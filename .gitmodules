@@ -1,0 +1,3 @@
+[submodule "external/agentiq-opensource-ui"]
+	path = external/agentiq-opensource-ui
+	url = git@github.com:NVIDIA/AgentIQ-UI.git
