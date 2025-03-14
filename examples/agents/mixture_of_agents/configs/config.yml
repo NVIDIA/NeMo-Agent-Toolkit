@@ -1,0 +1,97 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+general:
+  use_uvloop: true
+
+llms:
+  agent_orchestrator:
+    _type: nim
+    model_name: meta/llama-3.1-405b-instruct
+    temperature: 0.2
+    max_tokens: 250
+  agent_executor:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    max_tokens: 250
+
+functions:
+  calculator_multiply:
+    _type: calculator_multiply
+  calculator_inequality:
+    _type: calculator_inequality
+  calculator_divide:
+    _type: aiq_simple_calculator/calculator_divide
+  math_agent:
+    _type: tool_calling_agent
+    tool_names:
+      - calculator_multiply
+      - calculator_inequality
+      - calculator_divide
+    llm_name: agent_executor
+    verbose: true
+    handle_tool_errors: true
+    description: 'Useful for performing simple mathematical calculations.'
+
+  wikipedia_search:
+    _type: wiki_search
+    max_results: 3
+  current_datetime:
+    _type: current_datetime
+  internet_agent:
+    _type: tool_calling_agent
+    tool_names:
+      - wikipedia_search
+      - current_datetime
+    llm_name: agent_executor
+    verbose: true
+    handle_tool_errors: true
+    description: "Useful for performing simple internet searches."
+
+  code_generation:
+    _type: code_generation
+    programming_language: "Python"
+    description: "Useful to generate Python code. For any questions about code generation, you must only use this tool!"
+    llm_name: agent_orchestrator
+    verbose: true
+
+workflow:
+  _type: react_agent
+  tool_names: [math_agent, internet_agent, code_generation]
+  llm_name: agent_orchestrator
+  verbose: true
+  handle_parsing_errors: true
+  max_retries: 2
+  system_prompt: |
+    Answer the following questions as best you can. You may communicate and collaborate with various experts to answer the questions:
+
+    {tools}
+
+    You may respond in one of two formats.
+    Use the following format exactly to communicate with an expert:
+
+    Question: the input question you must answer
+    Thought: you should always think about what to do
+    Action: the action to take, should be one of [{tool_names}]
+    Action Input: the input to the action (if there is no required input, include "Action Input: None")
+    Observation: wait for the expert to respond, do not assume the expert's response
+
+    ... (this Thought/Action/Action Input/Observation can repeat N times.)
+    Use the following format once you have the final answer:
+
+    Thought: I now know the final answer
+    Final Answer: the final answer to the original input question

@@ -1,0 +1,26 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+root = "../.."
+
+[project]
+name = "aiq_plot_charts"
+dynamic = ["version"]
+dependencies = [
+  "agentiq[langchain]",
+  "colorama==0.4.6",
+  "matplotlib==3.9.*",
+  "seaborn==0.13.*",
+]
+requires-python = ">=3.12"
+description = "Simple AgentIQ example"
+keywords = ["ai", "rag", "agents"]
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+agentiq = { path = "../../", editable = true }
+
+[project.entry-points.'aiq.components']
+aiq_plot_charts = "aiq_plot_charts.register"

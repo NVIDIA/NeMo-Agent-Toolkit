@@ -1,0 +1,22 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+{% if editable %}requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+root = "{{ rel_path_to_repo_root}}"{% else %}requires = ["setuptools >= 64"]{% endif %}
+
+[project]
+name = "{{ package_name }}"
+{% if editable %}dynamic = ["version"]{% else %}version = "0.1.0"{% endif %}
+dependencies = [
+  "agentiq[langchain]",
+]
+requires-python = ">=3.12"
+description = "Custom AgentIQ Workflow"
+classifiers = ["Programming Language :: Python"]
+
+{% if editable %}[tool.uv.sources]
+agentiq = { path = "{{ rel_path_to_repo_root}}", editable = true }{% endif %}
+
+[project.entry-points.'aiq.components']
+{{ package_name }} = "{{ package_name }}.register"

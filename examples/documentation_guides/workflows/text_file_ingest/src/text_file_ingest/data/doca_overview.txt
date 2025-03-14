@@ -1,0 +1,40 @@
+This is an overview of the structure of NVIDIA DOCA documentation. It walks you through DOCA's developer zone portal which contains all the information about the DOCA toolkit from NVIDIA, providing everything you need to develop BlueField-accelerated applications.
+
+The NVIDIA DOCA SDK enables developers to rapidly create applications and services on top of NVIDIA® BlueField® networking platform, leveraging industry-standard APIs. With DOCA, developers can deliver breakthrough networking, security, and storage performance by harnessing the power of NVIDIA's BlueField data-processing units (DPUs) and SuperNICs.
+
+Installation
+
+DOCA contains a runtime and development environment for both the host and as part of a BlueField device image. The full installation instructions for both can be found in the NVIDIA DOCA Installation Guide for Linux.
+Whether DOCA has been installed on the host or on the BlueField networking platform, one can find the different DOCA components under the /opt/mellanox/doca directory. These include the traditional SDK-related components (libraries, header files, etc.) as well as the DOCA samples, applications, tools and more, as described in this document.
+
+API
+
+The DOCA SDK is built around the different DOCA libraries designed to leverage the capabilities of BlueField. Under the Programming Guides section, one can find a detailed description of each DOCA library, its goals, and API. These guides document DOCA's API, aiming to help developers wishing to develop DOCA-based programs.
+The API References section holds the Doxygen-generated documentation of DOCA's official API. See NVIDIA DOCA Library APIs.
+Please note that, as explained in the NVIDIA DOCA gRPC Infrastructure User Guide, some of DOCA's libraries also support a gRPC-based API. More information about these extended programming interfaces can be found in detail in the programming guides of the respective libraries.
+Programming Guides
+DOCA programming guides provide the full picture of DOCA libraries and their APIs. Each guide includes an introduction, architecture, API overview, and other library-specific information.
+Each library's programming guide includes code snippets for achieving basic DOCA-based tasks. It is recommended to review these samples while going over the programming guide of the relevant DOCA library to learn about its API. The samples provide an implementation example of a single feature of a given DOCA library.
+For a more detailed reference of full DOCA-based programs that make use of multiple DOCA libraries, please refer to the Reference Applications.
+
+Applications
+
+Applications are a higher-level reference code than the samples and demonstrate how a full DOCA-based program can be built. In addition to the supplied source code and compilation definitions, the applications are also shipped in their compiled binary form. This is to allow users an out-of-the-box interaction with DOCA-based programs without the hassle of a developer-oriented compilation process.
+Many DOCA applications combine the functionality of more than one DOCA library and offer an example implementation for common scenarios of interest to users such as application recognition according to incoming/outgoing traffic, scanning files using the hardware RegEx acceleration, and much more.
+For more information about DOCA applications, refer to DOCA Applications.
+
+Tools
+
+Some of the DOCA libraries are shipped alongside helper tools for both runtime and development. These tools are often an extension to the library's own API and bridge the gap between the library's expected input format and the input available to the users.
+An example for one such DOCA tool is the doca_dpi_compiler, responsible for converting Suricata-based rules to their matching .cdo definition files which are then used by the DOCA DPI library.
+For more information about DOCA tools, refer to DOCA Tools.
+
+Services
+
+DOCA services are containerized DOCA-based programs that provide an end-to-end solution for a given use case. DOCA services are accessible as part of NVIDIA's container catalog (NGC) from which they can be easily deployed directly to BlueField, and sometimes also to the host.
+For more information about container-based deployment to the BlueField DPU or SmartNIC, refer to the NVIDIA BlueField DPU Container Deployment Guide.
+For more information about DOCA services, refer to the DOCA Services.
+
+Note
+
+For questions, comments, and feedback, please contact us at DOCA-Feedback@exchange.nvidia.com

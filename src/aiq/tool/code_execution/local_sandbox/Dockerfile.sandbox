@@ -1,0 +1,60 @@
+# Copyright (c) 2024-2025, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Use the base image with Python 3.10 and Flask
+FROM tiangolo/uwsgi-nginx-flask:python3.10
+
+# Install dependencies required for Lean 4 and other tools
+RUN apt-get update && \
+    apt-get install -y curl git && \
+    curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh -s -- -y && \
+    /root/.elan/bin/elan toolchain install leanprover/lean4:v4.12.0 && \
+    /root/.elan/bin/elan default leanprover/lean4:v4.12.0 && \
+    /root/.elan/bin/elan self update
+
+# Set environment variables to include Lean and elan/lake in the PATH
+ENV PATH="/root/.elan/bin:$PATH"
+
+# Create Lean project directory and initialize a new Lean project with Mathlib4
+RUN mkdir -p /lean4 && cd /lean4 && \
+    /root/.elan/bin/lake new my_project && \
+    cd my_project && \
+    echo 'leanprover/lean4:v4.12.0' > lean-toolchain && \
+    echo 'require mathlib from git "https://github.com/leanprover-community/mathlib4" @ "v4.12.0"' >> lakefile.lean
+
+# Download and cache Mathlib4 to avoid recompiling, then build the project
+RUN cd /lean4/my_project && \
+    /root/.elan/bin/lake exe cache get && \
+    /root/.elan/bin/lake build
+
+# Set environment variables to include Lean project path
+ENV LEAN_PATH="/lean4/my_project"
+ENV PATH="/lean4/my_project:$PATH"
+
+# Set up application code and install Python dependencies
+COPY sandbox.requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+COPY local_sandbox_server.py /app/main.py
+
+# Set the working directory to /app
+WORKDIR /app
+
+# Set Flask app environment variables and ports
+ARG UWSGI_CHEAPER
+ENV UWSGI_CHEAPER=$UWSGI_CHEAPER
+
+ARG UWSGI_PROCESSES
+ENV UWSGI_PROCESSES=$UWSGI_PROCESSES
+
+ENV LISTEN_PORT=6000

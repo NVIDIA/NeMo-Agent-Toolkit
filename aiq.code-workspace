@@ -1,0 +1,76 @@
+{
+    "extensions": {
+        // See https://go.microsoft.com/fwlink/?LinkId=827846 to learn about workspace recommendations.
+        // Extension identifier format: ${publisher}.${name}. Example: vscode.csharp
+        // List of extensions which should be recommended for users of this workspace.
+        "recommendations": [
+            "eeyore.yapf",
+            "ms-python.flake8",
+            "ms-python.isort",
+            "ms-python.pylint",
+            "ms-python.vscode-pylance",
+            "stkb.rewrap"
+        ],
+        // List of extensions recommended by VS Code that should not be recommended for users of this workspace.
+        "unwantedRecommendations": [
+            "austin.code-gnu-global"
+        ]
+    },
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "launch": {
+        "compounds": [],
+        "configurations": []
+    },
+    "settings": {
+        "[python]": {
+            "editor.codeActionsOnSave": {
+                "source.organizeImports": "explicit"
+            },
+            "editor.defaultFormatter": "eeyore.yapf",
+            "editor.formatOnSave": true,
+            "editor.tabSize": 4,
+        },
+        "cmake.format.allowOptionalArgumentIndentation": true,
+        "docker.languageserver.formatter.ignoreMultilineInstructions": true,
+        "editor.rulers": [
+            120
+        ],
+        "files.insertFinalNewline": true,
+        "files.trimFinalNewlines": true,
+        "files.trimTrailingWhitespace": true,
+        "flake8.args": [
+            "--max-line-length=120",
+            "--max-doc-length=120"
+        ],
+        "isort.importStrategy": "fromEnvironment",
+        "pylint.args": [
+            "--rcfile=${workspaceFolder}/pyproject.toml"
+        ],
+        "python.analysis.exclude": [
+            // Repeat default options
+            "**/node_modules",
+            "**/__pycache__",
+            ".git",
+            // Ignore the build and dist directory
+            "build",
+            "dist",
+        ],
+        "pylint.importStrategy": "fromEnvironment",
+        "python.analysis.inlayHints.pytestParameters": true,
+        "python.analysis.typeCheckingMode": "basic",
+        "python.languageServer": "Pylance",
+        "python.testing.pytestArgs": [
+            "-s"
+        ],
+        "python.testing.pytestEnabled": true,
+        "python.testing.unittestEnabled": false,
+        "rewrap.wrappingColumn": 120,
+        "yapf.args": [
+            "--style=${workspaceFolder}/pyproject.toml"
+        ]
+    }
+}

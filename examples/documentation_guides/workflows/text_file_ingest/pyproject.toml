@@ -1,0 +1,19 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64"]
+
+[project]
+name = "text_file_ingest"
+version = "0.1.0"
+dependencies = [
+  "agentiq[langchain]",
+  "bs4==0.0.2",
+  "faiss-cpu==1.9.0",
+]
+requires-python = ">=3.12"
+description = "Ingest data from text files"
+keywords = ["ai", "rag", "agents"]
+classifiers = ["Programming Language :: Python"]
+
+[project.entry-points.'aiq.components']
+text_file_ingest = "text_file_ingest.register"

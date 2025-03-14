@@ -1,0 +1,75 @@
+A growing number of network applications need to exercise GPU real-time packet processing in order to implement high data rate solutions: data filtering, data placement, network analysis, sensors’ signal processing, and more.
+
+One primary motivation is the high degree of parallelism that the GPU can enable to process in parallel multiple packets while offering scalability and programmability.
+
+For an overview of the basic concepts of these techniques and an initial solution based on the DPDK gpudev library, see Boosting Inline Packet Processing Using DPDK and GPUdev with GPUs.
+
+This post explains how the new NVIDIA DOCA GPUNetIO Library can overcome some of the limitations found in the previous DPDK solution, moving a step closer to GPU-centric packet processing applications.
+Introduction
+
+Real-time GPU processing of network packets is a technique useful to several different application domains, including signal processing, network security, information gathering, and input reconstruction. The goal of these applications is to realize an inline packet processing pipeline to receive packets in GPU memory (without staging copies through CPU memory); process them in parallel with one or more CUDA kernels; and then run inference, evaluate, or send over the network the result of the calculation.
+
+Typically, in this pipeline, the CPU is the intermediary because it has to synchronize network card (NIC) receive activity with the GPU processing. This wakes up the CUDA kernel as soon as new packets have been received in GPU memory. Similar considerations can be applied to the send side of the pipeline.
+Graphic showing a CPU-centric application wherein the CPU has to wake up the network card to receive packets (that will be transferred directly in GPU memory through DMA), unblock the CUDA kernel waiting for those packets to arrive in GPU to actually start the packet processing.
+Figure 1. CPU-centric application with the CPU orchestrating the GPU and network card work
+
+The Data Plane Development Kit (DPDK) framework introduced the gpudev library to provide a solution for this kind of application: receive or send using GPU memory (GPUDirect RDMA technology) in combination with low-latency CPU synchronization. For more information about different approaches to coordinating CPU and GPU activity, see Boosting Inline Packet Processing Using DPDK and GPUdev with GPUs.
+GPUDirect Async Kernel-Initiated Network communications
+
+Looking at Figure 1, it is clear that the CPU is the main bottleneck. It has too many responsibilities in synchronizing NIC and GPU tasks and managing multiple network queues. As an example, consider an application with many receive queues and incoming traffic of 100 Gbps. A CPU-centric solution would have:
+
+    CPU invoking the network function on each receive queue to receive packets in GPU memory using one or multiple CPU cores
+    CPU collecting packets’ info (packets addresses, number)
+    CPU notifying the GPU about new received packets
+    GPU processing the packets
+
+This CPU-centric approach is:
+
+    Resource consuming: To deal with high-rate network throughput (100 Gbps or more) the application may have to dedicate an entire CPU physical core to receive or send packets.
+    Not scalable: To receive or send in parallel with different queues, the application may have to use multiple CPU cores, even on systems where the total number of CPU cores may be limited to a low number (depending on the platform).
+    Platform-dependent: The same application on a low-power CPU decreases the performance.
+
+The next natural step for GPU inline packet processing applications is to remove the CPU from the critical path. Moving to a GPU-centric solution, the GPU can directly interact with the NIC to receive packets so the processing can start as soon as packets arrive in GPU memory. The same considerations can be applied to the send operation.
+
+The capability of a GPU to control the NIC activity from a CUDA kernel is called GPUDirect Async Kernel-Initiated Network (GDAKIN) communications. Assuming the use of an NVIDIA GPU and an NVIDIA NIC, it is possible to expose the NIC registers to the direct access of the GPU. In this way, a CUDA kernel can directly configure and update these registers to orchestrate a send or a receive network operation without the intervention of the CPU.
+Graphic showing a GPU-centric application, with the GPU controlling the network card and packet processing without the need of the CPU.
+Figure 2. GPU-centric application with the GPU controlling the network card and packet processing without the need of the CPU
+
+DPDK is, by definition, a CPU framework. To enable GDAKIN communications, it would be necessary to move the whole control path on the GPU, which is not applicable. For this reason, this feature is enabled by creating a new NVIDIA DOCA library.
+NVIDIA DOCA GPUNetIO Library
+
+NVIDIA DOCA SDK is the new NVIDIA framework composed of drivers, libraries, tools, documentation, and example applications. These resources are needed to leverage your application with the network, security, and computation features the NVIDIA hardware can expose on host systems and DPU.
+
+NVIDIA DOCA GPUNetIO is a new library developed on top of the NVIDIA DOCA 1.5 release to introduce the notion of a GPU device in the DOCA ecosystem (Figure 3). To facilitate the creation of a DOCA GPU-centric real-time packet processing application, DOCA GPUNetIO combines GPUDirect RDMA for data-path acceleration, smart GPU memory management, low-latency message passing techniques between CPU and GPU (through GDRCopy features) and GDAKIN communications. 
+
+This enables a CUDA kernel to directly control an NVIDIA ConnectX network card. To maximize the performance, DOCA GPUNetIO Library must be used on platforms considered GPUDirect-friendly, where the GPU and the network card are directly connected through a dedicated PCIe bridge. The DPU converged card is an example but the same topology can be realized on host systems as well.
+
+DOCA GPUNetIO targets are GPU packet processing network applications using the Ethernet protocol to exchange packets in a network. With these applications, there is no need for a pre-synchronization phase across peers through an OOB mechanism, as for RDMA-based applications. There is also no need to assume other peers use DOCA GPUNetIO to communicate and no need to be topology-aware. In future releases, the RDMA option will be enabled to cover more use cases.
+
+Here are the DOCA GPUNetIO features enabled in the current release:
+
+    GDAKIN communications: A CUDA kernel can invoke the CUDA device functions in the DOCA GPUNetIO Library to instruct the network card to send or receive packets.
+    Accurate Send Scheduling: It is possible to schedule packets’ transmission in the future according to some user-provided timestamp.
+    GPUDirect RDMA: Receive or send packets in contiguous fixed-size GPU memory strides without CPU memory staging copies.
+    Semaphores: Provide a standardized low-latency message passing protocol between CPU and GPU or between different GPU CUDA kernels.
+    CPU direct access to GPU memory: CPU can modify GPU memory buffers without using the CUDA memory API.
+
+Graphic depicting NVIDIA DOCA GPUNetIO configuration requiring a GPU and CUDA drivers and libraries installed on the same platform.
+Figure 3. NVIDIA DOCA GPUNetIO is a new DOCA library requiring a GPU and CUDA drivers and libraries installed on the same platform
+
+As shown in Figure 4, the typical DOCA GPUNetIO application steps are:
+
+    Initial configuration phase on CPU
+        Use DOCA to identify and initialize a GPU device and a network device
+        Use DOCA GPUNetIO to create receive or send queues manageable from a CUDA kernel
+        Use DOCA Flow to determine which type of packet should land in each receive queue (for example, subset of IP addresses, TCP or UDP protocol, and so on)
+        Launch one or more CUDA kernels (to execute packet processing/filtering/analysis)
+    Runtime control and data path on GPU within CUDA kernel
+        Use DOCA GPUNetIO CUDA device functions to send or receive packets
+        Use DOCA GPUNetIO CUDA device functions to interact with the semaphores to synchronize the work with other CUDA kernels or with the CPU
+
+Flow chart showing generic GPU packet processing pipeline data flow composed by several building blocks: receive packets in GPU memory, first staging GPU packet processing or filtering, additional GPU processing (AI inference, for example), processing output stored in the GPU memory.
+Figure 4. Generic GPU packet processing pipeline data flow composed by several building blocks
+
+The following sections present an overview of possible GPU packet processing pipeline application layouts combining DOCA GPUNetIO building blocks.
+
