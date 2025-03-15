@@ -29,7 +29,7 @@ aiq eval --config_file=examples/simple/configs/eval_config.yml
 ```
 
 ## Using Datasets
-Run and  evaluate the workflow on a specified dataset. The dataset files types are `json`, `jsonl`, `csv`, `xls`, or `parquet`.
+Run and evaluate the workflow on a specified dataset. The dataset files types are `json`, `jsonl`, `csv`, `xls`, or `parquet`.
 
 Download and use datasets provided by AgentIQ examples by running the following.
 
@@ -37,7 +37,7 @@ Download and use datasets provided by AgentIQ examples by running the following.
 git lfs fetch
 git lfs pull
 ```
- The dataset used for evaluation is specified in the `config.yml` file  via `eval.general.dataset`. For example, to use the `langsmith.json` dataset, the configuration is as follows:
+ The dataset used for evaluation is specified in the configuration file  via `eval.general.dataset`. For example, to use the `langsmith.json` dataset, the configuration is as follows:
 ```yaml
 eval:
   general:
@@ -246,11 +246,20 @@ aiq eval --config_file=examples/simple/configs/eval_config.yml --skip_completed_
 ## Running evaluation offline
 You can evaluate a dataset with previously generated answers via the `--skip_workflow` option. In this case the dataset has both the expected `answer` and the `generated_answer`.
 ```bash
-aiq eval --config_file=examples/simple/configs/config.yml --skip_workflow
+aiq eval --config_file=examples/simple/configs/eval_config.yml --skip_workflow --dataset=.tmp/aiq/examples/simple/workflow_output.json
 ```
+This assumes that the workflow output is previously generated and stored in the `.tmp/aiq/examples/simple/workflow_output.json` file.
 
 ## Running the workflow over a dataset without evaluation
-You can do this via a config.yml file that has no `evaluators`.
+You can do this by running `aiq eval` with a workflow configuration file that includes an `eval` section with no `evaluators`.
+```yaml
+eval:
+  general:
+    output_dir: ./.tmp/aiq/examples/simple/
+    dataset:
+      _type: json
+      file_path: examples/simple/data/langsmith.json
+```
 
 ## Evaluation output
 The output of the workflow is stored as `workflow_output.json` in the `output_dir` provided in the config.yml -
