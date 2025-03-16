@@ -69,7 +69,7 @@ The dataset file provides a list of questions and expected answers. The followin
 The evaluators section specifies the evaluators to use for evaluating the workflow output. The evaluator configuration includes the evaluator type, the metric to evaluate, and any additional parameters required by the evaluator.
 
 ### Display all evaluators
-To display all exsting evaluators, run the following command:
+To display all existing evaluators, run the following command:
 ```bash
 aiq info components -t evaluator
 ```
