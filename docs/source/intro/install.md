@@ -97,7 +97,8 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
 
 
 ## Install AgentIQ with `pip`
-This is suitable for users who want to quickly install and start building agentic workflows.
+This is suitable for users who are ready to deploy an AgentIQ workflow to production.
+.
 **Note:** Ensure you have a Python environment with Python 3.12 or higher
 
 To install AgentIQ with `pip install`:
