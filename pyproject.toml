@@ -43,7 +43,7 @@ dependencies = [
 ]
 requires-python = "==3.12.*"
 description = "AgentIQ"
-readme = "pypi.md"
+readme = "ci/pypi.md"
 license = { file = "LICENSE.md" }
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
