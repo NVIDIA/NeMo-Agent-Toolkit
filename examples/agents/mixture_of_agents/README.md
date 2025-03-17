@@ -36,21 +36,11 @@ An example of a Mixture of Agents (naive Mixture of Experts / naive Agent Hyperv
 
 ## Installation and Setup
 
-### Setup Virtual Environment and Install AgentIQ
-
-From the root directory of the AgentIQ library, run the following commands. Skip this if you've already installed AgentIQ.
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-
-pip install uv
-uv sync --all-extras
-```
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
 
 ### Install this Workflow:
 
-From the root directory of the AgentIQ library, run the following commands:
+From the root directory of the AgentIQ repository, run the following commands:
 
 ```bash
 uv pip install -e .

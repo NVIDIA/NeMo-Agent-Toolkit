@@ -35,17 +35,7 @@ A configurable ReAct Agent. This agent leverages the AgentIQ plugin system and `
 
 ## Installation and Setup
 
-### Setup Virtual Environment and Install AgentIQ
-
-From the root directory of the AgentIQ library, run the following commands. Skip this if you've already installed AgentIQ.
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-
-pip install uv
-uv sync --all-extras
-```
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
 
 ### Install this Workflow:
 

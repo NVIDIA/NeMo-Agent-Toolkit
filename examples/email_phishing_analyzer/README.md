@@ -15,10 +15,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-<!--
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-  SPDX-License-Identifier: Apache-2.0
--->
 
 # Email phishing analyzer
 
@@ -52,17 +48,7 @@ limitations under the License.
 
 ## Installation and Setup
 
-### Setup Virtual Environment and Install AgentIQ
-
-From the root directory of the AgentIQ library, run the following commands. Skip this if you've already installed AgentIQ.
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-
-pip install uv
-uv sync --all-extras
-```
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
 
 ### Install this Workflow:
 
