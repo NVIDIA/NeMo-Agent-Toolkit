@@ -55,6 +55,7 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
 - Install [Git Large File Storage](https://git-lfs.github.com/) (LFS)
 - Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
+### Install From Source
 
 1. Clone the AgentIQ repository to your local machine.
     ```bash
