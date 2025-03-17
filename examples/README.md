@@ -18,10 +18,3 @@ limitations under the License.
 # AgentIQ Examples
 
 Each AgentIQ examples demonstrates a particular feature or use case of the AgentIQ library. Most of these contain a custom [workflow](../docs/source/guides/create-customize-workflows.md) along with a set of custom tools ([functions](../docs/source/concepts/functions.md) in AgentIQ). The examples can we used as a starting off point for creating your own custom workflows and tools. Each example contains a `README.md` file that explains the use case along with instructions on how to run the example.
-
-## Running examples with pre-installed AgentIQ packages
-If you have already created the virtual environment and installed the AgentIQ package, you can directly run the examples. To install all examples, run the following command:
-```bash
-pip install agentiq[examples]
-```
-Ensure that you have cloned the repository and are in the root directory of the repository.
