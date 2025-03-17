@@ -15,11 +15,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-<!--
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-  SPDX-License-Identifier: Apache-2.0
--->
-
 # Multi-Frameworks Example
 
 This example demonstrates how to integrate multiple AI frameworks seamlessly using a set of LangChain / LangGraph agents, in AgentIQ.
@@ -70,25 +65,16 @@ the multi-agents architecture looks like the below
 
 ## Local Installation and Usage
 
-### Step 1: Set Your NVIDIA API Key Environment Variable
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
 
-You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services.
+### Step 1: Set Your NVIDIA API Key Environment Variable
+If you have not already done so, follow the [Obtaining API Keys](../../docs/source/intro/get-started.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services.
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
-the follow step 2 and step 3 shows you how to build the environment for this workflow
-
-### Step 2: Install the AgentIQ Library
-
-From within the root directory of the AgentIQ project, install the AgentIQ library in editable mode:
-
-```bash
-uv pip install -e .
-```
-
-### Step 3: Running the `multi_frameworks` Workflow
+### Step 2: Running the `multi_frameworks` Workflow
 
 **Install the `multi_frameworks` Workflow**
 

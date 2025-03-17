@@ -23,12 +23,7 @@ We will begin by creating a workflow to profile, explore some of the configurati
 
 The AgentIQ profiler requires additional dependencies not installed by default.
 
-Users who installed AgentIQ using `pip` can install these dependencies by running the following command:
-```bash
-pip install agentiq[profiling]
-```
-
-Users who installed AgentIQ from source can install these dependencies by running the following command:
+Install these dependencies by running the following command:
 ```bash
 uv pip install -e .[profiling]
 ```
