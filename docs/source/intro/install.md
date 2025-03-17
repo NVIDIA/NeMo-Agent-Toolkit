@@ -106,7 +106,7 @@ dependencies = [
 ```
 
 Alternately for projects using a `requirements.txt` file:
-```txt
+```
 agentiq[langchain]==1.0.*
 ```
 
