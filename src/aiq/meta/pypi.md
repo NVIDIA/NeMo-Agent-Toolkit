@@ -42,7 +42,7 @@ With AgentIQ, you can move quickly, experiment freely, and ensure reliability ac
  * [Examples](https://github.com/NVIDIA/AgentIQ/tree/main/examples#readme): Explore examples of AgentIQ workflows.
  * [Create and Customize AgentIQ Workflows](https://docs.nvidia.com/agentiq/latest/guides/create_customize_workflows.html): Learn how to create and customize AgentIQ workflows.
  * [Evaluate with AgentIQ](https://docs.nvidia.com/agentiq/latest/guides/evaluate.html): Learn how to evaluate your AgentIQ workflows.
- * [Troubleshooting](https://docs.nvidia.com/agentiq/latest/troubleshooting.html): Get help with common issues.
+ * [Troubleshooting](https://docs.nvidia.com/agentiq/latest/troubleshooting.html): Get help with troubleshooting common issues.
 
 
 ## Get Started
