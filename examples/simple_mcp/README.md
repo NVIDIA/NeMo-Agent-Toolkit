@@ -32,8 +32,12 @@ to aid tool calling. The tool can accept parameters as a JSON string or a python
 generated `pydantic` schema.
 
 ## Example Workflow
+
 This example workflow uses a locally hosted MCP SSE server running a [`fetch` tool](https://github.com/modelcontextprotocol/servers/tree/main/src/fetch). This tool will fetch content from a URL (in Markdown by default) and provide it to the LLM as context.
 By default, the workflow being run is the `react_agent`, which will use the `fetch` tool to pull data from the necessary URLs to answer the provided query.
+
+### Installation and Setup
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
 
 To run this example do the following:
  1) Start up docker compose using the provided `docker-compose.yml` file.
@@ -55,6 +59,7 @@ To run this example do the following:
 
  2) In a new terminal, from the root of the AgentIQ repository run the workflow:
  ```bash
+ source .venv/bin/activate
  aiq run --config_file=examples/simple_mcp/configs/config.yml --input="What is langchain?"
  ```
 
