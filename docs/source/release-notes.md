@@ -17,7 +17,7 @@ limitations under the License.
 
 # NVIDIA AgentIQ Release Notes
 
-## Release 0.1.0
+## Release 1.0.0
 ### Summary
 This is the first general release of AgentIQ.
 
