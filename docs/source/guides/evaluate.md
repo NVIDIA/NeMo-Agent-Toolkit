@@ -68,6 +68,12 @@ The dataset file provides a list of questions and expected answers. The followin
 ## Understanding the Evaluator Configuration
 The evaluators section specifies the evaluators to use for evaluating the workflow output. The evaluator configuration includes the evaluator type, the metric to evaluate, and any additional parameters required by the evaluator.
 
+### Display all evaluators
+To display all existing evaluators, run the following command:
+```bash
+aiq info components -t evaluator
+```
+
 ### Ragas Evaluator
 [RAGAS](https://docs.ragas.io/) is an OSS evaluation framework that enables end-to-end
 evaluation of RAG workflows. AgentIQ provides an interface to RAGAS to evaluate the performance
