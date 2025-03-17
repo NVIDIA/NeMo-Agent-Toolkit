@@ -68,8 +68,7 @@ the multi-agents architecture looks like the below
 If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
 
 ### Step 1: Set Your NVIDIA API Key Environment Variable
-
-You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services.
+If you have not already done so, follow the [Obtaining API Keys](../../docs/source/intro/get-started.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services.
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
