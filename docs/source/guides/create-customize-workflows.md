@@ -272,10 +272,6 @@ Adding individual web pages to a workflow can be cumbersome, especially when dea
 
 The `tavily_internet_search` tool is part of the `agentiq[langchain]` package, to install the package run:
 ```bash
-pip install agentiq[langchain]
-```
-Alternatively, to install the `agentiq[langchain]` package from source run:
-```bash
 # local package install from source
 uv pip install -e '.[langchain]'
 ```

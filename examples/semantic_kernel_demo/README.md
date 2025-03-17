@@ -15,28 +15,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-<!--
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-  SPDX-License-Identifier: Apache-2.0
--->
-
 # Semantic Kernel Example
 
 A minimal example using Semantic Kernel showcasing a multi-agent travel planning system where an Itinerary Agent creates a travel schedule, a Budget Agent ensures cost compliance, and a Summarizer Agent formats the final itinerary. **Please note that we only support OpenAI models currently**.
 
 ## Installation and Setup
 
-### Setup Virtual Environment and Install AgentIQ
-
-From the root directory of the AgentIQ library, run the following commands. Skip this if you've already installed AgentIQ.
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-
-pip install uv
-uv sync --all-extras
-```
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
 
 ### Install this Workflow:
 

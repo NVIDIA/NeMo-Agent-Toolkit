@@ -48,17 +48,7 @@ The automated description generation workflow is responsible for intelligently g
 
 ## Installation and Setup
 
-### Setup Virtual Environment and Install AgentIQ
-
-From the root directory of the AgentIQ library, run the following commands. Skip this if you've already installed AgentIQ.
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-
-pip install uv
-uv sync --all-extras
-```
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
 
 ### Install this Workflow:
 
@@ -69,8 +59,7 @@ uv pip install -e ./examples/automated_description_generation
 ```
 
 ### Set Up API Keys
-
-You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../docs/source/intro/get-started.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
@@ -78,13 +67,13 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ### Setting Up Milvus
 
-This example uses a `Milvus` vector database to demonstrate how descriptions can be generated for collections. However, because this workflow uses AgentIQ's native abstractions 
-for retrievers, this example will work for any database that implements the required methods of the AgentIQ `retriever` interface. 
+This example uses a `Milvus` vector database to demonstrate how descriptions can be generated for collections. However, because this workflow uses AgentIQ's native abstractions
+for retrievers, this example will work for any database that implements the required methods of the AgentIQ `retriever` interface.
 
 The rest of this example assumes you have a running instance of Milvus at `localhost:19530`. If you would like a guide on setting up the database used in this example, please follow
 the instructions in the `simple_rag` example of AgentIQ [here](../simple_rag/README.md).
 
-If you have a different Milvus database you would like to use, please modify the `./configs/config.yml` with the appropriate URLs to your database instance. 
+If you have a different Milvus database you would like to use, please modify the `./configs/config.yml` with the appropriate URLs to your database instance.
 
 To use this example, you will also need to create a `wikipedia_docs` collection in your Milvus database. You can do this by following the instructions in the `simple_rag` example of AgentIQ [here](../simple_rag/README.md) and running the following command:
 
@@ -94,7 +83,7 @@ python3 examples/simple_rag/ingestion/langchain_web_ingest.py --urls https://en.
 ## Example Usage
 
 To demonstrate the benefit of this methodology to automatically generate collection descriptions, we will use it in a function that can automatically discover and generate descriptions for collections within a given vector database.
-It will then rename the retriever tool for that database with the generated description instead of the user-provided description. Let us explore the `config_no_auto.yml` file, that performs simple RAG. 
+It will then rename the retriever tool for that database with the generated description instead of the user-provided description. Let us explore the `config_no_auto.yml` file, that performs simple RAG.
 
 ```yaml
 llms:
@@ -123,7 +112,7 @@ functions:
   cuda_tool:
     _type: aiq_retriever
     retriever: retriever
-    # Intentionally mislabelled to show the effects of poor descriptions 
+    # Intentionally mislabelled to show the effects of poor descriptions
     topic: NVIDIA CUDA
     description: Only to search about NVIDIA CUDA
 
@@ -137,7 +126,7 @@ workflow:
 
 Like in the `simple_rag` example, we demonstrate the use of the `react_agent` tool to execute the workflow. The `react_agent` tool will execute workflow
 with the given function. However, you have noticed that the `cuda_tool` is incorrectly named and labelled! it points to a retriever that contains documents
-from Wikipedia, but the agent may not know that because the description is inaccurate. 
+from Wikipedia, but the agent may not know that because the description is inaccurate.
 
 Let us explore the output of running the agent without an automated description generation tool:
 
@@ -160,7 +149,7 @@ Action Input: None
 
 2025-03-14 06:23:48,271 - aiq.agent.react_agent.agent - WARNING - ReAct Agent wants to call tool None. In the ReAct Agent's configuration within the config file,there is no tool with that name: ['cuda_tool']
 2025-03-14 06:23:48,273 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-03-14 06:23:49,755 - aiq.agent.react_agent.agent - INFO - 
+2025-03-14 06:23:49,755 - aiq.agent.react_agent.agent - INFO -
 
 The agent's thoughts are:
 You are correct, there is no tool named "None". Since the question is about Aardvark subspecies and not related to NVIDIA CUDA, I should not use the cuda_tool.
@@ -206,7 +195,7 @@ functions:
   cuda_tool:
     _type: aiq_retriever
     retriever: retriever
-    # Intentionally mislabelled to show the effects of poor descriptions 
+    # Intentionally mislabelled to show the effects of poor descriptions
     topic: NVIDIA CUDA
     description: This tool retrieves information about NVIDIA's CUDA library
   retrieve_tool:
@@ -223,10 +212,10 @@ workflow:
   verbose: true
   llm_name: nim_llm
 ```
-Here, we're searching for information about Wikipedia in a collection using a tool incorrectly described to contain documents about NVIDIA's CUDA library. 
+Here, we're searching for information about Wikipedia in a collection using a tool incorrectly described to contain documents about NVIDIA's CUDA library.
 We see above that we use the automated description generation tool to generate a description for the collection `wikipedia_docs`. The tool uses the `retriever` to retrieve documents from the collection, and then uses the `nim_llm` to generate a description for the collection.
 
-If we run the updated configuration, we see the following output: 
+If we run the updated configuration, we see the following output:
 
 ```bash
 aiq run --config_file examples/automated_description_generation/configs/config.yml --input "List 5 subspecies of Aardvark?"
@@ -242,7 +231,7 @@ Action Input: {'query': 'Aardvark subspecies'}
 2025-03-14 06:30:43,334 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
 2025-03-14 06:30:43,759 - aiq.tool.retriever - INFO - Retrieved 10 records for query Aardvark subspecies.
 2025-03-14 06:30:43,763 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-03-14 06:30:48,516 - aiq.agent.react_agent.agent - INFO - 
+2025-03-14 06:30:48,516 - aiq.agent.react_agent.agent - INFO -
 
 The agent's thoughts are:
 Thought: I now know the final answer
@@ -255,4 +244,4 @@ Workflow Result:
 ```
 
 We see that the agent called the `retrieve_tool`. This demonstrates how the automated description generation tool can be used to automatically generate descriptions for collections within a vector database.
-While this is a toy example, this can be quite helpful when descriptions are vague, or you have too many collections to describe! 
+While this is a toy example, this can be quite helpful when descriptions are vague, or you have too many collections to describe!
