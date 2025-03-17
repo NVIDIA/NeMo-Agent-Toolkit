@@ -93,7 +93,7 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
 
 
 ## AgentIQ Packages
-Once an AgentIQ workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `agentiq` package, along with the needed pluguns. When declaring a dependency on AgentIQ it is recomended to use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `1.0`.
+Once an AgentIQ workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `agentiq` package, along with the needed plugins. When declaring a dependency on AgentIQ it is recommended to use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `1.0`.
 
 For more information on the available plugins, refer to the [Framework Integrations](../concepts/plugins.md#framework-integrations) section of the plugins documentation.
 
