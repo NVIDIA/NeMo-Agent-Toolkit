@@ -47,8 +47,6 @@ With AgentIQ, you can move quickly, experiment freely, and ensure reliability ac
 
 ## Get Started
 
-## Install From Source
-
 ### Prerequisites
 
 Before you begin using AgentIQ, ensure that you meet the following software prerequisites.
