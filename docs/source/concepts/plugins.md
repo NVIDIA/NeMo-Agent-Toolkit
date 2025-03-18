@@ -111,7 +111,7 @@ aiq_langchain = "aiq.plugins.langchain.register"
 What this means is that when the `agentiq-langchain` distribution is installed, the `aiq.plugins.langchain.register` module will be imported when the entry point is loaded. This module must contain all the `@register_<plugin_type>` decorators which need to be loaded when the library is initialized.
 
 > [!NOTE]
-> The above syntax in the `pyproject.toml` file is specific to [uv](https://docs.astral.sh/uv/reference/pyproject-toml/). Other package managers may have a different syntax for specifying entry points.
+> The above syntax in the `pyproject.toml` file is specific to [uv](https://docs.astral.sh/uv/concepts/projects/config/#plugin-entry-points). Other package managers may have a different syntax for specifying entry points.
 
 
 #### Multiple Plugins in a Single Distribution
