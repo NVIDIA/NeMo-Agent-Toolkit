@@ -40,22 +40,22 @@ Monitor and debug your workflows with any OpenTelemetry-compatible observability
 ## Evaluation System
 Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 
-
 ## Links
 
  * [Documentation](https://docs.nvidia.com/agentiq/latest/index.html): Explore the full documentation for AgentIQ.
- * [About AgentIQ](https://docs.nvidia.com/agentiq/latest/intro/why_aiq.html): Learn more about the benefits of using AgentIQ.
- * [Get Started Guide](https://docs.nvidia.com/agentiq/latest/intro/get_started.html): Set up your environment and start building with AgentIQ.
+ * [About AgentIQ](https://docs.nvidia.com/agentiq/latest/intro/why-agentiq.html): Learn more about the benefits of using AgentIQ.
+ * [Get Started Guide](https://docs.nvidia.com/agentiq/latest/intro/get-started.html): Set up your environment and start building with AgentIQ.
  * [Examples](https://github.com/NVIDIA/AgentIQ/tree/main/examples#readme): Explore examples of AgentIQ workflows.
- * [Create and Customize AgentIQ Workflows](https://docs.nvidia.com/agentiq/latest/guides/create_customize_workflows.html): Learn how to create and customize AgentIQ workflows.
+ * [Create and Customize AgentIQ Workflows](https://docs.nvidia.com/agentiq/latest/guides/create-customize-workflows.html): Learn how to create and customize AgentIQ workflows.
  * [Evaluate with AgentIQ](https://docs.nvidia.com/agentiq/latest/guides/evaluate.html): Learn how to evaluate your AgentIQ workflows.
  * [Troubleshooting](https://docs.nvidia.com/agentiq/latest/troubleshooting.html): Get help with troubleshooting common issues.
 
+## First time user?
+ If this is your first time using AgentIQ, it is recommended to install the latest version from the [source repository](https://github.com/NVIDIA/AgentIQ?tab=readme-ov-file#get-started) on GitHub. This package is intended for users who are familiar with AgentIQ applications and need to add AgentIQ as a dependency to their project.
 
-## Get Started with AgentIQ
+## Feedback
 
-To get started with AgentIQ visit the [GitHub Repository](https://github.com/NVIDIA/AgentIQ/) and run the example workflows.
-
+We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AgentIQ/issues) if you have any feedback or feature requests.
 
 ## Acknowledgements
 
