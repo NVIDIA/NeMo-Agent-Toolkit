@@ -25,24 +25,24 @@ AgentIQ is a flexible library designed to seamlessly integrate your enterprise a
 AgentIQ works with any agentic framework, so you can use your current technology stack without replatforming.
 
 ### Workflows
-AgentIQ workflows are fully configurable via a YAML file and can be executed on any platform with a single command.
-
 ![AgentIQ Workflow](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/config_to_workflow.png "AgentIQ workflow image")
 
-### Profiling
-Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
+AgentIQ workflows are fully configurable via a YAML file and can be executed on any platform with a single command.
 
+### Profiling
 ![AgentIQ Profiling](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/profiler_token_scatter.png "AgentIQ profiling image")
 
-### Observability
-Monitor and debug your workflows with any OpenTelemetry-compatible observability tool. For example, visualize your workflows with Phoenix.
+Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
 
+### Observability
 ![AgentIQ Observability](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/observability.png "AgentIQ observability image")
 
-### Evaluation System
-Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
+Monitor and debug your workflows with any OpenTelemetry-compatible observability tool. For example, visualize your workflows with Phoenix.
 
+### Evaluation System
 ![AgentIQ Evaluation](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/profiler_ragas_metrics.png  "AgentIQ evaluation image")
+
+Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 
 ## Links
  * [Documentation](https://docs.nvidia.com/agentiq/latest/index.html): Explore the full documentation for AgentIQ.
