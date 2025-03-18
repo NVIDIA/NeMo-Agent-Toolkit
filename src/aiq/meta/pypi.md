@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA AgentIQ](./docs/source/_static/agentiq_banner.png "AgentIQ banner image")
+![NVIDIA AgentIQ](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/agentiq_banner.png "AgentIQ banner image")
 
 # NVIDIA AgentIQ
 
@@ -44,40 +44,8 @@ With AgentIQ, you can move quickly, experiment freely, and ensure reliability ac
  * [Evaluate with AgentIQ](https://docs.nvidia.com/agentiq/latest/guides/evaluate.html): Learn how to evaluate your AgentIQ workflows.
  * [Troubleshooting](https://docs.nvidia.com/agentiq/latest/troubleshooting.html): Get help with troubleshooting common issues.
 
-
-## Get Started
-
-1. Ensure you have Python 3.12, and a Python development environment.
-
-   Assuming Python 3.12 is installed, create a virtual environment and activate it with:
-   ```bash
-   python -m venv env
-   source env/bin/activate
-   ```
-
-2. Install AgentIQ with support for your desired LLM framework
-
-   ```bash
-   pip install agentiq[<your framework>]
-   ```
-
-   For example, to install AgentIQ with support for the LangChain framework (which is necessary for the Hello World example), use the following command:
-
-   ```bash
-   pip install agentiq[langchain]
-   ```
-
-   > [!NOTE]
-   > AgentIQ also supports other LLM frameworks. Refer to the [plugin guide](https://docs.nvidia.com/agentiq/latest/concepts/plugins.md) for more information.
-
-
-3. Verify the installation using the AgentIQ CLI
-
-   ```bash
-   aiq --version
-   ```
-
-   This should output the AgentIQ version which is currently installed.
+> ## First time user?
+> If this is your first time using AgentIQ, it is recommended to install the latest version from the [source repository](https://github.com/NVIDIA/AgentIQ?tab=readme-ov-file#get-started) on GitHub. This package is intended for users who are familiar with AgentIQ applications and need to add AgentIQ as a dependency to their project.
 
 ## Feedback
 
