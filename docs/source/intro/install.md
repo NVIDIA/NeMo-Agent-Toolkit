@@ -16,45 +16,8 @@ limitations under the License.
 -->
 
 # Install NVIDIA AgentIQ
-AgentIQ can be installed in the following ways, depending on your needs:
-- **`pip install`**: Quickly install AgentIQ.
-- **Install from the source**: Installs AgentIQ and includes examples of using AgentIQ.
-
 AgentIQ is a Python library that doesn’t require a GPU to run the workflow by default. You can deploy the core workflows using one of the following:
 - Ubuntu or other Linux distributions, including WSL, in a Python virtual environment.
-
-## Install AgentIQ with `pip`
-This is suitable for users who want to quickly install and start building agentic workflows.
-**Note:** Ensure you have a Python environment with Python 3.12 or higher
-
-To install AgentIQ with `pip install`:
-
-1. Install AgentIQ and include the framework that you're using.
-
-   ```bash
-   pip install agentiq[<your framework>]
-   ```
-
-   For example, to install the LangChain integration, run the following:
-   ```bash
-   pip install agentiq[langchain]
-   ```
-   For example, to install both LangChain and LlamaIndex, run the following:
-   ```bash
-   pip install agentiq[langchain, llama-index]
-   ```
-   :::{note}
-   This installs the core AgentIQ package and the plugin of your framework. AgentIQ also supports other LLM frameworks. For more information, refer to [Framework Integrations](../concepts/plugins.md#framework-integrations).
-   :::
-
-2. Verify the installation
-
-   ```bash
-   aiq --version
-   ```
-
-   This should output the current AgentIQ version installed.
-
 
 ## Install From Source
 
@@ -126,6 +89,27 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
      ```
 
      If the installation succeeded, the `aiq` command will log the help message and its current version.
+
+
+
+## AgentIQ Packages
+Once an AgentIQ workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `agentiq` package, along with the needed plugins. When declaring a dependency on AgentIQ it is recommended to use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `1.0`.
+
+For more information on the available plugins, refer to the [Framework Integrations](../concepts/plugins.md#framework-integrations) section of the plugins documentation.
+
+Example dependency for AgentIQ using the `langchain` plugin for projects using a `pyproject.toml` file:
+```toml
+dependencies = [
+"agentiq[langchain]~=1.0",
+# Add any additional dependencies your workflow needs
+]
+```
+
+Alternately for projects using a `requirements.txt` file:
+```
+agentiq[langchain]==1.0.*
+```
+
 
 ## Next Steps
 After installing AgentIQ, you can start using AgentIQ agentic workflows. For more information, refer to [Get Started with AgentIQ](get-started.md).

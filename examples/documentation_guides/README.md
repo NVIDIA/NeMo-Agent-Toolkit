@@ -15,11 +15,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-<!--
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-  SPDX-License-Identifier: Apache-2.0
--->
-
 # Documentation Examples
 
 This directory contains the code for examples used in documentation guides which are located under the `docs/source` directory.

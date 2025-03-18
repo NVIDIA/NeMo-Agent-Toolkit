@@ -35,17 +35,7 @@ A configurable ReAct Agent. This agent leverages the AgentIQ plugin system and `
 
 ## Installation and Setup
 
-### Setup Virtual Environment and Install AgentIQ
-
-From the root directory of the AgentIQ library, run the following commands. Skip this if you've already installed AgentIQ.
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-
-pip install uv
-uv sync --all-extras
-```
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
 
 ### Install this Workflow:
 
@@ -57,17 +47,12 @@ uv pip install -e .
 
 The `code_generation` and `wiki_search` tools are part of the `agentiq[langchain]` package.  To install the package run the following command:
 ```bash
-pip install agentiq[langchain]
-```
-Alternatively, to install the `agentiq[langchain]` package from source run:
-```bash
 # local package install from source
 uv pip install -e '.[langchain]'
 ```
 
 ### Set Up API Keys
-
-You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/intro/get-started.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
