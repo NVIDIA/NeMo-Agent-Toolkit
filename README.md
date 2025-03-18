@@ -24,12 +24,12 @@ AgentIQ is a flexible library designed to seamlessly integrate your enterprise a
 ## Key Features
 
 - [**Framework Agnostic:**](https://docs.nvidia.com/agentiq/latest/concepts/plugins.html) Works with any agentic framework, so you can use your current technology stack without replatforming.
-- [**Reusability:**](https://docs.nvidia.com/agentiq/latest/guides/sharing_workflows_and_tools.html) Every agent, tool, or workflow can be combined and repurposed, allowing developers to leverage existing work in new scenarios.
-- [**Rapid Development:**](https://docs.nvidia.com/agentiq/latest/guides/create_customize_workflows.html) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
+- [**Reusability:**](https://docs.nvidia.com/agentiq/latest/guides/sharing-workflows-and-tools.html) Every agent, tool, or workflow can be combined and repurposed, allowing developers to leverage existing work in new scenarios.
+- [**Rapid Development:**](https://docs.nvidia.com/agentiq/latest/guides/create-customize-workflows.html) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
 - [**Profiling:**](https://docs.nvidia.com/agentiq/latest/guides/profiler.html) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
-- [**Observability:**](https://docs.nvidia.com/agentiq/latest/guides/observe_workflow_with_phoenix.html) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
+- [**Observability:**](https://docs.nvidia.com/agentiq/latest/guides/observe-workflow-with-phoenix.html) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
 - [**Evaluation System:**](https://docs.nvidia.com/agentiq/latest/guides/evaluate.html) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
-- [**User Interface:**](https://docs.nvidia.com/agentiq/latest/guides/use_aiq_serve.html) Use the AgentIQ UI chat interface to interact with your agents, visualize output, and debug workflows.
+- [**User Interface:**](https://docs.nvidia.com/agentiq/latest/guides/using-agentiq-ui-and-server.html) Use the AgentIQ UI chat interface to interact with your agents, visualize output, and debug workflows.
 - [**MCP Compatibility**](https://docs.nvidia.com/agentiq/latest/components/mcp.html) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AgentIQ functions.
 
 With AgentIQ, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
@@ -37,41 +37,77 @@ With AgentIQ, you can move quickly, experiment freely, and ensure reliability ac
 ## Links
 
  * [Documentation](https://docs.nvidia.com/agentiq/latest/index.html): Explore the full documentation for AgentIQ.
- * [About AgentIQ](https://docs.nvidia.com/agentiq/latest/intro/why_aiq.html): Learn more about the benefits of using AgentIQ.
- * [Get Started Guide](https://docs.nvidia.com/agentiq/latest/intro/get_started.html): Set up your environment and start building with AgentIQ.
+ * [About AgentIQ](https://docs.nvidia.com/agentiq/latest/intro/why-agentiq.html): Learn more about the benefits of using AgentIQ.
+ * [Get Started Guide](https://docs.nvidia.com/agentiq/latest/intro/get-started.html): Set up your environment and start building with AgentIQ.
  * [Examples](https://github.com/NVIDIA/AgentIQ/tree/main/examples#readme): Explore examples of AgentIQ workflows.
- * [Create and Customize AgentIQ Workflows](https://docs.nvidia.com/agentiq/latest/guides/create_customize_workflows.html): Learn how to create and customize AgentIQ workflows.
+ * [Create and Customize AgentIQ Workflows](https://docs.nvidia.com/agentiq/latest/guides/create-customize-workflows.html): Learn how to create and customize AgentIQ workflows.
  * [Evaluate with AgentIQ](https://docs.nvidia.com/agentiq/latest/guides/evaluate.html): Learn how to evaluate your AgentIQ workflows.
  * [Troubleshooting](https://docs.nvidia.com/agentiq/latest/troubleshooting.html): Get help with common issues.
 
 
 ## Get Started
 
-1. Ensure you have Python 3.12, and a Python development environment.
+### Prerequisites
 
-   Assuming Python 3.12 is installed, create a virtual environment and activate it with:
-   ```bash
-   python -m venv env
-   source env/bin/activate
-   ```
+Before you begin using AgentIQ, ensure that you meet the following software prerequisites.
 
-2. Install AgentIQ with support for your desired LLM framework
+- Install [Git](https://git-scm.com/)
+- Install [Git Large File Storage](https://git-lfs.github.com/) (LFS)
+- Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
-   ```bash
-   pip install agentiq[<your framework>]
-   ```
+### Install From Source
 
-   For example, to install AgentIQ with support for the LangChain framework (which is necessary for the Hello World example), use the following command:
+1. Clone the AgentIQ repository to your local machine.
+    ```bash
+    git clone git@github.com:NVIDIA/AgentIQ.git agentiq
+    cd agentiq
+    ```
 
-   ```bash
-   pip install agentiq[langchain]
-   ```
+2. Initialize, fetch, and update submodules in the Git repository.
+    ```bash
+    git submodule update --init --recursive
+    ```
 
-   > [!NOTE]
-   > AgentIQ also supports other LLM frameworks. Refer to the [plugin guide](https://docs.nvidia.com/agentiq/latest/concepts/plugins.md) for more information.
+3. Fetch the data sets by downloading the LFS files.
+    ```bash
+    git lfs install
+    git lfs fetch
+    git lfs pull
+    ```
+
+4. Create a Python environment.
+    ```bash
+    uv venv --seed .venv
+    source .venv/bin/activate
+    ```
+
+5. Install the AgentIQ library.
+    To install the AgentIQ library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
+    ```bash
+    uv sync --all-groups --all-extras
+    ```
+
+    Alternatively to install just the core AgentIQ without any plugins, run the following:
+    ```bash
+    uv sync
+    ```
+
+    At this point individual plugins, which are located under the `packages` directory, can be installed with the following command `uv pip install -e '.[<plugin_name>]'`.
+    For example, to install the `langchain` plugin, run the following:
+    ```bash
+    uv pip install -e '.[langchain]'
+    ```
+
+    > [!NOTE]
+    > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/simple/README.md` guide will install the `agentiq-langchain` plugin if you haven't already done so.
 
 
-3. Verify the installation using the AgentIQ CLI
+    In addition to plugins, there are optional dependencies needed for profiling. To install these dependencies, run the following:
+    ```bash
+    uv pip install -e .[profiling]
+    ```
+
+6. Verify the installation using the AgentIQ CLI
 
    ```bash
    aiq --version
