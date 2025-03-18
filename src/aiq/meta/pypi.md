@@ -25,7 +25,7 @@ AgentIQ is a flexible library designed to seamlessly integrate your enterprise a
 AgentIQ works with any agentic framework, so you can use your current technology stack without replatforming.
 
 ### Workflows
-AgentIQ workflows are completely configurable via a YAML file, and can be run on any platform with a single command.
+AgentIQ workflows are fully configurable via a YAML file and can be executed on any platform with a single command.
 
 ![AgentIQ Workflow](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/config_to_workflow.png "AgentIQ workflow image")
 
@@ -35,7 +35,9 @@ Profile entire workflows down to the tool and agent level, track input/output to
 ![AgentIQ Profiling](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/profiler_token_scatter.png "AgentIQ profiling image")
 
 ### Observability
-Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
+Monitor and debug your workflows with any OpenTelemetry-compatible observability tool. For example, visualize your workflows with Phoenix.
+
+`
 
 ![AgentIQ Observability](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/observability.png "AgentIQ observability image")
 
