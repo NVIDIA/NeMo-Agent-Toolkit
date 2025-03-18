@@ -24,7 +24,7 @@ AgentIQ is a flexible library designed to seamlessly integrate your enterprise a
 ## AgentIQ Workflows
 AgentIQ works with any agentic framework, so you can use your current technology stack without replatforming.
 
-AgentIQ workflows are completely configurable via a simple YAML file, and can be run on any platform with a single command.
+AgentIQ workflows are completely configurable via a YAML file, and can be run on any platform with a single command.
 
 ![AgentIQ Workflow](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/config_to_workflow.png "AgentIQ workflow image")
 
@@ -35,20 +35,17 @@ Profile entire workflows down to the tool and agent level, track input/output to
 
 ## Observability
 Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
-![AgentIQ Profiling](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/profiler_token_scatter.png "AgentIQ profiling image")git
+
+![AgentIQ Observability](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/observability.png"AgentIQ observability image")
 
 ## Evaluation System
 Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 
-## Links
+![AgentIQ Evaluation](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/profiler_ragas_metrics.png  "AgentIQ evaluation image")
 
+## Links
  * [Documentation](https://docs.nvidia.com/agentiq/latest/index.html): Explore the full documentation for AgentIQ.
  * [About AgentIQ](https://docs.nvidia.com/agentiq/latest/intro/why-agentiq.html): Learn more about the benefits of using AgentIQ.
- * [Get Started Guide](https://docs.nvidia.com/agentiq/latest/intro/get-started.html): Set up your environment and start building with AgentIQ.
- * [Examples](https://github.com/NVIDIA/AgentIQ/tree/main/examples#readme): Explore examples of AgentIQ workflows.
- * [Create and Customize AgentIQ Workflows](https://docs.nvidia.com/agentiq/latest/guides/create-customize-workflows.html): Learn how to create and customize AgentIQ workflows.
- * [Evaluate with AgentIQ](https://docs.nvidia.com/agentiq/latest/guides/evaluate.html): Learn how to evaluate your AgentIQ workflows.
- * [Troubleshooting](https://docs.nvidia.com/agentiq/latest/troubleshooting.html): Get help with troubleshooting common issues.
 
 ## First time user?
  If this is your first time using AgentIQ, it is recommended to install the latest version from the [source repository](https://github.com/NVIDIA/AgentIQ?tab=readme-ov-file#get-started) on GitHub. This package is intended for users who are familiar with AgentIQ applications and need to add AgentIQ as a dependency to their project.
