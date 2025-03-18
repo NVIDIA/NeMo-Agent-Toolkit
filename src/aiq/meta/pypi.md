@@ -37,8 +37,6 @@ Profile entire workflows down to the tool and agent level, track input/output to
 ### Observability
 Monitor and debug your workflows with any OpenTelemetry-compatible observability tool. For example, visualize your workflows with Phoenix.
 
-`
-
 ![AgentIQ Observability](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/observability.png "AgentIQ observability image")
 
 ### Evaluation System
