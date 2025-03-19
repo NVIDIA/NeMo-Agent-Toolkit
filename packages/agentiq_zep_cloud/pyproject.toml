@@ -24,6 +24,7 @@ dependencies = [
 ]
 requires-python = ">=3.12"
 description = "Subpackage for Zep memory integration in AgentIQ"
+readme = "src/aiq/meta/pypi.md"
 keywords = ["ai", "agents", "memory"]
 classifiers = ["Programming Language :: Python"]
 
