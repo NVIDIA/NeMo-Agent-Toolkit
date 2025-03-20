@@ -199,9 +199,22 @@ class DatasetHandler:
         if not self.is_structured_input():
             return None
 
+        if self.reps == 1:
+            # Directly use original_eval_input since there's only one repetition
+            best_eval_items = [
+                EvalInputItem(
+                    id=item.id,
+                    input_obj=item.input_obj,
+                    expected_output_obj=item.expected_output_obj,  # Comes from original input
+                    output_obj=None,
+                    expected_trajectory=[],
+                    trajectory=[],
+                ) for item in original_eval_input.eval_input_items  # No dictionary needed
+            ]
+            return EvalInput(eval_input_items=best_eval_items)
+
         # Aggregate scores for each rep across all evaluators
         rep_scores = defaultdict(list)
-
         for _, eval_output in evaluation_results:
             for item in eval_output.eval_output_items:
                 rep_scores[item.id].append(item.score)
@@ -209,10 +222,10 @@ class DatasetHandler:
         # Compute the average score per repetition
         avg_scores_per_rep = {rep_id: sum(scores) / len(scores) for rep_id, scores in rep_scores.items()}
 
-        # Select the best repetition per original ID
+        # Select the best repetition per original ID; if single rep, it is the best by default
         best_reps = {}
         for rep_id, avg_score in avg_scores_per_rep.items():
-            original_id = rep_id.rsplit("_rep", 1)[0]  # Extract base ID (without rep suffix)
+            original_id = rep_id.rsplit("_rep", 1)[0] if "_rep" in rep_id else rep_id
             if original_id not in best_reps or avg_score > best_reps[original_id][1]:
                 best_reps[original_id] = (rep_id, avg_score)
 
