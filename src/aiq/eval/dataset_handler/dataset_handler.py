@@ -176,13 +176,12 @@ class DatasetHandler:
         if not self.is_structured_input():
             None
 
-            # Extract structured data from EvalInputItems
-            data = [{
-                self.id_key: item.id,
-                self.question_key: item.input_obj,
-                self.answer_key: item.expected_output_obj,
-                self.generated_answer_key: item.output_obj,
-            } for item in eval_input.eval_input_items]
+        # Extract structured data from EvalInputItems
+        data = [{
+            self.id_key: item.id,
+            self.question_key: item.input_obj,
+            self.answer_key: item.expected_output_obj,
+        } for item in eval_input.eval_input_items]
 
         return json.dumps(data, indent=indent, ensure_ascii=False)
 
@@ -219,18 +218,19 @@ class DatasetHandler:
 
         # Create a new EvalInput with original IDs using the best repetitions
         best_eval_items = []
-        for item in original_eval_input.eval_input_items:
-            if item.id in best_reps:
-                original_id = item.id  # Keep the original ID (without _rep)
-
-                best_eval_items.append(
-                    EvalInputItem(
-                        id=original_id,
-                        input_obj=item.input_obj,
-                        expected_output_obj=item.expected_output_obj,
-                        output_obj=None,
-                        expected_trajectory=[],
-                        trajectory=[],
-                    ))
-
+        for id, (rep_id, _) in best_reps.items():
+            # Find the original item using the rep_id
+            for item in original_eval_input.eval_input_items:
+                if item.id == rep_id:  # Match the best rep_id
+                    # Use the generated answer as the ground truth/expected output
+                    best_eval_items.append(
+                        EvalInputItem(
+                            id=id,  # Assign the base ID, without the rep suffix
+                            input_obj=item.input_obj,
+                            expected_output_obj=item.output_obj,
+                            output_obj=None,
+                            expected_trajectory=[],
+                            trajectory=[],
+                        ))
+                    break
         return EvalInput(eval_input_items=best_eval_items)

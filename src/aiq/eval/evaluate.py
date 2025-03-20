@@ -190,7 +190,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         if self.generated_ground_truth:
             generated_ground_truth_file = self.eval_config.general.output_dir / "generated_ground_truth.json"
             generated_ground_truth_file.parent.mkdir(parents=True, exist_ok=True)
-            generated_ground_truth = dataset_handler.publish_eval_input(self.generated_ground_truth)
+            generated_ground_truth = dataset_handler.publish_ground_truth(self.generated_ground_truth)
             if generated_ground_truth:
                 with open(generated_ground_truth_file, "w", encoding="utf-8") as f:
                     f.write(generated_ground_truth)
