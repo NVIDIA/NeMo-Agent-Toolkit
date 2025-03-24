@@ -31,7 +31,7 @@ Some LLMs support reasoning, and can be used for Reasoning Agents.
 
 ---
 
-## *onfiguration
+## Configuration
 
 The Reasoning Agent may be utilized as a Workflow or a Function.
 
