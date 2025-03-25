@@ -105,6 +105,12 @@ class ReActAgentGraph(BaseAgent):
                     # the user input comes from the "messages" state channel
                     if len(state.messages) == 0:
                         raise RuntimeError('No input received in state: "messages"')
+                    # to check is any human input passed or not, if no input passed Agent will return the state
+                    if state.messages[0].content.strip() == "":
+                        logger.error("No human input passed to the agent.")
+                        output_message = "No human input obtained, Please ask a question."
+                        state.messages += [AIMessage(content=output_message)]
+                        return state
                     question = state.messages[0].content
                     logger.info("Querying agent, attempt: %d", attempt)
                     output_message = ""
