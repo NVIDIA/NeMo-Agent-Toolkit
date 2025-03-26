@@ -95,3 +95,26 @@ async def calculator_divide(config: DivisionToolConfig, builder: Builder):
         _calculator_divide,
         description=("This is a mathematical tool used to divide one number by another. "
                      "It takes 2 numbers as an input and computes their numeric quotient as the output."))
+
+
+class SubtractToolConfig(FunctionBaseConfig, name="calculator_subtract"):
+    pass
+
+
+@register_function(config_type=SubtractToolConfig)
+async def calculator_subtract(config: SubtractToolConfig, builder: Builder):
+
+    import re
+
+    async def _calculator_subtract(text: str) -> str:
+        numbers = re.findall(r"\d+", text)
+        a = int(numbers[0])
+        b = int(numbers[1])
+
+        return f"The result of {a} - {b} is {a - b}"
+
+    # Create a Generic AgentIQ tool that can be used with any supported LLM framework
+    yield FunctionInfo.from_fn(
+        _calculator_subtract,
+        description=("This is a mathematical tool used to subtract one number from another. "
+                     "It takes 2 numbers as an input and computes their numeric difference as the output."))
