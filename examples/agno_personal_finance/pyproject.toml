@@ -1,0 +1,25 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+root = "../.."
+
+[project]
+name = "agno_personal_finance"
+dynamic = ["version"]
+dependencies = [
+  "agentiq[agno]",
+  "openai~=1.66",
+  "google-search-results~=2.4.2",
+  "litellm~=1.63.14"
+]
+requires-python = ">=3.12"
+description = "Custom AgentIQ Workflow using Agno for personal finance"
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+agentiq = { path = "../..", editable = true }
+
+[project.entry-points.'aiq.components']
+agno_personal_finance = "agno_personal_finance.register"

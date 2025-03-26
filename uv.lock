@@ -9,6 +9,7 @@ resolution-markers = [
 [manifest]
 members = [
     "agentiq",
+    "agentiq-agno",
     "agentiq-crewai",
     "agentiq-langchain",
     "agentiq-llama-index",
@@ -59,6 +60,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+agno = [
+    { name = "agentiq-agno" },
+]
 crewai = [
     { name = "agentiq-crewai" },
 ]
@@ -127,6 +131,7 @@ docs = [
 
 [package.metadata]
 requires-dist = [
+    { name = "agentiq-agno", marker = "extra == 'agno'", editable = "packages/agentiq_agno" },
     { name = "agentiq-crewai", marker = "extra == 'crewai'", editable = "packages/agentiq_crewai" },
     { name = "agentiq-langchain", marker = "extra == 'langchain'", editable = "packages/agentiq_langchain" },
     { name = "agentiq-llama-index", marker = "extra == 'llama-index'", editable = "packages/agentiq_llama_index" },
@@ -167,7 +172,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["crewai", "langchain", "llama-index", "mem0ai", "semantic-kernel", "zep-cloud", "examples", "profiling"]
+provides-extras = ["crewai", "langchain", "llama-index", "mem0ai", "semantic-kernel", "zep-cloud", "agno", "examples", "profiling"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -199,6 +204,22 @@ docs = [
     { name = "sphinx-autoapi", specifier = ">=3.6" },
     { name = "sphinx-copybutton", specifier = ">=0.5" },
     { name = "vale", specifier = "==3.9.5" },
+]
+
+[[package]]
+name = "agentiq-agno"
+source = { editable = "packages/agentiq_agno" }
+dependencies = [
+    { name = "agentiq" },
+    { name = "agno" },
+    { name = "openai" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agentiq", editable = "." },
+    { name = "agno", specifier = "~=1.2.3" },
+    { name = "openai", specifier = "~=1.66" },
 ]
 
 [[package]]
@@ -314,6 +335,29 @@ dependencies = [
 requires-dist = [
     { name = "agentiq", editable = "." },
     { name = "zep-cloud", specifier = "~=2.2.0" },
+]
+
+[[package]]
+name = "agno"
+version = "1.2.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "docstring-parser" },
+    { name = "gitpython" },
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "python-dotenv" },
+    { name = "python-multipart" },
+    { name = "pyyaml" },
+    { name = "rich" },
+    { name = "tomli" },
+    { name = "typer" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ec/df/c1a46669a0a1b17b056927f9bc520eac42de1a68c935ab72bd6e806f5eff/agno-1.2.3.tar.gz", hash = "sha256:914f27008f3ca33a79639d818e1e8c8485981d0777d097a255975f94e6397285", size = 425540 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/15/e3/88b2bbd4912ec58bda49270910d8e4bc46a496432451763361dd4475f493/agno-1.2.3-py3-none-any.whl", hash = "sha256:ebd571c7baad92af7230a36acb065b9fdd8da08408b2fd7c6f54e80993704c68", size = 570988 },
 ]
 
 [[package]]
