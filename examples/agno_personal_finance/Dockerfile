@@ -42,8 +42,7 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     uv sync --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
     uv pip install -e '.[agno]' && \
-    uv pip install --link-mode=copy ./examples/agno_personal_finance && \
-    uv pip install langgraph
+    uv pip install --link-mode=copy ./examples/agno_personal_finance 
 
 # Set the config file environment variable
 ENV AIQ_CONFIG_FILE=/workspace/examples/agno_personal_finance/src/agno_personal_finance/configs/config.yml

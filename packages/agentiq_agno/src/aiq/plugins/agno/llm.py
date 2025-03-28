@@ -45,7 +45,11 @@ async def nim_agno(llm_config: NIMModelConfig, builder: Builder):
                 # Transfer the key to the correct environment variable
                 os.environ["NVIDIA_API_KEY"] = nvidai_api_key
 
-    yield Nvidia(id=config_obj.get("id"))
+    # Create Nvidia instance with conditional base_url
+    nvidia_args = {"id": config_obj.get("id")}
+    if "base_url" in config_obj and config_obj.get("base_url") is not None:
+        nvidia_args["base_url"] = config_obj.get("base_url")
+    yield Nvidia(**nvidia_args)
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
