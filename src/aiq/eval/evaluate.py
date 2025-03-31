@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
-from tqdm.asyncio import tqdm
+from tqdm import tqdm
 
 from aiq.data_models.evaluate import EvalConfig
 from aiq.eval.config import EvaluationRunConfig
@@ -123,6 +123,10 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                 item.output_obj = output
                 item.trajectory = self.intermediate_step_adapter.validate_intermediate_steps(intermediate_steps)
 
+        async def wrapped_run(item: EvalInputItem) -> None:
+            await run_one(item)
+            pbar.update(1)
+
         # if self.config.skip_complete is set skip eval_input_items with a non-empty output_obj
         if self.config.skip_completed_entries:
             eval_input_items = [item for item in self.eval_input.eval_input_items if not item.output_obj]
@@ -131,7 +135,9 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                 return
         else:
             eval_input_items = self.eval_input.eval_input_items
-        await tqdm.gather(*[run_one(item) for item in eval_input_items])
+        pbar = tqdm(total=len(eval_input_items), desc="Running workflow")
+        await asyncio.gather(*[wrapped_run(item) for item in eval_input_items])
+        pbar.close()
 
     async def run_workflow(self, session_manager: AIQSessionManager):
         if self.config.endpoint:
