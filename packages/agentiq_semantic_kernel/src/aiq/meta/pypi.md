@@ -18,6 +18,6 @@ limitations under the License.
 ![NVIDIA AgentIQ](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/agentiq_banner.png "AgentIQ banner image")
 
 # NVIDIA AgentIQ Subpackage
-This is a subpackage for for Semantic-Kernel integration in AgentIQ.
+This is a subpackage for Semantic-Kernel integration in AgentIQ.
 
 For more information about AgentIQ, please visit the [AgentIQ package](https://pypi.org/project/agentiq/).

@@ -47,7 +47,6 @@ jobs:
   pr-builder:
     needs:
       - prepare
-      - checks
       - ci_pipe
     secrets: inherit
     uses: rapidsai/shared-workflows/.github/workflows/pr-builder.yaml@branch-25.04
@@ -69,13 +68,19 @@ jobs:
       is_main_branch: ${{ github.ref_name == 'main' }}
       is_dev_branch: ${{ startsWith(github.ref_name, 'develop') }}
       has_skip_ci_label: ${{ steps.get-pr-info.outcome == 'success' && contains(fromJSON(steps.get-pr-info.outputs.pr-info).labels.*.name, 'skip-ci') || false }}
+      base_sha: ${{ steps.get-pr-info.outcome == 'success' && fromJSON(steps.get-pr-info.outputs.pr-info).base.sha || '' }}
       pr_info: ${{ steps.get-pr-info.outcome == 'success' && steps.get-pr-info.outputs.pr-info || '' }}
 
-  checks:
+
+  ci_pipe:
+    name: CI Pipeline
     needs: [prepare]
-    # Only run the CI pipeline if the PR does not have the skip-ci label and we are on a PR branch
-    if: ${{ !fromJSON(needs.prepare.outputs.has_skip_ci_label) && fromJSON(needs.prepare.outputs.is_pr )}}
-    secrets: inherit
-    uses: rapidsai/shared-workflows/.github/workflows/checks.yaml@branch-25.04
+    uses: ./.github/workflows/ci_pipe.yml
+    if: ${{ ! fromJSON(needs.prepare.outputs.has_skip_ci_label) }}
     with:
-      enable_check_generated_files: false
+      # Run checks for any PR branch
+      run_check: ${{ fromJSON(needs.prepare.outputs.is_pr) }}
+      # CI container
+      container: rapidsai/ci-conda:cuda12.5.1-ubuntu22.04-py3.12
+      # Info about the PR. Empty for non PR branches. Useful for extracting PR number, title, etc.
+      pr_info: ${{ needs.prepare.outputs.pr_info }}
