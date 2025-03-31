@@ -19,13 +19,14 @@ class TqdmPositionRegistry:
     A simple registry for tqdm positions.
     """
     _positions = set()
+    _max_positions = 100
 
     @classmethod
     def claim(cls) -> int:
         """
         Claim a tqdm position in the range of 0-99.
         """
-        for i in range(100):
+        for i in range(cls._max_positions):
             if i not in cls._positions:
                 cls._positions.add(i)
                 return i
