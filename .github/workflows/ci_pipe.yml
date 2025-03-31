@@ -101,7 +101,7 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-          lfs: true
+          lfs: false
           path: 'agentiq'
 
       - name: Test:linux
@@ -114,9 +114,6 @@ jobs:
     runs-on: linux-amd64-cpu4
     timeout-minutes: 15
     container:
-      credentials:
-        username: '$oauthtoken'
-        password: ${{ secrets.NGC_API_KEY }}
       image: ${{ inputs.container }}
     strategy:
       fail-fast: true
@@ -125,7 +122,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          lfs: true
+          lfs: false
           path: 'agentiq'
 
       - name: build_docs
