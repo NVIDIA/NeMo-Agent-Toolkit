@@ -41,6 +41,11 @@ function create_env() {
         fi
     done
 
+    rapids-logger "Installing uv"
+    pip install uv
+    uv venv --seed .venv
+    source .venv/bin/activate
+
     rapids-logger "Creating Environment with extras: ${@}"
 
     UV_SYNC_STDERROUT=$(uv sync ${extras[@]} 2>&1)
@@ -55,6 +60,15 @@ function create_env() {
 
     rapids-logger "Final Environment"
     uv pip list
+}
+
+
+function get_lfs_files() {
+    apt update
+    apt install --no-install-recommends -y git-lfs
+    git lfs install
+    git lfs fetch
+    git lfs pull
 }
 
 rapids-logger "Environment Variables"
