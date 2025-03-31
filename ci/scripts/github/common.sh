@@ -64,11 +64,17 @@ function create_env() {
 
 
 function get_lfs_files() {
+    rapids-logger "Installing git-lfs from apt"
     apt update
     apt install --no-install-recommends -y git-lfs
+
+    rapids-logger "Fetching LFS files"
     git lfs install
     git lfs fetch
     git lfs pull
+
+    rapids-logger "git lfs ls-files"
+    git lfs ls-files
 }
 
 rapids-logger "Environment Variables"
