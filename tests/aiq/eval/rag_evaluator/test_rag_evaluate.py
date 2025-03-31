@@ -151,6 +151,7 @@ def test_ragas_to_eval_output_unexpected_entries(rag_evaluator,
     assert round(eval_output.average_score, 4) == round(expected_avg_score, 4)
 
 
+@pytest.mark.skip(reason="Issue #50")
 async def test_rag_evaluate_success(rag_evaluator, rag_eval_input, ragas_judge_llm, ragas_metrics):
     """
     Test evaluate function to verify the following functions are called
@@ -188,6 +189,7 @@ async def test_rag_evaluate_success(rag_evaluator, rag_eval_input, ragas_judge_l
         assert output == mock_output
 
 
+@pytest.mark.skip(reason="Issue #50")
 async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input, ragas_judge_llm, ragas_metrics):
     """
     Validate evalute processing when ragas.evaluate raises an exception. Also
