@@ -106,7 +106,7 @@ jobs:
 
       - name: Test:linux
         shell: bash
-        run: ./agentiq/ci/scripts/github/test.sh
+        run: ./agentiq/ci/scripts/github/tests.sh
 
   documentation:
     name: Documentation
@@ -148,4 +148,4 @@ jobs:
 
       - name: build_wheels
         shell: bash
-        run: ./ci/scripts/gitlab/build_wheel.sh
+        run: ./ci/scripts/github/build_wheel.sh
