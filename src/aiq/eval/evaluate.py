@@ -139,12 +139,17 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         await asyncio.gather(*[wrapped_run(item) for item in eval_input_items])
         pbar.close()
 
+    async def run_workflow_remote(self, session_manager: AIQSessionManager):
+        from aiq.eval.remote_workflow import EvaluationRemoteWorkflowHandler
+        handler = EvaluationRemoteWorkflowHandler(self.config, self.eval_config)
+        await handler.run_workflow_remote(self.eval_input)
+
     async def run_workflow(self, session_manager: AIQSessionManager):
         if self.config.endpoint:
-            raise NotImplementedError("Remote workflow has been temporarily disabled")
-
-        # run the workflow locally
-        await self.run_workflow_local(session_manager=session_manager)
+            await self.run_workflow_remote(session_manager)
+        else:
+            # run the workflow locally
+            await self.run_workflow_local(session_manager=session_manager)
 
     async def profile_workflow(self):
         """
