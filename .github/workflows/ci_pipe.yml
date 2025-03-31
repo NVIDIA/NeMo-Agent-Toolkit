@@ -24,7 +24,7 @@ on:
         required: true
         type: boolean
       container:
-        description: 'The container to use for all stage'
+        description: 'The container to use for all CI stages'
         required: true
         type: string
       pr_info:
