@@ -54,7 +54,7 @@ from aiq.data_models.evaluator import EvaluatorBaseConfig
 
 class SimilarityEvaluatorConfig(EvaluatorBaseConfig, name="similarity"):
     '''Configuration for custom similarity evaluator'''
-    similarity_type: str = = Field(description="Similarity type to be computed", default="cosine")
+    similarity_type: str = Field(description="Similarity type to be computed", default="cosine")
 
 
 @register_evaluator(config_type=SimilarityEvaluatorConfig)
@@ -107,11 +107,13 @@ import asyncio
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from tqdm.asyncio import tqdm
+from tqdm import tqdm
 
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.evaluator.evaluator_model import EvalOutputItem
+from aiq.eval.evaluator.evaluator_model import EvalInputItem
+from aiq.eval.utils.tqdm_position_registry import TqdmPositionRegistry
 
 
 class SimilarityEvaluator:
@@ -145,11 +147,29 @@ class SimilarityEvaluator:
                 "generated_answer": generated_answer,
                 "similarity_type": "cosine"
             }
-
             return similarity_score, reasoning
 
-        # Process items concurrently with a limit on concurrency
-        results = await tqdm.gather(*[process_item(item) for item in eval_input.eval_input_items])
+        async def wrapped_process(item: EvalInputItem) -> tuple[float, dict]:
+            """
+            Process an item asynchronously and update the progress bar.
+            Use the semaphore to limit the number of concurrent items.
+            """
+            async with self.semaphore:
+              result = await process_item(item)
+              # Update the progress bar
+              pbar.update(1)
+              return result
+
+        try:
+            # Claim a tqdm position to display the progress bar
+            tqdm_position = TqdmPositionRegistry.claim()
+            # Create a progress bar
+            pbar = tqdm(total=len(eval_input.eval_input_items), desc="Evaluating Similarity", position=tqdm_position)
+            # Process items concurrently with a limit on concurrency
+            results = await asyncio.gather(*[wrapped_process(item) for item in eval_input.eval_input_items])
+        finally:
+            pbar.close()
+            TqdmPositionRegistry.release(tqdm_position)
 
         # Extract scores and reasonings
         sample_scores, sample_reasonings = zip(*results) if results else ([], [])
