@@ -148,4 +148,4 @@ jobs:
 
       - name: build_wheels
         shell: bash
-        run: ./ci/scripts/github/build_wheel.sh
+        run: ./agentiq/ci/scripts/github/build_wheel.sh
