@@ -23,6 +23,7 @@ dependencies = [
   "crewai~=0.95.0",
 ]
 requires-python = ">=3.12"
+readme = "src/aiq/meta/pypi.md"
 description = "Subpackage for CrewAI integration in AgentIQ"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]

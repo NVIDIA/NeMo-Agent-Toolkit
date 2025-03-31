@@ -21,6 +21,7 @@ from langchain_core.messages.tool import ToolMessage
 from langgraph.graph.graph import CompiledGraph
 
 from aiq.agent.base import AgentDecision
+from aiq.agent.react_agent.agent import NO_INPUT_ERROR_MESSAGE
 from aiq.agent.react_agent.agent import TOOL_NOT_FOUND_ERROR_MESSAGE
 from aiq.agent.react_agent.agent import ReActAgentGraph
 from aiq.agent.react_agent.agent import ReActGraphState
@@ -285,6 +286,14 @@ async def test_graph(mock_react_graph):
     response = response.messages[-1]  # pylint: disable=unsubscriptable-object
     assert isinstance(response, AIMessage)
     assert response.content == 'lorem ipsum'
+
+
+async def test_no_input(mock_react_graph):
+    response = await mock_react_graph.ainvoke(ReActGraphState(messages=[HumanMessage('')]))
+    response = ReActGraphState(**response)
+    response = response.messages[-1]  # pylint: disable=unsubscriptable-object
+    assert isinstance(response, AIMessage)
+    assert response.content == NO_INPUT_ERROR_MESSAGE
 
 
 def test_validate_system_prompt_no_input():

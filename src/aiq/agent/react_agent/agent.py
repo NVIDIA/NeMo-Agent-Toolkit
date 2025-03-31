@@ -40,6 +40,7 @@ from aiq.agent.react_agent.output_parser import ReActOutputParserException
 logger = logging.getLogger(__name__)
 TOOL_NOT_FOUND_ERROR_MESSAGE = "There is no tool named {tool_name}. Tool must be one of {tools}."
 INPUT_SCHEMA_MESSAGE = ". Arguments must be provided as a valid JSON object following this format: {schema}"
+NO_INPUT_ERROR_MESSAGE = "No human input recieved to the agent, Please ask a valid question."
 
 
 class ReActGraphState(BaseModel):
@@ -105,6 +106,11 @@ class ReActAgentGraph(BaseAgent):
                     # the user input comes from the "messages" state channel
                     if len(state.messages) == 0:
                         raise RuntimeError('No input received in state: "messages"')
+                    # to check is any human input passed or not, if no input passed Agent will return the state
+                    if state.messages[0].content.strip() == "":
+                        logger.error("No human input passed to the agent.")
+                        state.messages += [AIMessage(content=NO_INPUT_ERROR_MESSAGE)]
+                        return state
                     question = state.messages[0].content
                     logger.info("Querying agent, attempt: %d", attempt)
                     output_message = ""
