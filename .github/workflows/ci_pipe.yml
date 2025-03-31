@@ -44,6 +44,7 @@ env:
   RAPIDS_CONDA_RETRY_MAX: "5"
   WORKSPACE: "${{ github.workspace }}/agentiq"
   WORKSPACE_TMP: "${{ github.workspace }}/tmp"
+  UV_CACHE_DIR: .uv-cache
 
 permissions:
   actions: none
@@ -100,7 +101,7 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-          lfs: false
+          lfs: true
           path: 'agentiq'
 
       - name: Test:linux
@@ -124,7 +125,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          lfs: false
+          lfs: true
           path: 'agentiq'
 
       - name: build_docs
