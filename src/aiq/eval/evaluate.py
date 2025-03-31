@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
-from tqdm.asyncio import tqdm
+from tqdm import tqdm
 
 from aiq.data_models.evaluate import EvalConfig
 from aiq.eval.config import EvaluationRunConfig

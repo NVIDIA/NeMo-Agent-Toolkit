@@ -19,7 +19,7 @@ import logging
 from langchain.evaluation import TrajectoryEvalChain
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
-from tqdm.asyncio import tqdm
+from tqdm import tqdm
 
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
@@ -69,33 +69,30 @@ class TrajectoryEvaluator:
             1. score
             2. reasoning for the score
             """
+            question = item.input_obj
+            generated_answer = item.output_obj
+            agent_trajectory = intermediate_step_adapter.get_agent_actions(item.trajectory, event_filter)
+            try:
+                eval_result = await self.traj_eval_chain.aevaluate_agent_trajectory(
+                    input=question,
+                    agent_trajectory=agent_trajectory,
+                    prediction=generated_answer,
+                )
+            except Exception as e:
+                logger.exception("Error evaluating trajectory for question: %s, Error: %s", question, e, exc_info=True)
+                return 0.0, f"Error evaluating trajectory: {e}"
+
+            reasoning = {
+                "reasoning": eval_result["reasoning"],
+                "trajectory": [(action.model_dump(), output) for (action, output) in agent_trajectory]
+            }
+            return eval_result["score"], reasoning
+
+        async def wrapped_process(item: EvalInputItem) -> tuple[float, dict]:
             async with self.semaphore:
-                question = item.input_obj
-                generated_answer = item.output_obj
-                agent_trajectory = intermediate_step_adapter.get_agent_actions(item.trajectory, event_filter)
-                try:
-                    eval_result = await self.traj_eval_chain.aevaluate_agent_trajectory(
-                        input=question,
-                        agent_trajectory=agent_trajectory,
-                        prediction=generated_answer,
-                    )
-                except Exception as e:
-                    logger.exception("Error evaluating trajectory for question: %s, Error: %s",
-                                     question,
-                                     e,
-                                     exc_info=True)
-                    return 0.0, f"Error evaluating trajectory: {e}"
-
-                reasoning = {
-                    "reasoning": eval_result["reasoning"],
-                    "trajectory": [(action.model_dump(), output) for (action, output) in agent_trajectory]
-                }
-                return eval_result["score"], reasoning
-
-        async def wrapped_process(item: EvalInputItem) -> None:
-            result = await process_item(item)
-            pbar.update(1)
-            return result
+                result = await process_item(item)
+                pbar.update(1)
+                return result
 
         # Execute all evaluations asynchronously
         try:
@@ -110,7 +107,7 @@ class TrajectoryEvaluator:
         sample_scores, sample_reasonings = zip(*results) if results else ([], [])
 
         # Compute average score
-        avg_score = sum(sample_scores) / len(sample_scores) if sample_scores else 0.0
+        avg_score = round(sum(sample_scores) / len(sample_scores), 2) if sample_scores else 0.0
 
         # Construct EvalOutputItems
         eval_output_items = [
