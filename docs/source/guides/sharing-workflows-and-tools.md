@@ -52,7 +52,7 @@ fields:
 - `component_name`: The registered name of the AgentIQ component to be used in the `_type` field when configuring a
 workflow configuration object.
 - `description`: Description of the AgentIQ component pulled from its config objects docstrings and field metadata.
-- `developer_nodes`: Other notes to a developers to aid in the use of the component.
+- `developer_notes`: Other notes to a developers to aid in the use of the component.
 
 For this feature to provide useful information, there are a few hygiene requirements placed on AgentIQ component
 configuration object implementations.
