@@ -19,10 +19,6 @@ run-name: CI Pipeline
 on:
   workflow_call:
     inputs:
-      run_check:
-        description: 'Runs the check stage to verify code integrity'
-        required: true
-        type: boolean
       container:
         description: 'The container to use for all CI stages'
         required: true
