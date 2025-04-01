@@ -15,11 +15,13 @@
 
 import logging
 import os
+from textwrap import dedent
 
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
+from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
 
@@ -29,17 +31,29 @@ logger = logging.getLogger(__name__)
 class AgnoPersonalFinanceFunctionConfig(FunctionBaseConfig, name="agno_personal_finance"):
     _type: str = "agno_personal_finance"
     llm_name: LLMRef
+    serp_api_tool: FunctionRef
     api_key: str | None = None
 
 
 @register_function(config_type=AgnoPersonalFinanceFunctionConfig, framework_wrappers=[LLMFrameworkEnum.AGNO])
 async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConfig, builder: Builder):
+    """
+    Create a financial planning function that uses a researcher and planner to generate
+    personalized financial plans.
 
-    from textwrap import dedent
+    Parameters
+    ----------
+    config : AgnoPersonalFinanceFunctionConfig
+        Configuration for the financial planning function
+    builder : Builder
+        The AgentIQ builder instance
+
+    Returns
+    -------
+    A FunctionInfo object that can generate personalized financial plans
+    """
 
     from agno.agent import Agent
-    from agno.tools.serpapi import SerpApiTools
-
     if (not config.api_key):
         config.api_key = os.getenv("NVIDIA_API_KEY")
 
@@ -47,11 +61,13 @@ async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConf
         raise ValueError(
             "API token must be provided in the configuration or in the environment variable `NVIDIA_API_KEY`")
 
+    # Get the language model
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.AGNO)
 
-    # Create search tools with proper configuration
-    search_tools = SerpApiTools(api_key=os.getenv("SERP_API_KEY"))
+    # Get the search tool
+    search_tool = builder.get_tool(fn_name=config.serp_api_tool, wrapper_type=LLMFrameworkEnum.AGNO)
 
+    # Create researcher agent
     researcher = Agent(
         name="Researcher",
         role="Searches for financial advice, investment opportunities, and savings strategies "
@@ -72,10 +88,11 @@ async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConf
             "From the results of all searches, return the 10 most relevant results to the user's preferences.",
             "Remember: the quality of the results is important.",
         ],
-        tools=[search_tools],
+        tools=[search_tool],
         add_datetime_to_instructions=True,
     )
 
+    # Create planner agent
     planner = Agent(
         name="Planner",
         role="Generates a personalized financial plan based on user preferences and research results",
@@ -100,6 +117,7 @@ async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConf
         num_history_responses=3,
     )
 
+    # Create a function that uses the researcher and planner to generate a personalized financial plan
     async def _arun(inputs: str) -> str:
         """
         State your financial goals and current situation, and the planner will generate a personalized financial plan.
@@ -108,7 +126,7 @@ async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConf
         """
         try:
             # First, use the researcher to gather relevant financial information
-            researcher_response = researcher.run(inputs, stream=False)
+            researcher_response = await researcher.arun(inputs, stream=False)
             logger.info("Research results: \n %s", researcher_response)
 
             # Combine the original input with the research results for the planner
@@ -122,7 +140,7 @@ async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConf
                 """
 
             # Now run the planner with the research results
-            planner_response = planner.run(planner_input, stream=False)
+            planner_response = await planner.arun(planner_input, stream=False)
             logger.info("response from agno_personal_finance: \n %s", planner_response)
 
             # Extract content from RunResponse

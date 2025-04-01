@@ -19,6 +19,7 @@ import threading
 import time
 from collections.abc import Callable
 from typing import Any
+from uuid import uuid4
 
 import litellm
 
@@ -79,12 +80,14 @@ class AgnoProfilerHandler(BaseProfilerCallback):
             """
             now = time.time()
             tool_name = kwargs.get("tool_name", "")
+            uuid = str(uuid4())
 
             try:
                 # Pre-call usage event
                 stats = IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START,
                                                 framework=LLMFrameworkEnum.AGNO,
                                                 name=tool_name,
+                                                UUID=uuid,
                                                 data=StreamEventData(),
                                                 metadata=TraceMetadata(tool_inputs={
                                                     "args": args, "kwargs": dict(kwargs)
@@ -104,6 +107,7 @@ class AgnoProfilerHandler(BaseProfilerCallback):
                     span_event_timestamp=now,
                     framework=LLMFrameworkEnum.AGNO,
                     name=tool_name,
+                    UUID=uuid,
                     data=StreamEventData(input={
                         "args": args, "kwargs": dict(kwargs)
                     }, output=str(result)),
@@ -141,11 +145,14 @@ class AgnoProfilerHandler(BaseProfilerCallback):
             except Exception as e:
                 logger.exception("Error getting model input: %s", e)
 
+            uuid = str(uuid4())
+
             # Record the start event
             input_stats = IntermediateStepPayload(
                 event_type=IntermediateStepType.LLM_START,
                 framework=LLMFrameworkEnum.AGNO,
                 name=model_name,
+                UUID=uuid,
                 data=StreamEventData(input=model_input),
                 metadata=TraceMetadata(chat_inputs=copy.deepcopy(kwargs.get('messages', []))),
                 usage_info=UsageInfo(token_usage=TokenUsageBaseModel(),
@@ -172,6 +179,7 @@ class AgnoProfilerHandler(BaseProfilerCallback):
                 span_event_timestamp=now,
                 framework=LLMFrameworkEnum.AGNO,
                 name=model_name,
+                UUID=uuid,
                 data=StreamEventData(input=model_input, output=model_output),
                 metadata=TraceMetadata(chat_responses=output.choices[0].model_dump()),
                 usage_info=UsageInfo(token_usage=TokenUsageBaseModel(**output.model_extra['usage'].model_dump()),

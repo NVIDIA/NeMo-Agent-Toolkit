@@ -16,12 +16,33 @@
 
 general:
   use_uvloop: true
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: WARN
+      file:
+        _type: file
+        path: /tmp/agno_personal_finance.log
+        level: DEBUG
+  tracing:
+    phoenix:
+      _type: phoenix
+      endpoint: http://localhost:6006/v1/traces
+      project: agno_personal_finance
 
 functions:
+  serp_api_tool:
+    _type: serp_api_tool
+    # You can add your SerpAPI key here or use environment variables
+    # api_key: your_serp_api_key
+  
+  # Financial planning tool - references serp_api_tool by name
   agno_personal_finance:
     _type: agno_personal_finance
     llm_name: nim_llm
-
+    serp_api_tool: serp_api_tool
+  
 llms:
   nim_llm:
     _type: nim
@@ -30,8 +51,8 @@ llms:
 
 workflow:
   _type: agno_personal_finance
-  tool_names: [agno_personal_finance]
   llm_name: nim_llm
+  serp_api_tool: serp_api_tool
   verbose: true
   retry_parsing_errors: true
   max_retries: 3

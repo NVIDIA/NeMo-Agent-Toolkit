@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import time
 from uuid import uuid4
 
 import pytest
@@ -223,3 +224,132 @@ async def test_semantic_kernel_handler_tool_call(reactive_stream: Subject):
     assert all_[0].event_type == IntermediateStepType.TOOL_START
     assert all_[1].event_type == IntermediateStepType.TOOL_END
     assert all_[1].payload.metadata.tool_outputs == {"result": "some result"}
+
+
+async def test_agno_handler_llm_call(reactive_stream: Subject):
+    """
+    Test that the AgnoProfilerHandler correctly tracks LLM calls:
+    - It should generate LLM_START event when litellm.completion is called
+    - It should generate LLM_END event after completion finishes
+    - Events should have correct model input/output and token usage
+    """
+    pytest.importorskip("litellm")
+
+    from aiq.builder.context import AIQContext
+    from aiq.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
+    from aiq.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
+
+    # Create handler and set up collection of results
+    all_stats = []
+    handler = AgnoProfilerHandler()
+    _ = reactive_stream.subscribe(all_stats.append)
+    AIQContext.get().intermediate_step_manager
+
+    # Mock the original LLM call function that would be patched
+    def original_completion(*args, **kwargs):
+        return None
+
+    handler._original_llm_call = original_completion
+
+    # Create a wrapped function using the monkey patch
+    wrapped_llm_call = handler._llm_call_monkey_patch()
+
+    # Create mock LLM input (messages)
+    messages = [{
+        "role": "system", "content": "You are a helpful assistant."
+    }, {
+        "role": "user", "content": "Tell me about Agno."
+    }]
+
+    # Create mock LLM output
+    class MockChoice:
+
+        def __init__(self, msg_content):
+            self.model_extra = {"message": {"content": msg_content}}
+
+    class MockOutput:
+
+        def __init__(self):
+            self.choices = [MockChoice("Agno is an innovative framework for AI applications.")]
+            self.model_extra = {"usage": TokenUsageBaseModel(prompt_tokens=20, completion_tokens=15, total_tokens=35)}
+
+    # Mock the original litellm.completion call
+    def mock_completion(*args, **kwargs):
+        return MockOutput()
+
+    # Save current time to ensure timestamps work as expected
+    handler.last_call_ts = time.time() - 5  # 5 seconds ago
+
+    # Call the wrapped LLM function
+    original_completion
+    handler._original_llm_call = mock_completion
+
+    wrapped_llm_call(messages=messages, model="gpt-4")
+
+    # Verify the results
+    assert len(all_stats) == 2, "Expected 2 events: LLM_START and LLM_END"
+    assert all_stats[0].event_type == IntermediateStepType.LLM_START
+    assert all_stats[1].event_type == IntermediateStepType.LLM_END
+
+    # Check that event details are correct
+    assert all_stats[0].framework == LLMFrameworkEnum.AGNO
+    assert all_stats[0].payload.usage_info.num_llm_calls == 1
+    assert all_stats[0].payload.usage_info.seconds_between_calls >= 5
+
+    # Verify token usage in the final event
+    assert all_stats[1].payload.usage_info.token_usage.prompt_tokens == 20
+    assert all_stats[1].payload.usage_info.token_usage.completion_tokens == 15
+    assert all_stats[1].payload.usage_info.token_usage.total_tokens == 35
+
+    # Verify the model output was captured correctly
+    assert "Agno is an innovative framework" in all_stats[1].payload.data.output
+
+
+async def test_agno_handler_tool_execution(reactive_stream: Subject):
+    """
+    Test that the AgnoProfilerHandler correctly tracks tool executions:
+    - It should generate TOOL_START event when a tool is executed
+    - It should generate TOOL_END event after tool execution completes
+    - The events should contain correct input args and output results
+    """
+    from aiq.builder.context import AIQContext
+    from aiq.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
+
+    # Set up handler and collect results
+    all_stats = []
+    handler = AgnoProfilerHandler()
+    _ = reactive_stream.subscribe(all_stats.append)
+    AIQContext.get().intermediate_step_manager
+
+    # Mock original tool execution function
+    def original_tool_execute(*args, **kwargs):
+        return "Tool execution result"
+
+    handler._original_tool_execute = original_tool_execute
+
+    # Create a wrapped function using the monkey patch
+    wrapped_tool_execute = handler._tool_execute_monkey_patch()
+
+    # Mock tool execution args and kwargs
+    tool_args = ["arg1", "arg2"]
+    tool_kwargs = {"param1": "value1", "tool_name": "TestTool"}
+
+    # Call the wrapped tool execution function
+    result = wrapped_tool_execute(*tool_args, **tool_kwargs)
+
+    # Verify the result
+    assert result == "Tool execution result"
+
+    # Verify the events
+    assert len(all_stats) == 2, "Expected 2 events: TOOL_START and TOOL_END"
+    assert all_stats[0].event_type == IntermediateStepType.TOOL_START
+    assert all_stats[1].event_type == IntermediateStepType.TOOL_END
+
+    # Check that tool details are correctly recorded
+    assert all_stats[0].framework == LLMFrameworkEnum.AGNO
+    assert all_stats[0].payload.name == "TestTool"
+    assert all_stats[0].payload.metadata.tool_inputs["args"] == tool_args
+    assert all_stats[0].payload.metadata.tool_inputs["kwargs"]["param1"] == "value1"
+
+    # Check tool output is recorded
+    assert all_stats[1].payload.metadata.tool_outputs["result"] == "Tool execution result"

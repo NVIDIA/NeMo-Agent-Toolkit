@@ -40,3 +40,4 @@ agentiq = { workspace = true }
 
 [project.entry-points.'aiq.components']
 aiq_agno = "aiq.plugins.agno.register"
+aiq_agno_tools = "aiq.plugins.agno.tools.register"
