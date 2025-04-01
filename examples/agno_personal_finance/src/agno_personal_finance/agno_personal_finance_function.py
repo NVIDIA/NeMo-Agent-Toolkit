@@ -127,7 +127,7 @@ async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConf
         try:
             # First, use the researcher to gather relevant financial information
             researcher_response = await researcher.arun(inputs, stream=False)
-            logger.info("Research results: \n %s", researcher_response)
+            logger.debug("Research results: \n %s", researcher_response)
 
             # Combine the original input with the research results for the planner
             planner_input = f"""
