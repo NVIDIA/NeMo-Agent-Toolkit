@@ -32,8 +32,10 @@ if [[ "${GITLAB_CI}" == "true" ]]; then
 else
    echo "------------- 0 -------------"
    if [[ "${CURRENT_BRANCH}" != "" ]]; then
+      echo "------------- 0.1 -------------"
       export BASE_SHA=${BASE_SHA:-$(${SCRIPT_DIR}/gitutils.py get_merge_target --current-branch=${CURRENT_BRANCH})}
    else
+      echo "------------- 0.2 -------------"
       export BASE_SHA=${BASE_SHA:-$(${SCRIPT_DIR}/gitutils.py get_merge_target)}
    fi
    echo "------------- 1 -------------"
