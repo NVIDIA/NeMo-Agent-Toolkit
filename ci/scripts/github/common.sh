@@ -45,7 +45,6 @@ function create_env() {
     done
 
     rapids-logger "Installing uv"
-    pip install uv
     uv venv --seed .venv
     source .venv/bin/activate
 
@@ -64,7 +63,6 @@ function create_env() {
     rapids-logger "Final Environment"
     uv pip list
 }
-
 
 function get_lfs_files() {
     rapids-logger "Installing git-lfs from apt"

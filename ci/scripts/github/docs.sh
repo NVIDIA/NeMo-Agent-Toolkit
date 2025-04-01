@@ -22,9 +22,6 @@ source ${GITHUB_SCRIPT_DIR}/common.sh
 
 rapids-logger "Installing non-pip deps"
 get_lfs_files
-apt update
-apt install --no-install-recommends -y make
-
 
 create_env group:dev group:docs
 
