@@ -18,8 +18,14 @@ SCRIPT_DIR=$( dirname ${GITHUB_SCRIPT_DIR} )
 
 source ${SCRIPT_DIR}/common.sh
 
+echo "Installing Rapids GHA tools"
+wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | tar -xz -C /usr/local/bin
+
 AIQ_EXAMPLES=($(find ./examples/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
 AIQ_PACKAGES=($(find ./packages/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
+
+# Ensure the workspace tmp directory exists
+mkdir -p ${WORKSPACE_TMP}
 
 
 function create_env() {
@@ -42,7 +48,6 @@ function create_env() {
     done
 
     rapids-logger "Installing uv"
-    pip install uv
     uv venv --seed .venv
     source .venv/bin/activate
 
@@ -61,7 +66,6 @@ function create_env() {
     rapids-logger "Final Environment"
     uv pip list
 }
-
 
 function get_lfs_files() {
     rapids-logger "Installing git-lfs from apt"
