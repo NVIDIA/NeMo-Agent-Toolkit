@@ -19,7 +19,7 @@ set -e
 GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 source ${GITLAB_SCRIPT_DIR}/common.sh
-WHEELS_DIR=${WORKSPACE_TMP}/wheels
+WHEELS_DIR=${CI_PROJECT_DIR}/.tmp/wheels
 
 rapids-logger "Git Version: $(git describe)"
 
