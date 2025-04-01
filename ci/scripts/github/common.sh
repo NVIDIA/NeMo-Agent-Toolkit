@@ -47,9 +47,10 @@ function create_env() {
         fi
     done
 
-    rapids-logger "Installing uv"
-    uv venv --seed .venv
-    source .venv/bin/activate
+    rapids-logger "Creating uv env"
+    VENV_DIR="${WORKSPACE_TMP}/.venv"
+    uv venv --seed ${VENV_DIR}
+    source ${VENV_DIR}/bin/activate
 
     rapids-logger "Creating Environment with extras: ${@}"
 
