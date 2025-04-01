@@ -45,9 +45,9 @@ class MilvusRetrieverConfig(RetrieverBaseConfig, name="milvus_retriever"):
     search_params: dict = Field(default={"metric_type": "L2"},
                                 description="Search parameters to use when performing vector search")
     vector_field: str = Field(default="vector", description="Name of the field to compare with the vectorized query")
-    description: str = Field(default=None,
-                             description="If present it will be used as the tool description",
-                             alias="collection_description")
+    description: str | None = Field(default=None,
+                                    description="If present it will be used as the tool description",
+                                    alias="collection_description")
 
 
 @register_retriever_provider(config_type=MilvusRetrieverConfig)

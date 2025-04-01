@@ -25,6 +25,8 @@ functions:
     _type: aiq_simple_calculator/calculator_divide
   current_datetime:
     _type: current_datetime
+  calculator_subtract:
+    _type: calculator_subtract
 
 llms:
   nim_llm:
@@ -44,6 +46,7 @@ workflow:
     - calculator_inequality
     - current_datetime
     - calculator_divide
+    - calculator_subtract
   llm_name: nim_llm
   verbose: true
   retry_parsing_errors: true

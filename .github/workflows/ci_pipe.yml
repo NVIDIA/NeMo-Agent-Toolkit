@@ -1,0 +1,151 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: CI Pipeline
+run-name: CI Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      run_check:
+        description: 'Runs the check stage to verify code integrity'
+        required: true
+        type: boolean
+      container:
+        description: 'The container to use for all CI stages'
+        required: true
+        type: string
+      pr_info:
+        description: 'The JSON string containing the PR information'
+        required: true
+        type: string
+
+# We only support ubuntu, so bash is the default
+defaults:
+  run:
+    shell: bash
+
+env:
+  GH_TOKEN: "${{ github.token }}"
+  GIT_COMMIT: "${{ github.sha }}"
+  BASE_SHA: "${{ fromJSON(inputs.pr_info).base.sha }}"
+  RAPIDS_CONDA_RETRY_MAX: "5"
+  WORKSPACE: "${{ github.workspace }}/agentiq"
+  WORKSPACE_TMP: "${{ github.workspace }}/tmp"
+  UV_CACHE_DIR: .uv-cache
+
+permissions:
+  actions: none
+  checks: none
+  contents: read
+  deployments: none
+  discussions: none
+  id-token: write
+  issues: none
+  packages: read
+  pages: none
+  pull-requests: read
+  repository-projects: none
+  security-events: none
+  statuses: none
+
+jobs:
+  check:
+    if: ${{ inputs.run_check }}
+    name: Check
+    runs-on: linux-amd64-cpu4
+    timeout-minutes: 15
+    container:
+      image: ${{ inputs.container }}
+    strategy:
+      fail-fast: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          lfs: false
+          path: 'agentiq'
+
+      - name: Check
+        shell: bash
+        run: ./agentiq/ci/scripts/github/checks.sh
+
+  test:
+    name: Test
+    needs: [check]
+    runs-on:  linux-amd64-cpu4
+    timeout-minutes: 30
+    container:
+      image: ${{ inputs.container }}
+    strategy:
+      fail-fast: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          lfs: false
+          path: 'agentiq'
+
+      - name: Test:linux
+        shell: bash
+        run: ./agentiq/ci/scripts/github/tests.sh
+
+  documentation:
+    name: Documentation
+    needs: [check]
+    runs-on: linux-amd64-cpu4
+    timeout-minutes: 15
+    container:
+      image: ${{ inputs.container }}
+    strategy:
+      fail-fast: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+          path: 'agentiq'
+
+      - name: build_docs
+        shell: bash
+        run: ./agentiq/ci/scripts/github/docs.sh
+
+  package:
+    name: Build Wheels
+    needs: [check]
+    runs-on: linux-amd64-cpu4
+    timeout-minutes: 60
+    container:
+      image: ${{ inputs.container }}
+    strategy:
+      fail-fast: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+          path: 'agentiq'
+
+      - name: build_wheels
+        shell: bash
+        run: ./agentiq/ci/scripts/github/build_wheel.sh
