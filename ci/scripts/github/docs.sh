@@ -31,4 +31,5 @@ create_env group:dev group:docs
 rapids-logger "Building documentation"
 pushd ${PROJECT_ROOT}/docs
 make html
+tar cvfj ${WORKSPACE_TMP}/docs.tar.bz2 build/html
 popd

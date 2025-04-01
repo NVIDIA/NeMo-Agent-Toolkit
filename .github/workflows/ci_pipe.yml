@@ -129,6 +129,16 @@ jobs:
         shell: bash
         run: ./agentiq/ci/scripts/github/docs.sh
 
+      - name: Upload Documentation
+        if: "!cancelled()"
+        uses: actions/upload-artifact@v4
+        with:
+          path: "${{ github.workspace }}/tmp/docs/docs.tar.bz2"
+          retention-days: 1
+          if-no-files-found: error
+          compression-level: 0
+          overwrite: true
+
   package:
     name: Build Wheels
     needs: [check]
@@ -149,3 +159,13 @@ jobs:
       - name: build_wheels
         shell: bash
         run: ./agentiq/ci/scripts/github/build_wheel.sh
+
+      - name: Upload Wheels
+        if: "!cancelled()"
+        uses: actions/upload-artifact@v4
+        with:
+          path: "${{ github.workspace }}/tmp/wheels/*.whl"
+          retention-days: 1
+          if-no-files-found: error
+          compression-level: 0
+          overwrite: true
