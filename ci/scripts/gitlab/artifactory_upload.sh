@@ -17,8 +17,15 @@
 # Exit on error
 set -e
 
-# Define variables
+# change this to ready to publish. this should be done programmatically once
+# the release process is finalized.
 RELEASE_STATUS=preview
+
+# Define variables
+AIQ_ARCH="any"
+AIQ_OS="any"
+AIQ_COMPONENT_NAME="agentiq"
+
 WHEELS_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
 # Define the subdirectories to be exclude
 EXCLUDE_SUBDIRS=("examples")
@@ -66,14 +73,6 @@ function install_jfrog_cli() {
 }
 install_jfrog_cli
 
-# Function to get the current Git branch name
-function get_git_branch_name() {
-    git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "${CI_COMMIT_REF_NAME:-unknown}"
-}
-
-# Set the branch name dynamically
-BRANCH_NAME=$(get_git_branch_name)
-
 function get_git_tag() {
     # Get the latest Git tag, sorted by version, excluding lightweight tags
     git describe --tags --abbrev=0 2>/dev/null || echo "no-tag"
@@ -104,7 +103,7 @@ if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
             CI=true jf rt u --fail-no-op --url="${AIQ_ARTIFACTORY_URL}" \
                 --user="${URM_USER}" --password="${URM_API_KEY}" \
                 --flat=false "${WHEEL_FILE}" "${ARTIFACTORY_PATH}" \
-                --target-props "arch=any;os=any;branch=${BRANCH_NAME};component_name=${COMPONENT_NAME};version=${GIT_TAG};release_approver=${RELEASE_APPROVER};release_status=${RELEASE_STATUS}"
+                --target-props "arch=${AIQ_ARCH};os=${AIQ_OS};branch=${GIT_TAG};component_name=${AIQ_COMPONENT_NAME};version=${GIT_TAG};release_approver=${RELEASE_APPROVER};release_status=${RELEASE_STATUS}"
         done
     done
 else
@@ -116,5 +115,5 @@ if [[ "${LIST_ARTIFACTORY_CONTENTS}" == "true" ]]; then
     echo "Listing contents of Artifactory (${AIQ_ARTIFACTORY_NAME}):"
     CI=true jf rt s --url="${AIQ_ARTIFACTORY_URL}" \
         --user="${URM_USER}" --password="${URM_API_KEY}" \
-        "${AIQ_ARTIFACTORY_NAME}/" --recursive
+        "${AIQ_ARTIFACTORY_NAME}/*/${GIT_TAG}/" --recursive
 fi
