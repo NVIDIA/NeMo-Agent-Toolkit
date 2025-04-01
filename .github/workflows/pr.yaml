@@ -56,8 +56,6 @@ jobs:
     # PR does not have the label
     name: Prepare
     runs-on: ubuntu-latest
-    container:
-      image: rapidsai/ci-conda:latest
     steps:
       - name: Get PR Info
         id: get-pr-info
@@ -78,9 +76,7 @@ jobs:
     uses: ./.github/workflows/ci_pipe.yml
     if: ${{ ! fromJSON(needs.prepare.outputs.has_skip_ci_label) }}
     with:
-      # Run checks for any PR branch
-      run_check: ${{ fromJSON(needs.prepare.outputs.is_pr) }}
       # CI container
-      container: rapidsai/ci-conda:cuda12.5.1-ubuntu22.04-py3.12
+      container: ghcr.io/astral-sh/uv:python3.12-bookworm
       # Info about the PR. Empty for non PR branches. Useful for extracting PR number, title, etc.
       pr_info: ${{ needs.prepare.outputs.pr_info }}

@@ -22,13 +22,14 @@ source ${GITHUB_SCRIPT_DIR}/common.sh
 
 rapids-logger "Installing non-pip deps"
 get_lfs_files
-apt update
-apt install --no-install-recommends -y make
-
 
 create_env group:dev group:docs
 
 rapids-logger "Building documentation"
 pushd ${PROJECT_ROOT}/docs
 make html
+
+DOCS_TAR=${WORKSPACE_TMP}/docs.tar.bz2
+rapids-logger "Archiving documentation to ${DOCS_TAR}"
+tar cvfj ${DOCS_TAR} build/html
 popd
