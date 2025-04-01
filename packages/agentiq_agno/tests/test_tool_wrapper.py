@@ -244,7 +244,7 @@ class TestToolWrapper:
 
         # Verify that an error message is returned for empty query after initialization
         assert "ERROR" in result
-        assert "requires a valid search query" in result
+        assert "requires a valid query" in result
 
         # Verify that run_coroutine_threadsafe was not called since we blocked the empty query
         mock_run_coroutine_threadsafe.assert_not_called()
@@ -338,7 +338,7 @@ class TestToolWrapper:
 
         # Verify that the second call returned an error about infinite loops
         assert "ERROR" in result2
-        assert "infinite loop" in result2
+        assert "appears to be in a loop" in result2
 
         # Verify that coroutine_fn was called only once (for the first call)
         assert mock_coroutine_fn.call_count == 1
@@ -388,12 +388,25 @@ class TestToolWrapper:
     @pytest.mark.asyncio
     async def test_process_result_openai_style_response(self):
         """Test process_result with an OpenAI-style response object."""
-        # Create a mock OpenAI-style response
-        mock_choice = MagicMock()
-        mock_choice.message.content = "OpenAI response content"
 
-        mock_response = MagicMock()
-        mock_response.choices = [mock_choice]
+        # Create a simple class-based structure to simulate an OpenAI response
+        class Message:
+
+            def __init__(self, content):
+                self.content = content
+
+        class Choice:
+
+            def __init__(self, message):
+                self.message = message
+
+        class OpenAIResponse:
+
+            def __init__(self, choices):
+                self.choices = choices
+
+        # Create an actual object hierarchy instead of mocks
+        mock_response = OpenAIResponse([Choice(Message("OpenAI response content"))])
 
         result = await process_result(mock_response, "test_tool")
         assert result == "OpenAI response content"
