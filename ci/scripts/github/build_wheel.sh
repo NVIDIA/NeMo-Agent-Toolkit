@@ -55,3 +55,5 @@ for AIQ_PACKAGE in "${AIQ_PACKAGES[@]}"; do
     PACKAGE_DIR_NAME="${PACKAGE_DIR_NAME//aiq_/agentiq_}"
     build_wheel "${AIQ_PACKAGE}" "${PACKAGE_DIR_NAME}/${GIT_TAG}"
 done
+
+tar cvfj ${WORKSPACE_TMP}/wheels.tar.bz2 -C ${WHEELS_DIR} .

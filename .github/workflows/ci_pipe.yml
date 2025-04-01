@@ -163,6 +163,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "wheels"
-          path: "${{ github.workspace }}/tmp/wheels/**/*.whl"
+          path: "${{ github.workspace }}/tmp/wheels.tar.bz2"
           if-no-files-found: error
-          compression-level: 9
+          compression-level: 0
