@@ -106,7 +106,7 @@ jobs:
           name: "test-results"
           path: "${{ github.workspace }}/tmp/*.xml"
           if-no-files-found: error
-          overwrite: true
+
 
   documentation:
     name: Documentation
@@ -133,10 +133,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: "docs"
-          path: "${{ github.workspace }}/tmp/docs.tar.bz2"
+          path: "${{ github.workspace }}/tmp/docs"
           if-no-files-found: error
-          compression-level: 0
-          overwrite: true
+          compression-level: 9
+
 
   package:
     name: Build Wheels
@@ -166,4 +166,3 @@ jobs:
           path: "${{ github.workspace }}/tmp/wheels/**/*.whl"
           if-no-files-found: error
           compression-level: 0
-          overwrite: true

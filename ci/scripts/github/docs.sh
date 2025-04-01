@@ -29,7 +29,7 @@ rapids-logger "Building documentation"
 pushd ${PROJECT_ROOT}/docs
 make html
 
-DOCS_TAR=${WORKSPACE_TMP}/docs.tar.bz2
-rapids-logger "Archiving documentation to ${DOCS_TAR}"
-tar cvfj ${DOCS_TAR} build/html
+DOCS_DIR=${WORKSPACE_TMP}/docs
+rapids-logger "Archiving documentation to ${DOCS_DIR}"
+mv build/html ${DOCS_DIR}
 popd
