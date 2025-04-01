@@ -76,8 +76,6 @@ jobs:
     uses: ./.github/workflows/ci_pipe.yml
     if: ${{ ! fromJSON(needs.prepare.outputs.has_skip_ci_label) }}
     with:
-      # Run checks for any PR branch
-      run_check: ${{ fromJSON(needs.prepare.outputs.is_pr) }}
       # CI container
       container: ghcr.io/astral-sh/uv:python3.12-bookworm
       # Info about the PR. Empty for non PR branches. Useful for extracting PR number, title, etc.
