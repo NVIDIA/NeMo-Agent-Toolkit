@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+#!/bin/bash
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-curl -X POST \
-     --fail \
-     -F "token=$TRIGGER_TOKEN" \
-     -F "ref=main" \
-     -F "variables[BASE_IMAGE]=nvidia/cuda:12.6.2-cudnn-devel-ubuntu22.04" \
-     ${CI_API_V4_URL}/projects/${WEBHOOK_TRIGGER_ID}/trigger/pipeline
+set -e
+
+GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+source ${GITHUB_SCRIPT_DIR}/common.sh
+
+rapids-logger "Installing non-pip deps"
+get_lfs_files
+
+create_env group:dev group:docs
+
+rapids-logger "Building documentation"
+pushd ${PROJECT_ROOT}/docs
+make html
+
+DOCS_TAR=${WORKSPACE_TMP}/docs.tar.bz2
+rapids-logger "Archiving documentation to ${DOCS_TAR}"
+tar cvfj ${DOCS_TAR} build/html
+popd

@@ -81,7 +81,7 @@ async def test_trajectory_evaluate_success(trajectory_evaluator,
 
         # Validate average score
         assert isinstance(eval_output, EvalOutput)
-        assert eval_output.average_score == average_score
+        assert round(eval_output.average_score, 5) == round(average_score, 5)
         assert len(eval_output.eval_output_items) == len(scores)
 
         # Validate the score and reasoning for each individual item

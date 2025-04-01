@@ -13,15 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-SCRIPT_DIR=$( dirname ${GITLAB_SCRIPT_DIR} )
+GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+SCRIPT_DIR=$( dirname ${GITHUB_SCRIPT_DIR} )
 
 source ${SCRIPT_DIR}/common.sh
 
-export AIQ_AVOID_GH_CLI=1 # gh cli not working with gitlab, todo look into seeing if this can be fixed
+echo "Installing Rapids GHA tools"
+wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | tar -xz -C /usr/local/bin
 
 AIQ_EXAMPLES=($(find ./examples/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
 AIQ_PACKAGES=($(find ./packages/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
+
+# Ensure the workspace tmp directory exists
+mkdir -p ${WORKSPACE_TMP}
 
 
 function create_env() {
@@ -43,6 +47,10 @@ function create_env() {
         fi
     done
 
+    rapids-logger "Installing uv"
+    uv venv --seed .venv
+    source .venv/bin/activate
+
     rapids-logger "Creating Environment with extras: ${@}"
 
     UV_SYNC_STDERROUT=$(uv sync ${extras[@]} 2>&1)
@@ -57,6 +65,20 @@ function create_env() {
 
     rapids-logger "Final Environment"
     uv pip list
+}
+
+function get_lfs_files() {
+    rapids-logger "Installing git-lfs from apt"
+    apt update
+    apt install --no-install-recommends -y git-lfs
+
+    rapids-logger "Fetching LFS files"
+    git lfs install
+    git lfs fetch
+    git lfs pull
+
+    rapids-logger "git lfs ls-files"
+    git lfs ls-files
 }
 
 rapids-logger "Environment Variables"
