@@ -19,10 +19,6 @@ run-name: CI Pipeline
 on:
   workflow_call:
     inputs:
-      run_check:
-        description: 'Runs the check stage to verify code integrity'
-        required: true
-        type: boolean
       container:
         description: 'The container to use for all CI stages'
         required: true
@@ -63,7 +59,6 @@ permissions:
 
 jobs:
   check:
-    if: ${{ inputs.run_check }}
     name: Check
     runs-on: linux-amd64-cpu4
     timeout-minutes: 15
@@ -76,9 +71,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          fetch-tags: true
-          lfs: false
           path: 'agentiq'
 
       - name: Check
@@ -99,14 +91,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           fetch-tags: true
-          lfs: false
           path: 'agentiq'
 
       - name: Test:linux
         shell: bash
         run: ./agentiq/ci/scripts/github/tests.sh
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        # Upload test results even if the tests fail
+        if: ${{ always() }}
+        with:
+          name: "test-results"
+          path: "${{ github.workspace }}/tmp/*.xml"
+          if-no-files-found: error
+
 
   documentation:
     name: Documentation
@@ -122,12 +122,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          lfs: false
+          fetch-tags: true
           path: 'agentiq'
 
       - name: build_docs
         shell: bash
         run: ./agentiq/ci/scripts/github/docs.sh
+
+      - name: Upload Documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: "docs"
+          path: "${{ github.workspace }}/tmp/docs.tar.bz2"
+          if-no-files-found: error
+          compression-level: 0
+
 
   package:
     name: Build Wheels
@@ -143,9 +152,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          lfs: false
+          fetch-tags: true
           path: 'agentiq'
 
       - name: build_wheels
         shell: bash
         run: ./agentiq/ci/scripts/github/build_wheel.sh
+
+      - name: Upload Wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: "wheels"
+          path: "${{ github.workspace }}/tmp/wheels/**/*.whl"
+          if-no-files-found: error
+          compression-level: 9
