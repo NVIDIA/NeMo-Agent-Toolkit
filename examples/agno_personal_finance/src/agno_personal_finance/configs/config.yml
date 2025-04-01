@@ -16,20 +16,6 @@
 
 general:
   use_uvloop: true
-  telemetry:
-    logging:
-      console:
-        _type: console
-        level: WARN
-      file:
-        _type: file
-        path: /tmp/agno_personal_finance.log
-        level: DEBUG
-  tracing:
-    phoenix:
-      _type: phoenix
-      endpoint: http://localhost:6006/v1/traces
-      project: agno_personal_finance
 
 functions:
   serp_api_tool:
