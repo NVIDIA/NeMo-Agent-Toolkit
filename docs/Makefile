@@ -9,7 +9,7 @@ BUILDDIR      = build
 
 # By default clean and build the html documentation
 # Not cleaning doesn't save any time, and can lead to stale files
-default: clean html
+default: clean linkcheck html
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -20,7 +20,8 @@ clean:
 
 .PHONY: help Makefile
 
-# $(O) is meant as a shortcut for $(SPHINXOPTS).
-html: Makefile
+linkcheck:
 	@$(SPHINXBUILD) -b linkcheck "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+html: Makefile
 	@$(SPHINXBUILD) -b html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
