@@ -79,6 +79,6 @@ jobs:
       # Run checks for any PR branch
       run_check: ${{ fromJSON(needs.prepare.outputs.is_pr) }}
       # CI container
-      container: ghcr.io/astral-sh/uv:python3.12-bookworm
+      container: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
       # Info about the PR. Empty for non PR branches. Useful for extracting PR number, title, etc.
       pr_info: ${{ needs.prepare.outputs.pr_info }}
