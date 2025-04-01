@@ -165,4 +165,4 @@ jobs:
           name: "wheels"
           path: "${{ github.workspace }}/tmp/wheels/**/*.whl"
           if-no-files-found: error
-          compression-level: 0
+          compression-level: 9
