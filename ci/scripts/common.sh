@@ -31,7 +31,7 @@ if [[ "${GITLAB_CI}" == "true" ]]; then
    export COMMIT_SHA=${CI_COMMIT_SHA:-${COMMIT_SHA:-HEAD}}
 else
    echo "------------- 0 -------------"
-   if [[ "${CURRENT_BRANCH}" != ""]]; then
+   if [[ "${CURRENT_BRANCH}" != "" ]]; then
       export BASE_SHA=${BASE_SHA:-$(${SCRIPT_DIR}/gitutils.py get_merge_target --current-branch=${CURRENT_BRANCH})}
    else
       export BASE_SHA=${BASE_SHA:-$(${SCRIPT_DIR}/gitutils.py get_merge_target)}
