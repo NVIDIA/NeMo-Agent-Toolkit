@@ -54,7 +54,7 @@ function create_env() {
 
     rapids-logger "Creating Environment with extras: ${@}"
 
-    UV_SYNC_STDERROUT=$(uv sync ${extras[@]} 2>&1)
+    UV_SYNC_STDERROUT=$(uv sync --active ${extras[@]} 2>&1)
 
     # Environment should have already been created in the before_script
     if [[ "${UV_SYNC_STDERROUT}" =~ "warning:" ]]; then
