@@ -18,6 +18,9 @@ SCRIPT_DIR=$( dirname ${GITHUB_SCRIPT_DIR} )
 
 source ${SCRIPT_DIR}/common.sh
 
+echo "Installing Rapids GHA tools"
+wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | tar -xz -C /usr/local/bin
+
 AIQ_EXAMPLES=($(find ./examples/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
 AIQ_PACKAGES=($(find ./packages/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
 
