@@ -30,7 +30,6 @@ stages:
   - docs
   - package
   - upload
-  - trigger
 
 variables:
   UV_CACHE_DIR: .uv-cache
@@ -125,11 +124,3 @@ upload:artifactory:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_BRANCH == 'main'
-
-trigger:webhook:
-  stage: trigger
-  script:
-    - echo "Triggering webhook"
-    - ci/scripts/gitlab/trigger.sh
-  rules:
-    - if: $CI_PIPELINE_SOURCE != 'merge_request_event'
