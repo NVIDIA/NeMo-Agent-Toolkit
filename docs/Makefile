@@ -2,14 +2,14 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    = -j auto --show-traceback --fresh-env --write-all
+SPHINXOPTS    = -j 4 --show-traceback -W
 SPHINXBUILD   ?= sphinx-build
 SOURCEDIR     = source
 BUILDDIR      = build
 
 # By default clean and build the html documentation
 # Not cleaning doesn't save any time, and can lead to stale files
-default: clean html
+default: clean linkcheck html
 
 # Put it first so that "make" without argument is like "make help".
 help:
@@ -20,7 +20,8 @@ clean:
 
 .PHONY: help Makefile
 
-# $(O) is meant as a shortcut for $(SPHINXOPTS).
+linkcheck:
+	@$(SPHINXBUILD) -b linkcheck "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
 html: Makefile
 	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-	@$(SPHINXBUILD) -b linkcheck "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
