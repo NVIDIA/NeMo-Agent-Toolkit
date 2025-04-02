@@ -96,7 +96,7 @@ jobs:
           fetch-tags: true
           path: 'agentiq'
 
-      - name: Test:linux
+      - name: Test:linux:${{ matrix.arch }}
         shell: bash
         run: ./agentiq/ci/scripts/github/tests.sh
 
@@ -159,7 +159,7 @@ jobs:
           fetch-tags: true
           path: 'agentiq'
 
-      - name: build_wheels
+      - name: build_wheels:linux:${{ matrix.arch }}
         shell: bash
         run: ./agentiq/ci/scripts/github/build_wheel.sh
 
