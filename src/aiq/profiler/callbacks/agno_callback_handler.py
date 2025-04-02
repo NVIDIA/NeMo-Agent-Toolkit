@@ -39,8 +39,10 @@ logger = logging.getLogger(__name__)
 class AgnoProfilerHandler(BaseProfilerCallback):
     """
     A callback manager/handler for Agno that intercepts calls to:
+
       - Tool execution
       - LLM Calls
+
     to collect usage statistics (tokens, inputs, outputs, time intervals, etc.)
     and store them in AgentIQ's usage_stats queue for subsequent analysis.
     """

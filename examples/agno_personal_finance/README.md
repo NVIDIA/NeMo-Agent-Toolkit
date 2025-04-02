@@ -55,14 +55,8 @@ This personal financial planner was revised based on the [Awesome-LLM-App](https
 
 ### `Agno`
 
-- **Lightning Fast**: Agent creation is 10,000x faster than LangGraph.
-- **Model Agnostic**: Use any model, any provider, no lock-in.
-- **Multi Modal**: Native support for text, image, audio and video.
-- **Multi Agent**: Build teams of specialized agents.
-- **Memory Management**: Store agent sessions and state in a database.
-- **Knowledge Stores**: Use vector databases for RAG or dynamic few-shot learning.
-- **Structured Outputs**: Make Agents respond in a structured format.
-- **Monitoring**: Track agent sessions and performance in real-time on [agno.com](https://app.agno.com/).
+`Agno` is a lightweight library for building multimodal agents. Some of the key features of `Agno` include lightning fast, model agnostic, multimodal, multi agent, etc.  See Agno's README [here](https://github.com/agno-agi/agno/blob/main/README.md) for more information about the library.
+
 
 ## Installation and Setup
 
