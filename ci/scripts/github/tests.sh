@@ -21,7 +21,7 @@ GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 source ${GITHUB_SCRIPT_DIR}/common.sh
 get_lfs_files
 
-create_env group:dev extra:all
+create_env group:all extra:all
 rapids-logger "Git Version: $(git describe)"
 
 rapids-logger "Running tests"
