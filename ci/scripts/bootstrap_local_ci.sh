@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export WORKSPACE_TMP="$(pwd)/.tmp/local_ci_workspace"
+export WORKSPACE_TMP="${LOCAL_CI_TMP}/local_ci_workspace"
 mkdir -p ${WORKSPACE_TMP}
 
 if [[ "${USE_HOST_GIT}" == "1" ]]; then
