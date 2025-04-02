@@ -24,17 +24,6 @@ get_lfs_files
 create_env group:dev extra:all
 rapids-logger "Git Version: $(git describe)"
 
-# Install example packages in development mode
-rapids-logger "Installing example packages in development mode"
-for example_dir in ${AIQ_EXAMPLES[@]}; do
-  if [ -d "$example_dir" ]; then
-    rapids-logger "Installing $example_dir in development mode"
-    cd $example_dir
-    uv pip install -e .
-    cd $WORKSPACE
-  fi
-done
-
 rapids-logger "Running tests"
 set +e
 
