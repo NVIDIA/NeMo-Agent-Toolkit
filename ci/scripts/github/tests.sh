@@ -27,9 +27,9 @@ rapids-logger "Git Version: $(git describe)"
 rapids-logger "Running tests"
 set +e
 
-pytest --junit-xml=${PROJECT_ROOT}/report_pytest.xml \
+pytest --junit-xml=${WORKSPACE_TMP}/report_pytest.xml \
        --cov=aiq --cov-report term-missing \
-       --cov-report=xml:${PROJECT_ROOT}/report_pytest_coverage.xml
+       --cov-report=xml:${WORKSPACE_TMP}/report_pytest_coverage.xml
 PYTEST_RESULTS=$?
 
 exit ${PYTEST_RESULTS}
