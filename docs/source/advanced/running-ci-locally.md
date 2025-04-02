@@ -17,11 +17,11 @@
 
 # Running CI Locally
 
-The `ci/scripts/run_ci_local.sh` attempts to mirror the behavior of the Github Actions CI pipeline, by running the same CI scripts within the same Docker container that is used in the CI pipeline with the same environment variables needed.
+The `ci/scripts/run_ci_local.sh` attempts to mirror the behavior of the GitHub Actions CI pipeline, by running the same CI scripts within the same Docker container that is used in the CI pipeline with the same environment variables needed.
 
 By default the script will perform a `git clone` and checkout the latest commit. This requires the latest commit to be pushed. Alternately setting the environment variable `USE_HOST_GIT=1` the host's repo will be mounted inside the CI container, avoiding the need to commit/push changes. This option requires all Git LFS files to be checked out first.
 
-> Note: We don't set all of the same environment variables that Github Actions would set, just the ones needed by our own CI scripts.
+> Note: We don't set all of the same environment variables that GitHub Actions would set, just the ones needed by our own CI scripts.
 
 
 ## Prerequisites
@@ -51,7 +51,7 @@ To debug a CI issue, you can use the `bash` pseudo-stage. This will perform a gi
 ./ci/scripts/run_ci_local.sh bash
 ```
 
-From this point you can manually copy/paste the commands which would normally be run by the CI scripts one command at a time. The Github Actions CI scripts for AgentIQ are located in the `ci/scripts/github` directory, these scripts are Github Actions specific wrappers for scripts located in the `ci/scripts` directory.
+From this point you can manually copy/paste the commands which would normally be run by the CI scripts one command at a time. The GitHub Actions CI scripts for AgentIQ are located in the `ci/scripts/github` directory, these scripts are GitHub Actions specific wrappers for scripts located in the `ci/scripts` directory.
 
 ## CI Artifacts and Cache
 
