@@ -21,6 +21,7 @@ import aiohttp
 from pydantic import ValidationError
 from tqdm import tqdm
 
+from aiq.data_models.api_server import AIQResponseIntermediateStep
 from aiq.data_models.evaluate import EvalConfig
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
@@ -82,16 +83,14 @@ class EvaluationRemoteWorkflowHandler:
                         # This is an intermediate step
                         try:
                             step_data = json.loads(line[len(INTERMEDIATE_DATA_PREFIX):])
-                            # Convert the step data to the correct format
-                            step_payload = IntermediateStepPayload(event_type=IntermediateStepType(
-                                step_data.get("type", "CUSTOM_START")),
-                                                                   name=step_data.get("name"),
-                                                                   data=StreamEventData(input=step_data.get("input"),
-                                                                                        output=step_data.get("output"),
-                                                                                        chunk=step_data.get("chunk")),
-                                                                   metadata=step_data.get("metadata"))
-                            # Create an intermediate step directly
-                            intermediate_steps.append(IntermediateStep(payload=step_payload))
+                            response_intermediate = AIQResponseIntermediateStep.model_validate(step_data)
+                            # convert to IntermediateStep
+                            intermediate_step = IntermediateStep(payload=IntermediateStepPayload(
+                                event_type=IntermediateStepType(response_intermediate.type),
+                                name=response_intermediate.name,
+                                data=StreamEventData(input=response_intermediate.payload, output=None, chunk=None),
+                                metadata=None))
+                            intermediate_steps.append(intermediate_step)
                         except (json.JSONDecodeError, ValidationError) as e:
                             logger.error("Failed to parse intermediate step: %s", e)
                             continue
