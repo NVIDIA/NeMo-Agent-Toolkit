@@ -329,7 +329,6 @@ def save_gantt_chart(all_nodes: list[CallNode], output_path: str) -> None:
     ax.set_xlim(0, max_end - min_start)
     ax.set_xlabel("Time")
     ax.set_title("Gantt Chart of Nested Calls (All Examples)")
-
     plt.tight_layout()
     plt.savefig(output_path, dpi=150)
     plt.close(fig)
