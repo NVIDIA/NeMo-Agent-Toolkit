@@ -73,10 +73,14 @@ function get_lfs_files() {
     apt update
     apt install --no-install-recommends -y git-lfs
 
-    rapids-logger "Fetching LFS files"
-    git lfs install
-    git lfs fetch
-    git lfs pull
+    if [[ "${USE_HOST_GIT}" == "1" ]]; then
+        rapids-logger "Using host git, skipping git-lfs install"
+    else
+        rapids-logger "Fetching LFS files"
+        git lfs install
+        git lfs fetch
+        git lfs pull
+    fi
 
     rapids-logger "git lfs ls-files"
     git lfs ls-files
