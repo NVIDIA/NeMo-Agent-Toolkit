@@ -28,6 +28,7 @@ from aiq.eval.dataset_handler.dataset_handler import DatasetHandler
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
+from aiq.eval.utils.output_uploader import OutputUploader
 from aiq.runtime.session import AIQSessionManager
 
 logger = logging.getLogger(__name__)
@@ -269,6 +270,11 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         # Write the results to the output directory
         self.write_output(dataset_handler)
+
+        # Run custom scripts and upload evaluation outputs to S3
+        output_uploader = OutputUploader(self.eval_config.general.output)
+        output_uploader.run_custom_scripts()
+        output_uploader.upload_directory()
 
         return EvaluationRunOutput(
             workflow_output_file=self.workflow_output_file,
