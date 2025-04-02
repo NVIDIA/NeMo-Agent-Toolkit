@@ -38,8 +38,8 @@ fi
 export WORKSPACE=$(pwd)
 export LOCAL_CI=1
 export WORKSPACE_TMP="${LOCAL_CI_TMP}/local_ci_workspace"
-export UV_CACHE_DIR="${WORKSPACE_TMP}/uv_cache"
-export PRE_COMMIT_HOME="${WORKSPACE_TMP}/pre_commit"
+export UV_CACHE_DIR="${LOCAL_CI_TMP}/cache/uv"
+export PRE_COMMIT_HOME="${LOCAL_CI_TMP}/cache/pre_commit"
 mkdir -p ${UV_CACHE_DIR}
 
 GH_SCRIPT_DIR="${WORKSPACE}/ci/scripts/github"
