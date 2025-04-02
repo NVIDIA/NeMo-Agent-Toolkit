@@ -303,7 +303,7 @@ def save_gantt_chart(all_nodes: list[CallNode], output_path: str) -> None:
 
     # Sort calls by start_time
     sorted_nodes = sorted(all_nodes, key=lambda x: x.start_time)
-    min_start = min(node.start_time for node in sorted_nodes)
+    min_start = sorted_nodes[0].start_time
     max_end = max(node.end_time for node in sorted_nodes)
 
     color_map = {
