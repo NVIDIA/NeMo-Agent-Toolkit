@@ -14,9 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export WORKSPACE_TMP="${LOCAL_CI_TMP}/local_ci_workspace"
-mkdir -p ${WORKSPACE_TMP}
-
 if [[ "${USE_HOST_GIT}" == "1" ]]; then
     cd agentiq/
     git config --global --add safe.directory /agentiq
@@ -37,6 +34,11 @@ fi
 
 export WORKSPACE=$(pwd)
 export LOCAL_CI=1
+export WORKSPACE_TMP="${LOCAL_CI_TMP}/local_ci_workspace"
+export UV_CACHE_DIR="${WORKSPACE_TMP}/uv_cache"
+export PRE_COMMIT_HOME="${WORKSPACE_TMP}/pre_commit"
+mkdir -p ${UV_CACHE_DIR}
+
 GH_SCRIPT_DIR="${WORKSPACE}/ci/scripts/github"
 
 
