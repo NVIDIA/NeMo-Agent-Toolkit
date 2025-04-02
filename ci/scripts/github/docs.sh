@@ -33,3 +33,5 @@ DOCS_TAR=${WORKSPACE_TMP}/docs.tar.bz2
 rapids-logger "Archiving documentation to ${DOCS_TAR}"
 tar cvfj ${DOCS_TAR} build/html
 popd
+
+rapids-logger "Documentation build completed"
