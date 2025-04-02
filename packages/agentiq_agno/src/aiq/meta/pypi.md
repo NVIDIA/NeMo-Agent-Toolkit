@@ -18,6 +18,8 @@ limitations under the License.
 ![NVIDIA AgentIQ](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/agentiq_banner.png "AgentIQ banner image")
 
 # NVIDIA AgentIQ Subpackage
+
+<!-- Note: "Agno" is the official product name despite Vale spelling checker warnings -->
 This is a subpackage for Agno integration in AgentIQ.
 
 For more information about AgentIQ, please visit the [AgentIQ package](https://pypi.org/project/agentiq/).
