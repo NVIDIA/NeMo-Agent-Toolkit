@@ -14,19 +14,27 @@
 # limitations under the License.
 
 import asyncio
+import json
 import logging
 
 import aiohttp
 from pydantic import ValidationError
 from tqdm import tqdm
 
-from aiq.data_models.api_server import AIQGenerateResponse
 from aiq.data_models.evaluate import EvalConfig
+from aiq.data_models.intermediate_step import IntermediateStep
+from aiq.data_models.intermediate_step import IntermediateStepPayload
+from aiq.data_models.intermediate_step import IntermediateStepType
+from aiq.data_models.intermediate_step import StreamEventData
 from aiq.eval.config import EvaluationRunConfig
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 
 logger = logging.getLogger(__name__)
+
+# Constants for streaming response prefixes
+DATA_PREFIX = "data: "
+INTERMEDIATE_DATA_PREFIX = "intermediate_data: "
 
 
 class EvaluationRemoteWorkflowHandler:
@@ -34,7 +42,6 @@ class EvaluationRemoteWorkflowHandler:
     def __init__(self, config: EvaluationRunConfig, eval_config: EvalConfig):
         self.config = config
         self.eval_config = eval_config
-
         # Run metadata
         self.semaphore = asyncio.Semaphore(self.eval_config.general.max_concurrency)
 
@@ -43,12 +50,52 @@ class EvaluationRemoteWorkflowHandler:
         Sends a single input to the endpoint hosting the workflow and retrieves the response.
         """
         question = item.input_obj
-        # generate request is a dict with a single key "input_message"
+        # generate request format
         payload = {"input_message": question}
+
         try:
-            async with session.post(self.config.endpoint, json=payload) as response:
+            # Use the streaming endpoint
+            endpoint = f"{self.config.endpoint}/generate/stream"
+            async with session.post(endpoint, json=payload) as response:
                 response.raise_for_status()  # Raise an exception for HTTP errors
-                json_response = await response.json()
+
+                # Initialize variables to store the response
+                final_response = None
+                intermediate_steps = []
+
+                # Process the streaming response
+                async for line in response.content:
+                    line = line.decode('utf-8').strip()
+                    if not line:
+                        continue
+
+                    if line.startswith(DATA_PREFIX):
+                        # This is a generate response chunk
+                        try:
+                            chunk_data = json.loads(line[len(DATA_PREFIX):])
+                            if chunk_data.get("output"):
+                                final_response = chunk_data.get("output")
+                        except json.JSONDecodeError as e:
+                            logger.error("Failed to parse generate response chunk: %s", e)
+                            continue
+                    elif line.startswith(INTERMEDIATE_DATA_PREFIX):
+                        # This is an intermediate step
+                        try:
+                            step_data = json.loads(line[len(INTERMEDIATE_DATA_PREFIX):])
+                            # Convert the step data to the correct format
+                            step_payload = IntermediateStepPayload(event_type=IntermediateStepType(
+                                step_data.get("type", "CUSTOM_START")),
+                                                                   name=step_data.get("name"),
+                                                                   data=StreamEventData(input=step_data.get("input"),
+                                                                                        output=step_data.get("output"),
+                                                                                        chunk=step_data.get("chunk")),
+                                                                   metadata=step_data.get("metadata"))
+                            # Create an intermediate step directly
+                            intermediate_steps.append(IntermediateStep(payload=step_payload))
+                        except (json.JSONDecodeError, ValidationError) as e:
+                            logger.error("Failed to parse intermediate step: %s", e)
+                            continue
+
         except aiohttp.ClientError as e:
             # Handle connection or HTTP-related errors
             logger.error("Request failed for question %s: %s", question, e)
@@ -56,17 +103,9 @@ class EvaluationRemoteWorkflowHandler:
             item.trajectory = []
             return
 
-        try:
-            generate_response = AIQGenerateResponse.model_validate(json_response)
-        except ValidationError as e:
-            logger.error("Validation failed for question: %s\nResponse: %s\nError: %s", question, json_response, e)
-            item.output_obj = None
-            item.trajectory = []
-            return
-
         # Extract and fill the item with the response and intermediate steps
-        item.output_obj = generate_response.output
-        item.trajectory = generate_response.intermediate_steps
+        item.output_obj = final_response
+        item.trajectory = intermediate_steps
         return
 
     async def run_workflow_remote_with_limits(self, session: aiohttp.ClientSession, item: EvalInputItem, pbar: tqdm):
