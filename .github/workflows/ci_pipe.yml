@@ -80,12 +80,14 @@ jobs:
   test:
     name: Test
     needs: [check]
-    runs-on:  linux-amd64-cpu4
+    runs-on:  linux-${{ matrix.arch }}-cpu4
     timeout-minutes: 30
     container:
       image: ${{ inputs.container }}
     strategy:
       fail-fast: true
+      matrix:
+        arch: ["amd64", "arm64"]
 
     steps:
       - name: Checkout
@@ -141,12 +143,14 @@ jobs:
   package:
     name: Build Wheels
     needs: [check]
-    runs-on: linux-amd64-cpu4
+    runs-on: linux-${{ matrix.arch }}-cpu4
     timeout-minutes: 60
     container:
       image: ${{ inputs.container }}
     strategy:
       fail-fast: true
+      matrix:
+        arch: ["amd64", "arm64"]
 
     steps:
       - name: Checkout
