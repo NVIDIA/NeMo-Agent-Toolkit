@@ -20,6 +20,6 @@ limitations under the License.
 # NVIDIA AgentIQ Subpackage
 
 <!-- Note: "Agno" is the official product name despite Vale spelling checker warnings -->
-This is a subpackage for Agno integration in AgentIQ.
+This is a subpackage for `Agno` integration in AgentIQ.
 
 For more information about AgentIQ, please visit the [AgentIQ package](https://pypi.org/project/agentiq/).

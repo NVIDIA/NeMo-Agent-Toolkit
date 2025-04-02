@@ -19,7 +19,7 @@ limitations under the License.
 # Personal Finance
 
 <!-- Note: "Agno" is the official product name despite Vale spelling checker warnings -->
-Built on [Agno](https://github.com/agno-agi/agno) and AgentIQ, this workflow is a personal financial planner that generates personalized financial plans using NVIDIA NIM (can be customized to use OpenAI models). It automates the process of researching, planning, and creating tailored budgets, investment strategies, and savings goals, empowering you to take control of your financial future with ease.
+Built on [`Agno`](https://github.com/agno-agi/agno) and AgentIQ, this workflow is a personal financial planner that generates personalized financial plans using NVIDIA NIM (can be customized to use OpenAI models). It automates the process of researching, planning, and creating tailored budgets, investment strategies, and savings goals, empowering you to take control of your financial future with ease.
 
 This personal financial planner was revised based on the [Awesome-LLM-App](https://github.com/Shubhamsaboo/awesome-llm-apps) GitHub repo's [AI Personal Finance Planner](https://github.com/Shubhamsaboo/awesome-llm-apps/tree/main/ai_agent_tutorials/ai_personal_finance_agent) sample.
 
@@ -53,7 +53,7 @@ This personal financial planner was revised based on the [Awesome-LLM-App](https
 - **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
 - **Ease of Use:** Simplifies developer experience and deployment.
 
-### Agno
+### `Agno`
 
 - **Lightning Fast**: Agent creation is 10,000x faster than LangGraph.
 - **Model Agnostic**: Use any model, any provider, no lock-in.
