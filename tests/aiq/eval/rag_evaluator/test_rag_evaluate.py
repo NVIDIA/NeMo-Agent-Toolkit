@@ -151,7 +151,6 @@ def test_ragas_to_eval_output_unexpected_entries(rag_evaluator,
     assert round(eval_output.average_score, 4) == round(expected_avg_score, 4)
 
 
-@pytest.mark.skip(reason="Issue #50")
 async def test_rag_evaluate_success(rag_evaluator, rag_eval_input, ragas_judge_llm, ragas_metrics):
     """
     Test evaluate function to verify the following functions are called
@@ -179,20 +178,22 @@ async def test_rag_evaluate_success(rag_evaluator, rag_eval_input, ragas_judge_l
 
         # Assertions to ensure correct function calls
         mock_eval_input_to_ragas.assert_called_once_with(rag_eval_input)
-        mock_ragas_evaluate.assert_called_once_with(dataset=dataset,
-                                                    metrics=ragas_metrics,
-                                                    show_progress=True,
-                                                    llm=ragas_judge_llm)
+        mock_ragas_evaluate.assert_called_once()
+        called_kwargs = mock_ragas_evaluate.call_args.kwargs
+
+        assert called_kwargs["dataset"] == dataset
+        assert called_kwargs["metrics"] == ragas_metrics
+        assert called_kwargs["show_progress"] is True
+        assert called_kwargs["llm"] == ragas_judge_llm
         mock_ragas_to_eval_output.assert_called_once_with(rag_eval_input, mock_results_dataset)
 
         # Validate final output
         assert output == mock_output
 
 
-@pytest.mark.skip(reason="Issue #50")
 async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input, ragas_judge_llm, ragas_metrics):
     """
-    Validate evalute processing when ragas.evaluate raises an exception. Also
+    Validate evaluate processing when ragas.evaluate raises an exception. Also
     eval_input_to_ragas and ragas_to_eval_output are run as-is (not mocked) to validate
     their handling of the input and failed-output
     """
@@ -209,10 +210,13 @@ async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input, ragas_judge_l
 
         ragas_dataset = rag_evaluator.eval_input_to_ragas(eval_input=rag_eval_input)
         # Validate ragas.evaluate was called and failed
-        mock_ragas_evaluate.assert_called_once_with(dataset=ragas_dataset,
-                                                    metrics=ragas_metrics,
-                                                    show_progress=True,
-                                                    llm=ragas_judge_llm)
+        mock_ragas_evaluate.assert_called_once()
+        called_kwargs = mock_ragas_evaluate.call_args.kwargs
+
+        assert called_kwargs["dataset"] == ragas_dataset
+        assert called_kwargs["metrics"] == ragas_metrics
+        assert called_kwargs["show_progress"] is True
+        assert called_kwargs["llm"] == ragas_judge_llm
 
         # Ensure output is valid with an average_score of 0.0
         assert isinstance(output, EvalOutput)
