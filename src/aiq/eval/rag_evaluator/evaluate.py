@@ -21,10 +21,12 @@ from ragas import SingleTurnSample
 from ragas.dataset_schema import EvaluationResult
 from ragas.llms import LangchainLLMWrapper
 from ragas.metrics import Metric
+from tqdm import tqdm
 
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.evaluator.evaluator_model import EvalOutputItem
+from aiq.eval.utils.tqdm_position_registry import TqdmPositionRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -116,14 +118,21 @@ class RAGEvaluator:
         from ragas import evaluate as ragas_evaluate
 
         ragas_dataset = self.eval_input_to_ragas(eval_input)
+        tqdm_position = TqdmPositionRegistry.claim()
+        first_metric_name = self.metrics[0].name
+        pbar = tqdm(total=len(ragas_dataset), desc=f"Evaluating Ragas {first_metric_name}", position=tqdm_position)
         try:
             results_dataset = ragas_evaluate(dataset=ragas_dataset,
                                              metrics=self.metrics,
                                              show_progress=True,
-                                             llm=self.evaluator_llm)
+                                             llm=self.evaluator_llm,
+                                             _pbar=pbar)
         except Exception as e:
             # On exception we still continue with other evaluators. Log and return an avg_score of 0.0
             logger.exception("Error evaluating ragas metric, Error: %s", e, exc_info=True)
             results_dataset = None
+        finally:
+            pbar.close()
+            TqdmPositionRegistry.release(tqdm_position)
 
         return self.ragas_to_eval_output(eval_input, results_dataset)
