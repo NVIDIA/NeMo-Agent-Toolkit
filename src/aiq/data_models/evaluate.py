@@ -59,6 +59,11 @@ class EvalGeneralConfig(BaseModel):
     # Inference profiler
     profiler: ProfilerConfig | None = None
 
+    # overwrite the output_dir with the output config if present
+    def __post_init__(self):
+        if self.output and self.output.dir:
+            self.output_dir = self.output.dir
+
 
 class EvalConfig(BaseModel):
 
