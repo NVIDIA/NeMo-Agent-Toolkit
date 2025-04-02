@@ -21,7 +21,7 @@ from pathlib import Path
 import boto3
 from botocore.exceptions import NoCredentialsError
 
-from aiq.data_models.dataset_handler import EvalOutputConfig
+from aiq.data_models.evaluate import EvalOutputConfig
 
 logger = logging.getLogger(__name__)
 
