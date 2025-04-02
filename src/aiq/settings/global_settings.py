@@ -155,7 +155,7 @@ class Settings(HashableBaseModel):
         configuration_directory = os.getenv("AIQ_CONFIG_DIR", user_config_dir(appname="aiq"))
 
         if not os.path.exists(configuration_directory):
-            os.mkdir(configuration_directory)
+            os.makedirs(configuration_directory, exist_ok=True)
 
         configuration_file = os.path.join(configuration_directory, "config.json")
 
