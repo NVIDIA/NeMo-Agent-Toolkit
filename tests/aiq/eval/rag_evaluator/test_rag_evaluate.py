@@ -193,7 +193,7 @@ async def test_rag_evaluate_success(rag_evaluator, rag_eval_input, ragas_judge_l
 
 async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input, ragas_judge_llm, ragas_metrics):
     """
-    Validate evalute processing when ragas.evaluate raises an exception. Also
+    Validate evaluate processing when ragas.evaluate raises an exception. Also
     eval_input_to_ragas and ragas_to_eval_output are run as-is (not mocked) to validate
     their handling of the input and failed-output
     """
