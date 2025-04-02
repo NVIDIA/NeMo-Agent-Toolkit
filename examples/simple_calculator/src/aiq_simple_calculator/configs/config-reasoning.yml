@@ -33,6 +33,8 @@ functions:
     _type: aiq_simple_calculator/calculator_divide
   current_datetime:
     _type: current_datetime
+  calculator_subtract:
+    _type: calculator_subtract
   react_agent:
     _type: tool_calling_agent
     tool_names:
@@ -40,6 +42,7 @@ functions:
       - calculator_inequality
       - current_datetime
       - calculator_divide
+      - calculator_subtract
     llm_name: nim_mistral
     verbose: true
     handle_tool_errors: true
