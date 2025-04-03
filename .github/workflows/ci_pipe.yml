@@ -143,7 +143,7 @@ jobs:
   package:
     name: Build Wheels
     needs: [check]
-    runs-on: linux-${{ matrix.arch }}-cpu4
+    runs-on: linux-amd64-cpu4
     timeout-minutes: 60
     container:
       image: ${{ inputs.container }}
@@ -159,14 +159,14 @@ jobs:
           fetch-tags: true
           path: 'agentiq'
 
-      - name: build_wheels:linux:${{ matrix.arch }}
+      - name: build_wheels
         shell: bash
         run: ./agentiq/ci/scripts/github/build_wheel.sh
 
       - name: Upload Wheels
         uses: actions/upload-artifact@v4
         with:
-          name: "wheels-${{ matrix.arch }}"
+          name: "wheels"
           path: "${{ github.workspace }}/tmp/wheels/**/*.whl"
           if-no-files-found: error
           compression-level: 9
