@@ -39,8 +39,8 @@ class AIQSessionManager:
 
     def __init__(self, workflow: Workflow, max_concurrency: int = 8):
         """
-        The AIQRunner class is used to run a workflow. It handles converting input and output data types and running the
-        workflow with the specified concurrency.
+        The AIQSessionManager class is used to run and manage a user workflow session. It runs and manages the context,
+        and configuration of a workflow with the specified concurrency.
 
         Parameters
         ----------

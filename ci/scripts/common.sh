@@ -26,12 +26,12 @@ export PY_DIRS="${PY_ROOT} ${PROJECT_ROOT}/packages ${PROJECT_ROOT}/tests ${PROJ
 export AIQ_LOG_LEVEL=WARN
 export CI_MERGE_REQUEST_TARGET_BRANCH_NAME=${CI_MERGE_REQUEST_TARGET_BRANCH_NAME:-"develop"}
 
-if [[ "${GITHUB_ACTIONS}" == "true" ]]; then
-   export BASE_SHA=${BASE_SHA:-$(${SCRIPT_DIR}/gitutils.py get_merge_target)}
-   export COMMIT_SHA=${COMMIT_SHA:-${GITHUB_SHA}}
-else
+if [[ "${GITLAB_CI}" == "true" ]]; then
    export BASE_SHA=${BASE_SHA:-${CI_MERGE_REQUEST_TARGET_BRANCH_SHA:-${CI_MERGE_REQUEST_DIFF_BASE_SHA:-$(${SCRIPT_DIR}/gitutils.py get_merge_target --current-branch=${CURRENT_BRANCH})}}}
    export COMMIT_SHA=${CI_COMMIT_SHA:-${COMMIT_SHA:-HEAD}}
+else
+   export BASE_SHA=${BASE_SHA:-$(${SCRIPT_DIR}/gitutils.py get_merge_target)}
+   export COMMIT_SHA=${COMMIT_SHA:-${GITHUB_SHA:-HEAD}}
 fi
 
 
@@ -39,9 +39,6 @@ export PYTHON_FILE_REGEX='^(\.\/)?(?!\.|build|external).*\.(py|pyx|pxd)$'
 
 # Use these options to skip any of the checks
 export SKIP_COPYRIGHT=${SKIP_COPYRIGHT:-""}
-
-# Set BUILD_DIR to use a different build folder
-export BUILD_DIR=${BUILD_DIR:-"${PROJECT_ROOT}/build"}
 
 
 # Determine the merge base as the root to compare against. Optionally pass in a

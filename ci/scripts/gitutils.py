@@ -117,8 +117,7 @@ class GitWrapper:
     def get_repo_owner_name():
 
         # pylint: disable=anomalous-backslash-in-string
-        return "chat-labs/OpenSource/" + _run_cmd(
-            "git remote -v | grep -oP '/\K\w*(?=\.git \(fetch\))' | head -1")  # noqa: W605
+        return "NVIDIA/" + _run_cmd("git remote -v | grep -oP '/\\K\\w*(?=\\.git \\(fetch\\))' | head -1")
 
     @functools.lru_cache
     @staticmethod
