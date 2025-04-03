@@ -20,24 +20,22 @@ import pytest
 from aiq.tool.retriever import AIQRetrieverConfig
 
 
-@pytest.mark.parametrize(
-    "config_values",
-    [
-        {
-            "retriever": "test_retriever",
-            "raise_errors": False,
-            "topic": "test_topic",
-            "description": "test_description"
-        },
-        {
-            "retriever": "test_retriever",
-        },
-    ],
-    ids=[
-        "all_fields_provided",
-        "only_required_fields",
-    ]
-)
+@pytest.mark.parametrize("config_values",
+                         [
+                             {
+                                 "retriever": "test_retriever",
+                                 "raise_errors": False,
+                                 "topic": "test_topic",
+                                 "description": "test_description"
+                             },
+                             {
+                                 "retriever": "test_retriever",
+                             },
+                         ],
+                         ids=[
+                             "all_fields_provided",
+                             "only_required_fields",
+                         ])
 def test_retriever_config(config_values: dict[str, typing.Any]):
     """
     Test the AIQRetrieverConfig class.
