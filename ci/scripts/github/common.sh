@@ -47,13 +47,14 @@ function create_env() {
         fi
     done
 
-    rapids-logger "Installing uv"
-    uv venv --seed .venv
-    source .venv/bin/activate
+    rapids-logger "Creating uv env"
+    VENV_DIR="${WORKSPACE_TMP}/.venv"
+    uv venv --seed ${VENV_DIR}
+    source ${VENV_DIR}/bin/activate
 
     rapids-logger "Creating Environment with extras: ${@}"
 
-    UV_SYNC_STDERROUT=$(uv sync ${extras[@]} 2>&1)
+    UV_SYNC_STDERROUT=$(uv sync --active ${extras[@]} 2>&1)
 
     # Environment should have already been created in the before_script
     if [[ "${UV_SYNC_STDERROUT}" =~ "warning:" ]]; then
@@ -72,10 +73,14 @@ function get_lfs_files() {
     apt update
     apt install --no-install-recommends -y git-lfs
 
-    rapids-logger "Fetching LFS files"
-    git lfs install
-    git lfs fetch
-    git lfs pull
+    if [[ "${USE_HOST_GIT}" == "1" ]]; then
+        rapids-logger "Using host git, skipping git-lfs install"
+    else
+        rapids-logger "Fetching LFS files"
+        git lfs install
+        git lfs fetch
+        git lfs pull
+    fi
 
     rapids-logger "git lfs ls-files"
     git lfs ls-files
