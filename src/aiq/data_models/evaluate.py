@@ -18,6 +18,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import Discriminator
+from pydantic import model_validator
 
 from aiq.data_models.common import TypedBaseModel
 from aiq.data_models.dataset_handler import EvalDatasetConfig
@@ -42,6 +43,8 @@ class EvalOutputConfig(BaseModel):
     custom_script: list[EvalCustomScriptConfig] = []
     # S3 config for uploading the contents of the output directory
     s3: EvalS3Config | None = None
+    # Whether to cleanup the output directory before running the workflow
+    cleanup: bool = True
 
 
 class EvalGeneralConfig(BaseModel):
@@ -60,9 +63,12 @@ class EvalGeneralConfig(BaseModel):
     profiler: ProfilerConfig | None = None
 
     # overwrite the output_dir with the output config if present
-    def __post_init__(self):
-        if self.output and self.output.dir:
-            self.output_dir = self.output.dir
+    @model_validator(mode="before")
+    @classmethod
+    def override_output_dir(cls, values):
+        if values.get("output") and values["output"].get("dir"):
+            values["output_dir"] = values["output"]["dir"]
+        return values
 
 
 class EvalConfig(BaseModel):

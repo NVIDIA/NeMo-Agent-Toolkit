@@ -15,6 +15,7 @@
 
 import asyncio
 import logging
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -166,6 +167,12 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         await profiler_runner.run(all_stats)
 
+    def cleanup_output_directory(self):
+        '''Remove contents of the output directory if it exists'''
+        if self.eval_config.general.output and self.eval_config.general.output.dir and \
+                self.eval_config.general.output.dir.exists():
+            shutil.rmtree(self.eval_config.general.output.dir)
+
     def write_output(self, dataset_handler: DatasetHandler):
         workflow_output_file = self.eval_config.general.output_dir / "workflow_output.json"
         workflow_output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -232,6 +239,9 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         self.eval_config = config.eval
         logger.debug("Loaded evaluation configuration: %s", self.eval_config)
 
+        # Cleanup the output directory
+        if self.eval_config.general.output and self.eval_config.general.output.cleanup:
+            self.cleanup_output_directory()
         # Load the input dataset
         # For multiple datasets, one handler per dataset can be created
         dataset_config = self.eval_config.general.dataset  # Currently only one dataset is supported
