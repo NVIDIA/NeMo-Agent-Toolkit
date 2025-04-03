@@ -149,8 +149,6 @@ jobs:
       image: ${{ inputs.container }}
     strategy:
       fail-fast: true
-      matrix:
-        arch: ["amd64", "arm64"]
 
     steps:
       - name: Checkout
