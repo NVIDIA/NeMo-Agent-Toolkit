@@ -30,6 +30,10 @@ logger = logging.getLogger(__name__)
 class OutputUploader:
     """
     Run custom scripts and upload evaluation outputs to S3.
+    Notes:
+    Some of the code here can be converted to async functions via aioboto3.
+    However this is the final step in the evaluation pipeline, so there
+    doesn't seem to be a need to do this. It can be done in the future if needed.
     """
 
     def __init__(self, output_config: EvalOutputConfig):
