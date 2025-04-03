@@ -13,14 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
 import os
 import subprocess
 import sys
 from pathlib import Path
 
-import boto3
+import aioboto3
 from botocore.exceptions import NoCredentialsError
+from tqdm import tqdm
 
 from aiq.data_models.evaluate import EvalOutputConfig
 
@@ -44,27 +46,18 @@ class OutputUploader:
     def s3_config(self):
         return self.output_config.s3
 
-    @property
-    def s3_client(self):
-        """Lazy init the S3 client."""
-        if not self._s3_client:
-            try:
-                self._s3_client = boto3.client("s3",
-                                               endpoint_url=self.s3_config.endpoint_url,
-                                               aws_access_key_id=self.s3_config.access_key,
-                                               aws_secret_access_key=self.s3_config.secret_key)
-            except NoCredentialsError as e:
-                logger.error("AWS credentials not available: %s", e)
-                raise
-            except Exception as e:
-                logger.error("Failed to initialize S3 client: %s", e)
-                raise
-        return self._s3_client
+    async def _upload_file(self, s3_client, bucket, s3_key, local_path, pbar):
+        try:
+            await s3_client.upload_file(str(local_path), bucket, s3_key)
+            logger.info("Uploaded %s to s3://%s/%s", local_path, bucket, s3_key)
+            pbar.update(1)
+        except Exception as e:
+            logger.error("Failed to upload %s to s3://%s/%s: %s", local_path, bucket, s3_key, e)
+            raise
 
-    def upload_directory(self):
+    async def upload_directory(self):
         """
-        Upload the contents of the local output directory to the remote S3 bucket.
-        Preserves relative file structure.
+        Upload the contents of the local output directory to the remote S3 bucket in parallel.
         """
         if not self.output_config.s3:
             logger.info("No S3 config provided; skipping upload.")
@@ -74,19 +67,36 @@ class OutputUploader:
         bucket = self.s3_config.bucket
         remote_prefix = self.output_config.remote_dir or ""
 
+        file_entries = []
         for root, _, files in os.walk(local_dir):
             for file in files:
                 local_path = Path(root) / file
                 relative_path = local_path.relative_to(local_dir)
                 s3_path = Path(remote_prefix) / relative_path
                 s3_key = str(s3_path).replace("\\", "/")  # Normalize for S3
+                file_entries.append((local_path, s3_key))
 
-                try:
-                    self.s3_client.upload_file(str(local_path), bucket, s3_key)
-                    logger.info("Uploaded %s to s3://%s/%s", local_path, bucket, s3_key)
-                except Exception as e:
-                    logger.error("Failed to upload %s to s3://%s/%s: %s", local_path, bucket, s3_key, e)
-                    raise
+        session = aioboto3.Session()
+        try:
+            async with session.client(
+                    "s3",
+                    endpoint_url=self.s3_config.endpoint_url,
+                    aws_access_key_id=self.s3_config.access_key,
+                    aws_secret_access_key=self.s3_config.secret_key,
+            ) as s3_client:
+                with tqdm(total=len(file_entries), desc="Uploading files to S3") as pbar:
+                    upload_tasks = [
+                        self._upload_file(s3_client, bucket, s3_key, local_path, pbar)
+                        for local_path, s3_key in file_entries
+                    ]
+                    await asyncio.gather(*upload_tasks)
+
+        except NoCredentialsError as e:
+            logger.error("AWS credentials not available: %s", e)
+            raise
+        except Exception as e:
+            logger.error("Failed to upload files to S3: %s", e)
+            raise
 
     def run_custom_scripts(self):
         """
