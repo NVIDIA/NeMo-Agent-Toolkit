@@ -105,7 +105,7 @@ jobs:
         # Upload test results even if the tests fail
         if: ${{ always() }}
         with:
-          name: "test-results"
+          name: "test-results-${{ matrix.arch }}"
           path: "${{ github.workspace }}/tmp/*.xml"
           if-no-files-found: error
 
@@ -166,7 +166,7 @@ jobs:
       - name: Upload Wheels
         uses: actions/upload-artifact@v4
         with:
-          name: "wheels"
+          name: "wheels-${{ matrix.arch }}"
           path: "${{ github.workspace }}/tmp/wheels/**/*.whl"
           if-no-files-found: error
           compression-level: 9
