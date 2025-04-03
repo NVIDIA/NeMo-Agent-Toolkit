@@ -83,29 +83,28 @@ class OutputUploader:
                     logger.error("Failed to upload %s to s3://%s/%s: %s", local_path, bucket, s3_key, e)
                     raise
 
+    def run_custom_scripts(self):
+        """
+        Run custom scripts defined in the EvalOutputConfig.
+        Each script is run with its kwargs passed as command-line arguments (if any).
+        """
+        for script_config in self.output_config.custom_script:
+            script_path = script_config.script
+            if not script_path.exists():
+                logger.error("Custom script %s does not exist.", script_path)
+                continue
 
-def run_custom_scripts(self):
-    """
-    Run custom scripts defined in the EvalOutputConfig.
-    Each script is run with its kwargs passed as command-line arguments (if any).
-    """
-    for script_config in self.output_config.custom_script:
-        script_path = script_config.script
-        if not script_path.exists():
-            logger.error("Custom script %s does not exist.", script_path)
-            continue
+            args = [str(script_path)]
 
-        args = [str(script_path)]
+            if script_config.kwargs:
+                for key, value in script_config.kwargs.items():
+                    args.append(f"--{key}")
+                    args.append(str(value))
 
-        if script_config.kwargs:
-            for key, value in script_config.kwargs.items():
-                args.append(f"--{key}")
-                args.append(str(value))
-
-        try:
-            logger.info("Running custom script: %s %s", script_path, " ".join(args[1:]))
-            subprocess.run(args, check=True)
-            logger.info("Custom script %s completed successfully.", script_path)
-        except subprocess.CalledProcessError as e:
-            logger.error("Custom script %s failed: %s", script_path, e)
-            raise
+            try:
+                logger.info("Running custom script: %s %s", script_path, " ".join(args[1:]))
+                subprocess.run(args, check=True)
+                logger.info("Custom script %s completed successfully.", script_path)
+            except subprocess.CalledProcessError as e:
+                logger.error("Custom script %s failed: %s", script_path, e)
+                raise
