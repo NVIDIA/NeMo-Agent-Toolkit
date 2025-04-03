@@ -16,6 +16,7 @@
 import logging
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import boto3
@@ -85,26 +86,28 @@ class OutputUploader:
 
     def run_custom_scripts(self):
         """
-        Run custom scripts defined in the EvalOutputConfig.
-        Each script is run with its kwargs passed as command-line arguments (if any).
+        Run custom Python scripts defined in the EvalOutputConfig.
+        Each script is run with its kwargs passed as command-line arguments.
         """
-        for script_config in self.output_config.custom_script:
+        for script_name, script_config in self.output_config.custom_scripts.items():
             script_path = script_config.script
             if not script_path.exists():
                 logger.error("Custom script %s does not exist.", script_path)
                 continue
 
-            args = [str(script_path)]
-
+            # use python interpreter
+            args = [sys.executable, str(script_path)]
             if script_config.kwargs:
                 for key, value in script_config.kwargs.items():
                     args.append(f"--{key}")
                     args.append(str(value))
 
+            display_args = " ".join(f'"{arg}"' if " " in arg else arg for arg in args[1:])
+
             try:
-                logger.info("Running custom script: %s %s", script_path, " ".join(args[1:]))
-                subprocess.run(args, check=True)
+                logger.info("Running custom script: %s %s", script_path, display_args)
+                subprocess.run(args, check=True, text=True)
                 logger.info("Custom script %s completed successfully.", script_path)
             except subprocess.CalledProcessError as e:
-                logger.error("Custom script %s failed: %s", script_path, e)
+                logger.error("Custom script %s failed with return code %s", script_path, e.returncode)
                 raise

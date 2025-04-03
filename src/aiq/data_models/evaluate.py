@@ -40,7 +40,7 @@ class EvalOutputConfig(BaseModel):
     # S3 prefix for the workflow and evaluation results
     remote_dir: str | None = None
     # Custom scripts to run after the workflow and evaluation results are saved
-    custom_script: list[EvalCustomScriptConfig] = []
+    custom_scripts: dict[str, EvalCustomScriptConfig] = {}
     # S3 config for uploading the contents of the output directory
     s3: EvalS3Config | None = None
     # Whether to cleanup the output directory before running the workflow
