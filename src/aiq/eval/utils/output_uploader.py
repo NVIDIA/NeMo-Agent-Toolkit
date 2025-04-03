@@ -62,7 +62,7 @@ class OutputUploader:
         Preserves relative file structure.
         """
         if not self.output_config.s3:
-            logger.warning("No S3 config provided; skipping upload.")
+            logger.info("No S3 config provided; skipping upload.")
             return
 
         local_dir = self.output_config.dir

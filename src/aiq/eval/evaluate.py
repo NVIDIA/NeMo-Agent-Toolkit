@@ -282,9 +282,10 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         self.write_output(dataset_handler)
 
         # Run custom scripts and upload evaluation outputs to S3
-        output_uploader = OutputUploader(self.eval_config.general.output)
-        output_uploader.run_custom_scripts()
-        output_uploader.upload_directory()
+        if self.eval_config.general.output:
+            output_uploader = OutputUploader(self.eval_config.general.output)
+            output_uploader.run_custom_scripts()
+            output_uploader.upload_directory()
 
         return EvaluationRunOutput(
             workflow_output_file=self.workflow_output_file,
