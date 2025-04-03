@@ -55,7 +55,7 @@ This personal financial planner was revised based on the [Awesome-LLM-App](https
 
 ### `Agno`
 
-`Agno` is a lightweight library for building multimodal agents. Some of the key features of `Agno` include lightning fast, model agnostic, multimodal, multi agent, etc.  See Agno's README [here](https://github.com/agno-agi/agno/blob/main/README.md) for more information about the library.
+`Agno` is a lightweight library for building multimodal agents. Some of the key features of `Agno` include lightning fast, model agnostic, multimodal, multi agent, etc.  See `Agno` README [here](https://github.com/agno-agi/agno/blob/main/README.md) for more information about the library.
 
 
 ## Installation and Setup
