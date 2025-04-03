@@ -131,6 +131,7 @@ AgentIQ is a Python library that doesn’t require a GPU to run the workflow by 
 1. Code!
     - Make sure to update unit tests!
     - Ensure the [license headers are set properly](#licensing).
+1. Verify your changes by [running CI locally](./running-ci-locally.md) with the `./ci/scripts/run_ci_local.sh all` command.
 1. When done, [create your pull request](https://github.com/NVIDIA/AgentIQ/compare). Select `develop` as the `Target branch` of your pull request.
     - Ensure the body of the pull request references the issue you are working on in the form of `Closes #<issue number>`.
 1. Wait for other developers to review your code and update code as needed.
