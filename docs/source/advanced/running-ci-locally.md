@@ -67,7 +67,7 @@ Where `<arch>` is the architecture of the host machine at time of writing this w
 > Note: In some situations it may be necessary to delete the `.tmp/local_ci_tmp` directory to clear out old artifacts and caches. This is especially true if you are switching between branches or if you are running into issues with the CI pipeline.
 
 ## Multi-Architecture CI
-To run the CI pipeline on a different architecture other than your own, qemu can be used to emulate the target architecture.
+To run the CI pipeline on a different architecture other than your own, QEMU can be used to emulate the target architecture.
 
 > Note: This assumes you have an amd64 system and want to run the CI pipeline on arm64. If you are using an arm64 and want to emulate amd64, you will need to adjust the commands accordingly.
 
@@ -76,7 +76,7 @@ On an apt based system, this can be done with the following commands:
 sudo apt install qemu-utils qemu-system-arm qemu-user-static
 ```
 
-Register qemu with Docker:
+Register QEMU with Docker:
 ```bash
 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 ```
