@@ -26,6 +26,7 @@ import pytest
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.dataset_handler import EvalDatasetJsonConfig
 from aiq.data_models.evaluate import EvalConfig
+from aiq.data_models.evaluate import EvalOutputConfig
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
@@ -125,7 +126,8 @@ def default_eval_config(mock_evaluator):
     """Fixture for default evaluation configuration."""
     eval_config = EvalConfig()
     eval_config.general.dataset = EvalDatasetJsonConfig()
-    eval_config.general.output_dir = Path(".tmp/aiq/examples/mock/")
+    eval_config.general.output = EvalOutputConfig()
+    eval_config.general.output.dir = Path(".tmp/aiq/examples/mock/")
     eval_config.evaluators = {"MockEvaluator": mock_evaluator}
     return eval_config
 
@@ -434,11 +436,18 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
     async def mock_eval_builder(config):
         yield mock_eval_workflow
 
+    # Mock OutputUploader and its methods
+    mock_uploader = MagicMock()
+    mock_uploader.run_custom_scripts = MagicMock()
+    mock_uploader.upload_directory = AsyncMock()
+
+    # check if run_custom_scripts and upload_directory are called
     # Patch functions and classes. Goal here is simply to ensure calls are made to the right functions.
     with patch("aiq.runtime.loader.load_config", mock_load_config), \
          patch("aiq.builder.eval_builder.WorkflowEvalBuilder.from_config", side_effect=mock_eval_builder), \
          patch("aiq.runtime.session.AIQSessionManager", return_value=session_manager), \
          patch("aiq.eval.evaluate.DatasetHandler", return_value=mock_dataset_handler), \
+         patch("aiq.eval.evaluate.OutputUploader", return_value=mock_uploader), \
          patch.object(evaluation_run, "run_workflow", wraps=evaluation_run.run_workflow) as mock_run_workflow, \
          patch.object(evaluation_run, "run_evaluators", AsyncMock()) as mock_run_evaluators, \
          patch.object(evaluation_run, "profile_workflow", AsyncMock()) as mock_profile_workflow, \
@@ -468,3 +477,7 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
 
         # Ensure output is written
         mock_write_output.assert_called_once_with(mock_dataset_handler)
+
+        # Ensure custom scripts are run and directory is uploaded
+        mock_uploader.run_custom_scripts.assert_called_once()
+        mock_uploader.upload_directory.assert_awaited_once()
