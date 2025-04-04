@@ -18,11 +18,33 @@ from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import Discriminator
+from pydantic import model_validator
 
 from aiq.data_models.common import TypedBaseModel
 from aiq.data_models.dataset_handler import EvalDatasetConfig
+from aiq.data_models.dataset_handler import EvalS3Config
 from aiq.data_models.evaluator import EvaluatorBaseConfig
 from aiq.data_models.profiler import ProfilerConfig
+
+
+class EvalCustomScriptConfig(BaseModel):
+    # Path to the script to run
+    script: Path
+    # Keyword arguments to pass to the script
+    kwargs: dict[str, str]
+
+
+class EvalOutputConfig(BaseModel):
+    # Output directory for the workflow and evaluation results
+    dir: Path = Path("/tmp/aiq/examples/default/")
+    # S3 prefix for the workflow and evaluation results
+    remote_dir: str | None = None
+    # Custom scripts to run after the workflow and evaluation results are saved
+    custom_scripts: dict[str, EvalCustomScriptConfig] = {}
+    # S3 config for uploading the contents of the output directory
+    s3: EvalS3Config | None = None
+    # Whether to cleanup the output directory before running the workflow
+    cleanup: bool = True
 
 
 class EvalGeneralConfig(BaseModel):
@@ -31,11 +53,22 @@ class EvalGeneralConfig(BaseModel):
     # Output directory for the workflow and evaluation results
     output_dir: Path = Path("/tmp/aiq/examples/default/")
 
+    # If present overrides output_dir
+    output: EvalOutputConfig | None = None
+
     # Dataset for running the workflow and evaluating
     dataset: EvalDatasetConfig | None = None
 
     # Inference profiler
     profiler: ProfilerConfig | None = None
+
+    # overwrite the output_dir with the output config if present
+    @model_validator(mode="before")
+    @classmethod
+    def override_output_dir(cls, values):
+        if values.get("output") and values["output"].get("dir"):
+            values["output_dir"] = values["output"]["dir"]
+        return values
 
 
 class EvalConfig(BaseModel):
