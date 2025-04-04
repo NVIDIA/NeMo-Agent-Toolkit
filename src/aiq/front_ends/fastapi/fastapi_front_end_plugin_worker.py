@@ -25,6 +25,7 @@ from fastapi import Body
 from fastapi import FastAPI
 from fastapi import Response
 from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from aiq.builder.workflow_builder import WorkflowBuilder
@@ -80,7 +81,41 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
         aiq_app = FastAPI(lifespan=lifespan)
 
+        self.set_cors_config(aiq_app)
+
         return aiq_app
+
+    def set_cors_config(self, aiq_app: FastAPI) -> None:
+        """
+        Set the cross origin resource sharing configuration.
+        """
+        cors_kwargs = {}
+
+        if self.front_end_config.cross_origin_resource_sharing.allow_origins is not None:
+            cors_kwargs["allow_origins"] = self.front_end_config.cross_origin_resource_sharing.allow_origins
+
+        if self.front_end_config.cross_origin_resource_sharing.allow_origin_regex is not None:
+            cors_kwargs["allow_origin_regex"] = self.front_end_config.cross_origin_resource_sharing.allow_origin_regex
+
+        if self.front_end_config.cross_origin_resource_sharing.allow_methods is not None:
+            cors_kwargs["allow_methods"] = self.front_end_config.cross_origin_resource_sharing.allow_methods
+
+        if self.front_end_config.cross_origin_resource_sharing.allow_headers is not None:
+            cors_kwargs["allow_headers"] = self.front_end_config.cross_origin_resource_sharing.allow_headers
+
+        if self.front_end_config.cross_origin_resource_sharing.allow_credentials is not None:
+            cors_kwargs["allow_credentials"] = self.front_end_config.cross_origin_resource_sharing.allow_credentials
+
+        if self.front_end_config.cross_origin_resource_sharing.expose_headers is not None:
+            cors_kwargs["expose_headers"] = self.front_end_config.cross_origin_resource_sharing.expose_headers
+
+        if self.front_end_config.cross_origin_resource_sharing.max_age is not None:
+            cors_kwargs["max_age"] = self.front_end_config.cross_origin_resource_sharing.max_age
+
+        aiq_app.add_middleware(
+            CORSMiddleware,
+            **cors_kwargs,
+        )
 
     @abstractmethod
     async def configure(self, app: FastAPI, builder: WorkflowBuilder):
