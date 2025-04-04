@@ -27,6 +27,11 @@ from aiq.utils.data_models.schema_validator import validate_yaml
 logger = logging.getLogger(__name__)
 
 
+class _Placeholder:
+    """Placeholder class to represent a value that is not set yet."""
+    pass
+
+
 class LayeredConfig:
 
     def __init__(self, base_config: dict[str, Any]):
@@ -46,7 +51,11 @@ class LayeredConfig:
                 current_path = '.'.join(parts[:i])
                 raise click.BadParameter(f"Cannot navigate through non-dictionary value at '{current_path}'")
             if part not in current:
-                raise click.BadParameter(f"Path '{path}' not found in config. '{part}' is invalid.")
+                if i == len(parts) - 1:
+                    current[part] = _Placeholder()
+                else:
+                    current[part] = {}
+
             current = current[part]
 
     def set_override(self, path: str, value: str) -> None:
@@ -70,9 +79,10 @@ class LayeredConfig:
             # Convert string value to appropriate type
             try:
                 if isinstance(original_value, bool):
-                    if value.lower() not in ['true', 'false']:
+                    lower_value = value.lower().strip()
+                    if lower_value not in ['true', 'false']:
                         raise ValueError(f"Boolean value must be 'true' or 'false', got '{value}'")
-                    value = value.lower() == 'true'
+                    value = lower_value == 'true'
                 elif isinstance(original_value, (int, float)):
                     value = type(original_value)(value)
                 elif isinstance(original_value, list):
@@ -86,7 +96,12 @@ class LayeredConfig:
             # Store converted value
             self.overrides[path] = value
             self._effective_config = None
-            logger.info("Successfully set override for %s with value: %s", path, value)
+
+            log_msg = f"Successfully set override for {path} with value: {value}"
+            if not isinstance(original_value, _Placeholder):
+                log_msg += f" with type {type(value)})"
+
+            logger.info(log_msg)
 
         except Exception as e:
             logger.error("Failed to set override for %s: %s", path, str(e))
