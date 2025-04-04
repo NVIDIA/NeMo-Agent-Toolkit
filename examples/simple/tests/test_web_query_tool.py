@@ -13,12 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import platform
+
+import pytest
 from aiq_simple.register import WebQueryToolConfig
 
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.test.embedder import EmbedderTestConfig
 
 
+@pytest.mark.skipif(platform.machine() == "aarch64",
+                    reason="faiss not working on arm64 https://github.com/NVIDIA/AgentIQ/issues/72")
 async def test_web_query_config():
 
     config = WebQueryToolConfig(webpage_url="https://www.google.com",
@@ -36,6 +41,8 @@ async def test_web_query_config():
         assert fn.description == config.description
 
 
+@pytest.mark.skipif(platform.machine() == "aarch64",
+                    reason="faiss not working on arm64 https://github.com/NVIDIA/AgentIQ/issues/72")
 async def test_web_query_tool():
 
     config = WebQueryToolConfig(webpage_url="https://www.google.com",
