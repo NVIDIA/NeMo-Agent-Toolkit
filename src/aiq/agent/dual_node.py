@@ -14,31 +14,55 @@
 # limitations under the License.
 
 import logging
-from abc import ABC
 from abc import abstractmethod
+from enum import Enum
 
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
+from langgraph.graph import StateGraph
 from langgraph.graph.graph import CompiledGraph
+from pydantic import BaseModel
+
+from .base import BaseAgent
 
 log = logging.getLogger(__name__)
 
 
-class BaseAgent(ABC):
+class AgentDecision(Enum):
+    TOOL = "tool"
+    END = "finished"
+
+
+class DualNodeAgent(BaseAgent):
 
     def __init__(self,
                  llm: BaseChatModel,
                  tools: list[BaseTool],
                  callbacks: list[AsyncCallbackHandler] = None,
                  detailed_logs: bool = False):
-        log.debug("Initializing Agent Graph")
-        self.llm = llm
-        self.tools = tools
-        self.callbacks = callbacks or []
-        self.detailed_logs = detailed_logs
-        self.graph = None
+        super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs)
 
     @abstractmethod
-    async def _build_graph(self, state) -> CompiledGraph:
+    async def agent_node(self, state: BaseModel) -> BaseModel:
         pass
+
+    @abstractmethod
+    async def tool_node(self, state: BaseModel) -> BaseModel:
+        pass
+
+    @abstractmethod
+    async def conditional_edge(self, state: BaseModel) -> str:
+        pass
+
+    async def _build_graph(self, state) -> CompiledGraph:
+        log.debug("Building and compiling the Agent Graph")
+        graph = StateGraph(state)
+        graph.add_node("agent", self.agent_node)
+        graph.add_node("tool", self.tool_node)
+        graph.add_edge("tool", "agent")
+        conditional_edge_possible_outputs = {AgentDecision.TOOL: "tool", AgentDecision.END: "__end__"}
+        graph.add_conditional_edges("agent", self.conditional_edge, conditional_edge_possible_outputs)
+        graph.set_entry_point("agent")
+        self.graph = graph.compile()
+        return self.graph
