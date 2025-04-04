@@ -66,6 +66,7 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
                 uvicorn.run("aiq.front_ends.fastapi.main:get_app",
                             host=self.front_end_config.host,
                             port=self.front_end_config.port,
+                            workers=self.front_end_config.workers,
                             reload=self.front_end_config.reload,
                             factory=True,
                             reload_excludes=reload_excludes)
@@ -95,7 +96,7 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
 
                 options = {
                     "bind": f"{self.front_end_config.host}:{self.front_end_config.port}",
-                    "workers": 1,
+                    "workers": self.front_end_config.workers,
                     "worker_class": "uvicorn.workers.UvicornWorker",
                 }
 
