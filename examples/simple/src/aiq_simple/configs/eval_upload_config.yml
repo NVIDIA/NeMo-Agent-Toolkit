@@ -73,14 +73,16 @@ eval:
           kwargs:
             input: ./.tmp/aiq/examples/simple_output/workflow_output.json
             output: ./.tmp/aiq/examples/simple_output/workflow.csv
+      # Upload contents of output directory to remote storage using S3 credentials
+      remote_dir: output
       s3:
         endpoint_url: http://10.185.X.X:9000
         bucket: aiq-simple-bucket
         access_key: fake-access-key
         secret_key: fake-secret-key
-        remote_dir: output
     dataset:
       _type: json
+      # Download dataset from remote storage using S3 credentials
       remote_file_path: input/langsmith.json
       file_path: ./.tmp/aiq/examples/simple_input/langsmith.json
       s3:

@@ -343,6 +343,7 @@ eval:
   general:
     dataset:
       _type: json
+      # Download dataset from remote storage using S3 credentials
       remote_file_path: input/langsmith.json
       file_path: ./.tmp/aiq/examples/simple_input/langsmith.json
       s3:
@@ -359,13 +360,13 @@ You can upload the contents of the entire output directory to remote storage by 
 eval:
   general:
     output:
-      dir: ./.tmp/aiq/examples/simple_output/
-      remote_file_path: output/langsmith.json
+      # Upload contents of output directory to remote storage using S3 credentials
+      remote_dir: output
       s3:
         endpoint_url: http://10.185.X.X:9000
         bucket: aiq-simple-bucket
-        access_key: fake_access_key
-        secret_key: fake_secret_key
+        access_key: fake-access-key
+        secret_key: fake-secret-key
 ```
 ### Cleanup output directory
 The contents of the output directory can be deleted before running the evaluation pipeline by specifying the `eval.general.output.cleanup` section in the `config.yml` file. The following is an example configuration to clean up the output directory before running the evaluation pipeline.
