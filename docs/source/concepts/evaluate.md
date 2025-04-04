@@ -323,7 +323,7 @@ eval:
       dir: ./.tmp/aiq/examples/simple_output/
       custom_scripts:
         convert_workflow_to_csv:
-          script: examples/simple/src/aiq_simple/scripts/worflow_to_csv.py
+          script: examples/simple/src/aiq_simple/scripts/workflow_to_csv.py
           kwargs:
             input: ./.tmp/aiq/examples/simple_output/workflow_output.json
             output: ./.tmp/aiq/examples/simple_output/workflow.csv
@@ -362,7 +362,7 @@ eval:
         secret_key: fake_secret_key
 ```
 ### Cleanup output directory
-The contents of the output directory can be cleaned up before running the evaluation pipeline by specifying the `eval.general.output.cleanup` section in the `config.yml` file. The following is an example configuration to clean up the output directory before running the evaluation pipeline.
+The contents of the output directory can be deleted before running the evaluation pipeline by specifying the `eval.general.output.cleanup` section in the `config.yml` file. The following is an example configuration to clean up the output directory before running the evaluation pipeline.
 ```yaml
 eval:
   general:
