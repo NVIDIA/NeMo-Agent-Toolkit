@@ -39,40 +39,49 @@ def output_config(tmp_path, s3_config):
     return EvalOutputConfig(dir=tmp_path, s3=s3_config, remote_dir="my-remote", custom_scripts={})
 
 
-def test_upload_directory_success(output_config):
-    """Test that the upload_directory uploads the directory to S3."""
+async def test_upload_directory_success(output_config):
+    """Test that the upload_directory uploads the directory to S3 successfully."""
     uploader = OutputUploader(output_config)
 
-    with mock.patch.object(uploader, "s3_client") as mock_client:
-        uploader.upload_directory()
+    mock_client = mock.AsyncMock()
+    mock_session = mock.AsyncMock()
+    mock_session.__aenter__.return_value = mock_client
 
-        expected_key = "my-remote/output.txt"
-        local_path = output_config.dir / "output.txt"
+    with mock.patch("aioboto3.Session.client", return_value=mock_session):
+        await uploader.upload_directory()
 
-        mock_client.upload_file.assert_called_once_with(str(local_path), output_config.s3.bucket, expected_key)
+    expected_key = "my-remote/output.txt"
+    local_path = output_config.dir / "output.txt"
+
+    mock_client.upload_file.assert_called_once_with(str(local_path), output_config.s3.bucket, expected_key)
 
 
-def test_upload_directory_missing_config(tmp_path):
-    """Test that the upload_directory skips uploading if no S3 config is provided."""
+async def test_upload_directory_missing_config(tmp_path):
+    """Test that the upload_directory skips uploading if the S3 config is missing."""
     config = EvalOutputConfig(dir=tmp_path, s3=None, remote_dir="", custom_scripts={})
     uploader = OutputUploader(config)
 
-    # Should just skip uploading
-    with mock.patch.object(uploader, "s3_client") as mock_client:
-        uploader.upload_directory()
-        mock_client.upload_file.assert_not_called()
+    # Should skip uploading and not raise
+    with mock.patch("aioboto3.Session.client") as mock_client:
+        mock_client.return_value = mock.AsyncMock()
+        await uploader.upload_directory()
+
+        mock_client.assert_not_called()
 
 
-def test_upload_directory_upload_failure(output_config):
+async def test_upload_directory_upload_failure(output_config):
     """Test that the upload_directory raises an exception if the upload fails."""
     uploader = OutputUploader(output_config)
 
-    with mock.patch.object(uploader, "s3_client") as mock_client:
-        mock_client.upload_file.side_effect = Exception("Upload failed")
+    mock_client = mock.AsyncMock()
+    mock_client.upload_file.side_effect = Exception("Upload failed")
 
-        # Should raise an exception with "failed" in the message
-        with pytest.raises(Exception, match="failed", case_insensitive=True):
-            uploader.upload_directory()
+    mock_session = mock.AsyncMock()
+    mock_session.__aenter__.return_value = mock_client
+
+    with mock.patch("aioboto3.Session.client", return_value=mock_session):
+        with pytest.raises(Exception, match="failed", ignore_case=True):
+            await uploader.upload_directory()
 
 
 def test_run_custom_scripts_success(tmp_path):
