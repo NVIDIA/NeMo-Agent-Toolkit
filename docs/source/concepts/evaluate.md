@@ -314,5 +314,70 @@ The output of the evaluators are stored in distinct files in the same `output_di
 }
 ```
 
+## Customizing the output
+You can customize the output of the pipeline by providing custom scripts. One or more Python scripts can be provided in the `eval.general.output_scripts` section of the `config.yml` file.
+
+The custom scripts are executed after the evaluation is complete. They are executed as Python scripts with the kwargs provided in the `eval.general.output.custom_scripts.<script_name>.kwargs` section.
+
+The kwargs typically include the file or directory to operate on. To avoid overwriting contents it is recommended to provide a unique output file or directory name for the customization. It is also recommended that changes be limited to the contents of the output directory to avoid unintended side effects.
+
+**Example:**
+```yaml
+eval:
+  general:
+    output:
+      dir: ./.tmp/aiq/examples/simple_output/
+      custom_scripts:
+        convert_workflow_to_csv:
+          script: examples/simple/src/aiq_simple/scripts/workflow_to_csv.py
+          kwargs:
+            input: ./.tmp/aiq/examples/simple_output/workflow_output.json
+            output: ./.tmp/aiq/examples/simple_output/workflow.csv
+```
+
+## Remote Storage
+### Evaluating remote datasets
+You can evaluate a remote dataset by provide the information needed to download the dataset in the `eval.general.dataset` section of the `config.yml` file. The following is an example configuration to evaluate a remote dataset.
+```yaml
+eval:
+  general:
+    dataset:
+      _type: json
+      # Download dataset from remote storage using S3 credentials
+      remote_file_path: input/langsmith.json
+      file_path: ./.tmp/aiq/examples/simple_input/langsmith.json
+      s3:
+        endpoint_url: http://10.185.X.X:9000
+        bucket: aiq-simple-bucket
+        access_key: fake_access_key
+        secret_key: fake_secret_key
+```
+The `remote_file_path` is the path to the dataset in the remote storage. The `file_path` is the local path where the dataset will be downloaded. The `s3` section contains the information needed to access the remote storage.
+
+### Uploading output directory to remote storage
+You can upload the contents of the entire output directory to remote storage by providing the information needed to upload the output directory in the `eval.general.output` section of the `config.yml` file. The following is an example configuration to upload the output directory to remote storage.
+```yaml
+eval:
+  general:
+    output:
+      # Upload contents of output directory to remote storage using S3 credentials
+      remote_dir: output
+      s3:
+        endpoint_url: http://10.185.X.X:9000
+        bucket: aiq-simple-bucket
+        access_key: fake-access-key
+        secret_key: fake-secret-key
+```
+### Cleanup output directory
+The contents of the output directory can be deleted before running the evaluation pipeline by specifying the `eval.general.output.cleanup` section in the `config.yml` file. The following is an example configuration to clean up the output directory before running the evaluation pipeline.
+```yaml
+eval:
+  general:
+    output:
+      dir: ./.tmp/aiq/examples/simple_output/
+      cleanup: true
+```
+Output directory cleanup is disabled by default for easy troubleshooting.
+
 ## Profiling and Performance Monitoring of AgentIQ Workflows
 You can profile workflows via the AgentIQ evaluation system. For more information, see the [Profiler](profiler.md) documentation.
