@@ -57,9 +57,37 @@ From this point you can manually copy/paste the commands which would normally be
 
 | Name | Description | Location |
 |--|--|--|
-| Artifacts | Test results, wheels, and documentation | `.tmp/local_ci_tmp/local_ci_workspace` |
-| Cache | `uv` and `pre-commit` package caches | `.tmp/local_ci_tmp/cache` |
-| Virtual Environment | Python virtual environment | `.tmp/local_ci_tmp/local_ci_workspace/.venv` |
-| Bootstrap Script | The script used to bootstrap the CI environment within the CI container | `.tmp/local_ci_tmp/bootstrap_local_ci.sh` |
+| Artifacts | Test results, wheels, and documentation | `.tmp/local_ci_tmp/<arch>local_ci_workspace` |
+| Cache | `uv` and `pre-commit` package caches | `.tmp/local_ci_tmp/<arch>cache` |
+| Virtual Environment | Python virtual environment | `.tmp/local_ci_tmp/<arch>local_ci_workspace/.venv` |
+| Bootstrap Script | The script used to bootstrap the CI environment within the CI container | `.tmp/local_ci_tmp/<arch>bootstrap_local_ci.sh` |
+
+Where `<arch>` is the architecture of the host machine at time of writing this will be either `amd64` or `arm64`.
 
 > Note: In some situations it may be necessary to delete the `.tmp/local_ci_tmp` directory to clear out old artifacts and caches. This is especially true if you are switching between branches or if you are running into issues with the CI pipeline.
+
+## Multi-Architecture CI
+To run the CI pipeline on a different architecture other than your own, QEMU can be used to emulate the target architecture.
+
+> Note: This assumes you have an amd64 system and want to run the CI pipeline on arm64. If you are using an arm64 and want to emulate amd64, you will need to adjust the commands accordingly.
+
+On an apt based system, this can be done with the following commands:
+```bash
+sudo apt install qemu-utils qemu-system-arm qemu-user-static
+```
+
+Register QEMU with Docker:
+```bash
+docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+```
+
+Verify that the registration was successful:
+```bash
+docker run --platform=linux/arm64 --rm -t ubuntu:noble uname -m
+```
+
+### Run CI on arm64
+The `CI_ARCH` environment variable can be set to the desired architecture to run CI, for example to run the CI pipeline on arm64, you can use the following command:
+```bash
+CI_ARCH=arm64 ./ci/scripts/run_ci_local.sh all
+```

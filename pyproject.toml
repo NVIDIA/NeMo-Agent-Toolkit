@@ -18,8 +18,8 @@ dependencies = [
   # of precision in the version specifier. For example, use `~=1.2` instead of `~=1.2.3` and `~=0.1.3` instead of
   # `~=0.1.3.5`.
   # Keep sorted!!!
+  "aioboto3>=11.0.0",
   "arize-phoenix~=6.1",
-  "boto3~=1.35",
   "click~=8.1",
   "fastapi~=0.115.5",
   "httpx~=0.27",
