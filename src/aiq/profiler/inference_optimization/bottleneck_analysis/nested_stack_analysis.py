@@ -303,6 +303,8 @@ def save_gantt_chart(all_nodes: list[CallNode], output_path: str) -> None:
 
     # Sort calls by start_time
     sorted_nodes = sorted(all_nodes, key=lambda x: x.start_time)
+    min_start = sorted_nodes[0].start_time
+    max_end = max(node.end_time for node in sorted_nodes)
 
     color_map = {
         "LLM": "tab:blue",
@@ -318,15 +320,15 @@ def save_gantt_chart(all_nodes: list[CallNode], output_path: str) -> None:
         start = node.start_time
         width = node.end_time - node.start_time
         c = color_map.get(node.operation_type, default_color)
-        ax.barh(y=i, width=width, left=start, height=0.6, color=c, edgecolor="black")
+        ax.barh(y=i, width=width, left=start - min_start, height=0.6, color=c, edgecolor="black")
         labels.append(f"{node.operation_type}:{node.operation_name}")
 
     ax.set_yticks(list(y_positions))
     ax.set_yticklabels(labels)
     ax.invert_yaxis()
+    ax.set_xlim(0, max_end - min_start)
     ax.set_xlabel("Time")
     ax.set_title("Gantt Chart of Nested Calls (All Examples)")
-
     plt.tight_layout()
     plt.savefig(output_path, dpi=150)
     plt.close(fig)
