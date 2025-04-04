@@ -317,9 +317,9 @@ The output of the evaluators are stored in distinct files in the same `output_di
 ## Customizing the output
 You can customize the output of the pipeline by providing custom scripts. One or more Python scripts can be provided in the `eval.general.output_scripts` section of the `config.yml` file.
 
-The custom scripts are executed after the evaluation is complete. They are executed as Python scripts with the kwargs provided in the `eval.general.output.custom_scripts.<script_name>.kwargs` section.
+The custom scripts are executed after the evaluation is complete. They are executed as Python scripts with the `kwargs` provided in the `eval.general.output.custom_scripts.<script_name>.kwargs` section.
 
-The kwargs typically include the file or directory to operate on. To avoid overwriting contents it is recommended to provide a unique output file or directory name for the customization. It is also recommended that changes be limited to the contents of the output directory to avoid unintended side effects.
+The `kwargs` typically include the file or directory to operate on. To avoid overwriting contents it is recommended to provide a unique output file or directory name for the customization. It is also recommended that changes be limited to the contents of the output directory to avoid unintended side effects.
 
 **Example:**
 ```yaml
