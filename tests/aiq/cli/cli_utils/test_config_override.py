@@ -16,20 +16,13 @@
 import click
 import pytest
 
-from _utils.configs import WorkflowTestConfig
 from aiq.cli.cli_utils import config_override
+from aiq.data_models.function import FunctionBaseConfig
 
 
 @pytest.fixture(name="base_config")
 def fixture_base_config() -> dict:
-    return {
-        "a": {
-            "b": 1,
-            "c": 2
-        },
-        "d": 3,
-        "bool_val": True
-    }
+    return {"a": {"b": 1, "c": 2}, "d": 3, "bool_val": True}
 
 
 def test_layered_config_set_override(base_config: dict):
@@ -48,16 +41,10 @@ def test_layered_config_set_override(base_config: dict):
 
     assert layered_config.get_effective_config() == {
         "a": {
-            "b": 10,
-            "c": 2,
-            "e": '20'
-        },
-        "d": 3,
-        "f": {
+            "b": 10, "c": 2, "e": '20'
+        }, "d": 3, "f": {
             "g": '30'
-        },
-
-        "bool_val": False
+        }, "bool_val": False
     }
 
 
@@ -76,7 +63,34 @@ def test_layered_config_set_override_error(base_config: dict):
     with pytest.raises(click.BadParameter, match=r"Type mismatch for 'a\.b'"):
         layered_config.set_override("a.b", 'not_a_number')
 
+
 def test_layered_config_constructor_error(base_config: dict):
     # Attempt to set an override with an invalid base config
     with pytest.raises(ValueError, match="Base config must be a dictionary"):
         config_override.LayeredConfig("invalid_base_config")
+
+
+def test_config_casting():
+    """
+    Test to verify that pydantic's casting works as expected in situations where LayeredConfig
+    is unable to determine the type of the value being set.
+    """
+
+    class TestConfig(FunctionBaseConfig, name="TestConfig"):
+        a: bool
+        b: int
+        c: float
+
+    layered_config = config_override.LayeredConfig({})
+    for (field, value) in (
+        ("a", "false"),
+        ("b", "45"),
+        ("c", "5.6"),
+    ):
+        layered_config.set_override(field, value)
+
+    effective_config = layered_config.get_effective_config()
+    config = TestConfig(**effective_config)
+    assert config.a is False
+    assert config.b == 45
+    assert config.c == 5.6
