@@ -30,5 +30,6 @@ This is the first general release of AgentIQ.
 - LlamaIndex
 
 ## Known Issues
+- Faiss is currently broken on Arm64. This is a known issue [#72](https://github.com/NVIDIA/AgentIQ/issues/72) caused by an upstream bug in the Faiss library [https://github.com/facebookresearch/faiss/issues/3936](https://github.com/facebookresearch/faiss/issues/3936).
 - AgentIQ applications must use the same name for both the distribution and root package. This is a current implementation limitation and will be addressed in a future release.
 - Refer to [https://github.com/NVIDIA/AgentIQ/issues](https://github.com/NVIDIA/AgentIQ/issues) for an up to date list of current issues.

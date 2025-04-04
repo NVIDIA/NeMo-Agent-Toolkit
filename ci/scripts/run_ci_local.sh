@@ -53,7 +53,7 @@ GIT_COMMIT=$(git log -n 1 --pretty=format:%H)
 # Specifies whether to mount the current git repo or to use a clean clone (the default)
 USE_HOST_GIT=${USE_HOST_GIT:-0}
 
-LOCAL_CI_TMP=${LOCAL_CI_TMP:-${AGENTIQ_ROOT}/.tmp/local_ci_tmp}
+LOCAL_CI_TMP=${LOCAL_CI_TMP:-${AGENTIQ_ROOT}/.tmp/local_ci_tmp/${CI_ARCH}}
 DOCKER_EXTRA_ARGS=${DOCKER_EXTRA_ARGS:-""}
 
 CI_CONTAINER=${CI_CONTAINER:-"ghcr.io/astral-sh/uv:python3.12-bookworm"}
