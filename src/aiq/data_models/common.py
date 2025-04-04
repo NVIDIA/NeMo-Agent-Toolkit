@@ -109,9 +109,7 @@ class TypedBaseModel(BaseModel):
             module = inspect.getmodule(cls)
 
             assert module is not None, f"Module not found for class {cls} when registering {name}"
-            assert module.__package__ is not None, f"Package not found for class {cls} when registering {name}"
-
-            package_name: str = module.__package__
+            package_name: str | None = module.__package__
 
             # If the package name is not set, then we use the module name. Must have some namespace which will be unique
             if (not package_name):
