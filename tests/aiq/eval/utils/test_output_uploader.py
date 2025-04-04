@@ -18,18 +18,19 @@ from unittest import mock
 
 import pytest
 
+from aiq.data_models.dataset_handler import EvalS3Config
+from aiq.data_models.evaluate import EvalCustomScriptConfig
 from aiq.data_models.evaluate import EvalOutputConfig
-from aiq.data_models.evaluate import S3OutputConfig
-from aiq.data_models.evaluate import ScriptConfig
 from aiq.eval.utils.output_uploader import OutputUploader
 
 
+# pylint: disable=redefined-outer-name
 @pytest.fixture
 def s3_config():
-    return S3OutputConfig(bucket="test-bucket",
-                          access_key="fake-access-key",
-                          secret_key="fake-secret-key",
-                          endpoint_url="https://s3.fake.com")
+    return EvalS3Config(bucket="test-bucket",
+                        access_key="fake-access-key",
+                        secret_key="fake-secret-key",
+                        endpoint_url="https://s3.fake.com")
 
 
 @pytest.fixture
@@ -80,7 +81,7 @@ async def test_upload_directory_upload_failure(output_config):
     mock_session.__aenter__.return_value = mock_client
 
     with mock.patch("aioboto3.Session.client", return_value=mock_session):
-        with pytest.raises(Exception, match="failed", ignore_case=True):
+        with pytest.raises(Exception, match="failed"):
             await uploader.upload_directory()
 
 
@@ -92,7 +93,7 @@ def test_run_custom_scripts_success(tmp_path):
     config = EvalOutputConfig(dir=tmp_path,
                               s3=None,
                               remote_dir="",
-                              custom_scripts={"dummy": ScriptConfig(script=script, kwargs={"iam": "ai"})})
+                              custom_scripts={"dummy": EvalCustomScriptConfig(script=script, kwargs={"iam": "ai"})})
 
     uploader = OutputUploader(config)
 
@@ -114,7 +115,7 @@ def test_run_custom_scripts_missing_script(tmp_path):
     config = EvalOutputConfig(dir=tmp_path,
                               s3=None,
                               remote_dir="",
-                              custom_scripts={"missing": ScriptConfig(script=missing_script, kwargs={})})
+                              custom_scripts={"missing": EvalCustomScriptConfig(script=missing_script, kwargs={})})
 
     uploader = OutputUploader(config)
 
@@ -130,7 +131,7 @@ def test_run_custom_scripts_subprocess_fails(tmp_path):
     config = EvalOutputConfig(dir=tmp_path,
                               s3=None,
                               remote_dir="",
-                              custom_scripts={"fail": ScriptConfig(script=script, kwargs={})})
+                              custom_scripts={"fail": EvalCustomScriptConfig(script=script, kwargs={})})
 
     uploader = OutputUploader(config)
 
