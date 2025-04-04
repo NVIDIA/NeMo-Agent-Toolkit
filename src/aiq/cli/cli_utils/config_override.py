@@ -79,7 +79,7 @@ class LayeredConfig:
             # Convert string value to appropriate type
             try:
                 if isinstance(original_value, bool):
-                    lower_value = value.lower()
+                    lower_value = value.lower().strip()
                     if lower_value not in ['true', 'false']:
                         raise ValueError(f"Boolean value must be 'true' or 'false', got '{value}'")
                     value = lower_value == 'true'
