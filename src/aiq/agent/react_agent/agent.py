@@ -32,7 +32,7 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 from pydantic import Field
 
-from aiq.agent.dual_node import AgentDecision
+from aiq.agent.base import AgentDecision
 from aiq.agent.dual_node import DualNodeAgent
 from aiq.agent.react_agent.output_parser import ReActOutputParser
 from aiq.agent.react_agent.output_parser import ReActOutputParserException
@@ -268,7 +268,7 @@ class ReActAgentGraph(DualNodeAgent):
 
     async def build_graph(self):
         try:
-            self.graph = await super()._build_graph(state=ReActGraphState)
+            await super()._build_graph(state_schema=ReActGraphState)
             logger.info("ReAct Graph built and compiled successfully")
             return self.graph
         except Exception as ex:

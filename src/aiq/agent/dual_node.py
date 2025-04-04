@@ -15,7 +15,6 @@
 
 import logging
 from abc import abstractmethod
-from enum import Enum
 
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
@@ -24,14 +23,10 @@ from langgraph.graph import StateGraph
 from langgraph.graph.graph import CompiledGraph
 from pydantic import BaseModel
 
+from .base import AgentDecision
 from .base import BaseAgent
 
 log = logging.getLogger(__name__)
-
-
-class AgentDecision(Enum):
-    TOOL = "tool"
-    END = "finished"
 
 
 class DualNodeAgent(BaseAgent):
@@ -55,14 +50,18 @@ class DualNodeAgent(BaseAgent):
     async def conditional_edge(self, state: BaseModel) -> str:
         pass
 
-    async def _build_graph(self, state) -> CompiledGraph:
+    async def _build_graph(self, state_schema) -> CompiledGraph:
         log.debug("Building and compiling the Agent Graph")
-        graph = StateGraph(state)
+
+        graph = StateGraph(state_schema)
         graph.add_node("agent", self.agent_node)
         graph.add_node("tool", self.tool_node)
         graph.add_edge("tool", "agent")
+
         conditional_edge_possible_outputs = {AgentDecision.TOOL: "tool", AgentDecision.END: "__end__"}
         graph.add_conditional_edges("agent", self.conditional_edge, conditional_edge_possible_outputs)
+
         graph.set_entry_point("agent")
         self.graph = graph.compile()
+
         return self.graph

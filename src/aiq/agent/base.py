@@ -16,6 +16,7 @@
 import logging
 from abc import ABC
 from abc import abstractmethod
+from enum import Enum
 
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
@@ -23,6 +24,11 @@ from langchain_core.tools import BaseTool
 from langgraph.graph.graph import CompiledGraph
 
 log = logging.getLogger(__name__)
+
+
+class AgentDecision(Enum):
+    TOOL = "tool"
+    END = "finished"
 
 
 class BaseAgent(ABC):
@@ -40,5 +46,5 @@ class BaseAgent(ABC):
         self.graph = None
 
     @abstractmethod
-    async def _build_graph(self, state) -> CompiledGraph:
+    async def _build_graph(self, state_schema) -> CompiledGraph:
         pass

@@ -233,11 +233,11 @@ class ReWOOAgentGraph(BaseAgent):
             logger.warning("Ending graph traversal")
             return AgentDecision.END
 
-    async def build_graph(self):
+    async def _build_graph(self, state_schema):
         try:
             logger.debug("Building and compiling the ReWOO Graph")
 
-            graph = StateGraph(ReWOOGraphState)
+            graph = StateGraph(state_schema)
             graph.add_node("planner", self.planner_node)
             graph.add_node("executor", self.executor_node)
             graph.add_node("solver", self.solver_node)
@@ -258,11 +258,14 @@ class ReWOOAgentGraph(BaseAgent):
             logger.exception("Failed to build ReWOO Graph: %s", ex, exc_info=ex)
             raise ex
 
-    async def agent_node(self, state: ReWOOGraphState):
-        pass
-
-    async def tool_node(self, state: BaseModel) -> BaseModel:
-        pass
+    async def build_graph(self):
+        try:
+            await self._build_graph(state_schema=ReWOOGraphState)
+            logger.info("ReAct Graph built and compiled successfully")
+            return self.graph
+        except Exception as ex:
+            logger.exception("Failed to build ReAct Graph: %s", ex, exc_info=ex)
+            raise ex
 
     @staticmethod
     def validate_planner_prompt(planner_prompt: str) -> bool:
