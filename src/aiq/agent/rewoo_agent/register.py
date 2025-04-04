@@ -41,15 +41,16 @@ class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
                                           description="The list of tools to provide to the rewoo agent.")
     llm_name: LLMRef = Field(description="The LLM model to use with the rewoo agent.")
     verbose: bool = Field(default=False, description="Set the verbosity of the rewoo agent's logging.")
-    retry_parsing_errors: bool = Field(default=True, description="Specify retrying when encountering parsing errors.")
-    max_retries: int = Field(default=1, description="Sent the number of retries before raising a parsing error.")
     include_tool_input_schema_in_tool_description: bool = Field(
         default=True, description="Specify inclusion of tool input schemas in the prompt.")
     max_iterations: int = Field(default=15, description="Number of tool calls before stoping the rewoo agent.")
     description: str = Field(default="ReWOO Agent Workflow", description="The description of this functions use.")
-    system_prompt: str | None = Field(
+    planner_prompt: str | None = Field(
         default=None,
-        description="Provides the SYSTEM_PROMPT to use with the agent")  # defaults to SYSTEM_PROMPT in prompt.py
+        description="Provides the PLANNER_PROMPT to use with the agent")  # defaults to PLANNER_PROMPT in prompt.py
+    solver_prompt: str | None = Field(
+        default=None,
+        description="Provides the SOLVER_PROMPT to use with the agent")  # defaults to SOLVER_PROMPT in prompt.py
     max_history: int = Field(default=15, description="Maximum number of messages to keep in the conversation history.")
     use_openai_api: bool = Field(default=False,
                                  description=("Use OpenAI API for the input/output types to the function. "
@@ -63,43 +64,56 @@ async def ReWOO_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
     from langchain.schema import BaseMessage
     from langchain_core.messages import trim_messages
     from langchain_core.prompts import ChatPromptTemplate
-    from langchain_core.prompts import MessagesPlaceholder
     from langgraph.graph.graph import CompiledGraph
 
-    from aiq.agent.rewoo_agent.prompt import USER_PROMPT
+    from aiq.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from aiq.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
 
     from .agent import ReWOOAgentGraph
     from .agent import ReWOOGraphState
-    from .prompt import rewoo_agent_prompt
+    from .prompt import rewoo_planner_prompt
+    from .prompt import rewoo_solver_prompt
 
-    # the ReWOO Agent prompt comes from prompt.py, and can be customized there or via config option system_prompt.
-    if config.system_prompt:
-        _prompt_str = config.system_prompt
+    # the ReWOO Agent prompt comes from prompt.py, and can be customized there or via config option planner_prompt and
+    # solver_prompt.
+    if config.planner_prompt:
+        planner_prompt = config.planner_prompt
         if config.additional_instructions:
-            _prompt_str += f" {config.additional_instructions}"
-        valid_prompt = ReWOOAgentGraph.validate_system_prompt(config.system_prompt)
-        if not valid_prompt:
-            logger.exception("Invalid system_prompt")
-            raise ValueError("Invalid system_prompt")
-        prompt = ChatPromptTemplate([("system", config.system_prompt), ("user", USER_PROMPT),
-                                     MessagesPlaceholder(variable_name='agent_scratchpad', optional=True)])
+            planner_prompt += f"{config.additional_instructions}"
+        valid = ReWOOAgentGraph.validate_planner_prompt(config.planner_prompt)
+        if not valid:
+            logger.exception("Invalid planner_prompt")
+            raise ValueError("Invalid planner_prompt")
+        planner_prompt = ChatPromptTemplate([("system", config.planner_prompt), ("user", PLANNER_USER_PROMPT)])
     else:
-        prompt = rewoo_agent_prompt
+        planner_prompt = rewoo_planner_prompt
+
+    if config.solver_prompt:
+        solver_prompt = config.solver_prompt
+        if config.additional_instructions:
+            solver_prompt += f"{config.additional_instructions}"
+        valid = ReWOOAgentGraph.validate_solver_prompt(config.solver_prompt)
+        if not valid:
+            logger.exception("Invalid solver_prompt")
+            raise ValueError("Invalid solver_prompt")
+        solver_prompt = ChatPromptTemplate([("system", config.solver_prompt), ("user", SOLVER_USER_PROMPT)])
+    else:
+        solver_prompt = rewoo_solver_prompt
 
     # we can choose an LLM for the ReWOO agent in the config file
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+
     # the agent can run any installed tool, simply install the tool and add it to the config file
     # the sample tool provided can easily be copied or changed
     tools = builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    # configure callbacks, for sending intermediate steps
+
     # construct the ReWOO Agent Graph from the configured llm, prompt, and tools
     graph: CompiledGraph = await ReWOOAgentGraph(llm=llm,
-                                                 prompt=prompt,
+                                                 planner_prompt=planner_prompt,
+                                                 solver_prompt=solver_prompt,
                                                  tools=tools,
                                                  use_tool_schema=config.include_tool_input_schema_in_tool_description,
-                                                 detailed_logs=config.verbose,
-                                                 retry_parsing_errors=config.retry_parsing_errors,
-                                                 max_retries=config.max_retries).build_graph()
+                                                 detailed_logs=config.verbose).build_graph()
 
     async def _response_fn(input_message: AIQChatRequest) -> AIQChatResponse:
         try:
@@ -114,10 +128,7 @@ async def ReWOO_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
             state = ReWOOGraphState(task=task)
 
             # run the ReWOO Agent Graph
-            state = await graph.ainvoke(state, config={'recursion_limit': (config.max_iterations + 1) * 2})
-            # setting recursion_limit: 4 allows 1 tool call
-            #   - allows the ReWOO Agent to perform 1 cycle / call 1 single tool,
-            #   - but stops the agent when it tries to call a tool a second time
+            state = await graph.ainvoke(state)
 
             # get and return the output from the state
             state = ReWOOGraphState(**state)
@@ -133,11 +144,10 @@ async def ReWOO_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
 
     if (config.use_openai_api):
         yield FunctionInfo.from_fn(_response_fn, description=config.description)
-    else:
 
+    else:
         async def _str_api_fn(input_message: str) -> str:
             oai_input = GlobalTypeConverter.get().convert(input_message, to_type=AIQChatRequest)
-
             oai_output = await _response_fn(oai_input)
 
             return GlobalTypeConverter.get().convert(oai_output, to_type=str)

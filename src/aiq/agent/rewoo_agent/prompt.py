@@ -16,7 +16,7 @@
 # flake8: noqa
 from langchain_core.prompts.chat import ChatPromptTemplate
 
-PLANNER_PROMPT = """
+PLANNER_SYSTEM_PROMPT = """
 For the following task, make plans that can solve the problem step by step. For each plan, indicate \
 which external tool together with tool input to retrieve evidence. You can store the evidence into a \
 variable #E that can be called by later tools. (Plan, #E1, Plan, #E2, Plan, ...)
@@ -46,23 +46,28 @@ Begin!
 Describe your plans with rich details.
 """
 
-USER_PROMPT = """
+PLANNER_USER_PROMPT = """
 task: {task}
 """
 
 REWOO_PLAN_PATTERN = r"Plan:\s*(.+)\s*(#E\d+)\s*=\s*(\w+)\s*\[([^\]]+)\]"
 
-rewoo_agent_prompt = ChatPromptTemplate([("system", PLANNER_PROMPT), ("user", USER_PROMPT)])
+rewoo_planner_prompt = ChatPromptTemplate([("system", PLANNER_SYSTEM_PROMPT), ("user", PLANNER_USER_PROMPT)])
 
-SOLVER_PROMPT = """
+SOLVER_SYSTEM_PROMPT = """
 Solve the following task or problem. To solve the problem, we have made step-by-step Plan and \
 retrieved corresponding Evidence to each Plan. Use them with caution since long evidence might \
 contain irrelevant information.
 
-{plan}
-
 Now solve the question or task according to provided Evidence above. Respond with the answer
 directly with no extra words.
 
-Task: {task}
-Response:"""
+"""
+SOLVER_USER_PROMPT = """
+plan: {plan}
+task: {task}
+
+Response:
+"""
+
+rewoo_solver_prompt = ChatPromptTemplate([("system", SOLVER_SYSTEM_PROMPT), ("user", SOLVER_USER_PROMPT)])
