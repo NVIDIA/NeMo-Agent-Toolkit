@@ -16,6 +16,7 @@
 import json
 # pylint: disable=R0917
 import logging
+import re
 from json import JSONDecodeError
 
 from langchain_core.callbacks.base import AsyncCallbackHandler
@@ -32,6 +33,8 @@ from pydantic import Field
 from aiq.agent.base import AgentDecision
 from aiq.agent.base import BaseAgent
 
+from .prompt import REWOO_PLAN_PATTERN
+
 logger = logging.getLogger(__name__)
 TOOL_NOT_FOUND_ERROR_MESSAGE = "There is no tool named {tool_name}. Tool must be one of {tools}."
 INPUT_SCHEMA_MESSAGE = ". Arguments must be provided as a valid JSON object following this format: {schema}"
@@ -41,9 +44,9 @@ NO_INPUT_ERROR_MESSAGE = "No human input recieved to the agent, Please ask a val
 class ReWOOGraphState(BaseModel):
     """State schema for the ReAct Agent Graph"""
     task: str = Field(default="")  # the task to be performed
-    plan_string: str = Field(default="")  # the plan string to be executed
+    plan: str = Field(default="")  # the plan string to be executed
     steps: list[tuple[str, str, str, str]] = Field(default_factory=list)  # the steps to be executed
-    results: dict[str, str] = Field(default_factory=dict)  # the results of the steps
+    intermediate_results: dict[str, str] = Field(default_factory=dict)  # the results of the steps
     result: str = Field(default="")  # the final result of the task
 
 
@@ -79,7 +82,7 @@ class ReWOOAgentGraph(BaseAgent):
                          f"{INPUT_SCHEMA_MESSAGE.format(schema=tools[-1].input_schema.model_fields)}")
         prompt = prompt.partial(tools=tool_names_and_descriptions, tool_names=tool_names)
         # construct the ReWOO Agent
-        llm = llm.bind(stop=["Observation:"])
+        # llm = llm.bind(stop=["Observation:"])
         self.agent = prompt | llm
         self.tools_dict = {tool.name: tool for tool in tools}
         logger.info("Initialized ReWOO Agent Graph")
@@ -95,17 +98,13 @@ class ReWOOAgentGraph(BaseAgent):
         if len(state.steps) == 0:
             raise RuntimeError('No steps received in state: "steps"')
         # Get the current task
-        if len(state.results) == 0:
+        if len(state.intermediate_results) == 0:
             return 1
-        if len(state.results) == len(state.steps):
+        if len(state.intermediate_results) == len(state.steps):
             return -1
-        return len(state.results) + 1
+        return len(state.intermediate_results) + 1
 
     async def planner_node(self, state: ReWOOGraphState):
-
-        import re
-
-        from .prompt import rewoo_plan_pattern
 
         try:
             logger.debug("Starting the ReWOO Planner Node")
@@ -119,14 +118,14 @@ class ReWOOAgentGraph(BaseAgent):
 
                 output_message = AIMessage(content=output_message)
                 plan_string = str(output_message.content)
-                matches = re.findall(rewoo_plan_pattern, plan_string)
+                matches = re.findall(REWOO_PLAN_PATTERN, plan_string)
 
                 if self.detailed_logs:
                     logger.info("The task was: %s", task)
                     logger.info("The planner's thoughts are:\n%s", plan_string)
-                # matches = [match[0] for match in matches]
+
                 state.steps = matches
-                state.plan_string = plan_string
+                state.plan = plan_string
             return state
 
         except Exception as ex:
@@ -139,7 +138,7 @@ class ReWOOAgentGraph(BaseAgent):
             logger.debug("Starting the ReWOO Executor Node")
             current_step = self._get_current_task(state)
             _, step_name, tool, tool_input = state.steps[current_step - 1]
-            _results = state.results
+            _results = state.intermediate_results
             for k, v in _results.items():
                 tool_input = tool_input.replace(k, v)
             requested_tool = self._get_tool(tool)
@@ -154,10 +153,8 @@ class ReWOOAgentGraph(BaseAgent):
                                             tool_call_id='agent_error',
                                             content=TOOL_NOT_FOUND_ERROR_MESSAGE.format(tool_name=tool,
                                                                                         tools=configured_tool_names))
-                # state.results[step_name] = str(tool_response.content)
-                # return state
                 _results[step_name] = str(tool_response.content)
-                return {"results": _results}
+                return {"intermediate_results": _results}
             if self.detailed_logs:
                 logger.info("Calling tool %s with input: %s", requested_tool.name, tool_input)
             # Run the tool. Try to use structured input, if possible
@@ -184,28 +181,27 @@ class ReWOOAgentGraph(BaseAgent):
             logger.debug("Successfully called the tool")
             if self.detailed_logs:
                 logger.debug('The tool returned: %s', tool_response)
-            # state.results[step_name] = str(tool_response.content)
-            # return state
+
             _results[step_name] = str(tool_response.content)
-            return {"results": _results}
+            return {"intermediate_results": _results}
         except Exception as ex:
             logger.exception("Failed to call executor_node: %s", ex, exc_info=True)
             raise ex
 
     async def solver_node(self, state: ReWOOGraphState):
-        from .prompt import solve_prompt
+        from .prompt import SOLVER_PROMPT
         try:
             logger.debug("Starting the ReWOO Solver Node")
             plan = ""
             for _plan, step_name, tool, tool_input in state.steps:
-                _results = state.results
+                _results = state.intermediate_results
                 for k, v in _results.items():
                     tool_input = tool_input.replace(k, v)
                     step_name = step_name.replace(k, v)
                 plan += f"Plan: {_plan}\n{step_name} = {tool}[{tool_input}]"
-            solve_prompt = solve_prompt.format(plan=plan, task=state.task)
+            solver_prompt = SOLVER_PROMPT.format(plan=plan, task=state.task)
             output_message = ""
-            async for event in self.agent.astream({"task": solve_prompt},
+            async for event in self.agent.astream({"task": solver_prompt},
                                                   config=RunnableConfig(callbacks=self.callbacks)):
                 output_message += event.content
             output_message = AIMessage(content=output_message)
@@ -233,7 +229,6 @@ class ReWOOAgentGraph(BaseAgent):
 
     async def build_graph(self):
         try:
-            # self.graph = await super()._build_graph(state=ReWOOGraphState)
             logger.debug("Building and compiling the ReWOO Graph")
             graph = StateGraph(ReWOOGraphState)
             graph.add_node("planner", self.planner_node)
@@ -257,20 +252,20 @@ class ReWOOAgentGraph(BaseAgent):
     async def tool_node(self, state: BaseModel) -> BaseModel:
         pass
 
-    # @staticmethod
-    # def validate_system_prompt(system_prompt: str) -> bool:
-    #     errors = []
-    #     if not system_prompt:
-    #         errors.append("The system prompt cannot be empty.")
-    #     required_prompt_variables = {
-    #         "{tools}": "The system prompt must contain {tools} so the agent knows about configured tools.",
-    #         "{tool_names}": "The system prompt must contain {tool_names} so the agent knows tool names."
-    #     }
-    #     for variable_name, error_message in required_prompt_variables.items():
-    #         if variable_name not in system_prompt:
-    #             errors.append(error_message)
-    #     if errors:
-    #         error_text = "\n".join(errors)
-    #         logger.exception(error_text)
-    #         raise ValueError(error_text)
-    #     return True
+    @staticmethod
+    def validate_system_prompt(system_prompt: str) -> bool:
+        errors = []
+        if not system_prompt:
+            errors.append("The system prompt cannot be empty.")
+        required_prompt_variables = {
+            "{tools}": "The system prompt must contain {tools} so the agent knows about configured tools.",
+            "{tool_names}": "The system prompt must contain {tool_names} so the agent knows tool names."
+        }
+        for variable_name, error_message in required_prompt_variables.items():
+            if variable_name not in system_prompt:
+                errors.append(error_message)
+        if errors:
+            error_text = "\n".join(errors)
+            logger.exception(error_text)
+            raise ValueError(error_text)
+        return True

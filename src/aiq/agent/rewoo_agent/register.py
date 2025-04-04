@@ -72,21 +72,19 @@ async def ReWOO_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
     from .agent import ReWOOGraphState
     from .prompt import rewoo_agent_prompt
 
-    # # the ReWOO Agent prompt comes from prompt.py, and can be customized there or via config option system_prompt.
-    # if config.system_prompt:
-    #     _prompt_str = config.system_prompt
-    #     if config.additional_instructions:
-    #         _prompt_str += f" {config.additional_instructions}"
-    #     valid_prompt = ReWOOAgentGraph.validate_system_prompt(config.system_prompt)
-    #     if not valid_prompt:
-    #         logger.exception("Invalid system_prompt")
-    #         raise ValueError("Invalid system_prompt")
-    #     prompt = ChatPromptTemplate([("system", config.system_prompt), ("user", USER_PROMPT),
-    #                                  MessagesPlaceholder(variable_name='agent_scratchpad', optional=True)])
-    # else:
-    #     prompt = rewoo_agent_prompt
-
-    prompt = rewoo_agent_prompt
+    # the ReWOO Agent prompt comes from prompt.py, and can be customized there or via config option system_prompt.
+    if config.system_prompt:
+        _prompt_str = config.system_prompt
+        if config.additional_instructions:
+            _prompt_str += f" {config.additional_instructions}"
+        valid_prompt = ReWOOAgentGraph.validate_system_prompt(config.system_prompt)
+        if not valid_prompt:
+            logger.exception("Invalid system_prompt")
+            raise ValueError("Invalid system_prompt")
+        prompt = ChatPromptTemplate([("system", config.system_prompt), ("user", USER_PROMPT),
+                                     MessagesPlaceholder(variable_name='agent_scratchpad', optional=True)])
+    else:
+        prompt = rewoo_agent_prompt
 
     # we can choose an LLM for the ReWOO agent in the config file
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
