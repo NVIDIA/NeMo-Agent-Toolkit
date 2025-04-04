@@ -22,21 +22,26 @@ For the following task, make plans that can solve the problem step by step. For 
 which external tool together with tool input to retrieve evidence. You can store the evidence into a \
 variable #E that can be called by later tools. (Plan, #E1, Plan, #E2, Plan, ...)
 
-Tools can be one of the following:
-(1) Google[input]: Worker that searches results from Google. Useful when you need to find short
-and succinct answers about a specific topic. The input should be a search query.
-(2) LLM[input]: A pretrained LLM like yourself. Useful when you need to act with general
-world knowledge and common sense. Prioritize it when you are confident in solving the problem
-yourself. Input can be any instruction.
+You may ask the human to the following tools:
+
+{tools}
+
+The tools should be one of the following: [{tool_names}]
+
+Please not that you don't need to use all the tools. You can use any of the tools you want.
+Make sure to follow the pattern: #E = tool_name[tool_input]
 
 For example,
-Task: Thomas, Toby, and Rebecca worked a total of 157 hours in one week. Thomas worked x
-hours. Toby worked 10 hours less than twice what Thomas worked, and Rebecca worked 8 hours
-less than Toby. How many hours did Rebecca work?
-Plan: Given Thomas worked x hours, translate the problem into algebraic expressions and solve
-with Wolfram Alpha. #E1 = WolframAlpha[Solve x + (2x − 10) + ((2x − 10) − 8) = 157]
-Plan: Find out the number of hours Thomas worked. #E2 = LLM[What is x, given #E1]
-Plan: Calculate the number of hours Rebecca worked. #E3 = Calculator[(2 ∗ #E2 − 10) − 8]
+Task: Determine which is greater: the result of subtracting 13 from 25, or the result of dividing 132 by 12.
+
+Plan: Calculate the result of 25 minus 13.
+#E1 = calculator_subtract[25, 13]
+
+Plan: Calculate the result of 132 divided by 12.
+#E2 = calculator_divide[132, 12]
+
+Plan: Compare the results from steps 1 and 2 to determine which is greater.
+#E3 = calculator_inequality[#E1, ">", #E2]
 
 Begin!
 Describe your plans with rich details. Each Plan should be followed by only one #E.

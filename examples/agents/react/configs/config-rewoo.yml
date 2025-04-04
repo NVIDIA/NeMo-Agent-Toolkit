@@ -25,21 +25,18 @@ llms:
     max_tokens: 250
 
 functions:
-  wikipedia_search:
-    _type: wiki_search
-    max_results: 3
-  current_datetime:
-    _type: current_datetime
-  code_generation:
-    _type: code_generation
-    programming_language: "Python"
-    description: "Useful to generate Python code. For any questions about code generation, you must only use this tool!"
-    llm_name: nim_llm
-    verbose: true
+  calculator_multiply:
+    _type: calculator_multiply
+  calculator_inequality:
+    _type: calculator_inequality
+  calculator_divide:
+    _type: aiq_simple_calculator/calculator_divide
+  calculator_subtract:
+    _type: calculator_subtract
 
 workflow:
   _type: rewoo_agent
-  tool_names: [wikipedia_search, current_datetime, code_generation]
+  tool_names: [calculator_multiply, calculator_inequality, calculator_divide, calculator_subtract]
   llm_name: nim_llm
   verbose: true
   handle_parsing_errors: true

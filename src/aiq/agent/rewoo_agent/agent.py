@@ -42,7 +42,7 @@ class ReWOOGraphState(BaseModel):
     """State schema for the ReAct Agent Graph"""
     task: str = Field(default="")  # the task to be performed
     plan_string: str = Field(default="")  # the plan string to be executed
-    steps: list[str] = Field(default_factory=list)  # the steps to be executed
+    steps: list[tuple[str, str, str, str]] = Field(default_factory=list)  # the steps to be executed
     results: dict[str, str] = Field(default_factory=dict)  # the results of the steps
     result: str = Field(default="")  # the final result of the task
 
@@ -124,7 +124,7 @@ class ReWOOAgentGraph(BaseAgent):
                 if self.detailed_logs:
                     logger.info("The task was: %s", task)
                     logger.info("The planner's thoughts are:\n%s", plan_string)
-                matches = [match[0] for match in matches]
+                # matches = [match[0] for match in matches]
                 state.steps = matches
                 state.plan_string = plan_string
             return state
@@ -154,8 +154,10 @@ class ReWOOAgentGraph(BaseAgent):
                                             tool_call_id='agent_error',
                                             content=TOOL_NOT_FOUND_ERROR_MESSAGE.format(tool_name=tool,
                                                                                         tools=configured_tool_names))
-                state.results[step_name] = str(tool_response.content)
-                return state
+                # state.results[step_name] = str(tool_response.content)
+                # return state
+                _results[step_name] = str(tool_response.content)
+                return {"results": _results}
             if self.detailed_logs:
                 logger.info("Calling tool %s with input: %s", requested_tool.name, tool_input)
             # Run the tool. Try to use structured input, if possible
@@ -182,8 +184,10 @@ class ReWOOAgentGraph(BaseAgent):
             logger.debug("Successfully called the tool")
             if self.detailed_logs:
                 logger.debug('The tool returned: %s', tool_response)
-            state.results[step_name] = str(tool_response.content)
-            return state
+            # state.results[step_name] = str(tool_response.content)
+            # return state
+            _results[step_name] = str(tool_response.content)
+            return {"results": _results}
         except Exception as ex:
             logger.exception("Failed to call executor_node: %s", ex, exc_info=True)
             raise ex
@@ -201,11 +205,12 @@ class ReWOOAgentGraph(BaseAgent):
                 plan += f"Plan: {_plan}\n{step_name} = {tool}[{tool_input}]"
             solve_prompt = solve_prompt.format(plan=plan, task=state.task)
             output_message = ""
-            async for event in self.agent.astream({"task": task}, config=RunnableConfig(callbacks=self.callbacks)):
+            async for event in self.agent.astream({"task": solve_prompt},
+                                                  config=RunnableConfig(callbacks=self.callbacks)):
                 output_message += event.content
             output_message = AIMessage(content=output_message)
             state.result = str(output_message.content)
-            return state
+            return {"result": state.result}
 
         except Exception as ex:
             logger.exception("Failed to call solver_node: %s", ex, exc_info=True)
