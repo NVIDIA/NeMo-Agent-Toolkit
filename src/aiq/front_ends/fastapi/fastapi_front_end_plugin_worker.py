@@ -24,6 +24,7 @@ from functools import partial
 from fastapi import Body
 from fastapi import FastAPI
 from fastapi import Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -80,7 +81,41 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
         aiq_app = FastAPI(lifespan=lifespan)
 
+        self.set_cors_config(aiq_app)
+
         return aiq_app
+
+    def set_cors_config(self, aiq_app: FastAPI) -> None:
+        """
+        Set the cross origin resource sharing configuration.
+        """
+        cors_kwargs = {}
+
+        if self.front_end_config.cors.allow_origins is not None:
+            cors_kwargs["allow_origins"] = self.front_end_config.cors.allow_origins
+
+        if self.front_end_config.cors.allow_origin_regex is not None:
+            cors_kwargs["allow_origin_regex"] = self.front_end_config.cors.allow_origin_regex
+
+        if self.front_end_config.cors.allow_methods is not None:
+            cors_kwargs["allow_methods"] = self.front_end_config.cors.allow_methods
+
+        if self.front_end_config.cors.allow_headers is not None:
+            cors_kwargs["allow_headers"] = self.front_end_config.cors.allow_headers
+
+        if self.front_end_config.cors.allow_credentials is not None:
+            cors_kwargs["allow_credentials"] = self.front_end_config.cors.allow_credentials
+
+        if self.front_end_config.cors.expose_headers is not None:
+            cors_kwargs["expose_headers"] = self.front_end_config.cors.expose_headers
+
+        if self.front_end_config.cors.max_age is not None:
+            cors_kwargs["max_age"] = self.front_end_config.cors.max_age
+
+        aiq_app.add_middleware(
+            CORSMiddleware,
+            **cors_kwargs,
+        )
 
     @abstractmethod
     async def configure(self, app: FastAPI, builder: WorkflowBuilder):
