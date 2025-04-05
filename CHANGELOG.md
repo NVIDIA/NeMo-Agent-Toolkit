@@ -19,6 +19,13 @@ limitations under the License.
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+### Added
+- Added CORS configuration for the FastAPI server
+- Added support for customizing evaluation outputs and uploading results to remote storage
+
+### Fixed
+- Fixed `aiq serve` when running the `simple_rag` workflow example
+
 ## [1.0.0] - 2024-12-04
 
 ### Added
