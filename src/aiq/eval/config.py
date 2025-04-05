@@ -30,6 +30,7 @@ class EvaluationRunConfig(BaseModel):
     endpoint: str | None  # only used when running the workflow remotely
     endpoint_timeout: int
     reps: int
+    override: tuple[tuple[str, str], ...] = ()
 
 
 class EvaluationRunOutput(BaseModel):

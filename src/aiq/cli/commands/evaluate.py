@@ -21,6 +21,8 @@ import click
 
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
+from aiq.cli.cli_utils.config_override import load_and_override_config
+from aiq.data_models.config import AIQConfig
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +79,12 @@ logger = logging.getLogger(__name__)
     default=1,
     help="Number of repetitions for the evaluation.",
 )
+@click.option(
+    "--override",
+    type=(str, str),
+    multiple=True,
+    help="Override config values using dot notation (e.g., --override llms.nim_llm.temperature 0.7)",
+)
 @click.pass_context
 def eval_command(ctx, **kwargs) -> None:
     """ Evaluate datasets with the specified mechanism"""
@@ -84,7 +92,15 @@ def eval_command(ctx, **kwargs) -> None:
 
 
 async def run_and_evaluate(config: EvaluationRunConfig):
-    # Run evaluation
+    from aiq.runtime.loader import discover_and_register_plugins, PluginTypes
+
+    # Register plugins before validation
+    discover_and_register_plugins(PluginTypes.ALL)
+
+    # Apply overrides (validates that config is now correct)
+    _ = load_and_override_config(config.config_file, config.override)
+
+    # Initialize and run evaluation
     eval_runner = EvaluationRun(config=config)
     await eval_runner.run_and_evaluate()
 
@@ -101,6 +117,7 @@ def process_aiq_eval(
     endpoint: str,
     endpoint_timeout: int,
     reps: int,
+    override: tuple[tuple[str, str], ...],
 ):
     """
     Process the eval command and execute the evaluation. Here the config_file, if provided, is checked for its existence
@@ -127,5 +144,6 @@ def process_aiq_eval(
         endpoint=endpoint,
         endpoint_timeout=endpoint_timeout,
         reps=reps,
+        override=override,
     )
     asyncio.run(run_and_evaluate(config))
