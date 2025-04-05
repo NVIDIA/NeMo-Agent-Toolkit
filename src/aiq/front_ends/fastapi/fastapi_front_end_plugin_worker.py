@@ -36,6 +36,7 @@ from aiq.data_models.config import AIQConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from aiq.front_ends.fastapi.response_helpers import generate_single_response
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
+from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_raw_as_str
 from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
 from aiq.front_ends.fastapi.websocket import AIQWebSocket
 from aiq.runtime.session import AIQSessionManager
@@ -250,6 +251,35 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     methods=[endpoint.method],
                     response_model=GenerateStreamResponseType,
                     description=endpoint.description,
+                    responses={500: response_500},
+                )
+
+                # Add the raw intermediate steps endpoint
+                def post_streaming_raw_endpoint(request_type: type,
+                                                streaming: bool,
+                                                result_type: type | None,
+                                                output_type: type | None):
+
+                    async def post_stream(payload: request_type):
+                        return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                                 content=generate_streaming_response_raw_as_str(
+                                                     payload,
+                                                     session_manager=session_manager,
+                                                     streaming=streaming,
+                                                     result_type=result_type,
+                                                     output_type=output_type))
+
+                    return post_stream
+
+                app.add_api_route(
+                    path=f"{endpoint.path}/stream/full",
+                    endpoint=post_streaming_raw_endpoint(request_type=GenerateBodyType,
+                                                         streaming=True,
+                                                         result_type=GenerateStreamResponseType,
+                                                         output_type=GenerateStreamResponseType),
+                    methods=[endpoint.method],
+                    response_model=GenerateStreamResponseType,
+                    description="Stream raw intermediate steps without any step adaptor translations",
                     responses={500: response_500},
                 )
 
