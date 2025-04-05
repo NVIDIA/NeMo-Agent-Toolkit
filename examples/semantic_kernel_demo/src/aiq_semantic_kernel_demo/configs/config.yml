@@ -18,14 +18,8 @@ general:
   use_uvloop: true
   front_end:
     _type: fastapi
-    cross_origin_resource_sharing:
-      allow_origins:
-      allow_origin_regex:
-      allow_methods:
-      allow_headers:
-      allow_credentials:
-      expose_headers:
-      max_age:
+    cors:
+      allow_origins: ['*']
     step_adaptor:
       mode: default
 

@@ -56,7 +56,7 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
             default=None, description=" A list of origins that should be permitted to make cross-origin requests.")
         allow_origin_regex: str | None = Field(
             default=None,
-            description="A regex string to match against origins that should be permitted to make cross-origin requests",
+            description="A permitted regex string to match against origins to make cross-origin requests",
         )
         allow_methods: list[str] | None = Field(
             default_factory=lambda: ['GET'],
@@ -98,7 +98,7 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
             "Additional endpoints to add to the FastAPI app which run functions within the AgentIQ configuration. "
             "Each endpoint must have a unique path."))
 
-    cross_origin_resource_sharing: CrossOriginResourceSharing = Field(
+    cors: CrossOriginResourceSharing = Field(
         default_factory=CrossOriginResourceSharing,
         description="Cross origin resource sharing configuration for the FastAPI app")
 

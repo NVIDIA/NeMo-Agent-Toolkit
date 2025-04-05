@@ -24,8 +24,8 @@ from functools import partial
 from fastapi import Body
 from fastapi import FastAPI
 from fastapi import Response
-from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from aiq.builder.workflow_builder import WorkflowBuilder
@@ -91,26 +91,26 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         """
         cors_kwargs = {}
 
-        if self.front_end_config.cross_origin_resource_sharing.allow_origins is not None:
-            cors_kwargs["allow_origins"] = self.front_end_config.cross_origin_resource_sharing.allow_origins
+        if self.front_end_config.cors.allow_origins is not None:
+            cors_kwargs["allow_origins"] = self.front_end_config.cors.allow_origins
 
-        if self.front_end_config.cross_origin_resource_sharing.allow_origin_regex is not None:
-            cors_kwargs["allow_origin_regex"] = self.front_end_config.cross_origin_resource_sharing.allow_origin_regex
+        if self.front_end_config.cors.allow_origin_regex is not None:
+            cors_kwargs["allow_origin_regex"] = self.front_end_config.cors.allow_origin_regex
 
-        if self.front_end_config.cross_origin_resource_sharing.allow_methods is not None:
-            cors_kwargs["allow_methods"] = self.front_end_config.cross_origin_resource_sharing.allow_methods
+        if self.front_end_config.cors.allow_methods is not None:
+            cors_kwargs["allow_methods"] = self.front_end_config.cors.allow_methods
 
-        if self.front_end_config.cross_origin_resource_sharing.allow_headers is not None:
-            cors_kwargs["allow_headers"] = self.front_end_config.cross_origin_resource_sharing.allow_headers
+        if self.front_end_config.cors.allow_headers is not None:
+            cors_kwargs["allow_headers"] = self.front_end_config.cors.allow_headers
 
-        if self.front_end_config.cross_origin_resource_sharing.allow_credentials is not None:
-            cors_kwargs["allow_credentials"] = self.front_end_config.cross_origin_resource_sharing.allow_credentials
+        if self.front_end_config.cors.allow_credentials is not None:
+            cors_kwargs["allow_credentials"] = self.front_end_config.cors.allow_credentials
 
-        if self.front_end_config.cross_origin_resource_sharing.expose_headers is not None:
-            cors_kwargs["expose_headers"] = self.front_end_config.cross_origin_resource_sharing.expose_headers
+        if self.front_end_config.cors.expose_headers is not None:
+            cors_kwargs["expose_headers"] = self.front_end_config.cors.expose_headers
 
-        if self.front_end_config.cross_origin_resource_sharing.max_age is not None:
-            cors_kwargs["max_age"] = self.front_end_config.cross_origin_resource_sharing.max_age
+        if self.front_end_config.cors.max_age is not None:
+            cors_kwargs["max_age"] = self.front_end_config.cors.max_age
 
         aiq_app.add_middleware(
             CORSMiddleware,
