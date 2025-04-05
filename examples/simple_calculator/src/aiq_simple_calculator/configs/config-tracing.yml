@@ -38,6 +38,8 @@ general:
         method: POST
         description: Gets the current time
         function_name: current_datetime
+    cors:
+      allow_origins: ['*']
 
 functions:
   calculator_multiply:
