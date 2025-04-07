@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)
 
 
 class AgnoPersonalFinanceFunctionConfig(FunctionBaseConfig, name="agno_personal_finance"):
-    _type: str = "agno_personal_finance"
     llm_name: LLMRef
     serp_api_tool: FunctionRef
     api_key: str | None = None
