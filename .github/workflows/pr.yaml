@@ -66,8 +66,8 @@ jobs:
       is_main_branch: ${{ github.ref_name == 'main' }}
       is_dev_branch: ${{ startsWith(github.ref_name, 'develop') }}
       has_skip_ci_label: ${{ steps.get-pr-info.outcome == 'success' && contains(fromJSON(steps.get-pr-info.outputs.pr-info).labels.*.name, 'skip-ci') || false }}
-      base_sha: ${{ steps.get-pr-info.outcome == 'success' && fromJSON(steps.get-pr-info.outputs.pr-info).base.sha || '' }}
       pr_info: ${{ steps.get-pr-info.outcome == 'success' && steps.get-pr-info.outputs.pr-info || '' }}
+      base_sha: ${{ steps.get-pr-info.outcome == 'success' && fromJSON(steps.get-pr-info.outputs.pr-info).base.sha || '' }}
 
 
   ci_pipe:
@@ -80,3 +80,4 @@ jobs:
       container: ghcr.io/astral-sh/uv:python3.12-bookworm
       # Info about the PR. Empty for non PR branches. Useful for extracting PR number, title, etc.
       pr_info: ${{ needs.prepare.outputs.pr_info }}
+      base_sha: ${{ needs.prepare.outputs.base_sha }}
