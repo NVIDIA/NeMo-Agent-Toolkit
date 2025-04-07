@@ -17,19 +17,12 @@ import importlib
 import importlib.resources
 import inspect
 import logging
-import os
-import sys
 from pathlib import Path
 
 import pytest
 
 from agno_personal_finance.agno_personal_finance_function import AgnoPersonalFinanceFunctionConfig
 from aiq.runtime.loader import load_workflow
-
-# Add the src directory to the Python path if not already present
-src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src'))
-if src_path not in sys.path:
-    sys.path.insert(0, src_path)
 
 logger = logging.getLogger(__name__)
 

@@ -62,7 +62,7 @@ isort
 Jira
 jsonlines
 # libcudf isn't styled in the way that cuDF is https://docs.rapids.ai/api/libcudf/stable/
-kwargs
+[Kk]wargs
 libcudf
 LLM(s?)
 # https://github.com/logpai/loghub/
