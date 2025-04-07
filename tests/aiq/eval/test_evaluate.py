@@ -465,7 +465,8 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
          patch("aiq.runtime.session.AIQSessionManager", return_value=session_manager), \
          patch("aiq.eval.evaluate.DatasetHandler", return_value=mock_dataset_handler), \
          patch("aiq.eval.evaluate.OutputUploader", return_value=mock_uploader), \
-         patch.object(evaluation_run, "run_workflow", wraps=evaluation_run.run_workflow) as mock_run_workflow, \
+         patch.object(evaluation_run, "run_workflow_local",
+                      wraps=evaluation_run.run_workflow_local) as mock_run_workflow, \
          patch.object(evaluation_run, "run_evaluators", AsyncMock()) as mock_run_evaluators, \
          patch.object(evaluation_run, "profile_workflow", AsyncMock()) as mock_profile_workflow, \
          patch.object(evaluation_run, "write_output", MagicMock()) as mock_write_output:
