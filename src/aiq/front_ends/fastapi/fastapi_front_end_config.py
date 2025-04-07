@@ -51,6 +51,32 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     class Endpoint(EndpointBase):
         function_name: str = Field(description="The name of the function to call for this endpoint")
 
+    class CrossOriginResourceSharing(BaseModel):
+        allow_origins: list[str] | None = Field(
+            default=None, description=" A list of origins that should be permitted to make cross-origin requests.")
+        allow_origin_regex: str | None = Field(
+            default=None,
+            description="A permitted regex string to match against origins to make cross-origin requests",
+        )
+        allow_methods: list[str] | None = Field(
+            default_factory=lambda: ['GET'],
+            description="A list of HTTP methods that should be allowed for cross-origin requests.")
+        allow_headers: list[str] | None = Field(
+            default_factory=list,
+            description="A list of HTTP request headers that should be supported for cross-origin requests.")
+        allow_credentials: bool | None = Field(
+            default=False,
+            description="Indicate that cookies should be supported for cross-origin requests.",
+        )
+        expose_headers: list[str] | None = Field(
+            default_factory=list,
+            description="Indicate any response headers that should be made accessible to the browser.",
+        )
+        max_age: int | None = Field(
+            default=600,
+            description="Sets a maximum time in seconds for browsers to cache CORS responses.",
+        )
+
     root_path: str = Field(default="", description="The root path for the API")
     host: str = Field(default="localhost", description="Host to bind the server to")
     port: int = Field(default=8000, description="Port to bind the server to", ge=0, le=65535)
@@ -71,6 +97,10 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         description=(
             "Additional endpoints to add to the FastAPI app which run functions within the AgentIQ configuration. "
             "Each endpoint must have a unique path."))
+
+    cors: CrossOriginResourceSharing = Field(
+        default_factory=CrossOriginResourceSharing,
+        description="Cross origin resource sharing configuration for the FastAPI app")
 
     use_gunicorn: bool = Field(
         default=False,

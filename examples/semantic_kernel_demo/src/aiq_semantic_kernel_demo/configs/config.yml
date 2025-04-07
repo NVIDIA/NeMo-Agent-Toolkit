@@ -18,6 +18,8 @@ general:
   use_uvloop: true
   front_end:
     _type: fastapi
+    cors:
+      allow_origins: ['*']
     step_adaptor:
       mode: default
 
@@ -35,7 +37,7 @@ functions:
     memory: saas_memory
     description: |
       Add any facts about user preferences to long term memory. Always use this if users mention a preference.
-      The input to this tool should be a string that describes the user's preference, not the question or answer. 
+      The input to this tool should be a string that describes the user's preference, not the question or answer.
 
   get_memory:
     _type: get_memory
