@@ -25,8 +25,6 @@ from aiq.data_models.api_server import AIQResponseIntermediateStep
 from aiq.data_models.evaluate import EvalConfig
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.intermediate_step import StreamEventData
 from aiq.eval.config import EvaluationRunConfig
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
@@ -74,8 +72,8 @@ class EvaluationRemoteWorkflowHandler:
                         # This is a generate response chunk
                         try:
                             chunk_data = json.loads(line[len(DATA_PREFIX):])
-                            if chunk_data.get("output"):
-                                final_response = chunk_data.get("output")
+                            if chunk_data.get("value"):
+                                final_response = chunk_data.get("value")
                         except json.JSONDecodeError as e:
                             logger.error("Failed to parse generate response chunk: %s", e)
                             continue
@@ -84,12 +82,9 @@ class EvaluationRemoteWorkflowHandler:
                         try:
                             step_data = json.loads(line[len(INTERMEDIATE_DATA_PREFIX):])
                             response_intermediate = AIQResponseIntermediateStep.model_validate(step_data)
-                            # convert to IntermediateStep
-                            intermediate_step = IntermediateStep(payload=IntermediateStepPayload(
-                                event_type=IntermediateStepType(response_intermediate.type),
-                                name=response_intermediate.name,
-                                data=StreamEventData(input=response_intermediate.payload, output=None, chunk=None),
-                                metadata=None))
+                            # The payload is expected to be IntermediateStepPayload
+                            intermediate_step = IntermediateStep(
+                                payload=IntermediateStepPayload.model_validate_json(response_intermediate.payload))
                             intermediate_steps.append(intermediate_step)
                         except (json.JSONDecodeError, ValidationError) as e:
                             logger.error("Failed to parse intermediate step: %s", e)
