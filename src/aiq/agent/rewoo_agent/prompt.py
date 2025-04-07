@@ -31,16 +31,16 @@ Please note that you don't need to use all the tools. You can use any of the too
 Make sure to follow the pattern: #E = tool_name[tool_input]. Each Plan should be followed by only one #E.
 
 For example,
-Task: Determine which is greater: the result of subtracting 13 from 25, or the result of dividing 132 by 12.
+Task: Who was the CEO of Golden State Warriors in the year represented by the result of substracting 25 from 2023?
 
-Plan: Calculate the result of 25 minus 13.
-#E1 = calculator_subtract[25, 13]
+Plan: Calculate the result of 2023 minus 25.
+#E1 = calculator_subtract[2023, 25]
 
-Plan: Calculate the result of 132 divided by 12.
-#E2 = calculator_divide[132, 12]
+Plan: Get the year represented by #E1.
+#E2 = haystack_chitchat_agent["Response with the result number contained in #E1"]
 
-Plan: Compare the results from steps 1 and 2 to determine which is greater.
-#E3 = calculator_inequality[#E1, ">", #E2]
+Plan: Search for the CEO of Golden State Warriors in the year #E2.
+#E3 = internet_search["Who was the CEO of Golden State Warriors in the year #E2?"]
 
 Begin!
 Describe your plans with rich details.

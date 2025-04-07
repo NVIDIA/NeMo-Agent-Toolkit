@@ -162,12 +162,8 @@ class ReWOOAgentGraph(BaseAgent):
                 logger.info("Successfully parsed structured tool input from Action Input")
                 tool_response = await requested_tool.ainvoke(tool_input_dict,
                                                              config=RunnableConfig(callbacks=self.callbacks))
-            except JSONDecodeError as ex:
-                logger.warning(
-                    "Unable to parse structured tool input from Action Input. Using Action Input as is."
-                    "\nParsing error: %s",
-                    ex,
-                    exc_info=True)
+            except JSONDecodeError:
+                logger.info("Unable to parse structured tool input from Action Input. Using Action Input as is.")
                 tool_input_str = tool_input
                 tool_response = await requested_tool.ainvoke(tool_input_str,
                                                              config=RunnableConfig(callbacks=self.callbacks))
