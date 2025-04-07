@@ -17,6 +17,7 @@ import asyncio
 import typing
 from collections.abc import AsyncGenerator
 
+from aiq.data_models.api_server import AIQResponseIntermediateStep
 from aiq.data_models.api_server import AIQResponsePayloadOutput
 from aiq.data_models.api_server import AIQResponseSerializable
 from aiq.data_models.step_adaptor import StepAdaptorConfig
@@ -123,7 +124,7 @@ async def generate_streaming_response_raw(payload: typing.Any,
                                           result_type: type | None = None,
                                           output_type: type | None = None) -> AsyncGenerator[AIQResponseSerializable]:
     """
-    Similar to generate_streaming_response but provides raw IntermediateStep objects
+    Similar to generate_streaming_response but provides raw AIQResponseIntermediateStep objects
     without any step adaptor translations.
     """
     async with session_manager.run(payload) as runner:
@@ -148,7 +149,7 @@ async def generate_streaming_response_raw(payload: typing.Any,
             asyncio.create_task(pull_result())
 
             async for item in q:
-                if (isinstance(item, AIQResponseSerializable)):
+                if (isinstance(item, AIQResponseIntermediateStep)):
                     yield item
                 else:
                     yield AIQResponsePayloadOutput(payload=item)
@@ -173,7 +174,7 @@ async def generate_streaming_response_raw_as_str(payload: typing.Any,
                                                       streaming=streaming,
                                                       result_type=result_type,
                                                       output_type=output_type):
-        if (isinstance(item, AIQResponseSerializable)):
+        if (isinstance(item, AIQResponseIntermediateStep) or isinstance(item, AIQResponsePayloadOutput)):
             yield item.get_stream_data()
         else:
             raise ValueError("Unexpected item type in stream. Expected AIQChatResponseSerializable, got: " +

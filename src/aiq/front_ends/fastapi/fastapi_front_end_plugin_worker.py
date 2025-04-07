@@ -214,6 +214,19 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             return get_stream
 
+        def get_streaming_raw_endpoint(streaming: bool, result_type: type | None, output_type: type | None):
+
+            async def get_stream():
+
+                return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                         content=generate_streaming_response_raw_as_str(None,
+                                                                                        session_manager=session_manager,
+                                                                                        streaming=streaming,
+                                                                                        result_type=result_type,
+                                                                                        output_type=output_type))
+
+            return get_stream
+
         def post_single_endpoint(request_type: type, result_type: type | None):
 
             async def post_single(response: Response, payload: request_type):
@@ -242,6 +255,25 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             return post_stream
 
+        def post_streaming_raw_endpoint(request_type: type,
+                                        streaming: bool,
+                                        result_type: type | None,
+                                        output_type: type | None):
+            """
+            Stream raw intermediate steps without any step adaptor translations.
+            """
+
+            async def post_stream(payload: request_type):
+
+                return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                         content=generate_streaming_response_raw_as_str(payload,
+                                                                                        session_manager=session_manager,
+                                                                                        streaming=streaming,
+                                                                                        result_type=result_type,
+                                                                                        output_type=output_type))
+
+            return post_stream
+
         if (endpoint.path):
             if (endpoint.method == "GET"):
 
@@ -263,6 +295,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     response_model=GenerateStreamResponseType,
                     description=endpoint.description,
                     responses={500: response_500},
+                )
+
+                app.add_api_route(
+                    path=f"{endpoint.path}/stream/full",
+                    endpoint=get_streaming_raw_endpoint(streaming=True,
+                                                        result_type=GenerateStreamResponseType,
+                                                        output_type=GenerateStreamResponseType),
+                    methods=[endpoint.method],
                 )
 
             elif (endpoint.method == "POST"):
@@ -288,23 +328,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     description=endpoint.description,
                     responses={500: response_500},
                 )
-
-                # Add the raw intermediate steps endpoint
-                def post_streaming_raw_endpoint(request_type: type,
-                                                streaming: bool,
-                                                result_type: type | None,
-                                                output_type: type | None):
-
-                    async def post_stream(payload: request_type):
-                        return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                                 content=generate_streaming_response_raw_as_str(
-                                                     payload,
-                                                     session_manager=session_manager,
-                                                     streaming=streaming,
-                                                     result_type=result_type,
-                                                     output_type=output_type))
-
-                    return post_stream
 
                 app.add_api_route(
                     path=f"{endpoint.path}/stream/full",
