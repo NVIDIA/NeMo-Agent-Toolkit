@@ -70,7 +70,8 @@ examples = [
   "aiq_simple_calculator",
   "aiq_simple",
   "aiq_swe_bench",
-  "aiq_automated_description_generation"
+  "aiq_automated_description_generation",
+  "agno_personal_finance"
 ]
 
 profiling = [

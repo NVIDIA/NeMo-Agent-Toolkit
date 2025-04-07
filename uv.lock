@@ -68,6 +68,7 @@ crewai = [
     { name = "agentiq-crewai" },
 ]
 examples = [
+    { name = "agno-personal-finance" },
     { name = "aiq-automated-description-generation" },
     { name = "aiq-email-phishing-analyzer" },
     { name = "aiq-multi-frameworks" },
@@ -139,6 +140,7 @@ requires-dist = [
     { name = "agentiq-mem0ai", marker = "extra == 'mem0ai'", editable = "packages/agentiq_mem0ai" },
     { name = "agentiq-semantic-kernel", marker = "extra == 'semantic-kernel'", editable = "packages/agentiq_semantic_kernel" },
     { name = "agentiq-zep-cloud", marker = "extra == 'zep-cloud'", editable = "packages/agentiq_zep_cloud" },
+    { name = "agno-personal-finance", marker = "extra == 'examples'", editable = "examples/agno_personal_finance" },
     { name = "aioboto3", specifier = ">=11.0.0" },
     { name = "aiq-automated-description-generation", marker = "extra == 'examples'", editable = "examples/automated_description_generation" },
     { name = "aiq-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/email_phishing_analyzer" },
@@ -214,6 +216,7 @@ source = { editable = "packages/agentiq_agno" }
 dependencies = [
     { name = "agentiq" },
     { name = "agno" },
+    { name = "google-search-results" },
     { name = "openai" },
 ]
 
@@ -221,6 +224,7 @@ dependencies = [
 requires-dist = [
     { name = "agentiq", editable = "." },
     { name = "agno", specifier = "~=1.2.3" },
+    { name = "google-search-results", specifier = "~=2.4.2" },
     { name = "openai", specifier = "~=1.66" },
 ]
 
@@ -341,7 +345,7 @@ requires-dist = [
 
 [[package]]
 name = "agno"
-version = "1.2.3"
+version = "1.2.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "docstring-parser" },
@@ -357,9 +361,25 @@ dependencies = [
     { name = "typer" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ec/df/c1a46669a0a1b17b056927f9bc520eac42de1a68c935ab72bd6e806f5eff/agno-1.2.3.tar.gz", hash = "sha256:914f27008f3ca33a79639d818e1e8c8485981d0777d097a255975f94e6397285", size = 425540 }
+sdist = { url = "https://files.pythonhosted.org/packages/a6/a2/8d1961275318a1be24d09249f8445d43571bdc96949dd25c10f5a9e26a9e/agno-1.2.11.tar.gz", hash = "sha256:6f36ed60767b655223abca5b61b487e63b6b098050a65e71610e2de914a66e5a", size = 451754 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/15/e3/88b2bbd4912ec58bda49270910d8e4bc46a496432451763361dd4475f493/agno-1.2.3-py3-none-any.whl", hash = "sha256:ebd571c7baad92af7230a36acb065b9fdd8da08408b2fd7c6f54e80993704c68", size = 570988 },
+    { url = "https://files.pythonhosted.org/packages/13/47/2094f0801ae34fa487a17a6cd118e881d69f97fbf5caec504f8b966b0a92/agno-1.2.11-py3-none-any.whl", hash = "sha256:ea72e0f8e42e4ee8c20c8f583759f50bfbd2af90b2f8e3df20d35be9f8a235a8", size = 598924 },
+]
+
+[[package]]
+name = "agno-personal-finance"
+source = { editable = "examples/agno_personal_finance" }
+dependencies = [
+    { name = "agentiq", extra = ["agno"] },
+    { name = "litellm" },
+    { name = "openai" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agentiq", extras = ["agno"], editable = "." },
+    { name = "litellm", specifier = "~=1.63.14" },
+    { name = "openai", specifier = "~=1.66" },
 ]
 
 [[package]]
@@ -1793,6 +1813,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/52/12/9bf6042d5b0ac8c25afed562fb78e51b0641474097e4139e858b45de40a5/google_crc32c-1.6.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:bd5e7d2445d1a958c266bfa5d04c39932dc54093fa391736dbfdb0f1929c1fb3", size = 32614 },
     { url = "https://files.pythonhosted.org/packages/76/29/fc20f5ec36eac1eea0d0b2de4118c774c5f59c513f2a8630d4db6991f3e0/google_crc32c-1.6.0-cp312-cp312-win_amd64.whl", hash = "sha256:7aec8e88a3583515f9e0957fe4f5f6d8d4997e36d0f61624e70469771584c760", size = 33445 },
 ]
+
+[[package]]
+name = "google-search-results"
+version = "2.4.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/77/30/b3a6f6a2e00f8153549c2fa345c58ae1ce8e5f3153c2fe0484d444c3abcb/google_search_results-2.4.2.tar.gz", hash = "sha256:603a30ecae2af8e600b22635757a6df275dad4b934f975e67878ccd640b78245", size = 18818 }
 
 [[package]]
 name = "googleapis-common-protos"
