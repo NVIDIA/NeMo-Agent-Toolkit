@@ -22,7 +22,6 @@ from pydantic import ValidationError
 from tqdm import tqdm
 
 from aiq.data_models.api_server import AIQResponseIntermediateStep
-from aiq.data_models.evaluate import EvalConfig
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.eval.config import EvaluationRunConfig
@@ -38,11 +37,10 @@ INTERMEDIATE_DATA_PREFIX = "intermediate_data: "
 
 class EvaluationRemoteWorkflowHandler:
 
-    def __init__(self, config: EvaluationRunConfig, eval_config: EvalConfig):
+    def __init__(self, config: EvaluationRunConfig, max_concurrency: int):
         self.config = config
-        self.eval_config = eval_config
         # Run metadata
-        self.semaphore = asyncio.Semaphore(self.eval_config.general.max_concurrency)
+        self.semaphore = asyncio.Semaphore(max_concurrency)
 
     async def run_workflow_remote_single(self, session: aiohttp.ClientSession, item: EvalInputItem):
         """
