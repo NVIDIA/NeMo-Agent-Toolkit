@@ -46,7 +46,8 @@ async def pull_intermediate(_q, adapter):
         if adapter is None:
             adapted = AIQResponseIntermediateStep(id=item.UUID,
                                                   type=item.event_type,
-                                                  name=item.name,
+                                                  name=item.name or "",
+                                                  parent_id=item.parent_id,
                                                   payload=item.payload.model_dump_json())
         else:
             adapted = adapter.process(item)
