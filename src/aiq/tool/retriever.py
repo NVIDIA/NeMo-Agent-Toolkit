@@ -40,8 +40,8 @@ class AIQRetrieverConfig(FunctionBaseConfig, name="aiq_retriever"):
         default=True,
         description="If true the tool will raise exceptions, otherwise it will log them as warnings and return []",
     )
-    topic: str = Field(default=None, description="Used to provide a more detailed tool description to the agent")
-    description: str = Field(default=None, description="If present it will be used as the tool description")
+    topic: str | None = Field(default=None, description="Used to provide a more detailed tool description to the agent")
+    description: str | None = Field(default=None, description="If present it will be used as the tool description")
 
 
 def _get_description_from_config(config: AIQRetrieverConfig) -> str:

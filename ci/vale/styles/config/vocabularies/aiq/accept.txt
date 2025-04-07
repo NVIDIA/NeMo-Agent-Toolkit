@@ -47,6 +47,7 @@ DB(s?)
 [Ee]ngineerable
 [Ee]val
 [Ee]xplainability
+Faiss
 [Gg]eneratable
 glog
 GPU(s?)
