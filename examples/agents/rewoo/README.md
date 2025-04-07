@@ -291,3 +291,10 @@ curl --request POST \
   --data '{"input_message": "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"}'
 ```
 ---
+
+### Evaluating the ReWOO Agent Workflow
+**Run and evaluate the `rewoo_agent` example Workflow**
+
+```bash
+aiq eval --config_file=examples/agents/rewoo/configs/config.yml
+```
