@@ -266,10 +266,9 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             if self.config.endpoint:
                 await self.run_workflow_remote()
             else:
-                session_manager = AIQSessionManager(eval_workflow.build(),
-                                                    max_concurrency=self.eval_config.general.max_concurrency)
-                # Run workflow
                 if not self.config.skip_workflow:
+                    session_manager = AIQSessionManager(eval_workflow.build(),
+                                                        max_concurrency=self.eval_config.general.max_concurrency)
                     await self.run_workflow_local(session_manager)
 
             # Evaluate
