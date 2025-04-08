@@ -17,6 +17,7 @@ import asyncio
 import logging
 
 from aiq.builder.context import AIQContext
+from aiq.data_models.api_server import AIQResponseIntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStep
 
 logger = logging.getLogger(__name__)
@@ -39,8 +40,18 @@ async def pull_intermediate(_q, adapter):
         """
         Synchronously called whenever the runner publishes an event.
         We process it, then place it into the async queue (via a small async task).
+        If adapter is None, convert the raw IntermediateStep into the complete
+        AIQResponseIntermediateStep and place it into the queue.
         """
-        adapted = adapter.process(item)
+        if adapter is None:
+            adapted = AIQResponseIntermediateStep(id=item.UUID,
+                                                  type=item.event_type,
+                                                  name=item.name or "",
+                                                  parent_id=item.parent_id,
+                                                  payload=item.payload.model_dump_json())
+        else:
+            adapted = adapter.process(item)
+
         if adapted is not None:
             loop.create_task(_q.put(adapted))
 
