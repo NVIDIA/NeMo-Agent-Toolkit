@@ -29,13 +29,7 @@ from aiq.data_models.intermediate_step import TraceMetadata
 
 # --- Helper function to recursively serialize any object into JSON-friendly data ---
 def _serialize_data(obj: Any) -> Any:
-    """
-    Convert `obj` into a structure that can be passed to `json.dumps(...)`:
-      - If Pydantic BaseModel is detected, call model_dump().
-      - If it's a dict, list, tuple, set, etc., recursively handle items.
-      - If it's a basic type (str, int, float, bool, None), keep as is.
-      - Otherwise, fallback to str(obj).
-    """
+    """Convert `obj` into a structure that can be passed to `json.dumps(...)`."""
     if isinstance(obj, BaseModel):
         # Convert Pydantic model to dict
         return obj.model_dump()
@@ -67,19 +61,7 @@ def push_intermediate_step(step_manager: IntermediateStepManager,
                            kwargs: Any = None,
                            output: Any = None,
                            metadata: dict[str, Any] | None = None) -> None:
-    """
-    Push an intermediate step to the AgentIQ Event Stream.
-
-    Arguments:
-        step_manager: IntermediateStepManager
-        identifier: Unique identifier for the step.
-        function_name: Name of the function being tracked.
-        event_type: Type of the event (e.g., START, END).
-        args: Arguments passed to the function.
-        kwargs: Keyword arguments passed to the function.
-        output: Output from the function.
-        metadata: Optional metadata to attach to the step.
-    """
+    """Push an intermediate step to the AgentIQ Event Stream."""
 
     payload = IntermediateStepPayload(UUID=identifier,
                                       event_type=event_type,
@@ -98,23 +80,10 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
     Decorator that can wrap any type of function (sync, async, generator,
     async generator) and executes "tracking logic" around it.
 
-    Arguments:
-        func: Any: The function to be wrapped.
-        metadata: dict[str, Any] | None: Optional metadata to attach to the function call. This should
-
-    The decorator will:
-      1) Auto-detect the function type (sync vs async, generator vs normal).
-      2) Validate `metadata`.
-      3) Serialize `args` and `kwargs` into JSON-friendly data (including special
-         handling for Pydantic models if available).
-      4) Call (or iterate) the original function, **also serializing** returned
-         values / yielded items before returning or yielding them.
-
-    Example:
-
-        @track_function(metadata={'action': 'compute'})
-        def my_func(x, y):
-            return x + y
+    - If the function is async, it will be wrapped in an async function.
+    - If the function is a generator, it will be wrapped in a generator function.
+    - If the function is an async generator, it will be wrapped in an async generator function.
+    - If the function is sync, it will be wrapped in a sync function.
     """
 
     step_manager: IntermediateStepManager = AIQContext.get().intermediate_step_manager
