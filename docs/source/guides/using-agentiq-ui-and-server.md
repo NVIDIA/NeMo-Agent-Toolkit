@@ -111,6 +111,28 @@ result back to the client. The transaction schema is defined by the workflow.
   ```json
   "data": { "value": "No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 15)." }
   ```
+### Generate Streaming Raw Transaction
+  - **Route:** `/generate/stream/full`
+  - **Description:** Same as `/generate/stream` but provides raw `IntermediateStep` objects
+    without any step adaptor translations. This endpoint is used for remote evaluation of workflows.
+  - **HTTP Request Example:**
+    ```bash
+    curl --request POST \
+    --url http://localhost:8000/generate/stream/full \
+    --header 'Content-Type: application/json' \
+    --data '{
+      "input_message": "Is 4 + 4 greater than the current hour of the day"
+    }'
+    ```
+- **HTTP Intermediate Step Stream Example:**
+  ```json
+  "intermediate_data": {"id":"dda55b33-edd1-4dde-b938-182676a42a19","parent_id":"8282eb42-01dd-4db6-9fd5-915ed4a2a032","type":"LLM_END","name":"meta/llama-3.1-70b-instruct","payload":"{\"event_type\":\"LLM_END\",\"event_timestamp\":1744051441.449566,\"span_event_timestamp\":1744051440.5072863,\"framework\":\"langchain\",\"name\":\"meta/llama-3.1-70b-instruct\",\"tags\":null,\"metadata\":{\"chat_responses\":[{\"text\":\"Thought: I now know the final answer\\n\\nFinal Answer: No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11).\",\"generation_info\":null,\"type\":\"ChatGenerationChunk\",\"message\":{\"content\":\"Thought: I now know the final answer\\n\\nFinal Answer: No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11).\",\"additional_kwargs\":{},\"response_metadata\":{\"finish_reason\":\"stop\",\"model_name\":\"meta/llama-3.1-70b-instruct\"},\"type\":\"AIMessageChunk\",\"name\":null,\"id\":\"run-dda55b33-edd1-4dde-b938-182676a42a19\"}}],\"chat_inputs\":null,\"tool_inputs\":null,\"tool_outputs\":null,\"tool_info\":null},\"data\":{\"input\":\"First number 8 is less than the second number 11\",\"output\":\"Thought: I now know the final answer\\n\\nFinal Answer: No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11).\",\"chunk\":null},\"usage_info\":{\"token_usage\":{\"prompt_tokens\":37109,\"completion_tokens\":902,\"total_tokens\":38011},\"num_llm_calls\":0,\"seconds_between_calls\":0},\"UUID\":\"dda55b33-edd1-4dde-b938-182676a42a19\"}"}
+  ```
+- **HTTP Response Example:**
+  ```json
+  "data": {"value":"No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11)."}
+  ```
+
 ### Chat Non-Streaming Transaction
   - **Route:** `/chat`
   - **Description:** An OpenAI compatible non-streaming chat transaction.
