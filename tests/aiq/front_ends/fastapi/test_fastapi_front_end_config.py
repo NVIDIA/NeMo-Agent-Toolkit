@@ -16,6 +16,7 @@
 import pytest
 from pydantic import BaseModel
 
+from aiq.data_models.step_adaptor import StepAdaptorConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 
 ENDPOINT_BASE_ALL_VALUES = {
@@ -121,3 +122,20 @@ def test_cross_origin_resource_sharing(cors_kwargs: dict):
     ids=["all-values", "required-values"])
 def test_fast_api_front_end_config(config_kwargs: dict):
     model = _test_model_instantiation(FastApiFrontEndConfig, config_kwargs)
+
+    if len(model.model_fields_set) == 0:
+        # Make sure that the defaults appear reasonable
+        assert isinstance(model.root_path, str)
+        assert isinstance(model.host, str)
+        assert isinstance(model.port, int)
+        assert model.port >= 0
+        assert model.port <= 65535
+        assert isinstance(model.reload, bool)
+        assert isinstance(model.workers, int)
+        assert model.workers >= 1
+        assert isinstance(model.step_adaptor, StepAdaptorConfig)
+        assert isinstance(model.workflow, FastApiFrontEndConfig.EndpointBase)
+        assert isinstance(model.endpoints, list)
+        assert isinstance(model.cors, FastApiFrontEndConfig.CrossOriginResourceSharing)
+        assert isinstance(model.use_gunicorn, bool)
+        assert (isinstance(model.runner_class, str) or model.runner_class is None)
