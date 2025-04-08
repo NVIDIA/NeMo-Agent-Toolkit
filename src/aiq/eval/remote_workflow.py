@@ -13,78 +13,116 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+import json
 import logging
 
 import aiohttp
-from tqdm.asyncio import tqdm
+from pydantic import ValidationError
+from tqdm import tqdm
 
-from aiq.data_models.evaluate import EvalConfig
+from aiq.data_models.api_server import AIQResponseIntermediateStep
+from aiq.data_models.intermediate_step import IntermediateStep
+from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.eval.config import EvaluationRunConfig
+from aiq.eval.evaluator.evaluator_model import EvalInput
+from aiq.eval.evaluator.evaluator_model import EvalInputItem
 
 logger = logging.getLogger(__name__)
+
+# Constants for streaming response prefixes
+DATA_PREFIX = "data: "
+INTERMEDIATE_DATA_PREFIX = "intermediate_data: "
 
 
 class EvaluationRemoteWorkflowHandler:
 
-    def __init__(self, config: EvaluationRunConfig, eval_config: EvalConfig):
-        import asyncio
+    def __init__(self, config: EvaluationRunConfig, max_concurrency: int):
         self.config = config
-        self.eval_config = eval_config
-
         # Run metadata
-        self.semaphore = asyncio.Semaphore(self.eval_config.max_concurrency)
+        self.semaphore = asyncio.Semaphore(max_concurrency)
 
-    async def run_workflow_remote_single(self, session: aiohttp.ClientSession, question: str) -> dict:
+    async def run_workflow_remote_single(self, session: aiohttp.ClientSession, item: EvalInputItem):
         """
-        Sends a single question to the endpoint hosting the worflow and retrieves the response.
+        Sends a single input to the endpoint hosting the workflow and retrieves the response.
         """
-        from pydantic import ValidationError
+        question = item.input_obj
+        # generate request format
+        payload = {"input_message": question}
 
-        from aiq.data_models.api_server import AIQChatRequest
-        from aiq.data_models.api_server import AIQChatResponse
-        from aiq.data_models.api_server import Message
-
-        workflow_llm = self.eval_config.workflow_llm
-        chat_request = AIQChatRequest(model=workflow_llm.model,
-                                      temperature=workflow_llm.temperature,
-                                      top_p=workflow_llm.top_p,
-                                      max_tokens=workflow_llm.tokens,
-                                      messages=[Message(role="user", content=question)])
-        payload = chat_request.model_dump()
         try:
-            async with session.post(self.config.endpoint, json=payload) as response:
+            # Use the streaming endpoint
+            endpoint = f"{self.config.endpoint}/generate/stream/full"
+            async with session.post(endpoint, json=payload) as response:
                 response.raise_for_status()  # Raise an exception for HTTP errors
-                json_response = await response.json()
+
+                # Initialize variables to store the response
+                final_response = None
+                intermediate_steps = []
+
+                # Process the streaming response
+                async for line in response.content:
+                    line = line.decode('utf-8').strip()
+                    if not line:
+                        continue
+
+                    if line.startswith(DATA_PREFIX):
+                        # This is a generate response chunk
+                        try:
+                            chunk_data = json.loads(line[len(DATA_PREFIX):])
+                            if chunk_data.get("value"):
+                                final_response = chunk_data.get("value")
+                        except json.JSONDecodeError as e:
+                            logger.error("Failed to parse generate response chunk: %s", e)
+                            continue
+                    elif line.startswith(INTERMEDIATE_DATA_PREFIX):
+                        # This is an intermediate step
+                        try:
+                            step_data = json.loads(line[len(INTERMEDIATE_DATA_PREFIX):])
+                            response_intermediate = AIQResponseIntermediateStep.model_validate(step_data)
+                            # The payload is expected to be IntermediateStepPayload
+                            intermediate_step = IntermediateStep(
+                                payload=IntermediateStepPayload.model_validate_json(response_intermediate.payload))
+                            intermediate_steps.append(intermediate_step)
+                        except (json.JSONDecodeError, ValidationError) as e:
+                            logger.error("Failed to parse intermediate step: %s", e)
+                            continue
+
         except aiohttp.ClientError as e:
             # Handle connection or HTTP-related errors
             logger.error("Request failed for question %s: %s", question, e)
-            return {"error": str(e), "question": question}
+            item.output_obj = None
+            item.trajectory = []
+            return
 
-        try:
-            chat_response = AIQChatResponse.model_validate(json_response)
-        except ValidationError as e:
-            logger.error("Response validation failed: %s", e)
-            return {"error": "Response validation failed", "details": str(e)}
+        # Extract and fill the item with the response and intermediate steps
+        item.output_obj = final_response
+        item.trajectory = intermediate_steps
+        return
 
-        # Extract and return the content
-        if not chat_response.choices:
-            logger.error("Received empty choices from the endpoint for question '%s': %s", question, json_response)
-            return {"error": "Empty response choices", "question": question}
-
-        return {"response": chat_response.choices[-1].message.content}
-
-    async def run_workflow_remote_with_limits(self, session: aiohttp.ClientSession, question: str) -> dict:
+    async def run_workflow_remote_with_limits(self, session: aiohttp.ClientSession, item: EvalInputItem, pbar: tqdm):
         """
         Sends limited number of concurrent requests to a remote workflow and retrieves responses.
         """
         async with self.semaphore:
-            return await self.run_workflow_remote_single(session=session, question=question)
+            await self.run_workflow_remote_single(session=session, item=item)
+            pbar.update(1)
 
-    async def run_workflow_remote(self, questions: list[str]) -> list:
+    async def run_workflow_remote(self, eval_input: EvalInput) -> EvalInput:
         """
-        Sends question to a workflow hosted on a remote endpoint.
+        Sends inputs to a workflow hosted on a remote endpoint.
         """
         timeout = aiohttp.ClientTimeout(total=self.config.endpoint_timeout)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            tasks = [self.run_workflow_remote_with_limits(session=session, question=question) for question in questions]
-            return await tqdm.gather(*tasks)
+        try:
+            pbar = tqdm(total=len(eval_input.eval_input_items), desc="Running workflow", unit="item")
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                # get the questions from the eval_input
+                tasks = [
+                    self.run_workflow_remote_with_limits(session, item, pbar) for item in eval_input.eval_input_items
+                ]
+                await asyncio.gather(*tasks)
+
+        finally:
+            pbar.close()
+
+        return eval_input
