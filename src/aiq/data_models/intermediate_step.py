@@ -88,6 +88,9 @@ class TraceMetadata(BaseModel):
     tool_inputs: typing.Any | None = None
     tool_outputs: typing.Any | None = None
     tool_info: typing.Any | None = None
+    span_inputs: typing.Any | None = None
+    span_outputs: typing.Any | None = None
+    provided_metadata: typing.Any | None = None
 
     # Allow extra fields in the model_config to support derived models
     model_config = ConfigDict(extra="allow")

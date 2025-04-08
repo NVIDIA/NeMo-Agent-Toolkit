@@ -16,8 +16,8 @@ import asyncio
 
 from pydantic import BaseModel
 
+from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.profiler.decroators.function_tracking import SpanPayload
 from aiq.profiler.decroators.function_tracking import track_function
 from aiq.utils.reactive.subject import Subject
 
@@ -38,15 +38,15 @@ async def test_sync_function_no_metadata(reactive_stream: Subject):
     assert len(published_events) == 2
 
     # Check SPAN_START
-    start_event: SpanPayload = published_events[0].payload
+    start_event: IntermediateStepPayload = published_events[0].payload
     assert start_event.event_type == IntermediateStepType.SPAN_START
-    assert start_event.serialized_args == [2, 3]
-    assert start_event.serialized_kwargs == {}
+    assert start_event.metadata.span_inputs[0] == [2, 3]
+    assert start_event.metadata.span_inputs[1] == {}
 
     # Check SPAN_END
-    end_event: SpanPayload = published_events[1].payload
+    end_event: IntermediateStepPayload = published_events[1].payload
     assert end_event.event_type == IntermediateStepType.SPAN_END
-    assert end_event.serialized_output == 5
+    assert end_event.metadata.span_outputs == 5
 
 
 async def test_sync_function_with_metadata(reactive_stream: Subject):
@@ -62,14 +62,14 @@ async def test_sync_function_with_metadata(reactive_stream: Subject):
     assert result == 20
 
     assert len(published_events) == 2
-    start_event: SpanPayload = published_events[0].payload
-    end_event: SpanPayload = published_events[1].payload
+    start_event: IntermediateStepPayload = published_events[0].payload
+    end_event: IntermediateStepPayload = published_events[1].payload
 
     assert start_event.event_type == IntermediateStepType.SPAN_START
     assert end_event.event_type == IntermediateStepType.SPAN_END
 
-    assert end_event.serialized_output == 20
-    assert start_event.metadata == {"purpose": "test_sync"}
+    assert end_event.metadata.span_outputs == 20
+    assert start_event.metadata.provided_metadata == {"purpose": "test_sync"}
 
 
 async def test_sync_generator(reactive_stream: Subject):
@@ -92,7 +92,7 @@ async def test_sync_generator(reactive_stream: Subject):
     assert published_events[0].payload.event_type == IntermediateStepType.SPAN_START
     for i in range(1, 4):
         assert published_events[i].payload.event_type == IntermediateStepType.SPAN_CHUNK
-        assert published_events[i].payload.serialized_output == i - 1  # i-th event has output i-1
+        assert published_events[i].payload.metadata.span_outputs == i - 1  # i-th event has output i-1
     assert published_events[4].payload.event_type == IntermediateStepType.SPAN_END
 
 
@@ -112,12 +112,12 @@ async def test_class_method(reactive_stream: Subject):
     assert result == 6
 
     assert len(published_events) == 2
-    start_event: SpanPayload = published_events[0].payload
-    end_event: SpanPayload = published_events[1].payload
+    start_event: IntermediateStepPayload = published_events[0].payload
+    end_event: IntermediateStepPayload = published_events[1].payload
 
     assert start_event.event_type == IntermediateStepType.SPAN_START
-    assert start_event.serialized_args[1:] == [10, 4]
-    assert end_event.serialized_output == 6
+    assert start_event.metadata.span_inputs[0][1:] == [10, 4]
+    assert end_event.metadata.span_outputs == 6
 
 
 async def test_async_function(reactive_stream: Subject):
@@ -136,9 +136,9 @@ async def test_async_function(reactive_stream: Subject):
     # For an async, non-generator function => SPAN_START and SPAN_END
     assert len(published_events) == 2
     assert published_events[0].payload.event_type == IntermediateStepType.SPAN_START
-    assert published_events[0].payload.serialized_args == [7, 3]
+    assert published_events[0].payload.metadata.span_inputs[0] == [7, 3]
     assert published_events[1].payload.event_type == IntermediateStepType.SPAN_END
-    assert published_events[1].payload.serialized_output == 10
+    assert published_events[1].payload.metadata.span_outputs == 10
 
 
 async def test_async_generator(reactive_stream: Subject):
@@ -161,11 +161,11 @@ async def test_async_generator(reactive_stream: Subject):
     # For an async generator with 3 yields => 1 SPAN_START, 3 SPAN_CHUNK, 1 SPAN_END => total 5
     assert len(published_events) == 5
     assert published_events[0].payload.event_type == IntermediateStepType.SPAN_START
-    assert published_events[0].payload.serialized_args == [3]
+    assert published_events[0].payload.metadata.span_inputs[0] == [3]
     for i in range(1, 4):
         assert published_events[i].payload.event_type == IntermediateStepType.SPAN_CHUNK
         # The output is 3, 2, 1 respectively
-        assert published_events[i].payload.serialized_output == 4 - i
+        assert published_events[i].payload.metadata.span_outputs == 4 - i
     assert published_events[4].payload.event_type == IntermediateStepType.SPAN_END
 
 
@@ -193,15 +193,15 @@ async def test_sync_function_pydantic(reactive_stream: Subject):
     assert output == "Model is test with value 42"
     assert len(published_events) == 2
 
-    start_event: SpanPayload = published_events[0].payload
-    end_event: SpanPayload = published_events[1].payload
+    start_event: IntermediateStepPayload = published_events[0].payload
+    end_event: IntermediateStepPayload = published_events[1].payload
 
     # Check SPAN_START has the model fully serialized
     assert start_event.event_type == IntermediateStepType.SPAN_START
     # Should see something like [{"name": "test", "value": 42}] for the args
-    assert start_event.serialized_args == [{"name": "test", "value": 42}]
-    assert start_event.serialized_kwargs == {}
+    assert start_event.metadata.span_inputs[0] == [{"name": "test", "value": 42}]
+    assert start_event.metadata.span_inputs[1] == {}
 
     # Check SPAN_END output
     assert end_event.event_type == IntermediateStepType.SPAN_END
-    assert end_event.serialized_output == "Model is test with value 42"
+    assert end_event.metadata.span_outputs == "Model is test with value 42"

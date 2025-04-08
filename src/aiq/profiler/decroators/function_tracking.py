@@ -24,16 +24,7 @@ from aiq.builder.context import AIQContext
 from aiq.builder.intermediate_step_manager import IntermediateStepManager
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
-
-
-class SpanPayload(IntermediateStepPayload):
-    """
-    SpanPayload is a subclass of IntermediateStepPayload that represents
-    a span in the AgentIQ Event Stream.
-    """
-    serialized_args: list[Any] | None = None
-    serialized_kwargs: dict[str, Any] | None = None
-    serialized_output: Any | None = None
+from aiq.data_models.intermediate_step import TraceMetadata
 
 
 # --- Helper function to recursively serialize any object into JSON-friendly data ---
@@ -88,12 +79,13 @@ def push_intermediate_step(step_manager: IntermediateStepManager,
         metadata: Optional metadata to attach to the step.
     """
 
-    payload = SpanPayload(UUID=identifier,
-                          event_type=event_type,
-                          serialized_args=args,
-                          serialized_kwargs=kwargs,
-                          serialized_output=output,
-                          metadata=metadata)
+    payload = IntermediateStepPayload(UUID=identifier,
+                                      event_type=event_type,
+                                      metadata=TraceMetadata(
+                                          span_inputs=[args, kwargs],
+                                          span_outputs=output,
+                                          provided_metadata=metadata,
+                                      ))
 
     step_manager.push_intermediate_step(payload)
 
