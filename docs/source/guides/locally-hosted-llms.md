@@ -107,11 +107,60 @@ aiq run --config_file examples/documentation_guides/locally_hosted_llms/nim_conf
 
 ## Using vLLM
 
+vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getting_started/quickstart.html#openai-compatible-server) allowing us to re-use our existing OpenAI clients. If you have not already done so, install vLLM following the [Quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) guide. For this example we will be using the [`Qwen/Qwen2.5-1.5B-Instruct`](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct) the same model used in the [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getting_started/quickstart.html#openai-compatible-server) section of the Quickstart guide. Along with the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base)embedding model.
+
+### Serving the Models
+Similar to the NIM approach we will be running the LLM on the default port of 8000 and the embedding model on port 8001.
+
+In a terminal from within the vLLM environment, run the following command to serve the LLM:
 ```bash
 vllm serve Qwen/Qwen2.5-1.5B-Instruct
 ```
 
-
+In a second terminal also from within the vLLM environment, run the following command to serve the embedding model:
 ```bash
 vllm serve --task embed --override-pooler-config '{"pooling_type": "MEAN"}' --port 8001  ssmits/Qwen2-7B-Instruct-embed-base
 ```
+
+> Note: The `--override-pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/latest/models/supported_models.html#text-embedding-task-embed) documentation.
+
+
+### AgentIQ Configuration
+The pipeline configuration will be similar to the NIM example, with the key differences being the selection of `openai` as the `_type` for the LLM and embedding models. The OpenAI clients we are using to communicate with the vLLM server expect an API key, we simply need to provide a value key, as the vLLM server does not require authentication.
+`examples/documentation_guides/locally_hosted_llms/vllm_config.yml`:
+```yaml
+functions:
+  webpage_query:
+    _type: webpage_query
+    webpage_url: https://docs.smith.langchain.com/user_guide
+    description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
+    embedder_name: vllm_embedder
+    chunk_size: 512
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  vllm_llm:
+    _type: openai
+    api_key: "EMPTY"
+    base_url: "http://localhost:8000/v1"
+    model_name: Qwen/Qwen2.5-1.5B-Instruct
+
+embedders:
+  vllm_embedder:
+    _type: openai
+    api_key: "EMPTY"
+    base_url: "http://localhost:8001/v1"
+    model_name: ssmits/Qwen2-7B-Instruct-embed-base
+
+workflow:
+  _type: react_agent
+  tool_names: [webpage_query, current_datetime]
+  llm_name: vllm_llm
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3
+```
+
+### Running the AgentIQ Workflow
+aiq run --config_file examples/documentation_guides/locally_hosted_llms/vllm_config.yml --input "What is LangSmith?"
