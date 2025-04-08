@@ -106,3 +106,12 @@ aiq run --config_file examples/documentation_guides/locally_hosted_llms/nim_conf
 
 
 ## Using vLLM
+
+```bash
+vllm serve Qwen/Qwen2.5-1.5B-Instruct
+```
+
+
+```bash
+vllm serve --task embed --override-pooler-config '{"pooling_type": "MEAN"}' --port 8001  ssmits/Qwen2-7B-Instruct-embed-base
+```
