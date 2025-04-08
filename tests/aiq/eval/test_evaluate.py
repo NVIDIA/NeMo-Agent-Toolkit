@@ -68,10 +68,11 @@ def eval_input():
 
 
 @pytest.fixture
-def evaluation_run(default_eval_run_config, eval_input):
+def evaluation_run(default_eval_run_config, eval_input, default_eval_config):
     """Fixture for creating an EvaluationRun instance with defaults and one eval input item."""
     eval_run = EvaluationRun(default_eval_run_config)
     eval_run.eval_input = eval_input
+    eval_run.eval_config = default_eval_config
     return eval_run
 
 
@@ -127,8 +128,10 @@ def default_eval_config(mock_evaluator):
     eval_config = EvalConfig()
     eval_config.general.dataset = EvalDatasetJsonConfig()
     eval_config.general.output = EvalOutputConfig()
+    eval_config.general.max_concurrency = 1
     eval_config.general.output.dir = Path(".tmp/aiq/examples/mock/")
     eval_config.evaluators = {"MockEvaluator": mock_evaluator}
+
     return eval_config
 
 
@@ -268,16 +271,30 @@ async def test_run_workflow_local_workflow_interrupted(evaluation_run, eval_inpu
     assert evaluation_run.workflow_interrupted, "Expected workflow_interrupted to be True after failure"
 
 
-async def test_run_workflow_remote(evaluation_run, session_manager):
-    """Test that run_workflow raises NotImplementedError when a remote workflow is attempted."""
+async def test_run_workflow_remote_success(evaluation_run, generated_answer):
+    """
+    Mock RemoteWorkflowHandler and test evaluation with a remote workflow.
+    """
+    # Patch the remote handler
+    with patch("aiq.eval.remote_workflow.EvaluationRemoteWorkflowHandler") as MockHandler:
+        mock_handler = MockHandler.return_value
 
-    # Simulate a remote workflow by setting an endpoint
-    evaluation_run.config.endpoint = "http://localhost:8000/chat"
+        async def fake_run_workflow_remote(eval_input):
+            """
+            Mock the run_workflow_remote method to update the output field of the item.
+            """
+            for item in eval_input.eval_input_items:
+                item.output_obj = generated_answer
+            return eval_input
 
-    # Ensure the function raises NotImplementedError with the expected message
-    with pytest.raises(NotImplementedError, match="Remote workflow has been temporarily disabled"):
-        # run the actual function
-        await evaluation_run.run_workflow(session_manager)
+        mock_handler.run_workflow_remote = AsyncMock(side_effect=fake_run_workflow_remote)
+
+        # Run the remote evaluation (this calls the mocked handler)
+        await evaluation_run.run_workflow_remote()
+
+        # Assert that each item was updated with the generated output
+        for item in evaluation_run.eval_input.eval_input_items:
+            assert item.output_obj == generated_answer, f"Expected {generated_answer}, got {item.output_obj}"
 
 
 # Batch-2: Tests for running evaluators
@@ -448,7 +465,8 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
          patch("aiq.runtime.session.AIQSessionManager", return_value=session_manager), \
          patch("aiq.eval.evaluate.DatasetHandler", return_value=mock_dataset_handler), \
          patch("aiq.eval.evaluate.OutputUploader", return_value=mock_uploader), \
-         patch.object(evaluation_run, "run_workflow", wraps=evaluation_run.run_workflow) as mock_run_workflow, \
+         patch.object(evaluation_run, "run_workflow_local",
+                      wraps=evaluation_run.run_workflow_local) as mock_run_workflow, \
          patch.object(evaluation_run, "run_evaluators", AsyncMock()) as mock_run_evaluators, \
          patch.object(evaluation_run, "profile_workflow", AsyncMock()) as mock_profile_workflow, \
          patch.object(evaluation_run, "write_output", MagicMock()) as mock_write_output:
