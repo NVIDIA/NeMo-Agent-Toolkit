@@ -61,6 +61,7 @@ def _prepare_serialized_args_kwargs(*args, **kwargs) -> tuple[list[Any], dict[st
 
 def push_intermediate_step(step_manager: IntermediateStepManager,
                            identifier: str,
+                           function_name: str,
                            event_type: IntermediateStepType,
                            args: Any = None,
                            kwargs: Any = None,
@@ -72,6 +73,7 @@ def push_intermediate_step(step_manager: IntermediateStepManager,
     Arguments:
         step_manager: IntermediateStepManager
         identifier: Unique identifier for the step.
+        function_name: Name of the function being tracked.
         event_type: Type of the event (e.g., START, END).
         args: Arguments passed to the function.
         kwargs: Keyword arguments passed to the function.
@@ -81,6 +83,7 @@ def push_intermediate_step(step_manager: IntermediateStepManager,
 
     payload = IntermediateStepPayload(UUID=identifier,
                                       event_type=event_type,
+                                      name=function_name,
                                       metadata=TraceMetadata(
                                           span_inputs=[args, kwargs],
                                           span_outputs=output,
@@ -115,6 +118,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
     """
 
     step_manager: IntermediateStepManager = AIQContext.get().intermediate_step_manager
+    function_name: str = func.__name__ if func else "<unknown_function>"
 
     # If called as @track_function(...) but not immediately passed a function
     if func is None:
@@ -145,6 +149,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
             invocation_id = str(uuid.uuid4())
             push_intermediate_step(step_manager,
                                    invocation_id,
+                                   function_name,
                                    IntermediateStepType.SPAN_START,
                                    args=serialized_args,
                                    kwargs=serialized_kwargs,
@@ -156,6 +161,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
                 serialized_item = _serialize_data(item)
                 push_intermediate_step(step_manager,
                                        invocation_id,
+                                       function_name,
                                        IntermediateStepType.SPAN_CHUNK,
                                        args=serialized_args,
                                        kwargs=serialized_kwargs,
@@ -165,6 +171,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
 
             push_intermediate_step(step_manager,
                                    invocation_id,
+                                   function_name,
                                    IntermediateStepType.SPAN_END,
                                    args=serialized_args,
                                    kwargs=serialized_kwargs,
@@ -185,6 +192,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
             invocation_id = str(uuid.uuid4())
             push_intermediate_step(step_manager,
                                    invocation_id,
+                                   function_name,
                                    IntermediateStepType.SPAN_START,
                                    args=serialized_args,
                                    kwargs=serialized_kwargs,
@@ -195,6 +203,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
             serialized_result = _serialize_data(result)
             push_intermediate_step(step_manager,
                                    invocation_id,
+                                   function_name,
                                    IntermediateStepType.SPAN_END,
                                    args=serialized_args,
                                    kwargs=serialized_kwargs,
@@ -215,6 +224,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
             invocation_id = str(uuid.uuid4())
             push_intermediate_step(step_manager,
                                    invocation_id,
+                                   function_name,
                                    IntermediateStepType.SPAN_START,
                                    args=serialized_args,
                                    kwargs=serialized_kwargs,
@@ -224,6 +234,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
                 serialized_item = _serialize_data(item)
                 push_intermediate_step(step_manager,
                                        invocation_id,
+                                       function_name,
                                        IntermediateStepType.SPAN_CHUNK,
                                        args=serialized_args,
                                        kwargs=serialized_kwargs,
@@ -234,6 +245,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
 
             push_intermediate_step(step_manager,
                                    invocation_id,
+                                   function_name,
                                    IntermediateStepType.SPAN_END,
                                    args=serialized_args,
                                    kwargs=serialized_kwargs,
@@ -248,6 +260,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
         invocation_id = str(uuid.uuid4())
         push_intermediate_step(step_manager,
                                invocation_id,
+                               function_name,
                                IntermediateStepType.SPAN_START,
                                args=serialized_args,
                                kwargs=serialized_kwargs,
@@ -258,6 +271,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
         serialized_result = _serialize_data(result)
         push_intermediate_step(step_manager,
                                invocation_id,
+                               function_name,
                                IntermediateStepType.SPAN_END,
                                args=serialized_args,
                                kwargs=serialized_kwargs,
