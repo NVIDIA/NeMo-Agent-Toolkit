@@ -5,7 +5,7 @@ AgentIQ has the ability to interact with locally hosted LLMs, in this guide we w
 ## Using NIM
 In the AgentIQ simple example the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model was used. For the purposes of this guide we will be using a smaller model, the [`qwen/qwen2_5-7b-instruct`](https://build.nvidia.com/qwen/qwen2_5-7b-instruct) which is more likely to be runnable on a local workstation.
 
-Regardless of the model you choose, the process is the same for downloading the model's container from [build.nvidia.com](https://build.nvidia.com/). Navigate to the model you wish to run locally, if it is able to be downloaded it will be labeled with the `RUN ANYWHERE` tag, the exact commands will be specified on the `Deploy` tab for the model.
+Regardless of the model you choose, the process is the same for downloading the model's container from [`build.nvidia.com`](https://build.nvidia.com/). Navigate to the model you wish to run locally, if it is able to be downloaded it will be labeled with the `RUN ANYWHERE` tag, the exact commands will be specified on the `Deploy` tab for the model.
 
 ### Requirements
 - An NVIDIA GPU with CUDA support (exact requirements depend on the model you are using)
