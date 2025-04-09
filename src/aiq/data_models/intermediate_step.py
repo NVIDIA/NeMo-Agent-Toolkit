@@ -244,3 +244,7 @@ class IntermediateStep(BaseModel):
     @property
     def event_state(self) -> IntermediateStepState:
         return self.payload.event_state
+
+    @property
+    def parent_id(self) -> str | None:
+        return self.function_ancestry.function_id if self.function_ancestry else None

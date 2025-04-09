@@ -15,6 +15,7 @@
 
 import asyncio
 import logging
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +29,7 @@ from aiq.eval.dataset_handler.dataset_handler import DatasetHandler
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
+from aiq.eval.utils.output_uploader import OutputUploader
 from aiq.runtime.session import AIQSessionManager
 
 logger = logging.getLogger(__name__)
@@ -139,12 +141,10 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         await asyncio.gather(*[wrapped_run(item) for item in eval_input_items])
         pbar.close()
 
-    async def run_workflow(self, session_manager: AIQSessionManager):
-        if self.config.endpoint:
-            raise NotImplementedError("Remote workflow has been temporarily disabled")
-
-        # run the workflow locally
-        await self.run_workflow_local(session_manager=session_manager)
+    async def run_workflow_remote(self):
+        from aiq.eval.remote_workflow import EvaluationRemoteWorkflowHandler
+        handler = EvaluationRemoteWorkflowHandler(self.config, self.eval_config.general.max_concurrency)
+        await handler.run_workflow_remote(self.eval_input)
 
     async def profile_workflow(self):
         """
@@ -164,6 +164,12 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         profiler_runner = ProfilerRunner(self.eval_config.general.profiler, self.eval_config.general.output_dir)
 
         await profiler_runner.run(all_stats)
+
+    def cleanup_output_directory(self):
+        '''Remove contents of the output directory if it exists'''
+        if self.eval_config.general.output and self.eval_config.general.output.dir and \
+                self.eval_config.general.output.dir.exists():
+            shutil.rmtree(self.eval_config.general.output.dir)
 
     def write_output(self, dataset_handler: DatasetHandler):
         workflow_output_file = self.eval_config.general.output_dir / "workflow_output.json"
@@ -231,6 +237,9 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         self.eval_config = config.eval
         logger.debug("Loaded evaluation configuration: %s", self.eval_config)
 
+        # Cleanup the output directory
+        if self.eval_config.general.output and self.eval_config.general.output.cleanup:
+            self.cleanup_output_directory()
         # Load the input dataset
         # For multiple datasets, one handler per dataset can be created
         dataset_config = self.eval_config.general.dataset  # Currently only one dataset is supported
@@ -254,11 +263,13 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         # Run workflow and evaluate
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:
-            session_manager = AIQSessionManager(eval_workflow.build(),
-                                                max_concurrency=self.eval_config.general.max_concurrency)
-            # Run workflow
-            if not self.config.skip_workflow:
-                await self.run_workflow(session_manager)
+            if self.config.endpoint:
+                await self.run_workflow_remote()
+            else:
+                if not self.config.skip_workflow:
+                    session_manager = AIQSessionManager(eval_workflow.build(),
+                                                        max_concurrency=self.eval_config.general.max_concurrency)
+                    await self.run_workflow_local(session_manager)
 
             # Evaluate
             evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
@@ -269,6 +280,12 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         # Write the results to the output directory
         self.write_output(dataset_handler)
+
+        # Run custom scripts and upload evaluation outputs to S3
+        if self.eval_config.general.output:
+            output_uploader = OutputUploader(self.eval_config.general.output)
+            output_uploader.run_custom_scripts()
+            await output_uploader.upload_directory()
 
         return EvaluationRunOutput(
             workflow_output_file=self.workflow_output_file,

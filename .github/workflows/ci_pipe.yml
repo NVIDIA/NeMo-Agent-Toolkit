@@ -27,6 +27,10 @@ on:
         description: 'The JSON string containing the PR information'
         required: true
         type: string
+      base_sha:
+        description: 'The base SHA of the PR'
+        required: true
+        type: string
 
 # We only support ubuntu, so bash is the default
 defaults:
@@ -36,7 +40,7 @@ defaults:
 env:
   GH_TOKEN: "${{ github.token }}"
   GIT_COMMIT: "${{ github.sha }}"
-  BASE_SHA: "${{ fromJSON(inputs.pr_info).base.sha }}"
+  BASE_SHA: "${{ inputs.base_sha }}"
   RAPIDS_CONDA_RETRY_MAX: "5"
   WORKSPACE: "${{ github.workspace }}/agentiq"
   WORKSPACE_TMP: "${{ github.workspace }}/tmp"
@@ -80,12 +84,14 @@ jobs:
   test:
     name: Test
     needs: [check]
-    runs-on:  linux-amd64-cpu4
+    runs-on:  linux-${{ matrix.arch }}-cpu4
     timeout-minutes: 30
     container:
       image: ${{ inputs.container }}
     strategy:
       fail-fast: true
+      matrix:
+        arch: ["amd64", "arm64"]
 
     steps:
       - name: Checkout
@@ -94,7 +100,7 @@ jobs:
           fetch-tags: true
           path: 'agentiq'
 
-      - name: Test:linux
+      - name: Test:linux:${{ matrix.arch }}
         shell: bash
         run: ./agentiq/ci/scripts/github/tests.sh
 
@@ -103,7 +109,7 @@ jobs:
         # Upload test results even if the tests fail
         if: ${{ always() }}
         with:
-          name: "test-results"
+          name: "test-results-${{ matrix.arch }}"
           path: "${{ github.workspace }}/tmp/*.xml"
           if-no-files-found: error
 
@@ -152,6 +158,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           fetch-tags: true
           path: 'agentiq'
 

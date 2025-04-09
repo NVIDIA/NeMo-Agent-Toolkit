@@ -15,9 +15,6 @@
 
 import pytest
 
-from aiq.runtime.loader import PluginTypes
-from aiq.runtime.loader import discover_and_register_plugins
-
 
 def pytest_addoption(parser: pytest.Parser):
     """
@@ -62,6 +59,8 @@ def pytest_runtest_setup(item):
 
 @pytest.fixture(name="register_components", scope="session", autouse=True)
 def register_components_fixture():
+    from aiq.runtime.loader import PluginTypes
+    from aiq.runtime.loader import discover_and_register_plugins
 
     # Ensure that all components which need to be registered as part of an import are done so. This is necessary
     # because imports will not be reloaded between tests, so we need to ensure that all components are registered
