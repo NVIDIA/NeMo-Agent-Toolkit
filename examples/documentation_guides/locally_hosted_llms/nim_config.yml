@@ -27,7 +27,7 @@ llms:
   nim_llm:
     _type: nim
     base_url: "http://localhost:8000/v1"
-    model_name: qwen/qwen-2.5-7b-instruct
+    model_name: microsoft/phi-3-mini-4k-instruct
 
 embedders:
   nv-embedqa-e5-v5:

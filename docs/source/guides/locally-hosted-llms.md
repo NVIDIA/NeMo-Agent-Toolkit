@@ -20,7 +20,7 @@ limitations under the License.
 AgentIQ has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the AgentIQ simple example (`examples/simple`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/).
 
 ## Using NIM
-In the AgentIQ simple example the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model was used. For the purposes of this guide we will be using a smaller model, the [`qwen/qwen2_5-7b-instruct`](https://build.nvidia.com/qwen/qwen2_5-7b-instruct) which is more likely to be runnable on a local workstation.
+In the AgentIQ simple example the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model was used. For the purposes of this guide we will be using a smaller model, the [`microsoft/phi-3-mini-4k-instruct`](https://build.nvidia.com/microsoft/phi-3-mini-4k) which is more likely to be runnable on a local workstation.
 
 Regardless of the model you choose, the process is the same for downloading the model's container from [`build.nvidia.com`](https://build.nvidia.com/). Navigate to the model you wish to run locally, if it is able to be downloaded it will be labeled with the `RUN ANYWHERE` tag, the exact commands will be specified on the `Deploy` tab for the model.
 
@@ -40,7 +40,7 @@ Password: <PASTE_API_KEY_HERE>
 
 Download the container for the LLM:
 ```bash
-docker pull nvcr.io/nim/qwen/qwen-2.5-7b-instruct:latest
+docker pull nvcr.io/nim/microsoft/phi-3-mini-4k-instruct:latest
 ```
 
 Download the container for the embedding Model:
@@ -62,7 +62,7 @@ docker run -it --rm \
     -v "$LOCAL_NIM_CACHE:/opt/nim/.cache" \
     -u $(id -u) \
     -p 8000:8000 \
-    nvcr.io/nim/qwen/qwen-2.5-7b-instruct:latest
+    nvcr.io/nim/microsoft/phi-3-mini-4k-instruct:latest
 ```
 
 Open a new terminal and run the embedding model container, listening on port 8001:
@@ -98,7 +98,7 @@ llms:
   nim_llm:
     _type: nim
     base_url: "http://localhost:8000/v1"
-    model_name: qwen/qwen-2.5-7b-instruct
+    model_name: microsoft/phi-3-mini-4k-instruct
 
 embedders:
   nv-embedqa-e5-v5:
@@ -124,19 +124,19 @@ aiq run --config_file examples/documentation_guides/locally_hosted_llms/nim_conf
 
 ## Using vLLM
 
-vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getting_started/quickstart.html#openai-compatible-server) allowing us to re-use our existing OpenAI clients. If you have not already done so, install vLLM following the [Quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) guide. For this example we will be using the [`Qwen/Qwen2.5-1.5B-Instruct`](https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct) the same model used in the [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getting_started/quickstart.html#openai-compatible-server) section of the Quickstart guide. Along with the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base)embedding model.
+vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getting_started/quickstart.html#openai-compatible-server) allowing us to re-use our existing OpenAI clients. If you have not already done so, install vLLM following the [Quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) guide. Similar to the previous example we will be using the same [`microsoft/Phi-3-mini-4k-instruct`](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct) LLM model. Along with the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base)embedding model.
 
 ### Serving the Models
 Similar to the NIM approach we will be running the LLM on the default port of 8000 and the embedding model on port 8001.
 
 In a terminal from within the vLLM environment, run the following command to serve the LLM:
 ```bash
-vllm serve Qwen/Qwen2.5-1.5B-Instruct
+vllm serve microsoft/Phi-3-mini-4k-instruct
 ```
 
 In a second terminal also from within the vLLM environment, run the following command to serve the embedding model:
 ```bash
-vllm serve --task embed --override-pooler-config '{"pooling_type": "MEAN"}' --port 8001  ssmits/Qwen2-7B-Instruct-embed-base
+vllm serve --task embed --override-pooler-config '{"pooling_type": "MEAN"}' --port 8001 ssmits/Qwen2-7B-Instruct-embed-base
 ```
 
 > Note: The `--override-pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/latest/models/supported_models.html#text-embedding-task-embed) documentation.
@@ -161,7 +161,8 @@ llms:
     _type: openai
     api_key: "EMPTY"
     base_url: "http://localhost:8000/v1"
-    model_name: Qwen/Qwen2.5-1.5B-Instruct
+    model_name: microsoft/Phi-3-mini-4k-instruct
+    max_tokens: 4096
 
 embedders:
   vllm_embedder:
@@ -180,4 +181,7 @@ workflow:
 ```
 
 ### Running the AgentIQ Workflow
+To run the AgentIQ workflow using the locally hosted LLMs, run the following command:
+```bash
 aiq run --config_file examples/documentation_guides/locally_hosted_llms/vllm_config.yml --input "What is LangSmith?"
+```

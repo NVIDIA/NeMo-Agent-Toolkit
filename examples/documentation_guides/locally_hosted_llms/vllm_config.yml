@@ -28,7 +28,8 @@ llms:
     _type: openai
     api_key: "EMPTY"
     base_url: "http://localhost:8000/v1"
-    model_name: Qwen/Qwen2.5-1.5B-Instruct
+    model_name: microsoft/Phi-3-mini-4k-instruct
+    max_tokens: 4096
 
 embedders:
   vllm_embedder:
