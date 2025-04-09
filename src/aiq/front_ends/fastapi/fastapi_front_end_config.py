@@ -25,15 +25,25 @@ from aiq.data_models.step_adaptor import StepAdaptorConfig
 logger = logging.getLogger(__name__)
 
 
-class EvaluateRequest(BaseModel):
+class AIQEvaluateRequest(BaseModel):
     """Request model for the evaluate endpoint."""
     config_file: str = Field(description="Path to the configuration file for evaluation")
 
 
-class EvaluateResponse(BaseModel):
+class AIQEvaluateResponse(BaseModel):
     """Response model for the evaluate endpoint."""
     job_id: str = Field(description="Unique identifier for the evaluation job")
     status: str = Field(description="Current status of the evaluation job")
+
+
+class AIQEvaluateStatusResponse(BaseModel):
+    """Response model for the evaluate status endpoint."""
+    job_id: str = Field(description="Unique identifier for the evaluation job")
+    status: str = Field(description="Current status of the evaluation job")
+    config_file: str = Field(description="Path to the configuration file used for evaluation")
+    error: str | None = Field(default=None, description="Error message if the job failed")
+    output_path: str | None = Field(default=None,
+                                    description="Path to the output file if the job completed successfully")
 
 
 class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
@@ -106,7 +116,7 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     evaluate: typing.Annotated[EndpointBase, Field(description="Endpoint for evaluating workflows.")] = EndpointBase(
         method="POST",
         path="/evaluate",
-        description="Evaluates the performance and accuracy of workflows",
+        description="Evaluates the performance and accuracy of the workflow on a dataset",
     )
 
     endpoints: list[Endpoint] = Field(

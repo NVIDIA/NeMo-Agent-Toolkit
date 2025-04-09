@@ -20,11 +20,13 @@ from abc import ABC
 from abc import abstractmethod
 from contextlib import asynccontextmanager
 from functools import partial
+from pathlib import Path
 
 from fastapi import BackgroundTasks
 from fastapi import Body
 from fastapi import FastAPI
 from fastapi import Response
+from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -38,8 +40,9 @@ from aiq.data_models.config import AIQConfig
 from aiq.eval.config import EvaluationRunOutput
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
-from aiq.front_ends.fastapi.fastapi_front_end_config import EvaluateRequest
-from aiq.front_ends.fastapi.fastapi_front_end_config import EvaluateResponse
+from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateRequest
+from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateResponse
+from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateStatusResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from aiq.front_ends.fastapi.job_store import JobStore
 from aiq.front_ends.fastapi.response_helpers import generate_single_response
@@ -188,7 +191,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             """Background task to run the evaluation."""
             try:
                 # Create EvaluationRunConfig using the CLI defaults
-                eval_config = EvaluationRunConfig(config_file=config_file,
+                eval_config = EvaluationRunConfig(config_file=Path(config_file),
+                                                  dataset=None,
                                                   result_json_path="$",
                                                   skip_workflow=False,
                                                   skip_completed_entries=False,
@@ -209,11 +213,22 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 logger.error(f"Error in evaluation job {job_id}: {str(e)}")
                 job_store.update_status(job_id, "failure", error=str(e))
 
-        async def evaluate(request: EvaluateRequest, background_tasks: BackgroundTasks):
+        async def evaluate(request: AIQEvaluateRequest, background_tasks: BackgroundTasks):
             """Handle evaluation requests."""
             job_id = job_store.create_job(request.config_file)
             background_tasks.add_task(run_evaluation, job_id, request.config_file, session_manager)
-            return EvaluateResponse(job_id=job_id, status="submitted")
+            return AIQEvaluateResponse(job_id=job_id, status="submitted")
+
+        async def get_job_status(job_id: str) -> AIQEvaluateStatusResponse:
+            """Get the status of an evaluation job."""
+            job = job_store.get_job(job_id)
+            if not job:
+                raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+            return AIQEvaluateStatusResponse(job_id=job_id,
+                                             status=job.status,
+                                             config_file=job.config_file,
+                                             error=job.error,
+                                             output_path=job.output_path)
 
         if self.front_end_config.evaluate.path:
             # Add HTTP endpoint
@@ -221,9 +236,23 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 path=self.front_end_config.evaluate.path,
                 endpoint=evaluate,
                 methods=[self.front_end_config.evaluate.method],
-                response_model=EvaluateResponse,
+                response_model=AIQEvaluateResponse,
                 description=self.front_end_config.evaluate.description,
                 responses={500: response_500},
+            )
+
+            # Add status endpoint
+            app.add_api_route(
+                path=f"{self.front_end_config.evaluate.path}/status/{{job_id}}",
+                endpoint=get_job_status,
+                methods=["GET"],
+                response_model=AIQEvaluateStatusResponse,
+                description="Get the status of an evaluation job",
+                responses={
+                    404: {
+                        "description": "Job not found"
+                    }, 500: response_500
+                },
             )
 
     async def add_route(self,
