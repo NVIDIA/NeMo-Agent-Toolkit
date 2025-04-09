@@ -78,12 +78,13 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         # Run the workflow
         jsonpath_expr = parse(self.config.result_json_path)
         stop_event = asyncio.Event()
+        entry_fn = self.eval_config.general.entry_fn if self.eval_config.general.entry_fn else None
 
         async def run_one(item: EvalInputItem):
             if stop_event.is_set():
                 return "", []
 
-            async with session_manager.run(item.input_obj) as runner:
+            async with session_manager.run(item.input_obj, entry_fn) as runner:
                 try:
                     # Start usage stats and intermediate steps collection in parallel
                     intermediate_future = pull_intermediate()
