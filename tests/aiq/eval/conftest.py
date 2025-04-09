@@ -13,46 +13,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
+
 import pytest
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.intermediate_step import StreamEventData
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
-from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
-
-# pylint: disable=redefined-outer-name
+if typing.TYPE_CHECKING:
+    from aiq.data_models.intermediate_step import IntermediateStep
+    from aiq.eval.evaluator.evaluator_model import EvalInput
+    from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
 
 
-@pytest.fixture
-def rag_user_inputs() -> list[str]:
+@pytest.fixture(name="rag_user_inputs")
+def rag_user_inputs_fixture() -> list[str]:
     """Fixture providing multiple user inputs."""
     return ["What is ML?", "What is NLP?"]
 
 
-@pytest.fixture
-def rag_expected_outputs() -> list[str]:
+@pytest.fixture(name="rag_expected_outputs")
+def rag_expected_outputs_fixture() -> list[str]:
     """Fixture providing expected outputs corresponding to user inputs."""
     return ["Machine Learning", "Natural Language Processing"]
 
 
-@pytest.fixture
-def rag_generated_outputs() -> list[str]:
+@pytest.fixture(name="rag_generated_outputs")
+def rag_generated_outputs_fixture() -> list[str]:
     """Fixture providing workflow generated outputs corresponding to user inputs."""
     return ["ML is the abbreviation for Machine Learning", "NLP stands for Natural Language Processing"]
 
 
-@pytest.fixture
-def intermediate_step_adapter() -> IntermediateStepAdapter:
+@pytest.fixture(name="intermediate_step_adapter")
+def intermediate_step_adapter_fixture() -> "IntermediateStepAdapter":
+    from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
     return IntermediateStepAdapter()
 
 
-@pytest.fixture
-def rag_intermediate_steps(rag_user_inputs,
-                           rag_generated_outputs) -> tuple[list[IntermediateStep], list[IntermediateStep]]:
+@pytest.fixture(name="rag_intermediate_steps")
+def rag_intermediate_steps_fixture(rag_user_inputs, rag_generated_outputs) -> list[list["IntermediateStep"]]:
     """
     Fixture to generate separate lists of IntermediateStep objects for each user input.
 
@@ -63,6 +59,12 @@ def rag_intermediate_steps(rag_user_inputs,
     Returns:
         (list for user_input_1, list for user_input_2)
     """
+    from aiq.builder.framework_enum import LLMFrameworkEnum
+    from aiq.data_models.intermediate_step import IntermediateStep
+    from aiq.data_models.intermediate_step import IntermediateStepPayload
+    from aiq.data_models.intermediate_step import IntermediateStepType
+    from aiq.data_models.intermediate_step import StreamEventData
+
     framework = LLMFrameworkEnum.LANGCHAIN
     token_cnt = 10
     llm_name = "mock_llm"
@@ -96,12 +98,15 @@ def rag_intermediate_steps(rag_user_inputs,
 
         step_lists.append(steps)  # Append separate list for each user input
 
-    return tuple(step_lists)  # Return as two separate lists
+    return step_lists
 
 
 @pytest.fixture
-def rag_eval_input(rag_user_inputs, rag_expected_outputs, rag_generated_outputs, rag_intermediate_steps) -> EvalInput:
+def rag_eval_input(rag_user_inputs, rag_expected_outputs, rag_generated_outputs, rag_intermediate_steps) -> "EvalInput":
     """Fixture to create a mock EvalInput with multiple items."""
+
+    from aiq.eval.evaluator.evaluator_model import EvalInput
+    from aiq.eval.evaluator.evaluator_model import EvalInputItem
 
     # Unpack intermediate steps
     steps_1, steps_2 = rag_intermediate_steps
