@@ -14,16 +14,27 @@
 # limitations under the License.
 
 from datetime import datetime
+from enum import Enum
 from uuid import uuid4
 
+from pydantic import BaseModel
 
-class JobStatus(str):
+
+class JobStatus(str, Enum):
     SUBMITTED = "submitted"
     RUNNING = "running"
     SUCCESS = "success"
     FAILURE = "failure"
     INTERRUPTED = "interrupted"
     NOT_FOUND = "not_found"
+
+
+# pydantic model for the job status
+class JobInfo(BaseModel):
+    status: JobStatus
+    config_file: str
+    error: str | None
+    output_path: str | None
 
 
 class JobStore:
@@ -33,27 +44,27 @@ class JobStore:
 
     def create_job(self, config_file: str) -> str:
         job_id = str(uuid4())
-        self._jobs[job_id] = {
-            "status": JobStatus.SUBMITTED,
-            "config_file": config_file,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow(),
-            "error": None,
-            "output_path": None,
-        }
+        job = JobInfo(status=JobStatus.SUBMITTED,
+                      config_file=config_file,
+                      created_at=datetime.utcnow(),
+                      updated_at=datetime.utcnow(),
+                      error=None,
+                      output_path=None)
+        self._jobs[job_id] = job
         return job_id
 
     def update_status(self, job_id: str, status: str, error: str | None = None, output_path: str | None = None):
-        if job_id in self._jobs:
-            self._jobs[job_id]["status"] = status
-            self._jobs[job_id]["updated_at"] = datetime.utcnow()
-            if error:
-                self._jobs[job_id]["error"] = error
-            if output_path:
-                self._jobs[job_id]["output_path"] = output_path
+        if job_id not in self._jobs:
+            raise ValueError(f"Job {job_id} not found")
 
-    def get_status(self, job_id: str):
-        return self._jobs.get(job_id, {"status": JobStatus.NOT_FOUND})
+        job = self._jobs[job_id]
+        job.status = status
+        job.error = error
+        job.output_path = output_path
+        job.updated_at = datetime.utcnow()
+
+    def get_status(self, job_id: str) -> JobInfo | None:
+        return self._jobs.get(job_id)
 
     def list_jobs(self):
         return self._jobs
