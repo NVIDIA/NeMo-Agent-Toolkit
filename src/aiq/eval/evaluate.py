@@ -223,7 +223,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             logger.exception("An error occurred while running evaluators: %s", e, exc_info=True)
             raise
 
-    async def run_and_evaluate(self) -> EvaluationRunOutput:
+    async def run_and_evaluate(self, session_manager: AIQSessionManager | None = None) -> EvaluationRunOutput:
         """
         Run the workflow with the specified config file and evaluate the dataset
         """
@@ -267,8 +267,9 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                 await self.run_workflow_remote()
             else:
                 if not self.config.skip_workflow:
-                    session_manager = AIQSessionManager(eval_workflow.build(),
-                                                        max_concurrency=self.eval_config.general.max_concurrency)
+                    if session_manager is None:
+                        session_manager = AIQSessionManager(eval_workflow.build(),
+                                                            max_concurrency=self.eval_config.general.max_concurrency)
                     await self.run_workflow_local(session_manager)
 
             # Evaluate

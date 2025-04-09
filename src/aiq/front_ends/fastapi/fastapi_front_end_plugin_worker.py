@@ -35,6 +35,7 @@ from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.api_server import AIQChatResponseChunk
 from aiq.data_models.api_server import AIQResponseIntermediateStep
 from aiq.data_models.config import AIQConfig
+from aiq.eval.config import EvaluationRunOutput
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import EvaluateRequest
@@ -196,12 +197,17 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                   reps=1)
 
                 # Create a new EvaluationRun with the evaluation-specific config
+                job_store.update_status(job_id, "running")
                 eval_runner = EvaluationRun(eval_config)
-                await eval_runner.run_and_evaluate()
-                logger.info(f"Completed evaluation job {job_id}")
+                output: EvaluationRunOutput = await eval_runner.run_and_evaluate(session_manager=session_manager)
+                if output.workflow_interrupted:
+                    job_store.update_status(job_id, "interrupted")
+                else:
+                    job_store.update_status(job_id, "success")
+                    job_store.update_output_path(job_id, output.workflow_output_file)
             except Exception as e:
                 logger.error(f"Error in evaluation job {job_id}: {str(e)}")
-                raise
+                job_store.update_status(job_id, "failure", error=str(e))
 
         async def evaluate(request: EvaluateRequest, background_tasks: BackgroundTasks):
             """Handle evaluation requests."""
