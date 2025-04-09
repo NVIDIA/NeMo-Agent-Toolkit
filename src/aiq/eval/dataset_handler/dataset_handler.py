@@ -161,4 +161,4 @@ class DatasetHandler:
             # Unstructured case: return only raw output objects as a JSON array
             data = [json.loads(item.output_obj) for item in eval_input.eval_input_items]
 
-        return json.dumps(data, indent=indent, ensure_ascii=False)
+        return json.dumps(data, indent=indent, ensure_ascii=False, default=str)
