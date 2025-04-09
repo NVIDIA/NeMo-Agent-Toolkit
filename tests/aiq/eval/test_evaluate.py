@@ -175,7 +175,7 @@ def session_manager(generated_answer, mock_pull_intermediate):
 
     # Define an async context manager for runner
     @asynccontextmanager
-    async def mock_run(_message):
+    async def mock_run(_message, _fn):
         """Mock async context manager for runner."""
         yield mock_runner
 
