@@ -25,6 +25,17 @@ from aiq.data_models.step_adaptor import StepAdaptorConfig
 logger = logging.getLogger(__name__)
 
 
+class EvaluateRequest(BaseModel):
+    """Request model for the evaluate endpoint."""
+    config_file: str = Field(description="Path to the configuration file for evaluation")
+
+
+class EvaluateResponse(BaseModel):
+    """Response model for the evaluate endpoint."""
+    job_id: str = Field(description="Unique identifier for the evaluation job")
+    status: str = Field(description="Current status of the evaluation job")
+
+
 class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     """
     A FastAPI based front end that allows an AgentIQ workflow to be served as a microservice.
@@ -90,6 +101,12 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         websocket_path="/websocket",
         openai_api_path="/chat",
         description="Executes the default AgentIQ workflow from the loaded configuration ",
+    )
+
+    evaluate: typing.Annotated[EndpointBase, Field(description="Endpoint for evaluating workflows.")] = EndpointBase(
+        method="POST",
+        path="/evaluate",
+        description="Evaluates the performance and accuracy of workflows",
     )
 
     endpoints: list[Endpoint] = Field(

@@ -21,6 +21,7 @@ from abc import abstractmethod
 from contextlib import asynccontextmanager
 from functools import partial
 
+from fastapi import BackgroundTasks
 from fastapi import Body
 from fastapi import FastAPI
 from fastapi import Response
@@ -34,7 +35,12 @@ from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.api_server import AIQChatResponseChunk
 from aiq.data_models.api_server import AIQResponseIntermediateStep
 from aiq.data_models.config import AIQConfig
+from aiq.eval.evaluate import EvaluationRun
+from aiq.eval.evaluate import EvaluationRunConfig
+from aiq.front_ends.fastapi.fastapi_front_end_config import EvaluateRequest
+from aiq.front_ends.fastapi.fastapi_front_end_config import EvaluateResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+from aiq.front_ends.fastapi.job_store import JobStore
 from aiq.front_ends.fastapi.response_helpers import generate_single_response
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_raw_as_str
@@ -148,6 +154,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
     async def add_routes(self, app: FastAPI, builder: WorkflowBuilder):
 
         await self.add_default_route(app, AIQSessionManager(builder.build()))
+        await self.add_evaluate_route(app, AIQSessionManager(builder.build()))
 
         for ep in self.front_end_config.endpoints:
 
@@ -158,6 +165,60 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
     async def add_default_route(self, app: FastAPI, session_manager: AIQSessionManager):
 
         await self.add_route(app, self.front_end_config.workflow, session_manager)
+
+    async def add_evaluate_route(self, app: FastAPI, session_manager: AIQSessionManager):
+        """Add the evaluate endpoint to the FastAPI app."""
+
+        response_500 = {
+            "description": "Internal Server Error",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Internal server error occurred"
+                    }
+                }
+            },
+        }
+
+        # Create job store for tracking evaluation jobs
+        job_store = JobStore()
+
+        async def run_evaluation(job_id: str, config_file: str, session_manager: AIQSessionManager):
+            """Background task to run the evaluation."""
+            try:
+                # Create EvaluationRunConfig using the CLI defaults
+                eval_config = EvaluationRunConfig(config_file=config_file,
+                                                  result_json_path="$",
+                                                  skip_workflow=False,
+                                                  skip_completed_entries=False,
+                                                  endpoint=None,
+                                                  endpoint_timeout=300,
+                                                  reps=1)
+
+                # Create a new EvaluationRun with the evaluation-specific config
+                eval_runner = EvaluationRun(eval_config)
+                await eval_runner.run_and_evaluate()
+                logger.info(f"Completed evaluation job {job_id}")
+            except Exception as e:
+                logger.error(f"Error in evaluation job {job_id}: {str(e)}")
+                raise
+
+        async def evaluate(request: EvaluateRequest, background_tasks: BackgroundTasks):
+            """Handle evaluation requests."""
+            job_id = job_store.create_job(request.config_file)
+            background_tasks.add_task(run_evaluation, job_id, request.config_file, session_manager)
+            return EvaluateResponse(job_id=job_id, status="submitted")
+
+        if self.front_end_config.evaluate.path:
+            # Add HTTP endpoint
+            app.add_api_route(
+                path=self.front_end_config.evaluate.path,
+                endpoint=evaluate,
+                methods=[self.front_end_config.evaluate.method],
+                response_model=EvaluateResponse,
+                description=self.front_end_config.evaluate.description,
+                responses={500: response_500},
+            )
 
     async def add_route(self,
                         app: FastAPI,
