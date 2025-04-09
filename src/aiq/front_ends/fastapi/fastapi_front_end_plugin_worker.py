@@ -24,6 +24,7 @@ from functools import partial
 from fastapi import Body
 from fastapi import FastAPI
 from fastapi import Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -36,6 +37,7 @@ from aiq.data_models.config import AIQConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from aiq.front_ends.fastapi.response_helpers import generate_single_response
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
+from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_raw_as_str
 from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
 from aiq.front_ends.fastapi.websocket import AIQWebSocket
 from aiq.runtime.session import AIQSessionManager
@@ -80,7 +82,41 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
         aiq_app = FastAPI(lifespan=lifespan)
 
+        self.set_cors_config(aiq_app)
+
         return aiq_app
+
+    def set_cors_config(self, aiq_app: FastAPI) -> None:
+        """
+        Set the cross origin resource sharing configuration.
+        """
+        cors_kwargs = {}
+
+        if self.front_end_config.cors.allow_origins is not None:
+            cors_kwargs["allow_origins"] = self.front_end_config.cors.allow_origins
+
+        if self.front_end_config.cors.allow_origin_regex is not None:
+            cors_kwargs["allow_origin_regex"] = self.front_end_config.cors.allow_origin_regex
+
+        if self.front_end_config.cors.allow_methods is not None:
+            cors_kwargs["allow_methods"] = self.front_end_config.cors.allow_methods
+
+        if self.front_end_config.cors.allow_headers is not None:
+            cors_kwargs["allow_headers"] = self.front_end_config.cors.allow_headers
+
+        if self.front_end_config.cors.allow_credentials is not None:
+            cors_kwargs["allow_credentials"] = self.front_end_config.cors.allow_credentials
+
+        if self.front_end_config.cors.expose_headers is not None:
+            cors_kwargs["expose_headers"] = self.front_end_config.cors.expose_headers
+
+        if self.front_end_config.cors.max_age is not None:
+            cors_kwargs["max_age"] = self.front_end_config.cors.max_age
+
+        aiq_app.add_middleware(
+            CORSMiddleware,
+            **cors_kwargs,
+        )
 
     @abstractmethod
     async def configure(self, app: FastAPI, builder: WorkflowBuilder):
@@ -178,6 +214,19 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             return get_stream
 
+        def get_streaming_raw_endpoint(streaming: bool, result_type: type | None, output_type: type | None):
+
+            async def get_stream():
+
+                return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                         content=generate_streaming_response_raw_as_str(None,
+                                                                                        session_manager=session_manager,
+                                                                                        streaming=streaming,
+                                                                                        result_type=result_type,
+                                                                                        output_type=output_type))
+
+            return get_stream
+
         def post_single_endpoint(request_type: type, result_type: type | None):
 
             async def post_single(response: Response, payload: request_type):
@@ -206,6 +255,25 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             return post_stream
 
+        def post_streaming_raw_endpoint(request_type: type,
+                                        streaming: bool,
+                                        result_type: type | None,
+                                        output_type: type | None):
+            """
+            Stream raw intermediate steps without any step adaptor translations.
+            """
+
+            async def post_stream(payload: request_type):
+
+                return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                         content=generate_streaming_response_raw_as_str(payload,
+                                                                                        session_manager=session_manager,
+                                                                                        streaming=streaming,
+                                                                                        result_type=result_type,
+                                                                                        output_type=output_type))
+
+            return post_stream
+
         if (endpoint.path):
             if (endpoint.method == "GET"):
 
@@ -229,6 +297,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     responses={500: response_500},
                 )
 
+                app.add_api_route(
+                    path=f"{endpoint.path}/stream/full",
+                    endpoint=get_streaming_raw_endpoint(streaming=True,
+                                                        result_type=GenerateStreamResponseType,
+                                                        output_type=GenerateStreamResponseType),
+                    methods=[endpoint.method],
+                )
+
             elif (endpoint.method == "POST"):
 
                 app.add_api_route(
@@ -250,6 +326,18 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     methods=[endpoint.method],
                     response_model=GenerateStreamResponseType,
                     description=endpoint.description,
+                    responses={500: response_500},
+                )
+
+                app.add_api_route(
+                    path=f"{endpoint.path}/stream/full",
+                    endpoint=post_streaming_raw_endpoint(request_type=GenerateBodyType,
+                                                         streaming=True,
+                                                         result_type=GenerateStreamResponseType,
+                                                         output_type=GenerateStreamResponseType),
+                    methods=[endpoint.method],
+                    response_model=GenerateStreamResponseType,
+                    description="Stream raw intermediate steps without any step adaptor translations",
                     responses={500: response_500},
                 )
 
