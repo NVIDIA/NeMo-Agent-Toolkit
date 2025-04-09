@@ -221,10 +221,21 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         async def get_job_status(job_id: str) -> AIQEvaluateStatusResponse:
             """Get the status of an evaluation job."""
-            job = job_store.get_status(job_id)
+            job = job_store.get_job(job_id)
             if not job:
                 raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
             return AIQEvaluateStatusResponse(job_id=job_id,
+                                             status=job.status,
+                                             config_file=job.config_file,
+                                             error=job.error,
+                                             output_path=job.output_path)
+
+        async def get_last_job_status() -> AIQEvaluateStatusResponse:
+            """Get the status of the last created evaluation job."""
+            job = job_store.get_last_job()
+            if not job:
+                raise HTTPException(status_code=404, detail="No jobs found")
+            return AIQEvaluateStatusResponse(job_id=job.job_id,
                                              status=job.status,
                                              config_file=job.config_file,
                                              error=job.error,
@@ -251,6 +262,20 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 responses={
                     404: {
                         "description": "Job not found"
+                    }, 500: response_500
+                },
+            )
+
+            # Add last job status endpoint
+            app.add_api_route(
+                path=f"{self.front_end_config.evaluate.path}/status/last",
+                endpoint=get_last_job_status,
+                methods=["GET"],
+                response_model=AIQEvaluateStatusResponse,
+                description="Get the status of the last created evaluation job",
+                responses={
+                    404: {
+                        "description": "No jobs found"
                     }, 500: response_500
                 },
             )

@@ -35,6 +35,8 @@ class JobInfo(BaseModel):
     config_file: str
     error: str | None
     output_path: str | None
+    created_at: datetime
+    updated_at: datetime
 
 
 class JobStore:
@@ -68,3 +70,14 @@ class JobStore:
 
     def list_jobs(self):
         return self._jobs
+
+    def get_job(self, job_id: str) -> JobInfo | None:
+        """Get a job by its ID."""
+        return self._jobs.get(job_id)
+
+    def get_last_job(self) -> JobInfo | None:
+        """Get the last created job."""
+        if not self._jobs:
+            return None
+        # Get the job with the most recent created_at timestamp
+        return max(self._jobs.values(), key=lambda job: job.created_at)
