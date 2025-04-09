@@ -15,7 +15,6 @@
 
 import pytest
 
-from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.profiler.forecasting.model_trainer import ModelTrainer
 from aiq.profiler.forecasting.model_trainer import create_model
 from aiq.profiler.forecasting.models import ForecastingBaseModel
@@ -39,13 +38,15 @@ def test_create_model_invalid_type():
         create_model("unsupported_model")
 
 
-@pytest.mark.parametrize(
-    "model_trainer_kwargs",
-    [
-        {},
-        {"model_type": "linear"},
-        {"model_type": "randomforest"},
-    ])
+@pytest.mark.parametrize("model_trainer_kwargs", [
+    {},
+    {
+        "model_type": "linear"
+    },
+    {
+        "model_type": "randomforest"
+    },
+])
 def test_model_trainer_initialization(model_trainer_kwargs: dict):
     mt = ModelTrainer(**model_trainer_kwargs)
     if "model_type" in model_trainer_kwargs:

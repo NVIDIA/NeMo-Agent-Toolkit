@@ -116,6 +116,7 @@ def test_cross_origin_resource_sharing(cors_kwargs: dict):
         assert isinstance(model.expose_headers, list)
         assert isinstance(model.max_age, int)
 
+
 @pytest.mark.parametrize(
     "config_kwargs", [FAST_API_FRONT_END_CONFIG_ALL_VALUES.copy(), FAST_API_FRONT_END_CONFIG_REQUIRES_VALUES.copy()],
     ids=["all-values", "required-values"])

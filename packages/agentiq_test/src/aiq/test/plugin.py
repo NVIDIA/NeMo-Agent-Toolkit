@@ -83,6 +83,7 @@ def module_registry_fixture():
     with GlobalTypeRegistry.push() as registry:
         yield registry
 
+
 @pytest.fixture(name="registry", scope="function", autouse=True)
 def function_registry_fixture():
     """
