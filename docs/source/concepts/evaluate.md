@@ -246,6 +246,16 @@ eval:
         - The reasoning string must be concise and to the point. It should be 1 sentence and 2 only if extra description is needed. It must explain why the score was given and what is different between the generated answer and the expected answer.
 ```
 
+Note: In your evaluation dataset, make sure that the `answer` field is a description of the expected answer with details on what is expected from the generated answer.
+
+**Example:**
+```json
+{
+  "id": 1,
+  "question": "What is the product of 3 and 7, and is it greater than the current hour?",
+  "answer": "Answer must have the answer of product of 3 and 7 and whether it is greater than the current hour"
+}
+```
 
 ## Adding Custom Evaluators
 You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the AgentIQ evaluator system. See the [Custom Evaluator](../guides/custom-evaluator.md) documentation for more information.
