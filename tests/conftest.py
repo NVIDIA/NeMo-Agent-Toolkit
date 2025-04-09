@@ -27,6 +27,7 @@
 import os
 import sys
 import typing
+import uuid
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
 from unittest import mock
@@ -52,6 +53,7 @@ sys.path.append(SRC_DIR)
 
 if typing.TYPE_CHECKING:
     from aiq.data_models.intermediate_step import IntermediateStep
+    from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 
 @pytest.fixture(name="test_data_dir")
@@ -391,10 +393,18 @@ def rag_intermediate_steps_fixture(rag_user_inputs, rag_generated_outputs) -> li
     llm_name = "mock_llm"
     tool_name = "mock_tool"
 
-    def create_step(event_type, name=llm_name, input_data=None, output_data=None, chunk=None):
+    def create_step(event_type,
+                    name=llm_name,
+                    input_data=None,
+                    output_data=None,
+                    chunk=None,
+                    step_uuid: str | None = None):
+        if step_uuid is None:
+            step_uuid = str(uuid.uuid4())
         """Helper to create an `IntermediateStep`."""
         return IntermediateStep(
-            payload=IntermediateStepPayload(event_type=event_type,
+            payload=IntermediateStepPayload(UUID=step_uuid,
+                                            event_type=event_type,
                                             framework=framework,
                                             name=name,
                                             data=StreamEventData(input=input_data, output=output_data, chunk=chunk)))
@@ -406,17 +416,41 @@ def rag_intermediate_steps_fixture(rag_user_inputs, rag_generated_outputs) -> li
         tool_output = f"Here is information I have on {user_input}"
         generated_output = generated_ouput
 
+        llm_start_step = create_step(IntermediateStepType.LLM_START, input_data=user_input)
+
         steps = [
-            create_step(IntermediateStepType.LLM_START, input_data=user_input),
+            llm_start_step,
             *[
                 create_step(IntermediateStepType.LLM_NEW_TOKEN, chunk=f"Token {i} for {user_input}")
                 for i in range(token_cnt)
             ],
-            create_step(IntermediateStepType.LLM_END, input_data=user_input, output_data=generated_output),
-            create_step(IntermediateStepType.TOOL_START, name=tool_name, input_data=tool_input),
-            create_step(IntermediateStepType.TOOL_END, name=tool_name, input_data=tool_input, output_data=tool_output),
+            create_step(IntermediateStepType.LLM_END,
+                        input_data=user_input,
+                        output_data=generated_output,
+                        step_uuid=llm_start_step.UUID)
         ]
+
+        tool_start_step = create_step(IntermediateStepType.TOOL_START, name=tool_name, input_data=tool_input)
+        steps.append(tool_start_step)
+
+        steps.append(
+            create_step(IntermediateStepType.TOOL_END,
+                        name=tool_name,
+                        input_data=tool_input,
+                        output_data=tool_output,
+                        step_uuid=tool_start_step.UUID))
 
         step_lists.append(steps)  # Append separate list for each user input
 
     return step_lists
+
+
+@pytest.fixture(name="rag_intermediate_property_adaptor")
+def rag_intermediate_property_adaptor_fixture(rag_intermediate_steps) -> list[list["IntermediatePropertyAdaptor"]]:
+    """
+    Fixture to transform the rag_intermediate_steps fixture data into IntermediatePropertyAdaptor objects.
+    """
+    from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+
+    return [[IntermediatePropertyAdaptor.from_intermediate_step(step) for step in steps]
+            for steps in rag_intermediate_steps]
