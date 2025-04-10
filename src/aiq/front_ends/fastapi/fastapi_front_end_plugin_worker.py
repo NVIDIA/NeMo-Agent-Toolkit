@@ -213,7 +213,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 logger.error(f"Error in evaluation job {job_id}: {str(e)}")
                 job_store.update_status(job_id, "failure", error=str(e))
 
-        async def evaluate(request: AIQEvaluateRequest, background_tasks: BackgroundTasks):
+        async def post_async_evaluate(request: AIQEvaluateRequest, background_tasks: BackgroundTasks):
             """Handle evaluation requests."""
             job_id = job_store.create_job(request.config_file)
             background_tasks.add_task(run_evaluation, job_id, request.config_file, session_manager)
@@ -249,11 +249,18 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             logger.info(f"Found last job {job.job_id} with status {job.status}")
             return translate_job_to_response(job)
 
+        def get_all_jobs() -> list[AIQEvaluateStatusResponse]:
+            """Get all jobs."""
+            logger.info("Getting all jobs")
+            jobs = job_store.get_all_jobs()
+            logger.info(f"Found {len(jobs)} jobs")
+            return [translate_job_to_response(job) for job in jobs]
+
         def get_jobs_by_status(status: str) -> list[AIQEvaluateStatusResponse]:
-            """Get all jobs with the specified status."""
+            """Get all jobs with the specified status"""
             logger.info(f"Getting jobs with status {status}")
             jobs = job_store.get_jobs_by_status(status)
-            logger.info(f"Found {len(jobs)} jobs with status {status}")
+            logger.info(f"Found {len(jobs)} jobs")
             return [translate_job_to_response(job) for job in jobs]
 
         if self.front_end_config.evaluate.path:
@@ -272,6 +279,16 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             )
 
             # Add jobs by status endpoint
+            app.add_api_route(
+                path=f"{self.front_end_config.evaluate.path}/status/jobs",
+                endpoint=get_all_jobs,
+                methods=["GET"],
+                response_model=list[AIQEvaluateStatusResponse],
+                description="Get all jobs",
+                responses={500: response_500},
+            )
+
+            # Add jobs by status endpoint with status parameter
             app.add_api_route(
                 path=f"{self.front_end_config.evaluate.path}/status/jobs/{{status}}",
                 endpoint=get_jobs_by_status,
@@ -298,7 +315,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             # Add HTTP endpoint for evaluation
             app.add_api_route(
                 path=self.front_end_config.evaluate.path,
-                endpoint=evaluate,
+                endpoint=post_async_evaluate,
                 methods=[self.front_end_config.evaluate.method],
                 response_model=AIQEvaluateResponse,
                 description=self.front_end_config.evaluate.description,

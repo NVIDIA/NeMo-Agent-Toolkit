@@ -93,3 +93,7 @@ class JobStore:
     def get_jobs_by_status(self, status: str) -> list[JobInfo]:
         """Get all jobs with the specified status."""
         return [job for job in self._jobs.values() if job.status == status]
+
+    def get_all_jobs(self) -> list[JobInfo]:
+        """Get all jobs in the store."""
+        return list(self._jobs.values())
