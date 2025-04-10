@@ -71,7 +71,8 @@ class JobStore:
                       created_at=datetime.utcnow(),
                       updated_at=datetime.utcnow(),
                       error=None,
-                      output_path=None)
+                      output_path=None,
+                      expiry_seconds=clamped_expiry)
         self._jobs[job_id] = job
         logger.info(f"Created new job {job_id} with config {config_file}")
         return job_id
@@ -113,8 +114,8 @@ class JobStore:
         """Get all jobs in the store."""
         return list(self._jobs.values())
 
-    def get_expired_at(self, job: JobInfo) -> datetime | None:
-        """Get the expired at time for a job."""
+    def get_expires_at(self, job: JobInfo) -> datetime | None:
+        """Get the time for a job to expire."""
         if job.status in self.ACTIVE_STATUS:
             return None
         return job.created_at + timedelta(seconds=job.expiry_seconds)

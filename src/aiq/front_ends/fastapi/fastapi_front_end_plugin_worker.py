@@ -226,6 +226,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         async def start_evaluation(request: AIQEvaluateRequest, background_tasks: BackgroundTasks):
             """Handle evaluation requests."""
+            # if job_id is present and already exists return the job info
+            if request.job_id:
+                job = job_store.get_job(request.job_id)
+                if job:
+                    return AIQEvaluateResponse(job_id=job.job_id, status=job.status)
+
             job_id = job_store.create_job(request.config_file, request.job_id)
             background_tasks.add_task(run_evaluation, job_id, request.config_file, request.reps, session_manager)
             return AIQEvaluateResponse(job_id=job_id, status="submitted")
@@ -239,7 +245,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                              output_path=str(job.output_path),
                                              created_at=job.created_at,
                                              updated_at=job.updated_at,
-                                             expired_at=job.get_expired_at())
+                                             expires_at=job.get_expires_at())
 
         def get_job_status(job_id: str) -> AIQEvaluateStatusResponse:
             """Get the status of an evaluation job."""

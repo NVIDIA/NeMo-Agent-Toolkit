@@ -52,7 +52,7 @@ class AIQEvaluateStatusResponse(BaseModel):
                                     description="Path to the output file if the job completed successfully")
     created_at: datetime = Field(description="Timestamp when the job was created")
     updated_at: datetime = Field(description="Timestamp when the job was last updated")
-    expired_at: datetime | None = Field(default=None, description="Timestamp when the job will expire")
+    expires_at: datetime | None = Field(default=None, description="Timestamp when the job will expire")
 
 
 class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
