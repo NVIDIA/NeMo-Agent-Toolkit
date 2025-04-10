@@ -39,7 +39,6 @@ function get_git_tag() {
         # Note: We are intentionally not pushing this tag, it exists for the sole purpose of generating a
         # unique alpha version for nightly builds.
         GIT_TAG=$(echo $GIT_TAG | sed -e "s|-dev|a$(date +"%Y%m%d")|")
-        git tag -am ${GIT_TAG} "${GIT_TAG}"
     fi
 
     echo ${GIT_TAG}
