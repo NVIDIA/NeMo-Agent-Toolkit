@@ -19,7 +19,11 @@ set -e
 
 # change this to ready to publish. this should be done programmatically once
 # the release process is finalized.
-RELEASE_STATUS=preview
+if [[ "${CI_CRON_NIGHTLY}" == "true" || "${CI_COMMIT_BRANCH}" == "main" ]]; then
+    RELEASE_STATUS=ready
+else
+    RELEASE_STATUS=preview
+fi
 
 # Define variables
 AIQ_ARCH="any"
