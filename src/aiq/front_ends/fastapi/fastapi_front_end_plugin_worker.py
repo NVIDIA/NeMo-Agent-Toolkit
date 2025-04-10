@@ -245,7 +245,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                              output_path=str(job.output_path),
                                              created_at=job.created_at,
                                              updated_at=job.updated_at,
-                                             expires_at=job.get_expires_at())
+                                             expires_at=job_store.get_expires_at(job))
 
         def get_job_status(job_id: str) -> AIQEvaluateStatusResponse:
             """Get the status of an evaluation job."""
