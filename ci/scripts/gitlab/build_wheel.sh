@@ -21,8 +21,12 @@ GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 source ${GITLAB_SCRIPT_DIR}/common.sh
 
 GIT_TAG=$(get_git_tag)
-export SETUPTOOLS_SCM_PRETEND_VERSION="${GIT_TAG}"
 rapids-logger "Git Version: ${GIT_TAG}"
+
+if [[ "${CI_CRON_NIGHTLY}" == "1" ]]; then
+    export SETUPTOOLS_SCM_PRETEND_VERSION="${GIT_TAG}"
+fi
+
 
 WHEELS_DIR=${CI_PROJECT_DIR}/.tmp/wheels
 
