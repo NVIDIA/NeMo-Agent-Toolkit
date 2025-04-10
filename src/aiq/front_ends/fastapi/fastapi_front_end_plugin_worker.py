@@ -90,6 +90,11 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
                 yield
 
+                # If a cleanup task is running, cancel it
+                cleanup_task = getattr(starting_app.state, "cleanup_task", None)
+                if cleanup_task:
+                    cleanup_task.cancel()
+
             logger.debug("Closing AgentIQ server from process %s", os.getpid())
 
         aiq_app = FastAPI(lifespan=lifespan)
@@ -191,18 +196,16 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Don't run multiple evaluations at the same time
         evaluation_lock = asyncio.Lock()
 
-        async def periodic_cleanup():
+        async def periodic_cleanup(job_store: JobStore):
             while True:
                 try:
                     job_store.cleanup_expired_jobs()
                     logger.debug("Expired jobs cleaned up")
                 except Exception as e:
-                    logger.error(f"Error during job cleanup: {e}")
+                    logger.error("Error during job cleanup: %s", str(e))
                 await asyncio.sleep(300)  # every 5 minutes
 
-        @app.on_event("startup")
-        async def start_cleanup_task():
-            asyncio.create_task(periodic_cleanup())
+        app.state.cleanup_task = asyncio.create_task(periodic_cleanup(job_store))
 
         async def run_evaluation(job_id: str, config_file: str, reps: int, session_manager: AIQSessionManager):
             """Background task to run the evaluation."""
@@ -219,9 +222,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     if output.workflow_interrupted:
                         job_store.update_status(job_id, "interrupted")
                     else:
-                        job_store.update_status(job_id, "success", output_path=output.workflow_output_file)
+                        job_store.update_status(job_id, "success", output_path=str(output.workflow_output_file))
                 except Exception as e:
-                    logger.error(f"Error in evaluation job {job_id}: {str(e)}")
+                    logger.error("Error in evaluation job %s: %s", job_id, str(e))
                     job_store.update_status(job_id, "failure", error=str(e))
 
         async def start_evaluation(request: AIQEvaluateRequest, background_tasks: BackgroundTasks):
@@ -249,10 +252,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         def get_job_status(job_id: str) -> AIQEvaluateStatusResponse:
             """Get the status of an evaluation job."""
-            logger.info(f"Getting status for job {job_id}")
+            logger.info("Getting status for job %s", job_id)
             job = job_store.get_job(job_id)
             if not job:
-                logger.warning(f"Job {job_id} not found")
+                logger.warning("Job %s not found", job_id)
                 raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
             logger.info(f"Found job {job_id} with status {job.status}")
             return translate_job_to_response(job)
@@ -264,7 +267,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             if not job:
                 logger.warning("No jobs found when requesting last job status")
                 raise HTTPException(status_code=404, detail="No jobs found")
-            logger.info(f"Found last job {job.job_id} with status {job.status}")
+            logger.info("Found last job %s with status %s", job.job_id, job.status)
             return translate_job_to_response(job)
 
         def get_jobs(status: str | None = None) -> list[AIQEvaluateStatusResponse]:
@@ -273,9 +276,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 logger.info("Getting all jobs")
                 jobs = job_store.get_all_jobs()
             else:
-                logger.info(f"Getting jobs with status {status}")
+                logger.info("Getting jobs with status %s", status)
                 jobs = job_store.get_jobs_by_status(status)
-            logger.info(f"Found {len(jobs)} jobs")
+            logger.info("Found %d jobs", len(jobs))
             return [translate_job_to_response(job) for job in jobs]
 
         if self.front_end_config.evaluate.path:

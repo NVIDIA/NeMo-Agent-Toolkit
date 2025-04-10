@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 from enum import Enum
@@ -68,8 +69,8 @@ class JobStore:
         job = JobInfo(job_id=job_id,
                       status=JobStatus.SUBMITTED,
                       config_file=config_file,
-                      created_at=datetime.utcnow(),
-                      updated_at=datetime.utcnow(),
+                      created_at=datetime.now(UTC),
+                      updated_at=datetime.now(UTC),
                       error=None,
                       output_path=None,
                       expiry_seconds=clamped_expiry)
@@ -85,7 +86,7 @@ class JobStore:
         job.status = status
         job.error = error
         job.output_path = output_path
-        job.updated_at = datetime.utcnow()
+        job.updated_at = datetime.now(UTC)
 
     def get_status(self, job_id: str) -> JobInfo | None:
         return self._jobs.get(job_id)
@@ -122,7 +123,7 @@ class JobStore:
 
     def cleanup_expired_jobs(self):
         """Cleanup expired jobs that are not active."""
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
 
         finished_jobs = {job_id: job for job_id, job in self._jobs.items() if job.status not in self.ACTIVE_STATUS}
 
