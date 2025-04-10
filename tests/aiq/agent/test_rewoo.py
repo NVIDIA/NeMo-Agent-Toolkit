@@ -121,7 +121,7 @@ async def test_executor_node_with_not_configured_tool(mock_rewoo_agent):
     assert isinstance(state, dict)
     configured_tool_names = ['Tool A', 'Tool B']
     assert state["intermediate_results"]["#E2"] == TOOL_NOT_FOUND_ERROR_MESSAGE.format(tool_name=tool_not_configured,
-                                                                                          tools=configured_tool_names)
+                                                                                       tools=configured_tool_names)
 
 
 async def test_executor_node(mock_rewoo_agent):
