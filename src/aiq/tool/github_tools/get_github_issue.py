@@ -18,7 +18,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 from pydantic import Field
-from pydantic import validator
+from pydantic import field_validator
 
 from aiq.builder.builder import Builder
 from aiq.builder.function_info import FunctionInfo
@@ -35,7 +35,7 @@ class GithubListIssueModel(BaseModel):
     since: str | None = Field(None, description="Only show results that were last updated after the given time.")
 
     @classmethod
-    @validator('since', pre=True, always=True)
+    @field_validator('since', mode='before')
     def validate_since(cls, v):
         if v is None:
             return v
