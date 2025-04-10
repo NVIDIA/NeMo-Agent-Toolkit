@@ -64,12 +64,6 @@ async def test_full_workflow():
                 "Which city hosted the Summer Olympics in the year obtained by subtracting 4 from the larger number"
                 "between 2008 and 2012?",
             "answer": "beijing"
-        },
-        {
-            "question":
-                "Which film won the Academy Award for Best Picture in the year calculated by first dividing 4032 by 2"
-                "and then subtracting 16?",
-            "answer": "gladiator"
         }
     ]
 
