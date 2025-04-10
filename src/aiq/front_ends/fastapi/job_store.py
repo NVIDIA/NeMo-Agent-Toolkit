@@ -13,11 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from datetime import datetime
 from enum import Enum
 from uuid import uuid4
 
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class JobStatus(str, Enum):
@@ -31,6 +34,7 @@ class JobStatus(str, Enum):
 
 # pydantic model for the job status
 class JobInfo(BaseModel):
+    job_id: str
     status: JobStatus
     config_file: str
     error: str | None
@@ -46,13 +50,15 @@ class JobStore:
 
     def create_job(self, config_file: str) -> str:
         job_id = str(uuid4())
-        job = JobInfo(status=JobStatus.SUBMITTED,
+        job = JobInfo(job_id=job_id,
+                      status=JobStatus.SUBMITTED,
                       config_file=config_file,
                       created_at=datetime.utcnow(),
                       updated_at=datetime.utcnow(),
                       error=None,
                       output_path=None)
         self._jobs[job_id] = job
+        logger.info(f"Created new job {job_id} with config {config_file}")
         return job_id
 
     def update_status(self, job_id: str, status: str, error: str | None = None, output_path: str | None = None):
@@ -78,6 +84,12 @@ class JobStore:
     def get_last_job(self) -> JobInfo | None:
         """Get the last created job."""
         if not self._jobs:
+            logger.info("No jobs found in job store")
             return None
-        # Get the job with the most recent created_at timestamp
-        return max(self._jobs.values(), key=lambda job: job.created_at)
+        last_job = max(self._jobs.values(), key=lambda job: job.created_at)
+        logger.info(f"Retrieved last job {last_job.job_id} created at {last_job.created_at}")
+        return last_job
+
+    def get_jobs_by_status(self, status: str) -> list[JobInfo]:
+        """Get all jobs with the specified status."""
+        return [job for job in self._jobs.values() if job.status == status]

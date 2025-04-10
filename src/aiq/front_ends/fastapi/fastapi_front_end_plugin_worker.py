@@ -44,6 +44,7 @@ from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateRequest
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateStatusResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+from aiq.front_ends.fastapi.job_store import JobInfo
 from aiq.front_ends.fastapi.job_store import JobStore
 from aiq.front_ends.fastapi.response_helpers import generate_single_response
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
@@ -207,8 +208,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 if output.workflow_interrupted:
                     job_store.update_status(job_id, "interrupted")
                 else:
-                    job_store.update_status(job_id, "success")
-                    job_store.update_output_path(job_id, output.workflow_output_file)
+                    job_store.update_status(job_id, "success", output_path=output.workflow_output_file)
             except Exception as e:
                 logger.error(f"Error in evaluation job {job_id}: {str(e)}")
                 job_store.update_status(job_id, "failure", error=str(e))
@@ -219,42 +219,71 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             background_tasks.add_task(run_evaluation, job_id, request.config_file, session_manager)
             return AIQEvaluateResponse(job_id=job_id, status="submitted")
 
-        async def get_job_status(job_id: str) -> AIQEvaluateStatusResponse:
-            """Get the status of an evaluation job."""
-            job = job_store.get_job(job_id)
-            if not job:
-                raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
-            return AIQEvaluateStatusResponse(job_id=job_id,
-                                             status=job.status,
-                                             config_file=job.config_file,
-                                             error=job.error,
-                                             output_path=job.output_path)
-
-        async def get_last_job_status() -> AIQEvaluateStatusResponse:
-            """Get the status of the last created evaluation job."""
-            job = job_store.get_last_job()
-            if not job:
-                raise HTTPException(status_code=404, detail="No jobs found")
+        def translate_job_to_response(job: JobInfo) -> AIQEvaluateStatusResponse:
+            """Translate a JobInfo object to an AIQEvaluateStatusResponse."""
             return AIQEvaluateStatusResponse(job_id=job.job_id,
                                              status=job.status,
-                                             config_file=job.config_file,
+                                             config_file=str(job.config_file),
                                              error=job.error,
-                                             output_path=job.output_path)
+                                             output_path=str(job.output_path),
+                                             created_at=job.created_at,
+                                             updated_at=job.updated_at)
+
+        def get_job_status(job_id: str) -> AIQEvaluateStatusResponse:
+            """Get the status of an evaluation job."""
+            logger.info(f"Getting status for job {job_id}")
+            job = job_store.get_job(job_id)
+            if not job:
+                logger.warning(f"Job {job_id} not found")
+                raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+            logger.info(f"Found job {job_id} with status {job.status}")
+            return translate_job_to_response(job)
+
+        def get_last_job_status() -> AIQEvaluateStatusResponse:
+            """Get the status of the last created evaluation job."""
+            logger.info("Getting last job status")
+            job = job_store.get_last_job()
+            if not job:
+                logger.warning("No jobs found when requesting last job status")
+                raise HTTPException(status_code=404, detail="No jobs found")
+            logger.info(f"Found last job {job.job_id} with status {job.status}")
+            return translate_job_to_response(job)
+
+        def get_jobs_by_status(status: str) -> list[AIQEvaluateStatusResponse]:
+            """Get all jobs with the specified status."""
+            logger.info(f"Getting jobs with status {status}")
+            jobs = job_store.get_jobs_by_status(status)
+            logger.info(f"Found {len(jobs)} jobs with status {status}")
+            return [translate_job_to_response(job) for job in jobs]
 
         if self.front_end_config.evaluate.path:
-            # Add HTTP endpoint
+            # Add last job status endpoint first (most specific)
             app.add_api_route(
-                path=self.front_end_config.evaluate.path,
-                endpoint=evaluate,
-                methods=[self.front_end_config.evaluate.method],
-                response_model=AIQEvaluateResponse,
-                description=self.front_end_config.evaluate.description,
+                path=f"{self.front_end_config.evaluate.path}/status/job/last",
+                endpoint=get_last_job_status,
+                methods=["GET"],
+                response_model=AIQEvaluateStatusResponse,
+                description="Get the status of the last created evaluation job",
+                responses={
+                    404: {
+                        "description": "No jobs found"
+                    }, 500: response_500
+                },
+            )
+
+            # Add jobs by status endpoint
+            app.add_api_route(
+                path=f"{self.front_end_config.evaluate.path}/status/jobs/{{status}}",
+                endpoint=get_jobs_by_status,
+                methods=["GET"],
+                response_model=list[AIQEvaluateStatusResponse],
+                description="Get all jobs with the specified status",
                 responses={500: response_500},
             )
 
-            # Add status endpoint
+            # Add specific job status endpoint (least specific)
             app.add_api_route(
-                path=f"{self.front_end_config.evaluate.path}/status/{{job_id}}",
+                path=f"{self.front_end_config.evaluate.path}/status/job/{{job_id}}",
                 endpoint=get_job_status,
                 methods=["GET"],
                 response_model=AIQEvaluateStatusResponse,
@@ -266,18 +295,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 },
             )
 
-            # Add last job status endpoint
+            # Add HTTP endpoint for evaluation
             app.add_api_route(
-                path=f"{self.front_end_config.evaluate.path}/status/last",
-                endpoint=get_last_job_status,
-                methods=["GET"],
-                response_model=AIQEvaluateStatusResponse,
-                description="Get the status of the last created evaluation job",
-                responses={
-                    404: {
-                        "description": "No jobs found"
-                    }, 500: response_500
-                },
+                path=self.front_end_config.evaluate.path,
+                endpoint=evaluate,
+                methods=[self.front_end_config.evaluate.method],
+                response_model=AIQEvaluateResponse,
+                description=self.front_end_config.evaluate.description,
+                responses={500: response_500},
             )
 
     async def add_route(self,

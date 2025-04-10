@@ -15,6 +15,7 @@
 
 import logging
 import typing
+from datetime import datetime
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -44,6 +45,8 @@ class AIQEvaluateStatusResponse(BaseModel):
     error: str | None = Field(default=None, description="Error message if the job failed")
     output_path: str | None = Field(default=None,
                                     description="Path to the output file if the job completed successfully")
+    created_at: datetime = Field(description="Timestamp when the job was created")
+    updated_at: datetime = Field(description="Timestamp when the job was last updated")
 
 
 class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
