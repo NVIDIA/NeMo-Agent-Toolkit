@@ -23,6 +23,28 @@ export AIQ_AVOID_GH_CLI=1 # gh cli not working with gitlab, todo look into seein
 AIQ_EXAMPLES=($(find ./examples/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
 AIQ_PACKAGES=($(find ./packages/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
 
+function get_git_tag() {
+    # Get the latest Git tag, sorted by version, excluding lightweight tags
+    GIT_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "no-tag")
+
+    if [[ "${CI_CRON_NIGHTLY}" == "true" ]]; then
+        if [[ ${GIT_TAG} == "no-tag" ]]; then
+            rapids-logger "Error: No tag found. Exiting."
+            exit 1;
+        fi
+
+        # If the branch is a nightly build create an alpha tag which will be accepted by pypi
+        # Note: We are intentionally not pushing this tag, it exists for the sole purpose of generating a
+        # unique alpha version for nightly builds.
+        GIT_TAG=$(echo $GIT_TAG | sed -e "s|-dev|a$(date +"%Y%m%d")|")
+        git tag -am ${GIT_TAG} "${GIT_TAG}"
+    fi
+
+    echo ${GIT_TAG}
+}
+
+
+
 
 function create_env() {
 

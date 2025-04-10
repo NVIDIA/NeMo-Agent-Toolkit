@@ -77,11 +77,8 @@ function install_jfrog_cli() {
 }
 install_jfrog_cli
 
-function get_git_tag() {
-    # Get the latest Git tag, sorted by version, excluding lightweight tags
-    git describe --tags --abbrev=0 2>/dev/null || echo "no-tag"
-}
 GIT_TAG=$(get_git_tag)
+rapids-logger "Git Version: ${GIT_TAG}"
 
 # Upload wheels if enabled
 if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
