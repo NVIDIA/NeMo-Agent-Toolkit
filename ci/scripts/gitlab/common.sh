@@ -24,6 +24,8 @@ AIQ_EXAMPLES=($(find ./examples/ -maxdepth 2 -name "pyproject.toml" | sort | xar
 AIQ_PACKAGES=($(find ./packages/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
 
 function get_git_tag() {
+    FT=$(git fetch --all --tags)
+
     # Get the latest Git tag, sorted by version, excluding lightweight tags
     GIT_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "no-tag")
 
