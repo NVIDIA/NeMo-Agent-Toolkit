@@ -75,7 +75,7 @@ for example_readme in example_readmes:
     destination_docs.append(dest_path)
 
 with open(os.path.join(DOC_EXAMPLES, "index.md"), "w") as f:
-    f.write("```{toctree}\n\n")
+    f.write("```{toctree}\n:maxdepth: 1\n")
 
     for doc in destination_docs:
         relative_path = os.path.relpath(doc, DOC_EXAMPLES)
