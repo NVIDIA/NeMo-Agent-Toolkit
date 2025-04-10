@@ -29,7 +29,7 @@ function get_git_tag() {
     # Get the latest Git tag, sorted by version, excluding lightweight tags
     GIT_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "no-tag")
 
-    if [[ "${CI_CRON_NIGHTLY}" == "true" ]]; then
+    if [[ "${CI_CRON_NIGHTLY}" == "1" ]]; then
         if [[ ${GIT_TAG} == "no-tag" ]]; then
             rapids-logger "Error: No tag found. Exiting."
             exit 1;
