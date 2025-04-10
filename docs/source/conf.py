@@ -27,6 +27,7 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
+import glob
 import os
 import shutil
 import subprocess
@@ -39,6 +40,8 @@ CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 DOC_DIR = os.path.dirname(CUR_DIR)
 ROOT_DIR = os.path.dirname(os.path.dirname(CUR_DIR))
 AIQ_DIR = os.path.join(ROOT_DIR, "src", "aiq")
+DOC_EXAMPLES = os.path.join(DOC_DIR, "source", "examples")
+EXAMPLES_DIR = os.path.join(ROOT_DIR, "examples")
 
 # Work-around for https://github.com/readthedocs/sphinx-autoapi/issues/298
 # AutoAPI support for implicit namespaces is broken, so we need to manually
@@ -46,13 +49,40 @@ AIQ_DIR = os.path.join(ROOT_DIR, "src", "aiq")
 BUILD_DIR = os.path.join(DOC_DIR, "build")
 API_TREE = os.path.join(BUILD_DIR, "_api_tree")
 
-if os.path.exists(API_TREE):
-    shutil.rmtree(API_TREE)
+for tmp_dir in (API_TREE, DOC_EXAMPLES):
+    if os.path.exists(tmp_dir):
+        shutil.rmtree(tmp_dir)
 
-os.makedirs(API_TREE)
+    os.makedirs(tmp_dir)
+
 shutil.copytree(AIQ_DIR, os.path.join(API_TREE, "aiq"))
 with open(os.path.join(API_TREE, "aiq", "__init__.py"), "w") as f:
     f.write("")
+
+# Copy example Markdown files into the documentation tree
+IGNORE_EXAMPLES = [os.path.join(EXAMPLES_DIR, 'documentation_guides/README.md')]
+example_readmes = glob.glob(f'{EXAMPLES_DIR}/**/*.md', recursive=True)
+
+destination_docs = []
+for example_readme in example_readmes:
+    if example_readme in IGNORE_EXAMPLES:
+        continue
+
+    dest_path = os.path.join(DOC_EXAMPLES, example_readme.replace(f'{EXAMPLES_DIR}/', '', 1))
+    dest_dir = os.path.dirname(dest_path)
+    os.makedirs(dest_dir, exist_ok=True)
+    shutil.copyfile(example_readme, dest_path)
+    destination_docs.append(dest_path)
+
+with open(os.path.join(DOC_EXAMPLES, "index.md"), "w") as f:
+    f.write("```{toctree}\n\n")
+
+    for doc in destination_docs:
+        relative_path = os.path.relpath(doc, DOC_EXAMPLES)
+        f.write(relative_path + "\n")
+
+    f.write("\n```\n")
+
 
 # -- Project information -----------------------------------------------------
 

@@ -66,6 +66,7 @@ We would love to hear from you! Please file an issue on [GitHub](https://github.
 
 Introduction <./intro/index.md>
 Guides <./guides/index.md>
+Examples <./examples/index.md>
 Concepts <./concepts/index.md>
 Components <./components/index.md>
 Advanced <./advanced/index.md>

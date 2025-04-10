@@ -13,6 +13,7 @@ docs/source/_modules
 
 # Ignore autoapi intermediate files
 docs/source/api
+docs/source/examples
 
 # Ignore public folder for artifact (required path for Gitlab Pages)
 public/
