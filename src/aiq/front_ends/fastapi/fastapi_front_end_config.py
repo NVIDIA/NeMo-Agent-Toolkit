@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 class AIQEvaluateRequest(BaseModel):
     """Request model for the evaluate endpoint."""
     config_file: str = Field(description="Path to the configuration file for evaluation")
+    job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
 
 
 class AIQEvaluateResponse(BaseModel):

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
 import os
 import typing
@@ -187,35 +188,35 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         # Create job store for tracking evaluation jobs
         job_store = JobStore()
+        # Don't run multiple evaluations at the same time
+        evaluation_lock = asyncio.Lock()
 
         async def run_evaluation(job_id: str, config_file: str, session_manager: AIQSessionManager):
             """Background task to run the evaluation."""
-            try:
-                # Create EvaluationRunConfig using the CLI defaults
-                eval_config = EvaluationRunConfig(config_file=Path(config_file),
-                                                  dataset=None,
-                                                  result_json_path="$",
-                                                  skip_workflow=False,
-                                                  skip_completed_entries=False,
-                                                  endpoint=None,
-                                                  endpoint_timeout=300,
-                                                  reps=1)
+            async with evaluation_lock:
+                try:
+                    # Create EvaluationRunConfig using the CLI defaults
+                    eval_config = EvaluationRunConfig(config_file=Path(config_file), dataset=None, reps=1)
 
-                # Create a new EvaluationRun with the evaluation-specific config
-                job_store.update_status(job_id, "running")
-                eval_runner = EvaluationRun(eval_config)
-                output: EvaluationRunOutput = await eval_runner.run_and_evaluate(session_manager=session_manager)
-                if output.workflow_interrupted:
-                    job_store.update_status(job_id, "interrupted")
-                else:
-                    job_store.update_status(job_id, "success", output_path=output.workflow_output_file)
-            except Exception as e:
-                logger.error(f"Error in evaluation job {job_id}: {str(e)}")
-                job_store.update_status(job_id, "failure", error=str(e))
+                    # Create a new EvaluationRun with the evaluation-specific config
+                    job_store.update_status(job_id, "running")
+                    eval_runner = EvaluationRun(eval_config)
+                    output: EvaluationRunOutput = await eval_runner.run_and_evaluate(session_manager=session_manager,
+                                                                                     job_id=job_id)
+                    if output.workflow_interrupted:
+                        job_store.update_status(job_id, "interrupted")
+                    else:
+                        job_store.update_status(job_id, "success", output_path=output.workflow_output_file)
+                except Exception as e:
+                    logger.error(f"Error in evaluation job {job_id}: {str(e)}")
+                    job_store.update_status(job_id, "failure", error=str(e))
 
         async def start_evaluation(request: AIQEvaluateRequest, background_tasks: BackgroundTasks):
             """Handle evaluation requests."""
-            job_id = job_store.create_job(request.config_file)
+            if request.job_id:
+                job_id = request.job_id
+            else:
+                job_id = job_store.create_job(request.config_file)
             background_tasks.add_task(run_evaluation, job_id, request.config_file, session_manager)
             return AIQEvaluateResponse(job_id=job_id, status="submitted")
 
