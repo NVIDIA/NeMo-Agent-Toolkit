@@ -191,6 +191,19 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Don't run multiple evaluations at the same time
         evaluation_lock = asyncio.Lock()
 
+        async def periodic_cleanup():
+            while True:
+                try:
+                    job_store.cleanup_expired_jobs()
+                    logger.debug("Expired jobs cleaned up")
+                except Exception as e:
+                    logger.error(f"Error during job cleanup: {e}")
+                await asyncio.sleep(300)  # every 5 minutes
+
+        @app.on_event("startup")
+        async def start_cleanup_task():
+            asyncio.create_task(periodic_cleanup())
+
         async def run_evaluation(job_id: str, config_file: str, reps: int, session_manager: AIQSessionManager):
             """Background task to run the evaluation."""
             async with evaluation_lock:

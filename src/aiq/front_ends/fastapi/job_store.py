@@ -41,16 +41,29 @@ class JobInfo(BaseModel):
     output_path: str | None
     created_at: datetime
     updated_at: datetime
+    expiry_seconds: int
 
 
 class JobStore:
 
+    MIN_EXPIRY = 600  # 10 minutes
+    MAX_EXPIRY = 86400  # 24 hours
+    DEFAULT_EXPIRY = 3600  # 1 hour
+
+    # active jobs are exempt from expiry
+    ACTIVE_STATUS = {"running", "submitted"}
+
     def __init__(self):
         self._jobs = {}
 
-    def create_job(self, config_file: str, job_id: str | None = None) -> str:
+    def create_job(self, config_file: str, job_id: str | None = None, expiry_seconds: int = DEFAULT_EXPIRY) -> str:
         if job_id is None:
             job_id = str(uuid4())
+
+        clamped_expiry = max(self.MIN_EXPIRY, min(expiry_seconds, self.MAX_EXPIRY))
+        if expiry_seconds != clamped_expiry:
+            logger.info(f"Clamped expiry_seconds from {expiry_seconds} to {clamped_expiry} for job {job_id}")
+
         job = JobInfo(job_id=job_id,
                       status=JobStatus.SUBMITTED,
                       config_file=config_file,
@@ -98,3 +111,23 @@ class JobStore:
     def get_all_jobs(self) -> list[JobInfo]:
         """Get all jobs in the store."""
         return list(self._jobs.values())
+
+    def cleanup_expired_jobs(self):
+        """Cleanup expired jobs that are not active."""
+        now = datetime.utcnow()
+
+        finished_jobs = {job_id: job for job_id, job in self._jobs.items() if job.status not in self.ACTIVE_STATUS}
+
+        # Sort finished jobs by updated_at descending
+        sorted_finished = sorted(finished_jobs.items(), key=lambda item: item[1]["updated_at"], reverse=True)
+
+        # Always keep the most recent finished job
+        jobs_to_check = sorted_finished[1:]
+
+        expired_ids = [
+            job_id for job_id, job in jobs_to_check
+            if (now - job["updated_at"]).total_seconds() > job.get("expiry_seconds", 3600)
+        ]
+
+        for job_id in expired_ids:
+            del self.jobs[job_id]

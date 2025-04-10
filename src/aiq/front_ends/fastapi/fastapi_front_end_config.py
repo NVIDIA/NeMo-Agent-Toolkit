@@ -31,6 +31,9 @@ class AIQEvaluateRequest(BaseModel):
     config_file: str = Field(description="Path to the configuration file for evaluation")
     job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
     reps: int = Field(default=1, description="Number of repetitions for the evaluation, defaults to 1")
+    expiry_seconds: int = Field(
+        default=3600,
+        description="Optional time (in seconds) before the job expires. Clamped between 600 (10 min) and 86400 (24h).")
 
 
 class AIQEvaluateResponse(BaseModel):
