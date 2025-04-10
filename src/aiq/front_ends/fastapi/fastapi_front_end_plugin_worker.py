@@ -191,12 +191,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Don't run multiple evaluations at the same time
         evaluation_lock = asyncio.Lock()
 
-        async def run_evaluation(job_id: str, config_file: str, session_manager: AIQSessionManager):
+        async def run_evaluation(job_id: str, config_file: str, reps: int, session_manager: AIQSessionManager):
             """Background task to run the evaluation."""
             async with evaluation_lock:
                 try:
                     # Create EvaluationRunConfig using the CLI defaults
-                    eval_config = EvaluationRunConfig(config_file=Path(config_file), dataset=None, reps=1)
+                    eval_config = EvaluationRunConfig(config_file=Path(config_file), dataset=None, reps=reps)
 
                     # Create a new EvaluationRun with the evaluation-specific config
                     job_store.update_status(job_id, "running")
@@ -214,7 +214,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         async def start_evaluation(request: AIQEvaluateRequest, background_tasks: BackgroundTasks):
             """Handle evaluation requests."""
             job_id = job_store.create_job(request.config_file, request.job_id)
-            background_tasks.add_task(run_evaluation, job_id, request.config_file, session_manager)
+            background_tasks.add_task(run_evaluation, job_id, request.config_file, request.reps, session_manager)
             return AIQEvaluateResponse(job_id=job_id, status="submitted")
 
         def translate_job_to_response(job: JobInfo) -> AIQEvaluateStatusResponse:

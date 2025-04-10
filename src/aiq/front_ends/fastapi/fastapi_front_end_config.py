@@ -30,6 +30,7 @@ class AIQEvaluateRequest(BaseModel):
     """Request model for the evaluate endpoint."""
     config_file: str = Field(description="Path to the configuration file for evaluation")
     job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
+    reps: int = Field(default=1, description="Number of repetitions for the evaluation, defaults to 1")
 
 
 class AIQEvaluateResponse(BaseModel):
