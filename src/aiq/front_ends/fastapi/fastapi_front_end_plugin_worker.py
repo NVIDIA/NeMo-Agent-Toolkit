@@ -213,10 +213,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         async def start_evaluation(request: AIQEvaluateRequest, background_tasks: BackgroundTasks):
             """Handle evaluation requests."""
-            if request.job_id:
-                job_id = request.job_id
-            else:
-                job_id = job_store.create_job(request.config_file)
+            job_id = job_store.create_job(request.config_file, request.job_id)
             background_tasks.add_task(run_evaluation, job_id, request.config_file, session_manager)
             return AIQEvaluateResponse(job_id=job_id, status="submitted")
 
