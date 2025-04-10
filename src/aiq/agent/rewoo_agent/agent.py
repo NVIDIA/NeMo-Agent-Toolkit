@@ -95,7 +95,7 @@ class ReWOOAgentGraph(BaseAgent):
 
     def _get_current_step(self, state: ReWOOGraphState) -> int:
         if len(state.steps) == 0:
-            raise RuntimeError('No steps received in state: "steps"')
+            raise RuntimeError('No steps received in ReWOOGraphState')
         # Get the current step according to the number of intermediate results
         if len(state.intermediate_results) == 0:
             return 1
@@ -110,19 +110,21 @@ class ReWOOAgentGraph(BaseAgent):
 
             planner = self.planner_prompt | self.llm
             task = state.task
-            output_message = ""
-            async for event in planner.astream({"task": task}, config=RunnableConfig(callbacks=self.callbacks)):
-                output_message += event.content
+            if not task:
+                logger.error("No task provided to the ReWOO Agent. Please provide a valid task.")
+                return {"result": NO_INPUT_ERROR_MESSAGE}
 
-            output_message = AIMessage(content=output_message)
-            plan = str(output_message.content)
+            plan = ""
+            async for event in planner.astream({"task": task}, config=RunnableConfig(callbacks=self.callbacks)):
+                plan += event.content
+
             steps = re.findall(REWOO_PLAN_PATTERN, plan)
 
             if self.detailed_logs:
                 logger.info("The task was: %s", task)
                 logger.info("The planner's thoughts are:\n%s", plan)
 
-            return {"steps": steps, "plan": plan}
+            return {"plan": plan, "steps": steps}
 
         except Exception as ex:
             logger.exception("Failed to call planner_node: %s", ex, exc_info=True)
@@ -133,6 +135,10 @@ class ReWOOAgentGraph(BaseAgent):
             logger.debug("Starting the ReWOO Executor Node")
 
             current_step = self._get_current_step(state)
+            if current_step < 1:
+                logger.error("ReWOO Executor is invoked with an invalid step number: %s", current_step)
+                raise RuntimeError(f"ReWOO Executor is invoked with an invalid step number: {current_step}")
+
             _, step_name, tool, tool_input = state.steps[current_step - 1]
             intermediate_results = state.intermediate_results
             for k, v in intermediate_results.items():
@@ -146,11 +152,9 @@ class ReWOOAgentGraph(BaseAgent):
                     "there is no tool with that name: %s",
                     tool,
                     configured_tool_names)
-                tool_response = ToolMessage(name='agent_error',
-                                            tool_call_id='agent_error',
-                                            content=TOOL_NOT_FOUND_ERROR_MESSAGE.format(tool_name=tool,
-                                                                                        tools=configured_tool_names))
-                intermediate_results[step_name] = str(tool_response.content)
+
+                intermediate_results[step_name] = TOOL_NOT_FOUND_ERROR_MESSAGE.format(tool_name=tool,
+                                                                                      tools=configured_tool_names)
                 return {"intermediate_results": intermediate_results}
 
             if self.detailed_logs:
@@ -218,10 +222,10 @@ class ReWOOAgentGraph(BaseAgent):
 
             current_step = self._get_current_step(state)
             if current_step == -1:
-                logger.debug("The ReWOO Agent has finished its task")
+                logger.debug("The ReWOO Executor has finished its task")
                 return AgentDecision.END
             else:
-                logger.debug("The ReWOO Agent is still working on the task")
+                logger.debug("The ReWOO Executor is still working on the task")
                 return AgentDecision.TOOL
 
         except Exception as ex:
