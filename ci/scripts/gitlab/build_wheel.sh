@@ -21,17 +21,10 @@ GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 source ${GITLAB_SCRIPT_DIR}/common.sh
 WHEELS_DIR=${CI_PROJECT_DIR}/.tmp/wheels
 
-rapids-logger "Git Version: $(git describe)"
-
 create_env extra:all
 
-
-function get_git_tag() {
-    # Get the latest Git tag, sorted by version, excluding lightweight tags
-    git describe --tags --abbrev=0 2>/dev/null || echo "no-tag"
-}
 GIT_TAG=$(get_git_tag)
-
+rapids-logger "Git Version: ${GIT_TAG}"
 
 function build_wheel() {
     rapids-logger "Building Wheel for $1"
