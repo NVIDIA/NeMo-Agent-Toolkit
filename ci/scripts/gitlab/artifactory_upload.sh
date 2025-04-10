@@ -23,7 +23,7 @@ source ${GITLAB_SCRIPT_DIR}/common.sh
 
 # change this to ready to publish. this should be done programmatically once
 # the release process is finalized.
-if [[ "${CI_CRON_NIGHTLY}" == "true" || "${CI_COMMIT_BRANCH}" == "main" ]]; then
+if [[ "${CI_CRON_NIGHTLY}" == "1" || "${CI_COMMIT_BRANCH}" == "main" ]]; then
     RELEASE_STATUS=ready
 else
     RELEASE_STATUS=preview
