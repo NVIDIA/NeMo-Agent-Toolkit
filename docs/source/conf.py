@@ -62,20 +62,27 @@ with open(os.path.join(API_TREE, "aiq", "__init__.py"), "w") as f:
 # Copy example Markdown files into the documentation tree
 IGNORE_EXAMPLES = [os.path.join(EXAMPLES_DIR, 'documentation_guides/README.md')]
 example_readmes = glob.glob(f'{EXAMPLES_DIR}/**/*.md', recursive=True)
+EXAMPLES_INDEX = os.path.join(DOC_EXAMPLES, "index.md")
 
 destination_docs = []
 for example_readme in example_readmes:
     if example_readme in IGNORE_EXAMPLES:
         continue
 
-    dest_path = os.path.join(DOC_EXAMPLES, example_readme.replace(f'{EXAMPLES_DIR}/', '', 1))
+    rel_path = os.path.relpath(example_readme, EXAMPLES_DIR)
+    if rel_path == "README.md":
+        # make the top-level README.md file the index
+        dest_path = EXAMPLES_INDEX
+    else:
+        dest_path = os.path.join(DOC_EXAMPLES, os.path.relpath(example_readme, EXAMPLES_DIR))
+        destination_docs.append(dest_path)
+
     dest_dir = os.path.dirname(dest_path)
     os.makedirs(dest_dir, exist_ok=True)
     shutil.copyfile(example_readme, dest_path)
-    destination_docs.append(dest_path)
 
-with open(os.path.join(DOC_EXAMPLES, "index.md"), "w") as f:
-    f.write("```{toctree}\n:maxdepth: 1\n")
+with open(EXAMPLES_INDEX, "a") as f:
+    f.write("\n\n```{toctree}\n:maxdepth: 1\n")
 
     for doc in destination_docs:
         relative_path = os.path.relpath(doc, DOC_EXAMPLES)
