@@ -247,6 +247,8 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         # If a job id is provided keep the data per-job
         if job_id:
             self.eval_config.general.output_dir = self.eval_config.general.output_dir / f"jobs/{job_id}"
+            if self.eval_config.general.output:
+                self.eval_config.general.output.dir = self.eval_config.general.output_dir
 
         # Load the input dataset
         # For multiple datasets, one handler per dataset can be created
@@ -292,7 +294,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         # Run custom scripts and upload evaluation outputs to S3
         if self.eval_config.general.output:
-            output_uploader = OutputUploader(self.eval_config.general.output)
+            output_uploader = OutputUploader(self.eval_config.general.output, job_id=job_id)
             output_uploader.run_custom_scripts()
             await output_uploader.upload_directory()
 

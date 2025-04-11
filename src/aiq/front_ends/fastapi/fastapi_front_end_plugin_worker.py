@@ -222,7 +222,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     if output.workflow_interrupted:
                         job_store.update_status(job_id, "interrupted")
                     else:
-                        job_store.update_status(job_id, "success", output_path=str(output.workflow_output_file))
+                        parent_dir = os.path.dirname(
+                            output.workflow_output_file) if output.workflow_output_file else None
+
+                        job_store.update_status(job_id, "success", output_path=str(parent_dir))
                 except Exception as e:
                     logger.error("Error in evaluation job %s: %s", job_id, str(e))
                     job_store.update_status(job_id, "failure", error=str(e))
@@ -235,7 +238,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 if job:
                     return AIQEvaluateResponse(job_id=job.job_id, status=job.status)
 
-            job_id = job_store.create_job(request.config_file, request.job_id)
+            job_id = job_store.create_job(request.config_file, request.job_id, request.expiry_seconds)
             background_tasks.add_task(run_evaluation, job_id, request.config_file, request.reps, session_manager)
             return AIQEvaluateResponse(job_id=job_id, status="submitted")
 

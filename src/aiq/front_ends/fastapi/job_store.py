@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import logging
+import os
+import shutil
 from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
@@ -119,17 +121,21 @@ class JobStore:
         """Get the time for a job to expire."""
         if job.status in self.ACTIVE_STATUS:
             return None
-        return job.created_at + timedelta(seconds=job.expiry_seconds)
+        return job.updated_at + timedelta(seconds=job.expiry_seconds)
 
     def cleanup_expired_jobs(self):
-        """Cleanup expired jobs, keeping the most recent one."""
+        """
+        Cleanup expired jobs, keeping the most recent one.
+        Updated_at is used instead of created_at to determine the most recent job.
+        This is because jobs may not be processed in the order they are created.
+        """
         now = datetime.now(UTC)
 
         # Filter out active jobs
         finished_jobs = {job_id: job for job_id, job in self._jobs.items() if job.status not in self.ACTIVE_STATUS}
 
         # Sort finished jobs by created_at descending
-        sorted_finished = sorted(finished_jobs.items(), key=lambda item: item[1].created_at, reverse=True)
+        sorted_finished = sorted(finished_jobs.items(), key=lambda item: item[1].updated_at, reverse=True)
 
         # Always keep the most recent finished job
         jobs_to_check = sorted_finished[1:]
@@ -139,6 +145,17 @@ class JobStore:
             expires_at = self.get_expires_at(job)
             if expires_at and now > expires_at:
                 expired_ids.append(job_id)
+                # cleanup output dir if present
+                if job.output_path:
+                    logger.info("Cleaning up output directory for job %s at %s", job_id, job.output_path)
+                    # If it is a file remove it
+                    if os.path.isfile(job.output_path):
+                        os.remove(job.output_path)
+                    # If it is a directory remove it
+                    elif os.path.isdir(job.output_path):
+                        shutil.rmtree(job.output_path)
 
         for job_id in expired_ids:
+            # cleanup output dir if present
+
             del self._jobs[job_id]
