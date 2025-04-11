@@ -119,23 +119,6 @@ async def test_planner_node_no_input(mock_rewoo_agent):
     assert state["result"] == NO_INPUT_ERROR_MESSAGE
 
 
-# async def test_planner_node_parse_planner_output(mock_rewoo_agent):
-#     plan = '''
-#     [{"plan": "Compare the numbers 1996 and 2004 to determine which one is bigger.","evidence": {"variable": "#E1","tool": "calculator_inequality","tool_input": {"text": "2004 > 1996"}}},{"plan": "Since 2004 is bigger, search for the city that held the Olympic Games in 2004.","evidence": {"variable": "#E2",     "tool": "internet_search","tool_input": {"question": "Which city held the Olympic Games in 2004?"}}}]
-#     '''
-#     mock_state = ReWOOGraphState(task=plan, plan=plan, steps=[], intermediate_results={})
-#     state = await mock_rewoo_agent.planner_node(mock_state)
-#     expected_steps = [('Compare the numbers 1996 and 2004 to determine which one is bigger.',
-#                        '#E1',
-#                        'calculator_inequality',
-#                        '{"text": "2004 > 1996"}'),
-#                       ('Since 2004 is bigger, search for the city that held the Olympic Games in 2004.',
-#                        '#E2',
-#                        'internet_search',
-#                        '{"question": "Which city held the Olympic Games in 2004?"}')]
-#     assert state["steps"] == expected_steps
-
-
 async def test_conditional_edge_no_input(mock_rewoo_agent):
     # if the state.steps is empty, the conditional_edge should return END
     decision = await mock_rewoo_agent.conditional_edge(ReWOOGraphState())
