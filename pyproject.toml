@@ -133,6 +133,7 @@ dev = [
 
 docs = [
   "ipython~=8.31",
+  "mdformat~=0.7",
   "myst-parser~=4.0",
   "nbsphinx~=0.9",
   "nvidia-sphinx-theme>=0.0.7",

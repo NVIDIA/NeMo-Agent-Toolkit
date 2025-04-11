@@ -33,6 +33,9 @@ import shutil
 import subprocess
 import typing
 
+from markdown_it import MarkdownIt
+from mdformat.renderer import MDRenderer
+
 if typing.TYPE_CHECKING:
     from autoapi._objects import PythonObject
 
@@ -60,7 +63,7 @@ with open(os.path.join(API_TREE, "aiq", "__init__.py"), "w") as f:
     f.write("")
 
 # Copy example Markdown files into the documentation tree
-IGNORE_EXAMPLES = [os.path.join(EXAMPLES_DIR, 'documentation_guides/README.md')]
+IGNORE_EXAMPLES = (os.path.join(EXAMPLES_DIR, 'documentation_guides/README.md'), )
 example_readmes = glob.glob(f'{EXAMPLES_DIR}/**/*.md', recursive=True)
 EXAMPLES_INDEX = os.path.join(DOC_EXAMPLES, "index.md")
 
@@ -89,6 +92,44 @@ with open(EXAMPLES_INDEX, "a") as f:
         f.write(relative_path + "\n")
 
     f.write("\n```\n")
+
+destination_docs.append(EXAMPLES_INDEX)
+
+
+# re-write links
+def token_updater(t):
+    href = t.attrs.get('href')
+    if href is not None and '/docs/source' in href:
+        href = href.replace('/docs/source', '', 1)
+        t.attrs['href'] = href
+
+
+def token_checker(t, prefix=''):
+    loc = f"{prefix}.{t.type}"
+    try:
+        if t.type == 'link_open':
+            token_updater(t)
+
+        if t.children is not None:
+            for child in t.children:
+                token_checker(child, prefix=loc)
+
+    except Exception as e:
+        raise RuntimeError(f"Markdown parsing error at {loc}: {e}") from e
+
+
+for doc_path in destination_docs:
+    md = MarkdownIt()
+
+    with open(doc_path) as f:
+        tokens = md.parse(f.read())
+
+    for token in tokens:
+        token_checker(token)
+
+    with open(doc_path, "w") as f:
+        renderer = MDRenderer()
+        f.write(renderer.render(tokens, {}, {}))
 
 
 # -- Project information -----------------------------------------------------
