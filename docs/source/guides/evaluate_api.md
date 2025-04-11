@@ -18,14 +18,14 @@ limitations under the License.
 # Evaluate API Endpoints
 The evaluation endpoint can be used to start evaluation jobs on a remote AgentIQ server.
 
-## Evaluation Endpoint Usage Overview
+## Evaluation Endpoint Overview
 ```mermaid
 graph TD
-  A[POST /evaluate] --> B{Job Created}
-  B --> C[Background Processing]
-  C --> D[GET /evaluate/job/{job_id}]
-  C --> E[GET /evaluate/job/last]
-  C --> F[GET /evaluate/jobs]
+  A["POST /evaluate"] --> B["Job Created & Background Processing"]
+  B --> C["GET /evaluate/job/{job_id}"]
+  B --> D["GET /evaluate/job/last"]
+  B --> E["GET /evaluate/jobs"]
+```
 
 ## Evaluate Request and Response
 The /evaluate endpoint allows you to start an evaluation job. The request is processed in the background and returns a job ID for tracking.
