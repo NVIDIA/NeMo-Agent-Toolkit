@@ -172,4 +172,3 @@ curl --request POST \
 ```bash
 aiq eval --config_file=examples/agents/react/configs/config.yml
 ```
----

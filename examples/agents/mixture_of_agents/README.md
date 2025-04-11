@@ -163,4 +163,3 @@ curl --request POST \
   --header 'Content-Type: application/json' \
   --data '{"input_message": "What are LLMs?"}'
 ```
----

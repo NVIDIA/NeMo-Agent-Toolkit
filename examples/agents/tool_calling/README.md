@@ -157,4 +157,3 @@ curl --request POST \
 ```bash
 aiq eval --config_file=examples/agents/tool_calling/configs/config.yml
 ```
----
