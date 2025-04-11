@@ -60,6 +60,21 @@ def mock_tool():
     return create_mock_tool
 
 
+@pytest.fixture(scope="module")
+def mock_llm():
+    # Create an AsyncMock instance
+    llm = AsyncMock()
+
+    # Configure the mock to return the input directly when called
+    async def mock_astream(input_data, config=None):
+        # Simulate the behavior of returning the input directly
+        for key, value in input_data.items():
+            yield value
+
+    llm.astream = mock_astream
+    return llm
+
+
 def test_rewoo_init(mock_config_rewoo_agent, mock_llm, mock_tool):
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
     planner_prompt = rewoo_planner_prompt
@@ -104,6 +119,23 @@ async def test_planner_node_no_input(mock_rewoo_agent):
     assert state["result"] == NO_INPUT_ERROR_MESSAGE
 
 
+# async def test_planner_node_parse_planner_output(mock_rewoo_agent):
+#     plan = '''
+#     [{"plan": "Compare the numbers 1996 and 2004 to determine which one is bigger.","evidence": {"variable": "#E1","tool": "calculator_inequality","tool_input": {"text": "2004 > 1996"}}},{"plan": "Since 2004 is bigger, search for the city that held the Olympic Games in 2004.","evidence": {"variable": "#E2",     "tool": "internet_search","tool_input": {"question": "Which city held the Olympic Games in 2004?"}}}]
+#     '''
+#     mock_state = ReWOOGraphState(task=plan, plan=plan, steps=[], intermediate_results={})
+#     state = await mock_rewoo_agent.planner_node(mock_state)
+#     expected_steps = [('Compare the numbers 1996 and 2004 to determine which one is bigger.',
+#                        '#E1',
+#                        'calculator_inequality',
+#                        '{"text": "2004 > 1996"}'),
+#                       ('Since 2004 is bigger, search for the city that held the Olympic Games in 2004.',
+#                        '#E2',
+#                        'internet_search',
+#                        '{"question": "Which city held the Olympic Games in 2004?"}')]
+#     assert state["steps"] == expected_steps
+
+
 async def test_conditional_edge_no_input(mock_rewoo_agent):
     # if the state.steps is empty, the conditional_edge should return END
     decision = await mock_rewoo_agent.conditional_edge(ReWOOGraphState())
@@ -146,10 +178,15 @@ async def test_executor_node_with_not_configured_tool(mock_rewoo_agent):
 async def test_executor_node_parse_input(mock_rewoo_agent):
     with patch('aiq.agent.rewoo_agent.agent.logger.info') as mock_logger_info:
         # Test with valid JSON as tool input
-        mock_state = ReWOOGraphState(task="This is a task",
-                                     plan="This is the plan",
-                                     steps=[('step1', '#E1', 'Tool A', '{"arg1": "arg_1", "arg2": "arg_2"}')],
-                                     intermediate_results={})
+        mock_state = ReWOOGraphState(
+            task="This is a task",
+            plan="This is the plan",
+            steps=[('step1',
+                    '#E1',
+                    'Tool A',
+                    '{"query": "What is the capital of France?", "input_metadata": {"entities": ["France", "Paris"]}}')
+                   ],
+            intermediate_results={})
         await mock_rewoo_agent.executor_node(mock_state)
         mock_logger_info.assert_any_call("Successfully parsed structured tool input")
 

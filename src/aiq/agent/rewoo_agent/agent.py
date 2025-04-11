@@ -16,7 +16,6 @@
 import json
 # pylint: disable=R0917
 import logging
-import re
 from json import JSONDecodeError
 
 from langchain_core.callbacks.base import AsyncCallbackHandler
@@ -32,8 +31,6 @@ from pydantic import Field
 
 from aiq.agent.base import AgentDecision
 from aiq.agent.base import BaseAgent
-
-from .prompt import REWOO_PLAN_PATTERN
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +103,31 @@ class ReWOOAgentGraph(BaseAgent):
         return len(state.intermediate_results) + 1
 
     @staticmethod
+    def _parse_planner_output(planner_output: str) -> list[tuple[str, str, str, str]]:
+        # Parses the JSON string output from the LLM and returns a list of tuples.
+        # Each tuple contains (plan, variable, tool, tool_input) from a step.
+        try:
+            steps_data = json.loads(planner_output)
+        except json.JSONDecodeError as ex:
+            raise ValueError(f"The output of planner is invalid JSON format: {planner_output}") from ex
+
+        steps_list = []
+        for step in steps_data:
+            plan = step.get("plan", "")
+            evidence = step.get("evidence", {})
+            variable = evidence.get("variable", "")
+            tool = evidence.get("tool", "")
+            tool_input = evidence.get("tool_input", "")
+
+            # Ensure tool_input is a string; if it's a list or object, convert it to a JSON string.
+            if not isinstance(tool_input, str):
+                tool_input = json.dumps(tool_input)
+
+            steps_list.append((plan, variable, tool, tool_input))
+
+        return steps_list
+
+    @staticmethod
     def _parse_tool_input(tool_input: str):
         try:
             tool_input = tool_input.strip()
@@ -141,7 +163,7 @@ class ReWOOAgentGraph(BaseAgent):
             async for event in planner.astream({"task": task}, config=RunnableConfig(callbacks=self.callbacks)):
                 plan += event.content
 
-            steps = re.findall(REWOO_PLAN_PATTERN, plan)
+            steps = self._parse_planner_output(plan)
 
             if self.detailed_logs:
                 logger.info("The task was: %s", task)
