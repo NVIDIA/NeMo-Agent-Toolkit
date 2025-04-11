@@ -23,6 +23,17 @@ It is recommended that the [Evaluating AgentIQ Workflows](./evaluate.md) guide b
 The evaluation endpoint can be used to start evaluation jobs on a remote AgentIQ server.
 
 ## Evaluation Endpoint Overview
+````{only} html
+```{mermaid}
+graph TD
+  A["POST /evaluate"] --> B["Background Job Created"]
+  B --> C["GET /evaluate/job/{job_id}"]
+  B --> D["GET /evaluate/job/last"]
+  B --> E["GET /evaluate/jobs"]
+```
+````
+
+````{only} not html
 ```mermaid
 graph TD
   A["POST /evaluate"] --> B["Background Job Created"]
@@ -30,6 +41,8 @@ graph TD
   B --> D["GET /evaluate/job/last"]
   B --> E["GET /evaluate/jobs"]
 ```
+````
+
 
 ## Evaluate Request and Response
 The /evaluate endpoint allows you to start an evaluation job. The request is stored for background processing, and the server returns a job ID for tracking the job status.
