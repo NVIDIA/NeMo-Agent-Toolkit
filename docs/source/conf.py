@@ -77,7 +77,7 @@ for example_readme in example_readmes:
         # make the top-level README.md file the index
         dest_path = EXAMPLES_INDEX
     else:
-        dest_path = os.path.join(DOC_EXAMPLES, os.path.relpath(example_readme, EXAMPLES_DIR))
+        dest_path = os.path.join(DOC_EXAMPLES, rel_path)
         destination_docs.append(dest_path)
 
     dest_dir = os.path.dirname(dest_path)
@@ -97,17 +97,25 @@ destination_docs.append(EXAMPLES_INDEX)
 
 
 # re-write links
+def path_updater(path):
+    if '/docs/source' in path:
+        path = path.replace('/docs/source', '', 1)
+
+    return path
+
+
 def token_updater(t):
-    href = t.attrs.get('href')
-    if href is not None and '/docs/source' in href:
-        href = href.replace('/docs/source', '', 1)
-        t.attrs['href'] = href
+    for attr_key in ('href', 'src'):
+        attr = t.attrs.get(attr_key)
+        if attr is not None:
+            # Update the path to remove the '/docs/source' prefix
+            t.attrs[attr_key] = path_updater(attr)
 
 
 def token_checker(t, prefix=''):
     loc = f"{prefix}.{t.type}"
     try:
-        if t.type == 'link_open':
+        if t.type in ('link_open', 'image'):
             token_updater(t)
 
         if t.children is not None:
