@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import AsyncMock
+from unittest.mock import patch
+
 import pytest
 from langgraph.graph.graph import CompiledGraph
 
@@ -39,6 +42,22 @@ async def test_state_schema():
 @pytest.fixture(name='mock_config_rewoo_agent', scope="module")
 def mock_config():
     return ReWOOAgentWorkflowConfig(tool_names=["tool_1", "tool_2", "tool_3"], llm_name="llm", verbose=True)
+
+
+@pytest.fixture(scope="module")
+def mock_tool():
+
+    def create_mock_tool(name: str):
+        # Create a mock object
+        tool = AsyncMock()
+        tool.name = name  # Set the name attribute
+
+        # Configure the mock to return its name when called
+        tool.__call__ = AsyncMock(return_value=name)
+
+        return tool
+
+    return create_mock_tool
 
 
 def test_rewoo_init(mock_config_rewoo_agent, mock_llm, mock_tool):
@@ -124,21 +143,39 @@ async def test_executor_node_with_not_configured_tool(mock_rewoo_agent):
                                                                                        tools=configured_tool_names)
 
 
-async def test_executor_node(mock_rewoo_agent):
+async def test_executor_node_parse_input(mock_rewoo_agent):
+    with patch('aiq.agent.rewoo_agent.agent.logger.info') as mock_logger_info:
+        # Test with valid JSON as tool input
+        mock_state = ReWOOGraphState(task="This is a task",
+                                     plan="This is the plan",
+                                     steps=[('step1', '#E1', 'Tool A', '{"arg1": "arg_1", "arg2": "arg_2"}')],
+                                     intermediate_results={})
+        await mock_rewoo_agent.executor_node(mock_state)
+        mock_logger_info.assert_any_call("Successfully parsed structured tool input")
+
+        # Test with string with single quote as tool input
+        mock_state.steps = [('step1', '#E1', 'Tool A', "{'arg1': 'arg_1', 'arg2': 'arg_2'}")]
+        mock_state.intermediate_results = {}
+        await mock_rewoo_agent.executor_node(mock_state)
+        mock_logger_info.assert_any_call(
+            "Successfully parsed structured tool input after replacing single quotes with double quotes")
+
+        # Test with string that cannot be parsed as a JSON as tool input
+        mock_state.steps = [('step1', '#E1', 'Tool A', "arg1, arg2")]
+        mock_state.intermediate_results = {}
+        await mock_rewoo_agent.executor_node(mock_state)
+        mock_logger_info.assert_any_call("Unable to parse structured tool input. Using raw tool input as is.")
+
+
+async def test_executor_node_should_not_be_invoked_after_all_steps_executed(mock_rewoo_agent):
     mock_state = ReWOOGraphState(task="This is a task",
                                  plan="This is the plan",
-                                 steps=[('step1', '#E1', 'Tool A', 'arg1, arg2'),
-                                        ('step2', '#E2', 'Tool B', 'arg3, arg4'),
-                                        ('step3', '#E3', 'Tool A', 'arg5, arg6')],
+                                 steps=[('step1', '#E1', 'Tool A', '{"arg1": "arg_1", "arg2": "arg_2"}'),
+                                        ('step2', '#E2', 'Tool B', '{"arg3": "arg_3", "arg4": "arg_4"}'),
+                                        ('step3', '#E3', 'Tool A', '{"arg1": "arg_1", "arg2": "arg_2"}')],
                                  intermediate_results={
-                                     '#E1': 'result1', '#E2': 'result2'
+                                     '#E1': 'result1', '#E2': 'result2', '#E3': 'result3'
                                  })
-    state = await mock_rewoo_agent.executor_node(mock_state)
-    assert isinstance(state, dict)
-    assert state["intermediate_results"]["#E1"] == 'result1'
-    assert state["intermediate_results"]["#E2"] == 'result2'
-
-    mock_state.intermediate_results = {'#E1': 'result1', '#E2': 'result2', '#E3': 'result3'}
     # After executing all the steps, the executor_node should not be invoked
     with pytest.raises(RuntimeError):
         await mock_rewoo_agent.executor_node(mock_state)

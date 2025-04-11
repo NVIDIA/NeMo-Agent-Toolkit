@@ -93,7 +93,8 @@ class ReWOOAgentGraph(BaseAgent):
             logger.exception("Unable to find tool with the name %s\n%s", tool_name, ex, exc_info=True)
             raise ex
 
-    def _get_current_step(self, state: ReWOOGraphState) -> int:
+    @staticmethod
+    def _get_current_step(state: ReWOOGraphState) -> int:
         if len(state.steps) == 0:
             raise RuntimeError('No steps received in ReWOOGraphState')
         # Get the current step according to the number of intermediate results
@@ -103,6 +104,28 @@ class ReWOOAgentGraph(BaseAgent):
             # all steps are done
             return -1
         return len(state.intermediate_results) + 1
+
+    @staticmethod
+    def _parse_tool_input(tool_input: str):
+        try:
+            tool_input = tool_input.strip()
+            # If the input is already a valid JSON string, load it
+            tool_input_parsed = json.loads(tool_input)
+            logger.info("Successfully parsed structured tool input")
+        except JSONDecodeError:
+            # If parsing fails, handle nested single-quoted dictionaries
+            try:
+                # Replace single quotes with double quotes and attempt parsing again
+                tool_input_fixed = tool_input.replace("'", '"')
+                tool_input_parsed = json.loads(tool_input_fixed)
+                logger.info(
+                    "Successfully parsed structured tool input after replacing single quotes with double quotes")
+            except JSONDecodeError:
+                # If it still fails, fall back to using the input as a raw string
+                tool_input_parsed = tool_input
+                logger.info("Unable to parse structured tool input. Using raw tool input as is.")
+
+        return tool_input_parsed
 
     async def planner_node(self, state: ReWOOGraphState):
         try:
@@ -159,18 +182,11 @@ class ReWOOAgentGraph(BaseAgent):
 
             if self.detailed_logs:
                 logger.info("Calling tool %s with input: %s", requested_tool.name, tool_input)
-            try:
-                # Run the tool. Try to use structured input, if possible
-                tool_input_str = tool_input.strip().replace("'", '"')
-                tool_input_dict = json.loads(tool_input_str) if tool_input_str != 'None' else tool_input_str
-                logger.info("Successfully parsed structured tool input from Action Input")
-                tool_response = await requested_tool.ainvoke(tool_input_dict,
-                                                             config=RunnableConfig(callbacks=self.callbacks))
-            except JSONDecodeError:
-                logger.info("Unable to parse structured tool input from Action Input. Using Action Input as is.")
-                tool_input_str = tool_input
-                tool_response = await requested_tool.ainvoke(tool_input_str,
-                                                             config=RunnableConfig(callbacks=self.callbacks))
+
+            # Run the tool. Try to use structured input, if possible
+            tool_input_parsed = self._parse_tool_input(tool_input)
+            tool_response = await requested_tool.ainvoke(tool_input_parsed,
+                                                         config=RunnableConfig(callbacks=self.callbacks))
 
             # some tools, such as Wikipedia, will return an empty response when no search results are found
             if tool_response is None or tool_response == "":
