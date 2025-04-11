@@ -305,16 +305,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 },
             )
 
-            # Add jobs endpoint with optional status query parameter
-            app.add_api_route(
-                path=f"{self.front_end_config.evaluate.path}/jobs",
-                endpoint=get_jobs,
-                methods=["GET"],
-                response_model=list[AIQEvaluateStatusResponse],
-                description="Get all jobs, optionally filtered by status",
-                responses={500: response_500},
-            )
-
             # Add specific job endpoint (least specific)
             app.add_api_route(
                 path=f"{self.front_end_config.evaluate.path}/job/{{job_id}}",
@@ -327,6 +317,16 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         "description": "Job not found"
                     }, 500: response_500
                 },
+            )
+
+            # Add jobs endpoint with optional status query parameter
+            app.add_api_route(
+                path=f"{self.front_end_config.evaluate.path}/jobs",
+                endpoint=get_jobs,
+                methods=["GET"],
+                response_model=list[AIQEvaluateStatusResponse],
+                description="Get all jobs, optionally filtered by status",
+                responses={500: response_500},
             )
 
             # Add HTTP endpoint for evaluation
