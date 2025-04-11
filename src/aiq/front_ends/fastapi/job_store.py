@@ -134,7 +134,7 @@ class JobStore:
         # Filter out active jobs
         finished_jobs = {job_id: job for job_id, job in self._jobs.items() if job.status not in self.ACTIVE_STATUS}
 
-        # Sort finished jobs by created_at descending
+        # Sort finished jobs by updated_at descending
         sorted_finished = sorted(finished_jobs.items(), key=lambda item: item[1].updated_at, reverse=True)
 
         # Always keep the most recent finished job

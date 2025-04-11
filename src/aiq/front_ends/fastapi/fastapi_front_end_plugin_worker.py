@@ -93,6 +93,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
                 # If a cleanup task is running, cancel it
                 cleanup_task = getattr(starting_app.state, "cleanup_task", None)
                 if cleanup_task:
+                    logger.info("Cancelling cleanup task")
                     cleanup_task.cancel()
 
             logger.debug("Closing AgentIQ server from process %s", os.getpid())
@@ -205,7 +206,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     logger.error("Error during job cleanup: %s", str(e))
                 await asyncio.sleep(300)  # every 5 minutes
 
-        app.state.cleanup_task = asyncio.create_task(periodic_cleanup(job_store))
+        def create_cleanup_task():
+            # Schedule periodic cleanup of expired jobs on first job creation
+            if not hasattr(app.state, "cleanup_task"):
+                logger.info("Starting periodic cleanup task")
+                app.state.cleanup_task = asyncio.create_task(periodic_cleanup(job_store))
 
         async def run_evaluation(job_id: str, config_file: str, reps: int, session_manager: AIQSessionManager):
             """Background task to run the evaluation."""
@@ -239,6 +244,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     return AIQEvaluateResponse(job_id=job.job_id, status=job.status)
 
             job_id = job_store.create_job(request.config_file, request.job_id, request.expiry_seconds)
+            create_cleanup_task()
             background_tasks.add_task(run_evaluation, job_id, request.config_file, request.reps, session_manager)
             return AIQEvaluateResponse(job_id=job_id, status="submitted")
 
