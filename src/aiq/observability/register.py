@@ -15,14 +15,26 @@
 
 import logging
 import os
-from typing import Optional
+# import copy # Not strictly needed if we only use dict.copy()
+# import types # Not needed
+from typing import Optional, Sequence
 from pydantic import Field
+import json # Keep json import
+
+from opentelemetry.sdk.trace import ReadableSpan, Event, InstrumentationScope
+from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
+import opentelemetry.semconv_ai as ot
 
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_logging_method
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+
+# Removed incorrect import
+# import opentelemetry.semconv_ai as ot
+# from opentelemetry.sdk.trace import ReadableSpan # Already imported above
+# from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult # Already imported above
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +70,40 @@ class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
     )
 
 
+class AgentIQToWeaveExporter(SpanExporter):
+    """
+    A wrapper around the real OTLPSpanExporter that renames or reshapes
+    AgentIQ attributes so that Weave sees them as 'inputs' and 'outputs'.
+    """
+
+    def __init__(self, wrapped_exporter: SpanExporter):
+        self._wrapped_exporter = wrapped_exporter
+
+    def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
+        for span in spans:
+            # Create a mutable copy of attributes
+            original_attributes = dict(span.attributes) if span.attributes else {}
+            new_attributes = original_attributes.copy()
+
+            # --- Input Transformation ---
+            prompts = {}
+            # keys that start with "input"
+            inputs = {k: v for k, v in original_attributes.items() if k.startswith("input.")}
+            if inputs:
+                if inputs["input.mime_type"] == "application/json":
+                    inputs = json.loads(inputs["input.value"])
+
+                    new_attributes[ot.SpanAttributes.LLM_PROMPTS] = inputs
+                    print(f"new_attributes: {new_attributes}")
+
+            span._attributes = new_attributes
+
+        return self._wrapped_exporter.export(spans)
+
+    def shutdown(self):
+        return self._wrapped_exporter.shutdown()
+
+
 @register_telemetry_exporter(config_type=WeaveTelemetryExporter)
 async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Builder):
     import base64
@@ -83,9 +129,11 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
             "project_id": f"{config.entity}/{config.project}"
         }
         # Create and yield the OTLP HTTP exporter
-        yield OTLPSpanExporter(
-            endpoint=config.endpoint,
-            headers=headers
+        yield AgentIQToWeaveExporter(
+            OTLPSpanExporter(
+                endpoint=config.endpoint,
+                headers=headers
+            )
         )
     except Exception as ex:
         logger.error("Error in Weave telemetry Exporter\n %s", ex, exc_info=True)
