@@ -225,6 +225,10 @@ Run the evaluation with the `--endpoint` flag and the configuration file with th
 aiq eval --config_file=examples/simple/configs/eval_config.yml --endpoint http://localhost:8000
 ```
 
+## Evaluation Endpoint
+You can also evaluate workflows via the AgentIQ evaluation endpoint. The evaluation endpoint is a REST API that allows you to evaluate workflows using the same configuration file as the `aiq eval` command. The evaluation endpoint is available at `/evaluate` on the AgentIQ server. For more information, refer to the [AgentIQ Evaluation Endpoint](./evaluate-api.md) documentation.
+
+
 ## Adding Custom Evaluators
 You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the AgentIQ evaluator system. See the [Custom Evaluator](custom-evaluator.md) documentation for more information.
 
