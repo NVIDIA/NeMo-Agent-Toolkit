@@ -16,10 +16,15 @@ limitations under the License.
 -->
 
 # Evaluate API Endpoints
+
+:::{note}
+It is recommended that the [Evaluating AgentIQ Workflows](./evaluate.md) guide be read before proceeding with this detailed documentation.
+:::
+
 The evaluation endpoint can be used to start evaluation jobs on a remote AgentIQ server.
 
 ## Evaluation Endpoint Overview
-```{mermaid}
+```mermaid
 graph TD
   A["POST /evaluate"] --> B["Background Job Created"]
   B --> C["GET /evaluate/job/{job_id}"]
