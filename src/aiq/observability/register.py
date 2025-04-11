@@ -46,12 +46,15 @@ def get_wandb_api_key(config_api_key: Optional[str] = None) -> Optional[str]:
 
 class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
     """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
-    endpoint: str = Field(description="The Weave OTEL endpoint to export telemetry traces.")
     entity: str = Field(description="The W&B entity/organization.")
     project: str = Field(description="The W&B project name.")
     api_key: Optional[str] = Field(
         default=None,
         description="Your W&B API key for authentication. If not provided, will look for WANDB_API_KEY environment variable."
+    )
+    endpoint: Optional[str] = Field(
+        default="https://trace.wandb.ai/otel/v1/traces",
+        description="The Weave OTEL endpoint to export telemetry traces. If not provided, will use the default Weave endpoint."
     )
 
 
