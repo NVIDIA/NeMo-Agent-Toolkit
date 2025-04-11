@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-## :snowflake: Code freeze for `${SOURCE_BRANCH}` and `v${VERSION}` release
+## :snowflake: Code freeze for `${SOURCE_BRANCH}` and `v${RELEASE_VERSION}` release
 
 ### What does this mean?
 Only critical/hotfix level issues should be merged into `${SOURCE_BRANCH}` until release (merging of this PR).
