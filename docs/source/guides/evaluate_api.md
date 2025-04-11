@@ -28,10 +28,9 @@ graph TD
 ```
 
 ## Evaluate Request and Response
-The /evaluate endpoint allows you to start an evaluation job. The request is processed in the background and returns a job ID for tracking.
+The /evaluate endpoint allows you to start an evaluation job. The request is stored for background processing, and the server returns a job ID for tracking the job status.
 
 ### Evaluate Request
-The request is sent to the server and the server processes the request in the background. The request is defined as follows:
 - **Route**: `/evaluate`
 - **Method**: `POST`
 - **Description**: Start evaluation. Evaluates the performance and accuracy of the workflow on a dataset.
@@ -47,11 +46,9 @@ curl --request POST \
 ```
 You can optionally pipe the output to `jq` for response formatting.
 
-The `config_file` parameter is required and specifies the path to the evaluation configuration file on the remote server.
-
 ### Evaluate Request Format
 `AIQEvaluateRequest`:
-- `config_file`: Path to the configuration file for evaluation.
+- `config_file`: Path to the evaluation configuration file on the remote server.
 - `job_id`: Unique identifier for the evaluation job. If not provided, a new job ID is generated.
 - `reps`: Number of repetitions for the evaluation. Defaults to 1.
 - `expiry_seconds`: Optional time (in seconds) before the job expires. This is clamped between 600 (10 min) and 86400 (24h). Defaults to 3600 seconds (1 hour).
@@ -147,8 +144,10 @@ curl --request GET \
 ## Output Storage
 A separate output directory is created for each job. The output directory contains the evaluation results, including the evaluation metrics and any generated files. The `jobs/{job-id}` is appended to the `eval.general.output.dir` configuration parameter in the evaluation configuration file to maintain the results of each job. If upload to remote storage is enabled, `jobs/{job-id}` is similarly appended to the `eval.general.output.remote_dir` configuration parameter in the evaluation configuration file.
 
-As the results are maintained per-job the output directory cleanup is recommended. This can be done by enabling `eval.general.output.cleanup` in the evaluation configuration file. If cleanup is enabled, the server removes the entire contents of the output directory at the start of each job. This way only the last job's results are kept in the output directory.
+### Output Directory Cleanup
+As the results are maintained per-job, output directory cleanup is recommended. This can be done by enabling `eval.general.output.cleanup` in the evaluation configuration file. If this configuration is enabled, the server removes the entire contents of the output directory at the start of each job. This way only the last job's results are kept in the output directory.
 
-Alternatively, you can configure the expiry timer per-job using the `expiry_seconds` parameter in the `AIQEvaluateRequest`. The server will automatically clean up expired jobs based on this timer. The default value is 3600 seconds (1 hour). The expiration time is clamped between 600 (10 min) and 86400 (24h).
+### Job Expiry
+You can also configure the expiry timer per-job using the `expiry_seconds` parameter in the `AIQEvaluateRequest`. The server will automatically clean up expired jobs based on this timer. The default expiry value is 3600 seconds (1 hour). The expiration time is clamped between 600 (10 min) and 86400 (24h).
 
-This cleanup includes both the job metadata and the contents of the output directory. The most recently updated finished job is always preserved, even if expired. Similarly, active jobs, `["submitted", "running"]`, are exempt from cleanup.
+This cleanup includes both the job metadata and the contents of the output directory. The most recently finished job is always preserved, even if expired. Similarly, active jobs, `["submitted", "running"]`, are exempt from cleanup.
