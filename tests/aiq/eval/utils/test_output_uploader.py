@@ -102,6 +102,8 @@ def test_run_custom_scripts_success(tmp_path):
         expected_args = [
             mock.ANY,  # interpreter path
             str(script),
+            "--output_dir",
+            str(tmp_path),
             "--iam",
             "ai"
         ]
