@@ -21,7 +21,7 @@ The evaluation endpoint can be used to start evaluation jobs on a remote AgentIQ
 ## Evaluation Endpoint Overview
 ```mermaid
 graph TD
-  A["POST /evaluate"] --> B["Job Created & Background Processing"]
+  A["POST /evaluate"] --> B["Background Job Created"]
   B --> C["GET /evaluate/job/{job_id}"]
   B --> D["GET /evaluate/job/last"]
   B --> E["GET /evaluate/jobs"]
