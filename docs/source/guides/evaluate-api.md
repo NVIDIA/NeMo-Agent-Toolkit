@@ -19,7 +19,7 @@ limitations under the License.
 The evaluation endpoint can be used to start evaluation jobs on a remote AgentIQ server.
 
 ## Evaluation Endpoint Overview
-```mermaid
+```{mermaid}
 graph TD
   A["POST /evaluate"] --> B["Background Job Created"]
   B --> C["GET /evaluate/job/{job_id}"]
