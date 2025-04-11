@@ -139,6 +139,7 @@ docs = [
   "sphinx~=8.2",
   "sphinx-copybutton>=0.5",
   "sphinx-autoapi>=3.6",
+  "sphinx-mermaid",
   "vale==3.9.5",
 ]
 
