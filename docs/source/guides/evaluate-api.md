@@ -16,6 +16,10 @@ limitations under the License.
 -->
 
 # Evaluate API Endpoints
+:::{note}
+It is recommended that the [Evaluating AgentIQ Workflows](./evaluate.md) guide be read before proceeding with this detailed documentation.
+:::
+
 The evaluation endpoint can be used to start evaluation jobs on a remote AgentIQ server.
 
 ## Evaluation Endpoint Overview
@@ -25,6 +29,13 @@ graph TD
   B --> C["GET /evaluate/job/{job_id}"]
   B --> D["GET /evaluate/job/last"]
   B --> E["GET /evaluate/jobs"]
+```
+
+## Start AgentIQ API Server
+See AgentIQ [UI and Server](./using-agentiq-ui-and-server.md) guide for instructions on starting the AgentIQ server.
+Sample Usage:
+```bash
+aiq serve --config_file=examples/simple/configs/config.yml
 ```
 
 ## Evaluate Request and Response
