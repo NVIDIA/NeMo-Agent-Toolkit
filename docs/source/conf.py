@@ -32,6 +32,7 @@ import os
 import shutil
 import subprocess
 import typing
+from urllib.parse import urlparse
 
 from markdown_it import MarkdownIt
 from mdformat.renderer import MDRenderer
@@ -96,10 +97,21 @@ with open(EXAMPLES_INDEX, "a") as f:
 destination_docs.append(EXAMPLES_INDEX)
 
 
+def url_has_scheme(path):
+    """Check if the path has a scheme (e.g., http, https)."""
+    parsed_url = urlparse(path)
+    return parsed_url.scheme != ''
+
+
 # re-write links
 def path_updater(path):
-    if '/docs/source' in path:
-        path = path.replace('/docs/source', '', 1)
+    if not url_has_scheme(path) and not path.startswith('#'):  # only re-write relative urls without a scheme (https://)
+        (_, ext) = os.path.splitext(path)
+        if ext not in ('.md', '.rst'):
+            # replace with github link
+            pass
+        elif '/docs/source' in path:
+            path = path.replace('/docs/source', '', 1)
 
     return path
 
