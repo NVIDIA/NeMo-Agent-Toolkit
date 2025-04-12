@@ -35,7 +35,7 @@ docker info
 ```
 
 # Quickstart
-1. Setup Virtual Environment and install AgentIQ using the instructions in the base AgentIQ repo [README.md](../../README.md)
+1. Setup Virtual Environment and install AgentIQ using the instructions in the [Install Guide](../../docs/source/intro/install.md)
 
 2. Install the `swe_bench` example:
 ```bash
