@@ -80,117 +80,100 @@ class AgentIQToWeaveExporter(SpanExporter):
     def __init__(self, wrapped_exporter: SpanExporter):
         self._wrapped_exporter = wrapped_exporter
 
+    def _parse_and_structure_messages(
+        self, value_str: str, mime_type: str, default_role: str
+    ) -> List[Dict[str, str]]:
+        """Parses a string value based on mime type and structures it into messages."""
+        messages = []
+        if mime_type == "application/json" and value_str:
+            try:
+                parsed = json.loads(value_str)
+                if isinstance(parsed, list):
+                    for item in parsed:
+                        if isinstance(item, dict):
+                            role = item.get("role") or item.get("type") or default_role
+                            content = str(item.get("content", ""))
+                            messages.append({"role": str(role), "content": content})
+                        else:
+                            messages.append({"role": default_role, "content": str(item)})
+                elif isinstance(parsed, dict):
+                    role = parsed.get("role") or parsed.get("type") or default_role
+                    content = str(parsed.get("content", parsed))
+                    messages.append({"role": str(role), "content": content})
+                else:
+                    messages.append({"role": default_role, "content": str(parsed)})
+            except json.JSONDecodeError:
+                # Fallback to plain text if JSON parsing fails
+                messages.append({"role": default_role, "content": value_str})
+        else:
+            # Treat as plain text if not JSON or empty value
+            messages.append({"role": default_role, "content": value_str})
+        return messages
+
+    def _update_attributes_with_messages(
+        self,
+        attributes: Dict[str, Any],
+        prefix: str,
+        default_role: str,
+        target_attribute: str,
+    ):
+        """Processes attributes with a given prefix, structures them as messages,
+           and updates the attributes dictionary."""
+        prefixed_attrs = {k: v for k, v in attributes.items() if k.startswith(prefix)}
+        value_key = f"{prefix}value"
+        mime_type_key = f"{prefix}mime_type"
+
+        if value_key in prefixed_attrs:
+            raw_value = str(prefixed_attrs.get(value_key, ""))
+            mime_type = str(prefixed_attrs.get(mime_type_key, ""))
+
+            structured_messages = self._parse_and_structure_messages(raw_value, mime_type, default_role)
+
+            if structured_messages:
+                # Clear any previous target attribute
+                attributes.pop(target_attribute, None)
+                # Build the dictionary structure {index: {"role": role, "content": content}}
+                messages_dict = {
+                    i: {"role": msg.get("role", default_role), "content": msg.get("content", "")}
+                    for i, msg in enumerate(structured_messages)
+                }
+                if messages_dict:  # Ensure the dictionary is not empty
+                    attributes[target_attribute] = messages_dict
+
+            # Remove original prefixed attributes after processing
+            for key in list(attributes.keys()):
+                if key.startswith(prefix):
+                    attributes.pop(key)
+
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         for span in spans:
-            # Copy original attributes
-            original_attributes = dict(span.attributes) if span.attributes else {}
-            new_attributes = original_attributes.copy()
+            # It's generally safer to work with a copy if modifying complex objects,
+            # but directly modifying _attributes is done here for simplicity,
+            # mirroring the previous implementation style.
+            if not span.attributes:
+                continue # Skip spans with no attributes
 
-            # Safely detect inputs
-            inputs = {k: v for k, v in new_attributes.items() if k.startswith("input.")}
-            if inputs and "input.value" in inputs:
-                raw = str(inputs.get("input.value", ""))
-                mime_type = str(inputs.get("input.mime_type", ""))
+            new_attributes = dict(span.attributes) # Work on a copy
 
-                # Prepare the list for input messages
-                msg_list = []
+            # Process inputs
+            self._update_attributes_with_messages(
+                new_attributes,
+                prefix="input.",
+                default_role="user",
+                target_attribute=oi.SpanAttributes.LLM_INPUT_MESSAGES,
+            )
 
-                # Check if it's JSON mime type
-                if mime_type == "application/json" and raw:
-                    try:
-                        parsed = json.loads(raw)
-                        # If it's a list, ensure each item is a dict with role, content
-                        if isinstance(parsed, list):
-                            for item in parsed:
-                                if isinstance(item, dict):
-                                    role = item.get("role") or item.get("type") or "user"
-                                    content = str(item.get("content", ""))
-                                    msg_list.append({"role": role, "content": content})
-                                else:
-                                    msg_list.append({"role": "user", "content": str(item)})
-                        # If it's a dict, treat as single message
-                        elif isinstance(parsed, dict):
-                            role = parsed.get("role") or parsed.get("type") or "user"
-                            content = str(parsed.get("content", parsed))
-                            msg_list.append({"role": role, "content": content})
-                        else:
-                            # For a simple string/number/etc.
-                            msg_list.append({"role": "user", "content": str(parsed)})
-                    except json.JSONDecodeError:
-                        # Fallback to plain text
-                        msg_list.append({"role": "user", "content": raw})
-                else:
-                    # If not JSON or no mime, just store as plain text
-                    msg_list.append({"role": "user", "content": raw})
+            # Process outputs
+            self._update_attributes_with_messages(
+                new_attributes,
+                prefix="output.",
+                default_role="assistant",
+                target_attribute=oi.SpanAttributes.LLM_OUTPUT_MESSAGES,
+            )
 
-                # Set our standardized input messages in the flattened format
-                if msg_list:
-                    # Clear any previous attempt to set the whole list/JSON string
-                    new_attributes.pop(oi.SpanAttributes.LLM_INPUT_MESSAGES, None) 
-                    for i, message in enumerate(msg_list):
-                        role = message.get("role", "user")
-                        content = message.get("content", "")
-                        # Create flattened keys like "llm.input_messages.0.role"
-                        new_attributes[oi.SpanAttributes.LLM_INPUT_MESSAGES] = {i: {"role": str(role), "content": str(content)}}
-
-
-                # Remove original trace of input.* from attributes as they are now transformed
-                # Re-enabled this section
-                for key in list(new_attributes.keys()):
-                    if key.startswith("input."):
-                        new_attributes.pop(key)
-
-            # Safely detect outputs and transform them
-            outputs = {k: v for k, v in new_attributes.items() if k.startswith("output.")}
-            if outputs and "output.value" in outputs:
-                raw_output = str(outputs.get("output.value", ""))
-                output_mime_type = str(outputs.get("output.mime_type", ""))
-                output_msg_list = []
-
-                if output_mime_type == "application/json" and raw_output:
-                    try:
-                        parsed_output = json.loads(raw_output)
-                        if isinstance(parsed_output, list):
-                            for item in parsed_output:
-                                if isinstance(item, dict):
-                                    role = item.get("role") or item.get("type") or "assistant"
-                                    content = str(item.get("content", ""))
-                                    output_msg_list.append({"role": role, "content": content})
-                                else:
-                                    output_msg_list.append({"role": "assistant", "content": str(item)})
-                        elif isinstance(parsed_output, dict):
-                            role = parsed_output.get("role") or parsed_output.get("type") or "assistant"
-                            content = str(parsed_output.get("content", parsed_output))
-                            output_msg_list.append({"role": role, "content": content})
-                        else:
-                            output_msg_list.append({"role": "assistant", "content": str(parsed_output)})
-                    except json.JSONDecodeError:
-                        # Fallback for non-JSON output
-                        output_msg_list.append({"role": "assistant", "content": raw_output})
-                else:
-                    # Treat as single message with assistant role if not JSON or no mime type
-                    output_msg_list.append({"role": "assistant", "content": raw_output})
-
-                # Set our standardized output messages in the dictionary format
-                if output_msg_list:
-                    # Clear any previous output message attribute
-                    new_attributes.pop(oi.SpanAttributes.LLM_OUTPUT_MESSAGES, None)
-                    # Build the dictionary structure {index: {"role": role, "content": content}}
-                    output_messages_dict = {
-                        i: {"role": str(msg.get("role", "assistant")), "content": str(msg.get("content", ""))}
-                        for i, msg in enumerate(output_msg_list)
-                    }
-                    if output_messages_dict: # Ensure the dictionary is not empty
-                        new_attributes[oi.SpanAttributes.LLM_OUTPUT_MESSAGES] = output_messages_dict
-
-                # Remove original trace of output.* from attributes
-                for key in list(new_attributes.keys()):
-                    if key.startswith("output."):
-                        new_attributes.pop(key)
-
-            # Replace the original attributes with our updated version
             span._attributes = new_attributes
 
+        # Export the (potentially modified) spans
         return self._wrapped_exporter.export(spans)
 
     def shutdown(self):
