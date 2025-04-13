@@ -140,6 +140,54 @@ class AgentIQToWeaveExporter(SpanExporter):
                     if key.startswith("input."):
                         new_attributes.pop(key)
 
+            # Safely detect outputs and transform them
+            outputs = {k: v for k, v in new_attributes.items() if k.startswith("output.")}
+            if outputs and "output.value" in outputs:
+                raw_output = str(outputs.get("output.value", ""))
+                output_mime_type = str(outputs.get("output.mime_type", ""))
+                output_msg_list = []
+
+                if output_mime_type == "application/json" and raw_output:
+                    try:
+                        parsed_output = json.loads(raw_output)
+                        if isinstance(parsed_output, list):
+                            for item in parsed_output:
+                                if isinstance(item, dict):
+                                    role = item.get("role") or item.get("type") or "assistant"
+                                    content = str(item.get("content", ""))
+                                    output_msg_list.append({"role": role, "content": content})
+                                else:
+                                    output_msg_list.append({"role": "assistant", "content": str(item)})
+                        elif isinstance(parsed_output, dict):
+                            role = parsed_output.get("role") or parsed_output.get("type") or "assistant"
+                            content = str(parsed_output.get("content", parsed_output))
+                            output_msg_list.append({"role": role, "content": content})
+                        else:
+                            output_msg_list.append({"role": "assistant", "content": str(parsed_output)})
+                    except json.JSONDecodeError:
+                        # Fallback for non-JSON output
+                        output_msg_list.append({"role": "assistant", "content": raw_output})
+                else:
+                    # Treat as single message with assistant role if not JSON or no mime type
+                    output_msg_list.append({"role": "assistant", "content": raw_output})
+
+                # Set our standardized output messages in the dictionary format
+                if output_msg_list:
+                    # Clear any previous output message attribute
+                    new_attributes.pop(oi.SpanAttributes.LLM_OUTPUT_MESSAGES, None)
+                    # Build the dictionary structure {index: {"role": role, "content": content}}
+                    output_messages_dict = {
+                        i: {"role": str(msg.get("role", "assistant")), "content": str(msg.get("content", ""))}
+                        for i, msg in enumerate(output_msg_list)
+                    }
+                    if output_messages_dict: # Ensure the dictionary is not empty
+                        new_attributes[oi.SpanAttributes.LLM_OUTPUT_MESSAGES] = output_messages_dict
+
+                # Remove original trace of output.* from attributes
+                for key in list(new_attributes.keys()):
+                    if key.startswith("output."):
+                        new_attributes.pop(key)
+
             # Replace the original attributes with our updated version
             span._attributes = new_attributes
 
