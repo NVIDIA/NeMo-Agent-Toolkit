@@ -17,13 +17,14 @@ import logging
 import os
 # import copy # Not strictly needed if we only use dict.copy()
 # import types # Not needed
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Any, Dict, List, Union
 from pydantic import Field
 import json # Keep json import
 
 from opentelemetry.sdk.trace import ReadableSpan, Event, InstrumentationScope
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 import opentelemetry.semconv_ai as ot
+import openinference.semconv.trace as oi
 
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_logging_method
@@ -72,8 +73,8 @@ class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
 
 class AgentIQToWeaveExporter(SpanExporter):
     """
-    A wrapper around the real OTLPSpanExporter that renames or reshapes
-    AgentIQ attributes so that Weave sees them as 'inputs' and 'outputs'.
+    A wrapper around the real OTLPSpanExporter that transforms
+    attributes so that Weave sees them as 'inputs' and/or 'outputs'.
     """
 
     def __init__(self, wrapped_exporter: SpanExporter):
@@ -81,21 +82,65 @@ class AgentIQToWeaveExporter(SpanExporter):
 
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         for span in spans:
-            # Create a mutable copy of attributes
+            # Copy original attributes
             original_attributes = dict(span.attributes) if span.attributes else {}
             new_attributes = original_attributes.copy()
 
-            # --- Input Transformation ---
-            prompts = {}
-            # keys that start with "input"
-            inputs = {k: v for k, v in original_attributes.items() if k.startswith("input.")}
-            if inputs:
-                if inputs["input.mime_type"] == "application/json":
-                    inputs = json.loads(inputs["input.value"])
+            # Safely detect inputs
+            inputs = {k: v for k, v in new_attributes.items() if k.startswith("input.")}
+            if inputs and "input.value" in inputs:
+                raw = str(inputs.get("input.value", ""))
+                mime_type = str(inputs.get("input.mime_type", ""))
 
-                    new_attributes[ot.SpanAttributes.LLM_PROMPTS] = inputs
-                    print(f"new_attributes: {new_attributes}")
+                # Prepare the list for input messages
+                msg_list = []
 
+                # Check if it's JSON mime type
+                if mime_type == "application/json" and raw:
+                    try:
+                        parsed = json.loads(raw)
+                        # If it's a list, ensure each item is a dict with role, content
+                        if isinstance(parsed, list):
+                            for item in parsed:
+                                if isinstance(item, dict):
+                                    role = item.get("role") or item.get("type") or "user"
+                                    content = str(item.get("content", ""))
+                                    msg_list.append({"role": role, "content": content})
+                                else:
+                                    msg_list.append({"role": "user", "content": str(item)})
+                        # If it's a dict, treat as single message
+                        elif isinstance(parsed, dict):
+                            role = parsed.get("role") or parsed.get("type") or "user"
+                            content = str(parsed.get("content", parsed))
+                            msg_list.append({"role": role, "content": content})
+                        else:
+                            # For a simple string/number/etc.
+                            msg_list.append({"role": "user", "content": str(parsed)})
+                    except json.JSONDecodeError:
+                        # Fallback to plain text
+                        msg_list.append({"role": "user", "content": raw})
+                else:
+                    # If not JSON or no mime, just store as plain text
+                    msg_list.append({"role": "user", "content": raw})
+
+                # Set our standardized input messages in the flattened format
+                if msg_list:
+                    # Clear any previous attempt to set the whole list/JSON string
+                    new_attributes.pop(oi.SpanAttributes.LLM_INPUT_MESSAGES, None) 
+                    for i, message in enumerate(msg_list):
+                        role = message.get("role", "user")
+                        content = message.get("content", "")
+                        # Create flattened keys like "llm.input_messages.0.role"
+                        new_attributes[oi.SpanAttributes.LLM_INPUT_MESSAGES] = {i: {"role": str(role), "content": str(content)}}
+
+
+                # Remove original trace of input.* from attributes as they are now transformed
+                # Re-enabled this section
+                for key in list(new_attributes.keys()):
+                    if key.startswith("input."):
+                        new_attributes.pop(key)
+
+            # Replace the original attributes with our updated version
             span._attributes = new_attributes
 
         return self._wrapped_exporter.export(spans)
