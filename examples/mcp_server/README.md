@@ -17,7 +17,7 @@ limitations under the License.
 
 # MCP Server Example
 
-This example demonstrates how to set up and run an MCP (Model Control Protocol) server using a reusable Dockerfile.
+This example demonstrates how to set up and run an MCP (Model Control Protocol) server using a reusable `Dockerfile`.
 
 ## Prerequisites
 
@@ -47,7 +47,7 @@ export CONTAINER_NAME=mcp-proxy-aiq-${SERVICE_BRIEF_NAME}
 export SERVER_PORT=8080
 ```
 
-3. Create a directory for your service and copy the Dockerfile to it:
+3. Create a directory for your service and copy the `Dockerfile` to it:
 
 ```bash
 mkdir -p ${SERVICE_DIR}
