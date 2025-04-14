@@ -23,6 +23,7 @@ from functools import partial
 
 from fastapi import Body
 from fastapi import FastAPI
+from fastapi import Request
 from fastapi import Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -118,6 +119,21 @@ class FastApiFrontEndPluginWorkerBase(ABC):
             **cors_kwargs,
         )
 
+    def set_user_attributes(self, request: Request, session_manager: AIQSessionManager) -> None:
+        """
+        Extracts and sets user request attributes from an HTTP request.
+        """
+        session_manager.context.user_manager_attributes._request.method = request.method
+        session_manager.context.user_manager_attributes._request.url_path = request.url.path
+        session_manager.context.user_manager_attributes._request.url_port = request.url.port
+        session_manager.context.user_manager_attributes._request.url_scheme = request.url.scheme
+        session_manager.context.user_manager_attributes._request.headers = request.headers
+        session_manager.context.user_manager_attributes._request.query_params = request.query_params
+        session_manager.context.user_manager_attributes._request.path_params = request.path_params
+        session_manager.context.user_manager_attributes._request.client_host = request.client.host
+        session_manager.context.user_manager_attributes._request.client_port = request.client.port
+        session_manager.context.user_manager_attributes._request.cookies = request.cookies
+
     @abstractmethod
     async def configure(self, app: FastAPI, builder: WorkflowBuilder):
         pass
@@ -191,9 +207,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         def get_single_endpoint(result_type: type | None):
 
-            async def get_single(response: Response):
+            async def get_single(response: Response, request: Request):
 
                 response.headers["Content-Type"] = "application/json"
+
+                self.set_user_attributes(request, session_manager)
 
                 return await generate_single_response(None, session_manager, result_type=result_type)
 
@@ -201,7 +219,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         def get_streaming_endpoint(streaming: bool, result_type: type | None, output_type: type | None):
 
-            async def get_stream():
+            async def get_stream(request: Request):
+
+                self.set_user_attributes(request, session_manager)
 
                 return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                          content=generate_streaming_response_as_str(
@@ -216,7 +236,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         def get_streaming_raw_endpoint(streaming: bool, result_type: type | None, output_type: type | None):
 
-            async def get_stream():
+            async def get_stream(request: Request):
+
+                self.set_user_attributes(request, session_manager)
 
                 return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                          content=generate_streaming_response_raw_as_str(None,
@@ -229,9 +251,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         def post_single_endpoint(request_type: type, result_type: type | None):
 
-            async def post_single(response: Response, payload: request_type):
+            async def post_single(response: Response, request: Request, payload: request_type):
 
                 response.headers["Content-Type"] = "application/json"
+
+                self.set_user_attributes(request, session_manager)
 
                 return await generate_single_response(payload, session_manager, result_type=result_type)
 
@@ -242,7 +266,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                     result_type: type | None,
                                     output_type: type | None):
 
-            async def post_stream(payload: request_type):
+            async def post_stream(request: Request, payload: request_type):
+
+                self.set_user_attributes(request, session_manager)
 
                 return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                          content=generate_streaming_response_as_str(
@@ -263,7 +289,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             Stream raw intermediate steps without any step adaptor translations.
             """
 
-            async def post_stream(payload: request_type):
+            async def post_stream(request: Request, payload: request_type):
+
+                self.set_user_attributes(request, session_manager)
 
                 return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                          content=generate_streaming_response_raw_as_str(payload,

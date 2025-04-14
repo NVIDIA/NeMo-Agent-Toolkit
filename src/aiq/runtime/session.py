@@ -31,10 +31,6 @@ from aiq.data_models.interactive import InteractionPrompt
 _T = typing.TypeVar("_T")
 
 
-class UserManagerBase:
-    pass
-
-
 class AIQSessionManager:
 
     def __init__(self, workflow: Workflow, max_concurrency: int = 8):
