@@ -131,7 +131,12 @@ class ReWOOAgentGraph(BaseAgent):
         return steps_list
 
     @staticmethod
-    def _parse_tool_input(tool_input: str):
+    def _parse_tool_input(tool_input: str | dict):
+        # If the input is already a dictionary, return it as is
+        if isinstance(tool_input, dict):
+            logger.info("Tool input is already a dictionary. Use the tool input as is.")
+            return tool_input
+        # If the input is a string, attempt to parse it as JSON
         try:
             tool_input = tool_input.strip()
             # If the input is already a valid JSON string, load it

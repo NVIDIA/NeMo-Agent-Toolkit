@@ -96,7 +96,7 @@ async def test_conditional_edge_no_input(mock_rewoo_agent):
     assert decision == AgentDecision.END
 
 
-def _create_step_info(plan: str, variable: str, tool: str, tool_input: str) -> AIMessage:
+def _create_step_info(plan: str, variable: str, tool: str, tool_input: str | dict) -> AIMessage:
     return AIMessage(content=[{"plan": plan, "variable": variable, "tool": tool, "tool_input": tool_input}])
 
 
@@ -146,6 +146,24 @@ async def test_executor_node_with_not_configured_tool(mock_rewoo_agent):
 
 async def test_executor_node_parse_input(mock_rewoo_agent):
     with patch('aiq.agent.rewoo_agent.agent.logger.info') as mock_logger_info:
+        # Test with dict as tool input
+        mock_state = ReWOOGraphState(
+            task=HumanMessage(content="This is a task"),
+            plan=AIMessage(content="This is the plan"),
+            steps=[
+                _create_step_info(
+                    "step1",
+                    "#E1",
+                    "mock_tool_A", {
+                        "query": "What is the capital of France?", "input_metadata": {
+                            "entities": ["France", "Paris"]
+                        }
+                    })
+            ],
+            intermediate_results={})
+        await mock_rewoo_agent.executor_node(mock_state)
+        mock_logger_info.assert_any_call("Tool input is already a dictionary. Use the tool input as is.")
+
         # Test with valid JSON as tool input
         mock_state = ReWOOGraphState(
             task=HumanMessage(content="This is a task"),
@@ -173,6 +191,37 @@ async def test_executor_node_parse_input(mock_rewoo_agent):
         mock_state.intermediate_results = {}
         await mock_rewoo_agent.executor_node(mock_state)
         mock_logger_info.assert_any_call("Unable to parse structured tool input. Using raw tool input as is.")
+
+
+async def test_executor_node_handle_input_types(mock_rewoo_agent):
+    # mock_tool returns the input query as is.
+    # The executor_node should maintain the output type the same as the input type.
+
+    mock_state = ReWOOGraphState(task=HumanMessage(content="This is a task"),
+                                 plan=AIMessage(content="This is the plan"),
+                                 steps=[_create_step_info("step1", "#E1", "mock_tool_A", "This is a string query")],
+                                 intermediate_results={})
+    await mock_rewoo_agent.executor_node(mock_state)
+    assert isinstance(mock_state.intermediate_results["#E1"].content, str)
+
+    mock_state = ReWOOGraphState(
+        task=HumanMessage(content="This is a task"),
+        plan=AIMessage(content="This is the plan"),
+        steps=[
+            _create_step_info("step1",
+                              "#E1",
+                              "mock_tool_A", {"query": {
+                                  "data": "This is a dict query", "metadata": {
+                                      "key": "value"
+                                  }
+                              }}),
+            _create_step_info("step2", "#E2", "mock_tool_B", "arg3, arg4")
+        ],
+        intermediate_results={})
+    await mock_rewoo_agent.executor_node(mock_state)
+    # If the tool output is a dict, ToolMessage requires to store it inside a list
+    assert isinstance(mock_state.intermediate_results["#E1"].content[0], dict)
+    await mock_rewoo_agent.executor_node(mock_state)
 
 
 async def test_executor_node_should_not_be_invoked_after_all_steps_executed(mock_rewoo_agent):
