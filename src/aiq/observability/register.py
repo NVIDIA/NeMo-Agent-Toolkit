@@ -159,7 +159,6 @@ class AgentIQToWeaveExporter(SpanExporter):
             # Check if it's an LLM span and process token counts
             span_kind = new_attributes.get(oi.SpanAttributes.OPENINFERENCE_SPAN_KIND)
             if span_kind == "LLM":
-                print("span.attributes", span.attributes)
                 prompt_tokens = span.attributes.get("llm.token_count.prompt")
                 completion_tokens = span.attributes.get("llm.token_count.completion")
                 total_tokens = span.attributes.get("llm.token_count.total")
