@@ -214,8 +214,9 @@ class ReWOOAgentGraph(BaseAgent):
                     tool,
                     configured_tool_names)
 
-                intermediate_results[variable] = ToolMessage(
-                    content=TOOL_NOT_FOUND_ERROR_MESSAGE.format(tool_name=tool, tools=configured_tool_names))
+                intermediate_results[variable] = ToolMessage(content=TOOL_NOT_FOUND_ERROR_MESSAGE.format(
+                    tool_name=tool, tools=configured_tool_names),
+                                                             tool_call_id=tool)
                 return {"intermediate_results": intermediate_results}
 
             if self.detailed_logs:
