@@ -123,6 +123,7 @@ docs = [
     { name = "sphinx" },
     { name = "sphinx-autoapi" },
     { name = "sphinx-copybutton" },
+    { name = "sphinx-mermaid" },
     { name = "vale" },
 ]
 
@@ -200,6 +201,7 @@ docs = [
     { name = "sphinx", specifier = "~=8.2" },
     { name = "sphinx-autoapi", specifier = ">=3.6" },
     { name = "sphinx-copybutton", specifier = ">=0.5" },
+    { name = "sphinx-mermaid" },
     { name = "vale", specifier = "==3.9.5" },
 ]
 
@@ -5225,6 +5227,17 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/fc/2b/a964715e7f5295f77509e59309959f4125122d648f86b4fe7d70ca1d882c/sphinx-copybutton-0.5.2.tar.gz", hash = "sha256:4cf17c82fb9646d1bc9ca92ac280813a3b605d8c421225fd9913154103ee1fbd", size = 23039 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9e/48/1ea60e74949eecb12cdd6ac43987f9fd331156388dcc2319b45e2ebb81bf/sphinx_copybutton-0.5.2-py3-none-any.whl", hash = "sha256:fb543fd386d917746c9a2c50360c7905b605726b9355cd26e9974857afeae06e", size = 13343 },
+]
+
+[[package]]
+name = "sphinx-mermaid"
+version = "0.0.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "sphinx" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bd/65/96cb3a4117ea2a4ead808377259659885ea0fe5e539a9f29fc1c8a723ed1/sphinx_mermaid-0.0.8-py2.py3-none-any.whl", hash = "sha256:03cbad30c04130e5644c5112b4b2da7850d142f897876ac5aea83c8b5965bf76", size = 3336 },
 ]
 
 [[package]]
