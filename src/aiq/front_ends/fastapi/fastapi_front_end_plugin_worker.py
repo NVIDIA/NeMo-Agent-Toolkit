@@ -251,9 +251,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     logger.error("Error in evaluation job %s: %s", job_id, str(e))
                     job_store.update_status(job_id, "failure", error=str(e))
 
-        async def start_evaluation(request: AIQEvaluateRequest, background_tasks: BackgroundTasks):
+        async def start_evaluation(request: AIQEvaluateRequest,
+                                   background_tasks: BackgroundTasks,
+                                   http_request: Request):
             """Handle evaluation requests."""
             # if job_id is present and already exists return the job info
+            self.set_user_attributes(http_request, session_manager)
             if request.job_id:
                 job = job_store.get_job(request.job_id)
                 if job:
@@ -262,6 +265,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             job_id = job_store.create_job(request.config_file, request.job_id, request.expiry_seconds)
             create_cleanup_task()
             background_tasks.add_task(run_evaluation, job_id, request.config_file, request.reps, session_manager)
+
             return AIQEvaluateResponse(job_id=job_id, status="submitted")
 
         def translate_job_to_response(job: JobInfo) -> AIQEvaluateStatusResponse:
@@ -275,9 +279,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                              updated_at=job.updated_at,
                                              expires_at=job_store.get_expires_at(job))
 
-        def get_job_status(job_id: str) -> AIQEvaluateStatusResponse:
+        def get_job_status(job_id: str, http_request: Request) -> AIQEvaluateStatusResponse:
             """Get the status of an evaluation job."""
             logger.info("Getting status for job %s", job_id)
+            self.set_user_attributes(http_request, session_manager)
             job = job_store.get_job(job_id)
             if not job:
                 logger.warning("Job %s not found", job_id)
@@ -285,9 +290,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             logger.info(f"Found job {job_id} with status {job.status}")
             return translate_job_to_response(job)
 
-        def get_last_job_status() -> AIQEvaluateStatusResponse:
+        def get_last_job_status(http_request: Request) -> AIQEvaluateStatusResponse:
             """Get the status of the last created evaluation job."""
             logger.info("Getting last job status")
+            self.set_user_attributes(http_request, session_manager)
             job = job_store.get_last_job()
             if not job:
                 logger.warning("No jobs found when requesting last job status")
@@ -295,8 +301,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             logger.info("Found last job %s with status %s", job.job_id, job.status)
             return translate_job_to_response(job)
 
-        def get_jobs(status: str | None = None) -> list[AIQEvaluateStatusResponse]:
+        def get_jobs(http_request: Request, status: str | None = None) -> list[AIQEvaluateStatusResponse]:
             """Get all jobs, optionally filtered by status."""
+            self.set_user_attributes(http_request, session_manager)
             if status is None:
                 logger.info("Getting all jobs")
                 jobs = job_store.get_all_jobs()

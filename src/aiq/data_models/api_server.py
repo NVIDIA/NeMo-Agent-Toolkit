@@ -47,8 +47,8 @@ class Request(BaseModel):
     url_path: str | None = None
     url_port: int | None = None
     url_scheme: str | None = None
-    headers: dict[str, str] | None = None
-    query_params: dict[str, str] | None = None
+    headers: typing.Any | None = None
+    query_params: typing.Any | None = None
     path_params: dict[str, str] | None = None
     client_host: str | None = None
     client_port: int | None = None
