@@ -15,13 +15,11 @@
 
 import logging
 import os
-# import copy # Not strictly needed if we only use dict.copy()
-# import types # Not needed
 from typing import Optional, Sequence, Any, Dict, List, Union
 from pydantic import Field
-import json # Keep json import
+import json
 
-from opentelemetry.sdk.trace import ReadableSpan, Event, InstrumentationScope
+from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 import opentelemetry.semconv_ai as ot
 import openinference.semconv.trace as oi
@@ -31,11 +29,6 @@ from aiq.cli.register_workflow import register_logging_method
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-
-# Removed incorrect import
-# import opentelemetry.semconv_ai as ot
-# from opentelemetry.sdk.trace import ReadableSpan # Already imported above
-# from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult # Already imported above
 
 logger = logging.getLogger(__name__)
 
@@ -127,11 +120,11 @@ class AgentIQToWeaveExporter(SpanExporter):
             raw_value = str(prefixed_attrs.get(value_key, ""))
             mime_type = str(prefixed_attrs.get(mime_type_key, ""))
 
-            structured_messages = self._parse_and_structure_messages(raw_value, mime_type, default_role)
+            structured_messages = self._parse_and_structure_messages(
+                raw_value, mime_type, default_role
+            )
 
             if structured_messages:
-                # Clear any previous target attribute
-                attributes.pop(target_attribute, None)
                 # Build the dictionary structure {index: {"role": role, "content": content}}
                 messages_dict = {
                     i: {"role": msg.get("role", default_role), "content": msg.get("content", "")}
@@ -140,20 +133,12 @@ class AgentIQToWeaveExporter(SpanExporter):
                 if messages_dict:  # Ensure the dictionary is not empty
                     attributes[target_attribute] = messages_dict
 
-            # Remove original prefixed attributes after processing
-            for key in list(attributes.keys()):
-                if key.startswith(prefix):
-                    attributes.pop(key)
-
     def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
         for span in spans:
-            # It's generally safer to work with a copy if modifying complex objects,
-            # but directly modifying _attributes is done here for simplicity,
-            # mirroring the previous implementation style.
             if not span.attributes:
-                continue # Skip spans with no attributes
+                continue
 
-            new_attributes = dict(span.attributes) # Work on a copy
+            new_attributes = dict(span.attributes)
 
             # Process inputs
             self._update_attributes_with_messages(
@@ -188,7 +173,7 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
     class NoOpSpanExporter:
         def export(self, spans):
             return None
-        
+
         def shutdown(self):
             return None
 
