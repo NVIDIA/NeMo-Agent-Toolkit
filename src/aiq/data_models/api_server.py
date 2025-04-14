@@ -37,6 +37,24 @@ class Message(BaseModel):
     role: str
 
 
+class Request(BaseModel):
+    """
+    Request is a data model that represents HTTP request attributes.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    method: str | None = None
+    url_path: str | None = None
+    url_port: int | None = None
+    url_scheme: str | None = None
+    headers: typing.Any | None = None
+    query_params: typing.Any | None = None
+    path_params: dict[str, str] | None = None
+    client_host: str | None = None
+    client_port: int | None = None
+    cookies: dict[str, str] | None = None
+
+
 class AIQChatRequest(BaseModel):
     """
     AIQChatRequest is a data model that represents a request to the AgentIQ chat API.

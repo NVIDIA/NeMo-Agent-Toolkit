@@ -368,5 +368,8 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
 
             return getattr(value, first_key)
 
+        if value is None:
+            return value
+
         # Fallback to the converter
         return self._converter.convert(value, to_type=self.input_class)
