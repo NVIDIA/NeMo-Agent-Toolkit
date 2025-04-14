@@ -21,6 +21,7 @@ from json import JSONDecodeError
 from langchain_core.callbacks.base import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages.ai import AIMessage
+from langchain_core.messages.human import HumanMessage
 from langchain_core.messages.tool import ToolMessage
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.runnables.config import RunnableConfig
@@ -40,12 +41,12 @@ NO_INPUT_ERROR_MESSAGE = "No human input recieved to the agent, Please ask a val
 
 
 class ReWOOGraphState(BaseModel):
-    """State schema for the ReAct Agent Graph"""
-    task: str = Field(default="")  # the task to be performed
-    plan: str = Field(default="")  # the plan to be executed
-    steps: list[tuple[str, str, str, str]] = Field(default_factory=list)  # the steps to be executed
-    intermediate_results: dict[str, str] = Field(default_factory=dict)  # the intermediate results of each step
-    result: str = Field(default="")  # the final result of the task
+    """State schema for the ReWOO Agent Graph"""
+    task: HumanMessage = Field(default_factory=lambda: HumanMessage(content=""))  # the task to be performed
+    plan: AIMessage = Field(default_factory=lambda: AIMessage(content=""))  # the plan to be executed
+    steps: list[AIMessage] = Field(default_factory=list)  # the steps to be executed
+    intermediate_results: dict[str, ToolMessage] = Field(default_factory=dict)  # the intermediate results of each step
+    result: AIMessage = Field(default_factory=lambda: AIMessage(content=""))  # the final result of the task
 
 
 class ReWOOAgentGraph(BaseAgent):
@@ -94,36 +95,38 @@ class ReWOOAgentGraph(BaseAgent):
     def _get_current_step(state: ReWOOGraphState) -> int:
         if len(state.steps) == 0:
             raise RuntimeError('No steps received in ReWOOGraphState')
-        # Get the current step according to the number of intermediate results
-        if len(state.intermediate_results) == 0:
-            return 1
+
         if len(state.intermediate_results) == len(state.steps):
             # all steps are done
             return -1
-        return len(state.intermediate_results) + 1
+
+        return len(state.intermediate_results)
 
     @staticmethod
-    def _parse_planner_output(planner_output: str) -> list[tuple[str, str, str, str]]:
-        # Parses the JSON string output from the LLM and returns a list of tuples.
-        # Each tuple contains (plan, variable, tool, tool_input) from a step.
+    def _parse_planner_output(planner_output: str) -> list[AIMessage]:
+        # Parses the JSON string output from the LLM and returns a list of AIMessage.
+        # Each AIMessage contains plan, variable, tool, tool_input from a step.
         try:
-            steps_data = json.loads(planner_output)
+            steps_json = json.loads(planner_output)
         except json.JSONDecodeError as ex:
             raise ValueError(f"The output of planner is invalid JSON format: {planner_output}") from ex
 
         steps_list = []
-        for step in steps_data:
-            plan = step.get("plan", "")
-            evidence = step.get("evidence", {})
-            variable = evidence.get("variable", "")
-            tool = evidence.get("tool", "")
-            tool_input = evidence.get("tool_input", "")
+        for step in steps_json:
+            step_info = {}
 
+            step_info["plan"] = step.get("plan", "")
+            evidence = step.get("evidence", {})
+            step_info["variable"] = evidence.get("variable", "")
+            step_info["tool"] = evidence.get("tool", "")
+
+            tool_input = evidence.get("tool_input", "")
             # Ensure tool_input is a string; if it's a list or object, convert it to a JSON string.
             if not isinstance(tool_input, str):
                 tool_input = json.dumps(tool_input)
+            step_info["tool_input"] = tool_input
 
-            steps_list.append((plan, variable, tool, tool_input))
+            steps_list.append(AIMessage(content=[step_info]))
 
         return steps_list
 
@@ -134,6 +137,7 @@ class ReWOOAgentGraph(BaseAgent):
             # If the input is already a valid JSON string, load it
             tool_input_parsed = json.loads(tool_input)
             logger.info("Successfully parsed structured tool input")
+
         except JSONDecodeError:
             # If parsing fails, handle nested single-quoted dictionaries
             try:
@@ -142,6 +146,7 @@ class ReWOOAgentGraph(BaseAgent):
                 tool_input_parsed = json.loads(tool_input_fixed)
                 logger.info(
                     "Successfully parsed structured tool input after replacing single quotes with double quotes")
+
             except JSONDecodeError:
                 # If it still fails, fall back to using the input as a raw string
                 tool_input_parsed = tool_input
@@ -154,7 +159,7 @@ class ReWOOAgentGraph(BaseAgent):
             logger.debug("Starting the ReWOO Planner Node")
 
             planner = self.planner_prompt | self.llm
-            task = state.task
+            task = state.task.content
             if not task:
                 logger.error("No task provided to the ReWOO Agent. Please provide a valid task.")
                 return {"result": NO_INPUT_ERROR_MESSAGE}
@@ -168,8 +173,9 @@ class ReWOOAgentGraph(BaseAgent):
             if self.detailed_logs:
                 logger.info("The task was: %s", task)
                 logger.info("The planner's thoughts are:\n%s", plan)
+                logger.debug("The steps to solve the task are:\n%s", steps)
 
-            return {"plan": plan, "steps": steps}
+            return {"plan": AIMessage(content=plan), "steps": steps}
 
         except Exception as ex:
             logger.exception("Failed to call planner_node: %s", ex, exc_info=True)
@@ -180,14 +186,24 @@ class ReWOOAgentGraph(BaseAgent):
             logger.debug("Starting the ReWOO Executor Node")
 
             current_step = self._get_current_step(state)
-            if current_step < 1:
+            # The executor node should not be invoked after all steps are finished
+            if current_step < 0:
                 logger.error("ReWOO Executor is invoked with an invalid step number: %s", current_step)
                 raise RuntimeError(f"ReWOO Executor is invoked with an invalid step number: {current_step}")
 
-            _, step_name, tool, tool_input = state.steps[current_step - 1]
+            step_info = state.steps[current_step].content[0]
+            variable = step_info.get("variable", "")
+            tool = step_info.get("tool", "")
+            tool_input = step_info.get("tool_input", "")
+
             intermediate_results = state.intermediate_results
-            for k, v in intermediate_results.items():
-                tool_input = tool_input.replace(k, v)
+            for _variable, _tool_output in intermediate_results.items():
+                _tool_output = _tool_output.content
+                # If the content is a list, get the first element which should be a dict
+                if isinstance(_tool_output, list):
+                    _tool_output = _tool_output[0]
+                    assert (isinstance(_tool_output, dict))
+                tool_input = tool_input.replace(_variable, _tool_output)
 
             requested_tool = self._get_tool(tool)
             if not requested_tool:
@@ -198,8 +214,8 @@ class ReWOOAgentGraph(BaseAgent):
                     tool,
                     configured_tool_names)
 
-                intermediate_results[step_name] = TOOL_NOT_FOUND_ERROR_MESSAGE.format(tool_name=tool,
-                                                                                      tools=configured_tool_names)
+                intermediate_results[variable] = ToolMessage(
+                    content=TOOL_NOT_FOUND_ERROR_MESSAGE.format(tool_name=tool, tools=configured_tool_names))
                 return {"intermediate_results": intermediate_results}
 
             if self.detailed_logs:
@@ -214,12 +230,18 @@ class ReWOOAgentGraph(BaseAgent):
             if tool_response is None or tool_response == "":
                 tool_response = "The tool provided an empty response.\n"
 
+            # ToolMessage only accepts str or list[str | dict] as content.
+            # Convert into list if the response is a dict.
+            if isinstance(tool_response, dict):
+                tool_response = [tool_response]
+
             tool_response = ToolMessage(name=tool, tool_call_id=tool, content=tool_response)
+
             logger.debug("Successfully called the tool")
             if self.detailed_logs:
                 logger.debug('The tool returned: %s', tool_response)
 
-            intermediate_results[step_name] = str(tool_response.content)
+            intermediate_results[variable] = tool_response
             return {"intermediate_results": intermediate_results}
 
         except Exception as ex:
@@ -232,14 +254,27 @@ class ReWOOAgentGraph(BaseAgent):
 
             plan = ""
             # Add results of each step to the plan
-            for _plan, step_name, tool, tool_input in state.steps:
-                intermediate_results = state.intermediate_results
-                for k, v in intermediate_results.items():
-                    tool_input = tool_input.replace(k, v)
-                    step_name = step_name.replace(k, v)
-                plan += f"Plan: {_plan}\n{step_name} = {tool}[{tool_input}]"
+            for step in state.steps:
+                step_info = step.content[0]
+                tool_input = step_info.get("tool_input", "")
+                variable = step_info.get("variable", "")
 
-            task = state.task
+                intermediate_results = state.intermediate_results
+                for _variable, _tool_output in intermediate_results.items():
+                    _tool_output = _tool_output.content
+                    # If the content is a list, get the first element which should be a dict
+                    if isinstance(_tool_output, list):
+                        _tool_output = _tool_output[0]
+                        assert (isinstance(_tool_output, dict))
+
+                    tool_input = tool_input.replace(_variable, _tool_output)
+                    variable = variable.replace(_variable, _tool_output)
+
+                _plan = step_info.get("plan")
+                tool = step_info.get("tool")
+                plan += f"Plan: {_plan}\n{variable} = {tool}[{tool_input}]"
+
+            task = state.task.content
             solver_prompt = self.solver_prompt.partial(plan=plan)
             solver = solver_prompt | self.llm
             output_message = ""
@@ -247,8 +282,7 @@ class ReWOOAgentGraph(BaseAgent):
                 output_message += event.content
 
             output_message = AIMessage(content=output_message)
-            state.result = str(output_message.content)
-            return {"result": state.result}
+            return {"result": output_message}
 
         except Exception as ex:
             logger.exception("Failed to call solver_node: %s", ex, exc_info=True)
@@ -299,10 +333,10 @@ class ReWOOAgentGraph(BaseAgent):
     async def build_graph(self):
         try:
             await self._build_graph(state_schema=ReWOOGraphState)
-            logger.info("ReAct Graph built and compiled successfully")
+            logger.info("ReWOO Graph built and compiled successfully")
             return self.graph
         except Exception as ex:
-            logger.exception("Failed to build ReAct Graph: %s", ex, exc_info=ex)
+            logger.exception("Failed to build ReWOO Graph: %s", ex, exc_info=ex)
             raise ex
 
     @staticmethod

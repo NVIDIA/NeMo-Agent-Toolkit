@@ -63,6 +63,7 @@ class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
 async def ReWOO_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builder):
     from langchain.schema import BaseMessage
     from langchain_core.messages import trim_messages
+    from langchain_core.messages.human import HumanMessage
     from langchain_core.prompts import ChatPromptTemplate
     from langgraph.graph.graph import CompiledGraph
 
@@ -124,7 +125,7 @@ async def ReWOO_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
                                                         token_counter=len,
                                                         start_on="human",
                                                         include_system=True)
-            task = messages[0].content
+            task = HumanMessage(content=messages[0].content)
             state = ReWOOGraphState(task=task)
 
             # run the ReWOO Agent Graph
@@ -132,7 +133,7 @@ async def ReWOO_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
 
             # get and return the output from the state
             state = ReWOOGraphState(**state)
-            output_message = state.result  # pylint: disable=E1136
+            output_message = state.result.content  # pylint: disable=E1101
             return AIQChatResponse.from_string(output_message)
 
         except Exception as ex:
