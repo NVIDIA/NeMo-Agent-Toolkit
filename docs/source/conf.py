@@ -83,7 +83,8 @@ extensions = [
     'sphinx_copybutton',
     'sphinx.ext.doctest',
     'sphinx.ext.graphviz',
-    'sphinx.ext.intersphinx'
+    'sphinx.ext.intersphinx',
+    "sphinxmermaid"
 ]
 
 autoapi_dirs = [API_TREE]

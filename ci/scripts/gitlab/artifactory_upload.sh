@@ -17,9 +17,17 @@
 # Exit on error
 set -e
 
+GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+source ${GITLAB_SCRIPT_DIR}/common.sh
+
 # change this to ready to publish. this should be done programmatically once
 # the release process is finalized.
-RELEASE_STATUS=preview
+if [[ "${CI_CRON_NIGHTLY}" == "1" || "${CI_COMMIT_BRANCH}" == "main" ]]; then
+    RELEASE_STATUS=ready
+else
+    RELEASE_STATUS=preview
+fi
 
 # Define variables
 AIQ_ARCH="any"
@@ -30,6 +38,9 @@ WHEELS_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
 # Define the subdirectories to be exclude
 EXCLUDE_SUBDIRS=("examples")
 COMPONENT_NAME="agentiq"
+
+GIT_TAG=$(get_git_tag)
+rapids-logger "Git Version: ${GIT_TAG}"
 
 # Exit if required secrets are not set
 if [[ -z "${URM_USER}" || -z "${URM_API_KEY}" ]]; then
@@ -72,12 +83,6 @@ function install_jfrog_cli() {
     fi
 }
 install_jfrog_cli
-
-function get_git_tag() {
-    # Get the latest Git tag, sorted by version, excluding lightweight tags
-    git describe --tags --abbrev=0 2>/dev/null || echo "no-tag"
-}
-GIT_TAG=$(get_git_tag)
 
 # Upload wheels if enabled
 if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
