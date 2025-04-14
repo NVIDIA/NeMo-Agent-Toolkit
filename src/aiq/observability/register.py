@@ -156,6 +156,22 @@ class AgentIQToWeaveExporter(SpanExporter):
                 target_attribute=oi.SpanAttributes.LLM_OUTPUT_MESSAGES,
             )
 
+            # Check if it's an LLM span and process token counts
+            span_kind = new_attributes.get(oi.SpanAttributes.OPENINFERENCE_SPAN_KIND)
+            if span_kind == "LLM":
+                print("span.attributes", span.attributes)
+                prompt_tokens = span.attributes.get("llm.token_count.prompt")
+                completion_tokens = span.attributes.get("llm.token_count.completion")
+                total_tokens = span.attributes.get("llm.token_count.total")
+
+                # Add the standard OI attributes if the nested ones were found
+                if prompt_tokens is not None:
+                    new_attributes[oi.SpanAttributes.LLM_TOKEN_COUNT_PROMPT] = prompt_tokens
+                if completion_tokens is not None:
+                    new_attributes[oi.SpanAttributes.LLM_TOKEN_COUNT_COMPLETION] = completion_tokens
+                if total_tokens is not None:
+                    new_attributes[oi.SpanAttributes.LLM_TOKEN_COUNT_TOTAL] = total_tokens
+
             span._attributes = new_attributes
 
         # Export the (potentially modified) spans
