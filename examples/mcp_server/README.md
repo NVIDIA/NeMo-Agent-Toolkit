@@ -21,69 +21,87 @@ This example demonstrates how to set up and run an MCP (Model Control Protocol) 
 
 ## Prerequisites
 
-- Docker and Docker Compose
-
+- Docker
+- Docker Compose
 
 ## Available MCP Services
 
-The sample below uses the `mcp-server-time` service. For a list of available public MCP services, please refer to the [MCP Server GitHub repository](https://github.com/modelcontextprotocol/servers).
-
+This example uses the `mcp-server-time` service. For a list of available public MCP services, please refer to the [MCP Server GitHub repository](https://github.com/modelcontextprotocol/servers).
 
 ## Setup
 
-1. Set service directory and name(using `mcp-server-time` as an example):
-``` bash
-export SERVICE_DIR=./.tmp/mcp/time_service
-```
+1. Change the service name and brief name to the service you want to use.
 
-2. Create a directory for your service:
-``` bash
-mkdir -p ${SERVICE_DIR}
-```
-
-2. Copy the Dockerfile to your service directory:
 ```bash
+# This should be the name of the MCP service you want to use.
+export SERVICE_NAME=mcp-server-time
+# This can be any name you want to give to your service.
+export SERVICE_BRIEF_NAME=time
+```
+
+2. Set the service directory, server port, and container name.
+
+```bash
+export SERVICE_DIR=./.tmp/mcp/${SERVICE_BRIEF_NAME}_service
+export CONTAINER_NAME=mcp-proxy-aiq-${SERVICE_BRIEF_NAME}
+export SERVER_PORT=8080
+```
+
+3. Create a directory for your service and copy the Dockerfile to it:
+
+```bash
+mkdir -p ${SERVICE_DIR}
 cp examples/mcp_server/Dockerfile ${SERVICE_DIR}/
 ```
 
-3. Create the run script:
+4. Create the run script:
+
 ```bash
 cat > ${SERVICE_DIR}/run_service.sh <<EOF
 #!/bin/bash
-uvx run mcp-server-time
+uvx run ${SERVICE_NAME}
 EOF
 
 chmod +x ${SERVICE_DIR}/run_service.sh
 ```
 
-4. Create a docker-compose.yml file:
+5. Create a `docker-compose.yml` file:
+
 ```bash
 cat > ${SERVICE_DIR}/docker-compose.yml <<EOF
 services:
-  mcp_time_server:
-    container_name: mcp-proxy-aiq-time
+  ${SERVICE_BRIEF_NAME}_server:
+    container_name: ${CONTAINER_NAME}
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "${SERVER_PORT}:${SERVER_PORT}"
     volumes:
       - ./run_service.sh:/scripts/run_service.sh
     command:
-      - "--sse-port=8080"
+      - "--sse-port=${SERVER_PORT}"
       - "--sse-host=0.0.0.0"
       - "/scripts/run_service.sh"
 EOF
 ```
 
-5. Build and run the MCP server:
+6. Build and run the MCP server:
+
 ```bash
 docker compose -f ${SERVICE_DIR}/docker-compose.yml up -d
 ```
 
+7. Verify the MCP server is running and monitor the service:
+
+```bash
+docker ps
+docker logs -f ${CONTAINER_NAME}
+```
+
 ## Usage
 
-The MCP server will be available at `http://localhost:8080/sse`. You can use it with any MCP-compatible client.
+The MCP server will be available at `http://localhost:${SERVER_PORT}/sse`. You can use it with any MCP-compatible client.
 
 ## Client Configuration
 
@@ -91,9 +109,11 @@ To use the MCP service in your AgentIQ application, configure the MCP tool wrapp
 
 ```yaml
 functions:
-  mcp_time_tool:
+  ${SERVICE_BRIEF_NAME}_tool:
     _type: mcp_tool_wrapper
-    url: "http://0.0.0.0:8080/sse"
-    mcp_tool_name: time
+    url: "http://0.0.0.0:${SERVER_PORT}/sse"
+    mcp_tool_name: get_current_time
     description: "Returns the current date and time from the MCP server"
 ```
+
+Replace `get_current_time` with the actual tool name exposed by your service.
