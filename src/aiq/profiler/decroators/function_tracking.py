@@ -85,8 +85,6 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
     - If the function is an async generator, it will be wrapped in an async generator function.
     - If the function is sync, it will be wrapped in a sync function.
     """
-
-    step_manager: IntermediateStepManager = AIQContext.get().intermediate_step_manager
     function_name: str = func.__name__ if func else "<unknown_function>"
 
     # If called as @track_function(...) but not immediately passed a function
@@ -112,6 +110,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
 
         @functools.wraps(func)
         async def async_gen_wrapper(*args, **kwargs):
+            step_manager: IntermediateStepManager = AIQContext.get().intermediate_step_manager
             # 1) Serialize input
             serialized_args, serialized_kwargs = _prepare_serialized_args_kwargs(*args, **kwargs)
 
@@ -157,6 +156,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
         # ---------------------
         @functools.wraps(func)
         async def async_wrapper(*args, **kwargs):
+            step_manager: IntermediateStepManager = AIQContext.get().intermediate_step_manager
             serialized_args, serialized_kwargs = _prepare_serialized_args_kwargs(*args, **kwargs)
             invocation_id = str(uuid.uuid4())
             push_intermediate_step(step_manager,
@@ -189,6 +189,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
         # ---------------------
         @functools.wraps(func)
         def sync_gen_wrapper(*args, **kwargs):
+            step_manager: IntermediateStepManager = AIQContext.get().intermediate_step_manager
             serialized_args, serialized_kwargs = _prepare_serialized_args_kwargs(*args, **kwargs)
             invocation_id = str(uuid.uuid4())
             push_intermediate_step(step_manager,
@@ -225,6 +226,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
 
     @functools.wraps(func)
     def sync_wrapper(*args, **kwargs):
+        step_manager: IntermediateStepManager = AIQContext.get().intermediate_step_manager
         serialized_args, serialized_kwargs = _prepare_serialized_args_kwargs(*args, **kwargs)
         invocation_id = str(uuid.uuid4())
         push_intermediate_step(step_manager,
