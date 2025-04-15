@@ -15,19 +15,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA AgentIQ Guides
+## :snowflake: Code freeze for `${SOURCE_BRANCH}` and `v${RELEASE_VERSION}` release
 
-```{toctree}
-:maxdepth: 20
+### What does this mean?
+Only critical/hotfix level issues should be merged into `${SOURCE_BRANCH}` until release (merging of this PR).
 
-Create and Customize Workflows <./create-customize-workflows.md>
-Share Components <./sharing-workflows-and-tools.md>
-Evaluate <./evaluate.md>
-Add Custom Evaluators <./custom-evaluator.md>
-Evaluation Endpoints <./evaluate-api.md>
-./observe-workflow-with-phoenix.md
-Use User Interface and API Server <./using-agentiq-ui-and-server.md>
-Profile a Workflow <./profiler.md>
-Locally and Self-Hosted LLMs <./locally-hosted-llms.md>
-Adding an LLM Provider <./adding-an-llm-provider.md>
-```
+### What is the purpose of this PR?
+- Update documentation
+- Allow testing for the new release
+- Enable a means to merge `${SOURCE_BRANCH}` into `main` for the release
