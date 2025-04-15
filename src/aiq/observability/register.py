@@ -47,15 +47,15 @@ async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: 
         logger.error("Error in Phoenix telemetry Exporter\n %s", ex, exc_info=True)
 
 
-class OtelCollectorTelemetryExporter(TelemetryExporterBaseConfig, name="otelcollector"):
-    """A telemetry exporter to transmit traces to externally hosted otel collector service."""
+class OtlpTelemetryExporter(TelemetryExporterBaseConfig, name="otlp"):
+    """A telemetry exporter to transmit traces to externally hosted otlp service."""
 
     endpoint: str = Field(description="The otel endpoint to export telemetry traces.")
     project: str = Field(description="The project name to group the telemetry traces.")
 
 
-@register_telemetry_exporter(config_type=OtelCollectorTelemetryExporter)
-async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder):
+@register_telemetry_exporter(config_type=OtlpTelemetryExporter)
+async def otlp_telemetry_exporter(config: OtlpTelemetryExporter, builder: Builder):
 
     from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 

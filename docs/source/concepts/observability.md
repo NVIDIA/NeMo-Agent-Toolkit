@@ -20,7 +20,7 @@ limitations under the License.
 The AgentIQ Observability Module provides support for configurable telemetry setup to do logging tracing and metrics for AgentIQ workflows.
 - Enables users to configure telemetry options from a predefined list based on their preferences.
 - Listens real-time usage statistics pushed by `IntermediateStepManager`.
-- Translates the usage statistics to OpenTelemetry format and push to the configured provider/method. (e.g., phoenix, OTelCollector, console, file)
+- Translates the usage statistics to OpenTelemetry format and push to the configured provider/method. (e.g., phoenix, otlp, console, file)
 
 These features enable AgentIQ developers to test their workflows locally and integrate observability seamlessly.
 
