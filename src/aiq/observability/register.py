@@ -48,7 +48,7 @@ async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: 
 
 
 class OtlpTelemetryExporter(TelemetryExporterBaseConfig, name="otlp"):
-    """A telemetry exporter to transmit traces to externally hosted otlp service."""
+    """A telemetry exporter to transmit traces to externally hosted otlp services."""
 
     endpoint: str = Field(description="The otel endpoint to export telemetry traces.")
     project: str = Field(description="The project name to group the telemetry traces.")
