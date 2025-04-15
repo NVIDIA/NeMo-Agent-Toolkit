@@ -115,7 +115,7 @@ class ReWOOAgentGraph(BaseAgent):
         return AIMessage(content=steps)
 
     @staticmethod
-    def _replace_variable(variable: str, tool_input: str | dict, tool_output: str | dict):
+    def _replace_variable(variable: str, tool_input: str | dict, tool_output: str | dict) -> str | dict:
         if isinstance(tool_input, dict):
             for arg, value in tool_input.items():
                 if value == variable:
@@ -127,6 +127,7 @@ class ReWOOAgentGraph(BaseAgent):
             tool_input = tool_input.replace(variable, str(tool_output))
         else:
             assert False, f"Unexpected type for tool_input: {type(tool_input)}"
+        return tool_input
 
     @staticmethod
     def _parse_tool_input(tool_input: str | dict):
@@ -207,7 +208,7 @@ class ReWOOAgentGraph(BaseAgent):
                     _tool_output = _tool_output[0]
                     assert (isinstance(_tool_output, dict))
 
-                self._replace_variable(_variable, tool_input, _tool_output)
+                tool_input = self._replace_variable(_variable, tool_input, _tool_output)
 
             requested_tool = self._get_tool(tool)
             if not requested_tool:
@@ -272,7 +273,7 @@ class ReWOOAgentGraph(BaseAgent):
                         _tool_output = _tool_output[0]
                         assert (isinstance(_tool_output, dict))
 
-                    self._replace_variable(_variable, tool_input, _tool_output)
+                    tool_input = self._replace_variable(_variable, tool_input, _tool_output)
 
                     variable = variable.replace(_variable, str(_tool_output))
 
