@@ -116,11 +116,12 @@ class ReWOOAgentGraph(BaseAgent):
     def _replace_variable(variable: str, tool_input: str | dict, tool_output: str | dict) -> str | dict:
         if isinstance(tool_input, dict):
             for arg, value in tool_input.items():
-                if value == variable:
-                    tool_input[arg] = tool_output
-                elif variable in value:
-                    # If the variable is part of the value, replace it with the output
-                    tool_input[arg] = value.replace(variable, str(tool_output))
+                if value is not None:
+                    if value == variable:
+                        tool_input[arg] = tool_output
+                    elif variable in value:
+                        # If the variable is part of the value, replace it with the output
+                        tool_input[arg] = value.replace(variable, str(tool_output))
         elif isinstance(tool_input, str):
             tool_input = tool_input.replace(variable, str(tool_output))
         else:
