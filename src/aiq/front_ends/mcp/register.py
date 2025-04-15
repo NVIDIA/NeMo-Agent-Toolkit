@@ -13,10 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=unused-import
-# flake8: noqa
-# isort:skip_file
+from aiq.cli.register_workflow import register_front_end
+from aiq.data_models.config import AIQConfig
+from aiq.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
+from typing import AsyncIterator
 
-from .console import register as console_register
-from .fastapi import register as fastapi_register
-from .mcp import register as mcp_register
+
+@register_front_end(config_type=MCPFrontEndConfig)
+async def register_mcp_front_end(config: MCPFrontEndConfig, full_config: AIQConfig) -> AsyncIterator:
+    from aiq.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
+
+    yield MCPFrontEndPlugin(full_config=full_config) 
