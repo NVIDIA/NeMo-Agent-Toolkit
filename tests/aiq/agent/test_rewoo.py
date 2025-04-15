@@ -36,7 +36,7 @@ async def test_state_schema():
 
     assert isinstance(state.task, HumanMessage)
     assert isinstance(state.plan, AIMessage)
-    assert isinstance(state.steps, list)
+    assert isinstance(state.steps, AIMessage)
     assert isinstance(state.intermediate_results, dict)
     assert isinstance(state.result, AIMessage)
 
@@ -96,18 +96,18 @@ async def test_conditional_edge_no_input(mock_rewoo_agent):
     assert decision == AgentDecision.END
 
 
-def _create_step_info(plan: str, variable: str, tool: str, tool_input: str | dict) -> AIMessage:
-    return AIMessage(content=[{"plan": plan, "variable": variable, "tool": tool, "tool_input": tool_input}])
+def _create_step_info(plan: str, variable: str, tool: str, tool_input: str | dict) -> dict:
+    return {"plan": plan, "evidence": {"variable": variable, "tool": tool, "tool_input": tool_input}}
 
 
 async def test_conditional_edge_decisions(mock_rewoo_agent):
     mock_state = ReWOOGraphState(task=HumanMessage(content="This is a task"),
                                  plan=AIMessage(content="This is the plan"),
-                                 steps=[
+                                 steps=AIMessage(content=[
                                      _create_step_info("step1", "#E1", "mock_tool_A", "arg1, arg2"),
                                      _create_step_info("step2", "#E2", "mock_tool_B", "arg3, arg4"),
                                      _create_step_info("step3", "#E3", "mock_tool_A", "arg5, arg6")
-                                 ])
+                                 ]))
     decision = await mock_rewoo_agent.conditional_edge(mock_state)
     assert decision == AgentDecision.TOOL
 
@@ -132,10 +132,10 @@ async def test_executor_node_with_not_configured_tool(mock_rewoo_agent):
     mock_state = ReWOOGraphState(
         task=HumanMessage(content="This is a task"),
         plan=AIMessage(content="This is the plan"),
-        steps=[
+        steps=AIMessage(content=[
             _create_step_info("step1", "#E1", "mock_tool_A", "arg1, arg2"),
             _create_step_info("step2", "#E2", tool_not_configured, "arg3, arg4")
-        ],
+        ]),
         intermediate_results={"#E1": ToolMessage(content="result1", tool_call_id="mock_tool_A")})
     state = await mock_rewoo_agent.executor_node(mock_state)
     assert isinstance(state, dict)
@@ -150,7 +150,7 @@ async def test_executor_node_parse_input(mock_rewoo_agent):
         mock_state = ReWOOGraphState(
             task=HumanMessage(content="This is a task"),
             plan=AIMessage(content="This is the plan"),
-            steps=[
+            steps=AIMessage(content=[
                 _create_step_info(
                     "step1",
                     "#E1",
@@ -159,7 +159,7 @@ async def test_executor_node_parse_input(mock_rewoo_agent):
                             "entities": ["France", "Paris"]
                         }
                     })
-            ],
+            ]),
             intermediate_results={})
         await mock_rewoo_agent.executor_node(mock_state)
         mock_logger_info.assert_any_call("Tool input is already a dictionary. Use the tool input as is.")
@@ -168,26 +168,27 @@ async def test_executor_node_parse_input(mock_rewoo_agent):
         mock_state = ReWOOGraphState(
             task=HumanMessage(content="This is a task"),
             plan=AIMessage(content="This is the plan"),
-            steps=[
+            steps=AIMessage(content=[
                 _create_step_info(
                     "step1",
                     "#E1",
                     "mock_tool_A",
                     '{"query": "What is the capital of France?", "input_metadata": {"entities": ["France", "Paris"]}}')
-            ],
+            ]),
             intermediate_results={})
         await mock_rewoo_agent.executor_node(mock_state)
         mock_logger_info.assert_any_call("Successfully parsed structured tool input")
 
         # Test with string with single quote as tool input
-        mock_state.steps = [_create_step_info("step1", "#E1", "mock_tool_A", "{'arg1': 'arg_1', 'arg2': 'arg_2'}")]
+        mock_state.steps = AIMessage(
+            content=[_create_step_info("step1", "#E1", "mock_tool_A", "{'arg1': 'arg_1', 'arg2': 'arg_2'}")])
         mock_state.intermediate_results = {}
         await mock_rewoo_agent.executor_node(mock_state)
         mock_logger_info.assert_any_call(
             "Successfully parsed structured tool input after replacing single quotes with double quotes")
 
         # Test with string that cannot be parsed as a JSON as tool input
-        mock_state.steps = [_create_step_info("step1", "#E1", "mock_tool_A", "arg1, arg2")]
+        mock_state.steps = AIMessage(content=[_create_step_info("step1", "#E1", "mock_tool_A", "arg1, arg2")])
         mock_state.intermediate_results = {}
         await mock_rewoo_agent.executor_node(mock_state)
         mock_logger_info.assert_any_call("Unable to parse structured tool input. Using raw tool input as is.")
@@ -199,15 +200,21 @@ async def test_executor_node_handle_input_types(mock_rewoo_agent):
 
     mock_state = ReWOOGraphState(task=HumanMessage(content="This is a task"),
                                  plan=AIMessage(content="This is the plan"),
-                                 steps=[_create_step_info("step1", "#E1", "mock_tool_A", "This is a string query")],
+                                 steps=AIMessage(content=[
+                                     _create_step_info("step1", "#E1", "mock_tool_A", "This is a string query"),
+                                     _create_step_info("step2", "#E2", "mock_tool_B", "arg3, arg4")
+                                 ]),
                                  intermediate_results={})
     await mock_rewoo_agent.executor_node(mock_state)
     assert isinstance(mock_state.intermediate_results["#E1"].content, str)
+    # Call executor node again to make sure the intermediate result is correctly processed in the next step
+    await mock_rewoo_agent.executor_node(mock_state)
+    assert isinstance(mock_state.intermediate_results["#E2"].content[0], str)
 
     mock_state = ReWOOGraphState(
         task=HumanMessage(content="This is a task"),
         plan=AIMessage(content="This is the plan"),
-        steps=[
+        steps=AIMessage(content=[
             _create_step_info("step1",
                               "#E1",
                               "mock_tool_A", {"query": {
@@ -215,23 +222,25 @@ async def test_executor_node_handle_input_types(mock_rewoo_agent):
                                       "key": "value"
                                   }
                               }}),
-            _create_step_info("step2", "#E2", "mock_tool_B", "arg3, arg4")
-        ],
+            _create_step_info("step2", "#E2", "mock_tool_B", {"query": "#E1"})
+        ]),
         intermediate_results={})
     await mock_rewoo_agent.executor_node(mock_state)
     # If the tool output is a dict, ToolMessage requires to store it inside a list
     assert isinstance(mock_state.intermediate_results["#E1"].content[0], dict)
+    # Call executor node again to make sure the intermediate result is correctly processed in the next step
     await mock_rewoo_agent.executor_node(mock_state)
+    assert isinstance(mock_state.intermediate_results["#E2"].content[0], dict)
 
 
 async def test_executor_node_should_not_be_invoked_after_all_steps_executed(mock_rewoo_agent):
     mock_state = ReWOOGraphState(task=HumanMessage(content="This is a task"),
                                  plan=AIMessage(content="This is the plan"),
-                                 steps=[
+                                 steps=AIMessage(content=[
                                      _create_step_info("step1", "#E1", "mock_tool_A", "arg1, arg2"),
                                      _create_step_info("step2", "#E2", "mock_tool_B", "arg3, arg4"),
                                      _create_step_info("step3", "#E3", "mock_tool_A", "arg5, arg6")
-                                 ],
+                                 ]),
                                  intermediate_results={
                                      '#E1': ToolMessage(content='result1', tool_call_id='mock_tool_A'),
                                      '#E2': ToolMessage(content='result2', tool_call_id='mock_tool_B'),

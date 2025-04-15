@@ -44,7 +44,7 @@ class ReWOOGraphState(BaseModel):
     """State schema for the ReWOO Agent Graph"""
     task: HumanMessage = Field(default_factory=lambda: HumanMessage(content=""))  # the task to be performed
     plan: AIMessage = Field(default_factory=lambda: AIMessage(content=""))  # the plan to be executed
-    steps: list[AIMessage] = Field(default_factory=list)  # the steps to be executed
+    steps: AIMessage = Field(default_factory=lambda: AIMessage(content=""))  # the steps to be executed
     intermediate_results: dict[str, ToolMessage] = Field(default_factory=dict)  # the intermediate results of each step
     result: AIMessage = Field(default_factory=lambda: AIMessage(content=""))  # the final result of the task
 
@@ -93,42 +93,40 @@ class ReWOOAgentGraph(BaseAgent):
 
     @staticmethod
     def _get_current_step(state: ReWOOGraphState) -> int:
-        if len(state.steps) == 0:
+        steps = state.steps.content
+        if len(steps) == 0:
             raise RuntimeError('No steps received in ReWOOGraphState')
 
-        if len(state.intermediate_results) == len(state.steps):
+        if len(state.intermediate_results) == len(steps):
             # all steps are done
             return -1
 
         return len(state.intermediate_results)
 
     @staticmethod
-    def _parse_planner_output(planner_output: str) -> list[AIMessage]:
+    def _parse_planner_output(planner_output: str) -> AIMessage:
         # Parses the JSON string output from the LLM and returns a list of AIMessage.
         # Each AIMessage contains plan, variable, tool, tool_input from a step.
         try:
-            steps_json = json.loads(planner_output)
+            steps = json.loads(planner_output)
         except json.JSONDecodeError as ex:
             raise ValueError(f"The output of planner is invalid JSON format: {planner_output}") from ex
 
-        steps_list = []
-        for step in steps_json:
-            step_info = {}
+        return AIMessage(content=steps)
 
-            step_info["plan"] = step.get("plan", "")
-            evidence = step.get("evidence", {})
-            step_info["variable"] = evidence.get("variable", "")
-            step_info["tool"] = evidence.get("tool", "")
-
-            tool_input = evidence.get("tool_input", "")
-            # Ensure tool_input is a string; if it's a list or object, convert it to a JSON string.
-            if not isinstance(tool_input, str):
-                tool_input = json.dumps(tool_input)
-            step_info["tool_input"] = tool_input
-
-            steps_list.append(AIMessage(content=[step_info]))
-
-        return steps_list
+    @staticmethod
+    def _replace_variable(variable: str, tool_input: str | dict, tool_output: str | dict):
+        if isinstance(tool_input, dict):
+            for arg, value in tool_input.items():
+                if value == variable:
+                    tool_input[arg] = tool_output
+                elif variable in value:
+                    # If the variable is part of the value, replace it with the output
+                    tool_input[arg] = value.replace(variable, str(tool_output))
+        elif isinstance(tool_input, str):
+            tool_input = tool_input.replace(variable, str(tool_output))
+        else:
+            assert False, f"Unexpected type for tool_input: {type(tool_input)}"
 
     @staticmethod
     def _parse_tool_input(tool_input: str | dict):
@@ -178,7 +176,7 @@ class ReWOOAgentGraph(BaseAgent):
             if self.detailed_logs:
                 logger.info("The task was: %s", task)
                 logger.info("The planner's thoughts are:\n%s", plan)
-                logger.debug("The steps to solve the task are:\n%s", steps)
+                logger.debug("The steps to solve the task are:\n%s", steps.content)
 
             return {"plan": AIMessage(content=plan), "steps": steps}
 
@@ -196,7 +194,7 @@ class ReWOOAgentGraph(BaseAgent):
                 logger.error("ReWOO Executor is invoked with an invalid step number: %s", current_step)
                 raise RuntimeError(f"ReWOO Executor is invoked with an invalid step number: {current_step}")
 
-            step_info = state.steps[current_step].content[0]
+            step_info = state.steps.content[current_step]["evidence"]
             variable = step_info.get("variable", "")
             tool = step_info.get("tool", "")
             tool_input = step_info.get("tool_input", "")
@@ -208,7 +206,8 @@ class ReWOOAgentGraph(BaseAgent):
                 if isinstance(_tool_output, list):
                     _tool_output = _tool_output[0]
                     assert (isinstance(_tool_output, dict))
-                tool_input = tool_input.replace(_variable, _tool_output)
+
+                self._replace_variable(_variable, tool_input, _tool_output)
 
             requested_tool = self._get_tool(tool)
             if not requested_tool:
@@ -260,10 +259,10 @@ class ReWOOAgentGraph(BaseAgent):
 
             plan = ""
             # Add results of each step to the plan
-            for step in state.steps:
-                step_info = step.content[0]
-                tool_input = step_info.get("tool_input", "")
+            for step in state.steps.content:
+                step_info = step["evidence"]
                 variable = step_info.get("variable", "")
+                tool_input = step_info.get("tool_input", "")
 
                 intermediate_results = state.intermediate_results
                 for _variable, _tool_output in intermediate_results.items():
@@ -273,10 +272,11 @@ class ReWOOAgentGraph(BaseAgent):
                         _tool_output = _tool_output[0]
                         assert (isinstance(_tool_output, dict))
 
-                    tool_input = tool_input.replace(_variable, _tool_output)
-                    variable = variable.replace(_variable, _tool_output)
+                    self._replace_variable(_variable, tool_input, _tool_output)
 
-                _plan = step_info.get("plan")
+                    variable = variable.replace(_variable, str(_tool_output))
+
+                _plan = step.get("plan")
                 tool = step_info.get("tool")
                 plan += f"Plan: {_plan}\n{variable} = {tool}[{tool_input}]"
 
