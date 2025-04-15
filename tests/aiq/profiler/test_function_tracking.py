@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.profiler.decroators.function_tracking import track_function
+from aiq.profiler.decorators.function_tracking import track_function
 from aiq.utils.reactive.subject import Subject
 
 
