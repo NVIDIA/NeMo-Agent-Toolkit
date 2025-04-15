@@ -105,8 +105,6 @@ class ReWOOAgentGraph(BaseAgent):
 
     @staticmethod
     def _parse_planner_output(planner_output: str) -> AIMessage:
-        # Parses the JSON string output from the LLM and returns a list of AIMessage.
-        # Each AIMessage contains plan, variable, tool, tool_input from a step.
         try:
             steps = json.loads(planner_output)
         except json.JSONDecodeError as ex:
