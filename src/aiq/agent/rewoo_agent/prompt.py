@@ -19,7 +19,7 @@ from langchain_core.prompts.chat import ChatPromptTemplate
 PLANNER_SYSTEM_PROMPT = """
 For the following task, make plans that can solve the problem step by step. For each plan, indicate \
 which external tool together with tool input to retrieve evidence. You can store the evidence into a \
-variable #E that can be called by later tools. (Plan, #E1, Plan, #E2, Plan, ...)
+placeholder #E that can be called by later tools. (Plan, #E1, Plan, #E2, Plan, ...)
 
 You may ask the human to the following tools:
 
@@ -35,7 +35,7 @@ Your output must be a JSON array where each element represents one planning step
 
 2. "evidence": An object representing the external tool call associated with that plan step. This object must have the following keys:
 
-   -"variable": A string that identifies the evidence variable (e.g., "#E1", "#E2", etc.). The numbering should be sequential based on the order of steps.
+   -"placeholder": A string that identifies the evidence placeholder (e.g., "#E1", "#E2", etc.). The numbering should be sequential based on the order of steps.
 
    -"tool": A string specifying the name of the external tool used.
 
@@ -57,7 +57,7 @@ Here is an example of how a valid JSON output should look:
   \'{{
     "plan": "Calculate the result of 2023 minus 25.",
     "evidence": \'{{
-      "variable": "#E1",
+      "placeholder": "#E1",
       "tool": "calculator_subtract",
       "tool_input": [2023, 25]
     }}\'
@@ -65,7 +65,7 @@ Here is an example of how a valid JSON output should look:
   \'{{
     "plan": "Retrieve the year represented by the result stored in #E1.",
     "evidence": \'{{
-      "variable": "#E2",
+      "placeholder": "#E2",
       "tool": "haystack_chitchat_agent",
       "tool_input": "Response with the result number contained in #E1"
     }}\'
@@ -73,7 +73,7 @@ Here is an example of how a valid JSON output should look:
   \'{{
     "plan": "Search for the CEO of Golden State Warriors in the year stored in #E2.",
     "evidence": \'{{
-      "variable": "#E3",
+      "placeholder": "#E3",
       "tool": "internet_search",
       "tool_input": "Who was the CEO of Golden State Warriors in the year #E2?"
     }}\'
