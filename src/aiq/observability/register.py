@@ -50,20 +50,6 @@ def get_wandb_api_key(config_api_key: Optional[str] = None) -> Optional[str]:
     return None
 
 
-class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
-    """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
-    entity: str = Field(description="The W&B entity/organization.")
-    project: str = Field(description="The W&B project name.")
-    api_key: Optional[str] = Field(
-        default=None,
-        description="Your W&B API key for authentication. If not provided, will look for WANDB_API_KEY environment variable."
-    )
-    endpoint: Optional[str] = Field(
-        default="https://trace.wandb.ai/otel/v1/traces",
-        description="The Weave OTEL endpoint to export telemetry traces. If not provided, will use the default Weave endpoint."
-    )
-
-
 class AgentIQToWeaveExporter(SpanExporter):
     """
     A wrapper around the real OTLPSpanExporter that transforms
@@ -180,10 +166,35 @@ class AgentIQToWeaveExporter(SpanExporter):
         return self._wrapped_exporter.shutdown()
 
 
+class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
+    """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
+    entity: str = Field(description="The W&B entity/organization.")
+    project: str = Field(description="The W&B project name.")
+    log_otel_only: bool = Field(
+        default=False,
+        description="If true, only log opentelemetry traces to Weave. If false, log all traces to Weave."
+    )
+    api_key: Optional[str] = Field(
+        default=None,
+        description="Your W&B API key for authentication. If not provided, will look for WANDB_API_KEY environment variable."
+    )
+    endpoint: Optional[str] = Field(
+        default="https://trace.wandb.ai/otel/v1/traces",
+        description="The Weave OTEL endpoint to export telemetry traces. If not provided, will use the default Weave endpoint."
+    )
+
+
 @register_telemetry_exporter(config_type=WeaveTelemetryExporter)
 async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Builder):
     import base64
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+    # Initialize Weave client if log_otel_only is true
+    # it captures traces from the underlying frameworks weave has integration with
+    # list of weave integrations: https://weave-docs.wandb.ai/guides/integrations/
+    if config.log_otel_only:
+        import weave
+        _ = weave.init(project_name=f"{config.entity}/{config.project}")
 
     class NoOpSpanExporter:
         def export(self, spans):
