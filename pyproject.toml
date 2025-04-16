@@ -71,7 +71,7 @@ examples = [
   "aiq_simple",
   "aiq_swe_bench",
   "aiq_automated_description_generation",
-  "agno_personal_finance"
+  "aiq_agno_personal_finance"
 ]
 
 profiling = [
@@ -105,7 +105,7 @@ aiq_simple = { path = "examples/simple", editable = true }
 aiq_simple_calculator = { path = "examples/simple_calculator", editable = true }
 aiq_swe_bench = { path = "examples/swe_bench", editable = true }
 aiq_automated_description_generation = { path = "examples/automated_description_generation", editable = true }
-agno_personal_finance = { path = "examples/agno_personal_finance", editable = true }
+aiq_agno_personal_finance = { path = "examples/agno_personal_finance", editable = true }
 
 
 [tool.uv.workspace]

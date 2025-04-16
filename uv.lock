@@ -68,7 +68,7 @@ crewai = [
     { name = "agentiq-crewai" },
 ]
 examples = [
-    { name = "agno-personal-finance" },
+    { name = "aiq-agno-personal-finance" },
     { name = "aiq-automated-description-generation" },
     { name = "aiq-email-phishing-analyzer" },
     { name = "aiq-multi-frameworks" },
@@ -141,8 +141,8 @@ requires-dist = [
     { name = "agentiq-mem0ai", marker = "extra == 'mem0ai'", editable = "packages/agentiq_mem0ai" },
     { name = "agentiq-semantic-kernel", marker = "extra == 'semantic-kernel'", editable = "packages/agentiq_semantic_kernel" },
     { name = "agentiq-zep-cloud", marker = "extra == 'zep-cloud'", editable = "packages/agentiq_zep_cloud" },
-    { name = "agno-personal-finance", marker = "extra == 'examples'", editable = "examples/agno_personal_finance" },
     { name = "aioboto3", specifier = ">=11.0.0" },
+    { name = "aiq-agno-personal-finance", marker = "extra == 'examples'", editable = "examples/agno_personal_finance" },
     { name = "aiq-automated-description-generation", marker = "extra == 'examples'", editable = "examples/automated_description_generation" },
     { name = "aiq-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/email_phishing_analyzer" },
     { name = "aiq-multi-frameworks", marker = "extra == 'examples'", editable = "examples/multi_frameworks" },
@@ -369,7 +369,7 @@ wheels = [
 ]
 
 [[package]]
-name = "agno-personal-finance"
+name = "aiq-agno-personal-finance"
 source = { editable = "examples/agno_personal_finance" }
 dependencies = [
     { name = "agentiq", extra = ["agno"] },

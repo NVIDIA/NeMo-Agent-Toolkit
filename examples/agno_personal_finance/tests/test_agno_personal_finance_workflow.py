@@ -20,8 +20,8 @@ import logging
 from pathlib import Path
 
 import pytest
+from aiq_agno_personal_finance.agno_personal_finance_function import AgnoPersonalFinanceFunctionConfig
 
-from agno_personal_finance.agno_personal_finance_function import AgnoPersonalFinanceFunctionConfig
 from aiq.runtime.loader import load_workflow
 
 logger = logging.getLogger(__name__)

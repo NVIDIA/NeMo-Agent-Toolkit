@@ -23,7 +23,6 @@ functions:
     # You can add your SerpAPI key here or use environment variables
     # api_key: your_serp_api_key
   
-  # Financial planning tool - references serp_api_tool by name
   agno_personal_finance:
     _type: agno_personal_finance
     llm_name: nim_llm

@@ -19,7 +19,7 @@ limitations under the License.
 # Personal Finance
 
 <!-- Note: "Agno" is the official product name despite Vale spelling checker warnings -->
-Built on [`Agno`](https://github.com/agno-agi/agno) and AgentIQ, this workflow is a personal financial planner that generates personalized financial plans using NVIDIA NIM (can be customized to use OpenAI models). It automates the process of researching, planning, and creating tailored budgets, investment strategies, and savings goals, empowering you to take control of your financial future with ease.
+Built on [Agno](https://github.com/agno-agi/agno) and AgentIQ, this workflow is a personal financial planner that generates personalized financial plans using NVIDIA NIM (can be customized to use OpenAI models). It automates the process of researching, planning, and creating tailored budgets, investment strategies, and savings goals, empowering you to take control of your financial future with ease.
 
 This personal financial planner was revised based on the [Awesome-LLM-App](https://github.com/Shubhamsaboo/awesome-llm-apps) GitHub repo's [AI Personal Finance Planner](https://github.com/Shubhamsaboo/awesome-llm-apps/tree/main/ai_agent_tutorials/ai_personal_finance_agent) sample.
 
@@ -53,9 +53,9 @@ This personal financial planner was revised based on the [Awesome-LLM-App](https
 - **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
 - **Ease of Use:** Simplifies developer experience and deployment.
 
-### `Agno`
+### Agno
 
-`Agno` is a lightweight library for building multimodal agents. Some of the key features of `Agno` include lightning fast, model agnostic, multimodal, multi agent, etc.  See `Agno` README [here](https://github.com/agno-agi/agno/blob/main/README.md) for more information about the library.
+Agno is a lightweight library for building multimodal agents. Some of the key features of Agno include lightning fast, model agnostic, multimodal, multi agent, etc.  See Agno README [here](https://github.com/agno-agi/agno/blob/main/README.md) for more information about the library.
 
 
 ## Installation and Setup
@@ -85,12 +85,12 @@ export SERP_API_KEY=<SERP_API_KEY>
 Run the following command from the root of the AgentIQ repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file examples/agno_personal_finance/src/agno_personal_finance/configs/config.yml --input "My financial goal is to retire at age 60.  I am currently 40 years old, working as a Machine Learning engineer at NVIDIA."
+aiq run --config_file examples/agno_personal_finance/src/aiq_agno_personal_finance/configs/config.yml --input "My financial goal is to retire at age 60.  I am currently 40 years old, working as a Machine Learning engineer at NVIDIA."
 ```
 
 **Expected Output**
 ```console
-$ aiq run --config_file examples/agno_personal_finance/src/agno_personal_finance/configs/config.yml --input "My financial goal is to retire at age 60.  I am currently 40 years old, working as a Machine Learning engineer at NVIDIA."
+$ aiq run --config_file examples/agno_personal_finance/src/aiq_agno_personal_finance/configs/config.yml --input "My financial goal is to retire at age 60.  I am currently 40 years old, working as a Machine Learning engineer at NVIDIA."
 2025-03-25 15:30:44,745 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (906.506062 ms). Ensure all imports are inside your registered functions.
 2025-03-25 15:30:44,911 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples\agno_personal_finance\src\agno_personal_finance\configs\config.yml'
 2025-03-25 15:30:44,912 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
