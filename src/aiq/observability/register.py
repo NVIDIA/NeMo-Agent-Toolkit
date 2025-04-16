@@ -171,7 +171,7 @@ class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
     entity: str = Field(description="The W&B entity/organization.")
     project: str = Field(description="The W&B project name.")
     log_otel_only: bool = Field(
-        default=False,
+        default=True,
         description="If true, only log opentelemetry traces to Weave. If false, log all traces to Weave."
     )
     api_key: Optional[str] = Field(
@@ -189,10 +189,10 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
     import base64
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
-    # Initialize Weave client if log_otel_only is true
+    # Initialize Weave client if log_otel_only is false
     # it captures traces from the underlying frameworks weave has integration with
     # list of weave integrations: https://weave-docs.wandb.ai/guides/integrations/
-    if config.log_otel_only:
+    if not config.log_otel_only:
         import weave
         _ = weave.init(project_name=f"{config.entity}/{config.project}")
 
