@@ -355,8 +355,8 @@ async def test_user_attributes_from_http_request(client: httpx.AsyncClient, conf
         params=query_params,
     )
     aiq_context = AIQContext.get()
-    assert aiq_context.user_manager_attributes.headers['header-test'] == headers["Header-Test"]
-    assert aiq_context.user_manager_attributes.query_params['param1'] == query_params["param1"]
+    assert aiq_context.user_attributes.headers['header-test'] == headers["Header-Test"]
+    assert aiq_context.user_attributes.query_params['param1'] == query_params["param1"]
     assert response.status_code == 200
 
 

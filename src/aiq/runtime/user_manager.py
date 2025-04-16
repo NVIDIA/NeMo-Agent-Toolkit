@@ -8,9 +8,9 @@ class UserManagerBase:
     pass
 
 
-class UserManagerAttributes(UserManagerBase):
+class UserAttributes:
     """
-    UserManagerAttributes class is responsible for managing user-defined
+    UserAttributes class is responsible for managing user-defined
     metadata and attributes. It provides a way to store and
     expose user-defined attributes to workflow tools.
     """

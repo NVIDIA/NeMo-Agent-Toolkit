@@ -141,16 +141,16 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         """
         Extracts and sets user request attributes from an HTTP request.
         """
-        session_manager.context.user_manager_attributes._request.method = request.method
-        session_manager.context.user_manager_attributes._request.url_path = request.url.path
-        session_manager.context.user_manager_attributes._request.url_port = request.url.port
-        session_manager.context.user_manager_attributes._request.url_scheme = request.url.scheme
-        session_manager.context.user_manager_attributes._request.headers = request.headers
-        session_manager.context.user_manager_attributes._request.query_params = request.query_params
-        session_manager.context.user_manager_attributes._request.path_params = request.path_params
-        session_manager.context.user_manager_attributes._request.client_host = request.client.host
-        session_manager.context.user_manager_attributes._request.client_port = request.client.port
-        session_manager.context.user_manager_attributes._request.cookies = request.cookies
+        session_manager.context.user_attributes._request.method = request.method
+        session_manager.context.user_attributes._request.url_path = request.url.path
+        session_manager.context.user_attributes._request.url_port = request.url.port
+        session_manager.context.user_attributes._request.url_scheme = request.url.scheme
+        session_manager.context.user_attributes._request.headers = request.headers
+        session_manager.context.user_attributes._request.query_params = request.query_params
+        session_manager.context.user_attributes._request.path_params = request.path_params
+        session_manager.context.user_attributes._request.client_host = request.client.host
+        session_manager.context.user_attributes._request.client_port = request.client.port
+        session_manager.context.user_attributes._request.cookies = request.cookies
 
     @abstractmethod
     async def configure(self, app: FastAPI, builder: WorkflowBuilder):

@@ -29,7 +29,7 @@ from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.data_models.intermediate_step import StreamEventData
 from aiq.data_models.invocation_node import InvocationNode
-from aiq.runtime.user_manager import UserManagerAttributes
+from aiq.runtime.user_manager import UserAttributes
 from aiq.utils.reactive.subject import Subject
 
 
@@ -63,8 +63,7 @@ class AIQContextState(metaclass=Singleton):
     def __init__(self):
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
         self.user_manager: ContextVar[typing.Any] = ContextVar("user_manager", default=None)
-        self.user_manager_attributes: ContextVar[UserManagerAttributes] = ContextVar("user_manager_attributes",
-                                                                                     default=UserManagerAttributes())
+        self.user_attributes: ContextVar[UserAttributes] = ContextVar("user_attributes", default=UserAttributes())
         self.event_stream: ContextVar[Subject[IntermediateStep] | None] = ContextVar("event_stream", default=Subject())
         self.active_function: ContextVar[InvocationNode] = ContextVar("active_function",
                                                                       default=InvocationNode(function_id="root",
@@ -114,18 +113,18 @@ class AIQContext:
         return self._context_state.user_manager.get()
 
     @property
-    def user_manager_attributes(self):
+    def user_attributes(self):
         """
-        Retrieves the user manager attributes instance from the current context state.
+        Retrieves the user attributes instance from the current context state.
 
-        This property provides access to the user manager request attributes as
+        This property provides access to the user request attributes as
         well as user-defined metadata.
 
         Returns:
-            UserManagerAttributes: The instance of the user manager attributes
+            UserAttributes: The instance of the user attributes
                 retrieved from the context state.
         """
-        return self._context_state.user_manager_attributes.get()
+        return self._context_state.user_attributes.get()
 
     @property
     def user_interaction_manager(self) -> AIQUserInteractionManager:
