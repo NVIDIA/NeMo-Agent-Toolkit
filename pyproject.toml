@@ -126,7 +126,7 @@ dev = [
   "pylint==3.3.*",
   "pytest_httpserver==1.1.*",
   "pytest-asyncio==0.24.*",
-  "pytest-cov~=6.0",
+  "pytest-cov~=6.1",
   "pytest~=8.3",
   "python-docx~=1.1.0",
   "setuptools >= 64",
@@ -143,6 +143,7 @@ docs = [
   "sphinx~=8.2",
   "sphinx-copybutton>=0.5",
   "sphinx-autoapi>=3.6",
+  "sphinx-mermaid",
   "vale==3.9.5",
 ]
 

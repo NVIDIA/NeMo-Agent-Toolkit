@@ -27,6 +27,10 @@ on:
         description: 'The JSON string containing the PR information'
         required: true
         type: string
+      base_sha:
+        description: 'The base SHA of the PR'
+        required: true
+        type: string
 
 # We only support ubuntu, so bash is the default
 defaults:
@@ -36,7 +40,7 @@ defaults:
 env:
   GH_TOKEN: "${{ github.token }}"
   GIT_COMMIT: "${{ github.sha }}"
-  BASE_SHA: "${{ fromJSON(inputs.pr_info).base.sha }}"
+  BASE_SHA: "${{ inputs.base_sha }}"
   RAPIDS_CONDA_RETRY_MAX: "5"
   WORKSPACE: "${{ github.workspace }}/agentiq"
   WORKSPACE_TMP: "${{ github.workspace }}/tmp"
