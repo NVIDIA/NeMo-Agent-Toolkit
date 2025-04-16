@@ -96,8 +96,8 @@ async def test_conditional_edge_no_input(mock_rewoo_agent):
     assert decision == AgentDecision.END
 
 
-def _create_step_info(plan: str, variable: str, tool: str, tool_input: str | dict) -> dict:
-    return {"plan": plan, "evidence": {"variable": variable, "tool": tool, "tool_input": tool_input}}
+def _create_step_info(plan: str, placeholder: str, tool: str, tool_input: str | dict) -> dict:
+    return {"plan": plan, "evidence": {"placeholder": placeholder, "tool": tool, "tool_input": tool_input}}
 
 
 async def test_conditional_edge_decisions(mock_rewoo_agent):
