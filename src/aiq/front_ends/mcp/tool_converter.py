@@ -221,28 +221,6 @@ def get_function_description(function: FunctionBase) -> str:
     return function_description
 
 
-def is_workflow_function(function: Function) -> bool:
-    """Check if a function is a Workflow.
-
-    Args:
-        function: The AIQ Function to check
-
-    Returns:
-        True if the function is a Workflow, False otherwise
-    """
-    from aiq.builder.workflow import Workflow
-
-    if isinstance(function, Workflow):
-        return True
-    elif (
-        hasattr(function, "__class__")
-        and hasattr(function.__class__, "__name__")
-        and function.__class__.__name__ == "Workflow"
-    ):
-        return True
-    return False
-
-
 def register_function_with_mcp(
     mcp: "mcp.server.fastmcp.FastMCP", function_name: str, function: Function
 ) -> None:
@@ -260,7 +238,7 @@ def register_function_with_mcp(
     logger.info(f"Function {function_name} has input schema: {input_schema}")
 
     # Check if we're dealing with a Workflow
-    is_workflow = is_workflow_function(function)
+    is_workflow = isinstance(function, Workflow)
     if is_workflow:
         logger.info(f"Function {function_name} is a Workflow")
 
