@@ -21,14 +21,13 @@ from pydantic import BaseModel
 from typing import Type
 import json
 import logging
-import re
 
 logger = logging.getLogger(__name__)
 
 
 def create_function_wrapper(
     function_name: str,
-    function: Function,
+    function: FunctionBase,
     schema: Type[BaseModel],
     is_workflow: bool = False,
 ):
@@ -222,7 +221,7 @@ def get_function_description(function: FunctionBase) -> str:
 
 
 def register_function_with_mcp(
-    mcp: "mcp.server.fastmcp.FastMCP", function_name: str, function: Function
+    mcp: "mcp.server.fastmcp.FastMCP", function_name: str, function: FunctionBase
 ) -> None:
     """Register an AIQ Function as an MCP tool.
 
