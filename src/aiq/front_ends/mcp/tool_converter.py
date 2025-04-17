@@ -14,6 +14,8 @@
 # limitations under the License.
 
 from aiq.builder.function import Function
+from aiq.builder.function_base import FunctionBase
+from aiq.builder.workflow import Workflow
 from inspect import Parameter, Signature
 from pydantic import BaseModel
 from typing import Type
@@ -29,7 +31,6 @@ def create_function_wrapper(
     function: Function,
     schema: Type[BaseModel],
     is_workflow: bool = False,
-    function_description: str = None,
 ):
     """Create a wrapper function that exposes the actual parameters of an AIQ Function as an MCP tool.
 
@@ -38,15 +39,10 @@ def create_function_wrapper(
         function: The AIQ Function object
         schema: The input schema of the function
         is_workflow: Whether the function is a Workflow
-        function_description: Description of the function to use in docstring
 
     Returns:
         A wrapper function suitable for registration with MCP
     """
-    # If no function description is provided, get it from the function
-    if function_description is None:
-        function_description = get_function_description(function)
-
     # Check if we're dealing with AIQChatRequest - special case
     is_chat_request = False
 
@@ -68,139 +64,25 @@ def create_function_wrapper(
                 annotation=str,
             )
         ]
-
-        field_info = {
-            "query": {
-                "type": str,
-                "description": "Input query or prompt text",
-                "required": True,
-            }
-        }
     else:
         # Regular case - extract parameter information from the input schema
         # Extract parameter information from the input schema
         param_fields = schema.model_fields
 
-        # Parse docstring if available to get parameter descriptions
-        param_descriptions = {}
-        if function.__doc__:
-            docstring = function.__doc__
-            # Look for parameter descriptions in the docstring (Args: section)
-            args_section = re.search(
-                r"Args:(.*?)(?:Returns:|Yields:|Raises:|$)", docstring, re.DOTALL
-            )
-            if args_section:
-                args_text = args_section.group(1)
-                # Extract parameter descriptions using regex
-                param_matches = re.findall(
-                    r"(\w+):\s*(.*?)(?=\n\s*\w+:|$)", args_text, re.DOTALL
-                )
-                for param_name, param_desc in param_matches:
-                    param_descriptions[param_name] = param_desc.strip()
-
-        # For simple input handling, extract fields from the schema definition
-        # This is needed because some AIQ functions might have a single composite input
-        field_info = {}
-
-        # If we only have one field and it's a complex type, try to extract its fields
         parameters = []
-
-        # Check if we're dealing with a simple wrapper schema with a single field
-        # This is common in AIQ where functions often have a single field that contains the actual parameters
-        if len(param_fields) == 1:
-            # Get the field and check if it's a complex type
-            field_name, field = next(iter(param_fields.items()))
+        for name, field in param_fields.items():
+            # Get the field type and convert to appropriate Python type
             field_type = field.annotation
 
-            # If it's a string type, keep it simple - just expose the single parameter
-            if field_type == str or getattr(field_type, "__origin__", None) == str:
-                # This is a simple string field, use it directly
-                parameters.append(
-                    Parameter(
-                        name=field_name,
-                        kind=Parameter.KEYWORD_ONLY,
-                        default=Parameter.empty if field.is_required else None,
-                        annotation=field_type,
-                    )
+            # Add the parameter to our list
+            parameters.append(
+                Parameter(
+                    name=name,
+                    kind=Parameter.KEYWORD_ONLY,
+                    default=Parameter.empty if field.is_required else None,
+                    annotation=field_type,
                 )
-                # Get description from docstring if available
-                desc = param_descriptions.get(
-                    field_name, field.description or f"Parameter {field_name}"
-                )
-                field_info[field_name] = {
-                    "type": field_type,
-                    "description": desc,
-                    "required": field.is_required,
-                }
-            # If it's a complex type, try to extract its fields
-            # This is common with AIQ functions that accept a single object with multiple fields
-            elif hasattr(field_type, "model_fields"):
-                # This is a complex type, extract its fields
-                sub_fields = field_type.model_fields
-                for sub_name, sub_field in sub_fields.items():
-                    parameters.append(
-                        Parameter(
-                            name=sub_name,
-                            kind=Parameter.KEYWORD_ONLY,
-                            default=Parameter.empty if sub_field.is_required else None,
-                            annotation=sub_field.annotation,
-                        )
-                    )
-                    # Get description from docstring if available
-                    desc = param_descriptions.get(
-                        sub_name, sub_field.description or f"Parameter {sub_name}"
-                    )
-                    field_info[sub_name] = {
-                        "type": sub_field.annotation,
-                        "description": desc,
-                        "required": sub_field.is_required,
-                    }
-            else:
-                # This is some other type, use it directly
-                parameters.append(
-                    Parameter(
-                        name=field_name,
-                        kind=Parameter.KEYWORD_ONLY,
-                        default=Parameter.empty if field.is_required else None,
-                        annotation=field_type,
-                    )
-                )
-                # Get description from docstring if available
-                desc = param_descriptions.get(
-                    field_name, field.description or f"Parameter {field_name}"
-                )
-                field_info[field_name] = {
-                    "type": field_type,
-                    "description": desc,
-                    "required": field.is_required,
-                }
-        else:
-            # Multiple fields in the schema, use them directly
-            for name, field in param_fields.items():
-                # Get the field type and convert to appropriate Python type
-                field_type = field.annotation
-
-                # Get description from docstring if available
-                desc = param_descriptions.get(
-                    name, field.description or f"Parameter {name}"
-                )
-
-                # Store field info for documentation
-                field_info[name] = {
-                    "type": field_type,
-                    "description": desc,
-                    "required": field.is_required,
-                }
-
-                # Add the parameter to our list
-                parameters.append(
-                    Parameter(
-                        name=name,
-                        kind=Parameter.KEYWORD_ONLY,
-                        default=Parameter.empty if field.is_required else None,
-                        annotation=field_type,
-                    )
-                )
+            )
 
     # Create the function signature WITHOUT the ctx parameter
     # We'll handle this in the wrapper function internally
@@ -247,7 +129,7 @@ def create_function_wrapper(
                     # Regular handling
                     # Handle complex input schema - if we extracted fields from a nested schema,
                     # we need to reconstruct the input
-                    if len(schema.model_fields) == 1 and len(field_info) > 1:
+                    if len(schema.model_fields) == 1 and len(parameters) > 1:
                         # Get the field name from the original schema
                         field_name = next(iter(schema.model_fields.keys()))
                         field_type = schema.model_fields[field_name].annotation
@@ -298,52 +180,43 @@ def create_function_wrapper(
     wrapper.__signature__ = sig
     wrapper.__name__ = function_name
 
-    # Create a proper docstring
-    doc_lines = []
-    doc_lines.append(function_description)
-
-    # Add parameter documentation
-    for name, info in field_info.items():
-        doc_lines.append(f"  {name}: {info['description']}")
-
-    wrapper.__doc__ = "\n".join(doc_lines)
-
     # Return the wrapper with proper signature
     return wrapper
 
 
-def get_function_description(function: Function) -> str:
-    """Get the description for a function following priority:
-    1. topic from config
-    2. description from config
-    3. description from function
-    4. docstring first paragraph
+def get_function_description(function: FunctionBase) -> str:
+    """
+    Retrieve a human-readable description for an AIQ function or workflow.
+
+    The description is determined using the following precedence:
+      1. If the function is a Workflow and has a 'description' attribute, use it.
+      2. If the Workflow's config has a 'topic', use it.
+      3. If the Workflow's config has a 'description', use it.
+      4. If the function is a regular Function, use its 'description' attribute.
 
     Args:
-        function: The AIQ Function object
+        function: The AIQ FunctionBase instance (Function or Workflow).
 
     Returns:
-        A description string for the function
+        The best available description string for the function.
     """
     function_description = ""
-    function_config = function.config
 
-    # Try to get topic from config (highest priority)
-    if hasattr(function_config, "topic") and function_config.topic:
-        function_description = function_config.topic
-    # Try to get description from config
-    elif hasattr(function_config, "description") and function_config.description:
-        function_description = function_config.description
-    # Try to get description directly from the function
-    elif hasattr(function, "description") and function.description:
+    if isinstance(function, Workflow):
+        config = function.config
+
+        # Workflow doesn't have a description, but probably should
+        if hasattr(function, "description") and function.description:
+            function_description = function.description
+        # Try to get description from config
+        elif hasattr(config, "description") and config.description:
+            function_description = config.description
+        # Try to get anything that might be a description
+        elif hasattr(config, "topic") and config.topic:
+            function_description = config.topic
+
+    elif isinstance(function, Function):
         function_description = function.description
-    # Fall back to function docstring
-    elif hasattr(function, "__doc__") and function.__doc__:
-        # Extract the first paragraph from the docstring
-        function_description = function.__doc__.strip().split("\n\n")[0]
-    # Last resort - use function name
-    else:
-        function_description = f"Function {function.__name__}"
 
     return function_description
 
@@ -370,7 +243,9 @@ def is_workflow_function(function: Function) -> bool:
     return False
 
 
-def register_function_with_mcp(mcp, function_name: str, function: Function) -> None:
+def register_function_with_mcp(
+    mcp: "mcp.server.fastmcp.FastMCP", function_name: str, function: Function
+) -> None:
     """Register an AIQ Function as an MCP tool.
 
     Args:
@@ -394,6 +269,6 @@ def register_function_with_mcp(mcp, function_name: str, function: Function) -> N
 
     # Create and register the wrapper function with MCP
     wrapper_func = create_function_wrapper(
-        function_name, function, input_schema, is_workflow, function_description
+        function_name, function, input_schema, is_workflow
     )
     mcp.tool(name=function_name, description=function_description)(wrapper_func)

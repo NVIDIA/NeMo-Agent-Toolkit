@@ -68,12 +68,7 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
 
             # Add a simple fallback function if no functions were found
             if not functions:
-                logger.warning("No functions found in workflow, adding placeholder function")
-
-                @mcp.tool()
-                def add(a: int, b: int) -> int:
-                    """Add two numbers."""
-                    return a + b
+                raise RuntimeError("No functions found in workflow. Please check your configuration.")
 
             # Start the MCP server
             await mcp.run_sse_async()
