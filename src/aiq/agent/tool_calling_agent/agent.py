@@ -25,6 +25,8 @@ from langgraph.prebuilt import ToolNode
 from pydantic import BaseModel
 from pydantic import Field
 
+from aiq.agent.base import AGENT_RESPONSE_LOG_MESSAGE
+from aiq.agent.base import TOOL_RESPONSE_LOG_MESSAGE
 from aiq.agent.base import AgentDecision
 from aiq.agent.base import BaseAgent
 
@@ -49,18 +51,18 @@ class ToolCallAgentGraph(BaseAgent):
                  handle_tool_errors: bool = True):
         super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs)
         self.tool_caller = ToolNode(tools, handle_tool_errors=handle_tool_errors)
-        logger.info("Initialized Tool Calling Agent Graph")
+        logger.debug("Initialized Tool Calling Agent Graph")
 
     async def agent_node(self, state: ToolCallAgentGraphState):
         try:
-            logger.debug('Starting Agent Node')
-            logger.info("Calling agent")
+            logger.debug('Starting the Tool Calling Agent Node')
             if len(state.messages) == 0:
                 raise RuntimeError('No input received in state: "messages"')
             response = await self.llm.ainvoke(state.messages, config=RunnableConfig(callbacks=self.callbacks))
             if self.detailed_logs:
-                logger.debug("The agent's input was:\n%s", state.messages)
-                logger.debug("The agent's output is:\n%s", response)
+                agent_input = "\n".join(str(message.content) for message in state.messages)
+                logger.info(AGENT_RESPONSE_LOG_MESSAGE, agent_input, response)
+
             state.messages += [response]
             return state
         except Exception as ex:
@@ -88,17 +90,20 @@ class ToolCallAgentGraph(BaseAgent):
             logger.debug("Starting Tool Node")
             tool_calls = state.messages[-1].tool_calls
             tools = [tool.get('name') for tool in tool_calls]
-            logger.info("Calling tools: %s", tools)
-            tool_response = await self.tool_caller.ainvoke(input={"messages": [state.messages[-1]]},
+            tool_input = state.messages[-1]
+            tool_response = await self.tool_caller.ainvoke(input={"messages": [tool_input]},
                                                            config=RunnableConfig(callbacks=self.callbacks,
                                                                                  configurable={}))
             # this configurable = {} argument is needed due to a bug in LangGraph PreBuilt ToolNode ^
 
             for response in tool_response.get('messages'):
                 if self.detailed_logs:
-                    logger.debug("Tool response is:\n%s", response)
+                    # The tool response can be very large, so we log only the first 1000 characters
+                    response.content = response.content[:1000] + "..." if len(
+                        response.content) > 1000 else response.content
+                    logger.info(TOOL_RESPONSE_LOG_MESSAGE, tools, tool_input, response.content)
                 state.messages += [response]
-            logger.debug("Received response from tool\nAppended tool responses to state")
+
             return state
         except Exception as ex:
             logger.exception("Failed to call tool_node: %s", ex, exc_info=ex)
@@ -107,7 +112,7 @@ class ToolCallAgentGraph(BaseAgent):
     async def build_graph(self):
         try:
             self.graph = await super()._build_graph(state=ToolCallAgentGraphState)
-            logger.info("Tool Calling Agent Graph built and compiled successfully")
+            logger.debug("Tool Calling Agent Graph built and compiled successfully")
             return self.graph
         except Exception as ex:
             logger.exception("Failed to build Tool Calling Agent Graph: %s", ex, exc_info=ex)
