@@ -104,7 +104,7 @@ class OutputUploader:
         Each script is run with its kwargs passed as command-line arguments.
         The output directory is passed as the first argument.
         """
-        for script_name, script_config in self.output_config.custom_scripts.items():
+        for _, script_config in self.output_config.custom_scripts.items():
             script_path = script_config.script
             if not script_path.exists():
                 logger.error("Custom script %s does not exist.", script_path)
