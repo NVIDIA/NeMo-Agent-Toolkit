@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from pydantic import Field
-from typing import List
 
 from aiq.data_models.front_end import FrontEndBaseConfig
 
@@ -30,4 +29,4 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
     port: int = Field(default=9901, description="Port to bind the server to", ge=0, le=65535)
     debug: bool = Field(default=False, description="Enable debug mode")
     log_level: str = Field(default="INFO", description="Log level for the MCP server")
-    tool_names: List[str] = Field(default_factory=list, description="The list of tools MCP server will expose.") 
+    tool_names: list[str] = Field(default_factory=list, description="The list of tools MCP server will expose.")

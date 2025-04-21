@@ -13,15 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 from aiq.builder.front_end import FrontEndBase
 from aiq.builder.function import Function
 from aiq.builder.workflow import Workflow
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 from aiq.front_ends.mcp.tool_converter import register_function_with_mcp
-from aiq.runtime.session import AIQSessionManager
-from typing import Dict
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +31,7 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
     async def run(self) -> None:
         """Run the MCP server."""
         # Import FastMCP
-        from mcp.server.fastmcp import FastMCP, Context
+        from mcp.server.fastmcp import FastMCP
 
         # Create an MCP server with the configured parameters
         mcp = FastMCP(
@@ -54,7 +53,7 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
             # Filter functions based on tool_names if provided
             if self.front_end_config.tool_names:
                 logger.info(f"Filtering functions based on tool_names: {self.front_end_config.tool_names}")
-                filtered_functions: Dict[str, Function] = {}
+                filtered_functions: dict[str, Function] = {}
                 for function_name, function in functions.items():
                     if function_name in self.front_end_config.tool_names:
                         filtered_functions[function_name] = function
@@ -73,7 +72,7 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
             # Start the MCP server
             await mcp.run_sse_async()
 
-    def _get_all_functions(self, workflow: Workflow) -> Dict[str, Function]:
+    def _get_all_functions(self, workflow: Workflow) -> dict[str, Function]:
         """Get all functions from the workflow.
 
         Args:
@@ -82,7 +81,7 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
         Returns:
             Dict mapping function names to Function objects.
         """
-        functions: Dict[str, Function] = {}
+        functions: dict[str, Function] = {}
 
         # Extract all functions from the workflow
         for function_name, function in workflow.functions.items():
@@ -90,4 +89,4 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
 
         functions[workflow.config.workflow.type] = workflow
 
-        return functions 
+        return functions
