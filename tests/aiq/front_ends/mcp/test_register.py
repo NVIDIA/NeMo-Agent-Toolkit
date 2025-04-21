@@ -13,30 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
-
-from aiq.data_models.config import AIQConfig, GeneralConfig
+from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import GeneralConfig
 from aiq.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
-from aiq.front_ends.mcp.register import register_mcp_front_end
 from aiq.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
+from aiq.front_ends.mcp.register import register_mcp_front_end
 from aiq.test.functions import EchoFunctionConfig
 
 
-@pytest.mark.asyncio
 async def test_register_mcp_front_end():
     """Test that the register_mcp_front_end function returns the correct plugin."""
     # Create configuration objects
     mcp_config = MCPFrontEndConfig(name="Test MCP Server")
-    
+
     # Use a real AIQConfig with a proper workflow
-    full_config = AIQConfig(
-        general=GeneralConfig(front_end=mcp_config),
-        workflow=EchoFunctionConfig()
-    )
-    
+    full_config = AIQConfig(general=GeneralConfig(front_end=mcp_config), workflow=EchoFunctionConfig())
+
     # Use the context manager pattern since register_mcp_front_end
     # returns an AsyncGeneratorContextManager, not an async iterator
     async with register_mcp_front_end(mcp_config, full_config) as plugin:
         # Verify that the plugin is of the correct type and has the right config
         assert isinstance(plugin, MCPFrontEndPlugin)
-        assert plugin.full_config is full_config 
+        assert plugin.full_config is full_config

@@ -13,34 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 import sys
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 
 @patch("aiq.cli.entrypoint.cli.add_command")
 def test_mcp_command_registration(mock_add_command):
     """Test the CLI command registration mechanism for MCP."""
     from aiq.cli.entrypoint import start_command
-    
+
     # Create a mock module to simulate main.py
     mock_main_module = MagicMock()
-    
+
     # Create a mock command that would be returned by get_command
     mock_command = MagicMock(name="mcp_command")
-    
+
     # Patch the get_command method to return our mock command
-    with patch.object(start_command, 'get_command', return_value=mock_command) as mock_get_command:
+    with patch.object(start_command, 'get_command', return_value=mock_command):
         # Mock sys.modules to include our mock module
         with patch.dict(sys.modules, {'aiq.front_ends.mcp.main': mock_main_module}):
             # Import the module which would register the command
             # Since we're mocking the module, we'll call the registration code directly
             from aiq.cli.entrypoint import cli
             cli.add_command(mock_command, name="mcp")
-    
-        # Verify get_command was called correctly if we had main.py
-        # This is commented out because we're directly simulating what main.py would do
-        # mock_get_command.assert_called_once_with(None, "mcp")
-    
+
     # Verify that add_command was called with the correct arguments
-    mock_add_command.assert_called_with(mock_command, name="mcp") 
+    mock_add_command.assert_called_with(mock_command, name="mcp")
