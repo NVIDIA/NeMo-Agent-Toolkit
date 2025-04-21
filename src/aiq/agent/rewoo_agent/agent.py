@@ -216,7 +216,7 @@ class ReWOOAgentGraph(BaseAgent):
                 # If the content is a list, get the first element which should be a dict
                 if isinstance(_tool_output, list):
                     _tool_output = _tool_output[0]
-                    assert (isinstance(_tool_output, dict))
+                    assert isinstance(_tool_output, dict)
 
                 tool_input = self._replace_placeholder(_placeholder, tool_input, _tool_output)
 
@@ -281,7 +281,7 @@ class ReWOOAgentGraph(BaseAgent):
                     # If the content is a list, get the first element which should be a dict
                     if isinstance(_tool_output, list):
                         _tool_output = _tool_output[0]
-                        assert (isinstance(_tool_output, dict))
+                        assert isinstance(_tool_output, dict)
 
                     tool_input = self._replace_placeholder(_placeholder, tool_input, _tool_output)
 
