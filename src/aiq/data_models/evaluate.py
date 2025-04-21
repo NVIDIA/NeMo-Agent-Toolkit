@@ -31,7 +31,7 @@ class EvalCustomScriptConfig(BaseModel):
     # Path to the script to run
     script: Path
     # Keyword arguments to pass to the script
-    kwargs: dict[str, str]
+    kwargs: dict[str, str] = {}
 
 
 class EvalOutputConfig(BaseModel):
