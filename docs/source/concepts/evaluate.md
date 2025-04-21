@@ -331,8 +331,9 @@ eval:
         convert_workflow_to_csv:
           script: examples/simple/src/aiq_simple/scripts/workflow_to_csv.py
           kwargs:
-            input: ./.tmp/aiq/examples/simple_output/workflow_output.json
-            output: ./.tmp/aiq/examples/simple_output/workflow.csv
+            # The input and output are relative to the output directory
+            input: workflow_output.json
+            output: workflow.csv
 ```
 
 ## Remote Storage
