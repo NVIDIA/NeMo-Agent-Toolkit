@@ -1,0 +1,32 @@
+{
+    "user_id": "24680",
+    "timestamp": "2025-03-30T08:10:12Z",
+    "system": {
+      "os": "Ubuntu 22.04",
+      "cpu_usage": "93%",
+      "memory_usage": "7.9 GB / 8 GB",
+      "disk_space": "15 GB free of 256 GB"
+    },
+    "network": {
+      "latency_ms": 380,
+      "packet_loss": "2.1%",
+      "vpn_connected": false
+    },
+    "errors": [
+      {
+        "timestamp": "2025-03-30T08:08:45Z",
+        "message": "High CPU usage detected over sustained period",
+        "severity": "medium"
+      },
+      {
+        "timestamp": "2025-03-30T08:09:10Z",
+        "message": "Network latency above acceptable threshold",
+        "severity": "low"
+      }
+    ],
+    "recommendations": [
+      "Investigate background processes",
+      "Check internet connection and router",
+      "Upgrade memory if issue persists"
+    ]
+  }

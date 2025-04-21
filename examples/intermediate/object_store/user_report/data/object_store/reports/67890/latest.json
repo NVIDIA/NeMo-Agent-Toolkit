@@ -1,0 +1,20 @@
+{
+    "user_id": "67890",
+    "timestamp": "2025-04-21T15:40:00Z",
+    "system": {
+      "os": "macOS 14.1",
+      "cpu_usage": "43%",
+      "memory_usage": "8.1 GB / 16 GB",
+      "disk_space": "230 GB free of 512 GB"
+    },
+    "network": {
+      "latency_ms": 95,
+      "packet_loss": "0%",
+      "vpn_connected": true
+    },
+    "errors": [],
+    "recommendations": [
+      "System operating normally",
+      "No action required"
+    ]
+}

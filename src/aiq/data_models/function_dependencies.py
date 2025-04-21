@@ -26,6 +26,7 @@ class FunctionDependencies(BaseModel):
     llms: set[str] = Field(default_factory=set)
     embedders: set[str] = Field(default_factory=set)
     memory_clients: set[str] = Field(default_factory=set)
+    object_stores: set[str] = Field(default_factory=set)
     retrievers: set[str] = Field(default_factory=set)
 
     @field_serializer("functions", when_used="json")
@@ -44,6 +45,10 @@ class FunctionDependencies(BaseModel):
     def serialize_memory_clients(self, v: set[str]) -> list[str]:
         return list(v)
 
+    @field_serializer("object_stores", when_used="json")
+    def serialize_object_stores(self, v: set[str]) -> list[str]:
+        return list(v)
+
     @field_serializer("retrievers", when_used="json")
     def serialize_retrievers(self, v: set[str]) -> list[str]:
         return list(v)
@@ -59,6 +64,9 @@ class FunctionDependencies(BaseModel):
 
     def add_memory_client(self, memory_client: str):
         self.memory_clients.add(memory_client)  # pylint: disable=no-member
+
+    def add_object_store(self, object_store: str):
+        self.object_stores.add(object_store)  # pylint: disable=no-member
 
     def add_retriever(self, retriever: str):
         self.retrievers.add(retriever)  # pylint: disable=no-member

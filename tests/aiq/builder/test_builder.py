@@ -31,6 +31,7 @@ from aiq.cli.register_workflow import register_function
 from aiq.cli.register_workflow import register_llm_client
 from aiq.cli.register_workflow import register_llm_provider
 from aiq.cli.register_workflow import register_memory
+from aiq.cli.register_workflow import register_object_store
 from aiq.cli.register_workflow import register_retriever_client
 from aiq.cli.register_workflow import register_retriever_provider
 from aiq.cli.register_workflow import register_tool_wrapper
@@ -39,9 +40,11 @@ from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.memory.interfaces import MemoryEditor
 from aiq.memory.models import MemoryItem
+from aiq.object_store.in_memory_object_store import InMemoryObjectStore
 from aiq.retriever.interface import AIQRetriever
 from aiq.retriever.models import AIQDocument
 from aiq.retriever.models import RetrieverOutput
@@ -72,6 +75,10 @@ class TMemoryConfig(MemoryBaseConfig, name="test_memory"):
 
 
 class TRetrieverProviderConfig(RetrieverBaseConfig, name="test_retriever"):
+    raise_error: bool = False
+
+
+class TObjectStoreConfig(ObjectStoreBaseConfig, name="test_object_store"):
     raise_error: bool = False
 
 
@@ -159,6 +166,13 @@ async def _register():
             raise ValueError("Error")
 
         yield RetrieverProviderInfo(config=config, description="Mock retriever to test the registration process")
+
+    @register_object_store(config_type=TObjectStoreConfig)
+    async def register8(config: TObjectStoreConfig, builder: Builder):
+        if (config.raise_error):
+            raise ValueError("Error")
+
+        yield InMemoryObjectStore()
 
 
 async def test_build():
@@ -485,6 +499,44 @@ async def test_add_retriever():
             await builder.add_retriever("retriever_name", TRetrieverProviderConfig())
 
 
+async def test_add_object_store():
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_object_store("object_store_name", TObjectStoreConfig())
+
+        with pytest.raises(ValueError):
+            await builder.add_object_store("object_store_name2", TObjectStoreConfig(raise_error=True))
+
+        with pytest.raises(ValueError):
+            await builder.add_object_store("object_store_name", TObjectStoreConfig())
+
+
+async def test_get_object_store():
+
+    async with WorkflowBuilder() as builder:
+
+        object_store = await builder.add_object_store("object_store_name", TObjectStoreConfig())
+
+        assert object_store == builder.get_object_store_client("object_store_name")
+
+        with pytest.raises(ValueError):
+            await builder.get_object_store_client("object_store_name_not_exist")
+
+
+async def test_get_object_store_config():
+
+    async with WorkflowBuilder() as builder:
+
+        config = TObjectStoreConfig()
+
+        await builder.add_object_store("object_store_name", config)
+
+        assert builder.get_object_store_config("object_store_name") == config
+
+        with pytest.raises(ValueError):
+            builder.get_object_store_config("object_store_name_not_exist")
+
+
 async def get_retriever():
 
     @register_retriever_client(config_type=TRetrieverProviderConfig, wrapper_type="test_framework")
@@ -559,6 +611,7 @@ async def test_built_config():
     embedder_config = TEmbedderProviderConfig()
     memory_config = TMemoryConfig()
     retriever_config = TRetrieverProviderConfig()
+    object_store_config = TObjectStoreConfig()
 
     async with WorkflowBuilder(general_config=general_config) as builder:
 
@@ -574,6 +627,8 @@ async def test_built_config():
 
         await builder.add_retriever("retriever1", retriever_config)
 
+        await builder.add_object_store("object_store1", object_store_config)
+
         workflow = builder.build()
 
         workflow_config = workflow.config
@@ -585,3 +640,4 @@ async def test_built_config():
         assert workflow_config.embedders == {"embedder1": embedder_config}
         assert workflow_config.memory == {"memory1": memory_config}
         assert workflow_config.retrievers == {"retriever1": retriever_config}
+        assert workflow_config.object_stores == {"object_store1": object_store_config}

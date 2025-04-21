@@ -41,6 +41,7 @@ from aiq.data_models.component_ref import EmbedderRef
 from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.component_ref import MemoryRef
+from aiq.data_models.component_ref import ObjectStoreRef
 from aiq.data_models.component_ref import RetrieverRef
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.config import GeneralConfig
@@ -49,9 +50,11 @@ from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.function_dependencies import FunctionDependencies
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.memory.interfaces import MemoryEditor
+from aiq.object_store.interfaces import ObjectStore
 from aiq.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
 from aiq.profiler.utils import detect_llm_frameworks_in_build_fn
 from aiq.utils.optional_imports import TelemetryOptionalImportError
@@ -100,6 +103,12 @@ class ConfiguredMemory:
 
 
 @dataclasses.dataclass
+class ConfiguredObjectStore:
+    config: ObjectStoreBaseConfig
+    instance: ObjectStore
+
+
+@dataclasses.dataclass
 class ConfiguredRetriever:
     config: RetrieverBaseConfig
     instance: RetrieverProviderInfo
@@ -129,6 +138,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._llms: dict[str, ConfiguredLLM] = {}
         self._embedders: dict[str, ConfiguredEmbedder] = {}
         self._memory_clients: dict[str, ConfiguredMemory] = {}
+        self._object_stores: dict[str, ConfiguredObjectStore] = {}
         self._retrievers: dict[str, ConfiguredRetriever] = {}
 
         self._context_state = AIQContextState.get()
@@ -255,6 +265,10 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                                k: v.config
                                for k, v in self._memory_clients.items()
                            },
+                           object_stores={
+                               k: v.config
+                               for k, v in self._object_stores.items()
+                           },
                            retrievers={
                                k: v.config
                                for k, v in self._retrievers.items()
@@ -282,6 +296,10 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                                           memory={
                                               k: v.instance
                                               for k, v in self._memory_clients.items()
+                                          },
+                                          object_stores={
+                                              k: v.instance
+                                              for k, v in self._object_stores.items()
                                           },
                                           exporters={
                                               k: v.instance
@@ -546,6 +564,33 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return self._memory_clients[memory_name].config
 
     @override
+    async def add_object_store(self, name: str | ObjectStoreRef, config: ObjectStoreBaseConfig) -> ObjectStore:
+        if name in self._object_stores:
+            raise ValueError(f"Object store `{name}` already exists in the list of object stores")
+
+        object_store_info = self._registry.get_object_store(type(config))
+
+        info_obj = await self._get_exit_stack().enter_async_context(object_store_info.build_fn(config, self))
+
+        self._object_stores[name] = ConfiguredObjectStore(config=config, instance=info_obj)
+
+        return info_obj
+
+    @override
+    def get_object_store_client(self, object_store_name: str | ObjectStoreRef) -> ObjectStore:
+        if object_store_name not in self._object_stores:
+            raise ValueError(f"Object store `{object_store_name}` not found")
+
+        return self._object_stores[object_store_name].instance
+
+    @override
+    def get_object_store_config(self, object_store_name: str | ObjectStoreRef) -> ObjectStoreBaseConfig:
+        if object_store_name not in self._object_stores:
+            raise ValueError(f"Object store `{object_store_name}` not found")
+
+        return self._object_stores[object_store_name].config
+
+    @override
     async def add_retriever(self, name: str | RetrieverRef, config: RetrieverBaseConfig):
 
         if (name in self._retrievers):
@@ -624,6 +669,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Instantiate a memory client
             elif component_instance.component_group == ComponentGroup.MEMORY:
                 await self.add_memory_client(component_instance.name, component_instance.config)
+            # Instantiate a object store client
+            elif component_instance.component_group == ComponentGroup.OBJECT_STORES:
+                await self.add_object_store(component_instance.name, component_instance.config)
             # Instantiate a retriever client
             elif component_instance.component_group == ComponentGroup.RETRIEVERS:
                 await self.add_retriever(component_instance.name, component_instance.config)
@@ -748,6 +796,25 @@ class ChildBuilder(Builder):
     @override
     def get_memory_client_config(self, memory_name: str) -> MemoryBaseConfig:
         return self._workflow_builder.get_memory_client_config(memory_name=memory_name)
+
+    @override
+    async def add_object_store(self, name: str, config: ObjectStoreBaseConfig):
+        return await self._workflow_builder.add_object_store(name, config)
+
+    @override
+    def get_object_store_client(self, object_store_name: str) -> ObjectStore:
+        """
+        Return the instantiated object store client for the given name.
+        """
+        object_store_client = self._workflow_builder.get_object_store_client(object_store_name)
+
+        self._dependencies.add_object_store(object_store_name)
+
+        return object_store_client
+
+    @override
+    def get_object_store_config(self, object_store_name: str) -> ObjectStoreBaseConfig:
+        return self._workflow_builder.get_object_store_config(object_store_name)
 
     @override
     async def add_retriever(self, name: str, config: RetrieverBaseConfig):

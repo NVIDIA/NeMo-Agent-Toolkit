@@ -1,0 +1,27 @@
+{
+    "user_id": "12345",
+    "timestamp": "2025-04-15T10:22:30Z",
+    "system": {
+      "os": "Windows 11",
+      "cpu_usage": "82%",
+      "memory_usage": "6.3 GB / 8 GB",
+      "disk_space": "120 GB free of 500 GB"
+    },
+    "network": {
+      "latency_ms": 240,
+      "packet_loss": "0.5%",
+      "vpn_connected": false
+    },
+    "errors": [
+      {
+        "timestamp": "2025-04-15T10:21:59Z",
+        "message": "App crash detected: 'PhotoEditorPro.exe' exited unexpectedly",
+        "severity": "high"
+      }
+    ],
+    "recommendations": [
+      "Update graphics driver",
+      "Check for overheating hardware",
+      "Enable automatic crash reporting"
+    ]
+  }
