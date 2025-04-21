@@ -256,6 +256,9 @@ result back to the client. The transaction schema is defined by the workflow.
   }
   ```
 
+## Evaluation Endpoint
+You can also evaluate workflows via the AgentIQ `evaluate` endpoint. For more information, refer to the [AgentIQ Evaluation Endpoint](./evaluate-api.md) documentation.
+
 ### Choosing between Streaming and Non-Streaming
 Use streaming if you need real-time updates or live communication where users expect immediate feedback. Use non-streaming if your workflow responds with simple updates and less feedback is needed.
 
