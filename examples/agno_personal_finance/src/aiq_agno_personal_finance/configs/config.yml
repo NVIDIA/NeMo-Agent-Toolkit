@@ -13,10 +13,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=unused-import
-# flake8: noqa
-# isort:skip_file
 
-from .console import register as console_register
-from .fastapi import register as fastapi_register
-from .mcp import register as mcp_register
+general:
+  use_uvloop: true
+
+functions:
+  serp_api_tool:
+    _type: serp_api_tool
+    # You can add your SerpAPI key here or use environment variables
+    # api_key: your_serp_api_key
+  
+  agno_personal_finance:
+    _type: agno_personal_finance
+    llm_name: nim_llm
+    serp_api_tool: serp_api_tool
+  
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+
+workflow:
+  _type: agno_personal_finance
+  llm_name: nim_llm
+  serp_api_tool: serp_api_tool
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3
