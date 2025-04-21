@@ -43,7 +43,6 @@ class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
     verbose: bool = Field(default=False, description="Set the verbosity of the rewoo agent's logging.")
     include_tool_input_schema_in_tool_description: bool = Field(
         default=True, description="Specify inclusion of tool input schemas in the prompt.")
-    max_iterations: int = Field(default=15, description="Number of tool calls before stoping the rewoo agent.")
     description: str = Field(default="ReWOO Agent Workflow", description="The description of this functions use.")
     planner_prompt: str | None = Field(
         default=None,
