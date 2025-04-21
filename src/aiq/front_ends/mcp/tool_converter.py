@@ -13,14 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+import logging
+from inspect import Parameter
+from inspect import Signature
+
+from mcp.server.fastmcp import FastMCP
+from pydantic import BaseModel
+
 from aiq.builder.function import Function
 from aiq.builder.function_base import FunctionBase
 from aiq.builder.workflow import Workflow
-from inspect import Parameter, Signature
-from pydantic import BaseModel
-from typing import Type
-import json
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +31,7 @@ logger = logging.getLogger(__name__)
 def create_function_wrapper(
     function_name: str,
     function: FunctionBase,
-    schema: Type[BaseModel],
+    schema: type[BaseModel],
     is_workflow: bool = False,
 ):
     """Create a wrapper function that exposes the actual parameters of an AIQ Function as an MCP tool.
@@ -46,23 +49,18 @@ def create_function_wrapper(
     is_chat_request = False
 
     # Check if the schema name is AIQChatRequest
-    if schema.__name__ == "AIQChatRequest" or (
-        hasattr(schema, "__qualname__") and "AIQChatRequest" in schema.__qualname__
-    ):
+    if schema.__name__ == "AIQChatRequest" or (hasattr(schema, "__qualname__")
+                                               and "AIQChatRequest" in schema.__qualname__):
         is_chat_request = True
-        logger.info(
-            f"Function {function_name} uses AIQChatRequest - creating simplified interface"
-        )
+        logger.info("Function %s uses AIQChatRequest - creating simplified interface", function_name)
 
         # For AIQChatRequest, we'll create a simple wrapper with just a query parameter
-        parameters = [
-            Parameter(
-                name="query",
-                kind=Parameter.KEYWORD_ONLY,
-                default=Parameter.empty,
-                annotation=str,
-            )
-        ]
+        parameters = [Parameter(
+            name="query",
+            kind=Parameter.KEYWORD_ONLY,
+            default=Parameter.empty,
+            annotation=str,
+        )]
     else:
         # Regular case - extract parameter information from the input schema
         # Extract parameter information from the input schema
@@ -80,8 +78,7 @@ def create_function_wrapper(
                     kind=Parameter.KEYWORD_ONLY,
                     default=Parameter.empty if field.is_required else None,
                     annotation=field_type,
-                )
-            )
+                ))
 
     # Create the function signature WITHOUT the ctx parameter
     # We'll handle this in the wrapper function internally
@@ -89,6 +86,7 @@ def create_function_wrapper(
 
     # Define the actual wrapper function that accepts ctx but doesn't expose it
     def create_wrapper():
+
         async def wrapper_with_ctx(**kwargs):
             """Internal wrapper that will be called by MCP."""
             # MCP will add a ctx parameter, extract it
@@ -100,9 +98,7 @@ def create_function_wrapper(
 
             # Process the function call
             if ctx:
-                ctx.info(
-                    f"Calling function {function_name} with args: {json.dumps(kwargs, default=str)}"
-                )
+                ctx.info("Calling function %s with args: %s", function_name, json.dumps(kwargs, default=str))
                 await ctx.report_progress(0, 100)
 
             try:
@@ -161,13 +157,12 @@ def create_function_wrapper(
                 # Handle different result types for proper formatting
                 if isinstance(result, str):
                     return result
-                elif isinstance(result, (dict, list)):
+                if isinstance(result, (dict, list)):
                     return json.dumps(result, default=str)
-                else:
-                    return str(result)
+                return str(result)
             except Exception as e:
                 if ctx:
-                    ctx.error(f"Error calling function {function_name}: {str(e)}")
+                    ctx.error("Error calling function %s: %s", function_name, str(e))
                 raise
 
         return wrapper_with_ctx
@@ -188,10 +183,10 @@ def get_function_description(function: FunctionBase) -> str:
     Retrieve a human-readable description for an AIQ function or workflow.
 
     The description is determined using the following precedence:
-      1. If the function is a Workflow and has a 'description' attribute, use it.
-      2. If the Workflow's config has a 'topic', use it.
-      3. If the Workflow's config has a 'description', use it.
-      4. If the function is a regular Function, use its 'description' attribute.
+       1. If the function is a Workflow and has a 'description' attribute, use it.
+       2. If the Workflow's config has a 'topic', use it.
+       3. If the Workflow's config has a 'description', use it.
+       4. If the function is a regular Function, use its 'description' attribute.
 
     Args:
         function: The AIQ FunctionBase instance (Function or Workflow).
@@ -220,9 +215,7 @@ def get_function_description(function: FunctionBase) -> str:
     return function_description
 
 
-def register_function_with_mcp(
-    mcp: "mcp.server.fastmcp.FastMCP", function_name: str, function: FunctionBase
-) -> None:
+def register_function_with_mcp(mcp: FastMCP, function_name: str, function: FunctionBase) -> None:
     """Register an AIQ Function as an MCP tool.
 
     Args:
@@ -230,22 +223,20 @@ def register_function_with_mcp(
         function_name: The name to register the function under
         function: The AIQ Function to register
     """
-    logger.info(f"Registering function {function_name} with MCP")
+    logger.info("Registering function %s with MCP", function_name)
 
     # Get the input schema from the function
     input_schema = function.input_schema
-    logger.info(f"Function {function_name} has input schema: {input_schema}")
+    logger.info("Function %s has input schema: %s", function_name, input_schema)
 
     # Check if we're dealing with a Workflow
     is_workflow = isinstance(function, Workflow)
     if is_workflow:
-        logger.info(f"Function {function_name} is a Workflow")
+        logger.info("Function %s is a Workflow", function_name)
 
     # Get function description
     function_description = get_function_description(function)
 
     # Create and register the wrapper function with MCP
-    wrapper_func = create_function_wrapper(
-        function_name, function, input_schema, is_workflow
-    )
+    wrapper_func = create_function_wrapper(function_name, function, input_schema, is_workflow)
     mcp.tool(name=function_name, description=function_description)(wrapper_func)
