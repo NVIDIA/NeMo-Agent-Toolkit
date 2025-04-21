@@ -19,7 +19,7 @@ from langchain_core.prompts.chat import ChatPromptTemplate
 PLANNER_SYSTEM_PROMPT = """
 For the following task, make plans that can solve the problem step by step. For each plan, indicate \
 which external tool together with tool input to retrieve evidence. You can store the evidence into a \
-variable #E that can be called by later tools. (Plan, #E1, Plan, #E2, Plan, ...)
+placeholder #E that can be called by later tools. (Plan, #E1, Plan, #E2, Plan, ...)
 
 You may ask the human to the following tools:
 
@@ -27,30 +27,65 @@ You may ask the human to the following tools:
 
 The tools should be one of the following: [{tool_names}]
 
-Please note that you don't need to use all the tools. You can use any of the tools you want.
-Make sure to follow the pattern: #E = tool_name[tool_input]. Each Plan should be followed by only one #E.
+You are not required to use all the tools listed. Choose only the ones that best fit the needs of each plan step.
 
-For example,
-Task: Who was the CEO of Golden State Warriors in the year represented by the result of substracting 25 from 2023?
+Your output must be a JSON array where each element represents one planning step. Each step must be an object with exactly two keys:
 
-Plan: Calculate the result of 2023 minus 25.
-#E1 = calculator_subtract[2023, 25]
+1. "plan": A string that describes in detail the action or reasoning for that step.
 
-Plan: Get the year represented by #E1.
-#E2 = haystack_chitchat_agent["Response with the result number contained in #E1"]
+2. "evidence": An object representing the external tool call associated with that plan step. This object must have the following keys:
 
-Plan: Search for the CEO of Golden State Warriors in the year #E2.
-#E3 = internet_search["Who was the CEO of Golden State Warriors in the year #E2?"]
+   -"placeholder": A string that identifies the evidence placeholder (e.g., "#E1", "#E2", etc.). The numbering should be sequential based on the order of steps.
+
+   -"tool": A string specifying the name of the external tool used.
+
+   -"tool_input": The input to the tool. This can be a string, array, or object, depending on the requirements of the tool.
+
+Do not include any additional keys or characters in your output, and do not wrap your response with markdown formatting. Your output must be strictly valid JSON.
+
+Important instructions:
+
+Do not output any additional text, comments, or markdown formatting.
+
+Do not include any explanation or reasoning text outside of the JSON array.
+
+The output must be a valid JSON array that can be parsed directly.
+
+Here is an example of how a valid JSON output should look:
+
+[
+  \'{{
+    "plan": "Calculate the result of 2023 minus 25.",
+    "evidence": \'{{
+      "placeholder": "#E1",
+      "tool": "calculator_subtract",
+      "tool_input": [2023, 25]
+    }}\'
+  }}\',
+  \'{{
+    "plan": "Retrieve the year represented by the result stored in #E1.",
+    "evidence": \'{{
+      "placeholder": "#E2",
+      "tool": "haystack_chitchat_agent",
+      "tool_input": "Response with the result number contained in #E1"
+    }}\'
+  }}\',
+  \'{{
+    "plan": "Search for the CEO of Golden State Warriors in the year stored in #E2.",
+    "evidence": \'{{
+      "placeholder": "#E3",
+      "tool": "internet_search",
+      "tool_input": "Who was the CEO of Golden State Warriors in the year #E2?"
+    }}\'
+  }}\'
+]
 
 Begin!
-Describe your plans with rich details.
 """
 
 PLANNER_USER_PROMPT = """
 task: {task}
 """
-
-REWOO_PLAN_PATTERN = r"Plan:\s*(.+)\s*(#E\d+)\s*=\s*(\w+)\s*\[([^\]]+)\]"
 
 rewoo_planner_prompt = ChatPromptTemplate([("system", PLANNER_SYSTEM_PROMPT), ("user", PLANNER_USER_PROMPT)])
 
