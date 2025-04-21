@@ -34,6 +34,12 @@ AgentIQ is a flexible library designed to seamlessly integrate your enterprise a
 
 With AgentIQ, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 
+## Component Overview
+
+The following diagram illustrates the key components of AgentIQ and how they interact. It provides a high-level view of the architecture, including agents, plugins, workflows, and user interfaces. Use this as a reference to understand how to integrate and extend AgentIQ in your projects.
+
+![AgentIQ Components Diagram](docs/source/_static/agentiq_gitdiagram.png)
+
 ## Links
 
  * [Documentation](https://docs.nvidia.com/agentiq/latest/index.html): Explore the full documentation for AgentIQ.
