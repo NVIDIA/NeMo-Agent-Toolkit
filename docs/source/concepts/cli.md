@@ -45,7 +45,8 @@ aiq
 ├── serve
 ├── start
 │   ├── console
-│   └── fastapi
+│   ├── fastapi
+│   └── mcp
 ├── uninstall
 ├── validate
 └── workflow
@@ -133,6 +134,39 @@ Options:
                              workflow.
   --help                     Show this message and exit.
 ```
+
+### MCP
+
+The `aiq start mcp` command (or simply `aiq mcp`) will start a Model Context Protocol (MCP) server that exposes workflow functions as MCP tools. This allows other applications that support the MCP protocol to use your AgentIQ functions directly. MCP is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. The MCP front-end is especially useful for integrating AgentIQ workflows with MCP-compatible clients.
+
+The MCP front-end can be configured using the following options:
+
+```console
+$ aiq mcp --help
+Usage: aiq mcp [OPTIONS]
+
+Options:
+  --config_file FILE         A JSON/YAML file that sets the parameters for the
+                             workflow.  [required]
+  --override <TEXT TEXT>...  Override config values using dot notation (e.g.,
+                             --override llms.nim_llm.temperature 0.7)
+  --name TEXT                Name of the MCP server
+  --host TEXT                Host to bind the server to
+  --port INTEGER             Port to bind the server to
+  --debug BOOLEAN            Enable debug mode
+  --log_level TEXT           Log level for the MCP server
+  --tool_names TEXT          Comma-separated list of tool names to expose.
+                             If not provided, all functions will be exposed.
+  --help                     Show this message and exit.
+```
+
+For example, to start an MCP server with a specific workflow and expose only a particular tool:
+
+```bash
+aiq mcp --config_file examples/simple_rag/configs/milvus_rag_config.yml --tool_names mcp_retriever_tool
+```
+
+This will start an MCP server exposing the `mcp_retriever_tool` function from the workflow, which can then be accessed by any MCP-compatible client.
 
 ## Run
 
