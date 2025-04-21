@@ -109,6 +109,7 @@ cli.add_command(workflow_command, name="workflow")
 # Aliases
 cli.add_command(start_command.get_command(None, "console"), name="run")  # type: ignore
 cli.add_command(start_command.get_command(None, "fastapi"), name="serve")  # type: ignore
+cli.add_command(start_command.get_command(None, "mcp"), name="mcp")
 
 
 @cli.result_callback()
