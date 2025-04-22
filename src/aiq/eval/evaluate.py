@@ -224,6 +224,20 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             logger.exception("An error occurred while running evaluators: %s", e, exc_info=True)
             raise
 
+    def apply_overrides(self):
+        from aiq.cli.cli_utils.config_override import load_and_override_config
+        from aiq.data_models.config import AIQConfig
+        from aiq.runtime.loader import PluginTypes
+        from aiq.runtime.loader import discover_and_register_plugins
+        from aiq.utils.data_models.schema_validator import validate_schema
+
+        # Register plugins before validation
+        discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
+
+        config_dict = load_and_override_config(self.config.config_file, self.config.override)
+        config = validate_schema(config_dict, AIQConfig)
+        return config
+
     async def run_and_evaluate(self,
                                session_manager: AIQSessionManager | None = None,
                                job_id: str | None = None) -> EvaluationRunOutput:
@@ -233,12 +247,11 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         logger.info("Starting evaluation run with config file: %s", self.config.config_file)
 
         from aiq.builder.eval_builder import WorkflowEvalBuilder
-        from aiq.cli.cli_utils.config_override import load_and_override_config
         from aiq.runtime.loader import load_config
 
         # Load and override the config
         if self.config.override:
-            config = load_and_override_config(self.config.config_file, self.config.override)
+            config = self.apply_overrides()
         else:
             config = load_config(self.config.config_file)
         self.eval_config = config.eval

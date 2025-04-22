@@ -237,8 +237,8 @@ You can add custom evaluators to evaluate the workflow output. To add a custom e
 You can override the configuration in the `eval_config.yml` file using the `--override` command line flag. The following is an example of overriding the configuration:
 ```bash
 aiq eval --config_file examples/simple/configs/eval_config.yml \
-        --override llms.nim_llm.temperature 0.7 \
-        --override llms.nim_llm.model_name meta/llama-3.3-70b-instruct
+        --override llms.nim_rag_eval_llm.temperature 0.7 \
+        --override llms.nim_rag_eval_llm.model_name meta/llama-3.1-70b-instruct
 ```
 
 ## Additional Evaluation Options
