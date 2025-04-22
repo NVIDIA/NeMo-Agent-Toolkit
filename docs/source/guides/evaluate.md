@@ -46,7 +46,6 @@ eval:
 
 The dataset section specifies the dataset to use for running the workflow. The dataset can be of type `json`, `jsonl`, `csv`, `xls`, or `parquet`. The dataset file path is specified using the `file_path` key.
 
-
 ## Understanding the Dataset Format
 The dataset file provides a list of questions and expected answers. The following is an example of a dataset file:
 
