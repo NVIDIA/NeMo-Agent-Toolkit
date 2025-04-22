@@ -90,12 +90,6 @@ def eval_command(ctx, **kwargs) -> None:
 
 
 async def run_and_evaluate(config: EvaluationRunConfig):
-    from aiq.runtime.loader import PluginTypes
-    from aiq.runtime.loader import discover_and_register_plugins
-
-    # Register plugins before validation
-    discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
-
     # Run evaluation
     eval_runner = EvaluationRun(config=config)
     await eval_runner.run_and_evaluate()
