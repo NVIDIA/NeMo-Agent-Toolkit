@@ -97,7 +97,7 @@ The workflow configuration file is a YAML file that specifies the tools and mode
 functions:
   webpage_query:
     _type: webpage_query
-    webpage_url: https://docs.smith.langchain.com/user_guide
+    webpage_url: https://docs.smith.langchain.com
     description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
     embedder_name: nv-embedqa-e5-v5
     chunk_size: 512
@@ -188,7 +188,7 @@ The current workflow defines a tool to query the [LangSmith User Guide](https://
 functions:
   webpage_query:
     _type: webpage_query
-    webpage_url: https://docs.smith.langchain.com/user_guide
+    webpage_url: https://docs.smith.langchain.com
     description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
     embedder_name: nv-embedqa-e5-v5
     chunk_size: 512
@@ -212,7 +212,7 @@ To do this, create a copy of the original workflow configuration file. To add th
 functions:
   webpage_query:
     _type: webpage_query
-    webpage_url: https://docs.smith.langchain.com/user_guide
+    webpage_url: https://docs.smith.langchain.com
     description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
     embedder_name: nv-embedqa-e5-v5
     chunk_size: 512
@@ -223,7 +223,7 @@ to:
 functions:
   langsmith_query:
     _type: webpage_query
-    webpage_url: https://docs.smith.langchain.com/user_guide
+    webpage_url: https://docs.smith.langchain.com
     description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
     embedder_name: nv-embedqa-e5-v5
     chunk_size: 512
