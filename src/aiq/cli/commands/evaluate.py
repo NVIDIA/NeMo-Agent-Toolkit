@@ -19,7 +19,6 @@ from pathlib import Path
 
 import click
 
-from aiq.cli.cli_utils.config_override import load_and_override_config
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
 
@@ -96,9 +95,6 @@ async def run_and_evaluate(config: EvaluationRunConfig):
 
     # Register plugins before validation
     discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
-
-    # Apply overrides (validates that config is now correct)
-    _ = load_and_override_config(config.config_file, config.override)
 
     # Run evaluation
     eval_runner = EvaluationRun(config=config)

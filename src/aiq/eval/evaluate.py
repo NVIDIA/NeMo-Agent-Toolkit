@@ -233,10 +233,14 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         logger.info("Starting evaluation run with config file: %s", self.config.config_file)
 
         from aiq.builder.eval_builder import WorkflowEvalBuilder
+        from aiq.cli.cli_utils.config_override import load_and_override_config
         from aiq.runtime.loader import load_config
 
-        # Load the config object
-        config = load_config(self.config.config_file)
+        # Load and override the config
+        if self.config.override:
+            config = load_and_override_config(self.config.config_file, self.config.override)
+        else:
+            config = load_config(self.config.config_file)
         self.eval_config = config.eval
         logger.debug("Loaded evaluation configuration: %s", self.eval_config)
 
