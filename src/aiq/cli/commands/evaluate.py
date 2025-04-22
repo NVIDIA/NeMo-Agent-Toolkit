@@ -19,10 +19,9 @@ from pathlib import Path
 
 import click
 
+from aiq.cli.cli_utils.config_override import load_and_override_config
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
-from aiq.cli.cli_utils.config_override import load_and_override_config
-from aiq.data_models.config import AIQConfig
 
 logger = logging.getLogger(__name__)
 
@@ -92,10 +91,11 @@ def eval_command(ctx, **kwargs) -> None:
 
 
 async def run_and_evaluate(config: EvaluationRunConfig):
-    from aiq.runtime.loader import discover_and_register_plugins, PluginTypes
+    from aiq.runtime.loader import PluginTypes
+    from aiq.runtime.loader import discover_and_register_plugins
 
     # Register plugins before validation
-    discover_and_register_plugins(PluginTypes.ALL)
+    discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
 
     # Apply overrides (validates that config is now correct)
     _ = load_and_override_config(config.config_file, config.override)
