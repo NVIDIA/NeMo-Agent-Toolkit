@@ -1,22 +1,31 @@
 import asyncio
 import logging
+
+from langchain.output_parsers import ResponseSchema
+from langchain.output_parsers import StructuredOutputParser
+from langchain.schema import HumanMessage
+from langchain.schema import SystemMessage
+from langchain_core.language_models import BaseChatModel
 from tqdm import tqdm
 
-from langchain_core.language_models import BaseChatModel
-
-from langchain.output_parsers import StructuredOutputParser, ResponseSchema
-from langchain.schema import SystemMessage, HumanMessage
-
 from aiq.eval.evaluator.evaluator_model import EvalInput
+from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.evaluator.evaluator_model import EvalOutputItem
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.utils.tqdm_position_registry import TqdmPositionRegistry
 
 logger = logging.getLogger(__name__)
 
+# pylint: disable=line-too-long
+# flake8: noqa: E501
 
-def evaluation_prompt(judge_llm_prompt: str, question: str, answer_description: str, generated_answer: str, format_instructions: str, default_scoring: bool):
+
+def evaluation_prompt(judge_llm_prompt: str,
+                      question: str,
+                      answer_description: str,
+                      generated_answer: str,
+                      format_instructions: str,
+                      default_scoring: bool):
     """
     This function generates a prompt for the judge LLM to evaluate the generated answer.
     """
@@ -28,41 +37,39 @@ def evaluation_prompt(judge_llm_prompt: str, question: str, answer_description: 
     The reasoning is a 1-2 sentence explanation for the scoring.
     """
 
-    DEFAULT_EVAL_PROMPT = (
-        f"You are an intelligent assistant that responds strictly in JSON format."
-        f"Judge based on the following scoring rubric: {DEFAULT_SCORING_INSTRUCTIONS}"
-        f"{judge_llm_prompt}\n"
-        f"{format_instructions}\n"
-        f"Here is the user's query: {question}"
-        f"Here is the description of the expected answer: {answer_description}"
-        f"Here is the generated answer: {generated_answer}"
-    )
+    DEFAULT_EVAL_PROMPT = (f"You are an intelligent assistant that responds strictly in JSON format."
+                           f"Judge based on the following scoring rubric: {DEFAULT_SCORING_INSTRUCTIONS}"
+                           f"{judge_llm_prompt}\n"
+                           f"{format_instructions}\n"
+                           f"Here is the user's query: {question}"
+                           f"Here is the description of the expected answer: {answer_description}"
+                           f"Here is the generated answer: {generated_answer}")
 
-    EVAL_PROMPT = (
-        f"You are an intelligent assistant that responds strictly in JSON format. {judge_llm_prompt}\n"
-        f"{format_instructions}\n"
-        f"Here is the user's query: {question}"
-        f"Here is the description of the expected answer: {answer_description}"
-        f"Here is the generated answer: {generated_answer}"
-    )
+    EVAL_PROMPT = (f"You are an intelligent assistant that responds strictly in JSON format. {judge_llm_prompt}\n"
+                   f"{format_instructions}\n"
+                   f"Here is the user's query: {question}"
+                   f"Here is the description of the expected answer: {answer_description}"
+                   f"Here is the generated answer: {generated_answer}")
 
     return EVAL_PROMPT if not default_scoring else DEFAULT_EVAL_PROMPT
+
 
 class TunableRagEvaluator:
     '''Customizable RAG evaluator class with customizable LLM prompt for scoring.'''
 
-    def __init__(self, llm: BaseChatModel, judge_llm_prompt: str, max_concurrency: int, default_scoring: bool, default_score_weights: dict):
+    def __init__(self,
+                 llm: BaseChatModel,
+                 judge_llm_prompt: str,
+                 max_concurrency: int,
+                 default_scoring: bool,
+                 default_score_weights: dict):
         self.llm = llm
         self.max_concurrency = max_concurrency
         self.judge_llm_prompt = judge_llm_prompt
         self.semaphore = asyncio.Semaphore(self.max_concurrency)
         self.default_scoring = default_scoring
         # Set equal weights for each score
-        self.default_score_weights = {
-            "coverage": 1/3,
-            "correctness": 1/3,
-            "relevance": 1/3
-        }
+        self.default_score_weights = {"coverage": 1 / 3, "correctness": 1 / 3, "relevance": 1 / 3}
 
     async def evaluate(self, eval_input: EvalInput) -> EvalOutput:
         '''Evaluate function'''
@@ -77,15 +84,33 @@ class TunableRagEvaluator:
             score = 0.0
 
             default_evaluation_schema = [
-                ResponseSchema(name="coverage_score", description="Score for the coverage of all critical aspects mentioned in the expected answer. Ex. 0.5", type="float"),
-                ResponseSchema(name="correctness_score", description="Score for the accuracy of the generated answer compared to the expected answer. Ex. 0.5", type="float"),
-                ResponseSchema(name="relevance_score", description="Score for the relevance of the generated answer to the question. Ex. 0.5", type="float"),
-                ResponseSchema(name="reasoning", description="1-2 summarized sentences of reasoning for the scores. Ex. 'The generated answer covers all critical aspects mentioned in the expected answer, is correct, and is relevant to the question.'", type="string"),
+                ResponseSchema(
+                    name="coverage_score",
+                    description=
+                    "Score for the coverage of all critical aspects mentioned in the expected answer. Ex. 0.5",
+                    type="float"),
+                ResponseSchema(
+                    name="correctness_score",
+                    description=
+                    "Score for the accuracy of the generated answer compared to the expected answer. Ex. 0.5",
+                    type="float"),
+                ResponseSchema(name="relevance_score",
+                               description="Score for the relevance of the generated answer to the question. Ex. 0.5",
+                               type="float"),
+                ResponseSchema(
+                    name="reasoning",
+                    description=
+                    "1-2 summarized sentences of reasoning for the scores. Ex. 'The generated answer covers all critical aspects mentioned in the expected answer, is correct, and is relevant to the question.'",
+                    type="string"),
             ]
 
             custom_evaluation_schema = [
                 ResponseSchema(name="score", description="Score for the generated answer. Ex. 0.5", type="float"),
-                ResponseSchema(name="reasoning", description="1-2 sentence reasoning for the score. Ex. 'The generated answer is exactly the same as the description of the expected answer.'", type="string"),
+                ResponseSchema(
+                    name="reasoning",
+                    description=
+                    "1-2 sentence reasoning for the score. Ex. 'The generated answer is exactly the same as the description of the expected answer.'",
+                    type="string"),
             ]
 
             if self.default_scoring:
@@ -96,16 +121,16 @@ class TunableRagEvaluator:
             llm_input_response_parser = StructuredOutputParser.from_response_schemas(evaluation_schema)
             format_instructions = llm_input_response_parser.get_format_instructions()
 
-            eval_prompt = evaluation_prompt(
-                judge_llm_prompt=self.judge_llm_prompt,
-                question = question,
-                answer_description = answer_description,
-                generated_answer = generated_answer,
-                format_instructions=format_instructions,
-                default_scoring=self.default_scoring
-            )
+            eval_prompt = evaluation_prompt(judge_llm_prompt=self.judge_llm_prompt,
+                                            question=question,
+                                            answer_description=answer_description,
+                                            generated_answer=generated_answer,
+                                            format_instructions=format_instructions,
+                                            default_scoring=self.default_scoring)
 
-            messages = [SystemMessage(content="You must respond only in JSON format."), HumanMessage(content=eval_prompt)]
+            messages = [
+                SystemMessage(content="You must respond only in JSON format."), HumanMessage(content=eval_prompt)
+            ]
 
             response = await self.llm.ainvoke(messages)
             try:
@@ -117,29 +142,35 @@ class TunableRagEvaluator:
                         relevance_score = parsed_response["relevance_score"]
                         reasoning = parsed_response["reasoning"]
                     except KeyError as e:
-                        logger.error(f"Missing required keys in default scoring response: {', '.join(str(arg) for arg in e.args)}")
+                        logger.error(
+                            f"Missing required keys in default scoring response: {', '.join(str(arg) for arg in e.args)}"
+                        )
                         reasoning = f"Error in evaluator from parsing judge LLM response. Missing required key(s): {', '.join(str(arg) for arg in e.args)}"
                         raise
 
                     # Calculate score
                     coverage_weight = self.default_score_weights.get("coverage", 0)
-                    correctness_weight = self.default_score_weights.get("correctness", 0) 
+                    correctness_weight = self.default_score_weights.get("correctness", 0)
                     relevance_weight = self.default_score_weights.get("relevance", 0)
-                    
+
                     if round(coverage_weight + correctness_weight + relevance_weight, 2) != 1:
                         logger.warning("The sum of the default score weights is not 1. The weights will be normalized.")
                         coverage_weight = coverage_weight / (coverage_weight + correctness_weight + relevance_weight)
-                        correctness_weight = correctness_weight / (coverage_weight + correctness_weight + relevance_weight)
+                        correctness_weight = correctness_weight / (coverage_weight + correctness_weight +
+                                                                   relevance_weight)
                         relevance_weight = relevance_weight / (coverage_weight + correctness_weight + relevance_weight)
 
-                    score = (coverage_weight * coverage_score + correctness_weight * correctness_score + relevance_weight * relevance_score)
+                    score = (coverage_weight * coverage_score + correctness_weight * correctness_score +
+                             relevance_weight * relevance_score)
 
                 else:
                     try:
                         score = parsed_response["score"]
                         reasoning = parsed_response["reasoning"]
                     except KeyError as e:
-                        logger.error(f"Missing required keys in custom scoring response: {', '.join(str(arg) for arg in e.args)}")
+                        logger.error(
+                            f"Missing required keys in custom scoring response: {', '.join(str(arg) for arg in e.args)}"
+                        )
                         reasoning = f"Error in evaluator from parsing judge LLM response. Missing required key(s): {', '.join(str(arg) for arg in e.args)}"
                         raise
             except (KeyError, ValueError) as e:
@@ -166,7 +197,7 @@ class TunableRagEvaluator:
                     "generated_answer": generated_answer,
                     "reasoning": reasoning
                 }
-            
+
             return score, reasoning
 
         async def wrapped_process(item: EvalInputItem) -> tuple[float, dict]:
@@ -175,10 +206,10 @@ class TunableRagEvaluator:
             Use the semaphore to limit the number of concurrent items.
             """
             async with self.semaphore:
-              result = await process_item(item)
-              # Update the progress bar
-              pbar.update(1)
-              return result
+                result = await process_item(item)
+                # Update the progress bar
+                pbar.update(1)
+                return result
 
         try:
             # Claim a tqdm position to display the progress bar
