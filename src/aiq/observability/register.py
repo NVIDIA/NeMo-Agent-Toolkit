@@ -50,122 +50,6 @@ def get_wandb_api_key(config_api_key: Optional[str] = None) -> Optional[str]:
     return None
 
 
-class AgentIQToWeaveExporter(SpanExporter):
-    """
-    A wrapper around the real OTLPSpanExporter that transforms
-    attributes so that Weave sees them as 'inputs' and/or 'outputs'.
-    """
-
-    def __init__(self, wrapped_exporter: SpanExporter):
-        self._wrapped_exporter = wrapped_exporter
-
-    def _parse_and_structure_messages(
-        self, value_str: str, mime_type: str, default_role: str
-    ) -> List[Dict[str, str]]:
-        """Parses a string value based on mime type and structures it into messages."""
-        messages = []
-        if mime_type == "application/json" and value_str:
-            try:
-                parsed = json.loads(value_str)
-                if isinstance(parsed, list):
-                    for item in parsed:
-                        if isinstance(item, dict):
-                            role = item.get("role") or item.get("type") or default_role
-                            content = str(item.get("content", ""))
-                            messages.append({"role": str(role), "content": content})
-                        else:
-                            messages.append({"role": default_role, "content": str(item)})
-                elif isinstance(parsed, dict):
-                    role = parsed.get("role") or parsed.get("type") or default_role
-                    content = str(parsed.get("content", parsed))
-                    messages.append({"role": str(role), "content": content})
-                else:
-                    messages.append({"role": default_role, "content": str(parsed)})
-            except json.JSONDecodeError:
-                # Fallback to plain text if JSON parsing fails
-                messages.append({"role": default_role, "content": value_str})
-        else:
-            # Treat as plain text if not JSON or empty value
-            messages.append({"role": default_role, "content": value_str})
-        return messages
-
-    def _update_attributes_with_messages(
-        self,
-        attributes: Dict[str, Any],
-        prefix: str,
-        default_role: str,
-        target_attribute: str,
-    ):
-        """Processes attributes with a given prefix, structures them as messages,
-           and updates the attributes dictionary."""
-        prefixed_attrs = {k: v for k, v in attributes.items() if k.startswith(prefix)}
-        value_key = f"{prefix}value"
-        mime_type_key = f"{prefix}mime_type"
-
-        if value_key in prefixed_attrs:
-            raw_value = str(prefixed_attrs.get(value_key, ""))
-            mime_type = str(prefixed_attrs.get(mime_type_key, ""))
-
-            structured_messages = self._parse_and_structure_messages(
-                raw_value, mime_type, default_role
-            )
-
-            if structured_messages:
-                # Build the dictionary structure {index: {"role": role, "content": content}}
-                messages_dict = {
-                    i: {"role": msg.get("role", default_role), "content": msg.get("content", "")}
-                    for i, msg in enumerate(structured_messages)
-                }
-                if messages_dict:  # Ensure the dictionary is not empty
-                    attributes[target_attribute] = messages_dict
-
-    def export(self, spans: Sequence[ReadableSpan]) -> SpanExportResult:
-        for span in spans:
-            if not span.attributes:
-                continue
-
-            new_attributes = dict(span.attributes)
-
-            # Process inputs
-            self._update_attributes_with_messages(
-                new_attributes,
-                prefix="input.",
-                default_role="user",
-                target_attribute=oi.SpanAttributes.LLM_INPUT_MESSAGES,
-            )
-
-            # Process outputs
-            self._update_attributes_with_messages(
-                new_attributes,
-                prefix="output.",
-                default_role="assistant",
-                target_attribute=oi.SpanAttributes.LLM_OUTPUT_MESSAGES,
-            )
-
-            # Check if it's an LLM span and process token counts
-            span_kind = new_attributes.get(oi.SpanAttributes.OPENINFERENCE_SPAN_KIND)
-            if span_kind == "LLM":
-                prompt_tokens = span.attributes.get("llm.token_count.prompt")
-                completion_tokens = span.attributes.get("llm.token_count.completion")
-                total_tokens = span.attributes.get("llm.token_count.total")
-
-                # Add the standard OI attributes if the nested ones were found
-                if prompt_tokens is not None:
-                    new_attributes[oi.SpanAttributes.LLM_TOKEN_COUNT_PROMPT] = prompt_tokens
-                if completion_tokens is not None:
-                    new_attributes[oi.SpanAttributes.LLM_TOKEN_COUNT_COMPLETION] = completion_tokens
-                if total_tokens is not None:
-                    new_attributes[oi.SpanAttributes.LLM_TOKEN_COUNT_TOTAL] = total_tokens
-
-            span._attributes = new_attributes
-
-        # Export the (potentially modified) spans
-        return self._wrapped_exporter.export(spans)
-
-    def shutdown(self):
-        return self._wrapped_exporter.shutdown()
-
-
 class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
     """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
     entity: str = Field(description="The W&B entity/organization.")
@@ -215,12 +99,9 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
             "Authorization": f"Basic {auth}",
             "project_id": f"{config.entity}/{config.project}"
         }
-        # Create and yield the OTLP HTTP exporter
-        yield AgentIQToWeaveExporter(
-            OTLPSpanExporter(
-                endpoint=config.endpoint,
-                headers=headers
-            )
+        yield OTLPSpanExporter(
+            endpoint=config.endpoint,
+            headers=headers
         )
     except Exception as ex:
         logger.error("Error in Weave telemetry Exporter\n %s", ex, exc_info=True)
