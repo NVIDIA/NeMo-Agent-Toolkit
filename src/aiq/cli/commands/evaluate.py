@@ -77,6 +77,12 @@ logger = logging.getLogger(__name__)
     default=1,
     help="Number of repetitions for the evaluation.",
 )
+@click.option(
+    "--override",
+    type=(str, str),
+    multiple=True,
+    help="Override config values using dot notation (e.g., --override llms.nim_llm.temperature 0.7)",
+)
 @click.pass_context
 def eval_command(ctx, **kwargs) -> None:
     """ Evaluate datasets with the specified mechanism"""
@@ -101,6 +107,7 @@ def process_aiq_eval(
     endpoint: str,
     endpoint_timeout: int,
     reps: int,
+    override: tuple[tuple[str, str], ...],
 ):
     """
     Process the eval command and execute the evaluation. Here the config_file, if provided, is checked for its existence
@@ -127,5 +134,6 @@ def process_aiq_eval(
         endpoint=endpoint,
         endpoint_timeout=endpoint_timeout,
         reps=reps,
+        override=override,
     )
     asyncio.run(run_and_evaluate(config))
