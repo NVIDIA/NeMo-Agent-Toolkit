@@ -183,7 +183,7 @@ AgentIQ includes several built-in tools (functions) that can be used in any work
 aiq info components -t function
 ```
 
-The current workflow defines a tool to query the [LangSmith User Guide](https://docs.smith.langchain.com/user_guide). This is defined in the `tools` section of the configuration file:
+The current workflow defines a tool to query the [LangSmith User Guide](https://docs.smith.langchain.com). This is defined in the `tools` section of the configuration file:
 ```yaml
 functions:
   webpage_query:
