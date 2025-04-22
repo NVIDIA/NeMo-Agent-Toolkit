@@ -13,10 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=unused-import
-# flake8: noqa
-# isort:skip_file
+FROM ubuntu:22.04
 
-from .console import register as console_register
-from .fastapi import register as fastapi_register
-from .mcp import register as mcp_register
+# Install Python and pip
+RUN apt-get update && apt-get upgrade -y && apt install -y python3 python3-pip
+
+# Install MCP proxy and tools
+RUN pip3 install uv uvx
+RUN pip3 install mcp-proxy
+
+# Create directory for scripts
+RUN mkdir /scripts
+
+# Set the entrypoint to run the MCP proxy
+ENTRYPOINT [ "mcp-proxy", "--pass-environment"]
