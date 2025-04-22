@@ -16,7 +16,7 @@
 functions:
   webpage_query:
     _type: webpage_query
-    webpage_url: https://docs.smith.langchain.com/user_guide
+    webpage_url: https://docs.smith.langchain.com
     description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
     embedder_name: vllm_embedder
     chunk_size: 512
