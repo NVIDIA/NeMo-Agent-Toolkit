@@ -87,7 +87,7 @@ To define the pipeline configuration, we will start with the `examples/simple/co
 functions:
   webpage_query:
     _type: webpage_query
-    webpage_url: https://docs.smith.langchain.com/user_guide
+    webpage_url: https://docs.smith.langchain.com
     description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
     embedder_name: nv-embedqa-e5-v5
     chunk_size: 512
@@ -149,7 +149,7 @@ The pipeline configuration will be similar to the NIM example, with the key diff
 functions:
   webpage_query:
     _type: webpage_query
-    webpage_url: https://docs.smith.langchain.com/user_guide
+    webpage_url: https://docs.smith.langchain.com
     description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
     embedder_name: vllm_embedder
     chunk_size: 512
