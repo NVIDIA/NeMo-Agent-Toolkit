@@ -55,7 +55,7 @@ def evaluation_prompt(judge_llm_prompt: str,
 
 
 class TunableRagEvaluator:
-    '''Customizable RAG evaluator class with customizable LLM prompt for scoring.'''
+    '''Tunable RAG evaluator class with customizable LLM prompt for scoring.'''
 
     def __init__(self,
                  llm: BaseChatModel,

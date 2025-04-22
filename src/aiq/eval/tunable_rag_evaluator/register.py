@@ -4,12 +4,13 @@ from aiq.builder.builder import EvalBuilder
 from aiq.builder.evaluator import EvaluatorInfo
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_evaluator
+from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.evaluator import EvaluatorBaseConfig
 
 
 class TunableRagEvaluatorConfig(EvaluatorBaseConfig, name="tunable_rag_evaluator"):
-    '''Configuration for custom RAG evaluator'''
-    llm_name: str = Field(description="Name of the judge LLM")
+    '''Configuration for tunable RAG evaluator'''
+    llm_name: LLMRef = Field(description="Name of the judge LLM")
     judge_llm_prompt: str = Field(description="LLM prompt for the judge LLM")
     default_scoring: bool = Field(description="Whether to use default scoring", default=False)
     default_score_weights: dict = Field(
@@ -21,7 +22,7 @@ class TunableRagEvaluatorConfig(EvaluatorBaseConfig, name="tunable_rag_evaluator
 
 @register_evaluator(config_type=TunableRagEvaluatorConfig)
 async def register_tunable_rag_evaluator(config: TunableRagEvaluatorConfig, builder: EvalBuilder):
-    '''Register customizable RAG evaluator'''
+    '''Register tunable RAG evaluator'''
     from .evaluate import TunableRagEvaluator
 
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
@@ -31,4 +32,4 @@ async def register_tunable_rag_evaluator(config: TunableRagEvaluatorConfig, buil
                                     config.default_scoring,
                                     config.default_score_weights)
 
-    yield EvaluatorInfo(config=config, evaluate_fn=evaluator.evaluate, description="Customizable RAG Evaluator")
+    yield EvaluatorInfo(config=config, evaluate_fn=evaluator.evaluate, description="Tunable RAG Evaluator")
