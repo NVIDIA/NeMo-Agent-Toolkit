@@ -137,21 +137,6 @@ class FastApiFrontEndPluginWorkerBase(ABC):
             **cors_kwargs,
         )
 
-    def set_user_attributes(self, request: Request, session_manager: AIQSessionManager) -> None:
-        """
-        Extracts and sets user request attributes from an HTTP request.
-        """
-        session_manager.context.user_attributes._request.method = request.method
-        session_manager.context.user_attributes._request.url_path = request.url.path
-        session_manager.context.user_attributes._request.url_port = request.url.port
-        session_manager.context.user_attributes._request.url_scheme = request.url.scheme
-        session_manager.context.user_attributes._request.headers = request.headers
-        session_manager.context.user_attributes._request.query_params = request.query_params
-        session_manager.context.user_attributes._request.path_params = request.path_params
-        session_manager.context.user_attributes._request.client_host = request.client.host
-        session_manager.context.user_attributes._request.client_port = request.client.port
-        session_manager.context.user_attributes._request.cookies = request.cookies
-
     @abstractmethod
     async def configure(self, app: FastAPI, builder: WorkflowBuilder):
         pass
@@ -255,18 +240,20 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                    background_tasks: BackgroundTasks,
                                    http_request: Request):
             """Handle evaluation requests."""
-            # if job_id is present and already exists return the job info
-            self.set_user_attributes(http_request, session_manager)
-            if request.job_id:
-                job = job_store.get_job(request.job_id)
-                if job:
-                    return AIQEvaluateResponse(job_id=job.job_id, status=job.status)
 
-            job_id = job_store.create_job(request.config_file, request.job_id, request.expiry_seconds)
-            create_cleanup_task()
-            background_tasks.add_task(run_evaluation, job_id, request.config_file, request.reps, session_manager)
+            async with session_manager.session(request=http_request):
 
-            return AIQEvaluateResponse(job_id=job_id, status="submitted")
+                # if job_id is present and already exists return the job info
+                if request.job_id:
+                    job = job_store.get_job(request.job_id)
+                    if job:
+                        return AIQEvaluateResponse(job_id=job.job_id, status=job.status)
+
+                job_id = job_store.create_job(request.config_file, request.job_id, request.expiry_seconds)
+                create_cleanup_task()
+                background_tasks.add_task(run_evaluation, job_id, request.config_file, request.reps, session_manager)
+
+                return AIQEvaluateResponse(job_id=job_id, status="submitted")
 
         def translate_job_to_response(job: JobInfo) -> AIQEvaluateStatusResponse:
             """Translate a JobInfo object to an AIQEvaluateStatusResponse."""
@@ -279,39 +266,45 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                              updated_at=job.updated_at,
                                              expires_at=job_store.get_expires_at(job))
 
-        def get_job_status(job_id: str, http_request: Request) -> AIQEvaluateStatusResponse:
+        async def get_job_status(job_id: str, http_request: Request) -> AIQEvaluateStatusResponse:
             """Get the status of an evaluation job."""
             logger.info("Getting status for job %s", job_id)
-            self.set_user_attributes(http_request, session_manager)
-            job = job_store.get_job(job_id)
-            if not job:
-                logger.warning("Job %s not found", job_id)
-                raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
-            logger.info(f"Found job {job_id} with status {job.status}")
-            return translate_job_to_response(job)
 
-        def get_last_job_status(http_request: Request) -> AIQEvaluateStatusResponse:
+            async with session_manager.session(request=http_request):
+
+                job = job_store.get_job(job_id)
+                if not job:
+                    logger.warning("Job %s not found", job_id)
+                    raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+                logger.info(f"Found job {job_id} with status {job.status}")
+                return translate_job_to_response(job)
+
+        async def get_last_job_status(http_request: Request) -> AIQEvaluateStatusResponse:
             """Get the status of the last created evaluation job."""
             logger.info("Getting last job status")
-            self.set_user_attributes(http_request, session_manager)
-            job = job_store.get_last_job()
-            if not job:
-                logger.warning("No jobs found when requesting last job status")
-                raise HTTPException(status_code=404, detail="No jobs found")
-            logger.info("Found last job %s with status %s", job.job_id, job.status)
-            return translate_job_to_response(job)
 
-        def get_jobs(http_request: Request, status: str | None = None) -> list[AIQEvaluateStatusResponse]:
+            async with session_manager.session(request=http_request):
+
+                job = job_store.get_last_job()
+                if not job:
+                    logger.warning("No jobs found when requesting last job status")
+                    raise HTTPException(status_code=404, detail="No jobs found")
+                logger.info("Found last job %s with status %s", job.job_id, job.status)
+                return translate_job_to_response(job)
+
+        async def get_jobs(http_request: Request, status: str | None = None) -> list[AIQEvaluateStatusResponse]:
             """Get all jobs, optionally filtered by status."""
-            self.set_user_attributes(http_request, session_manager)
-            if status is None:
-                logger.info("Getting all jobs")
-                jobs = job_store.get_all_jobs()
-            else:
-                logger.info("Getting jobs with status %s", status)
-                jobs = job_store.get_jobs_by_status(status)
-            logger.info("Found %d jobs", len(jobs))
-            return [translate_job_to_response(job) for job in jobs]
+
+            async with session_manager.session(request=http_request):
+
+                if status is None:
+                    logger.info("Getting all jobs")
+                    jobs = job_store.get_all_jobs()
+                else:
+                    logger.info("Getting jobs with status %s", status)
+                    jobs = job_store.get_jobs_by_status(status)
+                logger.info("Found %d jobs", len(jobs))
+                return [translate_job_to_response(job) for job in jobs]
 
         if self.front_end_config.evaluate.path:
             # Add last job endpoint first (most specific)
@@ -398,9 +391,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                self.set_user_attributes(request, session_manager)
+                async with session_manager.session(request=request):
 
-                return await generate_single_response(None, session_manager, result_type=result_type)
+                    return await generate_single_response(None, session_manager, result_type=result_type)
 
             return get_single
 
@@ -408,16 +401,16 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def get_stream(request: Request):
 
-                self.set_user_attributes(request, session_manager)
+                async with session_manager.session(request=request):
 
-                return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                         content=generate_streaming_response_as_str(
-                                             None,
-                                             session_manager=session_manager,
-                                             streaming=streaming,
-                                             step_adaptor=self.get_step_adaptor(),
-                                             result_type=result_type,
-                                             output_type=output_type))
+                    return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                             content=generate_streaming_response_as_str(
+                                                 None,
+                                                 session_manager=session_manager,
+                                                 streaming=streaming,
+                                                 step_adaptor=self.get_step_adaptor(),
+                                                 result_type=result_type,
+                                                 output_type=output_type))
 
             return get_stream
 
@@ -425,14 +418,15 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def get_stream(request: Request):
 
-                self.set_user_attributes(request, session_manager)
+                async with session_manager.session(request=request):
 
-                return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                         content=generate_streaming_response_raw_as_str(None,
-                                                                                        session_manager=session_manager,
-                                                                                        streaming=streaming,
-                                                                                        result_type=result_type,
-                                                                                        output_type=output_type))
+                    return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                             content=generate_streaming_response_raw_as_str(
+                                                 None,
+                                                 session_manager=session_manager,
+                                                 streaming=streaming,
+                                                 result_type=result_type,
+                                                 output_type=output_type))
 
             return get_stream
 
@@ -442,9 +436,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                self.set_user_attributes(request, session_manager)
+                async with session_manager.session(request=request):
 
-                return await generate_single_response(payload, session_manager, result_type=result_type)
+                    return await generate_single_response(payload, session_manager, result_type=result_type)
 
             return post_single
 
@@ -455,16 +449,16 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_stream(request: Request, payload: request_type):
 
-                self.set_user_attributes(request, session_manager)
+                async with session_manager.session(request=request):
 
-                return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                         content=generate_streaming_response_as_str(
-                                             payload,
-                                             session_manager=session_manager,
-                                             streaming=streaming,
-                                             step_adaptor=self.get_step_adaptor(),
-                                             result_type=result_type,
-                                             output_type=output_type))
+                    return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                             content=generate_streaming_response_as_str(
+                                                 payload,
+                                                 session_manager=session_manager,
+                                                 streaming=streaming,
+                                                 step_adaptor=self.get_step_adaptor(),
+                                                 result_type=result_type,
+                                                 output_type=output_type))
 
             return post_stream
 
@@ -478,14 +472,15 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_stream(request: Request, payload: request_type):
 
-                self.set_user_attributes(request, session_manager)
+                async with session_manager.session(request=request):
 
-                return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                         content=generate_streaming_response_raw_as_str(payload,
-                                                                                        session_manager=session_manager,
-                                                                                        streaming=streaming,
-                                                                                        result_type=result_type,
-                                                                                        output_type=output_type))
+                    return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                             content=generate_streaming_response_raw_as_str(
+                                                 payload,
+                                                 session_manager=session_manager,
+                                                 streaming=streaming,
+                                                 result_type=result_type,
+                                                 output_type=output_type))
 
             return post_stream
 

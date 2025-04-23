@@ -368,6 +368,7 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
 
             return getattr(value, first_key)
 
+        # If the value is None bypass conversion to avoid raising an error.
         if value is None:
             return value
 

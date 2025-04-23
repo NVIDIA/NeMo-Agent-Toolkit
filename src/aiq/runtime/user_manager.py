@@ -1,3 +1,18 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from starlette.datastructures import Headers
 from starlette.datastructures import QueryParams
 
@@ -75,7 +90,7 @@ class UserAttributes:
         This property retrieves the query parameters from the request stored in a dictionary-like object.
 
         Returns:
-            QueryParams | None: _description_
+            QueryParams | None
         """
         return self._request.query_params
 
@@ -85,7 +100,7 @@ class UserAttributes:
         This property retrieves the path parameters from the request stored in a dictionary-like object.
 
         Returns:
-            dict[str, str] | None: _description_
+            dict[str, str] | None
         """
         return self._request.path_params
 
@@ -95,7 +110,7 @@ class UserAttributes:
         This property retrieves the clients remote hostname or IP address.
 
         Returns:
-            str | None: _description_
+            str | None
         """
         return self._request.client_host
 
@@ -103,8 +118,9 @@ class UserAttributes:
     def client_port(self) -> int | None:
         """
         This property retrieves the clients remote port number from which the client is connecting to.
+
         Returns:
-            int | None: _description_
+            int | None
         """
         return self._request.client_port
 
@@ -114,6 +130,6 @@ class UserAttributes:
         This property retrieves the cookies from the request stored in a dictionary-like object.
 
         Returns:
-            dict[str, str] | None: _description_
+            dict[str, str] | None
         """
         return self._request.cookies
