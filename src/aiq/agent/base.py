@@ -30,7 +30,9 @@ TOOL_NOT_FOUND_ERROR_MESSAGE = "There is no tool named {tool_name}. Tool must be
 INPUT_SCHEMA_MESSAGE = ". Arguments must be provided as a valid JSON object following this format: {schema}"
 NO_INPUT_ERROR_MESSAGE = "No human input recieved to the agent, Please ask a valid question."
 
+AGENT_LOG_PREFIX = "[AGENT]"
 AGENT_RESPONSE_LOG_MESSAGE = f"\n{'-' * 30}\n" + \
+                                 AGENT_LOG_PREFIX + "\n" + \
                                  Fore.YELLOW + \
                                  "Agent input: %s\n" + \
                                  Fore.CYAN + \
@@ -39,6 +41,7 @@ AGENT_RESPONSE_LOG_MESSAGE = f"\n{'-' * 30}\n" + \
                                  f"\n{'-' * 30}"
 
 TOOL_RESPONSE_LOG_MESSAGE = f"\n{'-' * 30}\n" + \
+                                 AGENT_LOG_PREFIX + "\n" + \
                                  Fore.WHITE + \
                                  "Calling Tools: %s\n" + \
                                  Fore.YELLOW + \
