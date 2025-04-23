@@ -33,7 +33,7 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 logger = logging.getLogger(__name__)
 
 
-def get_wandb_api_key(config_api_key: Optional[str] = None) -> Optional[str]:
+def set_wandb_api_key(config_api_key: Optional[str] = None) -> Optional[str]:
     """
     Get the W&B API key from various sources in order of priority:
     1. Config provided key
@@ -54,31 +54,19 @@ class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
     """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
     entity: str = Field(description="The W&B entity/organization.")
     project: str = Field(description="The W&B project name.")
-    log_otel_only: bool = Field(
-        default=True,
-        description="If true, only log opentelemetry traces to Weave. If false, log all traces to Weave."
-    )
     api_key: Optional[str] = Field(
         default=None,
         description="Your W&B API key for authentication. If not provided, will look for WANDB_API_KEY environment variable."
-    )
-    endpoint: Optional[str] = Field(
-        default="https://trace.wandb.ai/otel/v1/traces",
-        description="The Weave OTEL endpoint to export telemetry traces. If not provided, will use the default Weave endpoint."
     )
 
 
 @register_telemetry_exporter(config_type=WeaveTelemetryExporter)
 async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Builder):
-    import base64
-    from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+    if config.api_key:
+        set_wandb_api_key(config.api_key)
 
-    # Initialize Weave client if log_otel_only is false
-    # it captures traces from the underlying frameworks weave has integration with
-    # list of weave integrations: https://weave-docs.wandb.ai/guides/integrations/
-    if not config.log_otel_only:
-        import weave
-        _ = weave.init(project_name=f"{config.entity}/{config.project}")
+    import weave
+    _ = weave.init(project_name=f"{config.entity}/{config.project}")
 
     class NoOpSpanExporter:
         def export(self, spans):
@@ -87,26 +75,9 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
         def shutdown(self):
             return None
 
-    api_key = get_wandb_api_key(config.api_key)
-    if not api_key:
-        logger.error("W&B API key not found. Please provide it in the config or set WANDB_API_KEY environment variable.")
-        yield NoOpSpanExporter()
-        return
-
-    try:
-        auth = base64.b64encode(f"api:{api_key}".encode()).decode()
-        headers = {
-            "Authorization": f"Basic {auth}",
-            "project_id": f"{config.entity}/{config.project}"
-        }
-        yield OTLPSpanExporter(
-            endpoint=config.endpoint,
-            headers=headers
-        )
-    except Exception as ex:
-        logger.error("Error in Weave telemetry Exporter\n %s", ex, exc_info=True)
-        yield NoOpSpanExporter()
-
+    # just yielding None errors with 'NoneType' object has no attribute 'export'
+    yield NoOpSpanExporter()
+    
 
 class PhoenixTelemetryExporter(TelemetryExporterBaseConfig, name="phoenix"):
     """A telemetry exporter to transmit traces to externally hosted phoenix service."""
