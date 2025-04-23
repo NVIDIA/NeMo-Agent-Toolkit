@@ -332,10 +332,18 @@ def mock_tool():
             name: str = tool_name
             description: str = 'test tool:' + tool_name
 
-            async def _arun(self, query: str = 'test', run_manager: AsyncCallbackManagerForToolRun | None = None):  # noqa: E501  # pylint: disable=arguments-differ
+            async def _arun(self,
+                            query: str | dict = 'test',
+                            *args,
+                            run_manager: AsyncCallbackManagerForToolRun | None = None,
+                            **kwargs):  # noqa: E501  # pylint: disable=arguments-differ
                 return query
 
-            def _run(self, query: str = 'test', run_manager: CallbackManagerForToolRun | None = None):  # noqa: E501  # pylint: disable=arguments-differ
+            def _run(self,
+                     query: str | dict = 'test',
+                     *args,
+                     run_manager: CallbackManagerForToolRun | None = None,
+                     **kwargs):  # noqa: E501  # pylint: disable=arguments-differ
                 return query
 
         return MockTool()
