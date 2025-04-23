@@ -38,7 +38,7 @@ from aiq.agent.base import NO_INPUT_ERROR_MESSAGE
 from aiq.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
 from aiq.agent.base import TOOL_RESPONSE_LOG_MESSAGE
 from aiq.agent.base import AgentDecision
-from aiq.agent.base import BaseAgent
+from aiq.agent.dual_node import DualNodeAgent
 from aiq.agent.react_agent.output_parser import ReActOutputParser
 from aiq.agent.react_agent.output_parser import ReActOutputParserException
 
@@ -52,7 +52,7 @@ class ReActGraphState(BaseModel):
     tool_responses: list[BaseMessage] = Field(default_factory=list)  # the responses from any tool calls
 
 
-class ReActAgentGraph(BaseAgent):
+class ReActAgentGraph(DualNodeAgent):
     """Configurable LangGraph ReAct Agent. A ReAct Agent performs reasoning inbetween tool calls, and utilizes the tool
     names and descriptions to select the optimal tool.  Supports retrying on output parsing errors.  Argument
     "detailed_logs" toggles logging of inputs, outputs, and intermediate steps."""
@@ -270,7 +270,7 @@ class ReActAgentGraph(BaseAgent):
 
     async def build_graph(self):
         try:
-            self.graph = await super()._build_graph(state=ReActGraphState)
+            await super()._build_graph(state_schema=ReActGraphState)
             logger.debug("ReAct Graph built and compiled successfully")
             return self.graph
         except Exception as ex:

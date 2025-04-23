@@ -70,7 +70,7 @@ aiq run --config_file examples/simple/configs/config.yml --input "What is LangSm
 $ aiq run --config_file=examples/simple/configs/config.yml --input "What is LangSmith"
 2025-01-29 15:33:57,665 - aiq.cli.run - INFO - Loading configuration from: examples/simple/configs/config.yml
 2025-01-29 15:33:59,375 - langchain_community.utils.user_agent - WARNING - USER_AGENT environment variable not set, consider setting it to identify your requests.
-2025-01-29 15:33:59,410 - aiq_simple.register - INFO - Generating docs for the webpage: https://docs.smith.langchain.com/user_guide
+2025-01-29 15:33:59,410 - aiq_simple.register - INFO - Generating docs for the webpage: https://docs.smith.langchain.com
 2025-01-29 15:34:00,725 - faiss.loader - INFO - Loading faiss.
 2025-01-29 15:34:00,816 - faiss.loader - INFO - Successfully loaded faiss.
 2025-01-29 15:34:01,255 - aiq.workflows.react_agent.agent - INFO - Initializing ReAct Agent Graph

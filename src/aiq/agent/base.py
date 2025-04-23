@@ -22,9 +22,7 @@ from colorama import Fore
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
-from langgraph.graph import StateGraph
 from langgraph.graph.graph import CompiledGraph
-from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 
@@ -71,25 +69,5 @@ class BaseAgent(ABC):
         self.graph = None
 
     @abstractmethod
-    async def agent_node(self, state: BaseModel) -> BaseModel:
+    async def _build_graph(self, state_schema) -> CompiledGraph:
         pass
-
-    @abstractmethod
-    async def tool_node(self, state: BaseModel) -> BaseModel:
-        pass
-
-    @abstractmethod
-    async def conditional_edge(self, state: BaseModel) -> str:
-        pass
-
-    async def _build_graph(self, state) -> CompiledGraph:
-        log.debug("Building and compiling the Agent Graph")
-        graph = StateGraph(state)
-        graph.add_node("agent", self.agent_node)
-        graph.add_node("tool", self.tool_node)
-        graph.add_edge("tool", "agent")
-        conditional_edge_possible_outputs = {AgentDecision.TOOL: "tool", AgentDecision.END: "__end__"}
-        graph.add_conditional_edges("agent", self.conditional_edge, conditional_edge_possible_outputs)
-        graph.set_entry_point("agent")
-        self.graph = graph.compile()
-        return self.graph

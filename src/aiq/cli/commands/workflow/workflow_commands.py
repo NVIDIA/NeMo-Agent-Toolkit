@@ -270,6 +270,9 @@ def delete_command(workflow_name: str):
         workflow_name (str): The name of the workflow to delete.
     """
     try:
+        if not click.confirm(f"Are you sure you want to delete the workflow '{workflow_name}'?"):
+            click.echo("Workflow deletion cancelled.")
+            return
         editable = get_repo_root() is not None
 
         workflow_dir = get_workflow_path_from_name(workflow_name)
