@@ -25,6 +25,7 @@ from langgraph.prebuilt import ToolNode
 from pydantic import BaseModel
 from pydantic import Field
 
+from aiq.agent.base import AGENT_LOG_PREFIX
 from aiq.agent.base import AGENT_RESPONSE_LOG_MESSAGE
 from aiq.agent.base import TOOL_RESPONSE_LOG_MESSAGE
 from aiq.agent.base import AgentDecision
@@ -51,11 +52,11 @@ class ToolCallAgentGraph(DualNodeAgent):
                  handle_tool_errors: bool = True):
         super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs)
         self.tool_caller = ToolNode(tools, handle_tool_errors=handle_tool_errors)
-        logger.debug("Initialized Tool Calling Agent Graph")
+        logger.debug("%s Initialized Tool Calling Agent Graph", AGENT_LOG_PREFIX)
 
     async def agent_node(self, state: ToolCallAgentGraphState):
         try:
-            logger.debug('Starting the Tool Calling Agent Node')
+            logger.debug('%s Starting the Tool Calling Agent Node', AGENT_LOG_PREFIX)
             if len(state.messages) == 0:
                 raise RuntimeError('No input received in state: "messages"')
             response = await self.llm.ainvoke(state.messages, config=RunnableConfig(callbacks=self.callbacks))
@@ -66,28 +67,29 @@ class ToolCallAgentGraph(DualNodeAgent):
             state.messages += [response]
             return state
         except Exception as ex:
-            logger.exception("Failed to call agent_node: %s", ex, exc_info=True)
+            logger.exception("%s Failed to call agent_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
             raise ex
 
     async def conditional_edge(self, state: ToolCallAgentGraphState):
         try:
-            logger.debug("Starting the Tool Calling Conditional Edge")
+            logger.debug("%s Starting the Tool Calling Conditional Edge", AGENT_LOG_PREFIX)
             last_message = state.messages[-1]
             if last_message.tool_calls:
                 # the agent wants to call a tool
-                logger.debug('Agent is calling a tool')
+                logger.debug('%s Agent is calling a tool', AGENT_LOG_PREFIX)
                 return AgentDecision.TOOL
             if self.detailed_logs:
-                logger.debug("Final answer:\n%s", state.messages[-1].content)
+                logger.debug("%s Final answer:\n%s", AGENT_LOG_PREFIX, state.messages[-1].content)
             return AgentDecision.END
         except Exception as ex:
-            logger.exception("Failed to determine whether agent is calling a tool: %s", ex, exc_info=True)
-            logger.warning("Ending graph traversal")
+            logger.exception("%s Failed to determine whether agent is calling a tool: %s", AGENT_LOG_PREFIX, ex,
+                             exc_info=True)
+            logger.warning("%s Ending graph traversal", AGENT_LOG_PREFIX)
             return AgentDecision.END
 
     async def tool_node(self, state: ToolCallAgentGraphState):
         try:
-            logger.debug("Starting Tool Node")
+            logger.debug("%s Starting Tool Node", AGENT_LOG_PREFIX)
             tool_calls = state.messages[-1].tool_calls
             tools = [tool.get('name') for tool in tool_calls]
             tool_input = state.messages[-1]
@@ -106,14 +108,14 @@ class ToolCallAgentGraph(DualNodeAgent):
 
             return state
         except Exception as ex:
-            logger.exception("Failed to call tool_node: %s", ex, exc_info=ex)
+            logger.exception("%s Failed to call tool_node: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
             raise ex
 
     async def build_graph(self):
         try:
             await super()._build_graph(state_schema=ToolCallAgentGraphState)
-            logger.debug("Tool Calling Agent Graph built and compiled successfully")
+            logger.debug("%s Tool Calling Agent Graph built and compiled successfully", AGENT_LOG_PREFIX)
             return self.graph
         except Exception as ex:
-            logger.exception("Failed to build Tool Calling Agent Graph: %s", ex, exc_info=ex)
+            logger.exception("%s Failed to build Tool Calling Agent Graph: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
             raise ex
