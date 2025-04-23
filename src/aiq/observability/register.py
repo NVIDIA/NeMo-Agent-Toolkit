@@ -15,14 +15,9 @@
 
 import logging
 import os
-from typing import Optional, Sequence, Any, Dict, List, Union
-from pydantic import Field
-import json
+from typing import Optional
 
-from opentelemetry.sdk.trace import ReadableSpan
-from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
-import opentelemetry.semconv_ai as ot
-import openinference.semconv.trace as oi
+from pydantic import Field
 
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_logging_method
@@ -56,8 +51,7 @@ class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
     project: str = Field(description="The W&B project name.")
     api_key: Optional[str] = Field(
         default=None,
-        description="Your W&B API key for authentication. If not provided, will look for WANDB_API_KEY environment variable."
-    )
+        description="Your W&B API key for auth. If not provided, look for WANDB_API_KEY environment variable.")
 
 
 @register_telemetry_exporter(config_type=WeaveTelemetryExporter)
@@ -69,6 +63,7 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
     _ = weave.init(project_name=f"{config.entity}/{config.project}")
 
     class NoOpSpanExporter:
+
         def export(self, spans):
             return None
 
@@ -77,7 +72,7 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
 
     # just yielding None errors with 'NoneType' object has no attribute 'export'
     yield NoOpSpanExporter()
-    
+
 
 class PhoenixTelemetryExporter(TelemetryExporterBaseConfig, name="phoenix"):
     """A telemetry exporter to transmit traces to externally hosted phoenix service."""

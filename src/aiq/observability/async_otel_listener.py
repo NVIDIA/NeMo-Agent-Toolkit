@@ -15,7 +15,8 @@
 
 import logging
 import re
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager
+from contextlib import contextmanager
 from typing import Any
 
 from openinference.semconv.trace import OpenInferenceSpanKindValues
@@ -25,14 +26,14 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.trace import Span
 from opentelemetry.trace.propagation import set_span_in_context
 from pydantic import TypeAdapter
+from weave.trace.context import weave_client_context
+from weave.trace.context.call_context import get_current_call
+from weave.trace.context.call_context import set_call_stack
+from weave.trace.weave_client import Call
 
 from aiq.builder.context import AIQContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepState
-
-from weave.trace.context import weave_client_context
-from weave.trace.context.call_context import get_current_call, set_call_stack
-from weave.trace.weave_client import Call
 
 logger = logging.getLogger(__name__)
 
@@ -293,17 +294,10 @@ class AsyncOtelSpanListener:
     @contextmanager
     def parent_call(self, trace_id: str, parent_call_id: str):
         """Context manager to set a parent call context for Weave.
-        
         This allows connecting AIQ spans to existing traces from other frameworks.
         """
-        with set_call_stack([Call(
-                trace_id=trace_id,
-                id=parent_call_id,
-                _op_name="",
-                project_id="",
-                parent_id=None,
-                inputs={}
-        )]):
+        dummy_call = Call(trace_id=trace_id, id=parent_call_id, _op_name="", project_id="", parent_id=None, inputs={})
+        with set_call_stack([dummy_call]):
             yield
 
     def _create_weave_call(self, step: IntermediateStep, span: Span) -> None:
@@ -348,7 +342,7 @@ class AsyncOtelSpanListener:
             except Exception:
                 # If serialization fails, use string representation
                 inputs["input"] = str(step.payload.data.input)
-        
+
         # Create the Weave call
         call = self.gc.create_call(
             op_name,
@@ -357,13 +351,13 @@ class AsyncOtelSpanListener:
             attributes=span.attributes,
             display_name=op_name,
         )
-        
+
         # Store the call with step UUID as key
         self._weave_calls[step.UUID] = call
-        
+
         # Store span ID for parent reference
         setattr(call, "span_id", span.get_span_context().span_id)
-        
+
         return call
 
     def _finish_weave_call(self, step: IntermediateStep, span: Span) -> None:
@@ -372,11 +366,11 @@ class AsyncOtelSpanListener:
         """
         # Find the call for this step
         call = self._weave_calls.pop(step.UUID, None)
-        
+
         if call is None:
             logger.warning("No Weave call found for step %s", step.UUID)
             return
-            
+
         # Create output dictionary
         outputs = {}
         if step.payload.data and step.payload.data.output is not None:
@@ -386,7 +380,7 @@ class AsyncOtelSpanListener:
             except Exception:
                 # If serialization fails, use string representation
                 outputs["output"] = str(step.payload.data.output)
-        
+
         # Add usage information if available
         usage_info = step.payload.usage_info
         if usage_info:
@@ -394,12 +388,12 @@ class AsyncOtelSpanListener:
                 outputs["prompt_tokens"] = usage_info.token_usage.prompt_tokens
                 outputs["completion_tokens"] = usage_info.token_usage.completion_tokens
                 outputs["total_tokens"] = usage_info.token_usage.total_tokens
-                
+
             if usage_info.num_llm_calls:
                 outputs["num_llm_calls"] = usage_info.num_llm_calls
-                
+
             if usage_info.seconds_between_calls:
                 outputs["seconds_between_calls"] = usage_info.seconds_between_calls
-        
+
         # Finish the call with outputs
         self.gc.finish_call(call, outputs)
