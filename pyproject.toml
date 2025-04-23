@@ -40,6 +40,7 @@ dependencies = [
   "ragas~=0.2.14",
   "rich~=13.9",
   "uvicorn[standard]~=0.32.0",
+  "weave>=0.51.43",
   "wikipedia~=1.4",
 ]
 requires-python = "==3.12.*"
@@ -305,8 +306,7 @@ argument-naming-style = "snake_case"
 attr-naming-style = "snake_case"
 
 # Regular expression matching correct attribute names. Overrides attr-naming-
-# style. If left empty, attribute names will be checked with the set naming
-# style.
+# style. If left empty, attribute names will be checked with the set naming style.
 # attr-rgx =
 
 # Bad variable names which should always be refused, separated by a comma.

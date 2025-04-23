@@ -91,8 +91,6 @@ class AsyncOtelSpanListener:
 
         # get the weave client
         self.gc = weave_client_context.require_weave_client()
-
-        # Map to track weave calls corresponding to spans
         self._weave_calls: dict[str, Call] = {}
 
     def _on_next(self, step: IntermediateStep) -> None:
