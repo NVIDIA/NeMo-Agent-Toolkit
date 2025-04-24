@@ -33,6 +33,7 @@ _library_instrumented = {
     "langchain": False,
     "crewai": False,
     "semantic_kernel": False,
+    "agno": False,
 }
 
 callback_handler_var: ContextVar[Any | None] = ContextVar("callback_handler_var", default=None)
@@ -61,7 +62,7 @@ def set_framework_profiler_handler(
                 callback_handler_var.set(handler)
                 register_configure_hook(callback_handler_var, inheritable=True)
                 _library_instrumented["langchain"] = True
-                logger.info("Langchain callback handler registered")
+                logger.debug("Langchain callback handler registered")
 
             if LLMFrameworkEnum.LLAMA_INDEX in frameworks:
                 from llama_index.core import Settings
@@ -71,7 +72,7 @@ def set_framework_profiler_handler(
 
                 handler = LlamaIndexProfilerHandler()
                 Settings.callback_manager = CallbackManager([handler])
-                logger.info("LlamaIndex callback handler registered")
+                logger.debug("LlamaIndex callback handler registered")
 
             if LLMFrameworkEnum.CREWAI in frameworks and not _library_instrumented["crewai"]:
                 from aiq.plugins.crewai.crewai_callback_handler import \
@@ -80,7 +81,7 @@ def set_framework_profiler_handler(
                 handler = CrewAIProfilerHandler()
                 handler.instrument()
                 _library_instrumented["crewai"] = True
-                logger.info("CrewAI callback handler registered")
+                logger.debug("CrewAI callback handler registered")
 
             if LLMFrameworkEnum.SEMANTIC_KERNEL in frameworks and not _library_instrumented["semantic_kernel"]:
                 from aiq.profiler.callbacks.semantic_kernel_callback_handler import SemanticKernelProfilerHandler
@@ -88,7 +89,15 @@ def set_framework_profiler_handler(
                 handler = SemanticKernelProfilerHandler(workflow_llms=workflow_llms)
                 handler.instrument()
                 _library_instrumented["semantic_kernel"] = True
-                logger.info("SemanticKernel callback handler registered")
+                logger.debug("SemanticKernel callback handler registered")
+
+            if LLMFrameworkEnum.AGNO in frameworks and not _library_instrumented["agno"]:
+                from aiq.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
+
+                handler = AgnoProfilerHandler()
+                handler.instrument()
+                _library_instrumented["agno"] = True
+                logger.info("Agno callback handler registered")
 
             # IMPORTANT: actually call the wrapped function as an async context manager
             async with func(workflow_config, builder) as result:

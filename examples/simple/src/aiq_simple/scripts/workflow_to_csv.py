@@ -57,8 +57,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Convert workflow_output.json to workflow.csv")
     # output_dir is a mandatory first argument
     parser.add_argument("--output_dir", type=Path, required=True, help="Path to output directory")
-    parser.add_argument("--input", type=Path, required=True, help="Path to workflow_output.json")
-    parser.add_argument("--output", type=Path, required=True, help="Path to output CSV")
+    parser.add_argument("--input", type=Path, default="workflow_output.json", help="Path to workflow_output.json")
+    parser.add_argument("--output", type=Path, default="workflow.csv", help="Path to output CSV")
     return parser.parse_args()
 
 
