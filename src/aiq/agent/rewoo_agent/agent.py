@@ -274,7 +274,7 @@ class ReWOOAgentGraph(BaseAgent):
                     requested_tool.name, tool_input_parsed, tool_response_str)
                 logger.info("ReWOO agent executor output: %s", tool_response_log_message)
 
-            intermediate_results[placeholder] = tool_response
+            intermediate_results[placeholder] = tool_response_message
             return {"intermediate_results": intermediate_results}
 
         except Exception as ex:
