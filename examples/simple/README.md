@@ -67,46 +67,66 @@ aiq run --config_file examples/simple/configs/config.yml --input "What is LangSm
 **Expected Output**
 
 ```console
-$ aiq run --config_file=examples/simple/configs/config.yml --input "What is LangSmith"
-2025-01-29 15:33:57,665 - aiq.cli.run - INFO - Loading configuration from: examples/simple/configs/config.yml
-2025-01-29 15:33:59,375 - langchain_community.utils.user_agent - WARNING - USER_AGENT environment variable not set, consider setting it to identify your requests.
-2025-01-29 15:33:59,410 - aiq_simple.register - INFO - Generating docs for the webpage: https://docs.smith.langchain.com
-2025-01-29 15:34:00,725 - faiss.loader - INFO - Loading faiss.
-2025-01-29 15:34:00,816 - faiss.loader - INFO - Successfully loaded faiss.
-2025-01-29 15:34:01,255 - aiq.workflows.react_agent.agent - INFO - Initializing ReAct Agent Graph
-2025-01-29 15:34:01,255 - aiq.workflows.react_agent.agent - INFO - Filling the prompt variables "tools" and "tool_names", using the tools provided in the config.
-2025-01-29 15:34:01,255 - aiq.workflows.react_agent.agent - INFO - Initialized ReAct Agent Graph
-2025-01-29 15:34:01,255 - aiq.workflows.react_agent.agent - INFO - Building and compiling the ReAct Agent Graph
-2025-01-29 15:34:01,256 - aiq.workflows.react_agent.agent - INFO - ReAct Graph built and compiled successfully
+$ aiq run --config_file examples/simple/configs/config.yml --input "What is LangSmith?"
+2025-04-23 15:53:15,873 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (446.926117 ms). Ensure all imports are inside your registered functions.
+2025-04-23 15:53:16,192 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/simple/configs/config.yml'
+2025-04-23 15:53:16,197 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
+2025-04-23 15:53:16,243 - aiq.profiler.utils - WARNING - Discovered frameworks: {<LLMFrameworkEnum.LANGCHAIN: 'langchain'>} in function webquery_tool by inspecting source. It is recommended and more reliable to instead add the used LLMFrameworkEnum types in the framework_wrappers argument when calling @register_function.
+2025-04-23 15:53:16,251 - langchain_community.utils.user_agent - WARNING - USER_AGENT environment variable not set, consider setting it to identify your requests.
+2025-04-23 15:53:16,262 - aiq_simple.register - INFO - Generating docs for the webpage: https://docs.smith.langchain.com
+Fetching pages: 100%|#########################################################################################| 1/1 [00:00<00:00, 13.51it/s]
+2025-04-23 15:53:16,769 - faiss.loader - INFO - Loading faiss with AVX2 support.
+2025-04-23 15:53:16,873 - faiss.loader - INFO - Successfully loaded faiss with AVX2 support.
 
 Configuration Summary:
 --------------------
 Workflow Type: react_agent
-Number of Tools: 3
+Number of Functions: 2
 Number of LLMs: 1
-Number of Embedders: 0
+Number of Embedders: 1
 Number of Memory: 0
+Number of Retrievers: 0
 
-2025-01-29 15:34:01,256 - aiq.cli.run - INFO - Processing input: ('What is LangSmith',)
-2025-01-29 15:34:02,028 - aiq.workflows.react_agent.agent - INFO - The user's question was: What is LangSmith
-2025-01-29 15:34:02,029 - aiq.workflows.react_agent.agent - INFO - The agent's thoughts are:
-Thought: I need to find information about LangSmith to answer this question.
+2025-04-23 15:53:18,031 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: What is LangSmith?
+Agent's thoughts:
+Thought: To answer this question, I need to find information about LangSmith.
+
 Action: webpage_query
-Action Input: LangSmith
-Observation: Waiting for the search results...
-2025-01-29 15:34:02,034 - aiq.workflows.react_agent.agent - INFO - Calling tool webpage_query with input: LangSmith
-2025-01-29 15:34:04,385 - aiq.workflows.react_agent.agent - INFO -
+Action Input: {"query": "LangSmith"}
 
-The agent's thoughts are:
+
+------------------------------
+2025-04-23 15:53:18,290 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: webpage_query
+Tool's input: {"query": "LangSmith"}
+Tool's response:
+Get started with LangSmith | 🦜️🛠️ LangSmith
+
+LangSmith is a platform for building production-grade LLM applications.
+It allows you to closely monitor and evaluate your application, so you can ship quickly and with confidence.
+ObservabilityAnalyze traces in LangSmith and configure metrics, dashboards, alerts based on these.EvalsEvaluate your application over production traffic — score application performance and get human feedback on your data.Prompt EngineeringIterate on prompts, with automatic version control and collaboration features.
+
+Skip to main contentWe are growing and hiring for multiple roles for LangChain, LangGraph and LangSmith. Join our team!API ReferenceRESTPythonJS/TSSearchRegionUSEUGo to AppGet StartedObservabilityEvaluationPrompt EngineeringDeployment (LangGraph Platform)AdministrationSelf-hostingPricingReferenceCloud architecture and scalabilityAuthz and AuthnAuthentication methodsdata_formatsEvaluationDataset transformationsRegions FAQsdk_referenceGet StartedOn this...
+------------------------------
+2025-04-23 15:53:19,303 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: What is LangSmith?
+Agent's thoughts:
 Thought: I now know the final answer
-Final Answer: LangSmith is a platform for LLM (Large Language Model) application development, monitoring, and testing. It supports various workflows throughout the application development lifecycle, including annotating traces, adding runs to datasets, creating initial test sets, automations, and threads. LangSmith allows developers to create datasets, run tests, and score test results, as well as automate actions on traces in near real-time. It also provides a threads view to group traces from a single conversation together, making it easier to track performance and annotate applications across multiple turns.
-2025-01-29 15:34:04,387 - aiq.cli.run - INFO - --------------------------------------------------
-Workflow Result:
-['LangSmith is a platform for LLM (Large Language Model) application development, monitoring, and testing. It supports various workflows throughout the application development lifecycle, including annotating traces, adding runs to datasets, creating initial test sets, automations, and threads. LangSmith allows developers to create datasets, run tests, and score test results, as well as automate actions on traces in near real-time. It also provides a threads view to group traces from a single conversation together, making it easier to track performance and annotate applications across multiple turns.']
+
+Final Answer: LangSmith is a platform for building production-grade LLM (Large Language Model) applications, allowing users to monitor and evaluate their applications, and providing features such as observability, evaluation, prompt engineering, and deployment.
+------------------------------
+2025-04-23 15:53:19,307 - aiq.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
-Cleaning up react_agent workflow.
-2025-01-29 15:34:04,408 - aiq.cli.entrypoint - INFO - Total time: 6.75 sec
-2025-01-29 15:34:04,408 - aiq.cli.entrypoint - INFO - Pipeline runtime: 3.15 sec
+Workflow Result:
+['LangSmith is a platform for building production-grade LLM (Large Language Model) applications, allowing users to monitor and evaluate their applications, and providing features such as observability, evaluation, prompt engineering, and deployment.']
+--------------------------------------------------
 ```
 
 ## Docker Quickstart

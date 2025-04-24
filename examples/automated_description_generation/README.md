@@ -224,22 +224,60 @@ aiq run --config_file examples/automated_description_generation/configs/config.y
 The expected output is as follows:
 
 ```console
-## Omitted for brevity
-Action: retrieve_tool
-Action Input: {'query': 'Aardvark subspecies'}
-2025-03-14 06:30:43,334 - aiq.agent.react_agent.agent - INFO - Calling tool retrieve_tool with input: {'query': 'Aardvark subspecies'}
-2025-03-14 06:30:43,334 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
-2025-03-14 06:30:43,759 - aiq.tool.retriever - INFO - Retrieved 10 records for query Aardvark subspecies.
-2025-03-14 06:30:43,763 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-03-14 06:30:48,516 - aiq.agent.react_agent.agent - INFO -
+$ aiq run --config_file examples/automated_description_generation/configs/config_no_auto.yml --input "List 5 subspecies of Aardvark?"
+2025-04-23 15:20:59,964 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (485.568047 ms). Ensure all imports are inside your registered functions.
+2025-04-23 15:21:00,193 - aiq.runtime.loader - WARNING - Loading module 'aiq.eval.register' from entry point 'aiq_evaluators' took a long time (119.121313 ms). Ensure all imports are inside your registered functions.
+2025-04-23 15:21:00,300 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/automated_description_generation/configs/config_no_auto.yml'
+2025-04-23 15:21:00,307 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
+2025-04-23 15:21:00,445 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
 
-The agent's thoughts are:
-Thought: I now know the final answer
-Final Answer: The 17 subspecies of Aardvark are: Orycteropus afer afer, O. a. adametzi, O. a. aethiopicus, O. a. angolensis, O. a. erikssoni, O. a. faradjius, O. a. haussanus, O. a. kordofanicus, O. a. lademanni, O. a. leptodon, O. a. matschiei, O. a. observandus, O. a. ruvanensis, O. a. senegalensis, O. a. somalicus, O. a. wardi, and O. a. wertheri.
-2025-03-14 06:30:48,520 - aiq.observability.async_otel_listener - INFO - Intermediate step stream completed. No more events will arrive.
-2025-03-14 06:30:48,520 - aiq.front_ends.console.console_front_end_plugin - INFO - --------------------------------------------------
+Configuration Summary:
+--------------------
+Workflow Type: react_agent
+Number of Functions: 1
+Number of LLMs: 1
+Number of Embedders: 1
+Number of Memory: 0
+Number of Retrievers: 1
+
+2025-04-23 15:21:01,728 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: List 5 subspecies of Aardvark?
+Agent's thoughts:
+Thought: To answer this question, I need to find information about the subspecies of Aardvark. I will use my knowledge database to find the answer.
+
+Action: None
+Action Input: None
+
+
+------------------------------
+2025-04-23 15:21:01,734 - aiq.agent.react_agent.agent - WARNING - [AGENT] ReAct Agent wants to call tool None. In the ReAct Agent's configuration within the config file,there is no tool with that name: ['cuda_tool']
+2025-04-23 15:21:05,135 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: List 5 subspecies of Aardvark?
+Agent's thoughts:
+You are correct, there is no tool named "None". Since the question is about Aardvark subspecies and not related to NVIDIA CUDA, I should not use the cuda_tool.
+
+Instead, I will provide a general answer based on my knowledge.
+
+There are several subspecies of Aardvark, but the exact classification can vary depending on the source. Here are five subspecies that are commonly recognized:
+
+1. Orycteropus afer afer
+2. Orycteropus afer adametzi
+3. Orycteropus afer lademanni
+4. Orycteropus afer wardi
+5. Orycteropus afer kordofanicus
+
+Please note that taxonomy is constantly evolving, and different sources may group these subspecies differently.
+
+Final Answer: The five subspecies of Aardvark are Orycteropus afer afer, Orycteropus afer adametzi, Orycteropus afer lademanni, Orycteropus afer wardi, and Orycteropus afer kordofanicus.
+------------------------------
+2025-04-23 15:21:05,139 - aiq.front_ends.console.console_front_end_plugin - INFO -
+--------------------------------------------------
 Workflow Result:
-['The 17 subspecies of Aardvark are: Orycteropus afer afer, O. a. adametzi, O. a. aethiopicus, O. a. angolensis, O. a. erikssoni, O. a. faradjius, O. a. haussanus, O. a. kordofanicus, O. a. lademanni, O. a. leptodon, O. a. matschiei, O. a. observandus, O. a. ruvanensis, O. a. senegalensis, O. a. somalicus, O. a. wardi, and O. a. wertheri.']
+['The five subspecies of Aardvark are Orycteropus afer afer, Orycteropus afer adametzi, Orycteropus afer lademanni, Orycteropus afer wardi, and Orycteropus afer kordofanicus.']
 --------------------------------------------------
 ```
 

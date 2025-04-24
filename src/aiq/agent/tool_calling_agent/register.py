@@ -17,6 +17,7 @@ import logging
 
 from pydantic import Field
 
+from aiq.agent.base import AGENT_LOG_PREFIX
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function_info import FunctionInfo
@@ -63,7 +64,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
         # in tool calling agents, we bind the tools to the LLM, to pass the tools' input schemas at runtime
         llm = llm.bind_tools(tools)
     except NotImplementedError as ex:
-        logger.error("Failed to bind tools: %s", ex, exc_info=True)
+        logger.error("%s Failed to bind tools: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
         raise ex
 
     # construct the Tool Calling Agent Graph from the configured llm, and tools
@@ -89,7 +90,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
             output_message = state.messages[-1]  # pylint: disable=E1136
             return output_message.content
         except Exception as ex:
-            logger.exception("Tool Calling Agent failed with exception: %s", ex, exc_info=ex)
+            logger.exception("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
             if config.verbose:
                 return str(ex)
             return "I seem to be having a problem."
@@ -97,6 +98,6 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
     try:
         yield FunctionInfo.from_fn(_response_fn, description=config.description)
     except GeneratorExit:
-        logger.exception("Workflow exited early!", exc_info=True)
+        logger.exception("%s Workflow exited early!", AGENT_LOG_PREFIX, exc_info=True)
     finally:
-        logger.debug("Cleaning up react_agent workflow.")
+        logger.debug("%s Cleaning up react_agent workflow.", AGENT_LOG_PREFIX)
