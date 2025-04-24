@@ -71,60 +71,66 @@ aiq run --config_file=examples/agents/mixture_of_agents/configs/config.yml --inp
 
 ```console
 $ aiq run --config_file=examples/agents/mixture_of_agents/configs/config.yml --input "who was Djikstra?"
-2025-02-11 17:50:38,377 - aiq.cli.commands.run - INFO - Loading configuration from: examples/agents/mixture_of_agents/configs/config.yml
-2025-02-11 17:50:40,013 - aiq.profiler.callbacks.crewai_callback_handler - ERROR - Failed to import crewAI or a sub-module: No module named 'litellm'
-/Users/sjaviya/Documents/AgentIQ/sjaviya/ai-query-engine/.tempvenv/lib/python3.12/site-packages/langchain_nvidia_ai_endpoints/chat_models.py:591: UserWarning: Model 'meta/llama-3.3-70b-instruct' is not known to support tools. Your tool binding may fail at inference time.
-  warnings.warn(
-2025-02-11 17:50:41,337 - aiq.agent.tool_calling_agent.agent - INFO - Initialized Tool Calling Agent Graph
-2025-02-11 17:50:41,337 - aiq.agent.tool_calling_agent.agent - INFO - Tool Calling Agent Graph built and compiled successfully
-/Users/sjaviya/Documents/AgentIQ/sjaviya/ai-query-engine/.tempvenv/lib/python3.12/site-packages/langchain_nvidia_ai_endpoints/chat_models.py:591: UserWarning: Model 'meta/llama-3.3-70b-instruct' is not known to support tools. Your tool binding may fail at inference time.
-  warnings.warn(
-2025-02-11 17:50:41,560 - aiq.agent.tool_calling_agent.agent - INFO - Initialized Tool Calling Agent Graph
-2025-02-11 17:50:41,561 - aiq.agent.tool_calling_agent.agent - INFO - Tool Calling Agent Graph built and compiled successfully
-2025-02-11 17:50:41,561 - aiq.tool.code_generation_tool - INFO - Initializing code generation tool
+2025-04-23 14:57:12,020 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (503.239393 ms). Ensure all imports are inside your registered functions.
+2025-04-23 14:57:12,284 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/agents/mixture_of_agents/configs/config.yml'
+2025-04-23 14:57:12,293 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
+2025-04-23 14:57:12,375 - aiq.profiler.utils - WARNING - Discovered frameworks: {<LLMFrameworkEnum.LANGCHAIN: 'langchain'>} in function code_generation_tool by inspecting source. It is recommended and more reliable to instead add the used LLMFrameworkEnum types in the framework_wrappers argument when calling @register_function.
+2025-04-23 14:57:12,375 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Initializing code generation tool
 Getting tool LLM from config
-2025-02-11 17:50:41,746 - aiq.tool.code_generation_tool - INFO - Filling tool's prompt variable from config
-2025-02-11 17:50:41,746 - aiq.tool.code_generation_tool - INFO - Initialized code generation tool
-2025-02-11 17:50:42,182 - aiq.agent.react_agent.agent - INFO - Filling the prompt variables "tools" and "tool_names", using the tools provided in the config.
-2025-02-11 17:50:42,182 - aiq.agent.react_agent.agent - INFO - Initialized ReAct Agent Graph
-2025-02-11 17:50:42,183 - aiq.agent.react_agent.agent - INFO - ReAct Graph built and compiled successfully
+2025-04-23 14:57:12,376 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Filling tool's prompt variable from config
+2025-04-23 14:57:12,376 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Initialized code generation tool
 
 Configuration Summary:
 --------------------
 Workflow Type: react_agent
-Number of Functions: 9
+Number of Functions: 8
 Number of LLMs: 2
 Number of Embedders: 0
 Number of Memory: 0
+Number of Retrievers: 0
 
-2025-02-11 17:50:42,185 - aiq.cli.commands.run - INFO - Processing input: ('who was Djikstra?',)
-2025-02-11 17:50:42,187 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-02-11 17:50:43,906 - aiq.agent.react_agent.agent - INFO - The user's question was: who was Djikstra?
-2025-02-11 17:50:43,906 - aiq.agent.react_agent.agent - INFO - The agent's thoughts are:
-Thought: I need to find information about a person named Djikstra, I think he might be related to computer science or mathematics.
-
+2025-04-23 14:57:14,060 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: who was Djikstra?
+Agent's thoughts:
+Thought: I should search the internet for information on Djikstra.
 Action: internet_agent
-Action Input: Djikstra
+Action Input: {'input_message': 'Djikstra'}
+Observation
+------------------------------
+2025-04-23 14:57:20,638 - aiq.agent.tool_calling_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: Djikstra
+Agent's thoughts:
+content="Dijkstra's algorithm is a well-known algorithm in graph theory, named after the Dutch computer scientist Edsger W. Dijkstra. It is used to find the shortest path between two nodes in a graph. The algorithm works by maintaining a list of unvisited nodes and iteratively selecting the node with the shortest distance from the starting node. The distance to each node is updated as the algorithm progresses, and the node with the shortest distance is added to the list of visited nodes. The algorithm terminates when the destination node is reached, and the shortest path is constructed by tracing back the nodes from the destination to the starting node.\n\nDijkstra's algorithm has many applications in computer science and other fields, such as network routing, traffic optimization, and resource allocation. It is also used in many real-world problems, such as finding the shortest path between two cities, optimizing traffic flow, and scheduling tasks.\n\nThe algorithm has a time complexity of O(|E| + |V|log|V|) in the worst case, where |E| is the number of edges and |V| is the number of vertices in the graph. This makes it efficient for large graphs. However, it can be slow for very large graphs or graphs with a large number" additional_kwargs={} response_metadata={'role': 'assistant', 'content': "Dijkstra's algorithm is a well-known algorithm in graph theory, named after the Dutch computer scientist Edsger W. Dijkstra. It is used to find the shortest path between two nodes in a graph. The algorithm works by maintaining a list of unvisited nodes and iteratively selecting the node with the shortest distance from the starting node. The distance to each node is updated as the algorithm progresses, and the node with the shortest distance is added to the list of visited nodes. The algorithm terminates when the destination node is reached, and the shortest path is constructed by tracing back the nodes from the destination to the starting node.\n\nDijkstra's algorithm has many applications in computer science and other fields, such as network routing, traffic optimization, and resource allocation. It is also used in many real-world problems, such as finding the shortest path between two cities, optimizing traffic flow, and scheduling tasks.\n\nThe algorithm has a time complexity of O(|E| + |V|log|V|) in the worst case, where |E| is the number of edges and |V| is the number of vertices in the graph. This makes it efficient for large graphs. However, it can be slow for very large graphs or graphs with a large number", 'token_usage': {'prompt_tokens': 363, 'total_tokens': 613, 'completion_tokens': 250}, 'finish_reason': 'length', 'model_name': 'meta/llama-3.3-70b-instruct'} id='run-44bec667-41ec-43a8-bbe2-ecacfe0580e8-0' usage_metadata={'input_tokens': 363, 'output_tokens': 250, 'total_tokens': 613} role='assistant'
+------------------------------
+2025-04-23 14:57:20,641 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: internet_agent
+Tool's input: {"input_message": "Djikstra"}
+Tool's response:
+Dijkstra's algorithm is a well-known algorithm in graph theory, named after the Dutch computer scientist Edsger W. Dijkstra. It is used to find the shortest path between two nodes in a graph. The algorithm works by maintaining a list of unvisited nodes and iteratively selecting the node with the shortest distance from the starting node. The distance to each node is updated as the algorithm progresses, and the node with the shortest distance is added to the list of visited nodes. The algorithm terminates when the destination node is reached, and the shortest path is constructed by tracing back the nodes from the destination to the starting node.
 
+Dijkstra's algorithm has many applications in computer science and other fields, such as network routing, traffic optimization, and resource allocation. It is also used in many real-world problems, such as finding the shortest path between two cities, optimizing traffic flow, and scheduling tasks.
 
-2025-02-11 17:50:43,909 - aiq.agent.react_agent.agent - INFO - Calling tool internet_agent with input: Djikstra
-
-2025-02-11 17:50:43,911 - aiq.agent.tool_calling_agent.agent - INFO - Calling agent
-2025-02-11 17:50:50,325 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-02-11 17:50:52,418 - aiq.agent.react_agent.agent - INFO -
-
-The agent's thoughts are:
+The algorithm has a time complexity of O(|E| +...
+------------------------------
+2025-04-23 14:57:22,680 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: who was Djikstra?
+Agent's thoughts:
 Thought: I now know the final answer
-Final Answer: Edsger W. Dijkstra was a computer scientist who created Dijkstra's algorithm, a well-known algorithm in graph theory used to find the shortest path between two nodes in a graph.
-2025-02-11 17:50:52,421 - aiq.cli.commands.run - INFO - --------------------------------------------------
-Workflow Result:
-["Edsger W. Dijkstra was a computer scientist who created Dijkstra's algorithm, a well-known algorithm in graph theory used to find the shortest path between two nodes in a graph."]
+Final Answer: Edsger W. Dijkstra was a Dutch computer scientist, and Dijkstra's algorithm is a well-known algorithm in graph theory used to find the shortest path between two nodes in a graph.
+------------------------------
+2025-04-23 14:57:22,684 - aiq.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
-Cleaning up react_agent workflow.
-Cleaning up react_agent workflow.
-Cleaning up react_agent workflow.
-2025-02-11 17:50:52,428 - aiq.cli.entrypoint - INFO - Total time: 14.10 sec
-2025-02-11 17:50:52,428 - aiq.cli.entrypoint - INFO - Pipeline runtime: 10.24 sec
+Workflow Result:
+["Edsger W. Dijkstra was a Dutch computer scientist, and Dijkstra's algorithm is a well-known algorithm in graph theory used to find the shortest path between two nodes in a graph."]
+--------------------------------------------------
 ```
 ---
 

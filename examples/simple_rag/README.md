@@ -126,17 +126,12 @@ such as the `react_agent`
     ```
    The expected output of running the above command is:
     ```console
-   2025-03-11 15:19:18,551 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/simple_rag/configs/milvus_rag_config.yml'
-    2025-03-11 15:19:18,556 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
-    2025-03-11 15:19:19,634 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
-    2025-03-11 15:19:19,831 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
-    2025-03-11 15:19:19,833 - aiq.profiler.decorators - INFO - Langchain callback handler registered
-    2025-03-11 15:19:20,237 - aiq.agent.react_agent.agent - INFO - Filling the prompt variables "tools" and "tool_names", using the tools provided in the config.
-    2025-03-11 15:19:20,238 - aiq.agent.react_agent.agent - INFO - Adding the tools' input schema to the tools' description
-    2025-03-11 15:19:20,238 - aiq.agent.react_agent.agent - INFO - Initialized ReAct Agent Graph
-    2025-03-11 15:19:20,242 - aiq.agent.react_agent.agent - INFO - ReAct Graph built and compiled successfully
-    2025-03-11 15:19:20,243 - aiq.front_ends.console.console_front_end_plugin - INFO - Processing input: ('How do I install CUDA?',)
-    2025-03-11 15:19:20,246 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
+    $ aiq run --config_file examples/simple_rag/configs/milvus_rag_config.yml --input "How do I install CUDA"
+    2025-04-23 16:45:01,698 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (469.127893 ms). Ensure all imports are inside your registered functions.
+    2025-04-23 16:45:02,024 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/simple_rag/configs/milvus_rag_config.yml'
+    2025-04-23 16:45:02,032 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
+    2025-04-23 16:45:02,169 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
+    2025-04-23 16:45:02,177 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
 
     Configuration Summary:
     --------------------
@@ -147,34 +142,46 @@ such as the `react_agent`
     Number of Memory: 0
     Number of Retrievers: 2
 
-    2025-03-11 15:19:21,142 - aiq.agent.react_agent.agent - INFO - The user's question was: How do I install CUDA?
-    2025-03-11 15:19:21,142 - aiq.agent.react_agent.agent - INFO - The agent's thoughts are:
+    2025-04-23 16:45:03,203 - aiq.agent.react_agent.agent - INFO -
+    ------------------------------
+    [AGENT]
+    Agent input: How do I install CUDA
+    Agent's thoughts:
     Thought: To answer the user's question, I need to find information about installing CUDA.
     Action: cuda_retriever_tool
     Action Input: {"query": "install CUDA"}
 
-    2025-03-11 15:19:21,146 - aiq.agent.react_agent.agent - INFO - Calling tool cuda_retriever_tool with input: {"query": "install CUDA"}
-    2025-03-11 15:19:21,146 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
-    2025-03-11 15:19:21,853 - aiq.tool.retriever - INFO - Retrieved 10 records for query install CUDA.
-    2025-03-11 15:19:21,855 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-    2025-03-11 15:19:25,078 - aiq.agent.react_agent.agent - INFO -
-
-    The agent's thoughts are:
-    Thought: The provided tool output contains detailed instructions for installing CUDA on various Linux distributions and Windows. To provide a clear and concise answer, I will summarize the general steps for installing CUDA.
+    ------------------------------
+    2025-04-23 16:45:03,511 - aiq.tool.retriever - INFO - Retrieved 10 records for query install CUDA.
+    2025-04-23 16:45:03,513 - aiq.agent.react_agent.agent - INFO -
+    ------------------------------
+    [AGENT]
+    Calling tools: cuda_retriever_tool
+    Tool's input: {"query": "install CUDA"}
+    Tool's response:
+    {"results": [{"page_content": "1. Introduction \u2014 Installation Guide Windows 12.8 documentation\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n1. Introduction\n1.1. System Requirements\n1.2. About This Document\n\n\n2. Installing CUDA Development Tools\n2.1. Verify You Have a CUDA-capable GPU\n2.2. Download the NVIDIA CUDA Toolkit\n2.3. Install the CUDA Software\n2.3.1. Uninstalling the CUDA Software\n\n\n2.4. Using Conda to Install the CUDA Software\n2.4.1. Conda Overview\n2.4.2. Installation\n2.4.3. Uninstallation\n2.4.4. Installing Previous CUDA Releases\n\n\n2.5. Use a Suitable Driver Model\n2.6. Verify the Installation\n2.6.1. Running the Compiled Examples\n\n\n\n\n3. Pip Wheels\n4. Compiling CUDA Programs\n4.1. Compiling Sample Projects\n4.2. Sample Projects\n4.3. Build Customizations for New Projects\n4.4. Build Customizations for Existing Projects\n\n\n5. Additional Considerations\n6. Notices\n6.1. Notice\n6.2. OpenCL\n6.3. Trademarks\n\n\n...
+    ------------------------------
+    2025-04-23 16:45:06,407 - aiq.agent.react_agent.agent - INFO -
+    ------------------------------
+    [AGENT]
+    Agent input: How do I install CUDA
+    Agent's thoughts:
+    Thought: The provided tool output contains detailed instructions for installing CUDA on various Linux distributions and Windows. To answer the user's question, I will summarize the general steps for installing CUDA.
 
     Final Answer: To install CUDA, you need to follow these general steps:
 
     1. Verify that your system has a CUDA-capable GPU.
-       2. Choose an installation method: network installer, local installer, or package manager installation.
-       3. Download the NVIDIA CUDA Toolkit from the official website.
-       4. Install the CUDA Toolkit using the chosen installation method.
-       5. Perform post-installation actions, such as updating the Apt repository cache and installing additional packages.
+    2. Choose an installation method: local repo or network repo.
+    3. Download the NVIDIA CUDA Toolkit from the official NVIDIA website.
+    4. Install the CUDA Toolkit using the chosen installation method.
+    5. Perform post-installation actions, such as updating the Apt repository cache and installing additional packages.
 
-    For specific instructions, please refer to the official NVIDIA CUDA documentation, which provides detailed guides for various Linux distributions and Windows.
-    2025-03-11 15:19:25,083 - aiq.observability.async_otel_listener - INFO - Intermediate step stream completed. No more events will arrive.
-    2025-03-11 15:19:25,084 - aiq.front_ends.console.console_front_end_plugin - INFO - --------------------------------------------------
+    For specific instructions, please refer to the official NVIDIA documentation for your operating system: https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html or https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html.
+    ------------------------------
+    2025-04-23 16:45:06,412 - aiq.front_ends.console.console_front_end_plugin - INFO -
+    --------------------------------------------------
     Workflow Result:
-    ['To install CUDA, you need to follow these general steps:\n\n1. Verify that your system has a CUDA-capable GPU.\n2. Choose an installation method: network installer, local installer, or package manager installation.\n3. Download the NVIDIA CUDA Toolkit from the official website.\n4. Install the CUDA Toolkit using the chosen installation method.\n5. Perform post-installation actions, such as updating the Apt repository cache and installing additional packages.\n\nFor specific instructions, please refer to the official NVIDIA CUDA documentation, which provides detailed guides for various Linux distributions and Windows.']
+    ['To install CUDA, you need to follow these general steps:\n\n1. Verify that your system has a CUDA-capable GPU.\n2. Choose an installation method: local repo or network repo.\n3. Download the NVIDIA CUDA Toolkit from the official NVIDIA website.\n4. Install the CUDA Toolkit using the chosen installation method.\n5. Perform post-installation actions, such as updating the Apt repository cache and installing additional packages.\n\nFor specific instructions, please refer to the official NVIDIA documentation for your operating system: https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html or https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html.']
     --------------------------------------------------
     ```
 
@@ -279,18 +286,14 @@ aiq run --config_file=examples/simple_rag/configs/milvus_memory_rag_config.yml -
 The expected output of the above run is:
 
 ```console
-2025-03-11 15:42:18,804 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/simple_rag/configs/milvus_memory_rag_config.yml'
-2025-03-11 15:42:18,807 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
-2025-03-11 15:42:20,301 - httpx - INFO - HTTP Request: GET https://api.mem0.ai/v1/ping/ "HTTP/1.1 200 OK"
-2025-03-11 15:42:21,073 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
-2025-03-11 15:42:21,283 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
-2025-03-11 15:42:21,295 - aiq.profiler.decorators - INFO - Langchain callback handler registered
-2025-03-11 15:42:21,692 - aiq.agent.react_agent.agent - INFO - Filling the prompt variables "tools" and "tool_names", using the tools provided in the config.
-2025-03-11 15:42:21,692 - aiq.agent.react_agent.agent - INFO - Adding the tools' input schema to the tools' description
-2025-03-11 15:42:21,692 - aiq.agent.react_agent.agent - INFO - Initialized ReAct Agent Graph
-2025-03-11 15:42:21,696 - aiq.agent.react_agent.agent - INFO - ReAct Graph built and compiled successfully
-2025-03-11 15:42:21,697 - aiq.front_ends.console.console_front_end_plugin - INFO - Processing input: ('How do I install CUDA? I like responses with a lot of emojis in them! :)',)
-2025-03-11 15:42:21,699 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
+$ aiq run --config_file=examples/simple_rag/configs/milvus_memory_rag_config.yml --input "How do I install CUDA? I like responses with a lot of emojis in them! :)"
+2025-04-23 16:56:40,025 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (478.030443 ms). Ensure all imports are inside your registered functions.
+2025-04-23 16:56:40,222 - aiq.runtime.loader - WARNING - Loading module 'aiq_swe_bench.register' from entry point 'aiq_swe_bench' took a long time (103.739262 ms). Ensure all imports are inside your registered functions.
+2025-04-23 16:56:40,376 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/simple_rag/configs/milvus_memory_rag_config.yml'
+2025-04-23 16:56:40,385 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
+2025-04-23 16:56:41,738 - httpx - INFO - HTTP Request: GET https://api.mem0.ai/v1/ping/ "HTTP/1.1 200 OK"
+2025-04-23 16:56:41,933 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
+2025-04-23 16:56:41,946 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
 
 Configuration Summary:
 --------------------
@@ -301,48 +304,87 @@ Number of Embedders: 1
 Number of Memory: 1
 Number of Retrievers: 2
 
-2025-03-11 15:42:22,935 - aiq.agent.react_agent.agent - INFO - The user's question was: How do I install CUDA? I like responses with a lot of emojis in them! :)
-2025-03-11 15:42:22,936 - aiq.agent.react_agent.agent - INFO - The agent's thoughts are:
-Thought: The user is asking for installation instructions for CUDA and has a preference for responses with a lot of emojis. I should first retrieve information about installing CUDA and then add the user's preference to long term memory.
+2025-04-23 16:56:44,973 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: How do I install CUDA? I like responses with a lot of emojis in them! :)
+Agent's thoughts:
+Thought: The user is asking about installing CUDA, and they have a preference for responses with a lot of emojis. I should first try to retrieve information about the user's preference for response format.
+
+Action: get_memory
+Action Input: {"query": "response format", "top_k": 1, "user_id": "current_user"}
+
+------------------------------
+2025-04-23 16:56:45,143 - httpx - INFO - HTTP Request: POST https://api.mem0.ai/v1/memories/search/ "HTTP/1.1 200 OK"
+2025-04-23 16:56:45,145 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: get_memory
+Tool's input: {"query": "response format", "top_k": 1, "user_id": "current_user"}
+Tool's response:
+Memories as a JSON:
+[{"conversation": [], "tags": ["user_preferences"], "metadata": {}, "user_id": "current_user", "memory": "Likes responses with a lot of emojis"}]
+------------------------------
+2025-04-23 16:56:45,875 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: How do I install CUDA? I like responses with a lot of emojis in them! :)
+Agent's thoughts:
+Thought: The user likes responses with a lot of emojis. Now, I should try to find information about installing CUDA.
 
 Action: cuda_retriever_tool
 Action Input: {"query": "install CUDA"}
+------------------------------
+2025-04-23 16:56:46,203 - aiq.tool.retriever - INFO - Retrieved 10 records for query install CUDA.
+2025-04-23 16:56:46,230 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: cuda_retriever_tool
+Tool's input: {"query": "install CUDA"}
+Tool's response:
+{"results": [{"page_content": "1. Introduction \u2014 Installation Guide Windows 12.8 documentation\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n1. Introduction\n1.1. System Requirements\n1.2. About This Document\n\n\n2. Installing CUDA Development Tools\n2.1. Verify You Have a CUDA-capable GPU\n2.2. Download the NVIDIA CUDA Toolkit\n2.3. Install the CUDA Software\n2.3.1. Uninstalling the CUDA Software\n\n\n2.4. Using Conda to Install the CUDA Software\n2.4.1. Conda Overview\n2.4.2. Installation\n2.4.3. Uninstallation\n2.4.4. Installing Previous CUDA Releases\n\n\n2.5. Use a Suitable Driver Model\n2.6. Verify the Installation\n2.6.1. Running the Compiled Examples\n\n\n\n\n3. Pip Wheels\n4. Compiling CUDA Programs\n4.1. Compiling Sample Projects\n4.2. Sample Projects\n4.3. Build Customizations for New Projects\n4.4. Build Customizations for Existing Projects\n\n\n5. Additional Considerations\n6. Notices\n6.1. Notice\n6.2. OpenCL\n6.3. Trademarks\n\n\n...
+------------------------------
+2025-04-23 16:56:51,636 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: How do I install CUDA? I like responses with a lot of emojis in them! :)
+Agent's thoughts:
+Thought: The user likes responses with a lot of emojis. Now, I should try to find information about installing CUDA.
 
-2025-03-11 15:42:22,942 - aiq.agent.react_agent.agent - INFO - Calling tool cuda_retriever_tool with input: {"query": "install CUDA"}
-2025-03-11 15:42:22,942 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
-2025-03-11 15:42:23,584 - aiq.tool.retriever - INFO - Retrieved 10 records for query install CUDA.
-2025-03-11 15:42:23,588 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-03-11 15:42:26,993 - aiq.agent.react_agent.agent - INFO -
+The installation instructions for CUDA are as follows:
 
-The agent's thoughts are:
-Thought: I have retrieved the information about installing CUDA from the NVIDIA documentation. Now, I need to add the user's preference for responses with a lot of emojis to long term memory.
+1. Verify you have a CUDA-capable GPU.
+2. Download the NVIDIA CUDA Toolkit from https://developer.nvidia.com/cuda-downloads.
+3. Install the NVIDIA CUDA Toolkit.
 
-Action: add_memory
-Action Input: {"conversation": [{"role": "user", "content": "How do I install CUDA? I like responses with a lot of emojis! :)"}, {"role": "assistant", "content": "To install CUDA, you can follow these steps: ..."}], "tags": ["CUDA", "installation"], "metadata": {"user_id": "1234", "context": "CUDA installation"}, "user_id": "1234", "memory": "None"}
+For Windows:
+- Graphical Installation: Execute the CUDA installer and follow the on-screen prompts.
+- Silent Installation: Execute the package with the -s flag.
 
+For Linux:
+- Package Manager Installation: Install using RPM or Debian packages, which interface with your system’s package management system.
+- Runfile Installation: Install using the standalone installer, a .run file that is completely self-contained.
 
-2025-03-11 15:42:26,997 - aiq.agent.react_agent.agent - INFO - Calling tool add_memory with input: {"conversation": [{"role": "user", "content": "How do I install CUDA? I like responses with a lot of emojis! :)"}, {"role": "assistant", "content": "To install CUDA, you can follow these steps: ..."}], "tags": ["CUDA", "installation"], "metadata": {"user_id": "1234", "context": "CUDA installation"}, "user_id": "1234", "memory": "None"}
+After installation, perform the post-installation actions.
 
-2025-03-11 15:42:26,997 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
-2025-03-11 15:42:29,163 - httpx - INFO - HTTP Request: POST https://api.mem0.ai/v1/memories/ "HTTP/1.1 200 OK"
-2025-03-11 15:42:29,167 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-03-11 15:42:32,413 - aiq.agent.react_agent.agent - INFO -
+Thought: I now know the final answer
 
-The agent's thoughts are:
-Thought: I have added the user's preference to long term memory. Now, I can respond to the user's question about installing CUDA with a lot of emojis.
-
-Final Answer: 🎉👍 To install CUDA, you can follow these steps: 📝
-
-1. Verify you have a CUDA-capable GPU 🖥️
-2. Download the NVIDIA CUDA Toolkit 📦
-3. Install the CUDA Software 📈
-4. Test that the installed software runs correctly and communicates with the hardware 📊
-
-👍 You can find more detailed instructions in the NVIDIA CUDA documentation 📚. 🤔 If you have any questions or need further assistance, feel free to ask 🤗! 😊
-2025-03-11 15:42:32,416 - aiq.observability.async_otel_listener - INFO - Intermediate step stream completed. No more events will arrive.
-2025-03-11 15:42:32,416 - aiq.front_ends.console.console_front_end_plugin - INFO - --------------------------------------------------
+Final Answer: 🎉👍 To install CUDA, follow these steps: 📝
+1. Verify you have a CUDA-capable GPU 🖥️.
+2. Download the NVIDIA CUDA Toolkit from https://developer.nvidia.com/cuda-downloads 📊.
+3. Install the NVIDIA CUDA Toolkit 📈.
+For Windows:
+- Graphical Installation: Execute the CUDA installer and follow the on-screen prompts 📺.
+- Silent Installation: Execute the package with the -s flag 🗣️.
+For Linux:
+- Package Manager Installation: Install using RPM or Debian packages, which interface with your system’s package management system 📦.
+- Runfile Installation: Install using the standalone installer, a .run file that is completely self-contained 📁.
+After installation, perform the post-installation actions 📝. 🎉👍
+------------------------------
+2025-04-23 16:56:51,642 - aiq.front_ends.console.console_front_end_plugin - INFO -
+--------------------------------------------------
 Workflow Result:
-['🎉👍 To install CUDA, you can follow these steps: 📝\n\n1. Verify you have a CUDA-capable GPU 🖥️\n2. Download the NVIDIA CUDA Toolkit 📦\n3. Install the CUDA Software 📈\n4. Test that the installed software runs correctly and communicates with the hardware 📊\n\n👍 You can find more detailed instructions in the NVIDIA CUDA documentation 📚. 🤔 If you have any questions or need further assistance, feel free to ask 🤗! 😊']
+['🎉👍 To install CUDA, follow these steps: 📝\n1. Verify you have a CUDA-capable GPU 🖥️.\n2. Download the NVIDIA CUDA Toolkit from https://developer.nvidia.com/cuda-downloads 📊.\n3. Install the NVIDIA CUDA Toolkit 📈.\nFor Windows: \n- Graphical Installation: Execute the CUDA installer and follow the on-screen prompts 📺.\n- Silent Installation: Execute the package with the -s flag 🗣️.\nFor Linux: \n- Package Manager Installation: Install using RPM or Debian packages, which interface with your system’s package management system 📦.\n- Runfile Installation: Install using the standalone installer, a .run file that is completely self-contained 📁.\nAfter installation, perform the post-installation actions 📝. 🎉👍']
 --------------------------------------------------
 ```
 
@@ -357,18 +399,13 @@ aiq run --config_file=examples/simple_rag/configs/milvus_memory_rag_config.yml -
 The expected output of the above run is:
 
 ```console
-2025-03-11 15:54:23,700 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/simple_rag/configs/milvus_memory_rag_config.yml'
-2025-03-11 15:54:23,704 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
-2025-03-11 15:54:24,831 - httpx - INFO - HTTP Request: GET https://api.mem0.ai/v1/ping/ "HTTP/1.1 200 OK"
-2025-03-11 15:54:25,632 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
-2025-03-11 15:54:25,856 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
-2025-03-11 15:54:25,867 - aiq.profiler.decorators - INFO - Langchain callback handler registered
-2025-03-11 15:54:26,251 - aiq.agent.react_agent.agent - INFO - Filling the prompt variables "tools" and "tool_names", using the tools provided in the config.
-2025-03-11 15:54:26,251 - aiq.agent.react_agent.agent - INFO - Adding the tools' input schema to the tools' description
-2025-03-11 15:54:26,251 - aiq.agent.react_agent.agent - INFO - Initialized ReAct Agent Graph
-2025-03-11 15:54:26,255 - aiq.agent.react_agent.agent - INFO - ReAct Graph built and compiled successfully
-2025-03-11 15:54:26,256 - aiq.front_ends.console.console_front_end_plugin - INFO - Processing input: ('How do I install CUDA?',)
-2025-03-11 15:54:26,258 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
+$ aiq run --config_file=examples/simple_rag/configs/milvus_memory_rag_config.yml --input "How do I install CUDA?"
+2025-04-23 16:59:21,197 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (444.273233 ms). Ensure all imports are inside your registered functions.
+2025-04-23 16:59:21,517 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/simple_rag/configs/milvus_memory_rag_config.yml'
+2025-04-23 16:59:21,525 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
+2025-04-23 16:59:22,833 - httpx - INFO - HTTP Request: GET https://api.mem0.ai/v1/ping/ "HTTP/1.1 200 OK"
+2025-04-23 16:59:23,029 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
+2025-04-23 16:59:23,041 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
 
 Configuration Summary:
 --------------------
@@ -379,61 +416,102 @@ Number of Embedders: 1
 Number of Memory: 1
 Number of Retrievers: 2
 
-2025-03-11 15:54:27,518 - aiq.agent.react_agent.agent - INFO - The user's question was: How do I install CUDA?
-2025-03-11 15:54:27,519 - aiq.agent.react_agent.agent - INFO - The agent's thoughts are:
-Thought: To answer the user's question, I need to find information about installing CUDA. I should first check if the user has any preferences for the response format.
+2025-04-23 16:59:24,882 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: How do I install CUDA?
+Agent's thoughts:
+Thought: To answer the user's question, I need to find information about installing CUDA. I should use the get_memory tool to see if the user has any preferences for how the response should be formatted.
 
 Action: get_memory
-Action Input: {"query": "response format preference", "top_k": 1, "user_id": "current_user"}
+Action Input: {"query": "response format preferences", "top_k": 1, "user_id": "current_user"}
 
-2025-03-11 15:54:27,525 - aiq.agent.react_agent.agent - INFO - Calling tool get_memory with input: {"query": "response format preference", "top_k": 1, "user_id": "current_user"}
-2025-03-11 15:54:27,525 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
-2025-03-11 15:54:27,884 - httpx - INFO - HTTP Request: POST https://api.mem0.ai/v1/memories/search/ "HTTP/1.1 200 OK"
-2025-03-11 15:54:27,888 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-03-11 15:54:28,865 - aiq.agent.react_agent.agent - INFO -
-
-The agent's thoughts are:
-Thought: The user loves a lot of emojis in responses. Now, I need to find information about installing CUDA.
+------------------------------
+2025-04-23 16:59:25,049 - httpx - INFO - HTTP Request: POST https://api.mem0.ai/v1/memories/search/ "HTTP/1.1 200 OK"
+2025-04-23 16:59:25,051 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: get_memory
+Tool's input: {"query": "response format preferences", "top_k": 1, "user_id": "current_user"}
+Tool's response:
+Memories as a JSON:
+[{"conversation": [], "tags": ["user_preferences"], "metadata": {}, "user_id": "current_user", "memory": "Likes responses with a lot of emojis"}]
+------------------------------
+2025-04-23 16:59:27,888 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: How do I install CUDA?
+Agent's thoughts:
+Thought: The user likes responses with a lot of emojis. Now, I need to find information about installing CUDA. I should use the cuda_retriever_tool to find the installation steps.
 
 Action: cuda_retriever_tool
-Action Input: {"query": "installing CUDA"}
-2025-03-11 15:54:28,869 - aiq.agent.react_agent.agent - INFO - Calling tool cuda_retriever_tool with input: {"query": "installing CUDA"}
-2025-03-11 15:54:28,869 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
-2025-03-11 15:54:29,541 - aiq.tool.retriever - INFO - Retrieved 10 records for query installing CUDA.
-2025-03-11 15:54:29,549 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-03-11 15:54:36,376 - aiq.agent.react_agent.agent - INFO -
+Action Input: {"query": "install CUDA"}
+------------------------------
+2025-04-23 16:59:28,217 - aiq.tool.retriever - INFO - Retrieved 10 records for query install CUDA.
+2025-04-23 16:59:28,221 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: cuda_retriever_tool
+Tool's input: {"query": "install CUDA"}
+Tool's response:
+{"results": [{"page_content": "1. Introduction \u2014 Installation Guide Windows 12.8 documentation\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n1. Introduction\n1.1. System Requirements\n1.2. About This Document\n\n\n2. Installing CUDA Development Tools\n2.1. Verify You Have a CUDA-capable GPU\n2.2. Download the NVIDIA CUDA Toolkit\n2.3. Install the CUDA Software\n2.3.1. Uninstalling the CUDA Software\n\n\n2.4. Using Conda to Install the CUDA Software\n2.4.1. Conda Overview\n2.4.2. Installation\n2.4.3. Uninstallation\n2.4.4. Installing Previous CUDA Releases\n\n\n2.5. Use a Suitable Driver Model\n2.6. Verify the Installation\n2.6.1. Running the Compiled Examples\n\n\n\n\n3. Pip Wheels\n4. Compiling CUDA Programs\n4.1. Compiling Sample Projects\n4.2. Sample Projects\n4.3. Build Customizations for New Projects\n4.4. Build Customizations for Existing Projects\n\n\n5. Additional Considerations\n6. Notices\n6.1. Notice\n6.2. OpenCL\n6.3. Trademarks\n\n\n...
+------------------------------
+2025-04-23 16:59:36,163 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: How do I install CUDA?
+Agent's thoughts:
+Thought: The user likes responses with a lot of emojis. Now, I need to find information about installing CUDA. The results from the cuda_retriever_tool provide detailed steps for installing CUDA on various operating systems, including Windows and Linux.
 
-The agent's thoughts are:
-Thought: The user loves a lot of emojis in responses. Now, I have found information about installing CUDA.
+To install CUDA on Windows, the user should:
+1. Verify that their system has a CUDA-capable GPU 🖥️
+2. Download the NVIDIA CUDA Toolkit from the official website 📦
+3. Install the CUDA Software by executing the CUDA installer and following the on-screen prompts 💻
+4. Test that the installed software runs correctly and communicates with the hardware 📊
 
-To install CUDA, you need to follow these steps:
-1. Verify you have a CUDA-capable GPU.
-2. Download the NVIDIA CUDA Toolkit from https://developer.nvidia.com/cuda-downloads.
-3. Install the CUDA Software by executing the CUDA installer and following the on-screen prompts.
-4. Test that the installed software runs correctly and communicates with the hardware.
+To install CUDA on Linux, the user should:
+1. Perform the pre-installation actions 📝
+2. Choose an installation method: local repo or network repo 🤔
+3. Install the CUDA Toolkit using the chosen method 📦
+4. Perform the post-installation actions 📈
 
-Here are the steps with more details and emojis:
-🌟 Step 1: Verify you have a CUDA-capable GPU 🌟
-You can verify that you have a CUDA-capable GPU through the Display Adapters section in the Windows Device Manager 📊.
+Here are the detailed steps for each operating system:
 
-🌟 Step 2: Download the NVIDIA CUDA Toolkit 🌟
-The NVIDIA CUDA Toolkit is available at https://developer.nvidia.com/cuda-downloads 🌐. Choose the platform you are using and one of the following installer formats: Network Installer or Full Installer 📦.
+**Windows:**
+1. Verify that your system has a CUDA-capable GPU 🖥️
+2. Download the NVIDIA CUDA Toolkit from the official website 📦
+3. Install the CUDA Software by executing the CUDA installer and following the on-screen prompts 💻
+4. Test that the installed software runs correctly and communicates with the hardware 📊
 
-🌟 Step 3: Install the CUDA Software 🌟
-Before installing the toolkit, you should read the Release Notes, as they provide details on installation and software functionality 📄. The setup of CUDA development tools on a system running the appropriate version of Windows consists of a few simple steps:
-- Verify the system has a CUDA-capable GPU 🌟.
-- Download the NVIDIA CUDA Toolkit 📦.
-- Install the NVIDIA CUDA Toolkit 📈.
-- Test that the installed software runs correctly and communicates with the hardware 📊.
+**Linux:**
+1. Perform the pre-installation actions 📝
+2. Choose an installation method: local repo or network repo 🤔
+3. Install the CUDA Toolkit using the chosen method 📦
+4. Perform the post-installation actions 📈
 
-🌟 Step 4: Test the Installation 🌟
-Perform the post-installation actions 📝.
+For example, on Ubuntu, the user can install CUDA using the following commands:
 
-Final Answer: 🎉 To install CUDA, follow the steps: verify you have a CUDA-capable GPU 🌟, download the NVIDIA CUDA Toolkit 📦, install the CUDA Software 📈, and test the installation 📊. 🎊
-2025-03-11 15:54:36,381 - aiq.observability.async_otel_listener - INFO - Intermediate step stream completed. No more events will arrive.
-2025-03-11 15:54:36,381 - aiq.front_ends.console.console_front_end_plugin - INFO - --------------------------------------------------
+  sudo dpkg -i cuda-repo-<distro>-X-Y-local_<version>*_<arch>.deb
+  sudo cp /var/cuda-repo-<distro>-X-Y-local/cuda-*-keyring.gpg /usr/share/keyrings/
+  sudo mv cuda-<distro>.pin /etc/apt/preferences.d/cuda-repository-pin-600
+  sudo apt-get update
+  sudo apt-get install cuda-toolkit
+
+Replace `<distro>`, `<version>`, and `<arch>` with the corresponding values for your system 🤖
+
+Final Answer: 🎉 To install CUDA, follow these steps:
+1. Verify that your system has a CUDA-capable GPU 🖥️
+2. Download the NVIDIA CUDA Toolkit from the official website 📦
+3. Install the CUDA Software by executing the CUDA installer and following the on-screen prompts 💻
+4. Test that the installed software runs correctly and communicates with the hardware 📊
+For Linux, choose an installation method and install the CUDA Toolkit using the chosen method 📦
+Remember to perform the post-installation actions 📈
+👍
+------------------------------
+2025-04-23 16:59:36,167 - aiq.front_ends.console.console_front_end_plugin - INFO -
+--------------------------------------------------
 Workflow Result:
-['🎉 To install CUDA, follow the steps: verify you have a CUDA-capable GPU 🌟, download the NVIDIA CUDA Toolkit 📦, install the CUDA Software 📈, and test the installation 📊. 🎊']
+['🎉 To install CUDA, follow these steps: \n1. Verify that your system has a CUDA-capable GPU 🖥️\n2. Download the NVIDIA CUDA Toolkit from the official website 📦\n3. Install the CUDA Software by executing the CUDA installer and following the on-screen prompts 💻\n4. Test that the installed software runs correctly and communicates with the hardware 📊\nFor Linux, choose an installation method and install the CUDA Toolkit using the chosen method 📦\nRemember to perform the post-installation actions 📈\n👍']
 --------------------------------------------------
 ```
 
@@ -460,22 +538,18 @@ We can now run one of these workflows with a slightly more complex input.
 aiq run --config_file examples/simple_rag/configs/milvus_rag_tools_config.yml --input "How do I install CUDA and get started developing with it? Provide example python code"
 ```
 The expected output of the above run is:
-```console
-2025-03-12 12:32:58,855 - aiq.runtime.loader - WARNING - Loading module 'aiq_simple.register' from entry point 'aiq_simple' took a long time (101.465940 ms). Ensure all imports are inside your registered functions.
-2025-03-12 12:32:59,051 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/simple_rag/configs/milvus_rag_tools_config.yml'
-2025-03-12 12:32:59,057 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
-2025-03-12 12:32:59,764 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
-2025-03-12 12:32:59,769 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
-2025-03-12 12:32:59,771 - aiq.profiler.utils - WARNING - Discovered frameworks: {<LLMFrameworkEnum.LANGCHAIN: 'langchain'>} in function code_generation_tool by inspecting source. It is recommended and more reliable to instead add the used LLMFrameworkEnum types in the framework_wrappers argument when calling @register_function.
-2025-03-12 12:32:59,773 - aiq.profiler.decorators - INFO - Langchain callback handler registered
-2025-03-12 12:32:59,773 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Initializing code generation tool
+````console
+$ aiq run --config_file examples/simple_rag/configs/milvus_rag_tools_config.yml --input "How do I install CUDA and get started developing with it? Provide example python code"
+2025-04-23 20:31:34,456 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (491.573811 ms). Ensure all imports are inside your registered functions.
+2025-04-23 20:31:34,779 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/simple_rag/configs/milvus_rag_tools_config.yml'
+2025-04-23 20:31:34,788 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
+2025-04-23 20:31:34,950 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
+2025-04-23 20:31:34,960 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
+2025-04-23 20:31:34,964 - aiq.profiler.utils - WARNING - Discovered frameworks: {<LLMFrameworkEnum.LANGCHAIN: 'langchain'>} in function code_generation_tool by inspecting source. It is recommended and more reliable to instead add the used LLMFrameworkEnum types in the framework_wrappers argument when calling @register_function.
+2025-04-23 20:31:34,966 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Initializing code generation tool
 Getting tool LLM from config
-2025-03-12 12:32:59,778 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Filling tool's prompt variable from config
-2025-03-12 12:32:59,778 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Initialized code generation tool
-2025-03-12 12:33:00,103 - aiq.agent.react_agent.agent - INFO - Filling the prompt variables "tools" and "tool_names", using the tools provided in the config.
-2025-03-12 12:33:00,103 - aiq.agent.react_agent.agent - INFO - Adding the tools' input schema to the tools' description
-2025-03-12 12:33:00,103 - aiq.agent.react_agent.agent - INFO - Initialized ReAct Agent Graph
-2025-03-12 12:33:00,108 - aiq.agent.react_agent.agent - INFO - ReAct Graph built and compiled successfully
+2025-04-23 20:31:34,968 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Filling tool's prompt variable from config
+2025-04-23 20:31:34,968 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Initialized code generation tool
 
 Configuration Summary:
 --------------------
@@ -486,43 +560,43 @@ Number of Embedders: 1
 Number of Memory: 0
 Number of Retrievers: 2
 
-2025-03-12 12:33:00,109 - aiq.front_ends.console.console_front_end_plugin - INFO - Processing input: ('How do I install CUDA and get started developing with it? Provide example python code',)
-2025-03-12 12:33:00,113 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-03-12 12:33:01,462 - aiq.agent.react_agent.agent - INFO - The user's question was: How do I install CUDA and get started developing with it? Provide example python code
-2025-03-12 12:33:01,462 - aiq.agent.react_agent.agent - INFO - The agent's thoughts are:
+2025-04-23 20:31:36,778 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: How do I install CUDA and get started developing with it? Provide example python code
+Agent's thoughts:
 Thought: To answer this question, I need to provide information on how to install CUDA and get started with developing applications using it. I also need to provide example Python code to demonstrate its usage.
 
 Action: cuda_retriever_tool
-Action Input: {"query": "install CUDA and get started"}
+Action Input: {"query": "installing CUDA and getting started"}
 
-2025-03-12 12:33:01,464 - aiq.agent.react_agent.agent - INFO - Calling tool cuda_retriever_tool with input: {"query": "install CUDA and get started"}
-2025-03-12 12:33:01,464 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
-2025-03-12 12:33:01,985 - aiq.tool.retriever - INFO - Retrieved 10 records for query install CUDA and get started.
-2025-03-12 12:33:01,988 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-03-12 12:33:03,896 - aiq.agent.react_agent.agent - INFO -
-
-The agent's thoughts are:
-Thought: The provided information includes instructions on how to install CUDA on various operating systems, including Windows and Linux. It also mentions the system requirements, such as having a CUDA-capable GPU and a supported version of the operating system.
+------------------------------
+2025-04-23 20:31:37,097 - aiq.tool.retriever - INFO - Retrieved 10 records for query installing CUDA and getting started.
+2025-04-23 20:31:37,099 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: cuda_retriever_tool
+Tool's input: {"query": "installing CUDA and getting started"}
+Tool's response:
+{"results": [{"page_content": "1. Introduction \u2014 Installation Guide Windows 12.8 documentation\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n1. Introduction\n1.1. System Requirements\n1.2. About This Document\n\n\n2. Installing CUDA Development Tools\n2.1. Verify You Have a CUDA-capable GPU\n2.2. Download the NVIDIA CUDA Toolkit\n2.3. Install the CUDA Software\n2.3.1. Uninstalling the CUDA Software\n\n\n2.4. Using Conda to Install the CUDA Software\n2.4.1. Conda Overview\n2.4.2. Installation\n2.4.3. Uninstallation\n2.4.4. Installing Previous CUDA Releases\n\n\n2.5. Use a Suitable Driver Model\n2.6. Verify the Installation\n2.6.1. Running the Compiled Examples\n\n\n\n\n3. Pip Wheels\n4. Compiling CUDA Programs\n4.1. Compiling Sample Projects\n4.2. Sample Projects\n4.3. Build Customizations for New Projects\n4.4. Build Customizations for Existing Projects\n\n\n5. Additional Considerations\n6. Notices\n6.1. Notice\n6.2. OpenCL\n6.3. Trademarks\n\n\n...
+------------------------------
+2025-04-23 20:31:46,243 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: How do I install CUDA and get started developing with it? Provide example python code
+Agent's thoughts:
+Thought: The provided information from the CUDA documentation gives a detailed guide on how to install CUDA on various operating systems, including Windows and Linux. It also provides information on how to verify the installation and run sample programs to test the setup. However, to provide example Python code, I need to use the code generation tool.
 
 Action: code_generation_tool
-Action Input: {"query": "example python code using CUDA"}
-2025-03-12 12:33:03,898 - aiq.agent.react_agent.agent - INFO - Calling tool code_generation_tool with input: {"query": "example python code using CUDA"}
-2025-03-12 12:33:03,898 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
-2025-03-12 12:33:03,900 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Running code generation tool
-2025-03-12 12:33:05,445 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-03-12 12:33:10,982 - aiq.agent.react_agent.agent - INFO -
-
-The agent's thoughts are:
-Thought: The provided code is an example of using CUDA with Python. It creates a sample array, moves it to the GPU, performs some operations on the GPU, and then moves the result back to the CPU.
-
-Final Answer: To install CUDA and get started with developing applications using it, you can follow these steps:
-
-1. Verify that your system has a CUDA-capable GPU.
-2. Download the NVIDIA CUDA Toolkit from the official NVIDIA website.
-3. Install the CUDA Toolkit using the installation guide provided for your operating system.
-4. Test the installation by running the provided examples or by using the CUDA API in your own applications.
-
-Here's an example Python code using CUDA:
+Action Input: {"query": "Python code example using CUDA"}
+------------------------------
+2025-04-23 20:31:46,251 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Running code generation tool
+2025-04-23 20:31:47,931 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: code_generation_tool
+Tool's input: {"query": "Python code example using CUDA"}
+Tool's response:
 ```python
 import numpy as np
 import cupy as cp
@@ -530,21 +604,50 @@ import cupy as cp
 # Create a sample array
 arr = np.array([1, 2, 3, 4, 5])
 
-# Move the array to the GPU
+# Transfer the array to the GPU
 arr_gpu = cp.asarray(arr)
 
 # Perform some operations on the GPU
 result_gpu = cp.square(arr_gpu)
 
-# Move the result back to the CPU
+# Transfer the result back to the CPU
 result_cpu = cp.asnumpy(result_gpu)
 
 print(result_cpu)
-
-This code creates a sample array, moves it to the GPU, performs a square operation on the GPU, and then moves the result back to the CPU. The result is then printed to the console.
-2025-03-12 12:33:10,983 - aiq.observability.async_otel_listener - INFO - Intermediate step stream completed. No more events will arrive.
-2025-03-12 12:33:10,983 - aiq.front_ends.console.console_front_end_plugin - INFO - --------------------------------------------------
-Workflow Result:
-["To install CUDA and get started with developing applications using it, you can follow these steps:\n\n1. Verify that your system has a CUDA-capable GPU.\n2. Download the NVIDIA CUDA Toolkit from the official NVIDIA website.\n3. Install the CUDA Toolkit using the installation guide provided for your operating system.\n4. Test the installation by running the provided examples or by using the CUDA API in your own applications.\n\nHere's an example Python code using CUDA:\n```python\nimport numpy as np\nimport cupy as cp\n\n# Create a sample array\narr = np.array([1, 2, 3, 4, 5])\n\n# Move the array to the GPU\narr_gpu = cp.asarray(arr)\n\n# Perform some operations on the GPU\nresult_gpu = cp.square(arr_gpu)\n\n# Move the result back to the CPU\nresult_cpu = cp.asnumpy(result_gpu)\n\nprint(result_cpu)\n```\nThis code creates a sample array, moves it to the GPU, performs a square operation on the GPU, and then moves the result back to the CPU. The result is then printed to the console."]
---------------------------------------------------
 ```
+------------------------------
+2025-04-23 20:31:52,241 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: How do I install CUDA and get started developing with it? Provide example python code
+Agent's thoughts:
+Thought: I now know the final answer
+
+Final Answer: To install CUDA and get started with developing applications using it, you can follow the steps outlined in the CUDA documentation. This includes verifying that you have a CUDA-capable GPU, downloading the NVIDIA CUDA Toolkit, and installing the CUDA software. After installation, you can verify that the CUDA toolkit can find and communicate correctly with the CUDA-capable hardware by compiling and running sample programs.
+
+Here's an example Python code that demonstrates how to use CUDA:
+```python
+import numpy as np
+import cupy as cp
+
+# Create a sample array
+arr = np.array([1, 2, 3, 4, 5])
+
+# Transfer the array to the GPU
+arr_gpu = cp.asarray(arr)
+
+# Perform some operations on the GPU
+result_gpu = cp.square(arr_gpu)
+
+# Transfer the result back to the CPU
+result_cpu = cp.asnumpy(result_gpu)
+
+print(result_cpu)
+```
+This code creates a sample array, transfers it to the GPU, performs some operations on the GPU, and then transfers the result back to the CPU. The output of this code will be the squared values of the original array.
+------------------------------
+2025-04-23 20:31:52,244 - aiq.front_ends.console.console_front_end_plugin - INFO -
+--------------------------------------------------
+Workflow Result:
+["To install CUDA and get started with developing applications using it, you can follow the steps outlined in the CUDA documentation. This includes verifying that you have a CUDA-capable GPU, downloading the NVIDIA CUDA Toolkit, and installing the CUDA software. After installation, you can verify that the CUDA toolkit can find and communicate correctly with the CUDA-capable hardware by compiling and running sample programs.\n\nHere's an example Python code that demonstrates how to use CUDA:\n```python\nimport numpy as np\nimport cupy as cp\n\n# Create a sample array\narr = np.array([1, 2, 3, 4, 5])\n\n# Transfer the array to the GPU\narr_gpu = cp.asarray(arr)\n\n# Perform some operations on the GPU\nresult_gpu = cp.square(arr_gpu)\n\n# Transfer the result back to the CPU\nresult_cpu = cp.asnumpy(result_gpu)\n\nprint(result_cpu)\n```\nThis code creates a sample array, transfers it to the GPU, performs some operations on the GPU, and then transfers the result back to the CPU. The output of this code will be the squared values of the original array."]
+````
