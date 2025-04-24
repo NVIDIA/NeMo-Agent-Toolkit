@@ -145,7 +145,8 @@ async def test_executor_node_with_not_configured_tool(mock_rewoo_agent):
 
 
 async def test_executor_node_parse_input(mock_rewoo_agent):
-    with patch('aiq.agent.rewoo_agent.agent.logger.info') as mock_logger_info:
+    from aiq.agent.base import AGENT_LOG_PREFIX
+    with patch('aiq.agent.rewoo_agent.agent.logger.debug') as mock_logger_debug:
         # Test with dict as tool input
         mock_state = ReWOOGraphState(
             task=HumanMessage(content="This is a task"),
@@ -162,7 +163,8 @@ async def test_executor_node_parse_input(mock_rewoo_agent):
             ]),
             intermediate_results={})
         await mock_rewoo_agent.executor_node(mock_state)
-        mock_logger_info.assert_any_call("Tool input is already a dictionary. Use the tool input as is.")
+        mock_logger_debug.assert_any_call("%s Tool input is already a dictionary. Use the tool input as is.",
+                                          AGENT_LOG_PREFIX)
 
         # Test with valid JSON as tool input
         mock_state = ReWOOGraphState(
@@ -177,21 +179,23 @@ async def test_executor_node_parse_input(mock_rewoo_agent):
             ]),
             intermediate_results={})
         await mock_rewoo_agent.executor_node(mock_state)
-        mock_logger_info.assert_any_call("Successfully parsed structured tool input")
+        mock_logger_debug.assert_any_call("%s Successfully parsed structured tool input", AGENT_LOG_PREFIX)
 
         # Test with string with single quote as tool input
         mock_state.steps = AIMessage(
             content=[_create_step_info("step1", "#E1", "mock_tool_A", "{'arg1': 'arg_1', 'arg2': 'arg_2'}")])
         mock_state.intermediate_results = {}
         await mock_rewoo_agent.executor_node(mock_state)
-        mock_logger_info.assert_any_call(
-            "Successfully parsed structured tool input after replacing single quotes with double quotes")
+        mock_logger_debug.assert_any_call(
+            "%s Successfully parsed structured tool input after replacing single quotes with double quotes",
+            AGENT_LOG_PREFIX)
 
         # Test with string that cannot be parsed as a JSON as tool input
         mock_state.steps = AIMessage(content=[_create_step_info("step1", "#E1", "mock_tool_A", "arg1, arg2")])
         mock_state.intermediate_results = {}
         await mock_rewoo_agent.executor_node(mock_state)
-        mock_logger_info.assert_any_call("Unable to parse structured tool input. Using raw tool input as is.")
+        mock_logger_debug.assert_any_call("%s Unable to parse structured tool input. Using raw tool input as is.",
+                                          AGENT_LOG_PREFIX)
 
 
 async def test_executor_node_handle_input_types(mock_rewoo_agent):

@@ -119,12 +119,13 @@ aiq run --config_file examples/por_to_jiratickets/configs/config.yml  --input "C
 **Expected Output When Giving Permission**
 
 ```console
-2025-03-12 15:28:34,484 - aiq.agent.react_agent.agent - INFO - Filling the prompt variables "tools" and "tool_names", using the tools provided in the config.
-2025-03-12 15:28:34,484 - aiq.agent.react_agent.agent - INFO - Adding the tools' input schema to the tools' description
-2025-03-12 15:28:34,485 - aiq.agent.react_agent.agent - INFO - Initialized ReAct Agent Graph
-2025-03-12 15:28:34,553 - aiq.agent.react_agent.agent - INFO - ReAct Graph built and compiled successfully
-2025-03-12 15:28:34,555 - aiq.front_ends.console.console_front_end_plugin - INFO - Processing input: ('Can you extract por file por_requirements.txt, assign story points and create jira tickets for epics first and then followed by tasks?',)
-2025-03-12 15:28:34,558 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
+$ aiq run --config_file examples/por_to_jiratickets/configs/config.yml  --input "Can you extract por file por_requirements.txt, assign story points and create jira tickets for epics first and then followed by tasks?"
+2025-04-23 15:46:33,770 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (501.032114 ms). Ensure all imports are inside your registered functions.
+2025-04-23 15:46:34,105 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/por_to_jiratickets/configs/config.yml'
+2025-04-23 15:46:34,112 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
+2025-04-23 15:46:34,147 - aiq.profiler.utils - WARNING - Discovered frameworks: {<LLMFrameworkEnum.LANGCHAIN: 'langchain'>} in function extract_from_por_tool by inspecting source. It is recommended and more reliable to instead add the used LLMFrameworkEnum types in the framework_wrappers argument when calling @register_function.
+/nvme/1/yuchenz/projects/AgentIQ/examples/por_to_jiratickets/src/aiq_por_to_jiratickets/extract_por_tool.py:141: LangChainDeprecationWarning: The class `LLMChain` was deprecated in LangChain 0.1.17 and will be removed in 1.0. Use :meth:`~RunnableSequence, e.g., `prompt | llm`` instead.
+  chain = LLMChain(llm=llm, prompt=prompt)
 
 Configuration Summary:
 --------------------
@@ -135,68 +136,114 @@ Number of Embedders: 0
 Number of Memory: 0
 Number of Retrievers: 0
 
-2025-03-12 15:28:35,769 - aiq.agent.react_agent.agent - INFO - The user's question was: Can you extract por file por_requirements.txt, assign story points and create jira tickets for epics first and then followed by tasks?
-2025-03-12 15:28:35,770 - aiq.agent.react_agent.agent - INFO - The agent's thoughts are:
-Thought: To accomplish this task, I need to first extract the epics and tasks from the POR file, assign story points, and then create Jira tickets for epics and tasks separately.
+2025-04-23 15:46:35,415 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: Can you extract por file por_requirements.txt, assign story points and create jira tickets for epics first and then followed by tasks?
+Agent's thoughts:
+Thought: The user wants to extract epics and tasks from a POR file, assign story points, and create Jira tickets for epics and tasks. The first step is to extract the epics and tasks from the POR file.
 
 Action: extract_por_tool
 Action Input: {'input_text': 'por_requirements.txt'}
 
-2025-03-12 15:28:35,775 - aiq.agent.react_agent.agent - INFO - Calling tool extract_por_tool with input: {'input_text': 'por_requirements.txt'}
-2025-03-12 15:28:35,775 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
-2025-03-12 15:29:00,696 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-03-12 15:29:01,880 - aiq.agent.react_agent.agent - INFO -
-
-The agent's thoughts are:
-Thought: Now that the extraction is complete, I can ask to show the epics and tasks to verify the extraction results. After verification, I can proceed with creating Jira tickets for epics and tasks.
-
-Action: show_jira_tickets
-Action Input: {'input_text': 'epics'}
-2025-03-12 15:29:01,882 - aiq.agent.react_agent.agent - INFO - Calling tool show_jira_tickets with input: {'input_text': 'epics'}
-2025-03-12 15:29:01,882 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
-2025-03-12 15:29:01,888 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-I would like to create Jira tickets for the extracted data. Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: 2025-03-12 15:29:02,868 - aiq.agent.react_agent.agent - INFO -
-
-The agent's thoughts are:
-Thought: The epics have been successfully extracted and displayed. Now, I need to create Jira tickets for these epics.
-
-Action: create_jira_tickets_tool
-Action Input: {'input_text': 'epics'}
-2025-03-12 15:29:02,869 - aiq.agent.react_agent.agent - INFO - Calling tool create_jira_tickets_tool with input: {'input_text': 'epics'}
-2025-03-12 15:29:02,869 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
-yes
-2025-03-12 15:31:06,092 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-03-12 15:31:07,157 - aiq.agent.react_agent.agent - INFO -
-
-The agent's thoughts are:
-Thought: The Jira tickets for epics have been successfully created. Next, I need to show the tasks to verify their extraction results.
-
-Action: show_jira_tickets
-Action Input: {'input_text': 'tasks'}
-2025-03-12 15:31:07,160 - aiq.agent.react_agent.agent - INFO - Calling tool show_jira_tickets with input: {'input_text': 'tasks'}
-2025-03-12 15:31:07,160 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
-2025-03-12 15:31:07,164 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-03-12 15:31:08,135 - aiq.agent.react_agent.agent - INFO -
-
-The agent's thoughts are:
-Thought: The tasks have been successfully extracted and displayed. Now, I need to create Jira tickets for these tasks.
+------------------------------
+/nvme/1/yuchenz/projects/AgentIQ/examples/por_to_jiratickets/src/aiq_por_to_jiratickets/extract_por_tool.py:152: LangChainDeprecationWarning: The method `Chain.arun` was deprecated in langchain 0.1.0 and will be removed in 1.0. Use :meth:`~ainvoke` instead.
+  response = await chain.arun(por_content=input_text)
+2025-04-23 15:51:28,095 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: extract_por_tool
+Tool's input: {"input_text": "por_requirements.txt"}
+Tool's response:
+Extraction complete. You can now ask me to show epics or tasks.
+------------------------------
+2025-04-23 15:51:33,159 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: Can you extract por file por_requirements.txt, assign story points and create jira tickets for epics first and then followed by tasks?
+Agent's thoughts:
+Thought: Now that the extraction is complete, I can ask the human to show the extracted epics and tasks. However, the user's original request was to create Jira tickets for epics first and then tasks. So, I will ask the human to create Jira tickets for epics.
 
 Action: create_jira_tickets_tool
-Action Input: {'input_text': 'tasks'}
-2025-03-12 15:31:08,138 - aiq.agent.react_agent.agent - INFO - Calling tool create_jira_tickets_tool with input: {'input_text': 'tasks'}
-2025-03-12 15:31:08,138 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
+Action Input: {'input_text': 'epics'}
+------------------------------
 I would like to create Jira tickets for the extracted data. Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: yes
-2025-03-12 15:31:15,897 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-03-12 15:31:21,529 - aiq.agent.react_agent.agent - INFO -
+2025-04-23 15:51:52,134 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:52,197 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:52,211 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:52,334 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:52,356 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:52,370 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:52,373 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: create_jira_tickets_tool
+Tool's input: {"input_text": "epics"}
+Tool's response:
+### Created epics:
+- **AIQ-1158**: https://jirasw.nvidia.com/browse/AIQ-1158
+- **AIQ-1163**: https://jirasw.nvidia.com/browse/AIQ-1163
+- **AIQ-1159**: https://jirasw.nvidia.com/browse/AIQ-1159
+- **AIQ-1162**: https://jirasw.nvidia.com/browse/AIQ-1162
+- **AIQ-1161**: https://jirasw.nvidia.com/browse/AIQ-1161
+- **AIQ-1160**: https://jirasw.nvidia.com/browse/AIQ-1160
+------------------------------
+2025-04-23 15:51:53,217 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: Can you extract por file por_requirements.txt, assign story points and create jira tickets for epics first and then followed by tasks?
+Agent's thoughts:
+Thought: The Jira tickets for epics have been created. The next step is to create Jira tickets for tasks, as per the user's original request.
 
-The agent's thoughts are:
+Action: create_jira_tickets_tool
+Action Input: {'input_text': 'tasks'}
+------------------------------
+I would like to create Jira tickets for the extracted data. Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: yes
+2025-04-23 15:51:57,269 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:57,301 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:57,389 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:57,424 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:57,647 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:57,682 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:57,694 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:57,777 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:57,801 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:57,841 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:58,042 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:58,117 - httpx - INFO - HTTP Request: POST https://jirasw.nvidia.com/rest/api/2/issue "HTTP/1.1 201 Created"
+2025-04-23 15:51:58,120 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: create_jira_tickets_tool
+Tool's input: {"input_text": "tasks"}
+Tool's response:
+### Created tasks:
+- **AIQ-1166**: https://jirasw.nvidia.com/browse/AIQ-1166
+- **AIQ-1169**: https://jirasw.nvidia.com/browse/AIQ-1169
+- **AIQ-1170**: https://jirasw.nvidia.com/browse/AIQ-1170
+- **AIQ-1164**: https://jirasw.nvidia.com/browse/AIQ-1164
+- **AIQ-1171**: https://jirasw.nvidia.com/browse/AIQ-1171
+- **AIQ-1168**: https://jirasw.nvidia.com/browse/AIQ-1168
+- **AIQ-1172**: https://jirasw.nvidia.com/browse/AIQ-1172
+- **AIQ-1174**: https://jirasw.nvidia.com/browse/AIQ-1174
+- **AIQ-1165**: https://jirasw.nvidia.com/browse/AIQ-1165
+- **AIQ-1175**: https://jirasw.nvidia.com/browse/AIQ-1175
+- **AIQ-1173**: https://jirasw.nvidia.com/browse/AIQ-1173
+- **AIQ-1167**: https://jirasw.nvidia.com/browse/AIQ-1167
+------------------------------
+2025-04-23 15:56:27,177 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: Can you extract por file por_requirements.txt, assign story points and create jira tickets for epics first and then followed by tasks?
+Agent's thoughts:
 Thought: I now know the final answer
 
-Final Answer: Jira tickets for epics and tasks have been successfully created.
-2025-03-12 15:31:21,532 - aiq.observability.async_otel_listener - INFO - Intermediate step stream completed. No more events will arrive.
-2025-03-12 15:31:21,532 - aiq.front_ends.console.console_front_end_plugin - INFO - --------------------------------------------------
+Final Answer: Jira tickets for epics and tasks have been created. Epics: AIQ-1158, AIQ-1163, AIQ-1159, AIQ-1162, AIQ-1161, AIQ-1160. Tasks: AIQ-1166, AIQ-1169, AIQ-1170, AIQ-1164, AIQ-1171, AIQ-1168, AIQ-1172, AIQ-1174, AIQ-1165, AIQ-1175, AIQ-1173, AIQ-1167.
+------------------------------
+2025-04-23 15:56:27,180 - aiq.front_ends.console.console_front_end_plugin - INFO -
+--------------------------------------------------
 Workflow Result:
-['Jira tickets for epics and tasks have been successfully created.']
+['Jira tickets for epics and tasks have been created. Epics: AIQ-1158, AIQ-1163, AIQ-1159, AIQ-1162, AIQ-1161, AIQ-1160. Tasks: AIQ-1166, AIQ-1169, AIQ-1170, AIQ-1164, AIQ-1171, AIQ-1168, AIQ-1172, AIQ-1174, AIQ-1165, AIQ-1175, AIQ-1173, AIQ-1167.']
 --------------------------------------------------
 ```
 **Expected Output When Not Giving Permission**

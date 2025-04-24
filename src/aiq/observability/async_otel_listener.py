@@ -100,7 +100,7 @@ class AsyncOtelSpanListener:
         logger.error("Error in intermediate step subscription: %s", exc, exc_info=True)
 
     def _on_complete(self) -> None:
-        logger.info("Intermediate step stream completed. No more events will arrive.")
+        logger.debug("Intermediate step stream completed. No more events will arrive.")
 
     @asynccontextmanager
     async def start(self):

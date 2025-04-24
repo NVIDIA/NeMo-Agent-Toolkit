@@ -91,15 +91,89 @@ aiq run --config_file examples/simple_calculator/configs/config-tracing.yml --in
 **Expected Output**
 The workflow output can be quite lengthy, the end of the workflow output should contain something similar to the following (the final answer will depend on the time of day the workflow is run):
 ```console
-The agent's thoughts are:
+$ aiq run --config_file examples/simple_calculator/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+2025-04-23 15:58:34,877 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (440.151215 ms). Ensure all imports are inside your registered functions.
+2025-04-23 15:58:35,193 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/simple_calculator/configs/config.yml'
+2025-04-23 15:58:35,199 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
+
+Configuration Summary:
+--------------------
+Workflow Type: react_agent
+Number of Functions: 5
+Number of LLMs: 2
+Number of Embedders: 0
+Number of Memory: 0
+Number of Retrievers: 0
+
+2025-04-23 15:58:36,674 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: Is the product of 2 * 4 greater than the current hour of the day?
+Agent's thoughts:
+Thought: To answer this question, I need to calculate the product of 2 and 4, and then compare it to the current hour of the day.
+
+Action: calculator_multiply
+Action Input: {'text': '2 * 4'}
+
+
+------------------------------
+2025-04-23 15:58:36,682 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: calculator_multiply
+Tool's input: {"text": "2 * 4"}
+Tool's response:
+The product of 2 * 4 is 8
+------------------------------
+2025-04-23 15:58:37,704 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: Is the product of 2 * 4 greater than the current hour of the day?
+Agent's thoughts:
+Thought: Now that I have the product of 2 and 4, I need to get the current hour of the day to compare it with the product.
+
+Action: current_datetime
+Action Input: None
+------------------------------
+2025-04-23 15:58:37,710 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: current_datetime
+Tool's input: None
+Tool's response:
+The current time of day is 2025-04-23 15:58:37
+------------------------------
+2025-04-23 15:58:38,865 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: Is the product of 2 * 4 greater than the current hour of the day?
+Agent's thoughts:
+Thought: Now that I have the current time of day, I can extract the hour and compare it with the product of 2 and 4.
+
+Action: calculator_inequality
+Action Input: {'text': '8 > 15'}
+------------------------------
+2025-04-23 15:58:38,871 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: calculator_inequality
+Tool's input: {"text": "8 > 15"}
+Tool's response:
+First number 8 is less than the second number 15
+------------------------------
+2025-04-23 15:58:39,978 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: Is the product of 2 * 4 greater than the current hour of the day?
+Agent's thoughts:
 Thought: I now know the final answer
 
-Final Answer: No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 13).
-2025-03-04 13:25:03,419 - aiq.observability.async_otel_listener - INFO - Intermediate step stream completed. No more events will arrive.
-2025-03-04 13:25:03,419 - aiq.front_ends.console.console_front_end_plugin - INFO - --------------------------------------------------
-Workflow Result:
-['No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 13).']
+Final Answer: No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 15).
+------------------------------
+2025-04-23 15:58:39,981 - aiq.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
+Workflow Result:
+['No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 15).']
 ```
 
 ### Examine the Traces in Phoenix

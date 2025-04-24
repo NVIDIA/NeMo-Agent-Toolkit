@@ -19,6 +19,7 @@ from collections.abc import AsyncGenerator
 
 from pydantic import Field
 
+from aiq.agent.base import AGENT_LOG_PREFIX
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function_info import FunctionInfo
@@ -167,7 +168,7 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
             output = output.to_string()
 
             if config.verbose:
-                logger.info("Reasoning plan and input to agent: \n\n%s", output)
+                logger.info("%s Reasoning plan and input to agent: \n\n%s", AGENT_LOG_PREFIX, output)
 
             async for chunk in augmented_function.acall_stream(output):
                 yield chunk
@@ -210,7 +211,7 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
             output = output.to_string()
 
             if config.verbose:
-                logger.info("Reasoning plan and input to agent: \n\n%s", output)
+                logger.info("%s Reasoning plan and input to agent: \n\n%s", AGENT_LOG_PREFIX, output)
 
             return await augmented_function.acall_invoke(output)
 
