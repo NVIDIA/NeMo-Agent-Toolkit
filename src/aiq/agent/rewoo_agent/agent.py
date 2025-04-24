@@ -262,12 +262,12 @@ class ReWOOAgentGraph(BaseAgent):
             if isinstance(tool_response, dict):
                 tool_response = [tool_response]
 
-            tool_response = ToolMessage(name=tool, tool_call_id=tool, content=tool_response)
+            tool_response_message = ToolMessage(name=tool, tool_call_id=tool, content=tool_response)
 
             logger.debug("%s Successfully called the tool", AGENT_LOG_PREFIX)
             if self.detailed_logs:
                 # The tool response can be very large, so we log only the first 1000 characters
-                tool_response_str = tool_response.content
+                tool_response_str = tool_response_message.content
                 tool_response_str = tool_response_str[:1000] + "..." if len(
                     tool_response_str) > 1000 else tool_response_str
                 tool_response_log_message = TOOL_RESPONSE_LOG_MESSAGE % (
@@ -334,9 +334,9 @@ class ReWOOAgentGraph(BaseAgent):
             if current_step == -1:
                 logger.debug("%s The ReWOO Executor has finished its task", AGENT_LOG_PREFIX)
                 return AgentDecision.END
-            else:
-                logger.debug("%s The ReWOO Executor is still working on the task", AGENT_LOG_PREFIX)
-                return AgentDecision.TOOL
+
+            logger.debug("%s The ReWOO Executor is still working on the task", AGENT_LOG_PREFIX)
+            return AgentDecision.TOOL
 
         except Exception as ex:
             logger.exception("%s Failed to determine whether agent is calling a tool: %s",
