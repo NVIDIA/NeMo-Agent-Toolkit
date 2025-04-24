@@ -43,7 +43,7 @@ AGENT_RESPONSE_LOG_MESSAGE = f"\n{'-' * 30}\n" + \
 TOOL_RESPONSE_LOG_MESSAGE = f"\n{'-' * 30}\n" + \
                                  AGENT_LOG_PREFIX + "\n" + \
                                  Fore.WHITE + \
-                                 "Calling Tools: %s\n" + \
+                                 "Calling tools: %s\n" + \
                                  Fore.YELLOW + \
                                  "Tool's input: %s\n" + \
                                  Fore.CYAN + \

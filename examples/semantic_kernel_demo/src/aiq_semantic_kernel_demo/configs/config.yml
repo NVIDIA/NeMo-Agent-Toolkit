@@ -51,7 +51,7 @@ functions:
 llms:
   openai_llm:
     _type: openai
-    model_name: o3-mini
+    model_name: gpt-3.5-turbo
 
 workflow:
   _type: semantic_kernel

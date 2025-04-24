@@ -259,8 +259,12 @@ class ReActAgentGraph(DualNodeAgent):
                                                              config=RunnableConfig(callbacks=self.callbacks))
                 if self.detailed_logs:
                     # The tool response can be very large, so we log only the first 1000 characters
-                    tool_response = tool_response[:1000] + "..." if len(tool_response) > 1000 else tool_response
-                    logger.info(TOOL_RESPONSE_LOG_MESSAGE, requested_tool.name, tool_input_str, tool_response)
+                    tool_response_str = str(tool_response)
+                    tool_response_str = tool_response_str[:1000] + "..." if len(
+                        tool_response_str) > 1000 else tool_response_str
+                    tool_response_log_message = TOOL_RESPONSE_LOG_MESSAGE % (
+                        requested_tool.name, tool_input_str, tool_response_str)
+                    logger.info(tool_response_log_message)
             except JSONDecodeError as ex:
                 logger.warning(
                     "%s Unable to parse structured tool input from Action Input. Using Action Input as is."
