@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 from pydantic import BaseModel
@@ -10,6 +11,8 @@ from aiq.cli.register_workflow import register_function
 from aiq.data_models.function import FunctionBaseConfig
 
 from .a2a_client import A2AToolClient
+
+logger = logging.getLogger(__name__)
 
 
 class A2AFunctionConfig(FunctionBaseConfig, name="a2a_function_wrapper"):
@@ -29,7 +32,7 @@ async def a2a_function(config: A2AFunctionConfig, builder: Builder):
     """Generate an AgentIQ Function that wraps a tool provided by the A2A server."""
 
     # Setup a client for each tool
-    tool = A2AToolClient(str(config.url), tool_name=config.a2a_tool_name, description=config.description)
+    tool = A2AToolClient(str(config.url), tool_name=config.a2a_tool_name)
 
     # Get the AgentCard for the tool. This can be deferred to the first tool call but
     # we need the description if it is not configured in the aiq config file
@@ -41,6 +44,7 @@ async def a2a_function(config: A2AFunctionConfig, builder: Builder):
         return tool.input_schema.model_validate_json(input_str)
 
     async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
+        logger.info("Tool input: %s", tool_input)
         if tool_input:
             args = tool_input.model_dump()
             return await tool.acall(args)

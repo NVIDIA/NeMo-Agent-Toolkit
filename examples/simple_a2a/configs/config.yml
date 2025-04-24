@@ -20,11 +20,11 @@ functions:
   current_datetime:
     _type: current_datetime
     description: "Get the current date and time"
-  get_exchange_rate:
+  get_a2a_exchange_rate:
     _type: a2a_function_wrapper
     a2a_tool_name: get_exchange_rate
     url: "http://localhost:10000"
-    description: "Get the exchange rate for a given currency pair"
+    description: "Get the exchange rate for a given currency pair for a given date"
 
 llms:
   nim_llm:
@@ -35,9 +35,10 @@ llms:
     top_p: 1
 
 workflow:
-  _type: react_agent
+  _type: tool_calling_agent
   tool_names:
    - current_datetime
-   - get_exchange_rate
+   - get_a2a_exchange_rate
   verbose: true
   llm_name: nim_llm
+  handle_tool_errors: true

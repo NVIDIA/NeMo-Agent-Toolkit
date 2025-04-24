@@ -1,13 +1,13 @@
 import json
 import logging
+from enum import Enum
 from typing import Any
 from typing import AsyncIterable
 from uuid import uuid4
 
 import httpx
-from httpx_sse import connect_sse_async
+from httpx_sse import connect_sse
 from pydantic import BaseModel
-from pydantic import Enum
 from pydantic import Field
 from pydantic import create_model
 
@@ -64,6 +64,9 @@ class A2AClient:
         # Make the timeout configurable
         self._timeout = 30
 
+    async def __aenter__(self):
+        return self
+
     async def __aexit__(self, exc_type, exc, tb):
         """
         Context manager exit method
@@ -95,7 +98,7 @@ class A2AClient:
 
     async def send_task_streaming(self, payload: dict[str, Any]) -> AsyncIterable[dict[str, Any]]:
         request = JSONRPCRequest(method="send_task_streaming", params=payload)
-        async with connect_sse_async(self._client, "POST", self.url, json=request.model_dump()) as event_source:
+        async with connect_sse(self._client, "POST", self.url, json=request.model_dump()) as event_source:
             async for sse in event_source.aiter_sse():
                 try:
                     response = JSONRPCResponse(**json.loads(sse.data))
@@ -117,6 +120,7 @@ class A2AClient:
         response = await self._client.get(f"{base_url}/{agent_card_path}")
         response.raise_for_status()
         try:
+            logger.info("AgentCard: %s", response.json())
             return AgentCard(**response.json())
         except json.JSONDecodeError as e:
             # log and raise
@@ -152,22 +156,19 @@ class A2AClient:
 
 class A2AToolClient(A2AClient):
 
-    def __init__(self,
-                 agent_card: AgentCard | None = None,
-                 url: str | None = None,
-                 tool_name: str | None = None,
-                 tool_input_schema: dict | None = None):
+    def __init__(self, url: str | None = None, tool_name: str | None = None, tool_input_schema: dict | None = None):
         """
         Initialize the A2AToolClient
         """
         # Setup the A2AClient using the provided URL
-        super().__init__(agent_card, url)
+        super().__init__(url)
 
         # Setup tool attributes
         self._tool_name: str | None = tool_name
         self._tool_description: str | None = None
         self._input_schema: type[BaseModel] | None = \
             self.model_from_a2a_schema(self._tool_name, tool_input_schema) if tool_input_schema else None
+        self._session_id: str = uuid4().hex
 
     @property
     def name(self):
@@ -248,4 +249,6 @@ class A2AToolClient(A2AClient):
         """
         Call the tool
         """
-        return await self.complete_task(taskId=uuid4().hex, sessionId=uuid4().hex, prompt=tool_args)
+        task_result = await self.complete_task(taskId=uuid4().hex, sessionId=self._session_id, prompt=tool_args)
+        logger.info("Task result: %s", task_result)
+        return "WIP"
