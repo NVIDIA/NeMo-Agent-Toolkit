@@ -47,13 +47,13 @@ def is_valid_json(string):
 
 
 # Create a compatibility layer for typing.override
-# In Python 3.11+, use the built-in typing.override
-# In Python 3.11, create a no-op decorator
+# In Python >= 3.12, use the built-in typing.override
+# Otherwise, create a no-op decorator
 def _create_override_decorator():
     if sys.version_info >= (3, 12):
         return typing.override
     else:
-        # Simple no-op decorator for Python 3.11
+        # Simple no-op decorator for Python < 3.12
         def no_op_override(func):
             return func
 
