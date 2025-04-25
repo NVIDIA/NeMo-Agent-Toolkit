@@ -16,7 +16,6 @@
 import dataclasses
 import inspect
 import logging
-import typing
 import warnings
 from contextlib import AbstractAsyncContextManager
 from contextlib import AsyncExitStack
@@ -60,6 +59,7 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.memory.interfaces import MemoryEditor
 from aiq.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
 from aiq.profiler.utils import detect_llm_frameworks_in_build_fn
+from aiq.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
 
@@ -312,7 +312,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return ConfiguredFunction(config=config, instance=build_result)
 
-    @typing.override
+    @override
     async def add_function(self, name: str | FunctionRef, config: FunctionBaseConfig) -> Function:
 
         if (name in self._functions):
@@ -324,7 +324,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return build_result.instance
 
-    @typing.override
+    @override
     def get_function(self, name: str | FunctionRef) -> Function:
 
         if name not in self._functions:
@@ -332,14 +332,14 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return self._functions[name].instance
 
-    @typing.override
+    @override
     def get_function_config(self, name: str | FunctionRef) -> FunctionBaseConfig:
         if name not in self._functions:
             raise ValueError(f"Function `{name}` not found")
 
         return self._functions[name].config
 
-    @typing.override
+    @override
     async def set_workflow(self, config: FunctionBaseConfig) -> Function:
 
         if self._workflow is not None:
@@ -351,7 +351,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return build_result.instance
 
-    @typing.override
+    @override
     def get_workflow(self) -> Function:
 
         if self._workflow is None:
@@ -359,18 +359,18 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return self._workflow.instance
 
-    @typing.override
+    @override
     def get_workflow_config(self) -> FunctionBaseConfig:
         if self._workflow is None:
             raise ValueError("No workflow set")
 
         return self._workflow.config
 
-    @typing.override
+    @override
     def get_function_dependencies(self, fn_name: str | FunctionRef) -> FunctionDependencies:
         return self.function_dependencies[fn_name]
 
-    @typing.override
+    @override
     def get_tool(self, fn_name: str | FunctionRef, wrapper_type: LLMFrameworkEnum | str):
 
         if fn_name not in self._functions:
@@ -388,7 +388,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             logger.error("Error fetching tool `%s`", fn_name, exc_info=True)
             raise e
 
-    @typing.override
+    @override
     async def add_llm(self, name: str | LLMRef, config: LLMBaseConfig):
 
         if (name in self._llms):
@@ -404,7 +404,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             logger.error("Error adding llm `%s` with config `%s`", name, config, exc_info=True)
             raise e
 
-    @typing.override
+    @override
     async def get_llm(self, llm_name: str | LLMRef, wrapper_type: LLMFrameworkEnum | str):
 
         if (llm_name not in self._llms):
@@ -425,7 +425,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             logger.error("Error getting llm `%s` with wrapper `%s`", llm_name, wrapper_type, exc_info=True)
             raise e
 
-    @typing.override
+    @override
     def get_llm_config(self, llm_name: str | LLMRef) -> LLMBaseConfig:
 
         if llm_name not in self._llms:
@@ -434,7 +434,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Return the tool configuration object
         return self._llms[llm_name].config
 
-    @typing.override
+    @override
     async def add_embedder(self, name: str | EmbedderRef, config: EmbedderBaseConfig):
 
         if (name in self._embedders):
@@ -451,7 +451,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             raise e
 
-    @typing.override
+    @override
     async def get_embedder(self, embedder_name: str | EmbedderRef, wrapper_type: LLMFrameworkEnum | str):
 
         if (embedder_name not in self._embedders):
@@ -472,7 +472,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             logger.error("Error getting embedder `%s` with wrapper `%s`", embedder_name, wrapper_type, exc_info=True)
             raise e
 
-    @typing.override
+    @override
     def get_embedder_config(self, embedder_name: str | EmbedderRef) -> EmbedderBaseConfig:
 
         if embedder_name not in self._embedders:
@@ -481,7 +481,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Return the tool configuration object
         return self._embedders[embedder_name].config
 
-    @typing.override
+    @override
     async def add_memory_client(self, name: str | MemoryRef, config: MemoryBaseConfig) -> MemoryEditor:
 
         if (name in self._memory_clients):
@@ -495,7 +495,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return info_obj
 
-    @typing.override
+    @override
     def get_memory_client(self, memory_name: str | MemoryRef) -> MemoryEditor:
         """
         Return the instantiated memory client for the given name.
@@ -505,7 +505,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return self._memory_clients[memory_name].instance
 
-    @typing.override
+    @override
     def get_memory_client_config(self, memory_name: str | MemoryRef) -> MemoryBaseConfig:
 
         if memory_name not in self._memory_clients:
@@ -514,7 +514,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Return the tool configuration object
         return self._memory_clients[memory_name].config
 
-    @typing.override
+    @override
     async def add_retriever(self, name: str | RetrieverRef, config: RetrieverBaseConfig):
 
         if (name in self._retrievers):
@@ -534,7 +534,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         # return info_obj
 
-    @typing.override
+    @override
     async def get_retriever(self,
                             retriever_name: str | RetrieverRef,
                             wrapper_type: LLMFrameworkEnum | str | None = None):
@@ -558,7 +558,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             logger.error("Error getting retriever `%s` with wrapper `%s`", retriever_name, wrapper_type, exc_info=True)
             raise e
 
-    @typing.override
+    @override
     async def get_retriever_config(self, retriever_name: str | RetrieverRef) -> RetrieverBaseConfig:
 
         if retriever_name not in self._retrievers:
@@ -566,7 +566,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return self._retrievers[retriever_name].config
 
-    @typing.override
+    @override
     def get_user_manager(self):
         return UserManagerHolder(context=AIQContext(self._context_state))
 
@@ -621,11 +621,11 @@ class ChildBuilder(Builder):
     def dependencies(self) -> FunctionDependencies:
         return self._dependencies
 
-    @typing.override
+    @override
     async def add_function(self, name: str, config: FunctionBaseConfig) -> Function:
         return await self._workflow_builder.add_function(name, config)
 
-    @typing.override
+    @override
     def get_function(self, name: str) -> Function:
         # If a function tries to get another function, we assume it uses it
         fn = self._workflow_builder.get_function(name)
@@ -634,23 +634,23 @@ class ChildBuilder(Builder):
 
         return fn
 
-    @typing.override
+    @override
     def get_function_config(self, name: str) -> FunctionBaseConfig:
         return self._workflow_builder.get_function_config(name)
 
-    @typing.override
+    @override
     async def set_workflow(self, config: FunctionBaseConfig) -> Function:
         return await self._workflow_builder.set_workflow(config)
 
-    @typing.override
+    @override
     def get_workflow(self) -> Function:
         return self._workflow_builder.get_workflow()
 
-    @typing.override
+    @override
     def get_workflow_config(self) -> FunctionBaseConfig:
         return self._workflow_builder.get_workflow_config()
 
-    @typing.override
+    @override
     def get_tool(self, fn_name: str, wrapper_type: LLMFrameworkEnum | str):
         # If a function tries to get another function as a tool, we assume it uses it
         fn = self._workflow_builder.get_tool(fn_name, wrapper_type)
@@ -659,11 +659,11 @@ class ChildBuilder(Builder):
 
         return fn
 
-    @typing.override
+    @override
     async def add_llm(self, name: str, config: LLMBaseConfig):
         return await self._workflow_builder.add_llm(name, config)
 
-    @typing.override
+    @override
     async def get_llm(self, llm_name: str, wrapper_type: LLMFrameworkEnum | str):
         llm = await self._workflow_builder.get_llm(llm_name, wrapper_type)
 
@@ -671,15 +671,15 @@ class ChildBuilder(Builder):
 
         return llm
 
-    @typing.override
+    @override
     def get_llm_config(self, llm_name: str) -> LLMBaseConfig:
         return self._workflow_builder.get_llm_config(llm_name)
 
-    @typing.override
+    @override
     async def add_embedder(self, name: str, config: EmbedderBaseConfig):
         return await self._workflow_builder.add_embedder(name, config)
 
-    @typing.override
+    @override
     async def get_embedder(self, embedder_name: str, wrapper_type: LLMFrameworkEnum | str):
         embedder = await self._workflow_builder.get_embedder(embedder_name, wrapper_type)
 
@@ -687,15 +687,15 @@ class ChildBuilder(Builder):
 
         return embedder
 
-    @typing.override
+    @override
     def get_embedder_config(self, embedder_name: str) -> EmbedderBaseConfig:
         return self._workflow_builder.get_embedder_config(embedder_name)
 
-    @typing.override
+    @override
     async def add_memory_client(self, name: str, config: MemoryBaseConfig) -> MemoryEditor:
         return await self._workflow_builder.add_memory_client(name, config)
 
-    @typing.override
+    @override
     def get_memory_client(self, memory_name: str) -> MemoryEditor:
         """
         Return the instantiated memory client for the given name.
@@ -706,28 +706,28 @@ class ChildBuilder(Builder):
 
         return memory_client
 
-    @typing.override
+    @override
     def get_memory_client_config(self, memory_name: str) -> MemoryBaseConfig:
         return self._workflow_builder.get_memory_client_config(memory_name=memory_name)
 
-    @typing.override
+    @override
     async def add_retriever(self, name: str, config: RetrieverBaseConfig):
         return await self._workflow_builder.add_retriever(name, config)
 
-    @typing.override
+    @override
     async def get_retriever(self, retriever_name: str, wrapper_type: LLMFrameworkEnum | str | None = None):
         if not wrapper_type:
             return await self._workflow_builder.get_retriever(retriever_name=retriever_name)
         return await self._workflow_builder.get_retriever(retriever_name=retriever_name, wrapper_type=wrapper_type)
 
-    @typing.override
+    @override
     async def get_retriever_config(self, retriever_name: str) -> RetrieverBaseConfig:
         return await self._workflow_builder.get_retriever_config(retriever_name=retriever_name)
 
-    @typing.override
+    @override
     def get_user_manager(self) -> UserManagerHolder:
         return self._workflow_builder.get_user_manager()
 
-    @typing.override
+    @override
     def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
         return self._workflow_builder.get_function_dependencies(fn_name)

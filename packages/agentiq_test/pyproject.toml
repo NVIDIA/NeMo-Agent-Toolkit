@@ -22,7 +22,7 @@ dependencies = [
   "agentiq",
   "pytest~=8.3",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 description = "Testing utilities for AgentIQ"
 readme = "src/aiq/meta/pypi.md"
 keywords = ["ai", "rag", "agents"]
