@@ -1,8 +1,8 @@
 import json
 import logging
+from collections.abc import AsyncIterable
 from enum import Enum
 from typing import Any
-from typing import AsyncIterable
 from uuid import uuid4
 
 import httpx
@@ -11,47 +11,35 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import create_model
 
+from .types import A2AClientHTTPError
+from .types import A2AClientJSONError
 from .types import AgentCard
+from .types import Artifact
+from .types import CancelTaskRequest
+from .types import CancelTaskResponse
+from .types import GetTaskPushNotificationRequest
+from .types import GetTaskPushNotificationResponse
+from .types import GetTaskRequest
+from .types import GetTaskResponse
+from .types import JSONRPCRequest
+from .types import JSONRPCResponse
+from .types import SendTaskRequest
+from .types import SendTaskResponse
+from .types import SendTaskStreamingRequest
+from .types import SendTaskStreamingResponse
+from .types import SetTaskPushNotificationRequest
+from .types import SetTaskPushNotificationResponse
+from .types import TaskArtifactUpdateEvent
+from .types import TaskState
+from .types import TaskStatusUpdateEvent
 
 logger = logging.getLogger(__name__)
 
 
-# --- Error Types ---
-class A2AClientError(Exception):
-    pass
-
-
-class A2AClientHTTPError(A2AClientError):
-
-    def __init__(self, status_code: int, message: str):
-        super().__init__(f"HTTP Error {status_code}: {message}")
-        self.status_code = status_code
-        self.message = message
-
-
-class A2AClientJSONError(A2AClientError):
-
-    def __init__(self, message: str):
-        super().__init__(f"JSON Error: {message}")
-        self.message = message
-
-
-# --- JSON-RPC Base Models ---
-class JSONRPCRequest(BaseModel):
-    jsonrpc: str = "2.0"
-    method: str
-    params: dict[str, Any]
-    id: str = Field(default_factory=lambda: str(uuid4()))
-
-
-class JSONRPCResponse(BaseModel):
-    jsonrpc: str
-    result: dict[str, Any] | None = None
-    error: dict[str, Any] | None = None
-    id: str
-
-
 class A2AClient:
+    """
+    A client for the A2A API. Uses A2A.samples.python.common.client.client.A2AClient as a reference.
+    """
 
     def __init__(self, url: str):
         """
@@ -73,8 +61,9 @@ class A2AClient:
         """
         await self._client.aclose()
 
-    async def _send_request(self, method: str, params: dict[str, Any] = None) -> dict[str, Any]:
-        request = JSONRPCRequest(method=method, params=params or {})
+    async def _send_request(self, request: JSONRPCRequest) -> dict[str, Any]:
+        logger.info("Request payload: %s", request.model_dump_json(indent=2))
+
         try:
             response = await self._client.post(self.url, json=request.model_dump(), timeout=self._timeout)
             response.raise_for_status()
@@ -93,39 +82,82 @@ class A2AClient:
             logger.error("Error parsing JSON: %s", e, exc_info=True)
             raise A2AClientJSONError(str(e)) from e
 
-    async def send_task(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return await self._send_request("send_task", payload)
+    async def send_task(self, payload: dict[str, Any]) -> SendTaskResponse:
+        request = SendTaskRequest(params=payload)
+        return SendTaskResponse(**await self._send_request(request))
 
-    async def send_task_streaming(self, payload: dict[str, Any]) -> AsyncIterable[dict[str, Any]]:
-        request = JSONRPCRequest(method="send_task_streaming", params=payload)
-        async with connect_sse(self._client, "POST", self.url, json=request.model_dump()) as event_source:
-            async for sse in event_source.aiter_sse():
+    async def send_task_streaming_sync(self, payload: dict[str, Any]) -> AsyncIterable[SendTaskStreamingResponse]:
+        request = SendTaskStreamingRequest(params=payload)
+        logger.info("Request payload: %s", request.model_dump_json(indent=2))
+
+        # use a se
+        with httpx.Client(timeout=None) as client:
+            with connect_sse(client, "POST", self.url, json=request.model_dump()) as event_source:
                 try:
-                    response = JSONRPCResponse(**json.loads(sse.data))
-                    if response.error:
-                        # log and raise
-                        logger.error("Error in streaming response: %s", response.error, exc_info=True)
-                        raise A2AClientHTTPError(response.error.get("code", 400),
-                                                 response.error.get("message", "Unknown error"))
-                    yield response.result or {}
+                    for sse in event_source.iter_sse():
+                        yield SendTaskStreamingResponse(**json.loads(sse.data))
                 except json.JSONDecodeError as e:
-                    # log and raise
-                    logger.error("Error parsing JSON: %s", e, exc_info=True)
                     raise A2AClientJSONError(str(e)) from e
+                except httpx.RequestError as e:
+                    raise A2AClientHTTPError(400, str(e)) from e
 
-    async def get_card(self) -> AgentCard:
-        """Get the AgentCard from the server"""
-        base_url = self.url.rstrip("/")
-        agent_card_path = "/.well-known/agent.json".lstrip("/")
-        response = await self._client.get(f"{base_url}/{agent_card_path}")
-        response.raise_for_status()
-        try:
-            logger.info("AgentCard: %s", response.json())
-            return AgentCard(**response.json())
-        except json.JSONDecodeError as e:
-            # log and raise
-            logger.error("Error parsing AgentCard: %s", e, exc_info=True)
-            raise A2AClientJSONError(str(e)) from e
+    async def send_task_streaming_async(self, payload: dict[str, Any]) -> AsyncIterable[SendTaskStreamingResponse]:
+        request = SendTaskStreamingRequest(params=payload)
+        logger.info("Request payload: %s", request.model_dump_json(indent=2))
+
+        async with self._client.stream("POST", self.url, json=request.model_dump(), timeout=self._timeout) as response:
+            async for line in response.aiter_lines():
+                if line.startswith("data:"):
+                    try:
+                        event_data = line[len("data:"):].strip()
+                        response_obj = JSONRPCResponse(**json.loads(event_data))
+                        if response_obj.error:
+                            logger.error("Error in streaming response: %s", response_obj.error, exc_info=True)
+                            raise A2AClientHTTPError(response_obj.error.get("code", 400),
+                                                     response_obj.error.get("message", "Unknown error"))
+                        yield SendTaskStreamingResponse(**response_obj.result)
+                    except json.JSONDecodeError as e:
+                        logger.error("Error parsing JSON: %s", e, exc_info=True)
+                        raise A2AClientJSONError(str(e)) from e
+
+    async def send_task_streaming(self,
+                                  payload: dict[str, Any],
+                                  use_sync: bool = True) -> AsyncIterable[SendTaskStreamingResponse]:
+        if use_sync:
+            return self.send_task_streaming_sync(payload)
+        else:
+            return self.send_task_streaming_async(payload)
+
+    async def get_task(self, payload: dict[str, Any]) -> GetTaskResponse:
+        request = GetTaskRequest(params=payload)
+        return GetTaskResponse(**await self._send_request(request))
+
+    async def cancel_task(self, payload: dict[str, Any]) -> CancelTaskResponse:
+        request = CancelTaskRequest(params=payload)
+        return CancelTaskResponse(**await self._send_request(request))
+
+    async def set_task_callback(self, payload: dict[str, Any]) -> SetTaskPushNotificationResponse:
+        request = SetTaskPushNotificationRequest(params=payload)
+        return SetTaskPushNotificationResponse(**await self._send_request(request))
+
+    async def get_task_callback(self, payload: dict[str, Any]) -> GetTaskPushNotificationResponse:
+        request = GetTaskPushNotificationRequest(params=payload)
+        return GetTaskPushNotificationResponse(**await self._send_request(request))
+
+    def artifact_to_output_string(self, artifact: Artifact) -> str:
+        """
+        This is a temporary helper
+        """
+        if not artifact:
+            return "No artifact found"
+        elif not artifact.parts:
+            return "No artifact parts found"
+        elif artifact.parts[0].type == "text":
+            return artifact.parts[0].text
+        elif artifact.parts[0].type == "file":
+            return f"File: {artifact.parts[0].file.name}"
+        else:
+            return "Unknown artifact type"
 
     async def complete_task(self, taskId: str, sessionId: str, prompt: str) -> dict[str, Any]:
         """
@@ -143,15 +175,56 @@ class A2AClient:
             "acceptedOutputModes": ["text"],
             "message": message,
         }
-        taskResult = None
+
         streaming = self.agent_card.capabilities.streaming
+        artifact = None
+        final_status = None
+
         if streaming:
-            response_stream = self.send_task_streaming(payload)
+            response_stream = await self.send_task_streaming(payload, use_sync=True)
             async for result in response_stream:
-                print(f"stream event => {result.model_dump_json(exclude_none=True)}")
+                logger.info("Stream event: %s", result.model_dump_json(exclude_none=True))
+
+                # Change to use the pydantic model
+                if isinstance(result.result, TaskStatusUpdateEvent):
+                    if result.result.status.state == TaskState.COMPLETED.name:
+                        final_status = result.result.status
+                        break
+                elif isinstance(result.result, TaskArtifactUpdateEvent):
+                    if result.result.artifact:
+                        artifact = result.result.artifact
+
+            if artifact is None or final_status is not TaskState.COMPLETED:
+                taskResult = await self.get_task({"id": taskId})
+                return taskResult.result.artifacts[0] if taskResult.result.artifacts else None
+
+            return self.artifact_to_output_string(artifact)
         else:
             taskResult = await self.send_task(payload)
-        return taskResult
+            logger.info("Task result: %s", taskResult.model_dump_json(exclude_none=True))
+
+            state = getattr(taskResult.result.status, "name", None)
+            if state == TaskState.INPUT_REQUIRED.name:
+                # TODO: Handle input required
+                return await self.complete_task(taskId=taskId,
+                                                sessionId=sessionId,
+                                                prompt=taskResult.result.status.message.parts[0].text)
+            else:
+                return self.artifact_to_output_string(taskResult.result.artifacts[0])
+
+    async def get_card(self) -> AgentCard:
+        """Get the AgentCard from the server"""
+        base_url = self.url.rstrip("/")
+        agent_card_path = "/.well-known/agent.json".lstrip("/")
+        response = await self._client.get(f"{base_url}/{agent_card_path}")
+        response.raise_for_status()
+        try:
+            logger.info("AgentCard: %s", response.json())
+            self.agent_card = AgentCard(**response.json())
+        except json.JSONDecodeError as e:
+            # log and raise
+            logger.error("Error parsing AgentCard: %s", e, exc_info=True)
+            raise A2AClientJSONError(str(e)) from e
 
 
 class A2AToolClient(A2AClient):
@@ -245,10 +318,10 @@ class A2AToolClient(A2AClient):
             schema_dict[field_name] = _generate_field(field_name=field_name, field_properties=field_props)
         return create_model(f"{_generate_valid_classname(name)}InputSchema", **schema_dict)
 
-    async def acall(self, tool_args: dict) -> str:
+    async def acall(self, tool_input: str) -> str:
         """
         Call the tool
         """
-        task_result = await self.complete_task(taskId=uuid4().hex, sessionId=self._session_id, prompt=tool_args)
-        logger.info("Task result: %s", task_result)
-        return "WIP"
+        output = await self.complete_task(taskId=uuid4().hex, sessionId=self._session_id, prompt=tool_input)
+        logger.info("Task result: %s", output)
+        return output

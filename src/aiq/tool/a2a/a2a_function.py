@@ -1,7 +1,6 @@
 import logging
 from typing import Any
 
-from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
 
@@ -43,16 +42,13 @@ async def a2a_function(config: A2AFunctionConfig, builder: Builder):
     def _convert_from_str(input_str: str) -> tool.input_schema:
         return tool.input_schema.model_validate_json(input_str)
 
-    async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
-        logger.info("Tool input: %s", tool_input)
-        if tool_input:
-            args = tool_input.model_dump()
-            return await tool.acall(args)
+    async def _response_fn(tool_input: str) -> str:
+        logger.info("A2A Tool input: %s", tool_input)
+        # Some input adapation may be needed here based on information in the AgentCard
+        return await tool.acall(tool_input)
 
-        _ = tool.input_schema.model_validate(kwargs)
-        return await tool.acall(kwargs)
-
-    yield FunctionInfo.create(single_fn=_response_fn,
-                              description=tool.description,
-                              input_schema=tool.input_schema,
-                              converters=[_convert_from_str])
+    # Skip the input schema and converters
+    yield FunctionInfo.create(
+        single_fn=_response_fn,
+        description=tool.description,
+    )
