@@ -102,6 +102,9 @@ class A2AClient:
                     raise A2AClientHTTPError(400, str(e)) from e
 
     async def send_task_streaming_async(self, payload: dict[str, Any]) -> AsyncIterable[SendTaskStreamingResponse]:
+        """
+        Send a task streaming request asynchronously - not working
+        """
         request = SendTaskStreamingRequest(params=payload)
         logger.info("Request payload: %s", request.model_dump_json(indent=2))
 
@@ -178,7 +181,7 @@ class A2AClient:
 
         streaming = self.agent_card.capabilities.streaming
         artifact = None
-        final_status = None
+        final_state = None
 
         if streaming:
             response_stream = await self.send_task_streaming(payload, use_sync=True)
@@ -187,14 +190,15 @@ class A2AClient:
 
                 # Change to use the pydantic model
                 if isinstance(result.result, TaskStatusUpdateEvent):
+                    final_state = result.result.status.state
                     if result.result.status.state == TaskState.COMPLETED.name:
-                        final_status = result.result.status
                         break
                 elif isinstance(result.result, TaskArtifactUpdateEvent):
                     if result.result.artifact:
                         artifact = result.result.artifact
 
-            if artifact is None or final_status is not TaskState.COMPLETED:
+            if artifact is None or final_state != TaskState.COMPLETED:
+                # TODO: Get task is not working
                 taskResult = await self.get_task({"id": taskId})
                 return taskResult.result.artifacts[0] if taskResult.result.artifacts else None
 
