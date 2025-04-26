@@ -38,6 +38,7 @@ dependencies = [
     { name = "aioboto3" },
     { name = "arize-phoenix" },
     { name = "click" },
+    { name = "colorama" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "jinja2" },
@@ -153,6 +154,7 @@ requires-dist = [
     { name = "aiq-swe-bench", marker = "extra == 'examples'", editable = "examples/swe_bench" },
     { name = "arize-phoenix", specifier = "~=6.1" },
     { name = "click", specifier = "~=8.1" },
+    { name = "colorama", specifier = "~=0.4.6" },
     { name = "fastapi", specifier = "~=0.115.5" },
     { name = "httpx", specifier = "~=0.27" },
     { name = "jinja2", specifier = "~=3.1" },
@@ -369,22 +371,6 @@ wheels = [
 ]
 
 [[package]]
-name = "aiq-agno-personal-finance"
-source = { editable = "examples/agno_personal_finance" }
-dependencies = [
-    { name = "agentiq", extra = ["agno"] },
-    { name = "litellm" },
-    { name = "openai" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "agentiq", extras = ["agno"], editable = "." },
-    { name = "litellm", specifier = "~=1.63.14" },
-    { name = "openai", specifier = "~=1.66" },
-]
-
-[[package]]
 name = "aioboto3"
 version = "14.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -543,6 +529,22 @@ wheels = [
 ]
 
 [[package]]
+name = "aiq-agno-personal-finance"
+source = { editable = "examples/agno_personal_finance" }
+dependencies = [
+    { name = "agentiq", extra = ["agno"] },
+    { name = "litellm" },
+    { name = "openai" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agentiq", extras = ["agno"], editable = "." },
+    { name = "litellm", specifier = "~=1.63.14" },
+    { name = "openai", specifier = "~=1.66" },
+]
+
+[[package]]
 name = "aiq-automated-description-generation"
 source = { editable = "examples/automated_description_generation" }
 dependencies = [
@@ -578,7 +580,6 @@ source = { editable = "examples/multi_frameworks" }
 dependencies = [
     { name = "agentiq", extra = ["langchain", "llama-index"] },
     { name = "arxiv" },
-    { name = "colorama" },
     { name = "markdown-it-py" },
     { name = "nvidia-haystack" },
 ]
@@ -587,7 +588,6 @@ dependencies = [
 requires-dist = [
     { name = "agentiq", extras = ["langchain", "llama-index"], editable = "." },
     { name = "arxiv", specifier = "~=2.1.3" },
-    { name = "colorama", specifier = "~=0.4.6" },
     { name = "markdown-it-py", specifier = "~=3.0" },
     { name = "nvidia-haystack", specifier = "==0.1.2" },
 ]
@@ -597,7 +597,6 @@ name = "aiq-plot-charts"
 source = { editable = "examples/plot_charts" }
 dependencies = [
     { name = "agentiq", extra = ["langchain"] },
-    { name = "colorama" },
     { name = "matplotlib" },
     { name = "seaborn" },
 ]
@@ -605,7 +604,6 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "agentiq", extras = ["langchain"], editable = "." },
-    { name = "colorama", specifier = "==0.4.6" },
     { name = "matplotlib", specifier = "==3.9.*" },
     { name = "seaborn", specifier = "==0.13.*" },
 ]
@@ -2732,7 +2730,7 @@ wheels = [
 
 [[package]]
 name = "litellm"
-version = "1.63.6"
+version = "1.63.14"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -2747,9 +2745,9 @@ dependencies = [
     { name = "tiktoken" },
     { name = "tokenizers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/12/b3/79bea1f09869542a067872538a0c2dab7c7f6059dd358fde93295ec3b907/litellm-1.63.6.tar.gz", hash = "sha256:b8fd6eca1f17f7d1101f38a90689b5f1a2f42a828c70299e0cb570297e5fb9ae", size = 6596287 }
+sdist = { url = "https://files.pythonhosted.org/packages/3e/6a/a1a93c8419b59d0a40f59dc7300d67f45cd33a246367b09365dd7771568b/litellm-1.63.14.tar.gz", hash = "sha256:9cffe19d8140c33a2f777c5b2e8b8175ffe03979aac341b8538d6e6d143bd640", size = 6641535 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bd/bf/3e55da5cacd9c6a1ed45e42a484f8b47512bd9739e347be8e715a8af1545/litellm-1.63.6-py3-none-any.whl", hash = "sha256:68d3d1f6c062851702e3f7ad99a204cf2b67f8b79d8608f22b72664e7de641c6", size = 6909073 },
+    { url = "https://files.pythonhosted.org/packages/8b/0c/149ae51e16d0836d6ddc9aec03a110960227046860dfc68bd3746a23cdf5/litellm-1.63.14-py3-none-any.whl", hash = "sha256:d4c469f5990e142cc23dfa06c3fddd627001928e4df43682001f453af6a1fb51", size = 6964658 },
 ]
 
 [[package]]
