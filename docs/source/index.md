@@ -23,9 +23,9 @@ limitations under the License.
    :class: highlight
 ```
 
-![NVIDIA AgentIQ](./_static/aiqtoolkit_banner.png "AgentIQ banner image")
+![NVIDIA Agent Intelligence Toolkit](./_static/aiqtoolkit_banner.png "AgentIQ banner image")
 
-# Welcome to the NVIDIA AgentIQ Documentation
+# Welcome to the NVIDIA Agent Intelligence Toolkit Documentation
 
 AgentIQ is a flexible library designed to seamlessly integrate your enterprise agents—regardless of framework—with various data sources and tools. By treating agents, tools, and agentic workflows as simple function calls, AgentIQ enables true composability: build once and reuse anywhere.
 

@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Create and Customize NVIDIA AgentIQ Workflows
+# Create and Customize NVIDIA Agent Intelligence Toolkit Workflows
 
 Workflows are the heart of AgentIQ because they define which agentic tools and models are used to perform a given task or series of tasks. This document will walk through the process of running an existing workflow, customizing an existing workflow, adding tools to a workflow, creating a new tool, and creating a new workflows.
 

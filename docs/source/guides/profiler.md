@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Profiling an NVIDIA AgentIQ Workflow
+# Profiling an NVIDIA Agent Intelligence Toolkit Workflow
 In this guide, we will walk you through an end-to-end example of how to profile an AgentIQ workflow using the AgentIQ profiler, which is part of the library's evaluation harness.
 We will begin by creating a workflow to profile, explore some of the configuration options of the profiler, and then perform an in-depth analysis of the profiling results.
 

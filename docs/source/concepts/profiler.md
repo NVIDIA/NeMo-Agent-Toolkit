@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Profiling and Performance Monitoring of NVIDIA AgentIQ Workflows
+# Profiling and Performance Monitoring of NVIDIA Agent Intelligence Toolkit Workflows
 
 The AgentIQ Profiler Module provides profiling and forecasting capabilities for AgentIQ workflows. The profiler instruments the workflow execution by:
 - Collecting usage statistics in real time (via callbacks).
@@ -83,16 +83,16 @@ It supports all kinds of functions:
 
 #### Key Benefits
 
-- **Broad Compatibility:**  
+- **Broad Compatibility:**
   Use this decorator on any Python function, regardless of its type.
 
-- **Simple Metadata:**  
+- **Simple Metadata:**
   Optionally pass a dictionary of metadata to add extra context about the function call.
 
-- **Automatic Data Serialization:**  
+- **Automatic Data Serialization:**
   The decorator converts input arguments and outputs into a `JSON`-friendly format (with special handling for Pydantic models), making the data easier to analyze.
 
-- **Reactive Event Streaming:**  
+- **Reactive Event Streaming:**
   All profiling events are pushed to the `AgentIQ` intermediate step stream, so you can subscribe and monitor events in real time.
 
 #### How to Use

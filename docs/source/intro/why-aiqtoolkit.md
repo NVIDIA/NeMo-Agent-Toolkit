@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Why Use NVIDIA AgentIQ?
+# Why Use NVIDIA Agent Intelligence Toolkit?
 
 AgentIQ is a flexible library that allows for easy connection of existing enterprise agents, across any framework, to data sources and tools. The core principle of this library is every agent, tool, and agentic workflow exists as a function call - enabling composability between these agents, tools, and workflows that allow developers to build once and reuse in different scenarios. This makes AgentIQ able to work across any agentic framework, combining existing development work and reducing the need to replatform. This library is agentic framework agnostic, long term memory, and data source agnostic. It also allows development teams to move quickly if they already are developing with agents- focusing on what framework best meets their needs, while providing a holistic approach to evaluation and observability. A core component of AgentIQ is the profiler, which can be run to uncover hidden latencies and suboptimal models/tools for specific, granular parts of pipelines. An evaluation system is provided to help users verify and maintain the accuracy of the RAG and E2E system configurations.
 

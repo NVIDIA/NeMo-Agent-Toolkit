@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Evaluating NVIDIA AgentIQ Workflows
+# Evaluating NVIDIA Agent Intelligence Toolkit Workflows
 AgentIQ provides a set of evaluators to run and evaluate the AgentIQ workflows. In addition to the built-in evaluators, AgentIQ provides a plugin system to add custom evaluators.
 
 ## Evaluating a Workflow

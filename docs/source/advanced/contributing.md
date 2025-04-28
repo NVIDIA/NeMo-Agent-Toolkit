@@ -15,7 +15,7 @@
     limitations under the License.
 -->
 
-# Contributing to NVIDIA AgentIQ
+# Contributing to NVIDIA Agent Intelligence Toolkit
 
 Contributions to AgentIQ fall into the following three categories.
 

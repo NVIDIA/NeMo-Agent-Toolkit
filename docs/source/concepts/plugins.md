@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Plugin System in NVIDIA AgentIQ
+# Plugin System in NVIDIA Agent Intelligence Toolkit
 
 AgentIQ has a very extensible plugin system that allows you to add new tools, agents, workflows and more to the library. The plugin system is designed to be easy to use and allow developers to extend the library to their needs.
 

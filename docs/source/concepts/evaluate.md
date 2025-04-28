@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Evaluating NVIDIA AgentIQ Workflows Details
+# Evaluating NVIDIA Agent Intelligence Toolkit Workflows Details
 
 :::{note}
 It is recommended that the [Evaluating AgentIQ Workflows](../guides/evaluate.md) guide be read before proceeding with this detailed documentation.

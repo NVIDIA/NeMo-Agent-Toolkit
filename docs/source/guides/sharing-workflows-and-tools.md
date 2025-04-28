@@ -21,7 +21,7 @@ limitations under the License.
   SPDX-License-Identifier: Apache-2.0
 -->
 
-# Sharing NVIDIA AgentIQ Components
+# Sharing NVIDIA Agent Intelligence Toolkit Components
 
 Every AgentIQ component is an AgentIQ plugin and is designed to be sharable with the community of AgentIQ
 developers. Workflows and functions are by far the most common AgentIQ components, however that is not a comprehensive

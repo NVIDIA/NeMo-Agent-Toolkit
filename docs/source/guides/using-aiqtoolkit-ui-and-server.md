@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Using the NVIDIA AgentIQ User Interface and API Server
+# Using the NVIDIA Agent Intelligence Toolkit User Interface and API Server
 AgentIQ provides a user interface for interacting with your running workflow.
 
 There are currently four workflow transactions that can be initiated using HTTP or WebSocket when the AgentIQ server is

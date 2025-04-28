@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA AgentIQ Observability
+# NVIDIA Agent Intelligence Toolkit Observability
 
 The AgentIQ Observability Module provides support for configurable telemetry setup to do logging tracing and metrics for AgentIQ workflows.
 - Enables users to configure telemetry options from a predefined list based on their preferences.
