@@ -27,7 +27,7 @@ limitations under the License.
 
 # Welcome to the NVIDIA Agent Intelligence Toolkit Documentation
 
-AgentIQ is a flexible library designed to seamlessly integrate your enterprise agents—regardless of framework—with various data sources and tools. By treating agents, tools, and agentic workflows as simple function calls, AgentIQ enables true composability: build once and reuse anywhere.
+Agent Intelligence Toolkit (AIQ Toolkit) is a flexible library designed to seamlessly integrate your enterprise agents—regardless of framework—with various data sources and tools. By treating agents, tools, and agentic workflows as simple function calls, AgentIQ enables true composability: build once and reuse anywhere.
 
 ## Key Features
 
