@@ -39,11 +39,11 @@ With AgentIQ, you can move quickly, experiment freely, and ensure reliability ac
  * [About AgentIQ](https://docs.nvidia.com/aiqtoolkit/latest/intro/why-aiqtoolkit.html): Learn more about the benefits of using AgentIQ.
 
 ## First time user?
- If this is your first time using AgentIQ, it is recommended to install the latest version from the [source repository](https://github.com/NVIDIA/AgentIQ?tab=readme-ov-file#get-started) on GitHub. This package is intended for users who are familiar with AgentIQ applications and need to add AgentIQ as a dependency to their project.
+ If this is your first time using AgentIQ, it is recommended to install the latest version from the [source repository](https://github.com/NVIDIA/AIQToolkit?tab=readme-ov-file#get-started) on GitHub. This package is intended for users who are familiar with AgentIQ applications and need to add AgentIQ as a dependency to their project.
 
 ## Feedback
 
-We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AgentIQ/issues) if you have any feedback or feature requests.
+We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AIQToolkit/issues) if you have any feedback or feature requests.
 
 ## Acknowledgements
 

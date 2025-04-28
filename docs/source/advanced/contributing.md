@@ -20,13 +20,13 @@
 Contributions to AgentIQ fall into the following three categories.
 
 1. To report a bug, request a new feature, or report a problem with
-    documentation, file a [bug](https://github.com/NVIDIA/AgentIQ/issues)
+    documentation, file a [bug](https://github.com/NVIDIA/AIQToolkit/issues)
     describing in detail the problem or new feature. The AgentIQ team evaluates
     and triages bugs and schedules them for a release. If you believe the
     bug needs priority attention, comment on the bug to notify the
     team.
 2. To propose and implement a new Feature, file a new feature request
-    [issue](https://github.com/NVIDIA/AgentIQ/issues). Describe the
+    [issue](https://github.com/NVIDIA/AIQToolkit/issues). Describe the
     intended feature and discuss the design and implementation with the team and
     community. Once the team agrees that the plan is good, go ahead and
     implement it, using the [code contributions](#code-contributions) guide below.
@@ -49,7 +49,7 @@ AgentIQ is a Python library that doesn’t require a GPU to run the workflow by 
 
 ### Creating the Environment
 
-1. Fork the AgentIQ repository choosing **Fork** on the [AgentIQ repository page](https://github.com/NVIDIA/AgentIQ).
+1. Fork the AgentIQ repository choosing **Fork** on the [AgentIQ repository page](https://github.com/NVIDIA/AIQToolkit).
 
 1. Clone your personal fork of the AgentIQ repository to your local machine.
     ```bash
@@ -124,15 +124,15 @@ AgentIQ is a Python library that doesn’t require a GPU to run the workflow by 
 
 ### Your first issue
 
-1. Find an issue to work on. The best way is to search for issues with the [good first issue](https://github.com/NVIDIA/AgentIQ/issues) label.
+1. Find an issue to work on. The best way is to search for issues with the [good first issue](https://github.com/NVIDIA/AIQToolkit/issues) label.
 1. Make sure that you can contribute your work to open source (no license and/or patent conflict is introduced by your code). You will need to [`sign`](#signing-your-work) your commit.
 1. Comment on the issue stating that you are going to work on it.
-1. [Fork the AgentIQ repository](https://github.com/NVIDIA/AgentIQ/fork)
+1. [Fork the AgentIQ repository](https://github.com/NVIDIA/AIQToolkit/fork)
 1. Code!
     - Make sure to update unit tests!
     - Ensure the [license headers are set properly](#licensing).
 1. Verify your changes by [running CI locally](./running-ci-locally.md) with the `./ci/scripts/run_ci_local.sh all` command.
-1. When done, [create your pull request](https://github.com/NVIDIA/AgentIQ/compare). Select `develop` as the `Target branch` of your pull request.
+1. When done, [create your pull request](https://github.com/NVIDIA/AIQToolkit/compare). Select `develop` as the `Target branch` of your pull request.
     - Ensure the body of the pull request references the issue you are working on in the form of `Closes #<issue number>`.
 1. Wait for other developers to review your code and update code as needed.
 1. Once reviewed and approved, an AgentIQ developer will merge your pull request.
@@ -195,7 +195,7 @@ Remember, if you are unsure about anything, don't hesitate to comment on issues 
 
 ### Seasoned developers
 
-Once you have gotten your feet wet and are more comfortable with the code, you can review the prioritized issues for our next release in our [project boards](https://github.com/NVIDIA/AgentIQ/projects).
+Once you have gotten your feet wet and are more comfortable with the code, you can review the prioritized issues for our next release in our [project boards](https://github.com/NVIDIA/AIQToolkit/projects).
 
 > **Pro Tip:** Always review the release board with the highest number for issues to work on. This is where AgentIQ developers also focus their efforts.
 

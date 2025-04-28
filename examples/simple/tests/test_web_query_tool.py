@@ -23,7 +23,7 @@ from aiq.test.embedder import EmbedderTestConfig
 
 
 @pytest.mark.skipif(platform.machine() == "aarch64",
-                    reason="faiss not working on arm64 https://github.com/NVIDIA/AgentIQ/issues/72")
+                    reason="faiss not working on arm64 https://github.com/NVIDIA/AIQToolkit/issues/72")
 async def test_web_query_config():
 
     config = WebQueryToolConfig(webpage_url="https://www.google.com",
@@ -42,7 +42,7 @@ async def test_web_query_config():
 
 
 @pytest.mark.skipif(platform.machine() == "aarch64",
-                    reason="faiss not working on arm64 https://github.com/NVIDIA/AgentIQ/issues/72")
+                    reason="faiss not working on arm64 https://github.com/NVIDIA/AIQToolkit/issues/72")
 async def test_web_query_tool():
 
     config = WebQueryToolConfig(webpage_url="https://www.google.com",
