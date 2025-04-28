@@ -32,7 +32,7 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
 
 1. Clone the AgentIQ repository to your local machine.
     ```bash
-    git clone git@github.com:NVIDIA/AgentIQ.git aiqtoolkit
+    git clone git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit
     cd aiqtoolkit
     ```
 

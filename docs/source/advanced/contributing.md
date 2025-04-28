@@ -59,7 +59,7 @@ AgentIQ is a Python library that doesn’t require a GPU to run the workflow by 
 
     Then, set the upstream to the main repository and fetch the latest changes:
     ```bash
-    git remote add upstream git@github.com:NVIDIA/AgentIQ.git
+    git remote add upstream git@github.com:NVIDIA/AIQToolkit.git
     git fetch --all
     ```
 
