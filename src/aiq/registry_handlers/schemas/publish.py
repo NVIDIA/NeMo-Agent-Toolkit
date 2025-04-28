@@ -25,10 +25,10 @@ logger = logging.getLogger(__name__)
 
 
 class BuiltAIQArtifact(BaseModel):
-    """An AgentIQ artifact including base64 encoded string of wheel package and corrosponding discovery metadata.
+    """An AIQ Toolkit artifact including base64 encoded string of wheel package and corrosponding discovery metadata.
 
     Args:
-        whl (str): A base64 encoded string of an AgentIQ package wheel (.whl).
+        whl (str): A base64 encoded string of an AIQ Toolkit package wheel (.whl).
 
         metadata (dict[AIQComponentEnum, list[DiscoveryMetadata]]): Provides rich discover metadata for developers to
         quickly find useful components.
@@ -39,10 +39,10 @@ class BuiltAIQArtifact(BaseModel):
 
 
 class AIQArtifact(BaseModel):
-    """An AgentIQ artifact including base64 encoded string of wheel package and corrosponding discovery metadata.
+    """An AIQ Toolkit artifact including base64 encoded string of wheel package and corrosponding discovery metadata.
 
     Args:
-        artifact (BuildAIQArtifact): An AgentIQ artifact including base64 encoded string of wheel package and
+        artifact (BuildAIQArtifact): An AIQ Toolkit artifact including base64 encoded string of wheel package and
         corrosponding discovery metadata.
 
         whl_path (str): A local path to the built wheel package.

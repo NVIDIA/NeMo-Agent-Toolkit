@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA Agent Intelligence Toolkit](https://media.githubusercontent.com/media/NVIDIA/AIQToolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AgentIQ banner image")
+![NVIDIA Agent Intelligence Toolkit](https://media.githubusercontent.com/media/NVIDIA/AIQToolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AIQ Toolkit banner image")
 
 # NVIDIA Agent Intelligence Toolkit Subpackage
-This is a subpackage for Semantic-Kernel integration in AgentIQ.
+This is a subpackage for Semantic-Kernel integration in AIQ Toolkit.
 
-For more information about AgentIQ, please visit the [AgentIQ package](https://pypi.org/project/aiqtoolkit/).
+For more information about AIQ Toolkit, please visit the [AIQ Toolkit package](https://pypi.org/project/aiqtoolkit/).

@@ -153,7 +153,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Store them in a dict so we can un-register them if needed
             self._logging_handlers[key] = handler
 
-            # Now attach to AgentIQ's root logger
+            # Now attach to AIQ Toolkit's root logger
             logging.getLogger().addHandler(handler)
 
         provider = TracerProvider()
