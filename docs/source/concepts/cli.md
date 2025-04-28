@@ -62,7 +62,7 @@ in the following sections.
 
 The `aiq start fastapi` command will serve a FastAPI endpoint for the workflow based on the supplied configuration file
 in the `--config_file` option. This command is ideal for serving a workflow as a microservice that allows client
-applications to submit requests to a workflow. The aiq serve command is a good option when deploying this workflow into
+applications to submit requests to a workflow. The `aiq serve` command is a good option when deploying this workflow into
 production as the entrypoint of a containerized application. Additional options are available to serve this workflow
 are made available via the `aiq start fastapi --help` utility:
 
@@ -197,7 +197,7 @@ Options:
 ## Serve
 The `aiq serve` is an alias for the `aiq start fastapi` command and will serve a FastAPI endpoint for the workflow based
 on the supplied configuration file in the `--config_file` option. This command is ideal for serving a workflow as a
-microservice that allows client applications to submit requests to a workflow. The aiq serve command is a good option
+microservice that allows client applications to submit requests to a workflow. The `aiq serve` command is a good option
 when deploying this workflow into production as the entrypoint of a containerized application. Additional options are
 available to serve this workflow are made available via the `aiq serve --help` utility:
 
@@ -286,7 +286,7 @@ Options:
 
 When a package and its corresponding components are no longer needed, they can be removed from the local environment.
 This can help if certain packages are creating dependency conflicts. To remove packages from the local environment, use
-the `aiq uninstall` command. This command can be used with one or more aiq packages. The `aiq uninstall --help` utility
+the `aiq uninstall` command. This command can be used with one or more packages. The `aiq uninstall --help` utility
 illustrates is usage:
 
 ```console
@@ -321,7 +321,7 @@ Options:
 
 The extensibility of AIQ Toolkit is made possible through its plugin system. To install these plugins, they must be part of
 a Python package that gets installed in an environment where the AIQ Toolkit library is installed. Creating boiler plate
-package files (e.g. `pyproject.toml`) and aiq component code scaffolding can be tedious. This section provides an overview
+package files (e.g. `pyproject.toml`) and component code scaffolding can be tedious. This section provides an overview
 of commands that automate some of these steps.
 
 ### Create
@@ -463,10 +463,10 @@ Currently, there are two channel types that facilitate remote discovery and reus
  - `rest` – provides a contract driven interface to a registry service behind a REST endpoint
  - `pypi` – a simple interface to publish packages to a private PyPI registry.
 
-Invoking the aiq info components command provides an description of the available channel settings:
+Invoking the `aiq info components` command provides a description of the available channel settings.
 
 Here we provide a example that configures a remote rest channel. To use this channel, there must exists a remote
-registry that adheres to the contracts defined in the AIQ Toolkit's rest handler.
+registry that adheres to the contracts defined in the rest handler in AIQ Toolkit.
 
 ```console
 $ aiq configure channel add rest
@@ -560,7 +560,7 @@ benefit from it's implemented components. Invoking the `aiq registry publish` co
 all component metadata, and transmit to the specified remote registry by channel name. Note, a package must be first
 installed locally so the discovery hooks can pull in necessary AIQ Toolkit component metadata.
 
-The aiq registry publish --help utility provides an overview of its usage:
+The `aiq registry publish --help` utility provides an overview of its usage:
 
 ```console
 $ aiq registry publish --help
@@ -584,7 +584,7 @@ pre-built components will, only configuration settings are required to integrati
 pre-built exist in the core library, as well as, within other AIQ Toolkit plugin packages. Remote registry channels are the
 formal mechanism to publish reusable components to the community. The `aiq registry search` command allows developers
 to search relevant pre-built components that might benefit their application. The search command is usually followed up
-by an aiq registry pull command, once a useful package has been identified.
+by an `aiq registry pull` command, once a useful package has been identified.
 
 The `aiq registry search --help` utility provides an overview of its usage:
 
