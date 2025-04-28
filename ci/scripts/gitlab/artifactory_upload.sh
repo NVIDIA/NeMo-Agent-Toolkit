@@ -34,7 +34,8 @@ AIQ_ARCH="any"
 AIQ_OS="any"
 AIQ_COMPONENT_NAME="aiqtoolkit"
 
-WHEELS_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
+WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
+WHEELS_DIR="${WHEELS_BASE_DIR}/${AIQ_COMPONENT_NAME}"
 # Define the subdirectories to be exclude
 EXCLUDE_SUBDIRS=("examples")
 
@@ -99,7 +100,7 @@ if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
         # Find all .whl files in the current subdirectory (no depth limit)
         find "${SUBDIR}" -type f -name "*.whl" | while read -r WHEEL_FILE; do
             # Extract relative path to preserve directory structure
-            RELATIVE_PATH="${WHEEL_FILE#${WHEELS_DIR}/}"
+            RELATIVE_PATH="${WHEEL_FILE#${WHEELS_BASE_DIR}/}"
             ARTIFACTORY_PATH="${AIQ_ARTIFACTORY_NAME}/${RELATIVE_PATH}"
 
             echo "Uploading ${WHEEL_FILE} to ${ARTIFACTORY_PATH}..."
