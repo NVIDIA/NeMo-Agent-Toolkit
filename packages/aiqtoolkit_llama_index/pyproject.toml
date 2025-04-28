@@ -13,22 +13,23 @@ root = "../.."
 
 
 [project]
-name = "agentiq-langchain"
+name = "aiqtoolkit-llama-index"
 dynamic = ["version"]
 dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
   # Keep sorted!!!
-  "agentiq",
-  "langchain-core~=0.3.7",
-  "langchain-nvidia-ai-endpoints~=0.3.5",
-  "langchain-milvus~=0.1.5",
-  "langchain-openai~=0.2.8",
-  "langgraph~=0.2.50",
-  "langchain-milvus~=0.1.8"
+  "aiqtoolkit",
+  # We ran into pydantic validation errors with newer versions of llama-index, not sure which version introduced the
+  # error
+  "llama-index-core==0.12.15",
+  "llama-index-embeddings-nvidia==0.3.1",
+  "llama-index-llms-nvidia==0.3.1",
+  "llama-index-readers-file==0.4.4",
+  "llama-index==0.12.15",
 ]
-requires-python = ">=3.11"
-description = "Subpackage for Langchain/Langgraph integration in AgentIQ"
+requires-python = ">=3.12"
+description = "Subpackage for Llama-Index integration in AIQToolkit"
 readme = "src/aiq/meta/pypi.md"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
@@ -39,9 +40,8 @@ config-settings = { editable_mode = "compat" }
 
 
 [tool.uv.sources]
-agentiq = { workspace = true }
+aiqtoolkit = { workspace = true }
 
 
 [project.entry-points.'aiq.components']
-aiq_langchain = "aiq.plugins.langchain.register"
-aiq_langchain_tools = "aiq.plugins.langchain.tools.register"
+aiq_llama_index = "aiq.plugins.llama_index.register"

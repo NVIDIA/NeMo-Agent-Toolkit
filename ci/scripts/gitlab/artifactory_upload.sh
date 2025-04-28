@@ -32,12 +32,11 @@ fi
 # Define variables
 AIQ_ARCH="any"
 AIQ_OS="any"
-AIQ_COMPONENT_NAME="agentiq"
+AIQ_COMPONENT_NAME="aiqtoolkit"
 
 WHEELS_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
 # Define the subdirectories to be exclude
 EXCLUDE_SUBDIRS=("examples")
-COMPONENT_NAME="agentiq"
 
 GIT_TAG=$(get_git_tag)
 rapids-logger "Git Version: ${GIT_TAG}"

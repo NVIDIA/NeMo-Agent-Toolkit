@@ -9,7 +9,7 @@ root = "../.."
 name = "aiq_email_phishing_analyzer"
 dynamic = ["version"]
 dependencies = [
-  "agentiq[langchain]",
+  "aiqtoolkit[langchain]",
   "arize-phoenix==6.1.*",
   "bs4==0.0.2",
   "networkx~=3.4",
@@ -21,7 +21,7 @@ keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-agentiq = { path = "../../", editable = true }
+aiqtoolkit = { path = "../../", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_email_phishing_analyzer = "aiq_email_phishing_analyzer.register"
