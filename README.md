@@ -90,9 +90,9 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
     Make sure the environment is built with Python version `3.11` or above. If you have multiple Python versions installed,
     you can specify the desired version using the `--python` flag. For example, to use Python 3.11:
     ```bash
-    uv venv --seed .venv --python $(which python3.11)
+    uv venv --seed .venv --python 3.11
     ```
-    You can replace `python3.11` with any other Python version (3.11 or above) that you have installed.
+    You can replace `--python 3.11` with any other Python version (3.11 or above) that you have installed.
 
 5. Install the AgentIQ library.
     To install the AgentIQ library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
