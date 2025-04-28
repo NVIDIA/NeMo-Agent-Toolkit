@@ -46,6 +46,8 @@ ROOT_DIR = os.path.dirname(os.path.dirname(CUR_DIR))
 AIQ_DIR = os.path.join(ROOT_DIR, "src", "aiq")
 DOC_EXAMPLES = os.path.join(DOC_DIR, "source", "examples")
 EXAMPLES_DIR = os.path.join(ROOT_DIR, "examples")
+PROJECT_URL = "https://github.com/NVIDIA/AgentIQ"
+FILE_URL = f"{PROJECT_URL}/blob/main"
 
 # Work-around for https://github.com/readthedocs/sphinx-autoapi/issues/298
 # AutoAPI support for implicit namespaces is broken, so we need to manually
@@ -106,12 +108,11 @@ def url_has_scheme(path):
 # re-write links
 def path_updater(path):
     if not url_has_scheme(path) and not path.startswith('#'):  # only re-write relative urls without a scheme (https://)
-        (_, ext) = os.path.splitext(path)
-        if ext not in ('.md', '.rst'):
-            # replace with github link
-            pass
-        elif '/docs/source' in path:
+        if '/docs/source' in path:
             path = path.replace('/docs/source', '', 1)
+        else:
+            # replace with github link
+            path = os.path.join(FILE_URL, path)
 
     return path
 
