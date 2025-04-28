@@ -28,7 +28,7 @@ if [[ "${CI_CRON_NIGHTLY}" == "1" ]]; then
 fi
 
 
-WHEELS_DIR=${CI_PROJECT_DIR}/.tmp/wheels
+WHEELS_DIR=${CI_PROJECT_DIR}/.tmp/wheels/aiqtoolkit
 
 create_env extra:all
 
