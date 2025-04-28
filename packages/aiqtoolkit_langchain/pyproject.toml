@@ -27,7 +27,7 @@ dependencies = [
   "langgraph~=0.2.50",
   "langchain-milvus~=0.1.8"
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 description = "Subpackage for Langchain/Langgraph integration in AIQToolkit"
 readme = "src/aiq/meta/pypi.md"
 keywords = ["ai", "rag", "agents"]
