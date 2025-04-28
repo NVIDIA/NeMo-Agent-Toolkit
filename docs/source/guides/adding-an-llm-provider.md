@@ -96,7 +96,7 @@ The wrapped function in turn receives two required positional arguments: an inst
 
 Since many frameworks provide clients for many of the common LLM APIs, in AgentIQ, the client registration functions are often simple factory methods. For example, the OpenAI client registration function for LangChain is as follows:
 
-`packages/agentiq_langchain/src/aiq/plugins/langchain/llm.py`:
+`packages/aiqtoolkit_langchain/src/aiq/plugins/langchain/llm.py`:
 ```python
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):

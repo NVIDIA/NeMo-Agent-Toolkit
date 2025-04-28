@@ -20,7 +20,7 @@ limitations under the License.
 ```{toctree}
 :maxdepth: 20
 
-./why-agentiq.md
+./why-aiqtoolkit.md
 Install AgentIQ <./install.md>
 Get Started <./get-started.md>
 ```

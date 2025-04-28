@@ -53,8 +53,8 @@ AgentIQ is a Python library that doesn’t require a GPU to run the workflow by 
 
 1. Clone your personal fork of the AgentIQ repository to your local machine.
     ```bash
-    git clone <your fork url> agentiq
-    cd agentiq
+    git clone <your fork url> aiqtoolkit
+    cd aiqtoolkit
     ```
 
     Then, set the upstream to the main repository and fetch the latest changes:

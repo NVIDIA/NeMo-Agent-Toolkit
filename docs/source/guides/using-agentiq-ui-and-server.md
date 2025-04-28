@@ -266,7 +266,7 @@ Use streaming if you need real-time updates or live communication where users ex
 In this walk-through, we will guide you through the steps to set up and configure the AgentIQ user interface. Refer to `examples/simple_calculator/README.md` to set up the simple calculator workflow demonstrated in the following walk-through properly.
 
 
-The AgentIQ UI is located in a git submodule at `external/agentiq-opensource-ui`. Ensure you have checked out all of the
+The AgentIQ UI is located in a git submodule at `external/aiqtoolkit-opensource-ui`. Ensure you have checked out all of the
 git submodules by running the following:
 ```bash
 git submodule update --init --recursive
@@ -326,7 +326,7 @@ Running this command will produce the following expected output:
 After the AgentIQ server starts, launch the web user interface. Launching the UI requires that Node.js v18+ is installed. Instructions for downloading and installing Node.js can be found in the official documentation [here](https://nodejs.org/en/download).
 
 ```bash
-cd external/agentiq-opensource-ui
+cd external/aiqtoolkit-opensource-ui
 npm install
 npm run dev
 ```

@@ -30,7 +30,7 @@ This personal financial planner was revised based on the [Awesome-LLM-App](https
   - [Table of Contents](#table-of-contents)
   - [Key Features](#key-features)
   - [Installation and Setup](#installation-and-setup)
-    - [Setup Virtual Environment and Install AgentIQ](#setup-virtual-environment-and-install-agentiq)
+    - [Setup Virtual Environment and Install AgentIQ](#setup-virtual-environment-and-install-aiqtoolkit)
     - [Install this Workflow:](#install-this-workflow)
     - [Set Up API Keys](#set-up-api-keys)
   - [Example Usage](#example-usage)
@@ -136,7 +136,7 @@ For a production deployment, use Docker:
 
 Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AgentIQ virtual environment.
 
-From the root directory of the `agentiq` repository, build the Docker image:
+From the root directory of the `aiqtoolkit` repository, build the Docker image:
 
 ```bash
 docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t agno_personal_finance -f examples/agno_personal_finance/Dockerfile .

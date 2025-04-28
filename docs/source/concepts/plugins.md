@@ -51,17 +51,17 @@ AgentIQ currently supports the following plugins:
 
 ## Framework Integrations
 
-To keep the library lightweight, many of the first party plugins supported by AgentIQ are located in separate distribution packages. For example, the `agentiq-langchain` distribution contains all the LangChain specific plugins and the `agentiq-mem0ai` distribution contains the Mem0 specific plugins.
+To keep the library lightweight, many of the first party plugins supported by AgentIQ are located in separate distribution packages. For example, the `aiqtoolkit-langchain` distribution contains all the LangChain specific plugins and the `aiqtoolkit-mem0ai` distribution contains the Mem0 specific plugins.
 
-To install these first-party plugin libraries, you can use the full distribution name (for example, `agentiq-langchain`) or use the `agentiq[langchain]` extra distribution. A full list of the supported extras is listed below:
+To install these first-party plugin libraries, you can use the full distribution name (for example, `aiqtoolkit-langchain`) or use the `aiqtoolkit[langchain]` extra distribution. A full list of the supported extras is listed below:
 
-- `agentiq[crewai]` or `agentiq-crewai` - CrewAI specific plugins
-- `agentiq[langchain]` or `agentiq-langchain` - LangChain specific plugins
-- `agentiq[llama-index]` or `agentiq-llama-index` - LlamaIndex specific plugins
-- `agentiq[mem0ai]` or `agentiq-mem0ai` - Mem0AI specific plugins
-- `agentiq[semantic-kernel]` or `agentiq-semantic-kernel` - Semantic Kernel specific plugins
-- `agentiq[test]` or `agentiq-test` - Test specific plugins
-- `agentiq[zep-cloud]` or `agentiq-zep-cloud` - Zep Cloud specific plugins
+- `aiqtoolkit[crewai]` or `aiqtoolkit-crewai` - CrewAI specific plugins
+- `aiqtoolkit[langchain]` or `aiqtoolkit-langchain` - LangChain specific plugins
+- `aiqtoolkit[llama-index]` or `aiqtoolkit-llama-index` - LlamaIndex specific plugins
+- `aiqtoolkit[mem0ai]` or `aiqtoolkit-mem0ai` - Mem0AI specific plugins
+- `aiqtoolkit[semantic-kernel]` or `aiqtoolkit-semantic-kernel` - Semantic Kernel specific plugins
+- `aiqtoolkit[test]` or `aiqtoolkit-test` - Test specific plugins
+- `aiqtoolkit[zep-cloud]` or `aiqtoolkit-zep-cloud` - Zep Cloud specific plugins
 
 
 ## Anatomy of a Plugin
@@ -99,16 +99,16 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
 
 ### Entry Point
 
-Determining which plugins are available in a given environment is done through the use of [python entry points](https://packaging.python.org/en/latest/specifications/entry-points/). In AgentIQ, we scan the python environment for entry points which have the name `agentiq.components`. The value of the entry point is a python module that will be imported when the entry point is loaded.
+Determining which plugins are available in a given environment is done through the use of [python entry points](https://packaging.python.org/en/latest/specifications/entry-points/). In AgentIQ, we scan the python environment for entry points which have the name `aiqtoolkit.components`. The value of the entry point is a python module that will be imported when the entry point is loaded.
 
-For example, the `agentiq-langchain` distribution has the following entry point specified in the `pyproject.toml` file:
+For example, the `aiqtoolkit-langchain` distribution has the following entry point specified in the `pyproject.toml` file:
 
 ```toml
 [project.entry-points.'aiq.components']
 aiq_langchain = "aiq.plugins.langchain.register"
 ```
 
-What this means is that when the `agentiq-langchain` distribution is installed, the `aiq.plugins.langchain.register` module will be imported when the entry point is loaded. This module must contain all the `@register_<plugin_type>` decorators which need to be loaded when the library is initialized.
+What this means is that when the `aiqtoolkit-langchain` distribution is installed, the `aiq.plugins.langchain.register` module will be imported when the entry point is loaded. This module must contain all the `@register_<plugin_type>` decorators which need to be loaded when the library is initialized.
 
 > [!NOTE]
 > The above syntax in the `pyproject.toml` file is specific to [uv](https://docs.astral.sh/uv/concepts/projects/config/#plugin-entry-points). Other package managers may have a different syntax for specifying entry points.
@@ -116,7 +116,7 @@ What this means is that when the `agentiq-langchain` distribution is installed, 
 
 #### Multiple Plugins in a Single Distribution
 
-It is possible to have multiple plugins in a single distribution. For example, the `agentiq-langchain` distribution contains both the LangChain LLM client and the LangChain embedder client.
+It is possible to have multiple plugins in a single distribution. For example, the `aiqtoolkit-langchain` distribution contains both the LangChain LLM client and the LangChain embedder client.
 
 To register multiple plugins in a single distribution, there are two options:
 

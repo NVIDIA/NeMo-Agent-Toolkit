@@ -32,7 +32,7 @@ graph TD
 ```
 
 ## Start AgentIQ API Server
-See AgentIQ [UI and Server](./using-agentiq-ui-and-server.md) guide for instructions on starting the AgentIQ server.
+See AgentIQ [UI and Server](./using-aiqtoolkit-ui-and-server.md) guide for instructions on starting the AgentIQ server.
 Sample Usage:
 ```bash
 aiq serve --config_file=examples/simple/configs/config.yml

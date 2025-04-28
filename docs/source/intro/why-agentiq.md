@@ -27,7 +27,7 @@ AgentIQ is a flexible library that allows for easy connection of existing enterp
 - [**Profiling:**](./../guides/profiler.md) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
 - [**Observability:**](./../guides/observe-workflow-with-phoenix.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
 - [**Evaluation System:**](./../guides/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
-- [**User Interface:**](./../guides/using-agentiq-ui-and-server.md) Use the AgentIQ UI chat interface to interact with your agents, visualize output, and debug workflows.
+- [**User Interface:**](./../guides/using-aiqtoolkit-ui-and-server.md) Use the AgentIQ UI chat interface to interact with your agents, visualize output, and debug workflows.
 - [**MCP Compatibility**](./../components/mcp.md) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AgentIQ functions.
 
 

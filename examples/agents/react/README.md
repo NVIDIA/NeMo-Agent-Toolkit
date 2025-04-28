@@ -45,7 +45,7 @@ From the root directory of the AgentIQ library, run the following commands:
 uv pip install -e .
 ```
 
-The `code_generation` and `wiki_search` tools are part of the `agentiq[langchain]` package.  To install the package run the following command:
+The `code_generation` and `wiki_search` tools are part of the `aiqtoolkit[langchain]` package.  To install the package run the following command:
 ```bash
 # local package install from source
 uv pip install -e '.[langchain]'

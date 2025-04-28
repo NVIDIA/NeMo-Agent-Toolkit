@@ -520,7 +520,7 @@ We see from the above output that the agent was able to successfully retrieve ou
 In this way, you can easily construct an agent that answers questions about your knowledge base and stores long term memories, all without any agent code required!
 
 ## Adding Additional Tools
-This workflow can be further enhanced by adding additional tools. Included with this example are two additional tools: `tavily_internet_search` and `code_generation`. Both of these tools require the installation of the `agentiq[langchain]` package. To install this package run:
+This workflow can be further enhanced by adding additional tools. Included with this example are two additional tools: `tavily_internet_search` and `code_generation`. Both of these tools require the installation of the `aiqtoolkit[langchain]` package. To install this package run:
 ```bash
 uv pip install -e '.[langchain]'
 ```

@@ -270,7 +270,7 @@ Workflow Result:
 ### Alternate Method Using a Web Search Tool
 Adding individual web pages to a workflow can be cumbersome, especially when dealing with multiple web pages. An alternative method is to use a web search tool. One of the tools available in AgentIQ is the `tavily_internet_search` tool, which utilizes the [Tavily Search API](https://tavily.com/).
 
-The `tavily_internet_search` tool is part of the `agentiq[langchain]` package, to install the package run:
+The `tavily_internet_search` tool is part of the `aiqtoolkit[langchain]` package, to install the package run:
 ```bash
 # local package install from source
 uv pip install -e '.[langchain]'
@@ -502,21 +502,21 @@ The resulting YAML file is located at `examples/documentation_guides/workflows/t
 The `pyproject.toml` file defines your package metadata and dependencies. In this case, the `pyproject.toml` file that was created for us is sufficient; however, that might not always be the case. The most common need to update the `pyproject.toml` file is to add additional dependencies not included with AgentIQ.
 
 - **Dependencies**: Ensure all required libraries are listed under `[project]`.
-  In the example, the tool was created inside the AgentIQ repo and simply needed to declare a dependency on `agentiq[langchain]`. If, however, your tool is intended to be distributed independently then your tool will need to declare a dependency on the specific version of AgentIQ that it was built against. To determine the version of AgentIQ run:
+  In the example, the tool was created inside the AgentIQ repo and simply needed to declare a dependency on `aiqtoolkit[langchain]`. If, however, your tool is intended to be distributed independently then your tool will need to declare a dependency on the specific version of AgentIQ that it was built against. To determine the version of AgentIQ run:
   ```bash
   aiq --version
   ```
 
- Use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `agentiq[langchain]~=1.0`.
+ Use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `aiqtoolkit[langchain]~=1.0`.
 
   ```toml
   dependencies = [
-    "agentiq[langchain]~=1.0",
+    "aiqtoolkit[langchain]~=1.0",
     # Add any additional dependencies your workflow needs
   ]
   ```
 
-  In this example we have been using AgentIQ with LangChain, and thus we declared our dependency on `agentiq[langchain]`, that is to say AgentIQ with the LangChain integration plugin. If however we wished to use LlamaIndex, we would declare our dependency on `agentiq[llama-index]`. This is described in more detail in [Framework Integrations](../concepts/plugins.md#framework-integrations).
+  In this example we have been using AgentIQ with LangChain, and thus we declared our dependency on `aiqtoolkit[langchain]`, that is to say AgentIQ with the LangChain integration plugin. If however we wished to use LlamaIndex, we would declare our dependency on `aiqtoolkit[llama-index]`. This is described in more detail in [Framework Integrations](../concepts/plugins.md#framework-integrations).
 
   we wished to use an alternate framework or other optional dependencies
 

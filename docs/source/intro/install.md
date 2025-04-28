@@ -32,8 +32,8 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
 
 1. Clone the AgentIQ repository to your local machine.
     ```bash
-    git clone git@github.com:NVIDIA/AgentIQ.git agentiq
-    cd agentiq
+    git clone git@github.com:NVIDIA/AgentIQ.git aiqtoolkit
+    cd aiqtoolkit
     ```
 
 1. Initialize, fetch, and update submodules in the Git repository.
@@ -72,7 +72,7 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
     ```
 
     :::{note}
-    Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/simple/README.md` guide will install the `agentiq-langchain` plugin if you haven't already done so.
+    Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/simple/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
     :::
 
     In addition to plugins, there are optional dependencies needed for profiling. To install these dependencies, run the following:
@@ -93,21 +93,21 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
 
 
 ## AgentIQ Packages
-Once an AgentIQ workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `agentiq` package, along with the needed plugins. When declaring a dependency on AgentIQ it is recommended to use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `1.0`.
+Once an AgentIQ workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `aiqtoolkit` package, along with the needed plugins. When declaring a dependency on AgentIQ it is recommended to use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `1.0`.
 
 For more information on the available plugins, refer to the [Framework Integrations](../concepts/plugins.md#framework-integrations) section of the plugins documentation.
 
 Example dependency for AgentIQ using the `langchain` plugin for projects using a `pyproject.toml` file:
 ```toml
 dependencies = [
-"agentiq[langchain]~=1.0",
+"aiqtoolkit[langchain]~=1.0",
 # Add any additional dependencies your workflow needs
 ]
 ```
 
 Alternately for projects using a `requirements.txt` file:
 ```
-agentiq[langchain]==1.0.*
+aiqtoolkit[langchain]==1.0.*
 ```
 
 
