@@ -19,7 +19,7 @@ set -e
 GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 source ${GITHUB_SCRIPT_DIR}/common.sh
-WHEELS_DIR=${WORKSPACE_TMP}/wheels
+WHEELS_DIR=${WORKSPACE_TMP}/wheels/aiqtoolkit
 
 create_env extra:all
 

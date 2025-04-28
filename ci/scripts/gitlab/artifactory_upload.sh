@@ -34,7 +34,7 @@ AIQ_ARCH="any"
 AIQ_OS="any"
 AIQ_COMPONENT_NAME="aiqtoolkit"
 
-WHEELS_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
+WHEELS_DIR="${CI_PROJECT_DIR}/.tmp/wheels/${AIQ_COMPONENT_NAME}"
 # Define the subdirectories to be exclude
 EXCLUDE_SUBDIRS=("examples")
 
