@@ -26,14 +26,21 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.trace import Span
 from opentelemetry.trace.propagation import set_span_in_context
 from pydantic import TypeAdapter
-from weave.trace.context import weave_client_context
-from weave.trace.context.call_context import get_current_call
-from weave.trace.context.call_context import set_call_stack
-from weave.trace.weave_client import Call
 
 from aiq.builder.context import AIQContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepState
+
+try:
+    from weave.trace.context import weave_client_context
+    from weave.trace.context.call_context import get_current_call
+    from weave.trace.context.call_context import set_call_stack
+    from weave.trace.weave_client import Call
+    WEAVE_AVAILABLE = True
+except ImportError:
+    WEAVE_AVAILABLE = False
+    # we simply don't do anything if weave is not available
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -89,9 +96,13 @@ class AsyncOtelSpanListener:
 
         self._tracer = trace.get_tracer("aiq-async-otel-listener")
 
-        # get the weave client
-        self.gc = weave_client_context.require_weave_client()
-        self._weave_calls: dict[str, Call] = {}
+        # Initialize Weave-specific components if available
+        if WEAVE_AVAILABLE:
+            # get the weave client
+            self.gc = weave_client_context.require_weave_client()
+            self._weave_calls: dict[str, Call] = {}
+        else:
+            self._weave_calls = {}
 
     def _on_next(self, step: IntermediateStep) -> None:
         """
@@ -168,10 +179,11 @@ class AsyncOtelSpanListener:
 
         self._span_stack.clear()
 
-        # Clean up any lingering Weave calls
-        for _, call in list(self._weave_calls.items()):
-            self.gc.finish_call(call, {"status": "incomplete"})
-        self._weave_calls.clear()
+        # Clean up any lingering Weave calls if Weave is available
+        if WEAVE_AVAILABLE:
+            for _, call in list(self._weave_calls.items()):
+                self.gc.finish_call(call, {"status": "incomplete"})
+            self._weave_calls.clear()
 
     def _serialize_payload(self, input_value: Any) -> tuple[str, bool]:
         """
@@ -248,8 +260,9 @@ class AsyncOtelSpanListener:
 
         self._outstanding_spans[step.UUID] = sub_span
 
-        # Create corresponding Weave call
-        self._create_weave_call(step, sub_span)
+        # Create corresponding Weave call if Weave is available
+        if WEAVE_AVAILABLE:
+            self._create_weave_call(step, sub_span)
 
     def _process_end_event(self, step: IntermediateStep):
 
@@ -286,8 +299,9 @@ class AsyncOtelSpanListener:
         # End the subspan
         sub_span.end(end_time=end_ns)
 
-        # Finish corresponding Weave call
-        self._finish_weave_call(step, sub_span)
+        # Finish corresponding Weave call if Weave is available
+        if WEAVE_AVAILABLE:
+            self._finish_weave_call(step, sub_span)
 
     @contextmanager
     def parent_call(self, trace_id: str, parent_call_id: str):
