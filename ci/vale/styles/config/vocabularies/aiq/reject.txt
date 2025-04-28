@@ -2,7 +2,7 @@
 # file needs to exitst in order for vale to pick up our accept.txt file
 # Regular expressions are parsed according to the Go syntax: https://golang.org/pkg/regexp/syntax/
 (?i)Agent-IQ
+(?i)AgentIQ
 (?i)A-IQ
 (?i)AI-Q
-(?i)AIQ
 (?i)TODO
