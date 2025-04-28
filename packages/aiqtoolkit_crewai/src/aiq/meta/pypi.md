@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA Agent Intelligence Toolkit](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AgentIQ banner image")
+![NVIDIA Agent Intelligence Toolkit](https://media.githubusercontent.com/media/NVIDIA/AIQToolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AgentIQ banner image")
 
 # NVIDIA Agent Intelligence Toolkit Subpackage
 This is a subpackage for CrewAI integration in AgentIQ.

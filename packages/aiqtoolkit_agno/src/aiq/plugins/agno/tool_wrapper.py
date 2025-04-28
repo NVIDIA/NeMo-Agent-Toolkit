@@ -297,9 +297,9 @@ def execute_agno_tool(name: str,
 @register_tool_wrapper(wrapper_type=LLMFrameworkEnum.AGNO)
 def agno_tool_wrapper(name: str, fn: Function, builder: Builder):
     """
-    Wraps an AgentIQ Function to be usable as an Agno tool.
+    Wraps an AIQ Toolkit Function to be usable as an Agno tool.
 
-    This wrapper handles the conversion of async AgentIQ functions to
+    This wrapper handles the conversion of async AIQ Toolkit functions to
     the format expected by Agno tools. It properly handles input schema,
     descriptions, and async invocation.
 
@@ -308,7 +308,7 @@ def agno_tool_wrapper(name: str, fn: Function, builder: Builder):
     name : str
         The name of the tool
     fn : Function
-        The AgentIQ Function to wrap
+        The AIQ Toolkit Function to wrap
     builder : Builder
         The builder instance
 

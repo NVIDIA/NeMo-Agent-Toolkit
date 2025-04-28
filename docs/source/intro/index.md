@@ -21,6 +21,6 @@ limitations under the License.
 :maxdepth: 20
 
 ./why-aiqtoolkit.md
-Install AgentIQ <./install.md>
+Install AIQ Toolkit <./install.md>
 Get Started <./get-started.md>
 ```

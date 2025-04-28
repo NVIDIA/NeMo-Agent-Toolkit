@@ -17,11 +17,11 @@
 
 # Contributing to NVIDIA Agent Intelligence Toolkit
 
-Contributions to AgentIQ fall into the following three categories.
+Contributions to AIQ Toolkit fall into the following three categories.
 
 1. To report a bug, request a new feature, or report a problem with
     documentation, file a [bug](https://github.com/NVIDIA/AIQToolkit/issues)
-    describing in detail the problem or new feature. The AgentIQ team evaluates
+    describing in detail the problem or new feature. The AIQ Toolkit team evaluates
     and triages bugs and schedules them for a release. If you believe the
     bug needs priority attention, comment on the bug to notify the
     team.
@@ -34,7 +34,7 @@ Contributions to AgentIQ fall into the following three categories.
     follow the [code contributions](#code-contributions) guide below. If you
     need more context on a particular issue, ask in a comment.
 
-As contributors and maintainers of AgentIQ, you are expected to abide by AgentIQ's code of conduct. More information can be found at: [Contributor Code of Conduct](../code-of-conduct.md).
+As contributors and maintainers of AIQ Toolkit, you are expected to abide by AIQ Toolkit's code of conduct. More information can be found at: [Contributor Code of Conduct](../code-of-conduct.md).
 
 ## Set Up Your Development Environment
 ### Prerequisites
@@ -44,14 +44,14 @@ As contributors and maintainers of AgentIQ, you are expected to abide by AgentIQ
 - Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - Install [Visual Studio Code](https://code.visualstudio.com/) (recommended)
 
-AgentIQ is a Python library that doesn’t require a GPU to run the workflow by default. You can deploy the core workflows using one of the following:
+AIQ Toolkit is a Python library that doesn’t require a GPU to run the workflow by default. You can deploy the core workflows using one of the following:
 - Ubuntu or other Linux distributions, including WSL, in a Python virtual environment.
 
 ### Creating the Environment
 
-1. Fork the AgentIQ repository choosing **Fork** on the [AgentIQ repository page](https://github.com/NVIDIA/AIQToolkit).
+1. Fork the AIQ Toolkit repository choosing **Fork** on the [AIQ Toolkit repository page](https://github.com/NVIDIA/AIQToolkit).
 
-1. Clone your personal fork of the AgentIQ repository to your local machine.
+1. Clone your personal fork of the AIQ Toolkit repository to your local machine.
     ```bash
     git clone <your fork url> aiqtoolkit
     cd aiqtoolkit
@@ -90,15 +90,15 @@ AgentIQ is a Python library that doesn’t require a GPU to run the workflow by 
     ```
     **NOTE**: Running pre-commit for the first time will take longer than normal.
 
-7. Open the AgentIQ Workspace in Visual Studio Code.
+7. Open the AIQ Toolkit Workspace in Visual Studio Code.
     ```bash
     code ./aiq.code-workspace
     ```
 
-### Install the AgentIQ Library
+### Install the AIQ Toolkit Library
 
-1. Install the AgentIQ Examples by doing the following.
-   - Install AgentIQ examples.
+1. Install the AIQ Toolkit Examples by doing the following.
+   - Install AIQ Toolkit examples.
 
      ```bash
      uv sync --extra examples
@@ -110,7 +110,7 @@ AgentIQ is a Python library that doesn’t require a GPU to run the workflow by 
      uv pip install -e ./examples/simple_calculator
      ```
 
-2. Verify that you've installed the AgentIQ library.
+2. Verify that you've installed the AIQ Toolkit library.
 
      ```bash
      aiq --help
@@ -127,7 +127,7 @@ AgentIQ is a Python library that doesn’t require a GPU to run the workflow by 
 1. Find an issue to work on. The best way is to search for issues with the [good first issue](https://github.com/NVIDIA/AIQToolkit/issues) label.
 1. Make sure that you can contribute your work to open source (no license and/or patent conflict is introduced by your code). You will need to [`sign`](#signing-your-work) your commit.
 1. Comment on the issue stating that you are going to work on it.
-1. [Fork the AgentIQ repository](https://github.com/NVIDIA/AIQToolkit/fork)
+1. [Fork the AIQ Toolkit repository](https://github.com/NVIDIA/AIQToolkit/fork)
 1. Code!
     - Make sure to update unit tests!
     - Ensure the [license headers are set properly](#licensing).
@@ -135,7 +135,7 @@ AgentIQ is a Python library that doesn’t require a GPU to run the workflow by 
 1. When done, [create your pull request](https://github.com/NVIDIA/AIQToolkit/compare). Select `develop` as the `Target branch` of your pull request.
     - Ensure the body of the pull request references the issue you are working on in the form of `Closes #<issue number>`.
 1. Wait for other developers to review your code and update code as needed.
-1. Once reviewed and approved, an AgentIQ developer will merge your pull request.
+1. Once reviewed and approved, an AIQ Toolkit developer will merge your pull request.
 
 Remember, if you are unsure about anything, don't hesitate to comment on issues and ask for clarifications!
 
@@ -197,17 +197,17 @@ Remember, if you are unsure about anything, don't hesitate to comment on issues 
 
 Once you have gotten your feet wet and are more comfortable with the code, you can review the prioritized issues for our next release in our [project boards](https://github.com/NVIDIA/AIQToolkit/projects).
 
-> **Pro Tip:** Always review the release board with the highest number for issues to work on. This is where AgentIQ developers also focus their efforts.
+> **Pro Tip:** Always review the release board with the highest number for issues to work on. This is where AIQ Toolkit developers also focus their efforts.
 
 Review the unassigned issues and choose an issue that you are comfortable contributing. Ensure you comment on the issue before you begin to inform others that you are working on it. If you have questions about implementing the issue, comment your questions in the issue instead of the PR.
 
-## Developing with AgentIQ
+## Developing with AIQ Toolkit
 
 Refer to the [Get Started](../intro/get-started.md) guide to quickly begin development.
 
 
 ## Licensing
-AgentIQ is licensed under the Apache v2.0 license. All new source files including CMake and other build scripts should contain the Apache v2.0 license header. Any edits to existing source code should update the date range of the copyright to the current year. The format for the license header is:
+AIQ Toolkit is licensed under the Apache v2.0 license. All new source files including CMake and other build scripts should contain the Apache v2.0 license header. Any edits to existing source code should update the date range of the copyright to the current year. The format for the license header is:
 
 ```python
 # SPDX-FileCopyrightText: Copyright (c) <year>, NVIDIA CORPORATION & AFFILIATES. All rights reserved.

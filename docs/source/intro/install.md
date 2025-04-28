@@ -23,14 +23,14 @@ Agent Intelligence Toolkit (AIQ Toolkit) is a Python library that doesn’t requ
 
 ### Prerequisites
 
-Before you begin using AgentIQ, ensure that you meet the following software prerequisites.
+Before you begin using AIQ Toolkit, ensure that you meet the following software prerequisites.
 
 - Install [Git](https://git-scm.com/)
 - Install [Git Large File Storage](https://git-lfs.github.com/) (LFS)
 - Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
 
-1. Clone the AgentIQ repository to your local machine.
+1. Clone the AIQ Toolkit repository to your local machine.
     ```bash
     git clone git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit
     cd aiqtoolkit
@@ -54,13 +54,13 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
     source .venv/bin/activate
     ```
 
-1. Install the AgentIQ library.
-    To install the AgentIQ library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
+1. Install the AIQ Toolkit library.
+    To install the AIQ Toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
     ```bash
     uv sync --all-groups --all-extras
     ```
 
-    Alternatively to install just the core AgentIQ without any plugins, run the following:
+    Alternatively to install just the core AIQ Toolkit without any plugins, run the following:
     ```bash
     uv sync
     ```
@@ -81,7 +81,7 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
     ```
 
 
-2. Verify that you've installed the AgentIQ library.
+2. Verify that you've installed the AIQ Toolkit library.
 
      ```bash
      aiq --help
@@ -92,12 +92,12 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
 
 
 
-## AgentIQ Packages
-Once an AgentIQ workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `aiqtoolkit` package, along with the needed plugins. When declaring a dependency on AgentIQ it is recommended to use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `1.0`.
+## AIQ Toolkit Packages
+Once an AIQ Toolkit workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `aiqtoolkit` package, along with the needed plugins. When declaring a dependency on AIQ Toolkit it is recommended to use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `1.0`.
 
 For more information on the available plugins, refer to the [Framework Integrations](../concepts/plugins.md#framework-integrations) section of the plugins documentation.
 
-Example dependency for AgentIQ using the `langchain` plugin for projects using a `pyproject.toml` file:
+Example dependency for AIQ Toolkit using the `langchain` plugin for projects using a `pyproject.toml` file:
 ```toml
 dependencies = [
 "aiqtoolkit[langchain]~=1.0",
@@ -112,4 +112,4 @@ aiqtoolkit[langchain]==1.0.*
 
 
 ## Next Steps
-After installing AgentIQ, you can start using AgentIQ agentic workflows. For more information, refer to [Get Started with AgentIQ](get-started.md).
+After installing AIQ Toolkit, you can start using AIQ Toolkit agentic workflows. For more information, refer to [Get Started with AIQ Toolkit](get-started.md).
