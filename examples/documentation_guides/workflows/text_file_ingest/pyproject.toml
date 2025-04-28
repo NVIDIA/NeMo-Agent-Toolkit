@@ -6,7 +6,7 @@ requires = ["setuptools >= 64"]
 name = "text_file_ingest"
 version = "0.1.0"
 dependencies = [
-  "agentiq[langchain]",
+  "aiqtoolkit[langchain]",
   "bs4==0.0.2",
   "faiss-cpu==1.9.0",
 ]

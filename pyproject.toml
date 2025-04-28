@@ -10,7 +10,7 @@ include = ["aiq.*"]
 # intentionally empty, the section is required for setuptools_scm to work but we don't need to set anything
 
 [project]
-name = "agentiq"
+name = "aiqtoolkit"
 dynamic = ["version"]
 dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
@@ -44,7 +44,7 @@ dependencies = [
   "wikipedia~=1.4",
 ]
 requires-python = "==3.12.*"
-description = "AgentIQ"
+description = "Agent Intelligence Toolkit (AIQ Toolkit)"
 readme = "src/aiq/meta/pypi.md"
 license = { file = "LICENSE.md" }
 keywords = ["ai", "rag", "agents"]
@@ -54,14 +54,14 @@ maintainers = [{ name = "NVIDIA Corporation" }]
 
 
 [project.optional-dependencies]
-# Optional dependencies are things that users would want to install with AgentIQ. i.e. `uv pip install aiq[langchain]`
-crewai = ["agentiq-crewai"]
-langchain = ["agentiq-langchain"]
-llama-index = ["agentiq-llama-index"]
-mem0ai = ["agentiq-mem0ai"]
-semantic-kernel = ["agentiq-semantic-kernel"]
-zep-cloud = ["agentiq-zep-cloud"]
-agno = ["agentiq-agno"]
+# Optional dependencies are things that users would want to install with AIQToolkit. i.e. `uv pip install aiq[langchain]`
+crewai = ["aiqtoolkit-crewai"]
+langchain = ["aiqtoolkit-langchain"]
+llama-index = ["aiqtoolkit-llama-index"]
+mem0ai = ["aiqtoolkit-mem0ai"]
+semantic-kernel = ["aiqtoolkit-semantic-kernel"]
+zep-cloud = ["aiqtoolkit-zep-cloud"]
+agno = ["aiqtoolkit-agno"]
 
 examples = [
   "aiq_email_phishing_analyzer",
@@ -88,14 +88,14 @@ config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
 # Workspace members
-agentiq-crewai = { workspace = true }
-agentiq-langchain = { workspace = true }
-agentiq-llama-index = { workspace = true }
-agentiq-mem0ai = { workspace = true }
-agentiq-semantic-kernel = { workspace = true }
-agentiq-test = { workspace = true }
-agentiq-zep-cloud = { workspace = true }
-agentiq-agno = { workspace = true }
+aiqtoolkit-crewai = { workspace = true }
+aiqtoolkit-langchain = { workspace = true }
+aiqtoolkit-llama-index = { workspace = true }
+aiqtoolkit-mem0ai = { workspace = true }
+aiqtoolkit-semantic-kernel = { workspace = true }
+aiqtoolkit-test = { workspace = true }
+aiqtoolkit-zep-cloud = { workspace = true }
+aiqtoolkit-agno = { workspace = true }
 
 # All examples here
 aiq_email_phishing_analyzer = { path = "examples/email_phishing_analyzer", editable = true }
@@ -116,7 +116,7 @@ members = ["packages/*"]
 [dependency-groups]
 # Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
 dev = [
-  "agentiq_test",
+  "aiqtoolkit_test",
   "asgi-lifespan~=2.1",
   "flake8-pyproject~=1.2",
   "flake8~=7.1",
@@ -191,7 +191,7 @@ filterwarnings = [
 ]
 testpaths = ["tests", "examples/*/tests", "packages/*/tests"]
 asyncio_mode = "auto"
-pytest_plugins = ["agentiq-test"]
+pytest_plugins = ["aiqtoolkit-test"]
 
 ## Pylint configuration begins here
 
@@ -615,7 +615,7 @@ disable = [
   "too-many-statements",
   "unnecessary-lambda",            # We pass lambdas around a lot, so this is not useful
   "unnecessary-pass",              # Allow empty classes/methods with only a `pass` statement in the body
-  "unused-argument",               # Allow unused arguments in functions for rapid prototyping (delete after initial AgentIQ prototype)
+  "unused-argument",               # Allow unused arguments in functions for rapid prototyping (delete after initial AIQToolkit prototype)
   "use-symbolic-message-instead",
   "useless-suppression",
   "wrong-import-order",            # pylint mistakenly thinks that the test utils are third party, and we have isort for this

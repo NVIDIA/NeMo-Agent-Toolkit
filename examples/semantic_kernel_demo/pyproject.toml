@@ -9,7 +9,7 @@ root = "../.."
 name = "aiq_semantic_kernel_demo"
 dynamic = ["version"]
 dependencies = [
-  "agentiq[langchain,semantic-kernel]",
+  "aiqtoolkit[langchain,semantic-kernel]",
   "faiss-cpu==1.9.0",
 ]
 requires-python = ">=3.12"
@@ -18,7 +18,7 @@ keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-agentiq = { path = "../../", editable = true }
+aiqtoolkit = { path = "../../", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_semantic_kernel_demo = "aiq_semantic_kernel_demo.register"

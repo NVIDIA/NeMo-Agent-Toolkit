@@ -9,7 +9,7 @@ root = "../.."
 name = "aiq_simple_calculator"
 dynamic = ["version"]
 dependencies = [
-  "agentiq[langchain]",
+  "aiqtoolkit[langchain]",
 ]
 requires-python = ">=3.12"
 description = "Simple Calculator AgentIQ example"
@@ -17,7 +17,7 @@ keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-agentiq = { path = "../../", editable = true }
+aiqtoolkit = { path = "../../", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_simple_calculator = "aiq_simple_calculator.register"

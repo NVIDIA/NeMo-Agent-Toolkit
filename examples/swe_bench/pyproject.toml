@@ -9,7 +9,7 @@ root = "../.."
 name = "aiq_swe_bench"
 dynamic = ["version"]
 dependencies = [
-  "agentiq[langchain]",
+  "aiqtoolkit[langchain]",
   "swebench==3.0.3"
 ]
 requires-python = ">=3.12"
@@ -17,7 +17,7 @@ description = "Example for solving SWE bench problems"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-agentiq = { path = "../../", editable = true }
+aiqtoolkit = { path = "../../", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_swe_bench = "aiq_swe_bench.register"

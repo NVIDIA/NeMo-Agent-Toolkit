@@ -32,7 +32,7 @@ class AIQPackageError(Exception):
 
 
 def get_repo_root():
-    return find_package_root("agentiq")
+    return find_package_root("aiqtoolkit")
 
 
 def _get_module_name(workflow_name: str):
