@@ -64,7 +64,7 @@ def get_version():
     from importlib.metadata import version
     try:
         # Use the distro name to get the version
-        return version("agentiq")
+        return version("aiqtoolkit")
     except PackageNotFoundError:
         return "unknown"
 

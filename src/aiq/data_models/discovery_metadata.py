@@ -94,7 +94,7 @@ class DiscoveryMetadata(BaseModel):
         mapping = importlib.metadata.packages_distributions()
         try:
             distro_names = mapping.get(root_package_name, [None])
-            distro_name = DiscoveryMetadata.get_preferred_item(distro_names, "agentiq")
+            distro_name = DiscoveryMetadata.get_preferred_item(distro_names, "aiqtoolkit")
         except KeyError:
             return root_package_name
 
@@ -119,7 +119,7 @@ class DiscoveryMetadata(BaseModel):
     @lru_cache
     def get_distribution_name(root_package: str) -> str:
         """
-        The aiq library packages use a distro name 'agentiq[]' and
+        The aiq library packages use a distro name 'aiqtoolkit[]' and
         root package name 'aiq'. They provide mapping in a metadata file
         for optimized installation.
         """
