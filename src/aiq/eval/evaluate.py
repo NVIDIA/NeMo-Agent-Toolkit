@@ -169,6 +169,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         '''Remove contents of the output directory if it exists'''
         if self.eval_config.general.output and self.eval_config.general.output.dir and \
                 self.eval_config.general.output.dir.exists():
+            logger.info("Cleaning up output directory %s", self.eval_config.general.output.dir)
             shutil.rmtree(self.eval_config.general.output.dir)
 
     def write_output(self, dataset_handler: DatasetHandler):
@@ -223,7 +224,23 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             logger.exception("An error occurred while running evaluators: %s", e, exc_info=True)
             raise
 
-    async def run_and_evaluate(self) -> EvaluationRunOutput:
+    def apply_overrides(self):
+        from aiq.cli.cli_utils.config_override import load_and_override_config
+        from aiq.data_models.config import AIQConfig
+        from aiq.runtime.loader import PluginTypes
+        from aiq.runtime.loader import discover_and_register_plugins
+        from aiq.utils.data_models.schema_validator import validate_schema
+
+        # Register plugins before validation
+        discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
+
+        config_dict = load_and_override_config(self.config.config_file, self.config.override)
+        config = validate_schema(config_dict, AIQConfig)
+        return config
+
+    async def run_and_evaluate(self,
+                               session_manager: AIQSessionManager | None = None,
+                               job_id: str | None = None) -> EvaluationRunOutput:
         """
         Run the workflow with the specified config file and evaluate the dataset
         """
@@ -232,14 +249,24 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         from aiq.builder.eval_builder import WorkflowEvalBuilder
         from aiq.runtime.loader import load_config
 
-        # Load the config object
-        config = load_config(self.config.config_file)
+        # Load and override the config
+        if self.config.override:
+            config = self.apply_overrides()
+        else:
+            config = load_config(self.config.config_file)
         self.eval_config = config.eval
         logger.debug("Loaded evaluation configuration: %s", self.eval_config)
 
         # Cleanup the output directory
         if self.eval_config.general.output and self.eval_config.general.output.cleanup:
             self.cleanup_output_directory()
+
+        # If a job id is provided keep the data per-job
+        if job_id:
+            self.eval_config.general.output_dir = self.eval_config.general.output_dir / f"jobs/{job_id}"
+            if self.eval_config.general.output:
+                self.eval_config.general.output.dir = self.eval_config.general.output_dir
+
         # Load the input dataset
         # For multiple datasets, one handler per dataset can be created
         dataset_config = self.eval_config.general.dataset  # Currently only one dataset is supported
@@ -267,8 +294,9 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                 await self.run_workflow_remote()
             else:
                 if not self.config.skip_workflow:
-                    session_manager = AIQSessionManager(eval_workflow.build(),
-                                                        max_concurrency=self.eval_config.general.max_concurrency)
+                    if session_manager is None:
+                        session_manager = AIQSessionManager(eval_workflow.build(),
+                                                            max_concurrency=self.eval_config.general.max_concurrency)
                     await self.run_workflow_local(session_manager)
 
             # Evaluate
@@ -283,7 +311,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         # Run custom scripts and upload evaluation outputs to S3
         if self.eval_config.general.output:
-            output_uploader = OutputUploader(self.eval_config.general.output)
+            output_uploader = OutputUploader(self.eval_config.general.output, job_id=job_id)
             output_uploader.run_custom_scripts()
             await output_uploader.upload_directory()
 

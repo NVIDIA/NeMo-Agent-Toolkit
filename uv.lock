@@ -9,6 +9,7 @@ resolution-markers = [
 [manifest]
 members = [
     "agentiq",
+    "agentiq-agno",
     "agentiq-crewai",
     "agentiq-langchain",
     "agentiq-llama-index",
@@ -37,6 +38,7 @@ dependencies = [
     { name = "aioboto3" },
     { name = "arize-phoenix" },
     { name = "click" },
+    { name = "colorama" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "jinja2" },
@@ -60,10 +62,14 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+agno = [
+    { name = "agentiq-agno" },
+]
 crewai = [
     { name = "agentiq-crewai" },
 ]
 examples = [
+    { name = "aiq-agno-personal-finance" },
     { name = "aiq-automated-description-generation" },
     { name = "aiq-email-phishing-analyzer" },
     { name = "aiq-multi-frameworks" },
@@ -123,11 +129,13 @@ docs = [
     { name = "sphinx" },
     { name = "sphinx-autoapi" },
     { name = "sphinx-copybutton" },
+    { name = "sphinx-mermaid" },
     { name = "vale" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "agentiq-agno", marker = "extra == 'agno'", editable = "packages/agentiq_agno" },
     { name = "agentiq-crewai", marker = "extra == 'crewai'", editable = "packages/agentiq_crewai" },
     { name = "agentiq-langchain", marker = "extra == 'langchain'", editable = "packages/agentiq_langchain" },
     { name = "agentiq-llama-index", marker = "extra == 'llama-index'", editable = "packages/agentiq_llama_index" },
@@ -135,6 +143,7 @@ requires-dist = [
     { name = "agentiq-semantic-kernel", marker = "extra == 'semantic-kernel'", editable = "packages/agentiq_semantic_kernel" },
     { name = "agentiq-zep-cloud", marker = "extra == 'zep-cloud'", editable = "packages/agentiq_zep_cloud" },
     { name = "aioboto3", specifier = ">=11.0.0" },
+    { name = "aiq-agno-personal-finance", marker = "extra == 'examples'", editable = "examples/agno_personal_finance" },
     { name = "aiq-automated-description-generation", marker = "extra == 'examples'", editable = "examples/automated_description_generation" },
     { name = "aiq-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/email_phishing_analyzer" },
     { name = "aiq-multi-frameworks", marker = "extra == 'examples'", editable = "examples/multi_frameworks" },
@@ -145,6 +154,7 @@ requires-dist = [
     { name = "aiq-swe-bench", marker = "extra == 'examples'", editable = "examples/swe_bench" },
     { name = "arize-phoenix", specifier = "~=6.1" },
     { name = "click", specifier = "~=8.1" },
+    { name = "colorama", specifier = "~=0.4.6" },
     { name = "fastapi", specifier = "~=0.115.5" },
     { name = "httpx", specifier = "~=0.27" },
     { name = "jinja2", specifier = "~=3.1" },
@@ -169,7 +179,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["crewai", "langchain", "llama-index", "mem0ai", "semantic-kernel", "zep-cloud", "examples", "profiling"]
+provides-extras = ["crewai", "langchain", "llama-index", "mem0ai", "semantic-kernel", "zep-cloud", "agno", "examples", "profiling"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -200,7 +210,26 @@ docs = [
     { name = "sphinx", specifier = "~=8.2" },
     { name = "sphinx-autoapi", specifier = ">=3.6" },
     { name = "sphinx-copybutton", specifier = ">=0.5" },
+    { name = "sphinx-mermaid" },
     { name = "vale", specifier = "==3.9.5" },
+]
+
+[[package]]
+name = "agentiq-agno"
+source = { editable = "packages/agentiq_agno" }
+dependencies = [
+    { name = "agentiq" },
+    { name = "agno" },
+    { name = "google-search-results" },
+    { name = "openai" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agentiq", editable = "." },
+    { name = "agno", specifier = "~=1.2.3" },
+    { name = "google-search-results", specifier = "~=2.4.2" },
+    { name = "openai", specifier = "~=1.66" },
 ]
 
 [[package]]
@@ -316,6 +345,29 @@ dependencies = [
 requires-dist = [
     { name = "agentiq", editable = "." },
     { name = "zep-cloud", specifier = "~=2.2.0" },
+]
+
+[[package]]
+name = "agno"
+version = "1.2.11"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "docstring-parser" },
+    { name = "gitpython" },
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "python-dotenv" },
+    { name = "python-multipart" },
+    { name = "pyyaml" },
+    { name = "rich" },
+    { name = "tomli" },
+    { name = "typer" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a6/a2/8d1961275318a1be24d09249f8445d43571bdc96949dd25c10f5a9e26a9e/agno-1.2.11.tar.gz", hash = "sha256:6f36ed60767b655223abca5b61b487e63b6b098050a65e71610e2de914a66e5a", size = 451754 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/13/47/2094f0801ae34fa487a17a6cd118e881d69f97fbf5caec504f8b966b0a92/agno-1.2.11-py3-none-any.whl", hash = "sha256:ea72e0f8e42e4ee8c20c8f583759f50bfbd2af90b2f8e3df20d35be9f8a235a8", size = 598924 },
 ]
 
 [[package]]
@@ -477,6 +529,22 @@ wheels = [
 ]
 
 [[package]]
+name = "aiq-agno-personal-finance"
+source = { editable = "examples/agno_personal_finance" }
+dependencies = [
+    { name = "agentiq", extra = ["agno"] },
+    { name = "litellm" },
+    { name = "openai" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agentiq", extras = ["agno"], editable = "." },
+    { name = "litellm", specifier = "~=1.63.14" },
+    { name = "openai", specifier = "~=1.66" },
+]
+
+[[package]]
 name = "aiq-automated-description-generation"
 source = { editable = "examples/automated_description_generation" }
 dependencies = [
@@ -512,7 +580,6 @@ source = { editable = "examples/multi_frameworks" }
 dependencies = [
     { name = "agentiq", extra = ["langchain", "llama-index"] },
     { name = "arxiv" },
-    { name = "colorama" },
     { name = "markdown-it-py" },
     { name = "nvidia-haystack" },
 ]
@@ -521,7 +588,6 @@ dependencies = [
 requires-dist = [
     { name = "agentiq", extras = ["langchain", "llama-index"], editable = "." },
     { name = "arxiv", specifier = "~=2.1.3" },
-    { name = "colorama", specifier = "~=0.4.6" },
     { name = "markdown-it-py", specifier = "~=3.0" },
     { name = "nvidia-haystack", specifier = "==0.1.2" },
 ]
@@ -531,7 +597,6 @@ name = "aiq-plot-charts"
 source = { editable = "examples/plot_charts" }
 dependencies = [
     { name = "agentiq", extra = ["langchain"] },
-    { name = "colorama" },
     { name = "matplotlib" },
     { name = "seaborn" },
 ]
@@ -539,7 +604,6 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "agentiq", extras = ["langchain"], editable = "." },
-    { name = "colorama", specifier = "==0.4.6" },
     { name = "matplotlib", specifier = "==3.9.*" },
     { name = "seaborn", specifier = "==0.13.*" },
 ]
@@ -1751,6 +1815,15 @@ wheels = [
 ]
 
 [[package]]
+name = "google-search-results"
+version = "2.4.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/77/30/b3a6f6a2e00f8153549c2fa345c58ae1ce8e5f3153c2fe0484d444c3abcb/google_search_results-2.4.2.tar.gz", hash = "sha256:603a30ecae2af8e600b22635757a6df275dad4b934f975e67878ccd640b78245", size = 18818 }
+
+[[package]]
 name = "googleapis-common-protos"
 version = "1.69.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2657,7 +2730,7 @@ wheels = [
 
 [[package]]
 name = "litellm"
-version = "1.63.6"
+version = "1.63.14"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -2672,9 +2745,9 @@ dependencies = [
     { name = "tiktoken" },
     { name = "tokenizers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/12/b3/79bea1f09869542a067872538a0c2dab7c7f6059dd358fde93295ec3b907/litellm-1.63.6.tar.gz", hash = "sha256:b8fd6eca1f17f7d1101f38a90689b5f1a2f42a828c70299e0cb570297e5fb9ae", size = 6596287 }
+sdist = { url = "https://files.pythonhosted.org/packages/3e/6a/a1a93c8419b59d0a40f59dc7300d67f45cd33a246367b09365dd7771568b/litellm-1.63.14.tar.gz", hash = "sha256:9cffe19d8140c33a2f777c5b2e8b8175ffe03979aac341b8538d6e6d143bd640", size = 6641535 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bd/bf/3e55da5cacd9c6a1ed45e42a484f8b47512bd9739e347be8e715a8af1545/litellm-1.63.6-py3-none-any.whl", hash = "sha256:68d3d1f6c062851702e3f7ad99a204cf2b67f8b79d8608f22b72664e7de641c6", size = 6909073 },
+    { url = "https://files.pythonhosted.org/packages/8b/0c/149ae51e16d0836d6ddc9aec03a110960227046860dfc68bd3746a23cdf5/litellm-1.63.14-py3-none-any.whl", hash = "sha256:d4c469f5990e142cc23dfa06c3fddd627001928e4df43682001f453af6a1fb51", size = 6964658 },
 ]
 
 [[package]]
@@ -5225,6 +5298,17 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/fc/2b/a964715e7f5295f77509e59309959f4125122d648f86b4fe7d70ca1d882c/sphinx-copybutton-0.5.2.tar.gz", hash = "sha256:4cf17c82fb9646d1bc9ca92ac280813a3b605d8c421225fd9913154103ee1fbd", size = 23039 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9e/48/1ea60e74949eecb12cdd6ac43987f9fd331156388dcc2319b45e2ebb81bf/sphinx_copybutton-0.5.2-py3-none-any.whl", hash = "sha256:fb543fd386d917746c9a2c50360c7905b605726b9355cd26e9974857afeae06e", size = 13343 },
+]
+
+[[package]]
+name = "sphinx-mermaid"
+version = "0.0.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "sphinx" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bd/65/96cb3a4117ea2a4ead808377259659885ea0fe5e539a9f29fc1c8a723ed1/sphinx_mermaid-0.0.8-py2.py3-none-any.whl", hash = "sha256:03cbad30c04130e5644c5112b4b2da7850d142f897876ac5aea83c8b5965bf76", size = 3336 },
 ]
 
 [[package]]
