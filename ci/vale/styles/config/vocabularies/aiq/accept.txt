@@ -4,8 +4,6 @@
 
 [Aa]gentic
 [Aa]gno
-# do we need a lowercase version of this?
-aiq
 AIQ
 API(s?)
 Arize
