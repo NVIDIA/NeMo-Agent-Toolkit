@@ -14,7 +14,7 @@
 # limitations under the License.
 
 name: Documentation - New Documentation Request
-description: Request additions to AgentIQ documentation
+description: Request additions to AIQ Toolkit documentation
 title: "[DOC]: "
 labels: ["doc"]
 
