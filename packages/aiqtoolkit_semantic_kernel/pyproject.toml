@@ -13,17 +13,17 @@ root = "../.."
 
 
 [project]
-name = "agentiq-test"
+name = "aiqtoolkit-semantic-kernel"
 dynamic = ["version"]
 dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
   # Keep sorted!!!
-  "agentiq",
-  "pytest~=8.3",
+  "aiqtoolkit",
+  "semantic-kernel~=1.24.0",
 ]
 requires-python = ">=3.12"
-description = "Testing utilities for AgentIQ"
+description = "Subpackage for Semantic-Kernel integration in AIQToolkit"
 readme = "src/aiq/meta/pypi.md"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
@@ -34,12 +34,8 @@ config-settings = { editable_mode = "compat" }
 
 
 [tool.uv.sources]
-agentiq = { workspace = true }
-
-
-[project.entry-points.pytest11]
-agentiq-test = "aiq.test.plugin"
+aiqtoolkit = { workspace = true }
 
 
 [project.entry-points.'aiq.components']
-agentiq-test = "aiq.test.register"
+aiq_semantic_kernel = "aiq.plugins.semantic_kernel.register"
