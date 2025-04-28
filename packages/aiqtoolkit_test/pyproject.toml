@@ -13,18 +13,18 @@ root = "../.."
 
 
 [project]
-name = "agentiq-crewai"
+name = "aiqtoolkit-test"
 dynamic = ["version"]
 dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
   # Keep sorted!!!
-  "agentiq",
-  "crewai~=0.95.0",
+  "aiqtoolkit",
+  "pytest~=8.3",
 ]
 requires-python = ">=3.12"
+description = "Testing utilities for AIQToolkit"
 readme = "src/aiq/meta/pypi.md"
-description = "Subpackage for CrewAI integration in AgentIQ"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
@@ -34,8 +34,12 @@ config-settings = { editable_mode = "compat" }
 
 
 [tool.uv.sources]
-agentiq = { workspace = true }
+aiqtoolkit = { workspace = true }
+
+
+[project.entry-points.pytest11]
+aiqtoolkit-test = "aiq.test.plugin"
 
 
 [project.entry-points.'aiq.components']
-aiq_crewai = "aiq.plugins.crewai.register"
+aiqtoolkit-test = "aiq.test.register"

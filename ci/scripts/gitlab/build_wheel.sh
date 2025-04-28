@@ -37,7 +37,7 @@ function build_wheel() {
     uv build --wheel --no-progress --out-dir "${WHEELS_DIR}/$2" --directory $1
 }
 
-build_wheel . "agentiq/${GIT_TAG}"
+build_wheel . "aiqtoolkit/${GIT_TAG}"
 
 
 # Build all examples with a pyproject.toml in the first directory below examples
@@ -51,8 +51,8 @@ for AIQ_PACKAGE in "${AIQ_PACKAGES[@]}"; do
     # drop each package into a separate directory
     PACKAGE_DIR_NAME="${AIQ_PACKAGE#packages/}"
     PACKAGE_DIR_NAME="${AIQ_PACKAGE#./packages/}"
-    # Replace "aiq_" with "agentiq_"
-    PACKAGE_DIR_NAME="${PACKAGE_DIR_NAME//aiq_/agentiq_}"
+    # Replace "aiq_" with "aiqtoolkit_"
+    PACKAGE_DIR_NAME="${PACKAGE_DIR_NAME//aiq_/aiqtoolkit_}"
     build_wheel "${AIQ_PACKAGE}" "${PACKAGE_DIR_NAME}/${GIT_TAG}"
 done
 

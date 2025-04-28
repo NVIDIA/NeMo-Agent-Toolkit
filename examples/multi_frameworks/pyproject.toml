@@ -9,7 +9,7 @@ root = "../.."
 name = "aiq_multi_frameworks"
 dynamic = ["version"]
 dependencies = [
-  "agentiq[llama-index,langchain]",
+  "aiqtoolkit[llama-index,langchain]",
   "arxiv~=2.1.3",
   "markdown-it-py~=3.0",
   "nvidia-haystack==0.1.2",
@@ -19,7 +19,7 @@ description = "Custom AgentIQ Workflow"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-agentiq = { path = "../../", editable = true }
+aiqtoolkit = { path = "../../", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_multi_frameworks = "aiq_multi_frameworks.register"
