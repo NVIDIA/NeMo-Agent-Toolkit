@@ -23,7 +23,7 @@ limitations under the License.
    :class: highlight
 ```
 
-![NVIDIA AgentIQ](./_static/agentiq_banner.png "AgentIQ banner image")
+![NVIDIA AgentIQ](./_static/aiqtoolkit_banner.png "AgentIQ banner image")
 
 # Welcome to the NVIDIA AgentIQ Documentation
 

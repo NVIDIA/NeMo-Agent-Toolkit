@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA AgentIQ](./docs/source/_static/agentiq_banner.png "AgentIQ banner image")
+![NVIDIA AgentIQ](./docs/source/_static/aiqtoolkit_banner.png "AgentIQ banner image")
 
 # NVIDIA AgentIQ
 
@@ -38,7 +38,7 @@ With AgentIQ, you can move quickly, experiment freely, and ensure reliability ac
 
 The following diagram illustrates the key components of AgentIQ and how they interact. It provides a high-level view of the architecture, including agents, plugins, workflows, and user interfaces. Use this as a reference to understand how to integrate and extend AgentIQ in your projects.
 
-![AgentIQ Components Diagram](docs/source/_static/agentiq_gitdiagram.png)
+![AgentIQ Components Diagram](docs/source/_static/aiqtoolkit_gitdiagram.png)
 
 ## Links
 
