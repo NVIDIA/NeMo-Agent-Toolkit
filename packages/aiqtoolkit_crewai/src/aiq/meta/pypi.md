@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA AgentIQ](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/agentiq_banner.png "AgentIQ banner image")
+![NVIDIA AgentIQ](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AgentIQ banner image")
 
 # NVIDIA AgentIQ Subpackage
 This is a subpackage for CrewAI integration in AgentIQ.
 
-For more information about AgentIQ, please visit the [AgentIQ package](https://pypi.org/project/agentiq/).
+For more information about AgentIQ, please visit the [AgentIQ package](https://pypi.org/project/aiqtoolkit/).
