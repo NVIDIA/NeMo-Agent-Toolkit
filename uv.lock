@@ -40,6 +40,7 @@ dependencies = [
     { name = "aioboto3" },
     { name = "arize-phoenix" },
     { name = "click" },
+    { name = "colorama" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "jinja2" },
@@ -155,6 +156,7 @@ requires-dist = [
     { name = "aiq-swe-bench", marker = "extra == 'examples'", editable = "examples/swe_bench" },
     { name = "arize-phoenix", specifier = "~=6.1" },
     { name = "click", specifier = "~=8.1" },
+    { name = "colorama", specifier = "~=0.4.6" },
     { name = "fastapi", specifier = "~=0.115.5" },
     { name = "httpx", specifier = "~=0.27" },
     { name = "jinja2", specifier = "~=3.1" },
@@ -612,7 +614,6 @@ source = { editable = "examples/multi_frameworks" }
 dependencies = [
     { name = "agentiq", extra = ["langchain", "llama-index"] },
     { name = "arxiv" },
-    { name = "colorama" },
     { name = "markdown-it-py" },
     { name = "nvidia-haystack" },
 ]
@@ -621,7 +622,6 @@ dependencies = [
 requires-dist = [
     { name = "agentiq", extras = ["langchain", "llama-index"], editable = "." },
     { name = "arxiv", specifier = "~=2.1.3" },
-    { name = "colorama", specifier = "~=0.4.6" },
     { name = "markdown-it-py", specifier = "~=3.0" },
     { name = "nvidia-haystack", specifier = "==0.1.2" },
 ]
@@ -631,7 +631,6 @@ name = "aiq-plot-charts"
 source = { editable = "examples/plot_charts" }
 dependencies = [
     { name = "agentiq", extra = ["langchain"] },
-    { name = "colorama" },
     { name = "matplotlib" },
     { name = "seaborn" },
 ]
@@ -639,7 +638,6 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "agentiq", extras = ["langchain"], editable = "." },
-    { name = "colorama", specifier = "==0.4.6" },
     { name = "matplotlib", specifier = "==3.9.*" },
     { name = "seaborn", specifier = "==0.13.*" },
 ]
