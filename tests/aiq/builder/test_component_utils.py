@@ -57,7 +57,7 @@ from aiq.test.memory import DummyMemoryConfig
 @pytest.fixture(name="nested_aiq_config", scope="function")
 def nested_aiq_config_fixture():
 
-    # Setup nested AgentIQ config
+    # Setup nested AIQ Toolkit config
     class FnConfig(FunctionBaseConfig, name="test_fn"):
         llm_name: LLMRef
         embedder_name: EmbedderRef

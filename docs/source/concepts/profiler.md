@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Profiling and Performance Monitoring of NVIDIA AgentIQ Workflows
+# Profiling and Performance Monitoring of NVIDIA Agent Intelligence Toolkit Workflows
 
-The AgentIQ Profiler Module provides profiling and forecasting capabilities for AgentIQ workflows. The profiler instruments the workflow execution by:
+The AIQ Toolkit Profiler Module provides profiling and forecasting capabilities for AIQ Toolkit workflows. The profiler instruments the workflow execution by:
 - Collecting usage statistics in real time (via callbacks).
 - Recording the usage statistics on a per-invocation basis (e.g., tokens used, time between calls, LLM calls).
 - Storing the data for offline analysis.
@@ -25,21 +25,21 @@ The AgentIQ Profiler Module provides profiling and forecasting capabilities for 
 - Computing workflow specific metrics for performance analysis (e.g., latency, throughput, etc.).
 - Analyzing workflow performance measures such as bottlenecks, latency, and concurrency spikes.
 
-These functionalities will allow AgentIQ developers to dynamically stress test their workflows in pre-production phases to receive workflow-specific sizing guidance based on observed latency and throughput of their specific workflows
-At any or every stage in a workflow execution, the AgentIQ profiler generates predictions/forecasts about future token and tool usage.  Client side forecasting allows for workflow-specific predictions which can be difficult, if not impossible, to achieve server side in order to facilitate inference planning.
-Will allow for features such as offline-replay or simulation of workflow runs without the need for deployed infrastructure such as tooling/vector DBs, etc. Will also allow for AgentIQ native observability and workflow fingerprinting.
+These functionalities will allow AIQ Toolkit developers to dynamically stress test their workflows in pre-production phases to receive workflow-specific sizing guidance based on observed latency and throughput of their specific workflows
+At any or every stage in a workflow execution, the AIQ Toolkit profiler generates predictions/forecasts about future token and tool usage.  Client side forecasting allows for workflow-specific predictions which can be difficult, if not impossible, to achieve server side in order to facilitate inference planning.
+Will allow for features such as offline-replay or simulation of workflow runs without the need for deployed infrastructure such as tooling/vector DBs, etc. Will also allow for AIQ Toolkit native observability and workflow fingerprinting.
 
 ## Current Profiler Architecture
-The AgentIQ Profiler can be broken into the following components:
+The AIQ Toolkit Profiler can be broken into the following components:
 
 ### Profiler Decorators and Callbacks
 - **profiler/decorators.py** defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
-- **profiler/callbacks** directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the AgentIQ usage stats queue. We currently support callback handlers for LangChain,
+- **profiler/callbacks** directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the AIQ Toolkit usage stats queue. We currently support callback handlers for LangChain,
 LLama Index, CrewAI, and Semantic Kernel.
 
 ### Profiler Runner
 
-- **profiler/profile_runner.py** is the main orchestration class. It collects workflow run statistics from the AgentIQ Eval module, computed workflow-specific metrics, and optionally forecasts usage metrics using the AgentIQ Profiler module.
+- **profiler/profile_runner.py** is the main orchestration class. It collects workflow run statistics from the AIQ Toolkit Eval module, computed workflow-specific metrics, and optionally forecasts usage metrics using the AIQ Toolkit Profiler module.
 
 - **Under profiler/forecasting**, the code trains scikit-learn style models on the usage data.
 model_trainer.py can train a LinearModel or a RandomForestModel on the aggregated usage data (the raw statistics collected).
@@ -54,9 +54,9 @@ Native integrations with `aiq eval` to allow for running of the profiler through
 ## Using the Profiler
 
 ### Step 1: Enabling Instrumentation on a Workflow [Optional]
-**NOTE:** If you don't set it, AgentIQ will inspect your code to infer frameworks used. We recommend you set it explicitly.
+**NOTE:** If you don't set it, AIQ Toolkit will inspect your code to infer frameworks used. We recommend you set it explicitly.
 To enable profiling on a workflow, you need to wrap the workflow with the profiler decorators. The decorators can be applied to any workflow using the `framework_wrappers` argument of the `register_function` decorator.
-Simply specify which AgentIQ supported frameworks you will be using anywhere in your workflow (including tools) upon registration and AgentIQ will automatically apply the appropriate profiling decorators at build time.
+Simply specify which AIQ Toolkit supported frameworks you will be using anywhere in your workflow (including tools) upon registration and AIQ Toolkit will automatically apply the appropriate profiling decorators at build time.
 For example:
 
 ```python
@@ -65,9 +65,9 @@ async def webquery_tool(config: WebQueryToolConfig, builder: Builder):
 ```
 
 Once workflows are instrumented, the profiler will collect usage statistics in real time and store them for offline analysis for any LLM invocations or tool calls your workflow makes during execution. Runtime telemetry
-is stored in a `intermediate_steps_stream` context variable during runtime. AgentIQ has a subscriber that will read intermediate steps through eval.
+is stored in a `intermediate_steps_stream` context variable during runtime. AIQ Toolkit has a subscriber that will read intermediate steps through eval.
 
-Even if a function isn’t one of the built-in AgentIQ “Functions”, you can still profile it with our simple decorator. The `@track_function` decorator helps you capture details such as when a function starts and ends, its input arguments, and its output—even if the function is asynchronous, a generator, or a class method.
+Even if a function isn’t one of the built-in AIQ Toolkit “Functions”, you can still profile it with our simple decorator. The `@track_function` decorator helps you capture details such as when a function starts and ends, its input arguments, and its output—even if the function is asynchronous, a generator, or a class method.
 
 #### How It Works
 
@@ -83,17 +83,17 @@ It supports all kinds of functions:
 
 #### Key Benefits
 
-- **Broad Compatibility:**  
+- **Broad Compatibility:**
   Use this decorator on any Python function, regardless of its type.
 
-- **Simple Metadata:**  
+- **Simple Metadata:**
   Optionally pass a dictionary of metadata to add extra context about the function call.
 
-- **Automatic Data Serialization:**  
+- **Automatic Data Serialization:**
   The decorator converts input arguments and outputs into a `JSON`-friendly format (with special handling for Pydantic models), making the data easier to analyze.
 
-- **Reactive Event Streaming:**  
-  All profiling events are pushed to the `AgentIQ` intermediate step stream, so you can subscribe and monitor events in real time.
+- **Reactive Event Streaming:**
+  All profiling events are pushed to the `AIQ Toolkit` intermediate step stream, so you can subscribe and monitor events in real time.
 
 #### How to Use
 
@@ -182,6 +182,6 @@ This will, based on the above configuration, produce the following files in the 
 
 ## Providing Feedback
 
-We welcome feedback on the AgentIQ Profiler module. Please provide feedback by creating an issue on the AgentIQ Git repository.
+We welcome feedback on the AIQ Toolkit Profiler module. Please provide feedback by creating an issue on the AIQ Toolkit Git repository.
 
 If you're filing a bug report, please also include a reproducer workflow and the profiler output files.

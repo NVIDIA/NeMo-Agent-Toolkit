@@ -15,7 +15,6 @@
 
 import dataclasses
 import logging
-import typing
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -28,6 +27,7 @@ from aiq.data_models.config import AIQConfig
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.evaluate import EvalGeneralConfig
 from aiq.data_models.evaluator import EvaluatorBaseConfig
+from aiq.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
         self.eval_general_config = eval_general_config
         self._evaluators: dict[str, ConfiguredEvaluator] = {}
 
-    @typing.override
+    @override
     async def add_evaluator(self, name: str, config: EvaluatorBaseConfig):
         if name in self._evaluators:
             raise ValueError(f"Evaluator `{name}` already exists in the list of evaluators")
@@ -63,7 +63,7 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
             logger.error("Error %s adding evaluator `%s` with config `%s`", e, name, config, exc_info=True)
             raise
 
-    @typing.override
+    @override
     def get_evaluator(self, evaluator_name: str) -> EvaluatorInfo:
 
         if (evaluator_name not in self._evaluators):
@@ -71,7 +71,7 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
 
         return self._evaluators[evaluator_name].instance
 
-    @typing.override
+    @override
     def get_evaluator_config(self, evaluator_name: str) -> EvaluatorBaseConfig:
 
         if evaluator_name not in self._evaluators:
@@ -80,15 +80,15 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
         # Return the tool configuration object
         return self._evaluators[evaluator_name].config
 
-    @typing.override
+    @override
     def get_max_concurrency(self) -> int:
         return self.eval_general_config.max_concurrency
 
-    @typing.override
+    @override
     def get_output_dir(self) -> Path:
         return self.eval_general_config.output_dir
 
-    @typing.override
+    @override
     def get_all_tools(self, wrapper_type: LLMFrameworkEnum | str):
         tools = []
         tool_wrapper_reg = self._registry.get_tool_wrapper(llm_framework=wrapper_type)

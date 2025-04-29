@@ -3,9 +3,8 @@
 # Regular expressions are parsed according to the Go syntax: https://golang.org/pkg/regexp/syntax/
 
 [Aa]gentic
-AgentIQ
 [Aa]gno
-aiq
+AIQ
 API(s?)
 Arize
 arXiv

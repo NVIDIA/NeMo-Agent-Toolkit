@@ -15,11 +15,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# AgentIQ MCP Front-End
+# AIQ Toolkit MCP Front-End
 
-Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction). 
+Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
-The MCP front-end in AgentIQ allows you to expose your workflow functions as MCP-compatible tools that can be used by any MCP client. This enables seamless integration between AgentIQ workflows and other MCP-compatible systems.
+The MCP front-end in AIQ Toolkit allows you to expose your workflow functions as MCP-compatible tools that can be used by any MCP client. This enables seamless integration between AIQ Toolkit workflows and other MCP-compatible systems.
 
 ## Using the MCP Front-End
 
@@ -59,7 +59,7 @@ Once the MCP server is running, any MCP-compatible client can connect to it and 
 
 ## Integration with MCP Clients
 
-The AgentIQ MCP front-end implements the Model Context Protocol specification, making it compatible with any MCP client. This allows for seamless integration with various systems that support MCP, including:
+The AIQ Toolkit MCP front-end implements the Model Context Protocol specification, making it compatible with any MCP client. This allows for seamless integration with various systems that support MCP, including:
 
 1. MCP-compatible LLM frameworks
 2. Other agent frameworks that support MCP
