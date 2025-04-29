@@ -46,26 +46,15 @@ def is_valid_json(string):
         return False
 
 
-def override(func):
-    """
-    A compatibility layer for typing.override decorator.
+# A compatibility layer for typing.override decorator.
+# In Python >= 3.12, it uses the built-in typing.override decorator
+# In Python < 3.12, it acts as a no-op decorator
+if sys.version_info >= (3, 12):
+    from typing import override  # pylint: disable=unused-import
+else:
 
-    In Python >= 3.12, this uses the built-in typing.override decorator.
-    In Python < 3.12, this acts as a no-op decorator.
-
-    Parameters
-    ----------
-    func : Callable
-        The function to be decorated.
-
-    Returns
-    -------
-    Callable
-        The decorated function.
-    """
-    if sys.version_info >= (3, 12):
-        return typing.override(func)
-    return func
+    def override(func):
+        return func
 
 
 class DecomposedType:
