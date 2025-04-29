@@ -17,7 +17,7 @@
 
 # Building Documentation
 
-### Prerequisites
+## Prerequisites
 If you don't already have a uv environment setup, refer to the [Get Started](./source/intro/get-started.md) guide.
 
 ## Install Documentation Dependencies
