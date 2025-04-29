@@ -178,8 +178,7 @@ async def generate_streaming_response_raw_as_str(payload: typing.Any,
                                                  streaming: bool,
                                                  result_type: type | None = None,
                                                  output_type: type | None = None,
-                                                 filter_steps: str | None = None,
-                                                 suppress_steps: bool = False) -> AsyncGenerator[str]:
+                                                 filter_steps: str | None = None) -> AsyncGenerator[str]:
     """
     Similar to generate_streaming_response_raw but converts the response to a string format.
     """
