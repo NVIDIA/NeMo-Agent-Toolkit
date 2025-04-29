@@ -15,15 +15,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Using the NVIDIA AgentIQ User Interface and API Server
-AgentIQ provides a user interface for interacting with your running workflow.
+# Using the NVIDIA Agent Intelligence Toolkit User Interface and API Server
+AIQ Toolkit provides a user interface for interacting with your running workflow.
 
-There are currently four workflow transactions that can be initiated using HTTP or WebSocket when the AgentIQ server is
+There are currently four workflow transactions that can be initiated using HTTP or WebSocket when the AIQ Toolkit server is
 running: `generate non-streaming`,`generate streaming`, `chat non-streaming`, and `chat streaming`. The following are types of interfaces you can use to interact with your running workflows.
   - **Generate Interface:** Uses the transaction schema defined by your workflow. The interface documentation is accessible
     using Swagger while the server is running [`http://localhost:8000/docs`](http://localhost:8000/docs).
   - **Chat Interface:** [OpenAI API Documentation](https://platform.openai.com/docs/guides/text?api-mode=chat) provides
-    details on chat formats compatible with the AgentIQ server.
+    details on chat formats compatible with the AIQ Toolkit server.
 
 ## User Interface Features
 - Chat history
@@ -257,30 +257,30 @@ result back to the client. The transaction schema is defined by the workflow.
   ```
 
 ## Evaluation Endpoint
-You can also evaluate workflows via the AgentIQ `evaluate` endpoint. For more information, refer to the [AgentIQ Evaluation Endpoint](./evaluate-api.md) documentation.
+You can also evaluate workflows via the AIQ Toolkit `evaluate` endpoint. For more information, refer to the [AIQ Toolkit Evaluation Endpoint](./evaluate-api.md) documentation.
 
 ### Choosing between Streaming and Non-Streaming
 Use streaming if you need real-time updates or live communication where users expect immediate feedback. Use non-streaming if your workflow responds with simple updates and less feedback is needed.
 
 ## Walk-through
-In this walk-through, we will guide you through the steps to set up and configure the AgentIQ user interface. Refer to `examples/simple_calculator/README.md` to set up the simple calculator workflow demonstrated in the following walk-through properly.
+In this walk-through, we will guide you through the steps to set up and configure the AIQ Toolkit user interface. Refer to `examples/simple_calculator/README.md` to set up the simple calculator workflow demonstrated in the following walk-through properly.
 
 
-The AgentIQ UI is located in a git submodule at `external/agentiq-opensource-ui`. Ensure you have checked out all of the
+The AIQ Toolkit UI is located in a git submodule at `external/aiqtoolkit-opensource-ui`. Ensure you have checked out all of the
 git submodules by running the following:
 ```bash
 git submodule update --init --recursive
 ```
 
-### Start the AgentIQ Server
-You can start the AgentIQ server using the `aiq serve` command with the appropriate configuration file.
+### Start the AIQ Toolkit Server
+You can start the AIQ Toolkit server using the `aiq serve` command with the appropriate configuration file.
 
 ```bash
 aiq serve --config_file=examples/simple_calculator/configs/config.yml
 ```
 Running this command will produce the expected output as shown below:
 ```bash
-2025-03-07 12:54:20,394 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/simple_calculator/configs/config.yml'
+2025-03-07 12:54:20,394 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/simple_calculator/configs/config.yml'
 WARNING:  Current configuration will not reload as not all conditions are met, please refer to documentation.
 INFO:     Started server process [47250]
 INFO:     Waiting for application startup.
@@ -301,7 +301,7 @@ INFO:     Application startup complete.
 INFO:     Uvicorn running on http://localhost:8000 (Press CTRL+C to quit)
 ```
 
-### Verify the AgentIQ Server is Running
+### Verify the AIQ Toolkit Server is Running
 After the server is running, you can make HTTP requests to interact with the workflow.
 
 ```bash
@@ -322,23 +322,23 @@ Running this command will produce the following expected output:
 }
 ```
 
-### Launch the AgentIQ User Interface
-After the AgentIQ server starts, launch the web user interface. Launching the UI requires that Node.js v18+ is installed. Instructions for downloading and installing Node.js can be found in the official documentation [here](https://nodejs.org/en/download).
+### Launch the AIQ Toolkit User Interface
+After the AIQ Toolkit server starts, launch the web user interface. Launching the UI requires that Node.js v18+ is installed. Instructions for downloading and installing Node.js can be found in the official documentation [here](https://nodejs.org/en/download).
 
 ```bash
-cd external/agentiq-opensource-ui
+cd external/aiqtoolkit-opensource-ui
 npm install
 npm run dev
 ```
 After the web development server starts, open a web browser and navigate to [`http://localhost:3000/`](http://localhost:3000/).
 Port `3001` is an alternative port if port `3000` (default) is in use.
 
-![AgentIQ Web User Interface](../_static/ui_home_page.png)
+![AIQ Toolkit Web User Interface](../_static/ui_home_page.png)
 
-### Connect the User Interface to the AgentIQ Server Using HTTP API
+### Connect the User Interface to the AIQ Toolkit Server Using HTTP API
 Configure the settings by selecting the `Settings` icon located on the bottom left corner of the home page.
 
-![AgentIQ Web UI Settings](../_static/ui_generate_example_settings.png)
+![AIQ Toolkit Web UI Settings](../_static/ui_generate_example_settings.png)
 
 #### Settings Options
 **Note:** It is recommended to select /chat/stream for intermediate results streaming.
@@ -348,15 +348,15 @@ Configure the settings by selecting the `Settings` icon located on the bottom le
   - /generate/stream
   - /chat
   - /chat/stream
-- `WebSocket URL for Completion`: WebSocket URL to connect to running AgentIQ server.
+- `WebSocket URL for Completion`: WebSocket URL to connect to running AIQ Toolkit server.
 - `WebSocket Schema` - Workflow schema type over WebSocket connection.
 
 ### Simple Calculator Example Conversation
 Interact with the chat interface by prompting the Agent with the
 message: `Is 4 + 4 greater than the current hour of the day?`
 
-![AgentIQ Web UI Workflow Result](../_static/ui_generate_example.png)
+![AIQ Toolkit Web UI Workflow Result](../_static/ui_generate_example.png)
 
-## AgentIQ API Server Interaction Guide
+## AIQ Toolkit API Server Interaction Guide
 A custom user interface can communicate with the API server using both HTTP requests and WebSocket connections.
 For details on proper WebSocket messaging integration, refer to the [WebSocket Messaging Interface](../references/websockets.md) documentation.

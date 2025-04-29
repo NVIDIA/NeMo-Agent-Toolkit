@@ -66,7 +66,7 @@ def configure_registry_channel(config_type: RegistryHandlerBaseConfig, channel_n
 
 
 def add_channel_interative(channel_type: str) -> None:
-    """Add a remote registry channel to publish/search/pull AgentIQ plugin packages.
+    """Add a remote registry channel to publish/search/pull AIQ Toolkit plugin packages.
 
     Args:
         channel_type (str): They type of channel to configure.

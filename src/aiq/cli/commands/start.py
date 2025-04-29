@@ -149,7 +149,7 @@ class StartCommandGroup(click.MultiCommand):
 
             # Build the command parameters
             params: list[click.Parameter] = self._build_params(registered_front_end)
-            help_msg = f"Run an AgentIQ workflow using the {registered_front_end.local_name} front end."
+            help_msg = f"Run an AIQ Toolkit workflow using the {registered_front_end.local_name} front end."
 
             cmd = click.Command(name=registered_front_end.local_name,
                                 params=params,
@@ -178,7 +178,7 @@ class StartCommandGroup(click.MultiCommand):
         # Here we need to ensure all objects are loaded before we try to create the config object
         discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
 
-        logger.info("Starting AgentIQ from config file: '%s'", config_file)
+        logger.info("Starting AIQ Toolkit from config file: '%s'", config_file)
 
         config_dict = load_and_override_config(config_file, override)
 
@@ -242,9 +242,9 @@ class StartCommandGroup(click.MultiCommand):
 
 @click.command(name=__name__,
                invoke_without_command=False,
-               help="Run an AgentIQ workflow using a front end configuration.",
+               help="Run an AIQ Toolkit workflow using a front end configuration.",
                cls=StartCommandGroup)
 @click.pass_context
 def start_command(ctx: click.Context, **kwargs) -> None:
-    """Run an AgentIQ workflow using a front end configuration."""
+    """Run an AIQ Toolkit workflow using a front end configuration."""
     pass

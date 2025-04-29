@@ -15,10 +15,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 # Model Context Protocol Integration
-Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction). AgentIQ implements an MCP Client Tool which allows AgentIQ workflows and functions to connect to and use tools served by remote MCP servers using server sent events.
+Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction). AIQ Toolkit implements an MCP Client Tool which allows AIQ Toolkit workflows and functions to connect to and use tools served by remote MCP servers using server sent events.
 
 ## Usage
-Tools served by remote MCP servers can be leveraged as AgentIQ functions through configuration of an `mcp_tool_wrapper`.
+Tools served by remote MCP servers can be leveraged as AIQ Toolkit functions through configuration of an `mcp_tool_wrapper`.
 
 ```python
 class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
@@ -36,7 +36,7 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
         """
     )
 ```
-In addition to the URL of the server, the configuration also takes as a parameter the name of the MCP tool you want to use as an AgentIQ function. This is required because MCP servers can serve multiple tools, and for this wrapper we want to maintain a one-to-one relationship between AgentIQ functions and MCP tools. This means that if you want to include multiple tools from an MCP server you will configure multiple `mcp_tool_wrappers`.
+In addition to the URL of the server, the configuration also takes as a parameter the name of the MCP tool you want to use as an AIQ Toolkit function. This is required because MCP servers can serve multiple tools, and for this wrapper we want to maintain a one-to-one relationship between AIQ Toolkit functions and MCP tools. This means that if you want to include multiple tools from an MCP server you will configure multiple `mcp_tool_wrappers`.
 
 For example:
 

@@ -574,7 +574,7 @@ class FunctionInfo:
         Returns
         -------
         FunctionInfo
-            The created FunctionInfo object which can be used to create a Generic AgentIQ function.
+            The created FunctionInfo object which can be used to create a Generic AIQ Toolkit function.
 
         """
 

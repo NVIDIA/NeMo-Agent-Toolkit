@@ -15,24 +15,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Profiling an NVIDIA AgentIQ Workflow
-In this guide, we will walk you through an end-to-end example of how to profile an AgentIQ workflow using the AgentIQ profiler, which is part of the library's evaluation harness.
+# Profiling an NVIDIA Agent Intelligence Toolkit Workflow
+In this guide, we will walk you through an end-to-end example of how to profile an AIQ Toolkit workflow using the AIQ Toolkit profiler, which is part of the library's evaluation harness.
 We will begin by creating a workflow to profile, explore some of the configuration options of the profiler, and then perform an in-depth analysis of the profiling results.
 
 ## Prerequisites
 
-The AgentIQ profiler requires additional dependencies not installed by default.
+The AIQ Toolkit profiler requires additional dependencies not installed by default.
 
 Install these dependencies by running the following command:
 ```bash
 uv pip install -e .[profiling]
 ```
 
-Before you begin, ensure you have read the concepts of [AgentIQ Profiler](../concepts/profiler.md) and have a basic understanding of how to build and run an AgentIQ workflow. Also ensure you have read the [AgentIQ Evaluation Concepts](../concepts/evaluate.md) guide.
+Before you begin, ensure you have read the concepts of [AIQ Toolkit Profiler](../concepts/profiler.md) and have a basic understanding of how to build and run an AIQ Toolkit workflow. Also ensure you have read the [AIQ Toolkit Evaluation Concepts](../concepts/evaluate.md) guide.
 
 ## Defining a Workflow
 For this guide, we will use a simple, but useful, workflow that analyzes the body of a given email to determine if it is a Phishing email. We will define a single tool that takes an email body as input and returns a response on
-whether the email is a Phishing email or not. We will then add that tool as the only tool available to the `tool_calling` agent pre-built in the AgentIQ library. Below is the implementation of the phishing tool. The source code for this example can be found at `examples/email_phishing_analyzer/`.
+whether the email is a Phishing email or not. We will then add that tool as the only tool available to the `tool_calling` agent pre-built in the AIQ Toolkit library. Below is the implementation of the phishing tool. The source code for this example can be found at `examples/email_phishing_analyzer/`.
 
 ## Configuring the Workflow
 The configuration file for the workflow is as follows. Here, pay close attention to how the `profiler` and `eval` sections are configured.
@@ -281,6 +281,6 @@ Clearly, the `phi-3-*` models are not good fits given their `groundedness` and `
 The `mixtral-8x22b-instruct` model has a much higher runtime than the `llama-3.1-8b-instruct` model, so we will not use it either. The `llama-3.1-8b-instruct` model has the highest `groundedness` and `relevance`, so we will use it for our workflow.
 
 ## Conclusion
-In this guide, we walked through an end-to-end example of how to profile an AgentIQ workflow using the AgentIQ profiler. We defined a simple workflow, configured the profiler, ran the profiler, and analyzed the profiling results to compare the performance of various LLMs and evaluate the workflow's efficiency. We used the collected telemetry data to identify which LLM we think is the best fit for our workflow. We hope this guide has given you a good understanding of how to profile an AgentIQ workflow and analyze the results to make informed decisions about your workflow configuration.
+In this guide, we walked through an end-to-end example of how to profile an AIQ Toolkit workflow using the AIQ Toolkit profiler. We defined a simple workflow, configured the profiler, ran the profiler, and analyzed the profiling results to compare the performance of various LLMs and evaluate the workflow's efficiency. We used the collected telemetry data to identify which LLM we think is the best fit for our workflow. We hope this guide has given you a good understanding of how to profile an AIQ Toolkit workflow and analyze the results to make informed decisions about your workflow configuration.
 
 If you'd like to optimize further, we recommend exploring the `workflow_profiling_report.txt` file that was also created by the profiler. That has detailed information about workflow bottlenecks, and latency at various `concurrencies`, which can be helpful metrics when identifying performance issues in your workflow.

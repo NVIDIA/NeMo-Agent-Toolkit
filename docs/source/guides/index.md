@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA AgentIQ Guides
+# NVIDIA Agent Intelligence Toolkit Guides
 
 ```{toctree}
 :maxdepth: 20
@@ -26,7 +26,7 @@ Evaluate <./evaluate.md>
 Add Custom Evaluators <./custom-evaluator.md>
 Evaluation Endpoints <./evaluate-api.md>
 ./observe-workflow-with-phoenix.md
-Use User Interface and API Server <./using-agentiq-ui-and-server.md>
+Use User Interface and API Server <./using-aiqtoolkit-ui-and-server.md>
 MCP Server Front-End <./mcp-server.md>
 Profile a Workflow <./profiler.md>
 Locally and Self-Hosted LLMs <./locally-hosted-llms.md>

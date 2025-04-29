@@ -17,7 +17,7 @@ limitations under the License.
 
 # A Simple LLM Calculator
 
-This example demonstrates an end-to-end (E2E) agentic workflow using the AgentIQ library, fully configured through a YAML file. It showcases the AgentIQ plugin system and `Builder` to seamlessly integrate pre-built and custom tools into workflows.
+This example demonstrates an end-to-end (E2E) agentic workflow using the AIQ Toolkit library, fully configured through a YAML file. It showcases the AIQ Toolkit plugin system and `Builder` to seamlessly integrate pre-built and custom tools into workflows.
 
 ## Table of Contents
 
@@ -25,7 +25,7 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the AgentIQ
   - [Table of Contents](#table-of-contents)
   - [Key Features](#key-features)
   - [Installation and Setup](#installation-and-setup)
-    - [Setup Virtual Environment and Install AgentIQ](#setup-virtual-environment-and-install-agentiq)
+    - [Setup Virtual Environment and Install AIQ Toolkit](#setup-virtual-environment-and-install-aiqtoolkit)
     - [Install this Workflow:](#install-this-workflow)
     - [Set Up API Keys](#set-up-api-keys)
   - [Example Usage](#example-usage)
@@ -40,7 +40,7 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the AgentIQ
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AgentIQ library tools.
+- **Pre-built Tools:** Leverages core AIQ Toolkit library tools.
 - **Custom Plugin System:** Developers can bring in new tools using plugins.
 - **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
 - **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
@@ -50,11 +50,11 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the AgentIQ
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AIQ Toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AgentIQ library, run the following commands:
+From the root directory of the AIQ Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/simple_calculator
@@ -82,7 +82,7 @@ phoenix serve
 
 ### Run the Workflow
 
-Return to your original terminal, and run the following command from the root of the AgentIQ repo to execute this workflow with the specified input:
+Return to your original terminal, and run the following command from the root of the AIQ Toolkit repo to execute this workflow with the specified input:
 
 ```bash
 aiq run --config_file examples/simple_calculator/configs/config-tracing.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
@@ -93,7 +93,7 @@ The workflow output can be quite lengthy, the end of the workflow output should 
 ```console
 $ aiq run --config_file examples/simple_calculator/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 2025-04-23 15:58:34,877 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (440.151215 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:58:35,193 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/simple_calculator/configs/config.yml'
+2025-04-23 15:58:35,193 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/simple_calculator/configs/config.yml'
 2025-04-23 15:58:35,199 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 
 Configuration Summary:
@@ -185,7 +185,7 @@ For a production deployment, use Docker:
 
 ### Build the Docker Image
 
-Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AgentIQ virtual environment.
+Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AIQ Toolkit virtual environment.
 
 From the root directory of the Simple Calculator repository, build the Docker image:
 
@@ -225,7 +225,7 @@ curl -X 'POST' \
 
 ## Using MCP Services for running the workflow
 
-The `config-mcp-client.yml` file demonstrates how to use an MCP service as a tool in the AgentIQ `simple_calculator` workflow.
+The `config-mcp-client.yml` file demonstrates how to use an MCP service as a tool in the AIQ Toolkit `simple_calculator` workflow.
 
 ### MCP Server Setup
 
@@ -233,7 +233,7 @@ Follow the instructions in the [MCP Server README](../mcp_server/README.md) to s
 
 ### Running the workflow with MCP service
 
-The `config-mcp-client.yml` file demonstrates how to use an MCP service as a tool in the AgentIQ `simple_calculator` workflow.
+The `config-mcp-client.yml` file demonstrates how to use an MCP service as a tool in the AIQ Toolkit `simple_calculator` workflow.
 
 ```bash
 aiq run --config_file examples/simple_calculator/configs/config-mcp-client.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"

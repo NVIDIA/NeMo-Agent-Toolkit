@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(name=__name__,
              invoke_without_command=True,
-             help="Utility to remove a configured AgentIQ remote registry channel.")
+             help="Utility to remove a configured AIQ Toolkit remote registry channel.")
 @click.argument("channel", type=str)
 def remove(channel: str):
     from aiq.utils.settings.global_settings import remove_channel_interactive
