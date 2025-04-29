@@ -14,12 +14,15 @@
 # limitations under the License.
 
 import io
+import logging
 import typing
 
 import expandvars
 import yaml
 
 from aiq.utils.type_utils import StrPath
+
+logger = logging.getLogger(__name__)
 
 
 def _interpolate_variables(value: str | int | float | bool | None) -> str | int | float | bool | None:
@@ -100,7 +103,13 @@ def yaml_loads(config: str) -> dict:
     stream = io.StringIO(interpolated_config_str)
     stream.seek(0)
 
-    config_data = yaml.safe_load(stream)
+    # Load the YAML data
+    try:
+        config_data = yaml.safe_load(stream)
+    except yaml.YAMLError as e:
+        logger.error("Error loading YAML: %s", interpolated_config_str, exc_info=True)
+        raise ValueError(f"Error loading YAML: {e}") from e
+
     assert isinstance(config_data, dict)
 
     return config_data

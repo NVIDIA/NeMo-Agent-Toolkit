@@ -353,7 +353,23 @@ def test_yaml_load_with_function(env_vars: dict):
         assert workflow_config.workflow.dict_input == {"key1": "value1", "key2": env_vars["NESTED_VAR"]}  # type: ignore
         assert workflow_config.workflow.fn_list_input == ["fn0", "fn1", "fn2"]  # type: ignore
 
-        print(workflow_config)
-
     finally:
         os.unlink(temp_file_path)
+
+
+def test_yaml_loads_with_invalid_yaml():
+    # Test with invalid YAML syntax
+    invalid_yaml = """
+    workflow:
+      - this is not valid yaml
+        indentation is wrong
+      key without value
+    """
+
+    with pytest.raises(ValueError, match="Error loading YAML"):
+        yaml_loads(invalid_yaml)
+
+    # Test with completely malformed content
+    malformed_yaml = "{"  # Unclosed bracket
+    with pytest.raises(ValueError, match="Error loading YAML"):
+        yaml_loads(malformed_yaml)
