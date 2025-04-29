@@ -10,7 +10,7 @@ from aiq.builder.intermediate_step_manager import IntermediateStepState
 from aiq.builder.intermediate_step_manager import _current_open_step_id
 
 # --------------------------------------------------------------------------- #
-# Minimal stubs so the tests do not need the whole AgentIQ code-base
+# Minimal stubs so the tests do not need the whole aiq code-base
 # --------------------------------------------------------------------------- #
 
 
