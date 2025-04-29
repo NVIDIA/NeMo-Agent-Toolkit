@@ -15,7 +15,7 @@ dependencies = [
   "nvidia-haystack==0.1.2",
 ]
 requires-python = ">=3.11"
-description = "Custom AgentIQ Workflow"
+description = "Custom AIQ Toolkit Workflow"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]

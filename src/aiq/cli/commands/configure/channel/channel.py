@@ -24,7 +24,9 @@ from aiq.cli.commands.configure.channel.update import update
 logger = logging.getLogger(__name__)
 
 
-@click.group(name=__name__, invoke_without_command=False, help="Utility to configure AgentIQ remote registry channels.")
+@click.group(name=__name__,
+             invoke_without_command=False,
+             help="Utility to configure AIQ Toolkit remote registry channels.")
 def channel(**kwargs):
     pass
 

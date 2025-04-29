@@ -50,7 +50,7 @@ class ComponentInstanceData(BaseModel):
     """A data model to hold component runtime instance metadata to support generating build sequences.
 
     Args:
-        component_group (ComponentGroup): The component group in an AgentIQ configuration object.
+        component_group (ComponentGroup): The component group in an AIQ Toolkit configuration object.
         name (ComponentRef): The name of the component runtime instance.
         config (TypedBaseModel): The runtime instance's configuration object.
         instance_id (str): Unique identifier for each runtime instance.
@@ -154,7 +154,7 @@ def update_dependency_graph(config: "AIQConfig", instance_config: TypedBaseModel
     """Updates the hierarchical component instance dependency graph from a configuration runtime instance.
 
     Args:
-        config (AIQConfig): An AgentIQ configuration object with runtime instance details.
+        config (AIQConfig): An AIQ Toolkit configuration object with runtime instance details.
         instance_config (TypedBaseModel): A component's runtime instance configuration object.
         dependency_graph (nx.DiGraph): A graph tracking runtime instance component dependencies.
 
@@ -184,7 +184,7 @@ def config_to_dependency_objects(config: "AIQConfig") -> tuple[dict[str, Compone
     """Generates a map of component runtime instance IDs to use when generating a build sequence.
 
     Args:
-        config (AIQConfig): The AgentIQ workflow configuration object.
+        config (AIQConfig): The AIQ Toolkit workflow configuration object.
 
     Returns:
         tuple[dict[str, ComponentInstanceData], nx.DiGraph]: A tuple containing a map of component runtime instance
@@ -232,10 +232,10 @@ def config_to_dependency_objects(config: "AIQConfig") -> tuple[dict[str, Compone
 
 
 def build_dependency_sequence(config: "AIQConfig") -> list[ComponentInstanceData]:
-    """Generates the depencency sequence from an AgentIQ configuration object
+    """Generates the depencency sequence from an AIQ Toolkit configuration object
 
     Args:
-        config (AIQConfig): An AgentIQ configuration object.
+        config (AIQConfig): An AIQ Toolkit configuration object.
 
     Returns:
         list[ComponentInstanceData]: A list representing the instatiation sequence to ensure all valid

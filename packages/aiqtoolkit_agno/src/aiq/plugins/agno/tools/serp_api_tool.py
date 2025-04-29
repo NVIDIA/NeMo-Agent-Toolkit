@@ -50,7 +50,7 @@ async def serp_api_tool(tool_config: SerpApiToolConfig, builder: Builder):
     tool_config : SerpApiToolConfig
         Configuration for the SerpAPI tool
     builder : Builder
-        The AgentIQ builder instance
+        The AIQ Toolkit builder instance
 
     Returns
     -------
