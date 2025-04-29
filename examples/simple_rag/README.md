@@ -194,8 +194,7 @@ export MEM0_API_KEY=<MEM0 API KEY HERE>
 ```
 
 ### Adding Memory to the Agent
-Adding the ability to add and retrieve long-term memory to the agent is just a matter of adding a `memory` section to the configuration file. The `memory` section should contain the following fields:
-The AIQ Toolkit built-in abstractions for long term memory management allow agents to automatically interact with them as tools. We will use the following configuration file, which you can also find in the `configs` directory.
+Adding the ability to add and retrieve long-term memory to the agent is just a matter of adding a `memory` section to the configuration file. The AIQ Toolkit built-in abstractions for long term memory management allow agents to automatically interact with them as tools. We will use the following configuration file, which you can also find in the `configs` directory.
 
 ```yaml
 general:
