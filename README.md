@@ -45,7 +45,7 @@ The following diagram illustrates the key components of AIQ Toolkit and how they
  * [Documentation](https://docs.nvidia.com/aiqtoolkit/latest/index.html): Explore the full documentation for AIQ Toolkit.
  * [About AIQ Toolkit](https://docs.nvidia.com/aiqtoolkit/latest/intro/why-aiqtoolkit.html): Learn more about the benefits of using AIQ Toolkit.
  * [Get Started Guide](https://docs.nvidia.com/aiqtoolkit/latest/intro/get-started.html): Set up your environment and start building with AIQ Toolkit.
- * [Examples](https://github.com/NVIDIA/AIQ Toolkit/tree/main/examples#readme): Explore examples of AIQ Toolkit workflows.
+ * [Examples](https://github.com/NVIDIA/AIQToolkit/tree/main/examples#readme): Explore examples of AIQ Toolkit workflows.
  * [Create and Customize AIQ Toolkit Workflows](https://docs.nvidia.com/aiqtoolkit/latest/guides/create-customize-workflows.html): Learn how to create and customize AIQ Toolkit workflows.
  * [Evaluate with AIQ Toolkit](https://docs.nvidia.com/aiqtoolkit/latest/guides/evaluate.html): Learn how to evaluate your AIQ Toolkit workflows.
  * [Troubleshooting](https://docs.nvidia.com/aiqtoolkit/latest/troubleshooting.html): Get help with common issues.
@@ -182,7 +182,7 @@ Before you begin using AIQ Toolkit, ensure that you meet the following software 
 
 ## Feedback
 
-We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AIQ Toolkit/issues) if you have any feedback or feature requests.
+We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AIQToolkit/issues) if you have any feedback or feature requests.
 
 ## Acknowledgements
 
