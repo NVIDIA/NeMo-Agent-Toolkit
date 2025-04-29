@@ -46,7 +46,7 @@ ROOT_DIR = os.path.dirname(os.path.dirname(CUR_DIR))
 AIQ_DIR = os.path.join(ROOT_DIR, "src", "aiq")
 DOC_EXAMPLES = os.path.join(DOC_DIR, "source", "examples")
 EXAMPLES_DIR = os.path.join(ROOT_DIR, "examples")
-PROJECT_URL = "https://github.com/NVIDIA/AgentIQ"
+PROJECT_URL = "https://github.com/NVIDIA/AIQToolkit"
 FILE_URL = f"{PROJECT_URL}/blob/main"
 
 # Work-around for https://github.com/readthedocs/sphinx-autoapi/issues/298
@@ -106,34 +106,44 @@ def url_has_scheme(path):
 
 
 # re-write links
-def path_updater(path):
+def path_updater(doc_path, path):
     if not url_has_scheme(path) and not path.startswith('#'):  # only re-write relative urls without a scheme (https://)
         if '/docs/source' in path:
             path = path.replace('/docs/source', '', 1)
         else:
+            # First normalize the path
+            if not os.path.isabs(path):
+                dir_name = os.path.dirname(doc_path)
+                norm_path = os.path.normpath(os.path.join(dir_name, path))
+                if os.path.isabs(norm_path):
+                    norm_path = os.path.relpath(norm_path, start=ROOT_DIR)
+
+                print(f"\n--------------\nNormalizing path: {path} -> {norm_path}\n--------------\n")
+                path = norm_path
+
             # replace with github link
             path = os.path.join(FILE_URL, path)
 
     return path
 
 
-def token_updater(t):
+def token_updater(doc_path, t):
     for attr_key in ('href', 'src'):
         attr = t.attrs.get(attr_key)
         if attr is not None:
             # Update the path to remove the '/docs/source' prefix
-            t.attrs[attr_key] = path_updater(attr)
+            t.attrs[attr_key] = path_updater(doc_path, attr)
 
 
-def token_checker(t, prefix=''):
+def token_checker(doc_path, t, prefix=''):
     loc = f"{prefix}.{t.type}"
     try:
         if t.type in ('link_open', 'image'):
-            token_updater(t)
+            token_updater(doc_path, t)
 
         if t.children is not None:
             for child in t.children:
-                token_checker(child, prefix=loc)
+                token_checker(doc_path, child, prefix=loc)
 
     except Exception as e:
         raise RuntimeError(f"Markdown parsing error at {loc}: {e}") from e
@@ -146,7 +156,7 @@ for doc_path in destination_docs:
         tokens = md.parse(f.read())
 
     for token in tokens:
-        token_checker(token)
+        token_checker(doc_path, token)
 
     with open(doc_path, "w") as f:
         renderer = MDRenderer()
