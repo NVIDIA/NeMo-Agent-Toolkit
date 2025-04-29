@@ -70,7 +70,7 @@ class AsyncOtelSpanListener:
         self._outstanding_spans: dict[str, Span] = {}
 
         # Stack of spans, for when we need to create a child span
-        self._span_stack: list[Span] = []
+        self._span_stack: dict[str, Span] = {}
 
         self._running = False
 
@@ -152,7 +152,7 @@ class AsyncOtelSpanListener:
 
         self._outstanding_spans.clear()
 
-        if self._span_stack:
+        if len(self._span_stack) > 0:
             logger.error(
                 "Not all spans were closed. Ensure all start events have a corresponding end event. Remaining: %s",
                 self._span_stack)
@@ -175,7 +175,10 @@ class AsyncOtelSpanListener:
         parent_ctx = None
 
         if (len(self._span_stack) > 0):
-            parent_span = self._span_stack[-1]
+            parent_span = self._span_stack.get(step.function_ancestry.parent_id, None)
+            if parent_span is None:
+                logger.warning("No parent span found for step %s", step.UUID)
+                return
 
             parent_ctx = set_span_in_context(parent_span)
 
@@ -230,7 +233,7 @@ class AsyncOtelSpanListener:
                 sub_span.set_attribute(SpanAttributes.INPUT_VALUE, serialized_input)
                 sub_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE, "application/json" if is_json else "text/plain")
 
-        self._span_stack.append(sub_span)
+        self._span_stack[step.UUID] = sub_span
 
         self._outstanding_spans[step.UUID] = sub_span
 
@@ -243,7 +246,7 @@ class AsyncOtelSpanListener:
             logger.warning("No subspan found for step %s", step.UUID)
             return
 
-        self._span_stack.pop()
+        self._span_stack.pop(step.UUID, None)
 
         # Optionally add more attributes from usage_info or data
         usage_info = step.payload.usage_info
