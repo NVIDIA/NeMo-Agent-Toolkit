@@ -35,6 +35,10 @@ class A2AFunctionConfig(FunctionBaseConfig, name="a2a_function_wrapper"):
         Description for the tool that will override the description provided by the A2A server. Should only be used if
         the description provided by the server is poor or nonexistent
         """)
+    wait_time: int = Field(default=0,
+                           description="Wait time in seconds for the A2A server to complete the task.\
+                           If 0, the function will wait indefinitely.")
+    retry_frequency: int = Field(default=1, description="Retry frequency in seconds for polling the A2A server")
     parameters: dict[str, Any] = Field(default_factory=dict, description="Default parameters for the function")
 
 
@@ -50,6 +54,7 @@ async def a2a_function(config: A2AFunctionConfig, builder: Builder):
     await tool.get_card()
     # Set the description if configured otherwise use the AgentCard description
     tool.set_description(config.description)
+    tool.set_wait_time(config.wait_time, config.retry_frequency)
 
     def _convert_from_str(input_str: str) -> tool.input_schema:
         return tool.input_schema.model_validate_json(input_str)
