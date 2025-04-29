@@ -205,6 +205,27 @@ Review the unassigned issues and choose an issue that you are comfortable contri
 
 Refer to the [Get Started](../intro/get-started.md) guide to quickly begin development.
 
+## Documentation
+
+All Agent Intelligence Toolkit should be written in Markdown format. The documentation located under the `docs/source` directory is included in the documentation builds, refer to `docs/README.md` for information on how to build the documentation. In addition to this, each example should contain a `README.md` file that describes the example.
+
+### Checks
+All documentation is checked using [Vale](https://vale.sh/). In documentation the name of a command, variable, class, or function should be surrounded by backticks. For example referring `aiq` should always be surrounded by backticks. Vale will not perform a check against anything surrounded by backticks or by a code block.
+
+The spelling of a project name should use the casing of the project, for example [PyPI](https://pypi.org/) should always be spelled as `PyPI` and not `pypi` or `PYPI`. If needed new words can be added to the `ci/vale/styles/config/vocabularies/aiq/accept.txt` and `ci/vale/styles/config/vocabularies/aiq/reject.txt` files.
+
+### Agent Intelligence Toolkit Name Guidelines
+
+* Full Name: `Agent Intelligence Toolkit`
+  - Use for document titles, webpage headers, any public descriptions
+* Short Name: `AIQ Toolkit`
+  - Use after Agent Intelligence Toolkit has been referenced in blogs, docs, and other public locations
+* Uppercase No Space: `AIQToolkit`
+  - Use for situations where capitalization will be preserved like the GitHub URL, directories, etc.
+  - Do not use dashes or underscores
+* Lowercase No Space: `aiqtoolkit`
+  - Use for URLs, PyPI package, any place where spaces are not allowed and casing is not preserved.
+  - Do not use dashes or underscores
 
 ## Licensing
 AIQ Toolkit is licensed under the Apache v2.0 license. All new source files including CMake and other build scripts should contain the Apache v2.0 license header. Any edits to existing source code should update the date range of the copyright to the current year. The format for the license header is:
