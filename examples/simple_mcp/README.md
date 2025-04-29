@@ -16,7 +16,7 @@ limitations under the License.
 -->
 # Simple Model Context Protocol (MCP) Tool Example
 
-Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction). AgentIQ implements an MCP Client Tool which allows AgentIQ workflows and functions to connect to and use tools served by remote MCP servers using server sent events.
+Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction). AIQ Toolkit implements an MCP Client Tool which allows AIQ Toolkit workflows and functions to connect to and use tools served by remote MCP servers using server sent events.
 
 ## Usage
 The MCP tool has a simple configuration consisting of three parameters:
@@ -37,7 +37,7 @@ This example workflow uses a locally hosted MCP SSE server running a [`fetch` to
 By default, the workflow being run is the `react_agent`, which will use the `fetch` tool to pull data from the necessary URLs to answer the provided query.
 
 ### Installation and Setup
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AIQ Toolkit.
 
 To run this example do the following:
  1) Start up docker compose using the provided `docker-compose.yml` file.
@@ -57,7 +57,7 @@ To run this example do the following:
  mcp-proxy-aiq  | INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
  ```
 
- 2) In a new terminal, from the root of the AgentIQ repository run the workflow:
+ 2) In a new terminal, from the root of the AIQ Toolkit repository run the workflow:
  ```bash
  source .venv/bin/activate
  aiq run --config_file=examples/simple_mcp/configs/config.yml --input="What is langchain?"

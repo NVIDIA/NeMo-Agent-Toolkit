@@ -47,7 +47,7 @@ async def publish_artifact(registry_handler_config: RegistryHandlerBaseConfig, p
 
 @click.group(name=__name__,
              invoke_without_command=True,
-             help=("Publish local AgentIQ artifacts to a remote "
+             help=("Publish local AIQ Toolkit artifacts to a remote "
                    "registry from package repository."))
 @click.option(
     "--config_file",
@@ -61,12 +61,12 @@ async def publish_artifact(registry_handler_config: RegistryHandlerBaseConfig, p
     "--channel",
     type=str,
     required=True,
-    help=("The remote registry channel to use when publishing the AgentIQ artifact."),
+    help=("The remote registry channel to use when publishing the AIQ Toolkit artifact."),
 )
 @click.argument("package_root", type=str)
 def publish(channel: str, config_file: str, package_root: str) -> None:
     """
-    Publish AgentIQ artifacts with the specified configuration
+    Publish AIQ Toolkit artifacts with the specified configuration
     """
     from aiq.settings.global_settings import GlobalSettings
 

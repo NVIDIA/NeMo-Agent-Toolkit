@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Get Started with NVIDIA AgentIQ
+# Get Started with NVIDIA Agent Intelligence Toolkit
 
 This guide will help you set up your development environment, run existing workflows, and create your own custom workflows using the `aiq` command-line interface.
 
@@ -29,15 +29,15 @@ This guide will help you set up your development environment, run existing workf
 - CrewAI
 - Semantic Kernel
 
-## Installing AgentIQ
-To run the examples, you need to install AgentIQ from source. For more information on installing AgentIQ from source, refer to [Install From Source](./install.md#install-from-source)
+## Installing AIQ Toolkit
+To run the examples, you need to install AIQ Toolkit from source. For more information on installing AIQ Toolkit from source, refer to [Install From Source](./install.md#install-from-source)
 
 ## Obtaining API Keys
-Depending which workflows you are running, you may need to obtain API keys from the respective services. Most AgentIQ workflows require an NVIDIA API key defined with the `NVIDIA_API_KEY` environment variable. An API key can be obtained by visiting [`build.nvidia.com`](https://build.nvidia.com/) and creating an account.
+Depending which workflows you are running, you may need to obtain API keys from the respective services. Most AIQ Toolkit workflows require an NVIDIA API key defined with the `NVIDIA_API_KEY` environment variable. An API key can be obtained by visiting [`build.nvidia.com`](https://build.nvidia.com/) and creating an account.
 
 ## Running Example Workflows
 
-Before running any of the AgentIQ examples, set your NVIDIA API key as an
+Before running any of the AIQ Toolkit examples, set your NVIDIA API key as an
 environment variable to access NVIDIA AI services.
 
 ```bash
@@ -72,5 +72,5 @@ Replace `<YOUR_API_KEY>` with your actual NVIDIA API key.
 
 ## Next Steps
 
-* AgentIQ contains several examples which demonstrate how AgentIQ can be used to build custom workflows and tools. These examples are located in the `examples` directory of the AgentIQ repository.
-* Refer to the [AgentIQ Guides](../guides/index.md) for more detailed information on how to use AgentIQ.
+* AIQ Toolkit contains several examples which demonstrate how AIQ Toolkit can be used to build custom workflows and tools. These examples are located in the `examples` directory of the AIQ Toolkit repository.
+* Refer to the [AIQ Toolkit Guides](../guides/index.md) for more detailed information on how to use AIQ Toolkit.

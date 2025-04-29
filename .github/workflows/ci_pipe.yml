@@ -42,7 +42,7 @@ env:
   GIT_COMMIT: "${{ github.sha }}"
   BASE_SHA: "${{ inputs.base_sha }}"
   RAPIDS_CONDA_RETRY_MAX: "5"
-  WORKSPACE: "${{ github.workspace }}/agentiq"
+  WORKSPACE: "${{ github.workspace }}/aiqtoolkit"
   WORKSPACE_TMP: "${{ github.workspace }}/tmp"
   UV_CACHE_DIR: .uv-cache
 
@@ -75,11 +75,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          path: 'agentiq'
+          path: 'aiqtoolkit'
 
       - name: Check
         shell: bash
-        run: ./agentiq/ci/scripts/github/checks.sh
+        run: ./aiqtoolkit/ci/scripts/github/checks.sh
 
   test:
     name: Test
@@ -98,11 +98,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-tags: true
-          path: 'agentiq'
+          path: 'aiqtoolkit'
 
       - name: Test:linux:${{ matrix.arch }}
         shell: bash
-        run: ./agentiq/ci/scripts/github/tests.sh
+        run: ./aiqtoolkit/ci/scripts/github/tests.sh
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
@@ -129,11 +129,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-tags: true
-          path: 'agentiq'
+          path: 'aiqtoolkit'
 
       - name: build_docs
         shell: bash
-        run: ./agentiq/ci/scripts/github/docs.sh
+        run: ./aiqtoolkit/ci/scripts/github/docs.sh
 
       - name: Upload Documentation
         uses: actions/upload-artifact@v4
@@ -160,11 +160,11 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-          path: 'agentiq'
+          path: 'aiqtoolkit'
 
       - name: build_wheels
         shell: bash
-        run: ./agentiq/ci/scripts/github/build_wheel.sh
+        run: ./aiqtoolkit/ci/scripts/github/build_wheel.sh
 
       - name: Upload Wheels
         uses: actions/upload-artifact@v4

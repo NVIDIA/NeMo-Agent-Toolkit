@@ -17,9 +17,9 @@ limitations under the License.
 
 # Functions
 
-Functions are the main building blocks of AgentIQ and define the logic of your workflow.
+Functions are the main building blocks of AIQ Toolkit and define the logic of your workflow.
 
-In AgentIQ, functions are a core abstraction that offer type-safe, asynchronous operations with support for both single and streaming outputs. They wrap callable objects (like Python functions or coroutines) and enhance them with:
+In AIQ Toolkit, functions are a core abstraction that offer type-safe, asynchronous operations with support for both single and streaming outputs. They wrap callable objects (like Python functions or coroutines) and enhance them with:
 
 1. Type validation and conversion
 2. Schema-based input/output validation via Pydantic models
@@ -117,7 +117,7 @@ Both of these methods will result in a function that can be used in the same way
 
 #### Function Configuration Object
 
-To use a function from an AgentIQ configuration file, it must be registered with AgentIQ. Registering a function is done with the {py:deco}`~aiq.cli.register_workflow.register_function` decorator. More information about registering components can be found in the [Plugin System](./plugins.md) documentation.
+To use a function from an AIQ Toolkit configuration file, it must be registered with AIQ Toolkit. Registering a function is done with the {py:deco}`~aiq.cli.register_workflow.register_function` decorator. More information about registering components can be found in the [Plugin System](./plugins.md) documentation.
 
 When registering a function, we first need to define the function configuration object. This object is used to configure the function and is passed to the function when it is invoked. Any options that are available to the function must be specified in the configuration object.
 
@@ -461,7 +461,7 @@ Output schemas can also be overridden in a similar manner but for different purp
 
 ### Instantiating Functions
 
-Once a function is registered, it can be instantiated using the {py:class}`~aiq.builder.workflow_builder.WorkflowBuilder` class. The `WorkflowBuilder` class is used to create and manage all components in an AgentIQ workflow. When calling {py:meth}`~aiq.builder.workflow_builder.WorkflowBuilder.add_function`, which function to create is determined by the type of the configuration object. The builder will match the configuration object type to the type used in the {py:deco}`~aiq.cli.register_workflow.register_function` decorator.
+Once a function is registered, it can be instantiated using the {py:class}`~aiq.builder.workflow_builder.WorkflowBuilder` class. The `WorkflowBuilder` class is used to create and manage all components in an AIQ Toolkit workflow. When calling {py:meth}`~aiq.builder.workflow_builder.WorkflowBuilder.add_function`, which function to create is determined by the type of the configuration object. The builder will match the configuration object type to the type used in the {py:deco}`~aiq.cli.register_workflow.register_function` decorator.
 
 ```python
 
