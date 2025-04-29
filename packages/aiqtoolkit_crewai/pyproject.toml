@@ -22,7 +22,7 @@ dependencies = [
   "aiqtoolkit",
   "crewai~=0.95.0",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 readme = "src/aiq/meta/pypi.md"
 description = "Subpackage for CrewAI integration in AIQToolkit"
 keywords = ["ai", "rag", "agents"]
