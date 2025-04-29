@@ -68,8 +68,8 @@ class TunableRagEvaluator:
         self.judge_llm_prompt = judge_llm_prompt
         self.semaphore = asyncio.Semaphore(self.max_concurrency)
         self.default_scoring = default_scoring
-        # Set equal weights for each score
-        self.default_score_weights = {"coverage": 1 / 3, "correctness": 1 / 3, "relevance": 1 / 3}
+        # Use user-provided weights if available; otherwise, set equal weights for each score
+        self.default_score_weights = default_score_weights if default_score_weights else {"coverage": 1 / 3, "correctness": 1 / 3, "relevance": 1 / 3}
 
     async def evaluate(self, eval_input: EvalInput) -> EvalOutput:
         '''Evaluate function'''
@@ -149,9 +149,10 @@ class TunableRagEvaluator:
                         raise
 
                     # Calculate score
-                    coverage_weight = self.default_score_weights.get("coverage", 0)
-                    correctness_weight = self.default_score_weights.get("correctness", 0)
-                    relevance_weight = self.default_score_weights.get("relevance", 0)
+                    total_weight = coverage_weight + correctness_weight + relevance_weight
+                    coverage_weight = coverage_weight / total_weight
+                    correctness_weight = correctness_weight / total_weight
+                    relevance_weight = relevance_weight / total_weight
 
                     if round(coverage_weight + correctness_weight + relevance_weight, 2) != 1:
                         logger.warning("The sum of the default score weights is not 1. The weights will be normalized.")
