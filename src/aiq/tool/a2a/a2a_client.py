@@ -48,6 +48,9 @@ from .types import TaskStatusUpdateEvent
 
 logger = logging.getLogger(__name__)
 
+# enable debug logging
+logger.setLevel(logging.DEBUG)
+
 
 class A2AClient:
     """
@@ -164,16 +167,6 @@ class A2AClient:
                 except httpx.RequestError as e:
                     raise A2AClientHTTPError(400, str(e)) from e
 
-    async def send_task_streaming(self, payload: dict[str, Any],
-                                  use_sync: bool) -> AsyncIterable[SendTaskStreamingResponse]:
-        """
-        Send a task streaming request.
-        """
-        if use_sync:
-            return self.send_task_streaming_sync(payload)
-        else:
-            return self.send_task_streaming_async(payload)
-
     async def get_task(self, payload: dict[str, Any]) -> GetTaskResponse:
         """
         Get the task status and artifact by id
@@ -276,9 +269,13 @@ class A2AClient:
         final_state = None
 
         if streaming:
-            response_stream = await self.send_task_streaming(payload, use_sync=self._post_sync)
+            # set async generator based on post_sync configuration
+            if self._post_sync:
+                response_stream = self.send_task_streaming_sync(payload)
+            else:
+                response_stream = self.send_task_streaming_async(payload)
+
             async for result in response_stream:
-                # Parse event contents if they are not empty
                 if logger.isEnabledFor(logging.DEBUG):
                     logger.debug("Stream event: %s", result.model_dump_json(exclude_none=True))
 
@@ -313,9 +310,7 @@ class A2AClient:
             state = getattr(taskResult.result.status, "name", None)
             if state == TaskState.INPUT_REQUIRED.name:
                 # TODO: Handle input required
-                return await self.complete_task(taskId=taskId,
-                                                sessionId=self._session_id,
-                                                prompt=taskResult.result.status.message.parts[0].text)
+                return await self.complete_task(taskId=taskId, prompt=taskResult.result.status.message.parts[0].text)
             else:
                 return self.artifact_to_output_string(taskResult.result.artifacts[0])
 
