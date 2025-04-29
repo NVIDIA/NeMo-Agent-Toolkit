@@ -22,7 +22,7 @@ dependencies = [
   "aiqtoolkit",
   "zep-cloud~=2.2.0",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 description = "Subpackage for Zep memory integration in AIQToolkit"
 readme = "src/aiq/meta/pypi.md"
 keywords = ["ai", "agents", "memory"]

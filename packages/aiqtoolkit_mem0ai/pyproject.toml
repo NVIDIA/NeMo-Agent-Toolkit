@@ -22,7 +22,7 @@ dependencies = [
   "aiqtoolkit",
   "mem0ai~=0.1.30",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 description = "Subpackage for Mem0 memory integration in AIQToolkit"
 readme = "src/aiq/meta/pypi.md"
 keywords = ["ai", "agents", "memory"]

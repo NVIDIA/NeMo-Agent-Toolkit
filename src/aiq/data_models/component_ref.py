@@ -22,6 +22,7 @@ from pydantic_core import core_schema
 
 from aiq.data_models.common import HashableBaseModel
 from aiq.data_models.component import ComponentGroup
+from aiq.utils.type_utils import override
 
 
 def generate_instance_id(input_object: typing.Any) -> str:
@@ -85,7 +86,7 @@ class EmbedderRef(ComponentRef):
     """
 
     @property
-    @typing.override
+    @override
     def component_group(self):
         return ComponentGroup.EMBEDDERS
 
@@ -96,7 +97,7 @@ class FunctionRef(ComponentRef):
     """
 
     @property
-    @typing.override
+    @override
     def component_group(self):
         return ComponentGroup.FUNCTIONS
 
@@ -107,7 +108,7 @@ class LLMRef(ComponentRef):
     """
 
     @property
-    @typing.override
+    @override
     def component_group(self):
         return ComponentGroup.LLMS
 
@@ -118,7 +119,7 @@ class MemoryRef(ComponentRef):
     """
 
     @property
-    @typing.override
+    @override
     def component_group(self):
         return ComponentGroup.MEMORY
 
@@ -129,6 +130,6 @@ class RetrieverRef(ComponentRef):
     """
 
     @property
-    @typing.override
+    @override
     def component_group(self):
         return ComponentGroup.RETRIEVERS

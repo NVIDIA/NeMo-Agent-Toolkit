@@ -13,7 +13,7 @@ dependencies = [
   "openai~=1.66",
   "litellm~=1.63.14"
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 description = "Custom AgentIQ Workflow using Agno for personal finance"
 classifiers = ["Programming Language :: Python"]
 

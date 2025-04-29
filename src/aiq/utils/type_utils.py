@@ -18,6 +18,7 @@ import collections.abc
 import inspect
 import json
 import os
+import sys
 import types
 import typing
 from functools import lru_cache
@@ -43,6 +44,17 @@ def is_valid_json(string):
         return True
     except json.JSONDecodeError:
         return False
+
+
+# A compatibility layer for typing.override decorator.
+# In Python >= 3.12, it uses the built-in typing.override decorator
+# In Python < 3.12, it acts as a no-op decorator
+if sys.version_info >= (3, 12):
+    from typing import override  # pylint: disable=unused-import
+else:
+
+    def override(func):
+        return func
 
 
 class DecomposedType:

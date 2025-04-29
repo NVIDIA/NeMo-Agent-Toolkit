@@ -43,7 +43,7 @@ dependencies = [
   "uvicorn[standard]~=0.32.0",
   "wikipedia~=1.4",
 ]
-requires-python = "==3.12.*"
+requires-python = ">=3.11"
 description = "Agent Intelligence Toolkit (AIQ Toolkit)"
 readme = "src/aiq/meta/pypi.md"
 license = { file = "LICENSE.md" }
@@ -275,7 +275,7 @@ persistent = true
 
 # Minimum Python version to use for version dependent checks. Will default to the
 # version used to run pylint.
-py-version = "3.12"
+py-version = "3.11"
 
 # Discover python modules and packages in the file system subtree.
 # recursive =
