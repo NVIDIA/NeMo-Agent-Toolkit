@@ -12,13 +12,8 @@ dependencies = [
   "aiqtoolkit[langchain]",
   "faiss-cpu==1.9.0",
 ]
-<<<<<<< HEAD
 requires-python = ">=3.11"
 description = "Simple AIQ Toolkit example"
-=======
-requires-python = ">=3.11"
-description = "Simple AgentIQ example"
->>>>>>> cba9257697bcb543243d36d4ee66d815c13fc4e2
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
