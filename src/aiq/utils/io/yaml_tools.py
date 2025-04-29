@@ -14,10 +14,9 @@
 # limitations under the License.
 
 import io
-import os
-import re
 import typing
 
+import expandvars
 import yaml
 
 from aiq.utils.type_utils import StrPath
@@ -39,13 +38,7 @@ def _interpolate_variables(value: str | int | float | bool | None) -> str | int 
     if not isinstance(value, str):
         return value
 
-    def replace_var(match):
-        var_name = match.group(1)
-        default_value = match.group(2) if match.group(2) else ""
-        return os.environ.get(var_name, default_value)
-
-    pattern = r'\${([^:}]+)(?::-([^}]*))?}'
-    return re.sub(pattern, replace_var, value)
+    return expandvars.expandvars(value)
 
 
 def _process_config(
