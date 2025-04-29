@@ -16,15 +16,12 @@
 import json
 import logging
 from collections.abc import AsyncIterable
-from enum import Enum
 from typing import Any
 from uuid import uuid4
 
 import httpx
 from httpx_sse import connect_sse
 from pydantic import BaseModel
-from pydantic import Field
-from pydantic import create_model
 
 from .types import A2AClientHTTPError
 from .types import A2AClientJSONError
@@ -64,6 +61,9 @@ class A2AClient:
         self.agent_card = None
 
         self._client = httpx.AsyncClient(base_url=self.url)
+        # Use a single session id for all tasks submitted by this client
+        self._session_id: str = uuid4().hex
+
         # Make the timeout configurable
         self._timeout = 30
 
@@ -77,7 +77,11 @@ class A2AClient:
         await self._client.aclose()
 
     async def _send_request(self, request: JSONRPCRequest) -> dict[str, Any]:
-        logger.info("Request payload: %s", request.model_dump_json(indent=2))
+        """
+        Send a JSONRPC request and return the response
+        """
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Request payload: %s", request.model_dump_json(indent=2))
 
         try:
             response = await self._client.post(self.url, json=request.model_dump(), timeout=self._timeout)
@@ -98,14 +102,25 @@ class A2AClient:
             raise A2AClientJSONError(str(e)) from e
 
     async def send_task(self, payload: dict[str, Any]) -> SendTaskResponse:
+        """
+        Send a single (non-streaming) task request and return the response
+        """
         request = SendTaskRequest(params=payload)
         return SendTaskResponse(**await self._send_request(request))
 
     async def send_task_streaming_sync(self, payload: dict[str, Any]) -> AsyncIterable[SendTaskStreamingResponse]:
-        request = SendTaskStreamingRequest(params=payload)
-        logger.info("Request payload: %s", request.model_dump_json(indent=2))
+        """
+        Send a task streaming request synchronously.
+        The caller must parse the intermediate events as they come in.
 
-        # use a se
+        This approach is from A2A.samples.python.common.client.client.A2AClient.send_task_streaming().
+        It is not used by default and only present here for experimentation.
+        """
+        request = SendTaskStreamingRequest(params=payload)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Request payload: %s", request.model_dump_json(indent=2))
+
+        # Use a separate httpx client to avoid timeout issues.
         with httpx.Client(timeout=None) as client:
             with connect_sse(client, "POST", self.url, json=request.model_dump()) as event_source:
                 try:
@@ -118,10 +133,11 @@ class A2AClient:
 
     async def send_task_streaming_async(self, payload: dict[str, Any]) -> AsyncIterable[SendTaskStreamingResponse]:
         """
-        Send a task streaming request asynchronously - not working
+        Send a task streaming request asynchronously. The caller must use get_task() to get the final result
         """
         request = SendTaskStreamingRequest(params=payload)
-        logger.info("Request payload: %s", request.model_dump_json(indent=2))
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Request payload: %s", request.model_dump_json(indent=2))
 
         async with self._client.stream("POST", self.url, json=request.model_dump(), timeout=self._timeout) as response:
             async for line in response.aiter_lines():
@@ -140,31 +156,50 @@ class A2AClient:
 
     async def send_task_streaming(self,
                                   payload: dict[str, Any],
-                                  use_sync: bool = True) -> AsyncIterable[SendTaskStreamingResponse]:
+                                  use_sync: bool = False) -> AsyncIterable[SendTaskStreamingResponse]:
+        """
+        Send a task streaming request.
+        If use_sync is True, the caller must parse the intermediate events as they come in.
+        If use_sync is False, the caller must use get_task() to get the final result
+        """
         if use_sync:
             return self.send_task_streaming_sync(payload)
         else:
             return self.send_task_streaming_async(payload)
 
     async def get_task(self, payload: dict[str, Any]) -> GetTaskResponse:
+        """
+        Get the task status and artifact by id
+        """
         request = GetTaskRequest(params=payload)
         return GetTaskResponse(**await self._send_request(request))
 
     async def cancel_task(self, payload: dict[str, Any]) -> CancelTaskResponse:
+        """
+        Cancel a task by id
+        """
         request = CancelTaskRequest(params=payload)
         return CancelTaskResponse(**await self._send_request(request))
 
     async def set_task_callback(self, payload: dict[str, Any]) -> SetTaskPushNotificationResponse:
+        """
+        Set a task callback. This is only used if the client needs to be
+        notified when a task is completed.
+        """
         request = SetTaskPushNotificationRequest(params=payload)
         return SetTaskPushNotificationResponse(**await self._send_request(request))
 
     async def get_task_callback(self, payload: dict[str, Any]) -> GetTaskPushNotificationResponse:
+        """
+        Get the task callback configuration.
+        """
         request = GetTaskPushNotificationRequest(params=payload)
         return GetTaskPushNotificationResponse(**await self._send_request(request))
 
     def artifact_to_output_string(self, artifact: Artifact) -> str:
         """
-        This is a temporary helper
+        Parse artifact part. This can be of type text, file, or data.
+        TODO: This needs some refinement to handle the different types of artifacts.
         """
         if not artifact:
             return "No artifact found"
@@ -174,12 +209,15 @@ class A2AClient:
             return artifact.parts[0].text
         elif artifact.parts[0].type == "file":
             return f"File: {artifact.parts[0].file.name}"
+        elif artifact.parts[0].type == "data":
+            # TODO: Handle data parts
+            return f"{artifact.parts[0].data}"
         else:
             return "Unknown artifact type"
 
-    async def complete_task(self, taskId: str, sessionId: str, prompt: str) -> dict[str, Any]:
+    async def complete_task(self, taskId: str, prompt: str) -> dict[str, Any]:
         """
-        Complete a task
+        Create a new task, wait for it to complete, and return the parsed result from the artifact
         """
         message = {
             "role": "user", "parts": [{
@@ -189,7 +227,7 @@ class A2AClient:
         }
         payload = {
             "id": taskId,
-            "sessionId": sessionId,
+            "sessionId": self._session_id,
             "acceptedOutputModes": ["text"],
             "message": message,
         }
@@ -199,40 +237,57 @@ class A2AClient:
         final_state = None
 
         if streaming:
-            response_stream = await self.send_task_streaming(payload, use_sync=True)
+            response_stream = await self.send_task_streaming(payload, use_sync=False)
             async for result in response_stream:
-                logger.info("Stream event: %s", result.model_dump_json(exclude_none=True))
+                # Parse event contents if they are not empty -
+                # 1. events are empty if use_sync=False and get_task() is called to
+                # get the final result
+                # 2. events are non-empty if use_sync=True
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug("Stream event: %s", result.model_dump_json(exclude_none=True))
 
-                # Change to use the pydantic model
                 if isinstance(result.result, TaskStatusUpdateEvent):
                     final_state = result.result.status.state
-                    if result.result.status.state == TaskState.COMPLETED.name:
+                    if final_state == TaskState.COMPLETED.name:
+                        # This is the last event and the task is complete
                         break
                 elif isinstance(result.result, TaskArtifactUpdateEvent):
                     if result.result.artifact:
                         artifact = result.result.artifact
 
-            if artifact is None or final_state != TaskState.COMPLETED:
-                # TODO: Get task is not working
+            if artifact is None:
+                # If the artifact was not present in the streaming response,
+                # get the final result from the server
                 taskResult = await self.get_task({"id": taskId})
-                return taskResult.result.artifacts[0] if taskResult.result.artifacts else None
+                artifact = taskResult.result.artifacts[0] if taskResult.result.artifacts else None
 
             return self.artifact_to_output_string(artifact)
         else:
             taskResult = await self.send_task(payload)
-            logger.info("Task result: %s", taskResult.model_dump_json(exclude_none=True))
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug("Task result: %s", taskResult.model_dump_json(exclude_none=True))
 
             state = getattr(taskResult.result.status, "name", None)
             if state == TaskState.INPUT_REQUIRED.name:
                 # TODO: Handle input required
                 return await self.complete_task(taskId=taskId,
-                                                sessionId=sessionId,
+                                                sessionId=self._session_id,
                                                 prompt=taskResult.result.status.message.parts[0].text)
             else:
                 return self.artifact_to_output_string(taskResult.result.artifacts[0])
 
     async def get_card(self) -> AgentCard:
-        """Get the AgentCard from the server"""
+        """
+        Get the AgentCard from the server using a well-known path
+        The agent card provides:
+        1. Function description
+        2. Input schema
+        3. Output schema
+        4. Capabilities (streaming, push notifications etc.)
+        5. Authentication
+
+        TODO: More work is needed to use the info in the agent card better.
+        """
         base_url = self.url.rstrip("/")
         agent_card_path = "/.well-known/agent.json".lstrip("/")
         response = await self._client.get(f"{base_url}/{agent_card_path}")
@@ -258,9 +313,8 @@ class A2AToolClient(A2AClient):
         # Setup tool attributes
         self._tool_name: str | None = tool_name
         self._tool_description: str | None = None
-        self._input_schema: type[BaseModel] | None = \
-            self.model_from_a2a_schema(self._tool_name, tool_input_schema) if tool_input_schema else None
-        self._session_id: str = uuid4().hex
+        # TODO: Create the input schema from the info in the AgentCard
+        self._input_schema: type[BaseModel] | None = None
 
     @property
     def name(self):
@@ -284,63 +338,10 @@ class A2AToolClient(A2AClient):
         elif self.agent_card:
             self._tool_description = self.agent_card.description
 
-    def model_from_a2a_schema(self, name: str, a2a_input_schema: dict) -> type[BaseModel]:
-        """
-        Create a pydantic model from the input schema of the A2A tool
-        Note: This is a simplified version of the model_from_mcp_schema function in mcp_client.py
-        """
-        _type_map = {
-            "string": str,
-            "number": float,
-            "integer": int,
-            "boolean": bool,
-            "array": list,
-            "null": None,
-            "object": dict,
-        }
-
-        properties = a2a_input_schema.get("properties", {})
-        schema_dict = {}
-
-        def _generate_valid_classname(class_name: str):
-            return class_name.replace('_', ' ').replace('-', ' ').title().replace(' ', '')
-
-        def _generate_field(field_name: str, field_properties: dict[str, Any]) -> tuple:
-            json_type = field_properties.get("type", "string")
-            enum_vals = field_properties.get("enum")
-
-            if enum_vals:
-                enum_name = f"{field_name.capitalize()}Enum"
-                field_type = Enum(enum_name, {item: item for item in enum_vals})
-
-            elif json_type == "object" and "properties" in field_properties:
-                field_type = self.model_from_a2a_schema(name=field_name, a2a_input_schema=field_properties)
-            elif json_type == "array" and "items" in field_properties:
-                item_properties = field_properties.get("items", {})
-                if item_properties.get("type") == "object":
-                    item_type = self.model_from_a2a_schema(name=field_name, a2a_input_schema=field_properties)
-                else:
-                    item_type = _type_map.get(json_type, Any)
-                field_type = list[item_type]
-            else:
-                field_type = _type_map.get(json_type, Any)
-
-            default_value = field_properties.get("default", ...)
-            nullable = field_properties.get("nullable", False)
-            description = field_properties.get("description", "")
-
-            field_type = field_type | None if nullable else field_type
-
-            return field_type, Field(default=default_value, description=description)
-
-        for field_name, field_props in properties.items():
-            schema_dict[field_name] = _generate_field(field_name=field_name, field_properties=field_props)
-        return create_model(f"{_generate_valid_classname(name)}InputSchema", **schema_dict)
-
     async def acall(self, tool_input: str) -> str:
         """
-        Call the tool
+        Create a new task for each tool call
         """
-        output = await self.complete_task(taskId=uuid4().hex, sessionId=self._session_id, prompt=tool_input)
-        logger.info("Task result: %s", output)
+        output = await self.complete_task(taskId=uuid4().hex, prompt=tool_input)
+        logger.debug("Task result: %s", output)
         return output

@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 from typing import Any
 
 from pydantic import Field
@@ -25,8 +24,6 @@ from aiq.cli.register_workflow import register_function
 from aiq.data_models.function import FunctionBaseConfig
 
 from .a2a_client import A2AToolClient
-
-logger = logging.getLogger(__name__)
 
 
 class A2AFunctionConfig(FunctionBaseConfig, name="a2a_function_wrapper"):
@@ -58,11 +55,10 @@ async def a2a_function(config: A2AFunctionConfig, builder: Builder):
         return tool.input_schema.model_validate_json(input_str)
 
     async def _response_fn(tool_input: str) -> str:
-        logger.info("A2A Tool input: %s", tool_input)
         # Some input adapation may be needed here based on information in the AgentCard
         return await tool.acall(tool_input)
 
-    # Skip the input schema and converters
+    # TODO: Skip the input schema and converters for now
     yield FunctionInfo.create(
         single_fn=_response_fn,
         description=tool.description,
