@@ -478,7 +478,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 )
 
                 app.add_api_route(
-                    path=f"{endpoint.path}/stream/full",
+                    path=f"{endpoint.path}/full",
                     endpoint=get_streaming_raw_endpoint(streaming=True,
                                                         result_type=GenerateStreamResponseType,
                                                         output_type=GenerateStreamResponseType),
@@ -510,7 +510,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 )
 
                 app.add_api_route(
-                    path=f"{endpoint.path}/stream/full",
+                    path=f"{endpoint.path}/full",
                     endpoint=post_streaming_raw_endpoint(request_type=GenerateBodyType,
                                                          streaming=True,
                                                          result_type=GenerateStreamResponseType,
