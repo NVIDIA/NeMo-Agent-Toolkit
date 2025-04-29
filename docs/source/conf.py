@@ -50,21 +50,26 @@ EXAMPLES_DIR = os.path.join(ROOT_DIR, "examples")
 PROJECT_URL = "https://github.com/NVIDIA/AIQToolkit"
 FILE_URL = f"{PROJECT_URL}/blob/main"
 
-# Work-around for https://github.com/readthedocs/sphinx-autoapi/issues/298
-# AutoAPI support for implicit namespaces is broken, so we need to manually
-# construct an aiq package with an __init__.py file
 BUILD_DIR = os.path.join(DOC_DIR, "build")
 API_TREE = os.path.join(BUILD_DIR, "_api_tree")
 
-for tmp_dir in (API_TREE, DOC_EXAMPLES):
-    if os.path.exists(tmp_dir):
-        shutil.rmtree(tmp_dir)
 
-    os.makedirs(tmp_dir)
+def _create_dir(dest_dir: str):
+    if os.path.exists(dest_dir):
+        shutil.rmtree(dest_dir)
 
-shutil.copytree(AIQ_DIR, os.path.join(API_TREE, "aiq"))
-with open(os.path.join(API_TREE, "aiq", "__init__.py"), "w") as f:
-    f.write("")
+    os.makedirs(dest_dir)
+
+
+def copy_api_tree():
+    # Work-around for https://github.com/readthedocs/sphinx-autoapi/issues/298
+    # AutoAPI support for implicit namespaces is broken, so we need to manually
+    # construct an aiq package with an __init__.py file
+    _create_dir(API_TREE)
+    shutil.copytree(AIQ_DIR, os.path.join(API_TREE, "aiq"))
+    with open(os.path.join(API_TREE, "aiq", "__init__.py"), "w") as f:
+        f.write("")
+
 
 # Copy example Markdown files into the documentation tree
 IGNORE_EXAMPLES = (os.path.join(EXAMPLES_DIR, 'documentation_guides/README.md'), )
@@ -81,12 +86,16 @@ def url_has_scheme(path: str) -> bool:
 
 # re-write links
 def path_updater(doc_path: str, path: str) -> str:
-    if not url_has_scheme(path) and not path.startswith('#'):  # only re-write relative urls without a scheme (https://)
+    # only re-write relative urls without a scheme (https://)
+    if not url_has_scheme(path) and not path.startswith('#'):
         (_, ext) = os.path.splitext(path)
         if '/docs/source' in path:
+            # Transform links like `../../docs/source/components/react-agent.md` to `../../components/react-agent.md`
             path = path.replace('/docs/source', '', 1)
         elif ext not in DIRECT_LINK_EXTENSIONS:
-            # Re-write links to source code files to point to the GitHub repo
+            # Re-write links to source code files to point to the GitHub repo. In MD we can link to files in the
+            # source tree directly, but since these are not a part of the documentation, we need to link to the
+            # GitHub repo instead.
             # First normalize the path
             if not os.path.isabs(path):
                 dir_name = os.path.dirname(doc_path)
@@ -145,6 +154,8 @@ def rewrite_markdown(doc_path: str, dest_path: str):
 
 
 def copy_examples() -> list[str]:
+    _create_dir(DOC_EXAMPLES)
+
     destination_docs = []
     for example_readme in example_readmes:
         if example_readme in IGNORE_EXAMPLES:
@@ -176,6 +187,7 @@ def write_examples_index(destination_docs: list[str]):
         f.write("\n```\n")
 
 
+copy_api_tree()
 destination_docs = copy_examples()
 write_examples_index(destination_docs)
 
