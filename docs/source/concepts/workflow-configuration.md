@@ -114,7 +114,7 @@ This section configures retrievers for vector stores. It follows the same format
 
 ### Environment Variable Interpolation
 
-AgentIQ supports environment variable interpolation in YAML configuration files using the format `${VAR:-default_value}`. This allows you to:
+AIQ Toolkit supports environment variable interpolation in YAML configuration files using the format `${VAR:-default_value}`. This allows you to:
 
 1. Reference environment variables in your configuration
 2. Provide default values if the environment variable is not set
