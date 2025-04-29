@@ -61,12 +61,15 @@ class A2AClient:
         self.url = url.rstrip("/")
         self.agent_card = None
 
-        self._client = httpx.AsyncClient(base_url=self.url)
+        self._client = httpx.AsyncClient()
         # Use a single session id for all tasks submitted by this client
         self._session_id: str = uuid4().hex
+        logger.debug("Create A2A Client with Session ID: %s", self._session_id)
 
+        self._post_sync = False
         self._post_timeout = 30
-        self._wait_time: int = 0
+
+        self._wait_time: int = 60
         self._retry_frequency: int = 1
 
     async def __aenter__(self):
@@ -93,7 +96,7 @@ class A2AClient:
             if rpc_response.error:
                 raise A2AClientHTTPError(rpc_response.error.get("code", 400),
                                          rpc_response.error.get("message", "Unknown error"))
-            return rpc_response.result or {}
+            return data
         except httpx.HTTPStatusError as e:
             # log and raise
             logger.error("HTTP Error: %s", e, exc_info=True)
@@ -107,19 +110,41 @@ class A2AClient:
         """
         Send a single (non-streaming) task request and return the response
         """
-        request = SendTaskRequest(params=payload)
+        request = SendTaskRequest(params=payload, sessionId=self._session_id)
         return SendTaskResponse(**await self._send_request(request))
+
+    async def send_task_streaming_async(self, payload: dict[str, Any]) -> AsyncIterable[SendTaskStreamingResponse]:
+        """
+        Send a task streaming request asynchronously.
+        """
+        request = SendTaskStreamingRequest(params=payload, sessionId=self._session_id)
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Request payload (post_sync=False): %s", request.model_dump_json(indent=2))
+
+        async with self._client.stream("POST", self.url, json=request.model_dump(),
+                                       timeout=self._post_timeout) as response:
+            async for line in response.aiter_lines():
+                if line.startswith("data:"):
+                    try:
+                        event_data = line[len("data:"):].strip()
+                        response_obj = SendTaskStreamingResponse(**json.loads(event_data))
+                        if response_obj.error:
+                            logger.error("Error in streaming response: %s", response_obj.error, exc_info=True)
+                            raise A2AClientHTTPError(response_obj.error.get("code", 400),
+                                                     response_obj.error.get("message", "Unknown error"))
+                        yield response_obj
+                    except json.JSONDecodeError as e:
+                        logger.error("Error parsing JSON: %s", e, exc_info=True)
+                        raise A2AClientJSONError(str(e)) from e
 
     async def send_task_streaming_sync(self, payload: dict[str, Any]) -> AsyncIterable[SendTaskStreamingResponse]:
         """
-        Send a task streaming request synchronously.
-        The caller must parse the intermediate events as they come in.
-
+        Send a task streaming request synchronously. Not used by default.
         This approach is from A2A.samples.python.common.client.client.A2AClient.send_task_streaming().
         """
-        request = SendTaskStreamingRequest(params=payload)
+        request = SendTaskStreamingRequest(params=payload, sessionId=self._session_id)
         if logger.isEnabledFor(logging.DEBUG):
-            logger.debug("Request payload: %s", request.model_dump_json(indent=2))
+            logger.debug("Request payload (post_sync=True): %s", request.model_dump_json(indent=2))
 
         # Use a separate httpx client to avoid timeout issues.
         with httpx.Client(timeout=None) as client:
@@ -132,36 +157,10 @@ class A2AClient:
                 except httpx.RequestError as e:
                     raise A2AClientHTTPError(400, str(e)) from e
 
-    async def send_task_streaming_async(self, payload: dict[str, Any]) -> AsyncIterable[SendTaskStreamingResponse]:
-        """
-        Send a task streaming request asynchronously. The caller must use get_task() to get the final result
-        """
-        request = SendTaskStreamingRequest(params=payload)
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug("Request payload: %s", request.model_dump_json(indent=2))
-
-        async with self._client.stream("POST", self.url, json=request.model_dump(),
-                                       timeout=self._post_timeout) as response:
-            async for line in response.aiter_lines():
-                if line.startswith("data:"):
-                    try:
-                        event_data = line[len("data:"):].strip()
-                        response_obj = JSONRPCResponse(**json.loads(event_data))
-                        if response_obj.error:
-                            logger.error("Error in streaming response: %s", response_obj.error, exc_info=True)
-                            raise A2AClientHTTPError(response_obj.error.get("code", 400),
-                                                     response_obj.error.get("message", "Unknown error"))
-                        yield SendTaskStreamingResponse(**response_obj.result)
-                    except json.JSONDecodeError as e:
-                        logger.error("Error parsing JSON: %s", e, exc_info=True)
-                        raise A2AClientJSONError(str(e)) from e
-
     async def send_task_streaming(self, payload: dict[str, Any],
                                   use_sync: bool) -> AsyncIterable[SendTaskStreamingResponse]:
         """
         Send a task streaming request.
-        If use_sync is True, the caller must parse the intermediate events as they come in.
-        If use_sync is False, the caller must use get_task() to get the final result
         """
         if use_sync:
             return self.send_task_streaming_sync(payload)
@@ -175,17 +174,19 @@ class A2AClient:
         request = GetTaskRequest(params=payload)
         return GetTaskResponse(**await self._send_request(request))
 
-    async def get_task_with_retry(self,
-                                  payload: dict[str, Any],
-                                  wait_time: int = 60,
-                                  retry_frequency: int = 1) -> GetTaskResponse:
+    async def get_task_with_retry(self, payload: dict[str, Any]) -> GetTaskResponse:
         """
         Get the task status and artifact by id with retry logic
         """
-        for _ in range(wait_time // retry_frequency):
+        wait_time = self._wait_time
+        retry_frequency = self._retry_frequency if self._retry_frequency < wait_time else wait_time
 
+        for _ in range(wait_time // retry_frequency):
             result = await self.get_task(payload)
-            if result.result.status.state == TaskState.COMPLETED.name:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug("Get task result: %s", result.model_dump_json(exclude_none=True))
+
+            if result.result and result.result.status.state == TaskState.COMPLETED:
                 return result
             await asyncio.sleep(retry_frequency)
         return result
@@ -231,12 +232,19 @@ class A2AClient:
         else:
             return "Unknown artifact type"
 
-    def set_wait_time(self, wait_time: int, retry_frequency: int):
+    def set_post_config(self, post_timeout: int, post_sync: bool):
+        """
+        Set the post configuration.
+        """
+        self._post_timeout = post_timeout
+        self._post_sync = post_sync
+
+    def set_wait_time(self, wait_timeout: int, retry_frequency: int):
         """
         Set the wait time and retry frequency. These are used by the complete_task() method
         to wait for the task to complete.
         """
-        self._wait_time = wait_time
+        self._wait_time = wait_timeout
         self._retry_frequency = retry_frequency
 
     async def complete_task(self, taskId: str, prompt: str) -> dict[str, Any]:
@@ -257,17 +265,13 @@ class A2AClient:
         }
 
         streaming = self.agent_card.capabilities.streaming
-        artifact = None
+        artifacts = []
         final_state = None
 
         if streaming:
-            use_sync = self._wait_time == 0
-            response_stream = await self.send_task_streaming(payload, use_sync=use_sync)
+            response_stream = await self.send_task_streaming(payload, use_sync=self._post_sync)
             async for result in response_stream:
-                # Parse event contents if they are not empty -
-                # 1. events are empty if use_sync=False and get_task() is called to
-                # get the final result
-                # 2. events are non-empty if use_sync=True
+                # Parse event contents if they are not empty
                 if logger.isEnabledFor(logging.DEBUG):
                     logger.debug("Stream event: %s", result.model_dump_json(exclude_none=True))
 
@@ -278,13 +282,20 @@ class A2AClient:
                         break
                 elif isinstance(result.result, TaskArtifactUpdateEvent):
                     if result.result.artifact:
-                        artifact = result.result.artifact
+                        artifacts.append(result.result.artifact)
 
-            if artifact is None:
+            if artifacts:
+                artifact = artifacts[0]
+            else:
                 # If the artifact was not present in the streaming response,
                 # get the final result from the server
-                taskResult = await self.get_task({"id": taskId})
-                artifact = taskResult.result.artifacts[0] if taskResult.result.artifacts else None
+                taskResult = await self.get_task_with_retry({"id": taskId})
+                try:
+                    artifact = taskResult.result.artifacts[0]
+                except IndexError:
+                    artifact = None
+                except AttributeError:
+                    artifact = None
 
             return self.artifact_to_output_string(artifact)
         else:
@@ -367,6 +378,9 @@ class A2AToolClient(A2AClient):
         """
         Create a new task for each tool call
         """
-        output = await self.complete_task(taskId=uuid4().hex, prompt=tool_input)
+        taskId = uuid4().hex
+        logger.debug("Start new Task ID: %s", taskId)
+
+        output = await self.complete_task(taskId=taskId, prompt=tool_input)
         logger.debug("Task result: %s", output)
         return output
