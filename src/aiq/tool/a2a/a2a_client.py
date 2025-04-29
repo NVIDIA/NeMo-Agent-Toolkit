@@ -52,6 +52,11 @@ logger = logging.getLogger(__name__)
 class A2AClient:
     """
     A client for the A2A API. Uses A2A.samples.python.common.client.client.A2AClient as a reference.
+
+    TODO:
+    - Support for push notifications yet to be implemented
+    - Support for user authentication yet to be implemented
+    - Support for data parts other than text yet to be implemented
     """
 
     def __init__(self, url: str):
@@ -66,9 +71,11 @@ class A2AClient:
         self._session_id: str = uuid4().hex
         logger.debug("Create A2A Client with Session ID: %s", self._session_id)
 
+        # Post configuration
         self._post_sync = False
         self._post_timeout = 30
 
+        # Wait time and retry frequency if polling for the task to complete
         self._wait_time: int = 60
         self._retry_frequency: int = 1
 
