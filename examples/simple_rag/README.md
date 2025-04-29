@@ -64,8 +64,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
     --clean_cache         If true, deletes local files (default: False)
     ```
 
-3) Configure your Agent to use the Milvus collections for RAG. We have pre-configured a configuration file for you in `examples/simple_rag/configs/milvus_rag_config.yml`. You can modify this file to point to your Milvus instance and collections or add tools to your agent. The agent, by default, is a `tool_calling` agent that can be used to interact with the retriever component. The configuration file is shown below. You can also modify your agent to be another one of AIQ Toolkit's pre-built agent implementations
-such as the `react_agent`
+3) Configure your Agent to use the Milvus collections for RAG. We have pre-configured a configuration file for you in `examples/simple_rag/configs/milvus_rag_config.yml`. You can modify this file to point to your Milvus instance and collections or add tools to your agent. The agent, by default, is a `tool_calling` agent that can be used to interact with the retriever component. The configuration file is shown below. You can also modify your agent to be another one of the AIQ Toolkit pre-built agent implementations such as the `react_agent`
 
     ```yaml
     general:
@@ -196,7 +195,7 @@ export MEM0_API_KEY=<MEM0 API KEY HERE>
 
 ### Adding Memory to the Agent
 Adding the ability to add and retrieve long-term memory to the agent is just a matter of adding a `memory` section to the configuration file. The `memory` section should contain the following fields:
-AIQ Toolkit's native abstractions for long term memory management allow agents to automatically interact with them as tools. We will use the following configuration file, which you can also find in the `configs` directory.
+The AIQ Toolkit built-in abstractions for long term memory management allow agents to automatically interact with them as tools. We will use the following configuration file, which you can also find in the `configs` directory.
 
 ```yaml
 general:
