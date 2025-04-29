@@ -35,7 +35,7 @@ llms:
     top_p: 1
 
 workflow:
-  _type: tool_calling_agent
+  _type: react_agent
   tool_names:
    - current_datetime
    - get_a2a_exchange_rate
