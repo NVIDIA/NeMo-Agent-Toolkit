@@ -70,6 +70,7 @@ with open(os.path.join(API_TREE, "aiq", "__init__.py"), "w") as f:
 IGNORE_EXAMPLES = (os.path.join(EXAMPLES_DIR, 'documentation_guides/README.md'), )
 example_readmes = glob.glob(f'{EXAMPLES_DIR}/**/*.md', recursive=True)
 EXAMPLES_INDEX = os.path.join(DOC_EXAMPLES, "index.md")
+DIRECT_LINK_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.gif', '.svg', '.md', '.rst')
 
 
 def url_has_scheme(path: str) -> bool:
@@ -81,9 +82,11 @@ def url_has_scheme(path: str) -> bool:
 # re-write links
 def path_updater(doc_path: str, path: str) -> str:
     if not url_has_scheme(path) and not path.startswith('#'):  # only re-write relative urls without a scheme (https://)
+        (_, ext) = os.path.splitext(path)
         if '/docs/source' in path:
             path = path.replace('/docs/source', '', 1)
-        else:
+        elif ext not in DIRECT_LINK_EXTENSIONS:
+            # Re-write links to source code files to point to the GitHub repo
             # First normalize the path
             if not os.path.isabs(path):
                 dir_name = os.path.dirname(doc_path)
@@ -91,7 +94,6 @@ def path_updater(doc_path: str, path: str) -> str:
                 if os.path.isabs(norm_path):
                     norm_path = os.path.relpath(norm_path, start=ROOT_DIR)
 
-                print(f"\n--------------\nNormalizing path: {path} -> {norm_path}\n--------------\n")
                 path = norm_path
 
             # replace with github link
@@ -102,10 +104,10 @@ def path_updater(doc_path: str, path: str) -> str:
 
 def token_updater(doc_path: str, token: "Token"):
     for attr_key in ('href', 'src'):
-        attr = str(token.attrs.get(attr_key))
+        attr = token.attrs.get(attr_key)
         if attr is not None:
             # Update the path to remove the '/docs/source' prefix
-            token.attrs[attr_key] = path_updater(doc_path, attr)
+            token.attrs[attr_key] = path_updater(doc_path, str(attr))
 
 
 def token_checker(doc_path: str, token: "Token", prefix: str = ''):
