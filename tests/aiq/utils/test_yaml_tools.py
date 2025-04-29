@@ -43,7 +43,8 @@ def fixture_env_vars():
         "NESTED_VAR": "nested_value",
         "BOOL_VAR": "true",
         "FLOAT_VAR": "0.0",
-        "INT_VAR": "42"
+        "INT_VAR": "42",
+        "FN_LIST_VAR": "[fn0, fn1, fn2]"
     }
 
     # Store original environment variables state
@@ -74,6 +75,7 @@ class TestConfig(FunctionBaseConfig, name="my_test_fn"):
     none_input: None
     list_input: list[str]
     dict_input: dict[str, str]
+    fn_list_input: list[str]
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -293,6 +295,7 @@ def test_yaml_loads_with_function(env_vars: dict):
       dict_input:
         key1: value1
         key2: ${NESTED_VAR}
+      fn_list_input: ${FN_LIST_VAR}
     """
 
     # Test loading with function
@@ -308,6 +311,7 @@ def test_yaml_loads_with_function(env_vars: dict):
     assert workflow_config.workflow.none_input is None  # type: ignore
     assert workflow_config.workflow.list_input == ["a", env_vars["LIST_VAR"], "c"]  # type: ignore
     assert workflow_config.workflow.dict_input == {"key1": "value1", "key2": env_vars["NESTED_VAR"]}  # type: ignore
+    assert workflow_config.workflow.fn_list_input == ["fn0", "fn1", "fn2"]  # type: ignore
 
 
 def test_yaml_load_with_function(env_vars: dict):
@@ -328,6 +332,7 @@ def test_yaml_load_with_function(env_vars: dict):
           dict_input:
             key1: value1
             key2: ${NESTED_VAR}
+          fn_list_input: ${FN_LIST_VAR}
         """)
         temp_file_path = temp_file.name
 
@@ -346,6 +351,9 @@ def test_yaml_load_with_function(env_vars: dict):
         assert workflow_config.workflow.none_input is None  # type: ignore
         assert workflow_config.workflow.list_input == ["a", env_vars["LIST_VAR"], "c"]  # type: ignore
         assert workflow_config.workflow.dict_input == {"key1": "value1", "key2": env_vars["NESTED_VAR"]}  # type: ignore
+        assert workflow_config.workflow.fn_list_input == ["fn0", "fn1", "fn2"]  # type: ignore
+
+        print(workflow_config)
 
     finally:
         os.unlink(temp_file_path)

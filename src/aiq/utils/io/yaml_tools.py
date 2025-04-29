@@ -76,14 +76,10 @@ def yaml_load(config_path: StrPath) -> dict:
     """
 
     # Read YAML file
-    with open(config_path, 'r', encoding="utf-8") as stream:
-        config_data = yaml.safe_load(stream)
+    with open(config_path, "r", encoding="utf-8") as stream:
+        config_str = stream.read()
 
-    # Process the configuration to interpolate variables
-    config_data = _process_config(config_data)
-    assert isinstance(config_data, dict)
-
-    return config_data
+    return yaml_loads(config_str)
 
 
 def yaml_loads(config: str) -> dict:
@@ -98,14 +94,16 @@ def yaml_loads(config: str) -> dict:
         dict: The processed configuration dictionary.
     """
 
-    stream = io.StringIO(config)
+    interpolated_config_str = _interpolate_variables(config)
+    assert isinstance(interpolated_config_str, str), "Config must be a string"
+
+    stream = io.StringIO(interpolated_config_str)
     stream.seek(0)
 
     config_data = yaml.safe_load(stream)
-    config_dict = _process_config(config_data)
-    assert isinstance(config_dict, dict)
+    assert isinstance(config_data, dict)
 
-    return config_dict
+    return config_data
 
 
 def yaml_dump(config: dict, fp: typing.TextIO) -> None:
