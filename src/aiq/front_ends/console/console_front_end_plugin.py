@@ -18,6 +18,7 @@ import logging
 from io import StringIO
 
 import click
+from colorama import Fore
 
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.interactive import HumanPromptModelType
@@ -88,7 +89,7 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
 
             # Convert to a list
             input_list = list(self.front_end_config.input_query)
-            logger.info("Processing input: %s", self.front_end_config.input_query)
+            logger.debug("Processing input: %s", self.front_end_config.input_query)
 
             runner_outputs = await asyncio.gather(*[run_single_query(query) for query in input_list])
 
@@ -103,4 +104,4 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
             assert False, "Should not reach here. Should have been caught by pre_run"
 
         # Print result
-        logger.info(f"{'-' * 50}\nWorkflow Result:\n%s\n{'-' * 50}", runner_outputs)
+        logger.info(f"\n{'-' * 50}\n{Fore.GREEN}Workflow Result:\n%s{Fore.RESET}\n{'-' * 50}", runner_outputs)

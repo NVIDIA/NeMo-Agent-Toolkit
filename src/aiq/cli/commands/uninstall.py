@@ -55,11 +55,11 @@ async def uninstall_packages(packages: list[dict[str, str]]) -> None:
 
 @click.group(name=__name__,
              invoke_without_command=True,
-             help=("Uninstall an AgentIQ plugin packages from the local environment."))
+             help=("Uninstall an AIQ Toolkit plugin packages from the local environment."))
 @click.argument("packages", type=str)
 def uninstall_command(packages: str) -> None:
     """
-    Uninstall AgentIQ plugin packages from the local environment.
+    Uninstall AIQ Toolkit plugin packages from the local environment.
     """
 
     packages = packages.split()

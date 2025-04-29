@@ -58,7 +58,7 @@ functions:
       The question should be about user preferences which will help you format your response.
       For example: "How does the user like responses formatted?"
 
-  # To use these tools you will need to install the agentiq[langchain] package
+  # To use these tools you will need to install the aiqtoolkit[langchain] package
   web_search_tool:
     _type: tavily_internet_search
     max_results: 5

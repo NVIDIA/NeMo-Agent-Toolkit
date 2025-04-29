@@ -26,7 +26,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Fixed `aiq serve` when running the `simple_rag` workflow example
-- Added missing `platformdirs` dependency to `agentiq` package
+- Added missing `platformdirs` dependency to `aiqtoolkit` package
 
 ## [1.0.0] - 2024-12-04
 

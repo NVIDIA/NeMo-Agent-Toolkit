@@ -108,9 +108,9 @@ package:wheel:
     - ./ci/scripts/gitlab/build_wheel.sh
   artifacts:
     paths:
-      # match - .tmp/wheels/agentiq/<version>/*.whl, .tmp/wheels/agentiq-crewai/<version>/*.whl etc.
-      - .tmp/wheels/*/*/*.whl
-      - .tmp/wheels/examples/*.whl
+      # match - .tmp/wheels/aiqtoolkit/aiqtoolkit/<version>/*.whl, .tmp/wheels/aiqtoolkit/aiqtoolkit-crewai/<version>/*.whl etc.
+      - .tmp/wheels/aiqtoolkit/*/*/*.whl
+      - .tmp/wheels/aiqtoolkit/examples/*.whl
     expire_in: 1 week
 
 

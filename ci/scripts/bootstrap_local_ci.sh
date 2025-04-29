@@ -15,14 +15,14 @@
 # limitations under the License.
 
 if [[ "${USE_HOST_GIT}" == "1" ]]; then
-    cd agentiq/
-    git config --global --add safe.directory /agentiq
+    cd aiqtoolkit/
+    git config --global --add safe.directory /aiqtoolkit
 
     # Avoids SSH host key verification prompt
     ssh-keyscan github.com >> /etc/ssh/ssh_known_hosts
 else
-    git clone ${GIT_URL} agentiq
-    cd agentiq/
+    git clone ${GIT_URL} aiqtoolkit
+    cd aiqtoolkit/
     git remote add upstream ${GIT_UPSTREAM_URL}
     git fetch upstream
     git checkout develop

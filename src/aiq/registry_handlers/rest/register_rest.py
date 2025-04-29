@@ -27,10 +27,10 @@ class RestRegistryHandlerConfig(RegistryHandlerBaseConfig, name="rest"):
     endpoint: str = Field(description="A string representing the remote endpoint.")
     token: str | None = Field(default=None,
                               description="The authentication token to use when interacting with the registry.")
-    publish_route: str = Field(default="", description="The route to the AgentIQ publish service.")
-    pull_route: str = Field(default="", description="The route to the AgentIQ pull service.")
-    search_route: str = Field(default="", description="The route to the AgentIQ search service")
-    remove_route: str = Field(default="", description="The route to the AgentIQ remove service")
+    publish_route: str = Field(default="", description="The route to the AIQ Toolkit publish service.")
+    pull_route: str = Field(default="", description="The route to the AIQ Toolkit pull service.")
+    search_route: str = Field(default="", description="The route to the AIQ Toolkit search service")
+    remove_route: str = Field(default="", description="The route to the AIQ Toolkit remove service")
 
 
 @register_registry_handler(config_type=RestRegistryHandlerConfig)
