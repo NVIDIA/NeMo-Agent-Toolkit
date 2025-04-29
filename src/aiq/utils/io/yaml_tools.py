@@ -109,7 +109,10 @@ def yaml_loads(config: str) -> dict:
     stream.seek(0)
 
     config_data = yaml.safe_load(stream)
-    return _process_config(config_data)
+    config_dict = _process_config(config_data)
+    assert isinstance(config_dict, dict)
+
+    return config_dict
 
 
 def yaml_dump(config: dict, fp: typing.TextIO) -> None:
