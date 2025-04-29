@@ -17,7 +17,7 @@ limitations under the License.
 
 # NVIDIA Agent Intelligence Toolkit Memory Module
 
-AIQ Toolkit's Memory subsystem is designed to store and retrieve a user's conversation history, preferences, and other "long-term memory." This is especially useful for building stateful LLM-based applications that recall user-specific data or interactions across multiple steps.
+The AIQ Toolkit Memory subsystem is designed to store and retrieve a user's conversation history, preferences, and other "long-term memory." This is especially useful for building stateful LLM-based applications that recall user-specific data or interactions across multiple steps.
 
 This document explains the **AIQ Toolkit Memory Module** in detail:
 - How it is structured internally (interfaces, data models, and configuration).
@@ -25,7 +25,7 @@ This document explains the **AIQ Toolkit Memory Module** in detail:
 - How users can **bring a custom memory client** and wire it up in their AIQ Toolkit workflows.
 - An **example** of usage from the provided `aiq_agent_memory` plugin code.
 
-> **Note**: This documentation presumes familiarity with AIQ Toolkit's plugin architecture, the concept of "function registration" via `@register_function`, and how we define tool/workflow configurations in the AIQ Toolkit config.
+> **Note**: This documentation presumes familiarity with the AIQ Toolkit plugin architecture, the concept of "function registration" via `@register_function`, and how we define tool/workflow configurations in the AIQ Toolkit config.
 
 ### Key Components
 
@@ -53,7 +53,7 @@ This document explains the **AIQ Toolkit Memory Module** in detail:
 
 ## Registering a Memory Module
 
-In the AIQ Toolkit system, anything that extends {py:class}`~aiq.data_models.memory.MemoryBaseConfig` and is declared with a `name="some_memory"` can be discovered as a *Memory type* by AIQ Toolkit's global type registry. This allows you to define a custom memory class to handle your own backends (Redis, custom database, a vector store, etc.). Then your memory class can be selected in the AIQ Toolkit config YAML via `_type: <your memory type>`.
+In the AIQ Toolkit system, anything that extends {py:class}`~aiq.data_models.memory.MemoryBaseConfig` and is declared with a `name="some_memory"` can be discovered as a *Memory type* by the AIQ Toolkit global type registry. This allows you to define a custom memory class to handle your own backends (Redis, custom database, a vector store, etc.). Then your memory class can be selected in the AIQ Toolkit config YAML via `_type: <your memory type>`.
 
 ### Basic Steps
 

@@ -67,8 +67,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ### Setting Up Milvus
 
-This example uses a `Milvus` vector database to demonstrate how descriptions can be generated for collections. However, because this workflow uses AIQ Toolkit's native abstractions
-for retrievers, this example will work for any database that implements the required methods of the AIQ Toolkit `retriever` interface.
+This example uses a Milvus vector database to demonstrate how descriptions can be generated for collections. However, because this workflow uses the built-in AIQ Toolkit abstractions for retrievers, this example will work for any database that implements the required methods of the AIQ Toolkit `retriever` interface.
 
 The rest of this example assumes you have a running instance of Milvus at `localhost:19530`. If you would like a guide on setting up the database used in this example, please follow
 the instructions in the `simple_rag` example of AIQ Toolkit [here](../simple_rag/README.md).
