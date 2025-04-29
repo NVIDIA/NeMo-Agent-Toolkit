@@ -139,20 +139,16 @@ result back to the client. The transaction schema is defined by the workflow.
   Suppress all intermediate steps (only get final output):
   ```bash
   curl --request POST \
-    --url "http://localhost:8000/generate/full?filter_steps=none" \
+    --url 'http://localhost:8000/generate/full?filter_steps=none' \
     --header 'Content-Type: application/json' \
-    --data '{
-      "input_message": "What is LangSmith?"
-    }'
+    --data '{"input_message": "Is 4 + 4 greater than the current hour of the day"}'
   ```
   Get only specific step types:
   ```bash
   curl --request POST \
-    --url "http://localhost:8000/generate/full?filter_steps=LLM_END,TOOL_END" \
+    --url 'http://localhost:8000/generate/full?filter_steps=LLM_END,TOOL_END' \
     --header 'Content-Type: application/json' \
-    --data '{
-      "input_message": "What is LangSmith?"
-    }'
+    --data '{"input_message": "Is 4 + 4 greater than the current hour of the day"}'
   ```
 
 ### Chat Non-Streaming Transaction
