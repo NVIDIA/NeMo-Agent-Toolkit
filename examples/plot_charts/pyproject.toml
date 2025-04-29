@@ -14,7 +14,7 @@ dependencies = [
   "seaborn==0.13.*",
 ]
 requires-python = ">=3.11"
-description = "Simple AgentIQ example"
+description = "Simple Plot Chart Agent example"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 

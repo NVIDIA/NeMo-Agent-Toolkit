@@ -23,11 +23,11 @@ limitations under the License.
    :class: highlight
 ```
 
-![NVIDIA AgentIQ](./_static/agentiq_banner.png "AgentIQ banner image")
+![NVIDIA Agent Intelligence Toolkit](./_static/aiqtoolkit_banner.png "AIQ Toolkit banner image")
 
-# Welcome to the NVIDIA AgentIQ Documentation
+# Welcome to the NVIDIA Agent Intelligence Toolkit Documentation
 
-AgentIQ is a flexible library designed to seamlessly integrate your enterprise agents—regardless of framework—with various data sources and tools. By treating agents, tools, and agentic workflows as simple function calls, AgentIQ enables true composability: build once and reuse anywhere.
+Agent Intelligence Toolkit (AIQ Toolkit) is a flexible library designed to seamlessly integrate your enterprise agents—regardless of framework—with various data sources and tools. By treating agents, tools, and agentic workflows as simple function calls, AIQ Toolkit enables true composability: build once and reuse anywhere.
 
 ## Key Features
 
@@ -37,17 +37,17 @@ AgentIQ is a flexible library designed to seamlessly integrate your enterprise a
 - [**Profiling:**](./guides/profiler.md) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
 - [**Observability:**](./guides/observe-workflow-with-phoenix.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
 - [**Evaluation System:**](./guides/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
-- [**User Interface:**](./guides/using-agentiq-ui-and-server.md) Use the AgentIQ UI chat interface to interact with your agents, visualize output, and debug workflows.
-- [**MCP Compatibility**](./components/mcp.md) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AgentIQ functions.
+- [**User Interface:**](./guides/using-aiqtoolkit-ui-and-server.md) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
+- [**MCP Compatibility**](./components/mcp.md) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
 
-With AgentIQ, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
+With AIQ Toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 
 ## Links
 
-To learn more about AgentIQ, see the following links:
+To learn more about AIQ Toolkit, see the following links:
 
-* [About AgentIQ](./intro/why-agentiq.md)
-* [Install AgentIQ](./intro/install.md)
+* [About AIQ Toolkit](./intro/why-aiqtoolkit.md)
+* [Install AIQ Toolkit](./intro/install.md)
 * [Get Started](./intro/get-started.md)
 * [Create and Customize Workflows](./guides/create-customize-workflows.md)
 * [Sharing Components](./guides/sharing-workflows-and-tools.md)
@@ -58,7 +58,7 @@ To learn more about AgentIQ, see the following links:
 
 ## Feedback
 
-We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AgentIQ/issues) if you have any feedback or feature requests.
+We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AIQToolkit/issues) if you have any feedback or feature requests.
 
 
 ```{toctree}

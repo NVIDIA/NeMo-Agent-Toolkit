@@ -62,7 +62,7 @@ async def search_artifacts(  # pylint: disable=R0917
                 registry_handler.save_search_results(search_response=search_response, save_path=save_path)
 
 
-@click.group(name=__name__, invoke_without_command=True, help="Search for AgentIQ artifacts from remote registry.")
+@click.group(name=__name__, invoke_without_command=True, help="Search for AIQ Toolkit artifacts from remote registry.")
 @click.option(
     "--config_file",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
@@ -75,7 +75,7 @@ async def search_artifacts(  # pylint: disable=R0917
     "--channel",
     type=str,
     required=True,
-    help=("The remote registry channel to use when pulling the AgentIQ artifact."),
+    help=("The remote registry channel to use when pulling the AIQ Toolkit artifact."),
 )
 @click.option(
     "-o",
@@ -125,7 +125,7 @@ def search(  # pylint: disable=R0917
         n_results: int,
         output_path: str) -> None:
     """
-    Search for AgentIQ artifacts with the specified configuration.
+    Search for AIQ Toolkit artifacts with the specified configuration.
     """
 
     from aiq.settings.global_settings import GlobalSettings

@@ -39,8 +39,8 @@ functions:
     _type: aiq_retriever
     retriever: mcp_retriever
     topic: Retrieve information about Model Context Protocol (MCP)
-  
-  # To use these tools you will need to install the agentiq[langchain] package
+
+  # To use these tools you will need to install the aiqtoolkit[langchain] package
   web_search_tool:
     _type: tavily_internet_search
     max_results: 5

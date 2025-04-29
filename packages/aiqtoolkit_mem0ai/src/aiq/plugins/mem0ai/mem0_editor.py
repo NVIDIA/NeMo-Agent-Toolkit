@@ -23,7 +23,7 @@ from aiq.memory.models import MemoryItem
 
 class Mem0Editor(MemoryEditor):
     """
-    Wrapper class that implements AgentIQ Interfaces for Mem0 Integrations Async.
+    Wrapper class that implements AIQ Toolkit Interfaces for Mem0 Integrations Async.
     """
 
     def __init__(self, mem0_client: AsyncMemoryClient):

@@ -22,10 +22,10 @@ from aiq.cli.commands.configure.channel.channel import channel
 logger = logging.getLogger(__name__)
 
 
-@click.group(name=__name__, invoke_without_command=False, help="Configure AgentIQ developer preferences.")
+@click.group(name=__name__, invoke_without_command=False, help="Configure AIQ Toolkit developer preferences.")
 def configure_command(**kwargs):
     """
-    Publish AgentIQ artifacts with the specified configuration
+    Publish AIQ Toolkit artifacts with the specified configuration
     """
     pass
 

@@ -26,7 +26,7 @@ from aiq.memory.models import MemoryItem
 
 class ZepEditor(MemoryEditor):
     """
-    Wrapper class that implements AgentIQ Interfaces for Zep Integrations Async.
+    Wrapper class that implements AIQ Toolkit Interfaces for Zep Integrations Async.
     """
 
     def __init__(self, zep_client: AsyncZep):

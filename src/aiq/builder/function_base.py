@@ -12,10 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Base class for AgentIQ functions providing type handling and schema management.
+"""Base class for AIQ Toolkit functions providing type handling and schema management.
 
 This module contains the FunctionBase abstract base class which provides core functionality
-for AgentIQ functions including type handling via generics, schema management for inputs and outputs,
+for AIQ Toolkit functions including type handling via generics, schema management for inputs and outputs,
 and type conversion capabilities.
 """
 
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC):
     """
-    Abstract base class providing core functionality for AgentIQ functions.
+    Abstract base class providing core functionality for AIQ Toolkit functions.
 
     This class provides type handling via generics, schema management for inputs and outputs,
     and type conversion capabilities.
@@ -56,7 +56,7 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
 
     Notes
     -----
-    FunctionBase is the foundation of the AgentIQ function system, providing:
+    FunctionBase is the foundation of the AIQ Toolkit function system, providing:
     - Type handling via generics
     - Schema management for inputs and outputs
     - Type conversion capabilities

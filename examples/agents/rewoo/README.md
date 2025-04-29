@@ -22,11 +22,11 @@ limitations under the License.
 
 # ReWOO Agent
 
-A configurable ReWOO Agent. This agent leverages the AgentIQ plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
+A configurable ReWOO Agent. This agent leverages the AIQ Toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AgentIQ library agent and tools.
+- **Pre-built Tools:** Leverages core AIQ Toolkit library agent and tools.
 - **ReWOO Agent:** The ReWOO pattern eliminates the need to include the system prompt and all previous steps for every reasoning iteration, thereby reducing token usage and boosting performance.
 - **Custom Plugin System:** Developers can bring in new tools using plugins.
 - **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
@@ -35,11 +35,11 @@ A configurable ReWOO Agent. This agent leverages the AgentIQ plugin system and `
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/intro/install.md) to create the development environment and install AIQ Toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AgentIQ library, run the following commands:
+From the root directory of the AIQ Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e .
@@ -58,7 +58,7 @@ export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
 ```
 ---
 
-Run the following command from the root of the AgentIQ repo to execute this workflow with the specified input:
+Run the following command from the root of the AIQ Toolkit repo to execute this workflow with the specified input:
 
 ```bash
 aiq run  --config_file=examples/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
@@ -69,7 +69,7 @@ aiq run  --config_file=examples/agents/rewoo/configs/config.yml --input "Which c
 ```console
 $ aiq run  --config_file=examples/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
 2025-04-23 15:02:08,778 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (498.780251 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:02:09,024 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/agents/rewoo/configs/config.yml'
+2025-04-23 15:02:09,024 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/agents/rewoo/configs/config.yml'
 2025-04-23 15:02:09,032 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-04-23 15:02:09,088 - haystack.tracing.tracer - INFO - Auto-enabled tracing for 'OpenTelemetryTracer'
 
@@ -157,9 +157,9 @@ Workflow Result:
 ```
 ---
 
-### Starting the AgentIQ Server
+### Starting the AIQ Toolkit Server
 
-You can start the AgentIQ server using the `aiq serve` command with the appropriate configuration file.
+You can start the AIQ Toolkit server using the `aiq serve` command with the appropriate configuration file.
 
 **Starting the ReWOO Agent Example Workflow**
 
@@ -167,7 +167,7 @@ You can start the AgentIQ server using the `aiq serve` command with the appropri
 aiq serve --config_file=examples/agents/rewoo/configs/config.yml
 ```
 
-### Making Requests to the AgentIQ Server
+### Making Requests to the AIQ Toolkit Server
 
 Once the server is running, you can make HTTP requests to interact with the workflow.
 

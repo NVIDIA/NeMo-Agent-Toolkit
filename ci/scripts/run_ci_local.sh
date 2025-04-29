@@ -39,7 +39,7 @@ function git_ssh_to_https()
 }
 
 CI_ARCH=${CI_ARCH:-$(dpkg --print-architecture)}
-AGENTIQ_ROOT=${AGENTIQ_ROOT:-$(git rev-parse --show-toplevel)}
+AIQ_ROOT=${AIQ_ROOT:-$(git rev-parse --show-toplevel)}
 
 GIT_URL=$(git remote get-url origin)
 GIT_URL=$(git_ssh_to_https ${GIT_URL})
@@ -53,7 +53,7 @@ GIT_COMMIT=$(git log -n 1 --pretty=format:%H)
 # Specifies whether to mount the current git repo or to use a clean clone (the default)
 USE_HOST_GIT=${USE_HOST_GIT:-0}
 
-LOCAL_CI_TMP=${LOCAL_CI_TMP:-${AGENTIQ_ROOT}/.tmp/local_ci_tmp/${CI_ARCH}}
+LOCAL_CI_TMP=${LOCAL_CI_TMP:-${AIQ_ROOT}/.tmp/local_ci_tmp/${CI_ARCH}}
 DOCKER_EXTRA_ARGS=${DOCKER_EXTRA_ARGS:-""}
 
 CI_CONTAINER=${CI_CONTAINER:-"ghcr.io/astral-sh/uv:python3.12-bookworm"}
@@ -72,12 +72,12 @@ for STAGE in "${STAGES[@]}"; do
     ENV_LIST="${BASE_ENV_LIST}"
 
     mkdir -p ${LOCAL_CI_TMP}
-    cp ${AGENTIQ_ROOT}/ci/scripts/bootstrap_local_ci.sh ${LOCAL_CI_TMP}
+    cp ${AIQ_ROOT}/ci/scripts/bootstrap_local_ci.sh ${LOCAL_CI_TMP}
 
     DOCKER_RUN_ARGS="--rm -ti --net=host --platform=linux/${CI_ARCH} -v "${LOCAL_CI_TMP}":/ci_tmp ${ENV_LIST} --env STAGE=${STAGE}"
 
     if [[ "${USE_HOST_GIT}" == "1" ]]; then
-        DOCKER_RUN_ARGS="${DOCKER_RUN_ARGS} -v ${AGENTIQ_ROOT}:/agentiq"
+        DOCKER_RUN_ARGS="${DOCKER_RUN_ARGS} -v ${AIQ_ROOT}:/aiqtoolkit"
     fi
 
     if [[ "${STAGE}" == "bash" ]]; then
