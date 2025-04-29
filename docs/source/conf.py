@@ -39,6 +39,7 @@ from mdformat.renderer import MDRenderer
 
 if typing.TYPE_CHECKING:
     from autoapi._objects import PythonObject
+    from markdown_it.token import Token
 
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 DOC_DIR = os.path.dirname(CUR_DIR)
@@ -70,43 +71,15 @@ IGNORE_EXAMPLES = (os.path.join(EXAMPLES_DIR, 'documentation_guides/README.md'),
 example_readmes = glob.glob(f'{EXAMPLES_DIR}/**/*.md', recursive=True)
 EXAMPLES_INDEX = os.path.join(DOC_EXAMPLES, "index.md")
 
-destination_docs = []
-for example_readme in example_readmes:
-    if example_readme in IGNORE_EXAMPLES:
-        continue
 
-    rel_path = os.path.relpath(example_readme, EXAMPLES_DIR)
-    if rel_path == "README.md":
-        # make the top-level README.md file the index
-        dest_path = EXAMPLES_INDEX
-    else:
-        dest_path = os.path.join(DOC_EXAMPLES, rel_path)
-        destination_docs.append(dest_path)
-
-    dest_dir = os.path.dirname(dest_path)
-    os.makedirs(dest_dir, exist_ok=True)
-    shutil.copyfile(example_readme, dest_path)
-
-with open(EXAMPLES_INDEX, "a") as f:
-    f.write("\n\n```{toctree}\n:maxdepth: 1\n")
-
-    for doc in destination_docs:
-        relative_path = os.path.relpath(doc, DOC_EXAMPLES)
-        f.write(relative_path + "\n")
-
-    f.write("\n```\n")
-
-destination_docs.append(EXAMPLES_INDEX)
-
-
-def url_has_scheme(path):
+def url_has_scheme(path: str) -> bool:
     """Check if the path has a scheme (e.g., http, https)."""
     parsed_url = urlparse(path)
     return parsed_url.scheme != ''
 
 
 # re-write links
-def path_updater(doc_path, path):
+def path_updater(doc_path: str, path: str) -> str:
     if not url_has_scheme(path) and not path.startswith('#'):  # only re-write relative urls without a scheme (https://)
         if '/docs/source' in path:
             path = path.replace('/docs/source', '', 1)
@@ -127,29 +100,35 @@ def path_updater(doc_path, path):
     return path
 
 
-def token_updater(doc_path, t):
+def token_updater(doc_path: str, token: "Token"):
     for attr_key in ('href', 'src'):
-        attr = t.attrs.get(attr_key)
+        attr = str(token.attrs.get(attr_key))
         if attr is not None:
             # Update the path to remove the '/docs/source' prefix
-            t.attrs[attr_key] = path_updater(doc_path, attr)
+            token.attrs[attr_key] = path_updater(doc_path, attr)
 
 
-def token_checker(doc_path, t, prefix=''):
-    loc = f"{prefix}.{t.type}"
+def token_checker(doc_path: str, token: "Token", prefix: str = ''):
+    # The prefix and loc variables are just used for debugging and error reporting
+    loc = f"{prefix}.{token.type}"
     try:
-        if t.type in ('link_open', 'image'):
-            token_updater(doc_path, t)
+        if token.type in ('link_open', 'image'):
+            token_updater(doc_path, token)
 
-        if t.children is not None:
-            for child in t.children:
+        if token.children is not None:
+            for child in token.children:
                 token_checker(doc_path, child, prefix=loc)
 
     except Exception as e:
         raise RuntimeError(f"Markdown parsing error at {loc}: {e}") from e
 
 
-for doc_path in destination_docs:
+def rewrite_markdown(doc_path: str, dest_path: str):
+    """
+    This method serves two purposes:
+        1. It rewrites the markdown file updating links and image paths.
+        2. Performs a copy by writing the updated markdown to the destination path.
+    """
     md = MarkdownIt()
 
     with open(doc_path) as f:
@@ -158,10 +137,45 @@ for doc_path in destination_docs:
     for token in tokens:
         token_checker(doc_path, token)
 
-    with open(doc_path, "w") as f:
+    with open(dest_path, "w") as f:
         renderer = MDRenderer()
         f.write(renderer.render(tokens, {}, {}))
 
+
+def copy_examples() -> list[str]:
+    destination_docs = []
+    for example_readme in example_readmes:
+        if example_readme in IGNORE_EXAMPLES:
+            continue
+
+        rel_path = os.path.relpath(example_readme, EXAMPLES_DIR)
+        if rel_path == "README.md":
+            # make the top-level README.md file the index
+            dest_path = EXAMPLES_INDEX
+        else:
+            dest_path = os.path.join(DOC_EXAMPLES, rel_path)
+            destination_docs.append(dest_path)
+
+        dest_dir = os.path.dirname(dest_path)
+        os.makedirs(dest_dir, exist_ok=True)
+        rewrite_markdown(example_readme, dest_path)
+
+    return destination_docs
+
+
+def write_examples_index(destination_docs: list[str]):
+    with open(EXAMPLES_INDEX, "a") as f:
+        f.write("\n\n```{toctree}\n:maxdepth: 1\n")
+
+        for doc in destination_docs:
+            relative_path = os.path.relpath(doc, DOC_EXAMPLES)
+            f.write(relative_path + "\n")
+
+        f.write("\n```\n")
+
+
+destination_docs = copy_examples()
+write_examples_index(destination_docs)
 
 # -- Project information -----------------------------------------------------
 
