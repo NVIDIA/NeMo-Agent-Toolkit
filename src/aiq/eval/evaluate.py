@@ -143,6 +143,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
     async def run_workflow_remote(self):
         from aiq.eval.remote_workflow import EvaluationRemoteWorkflowHandler
+
         handler = EvaluationRemoteWorkflowHandler(self.config, self.eval_config.general.max_concurrency)
         await handler.run_workflow_remote(self.eval_input)
 
