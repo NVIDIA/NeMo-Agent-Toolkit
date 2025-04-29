@@ -20,20 +20,17 @@ limitations under the License.
 
 ## Table of Contents
 
-- [An Email phishing analyzer](#an-email-phishing-ayalyzer)
-  - [Table of Contents](#table-of-contents)
-  - [Key Features](#key-features)
-  - [Installation and Setup](#installation-and-setup)
-    - [Setup Virtual Environment and Install AgentIQ](#setup-virtual-environment-and-install-agentiq)
-    - [Install this Workflow:](#install-this-workflow)
-    - [Set Up API Keys](#set-up-api-keys)
-  - [Example Usage](#example-usage)
-    - [Run the Workflow](#run-the-workflow)
-  - [Deployment-Oriented Setup](#deployment-oriented-setup)
-    - [Build the Docker Image](#build-the-docker-image)
-    - [Run the Docker Container](#run-the-docker-container)
-    - [Test the API](#test-the-api)
-    - [Expected API Output](#expected-api-output)
+- [Key Features](#key-features)
+- [Installation and Setup](#installation-and-setup)
+  - [Install this Workflow:](#install-this-workflow)
+  - [Set Up API Keys](#set-up-api-keys)
+- [Example Usage](#example-usage)
+  - [Run the Workflow](#run-the-workflow)
+- [Deployment-Oriented Setup](#deployment-oriented-setup)
+  - [Build the Docker Image](#build-the-docker-image)
+  - [Run the Docker Container](#run-the-docker-container)
+  - [Test the API](#test-the-api)
+  - [Expected API Output](#expected-api-output)
 
 
 ## Key Features

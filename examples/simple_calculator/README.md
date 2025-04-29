@@ -25,7 +25,6 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the AgentIQ
   - [Table of Contents](#table-of-contents)
   - [Key Features](#key-features)
   - [Installation and Setup](#installation-and-setup)
-    - [Setup Virtual Environment and Install AgentIQ](#setup-virtual-environment-and-install-agentiq)
     - [Install this Workflow:](#install-this-workflow)
     - [Set Up API Keys](#set-up-api-keys)
   - [Example Usage](#example-usage)
