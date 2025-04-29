@@ -16,7 +16,7 @@ limitations under the License.
 -->
 # Simple A2A Client Example
 ## Run the sample currency exchange agent in the A2A repository
-Clone the [A2A repository](https://github.com/google/A2A/) and run the langgraph sample exchange agent by following the instructions [here](https://github.com/google/A2A/tree/main/samples/python/agents/langgraph#setup--running).
+Clone the [A2A repository](https://github.com/google/A2A/) and run the `langgraph` sample exchange agent by following the instructions [here](https://github.com/google/A2A/tree/main/samples/python/agents/langgraph#setup--running).
 
 
 ## Install and run the simple A2A client example in this repository
