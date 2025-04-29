@@ -13,17 +13,17 @@ root = "../.."
 
 
 [project]
-name = "agentiq-semantic-kernel"
+name = "aiqtoolkit-semantic-kernel"
 dynamic = ["version"]
 dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
   # Keep sorted!!!
-  "agentiq",
+  "aiqtoolkit",
   "semantic-kernel~=1.24.0",
 ]
-requires-python = ">=3.12"
-description = "Subpackage for Semantic-Kernel integration in AgentIQ"
+requires-python = ">=3.11"
+description = "Subpackage for Semantic-Kernel integration in AIQToolkit"
 readme = "src/aiq/meta/pypi.md"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
@@ -34,7 +34,7 @@ config-settings = { editable_mode = "compat" }
 
 
 [tool.uv.sources]
-agentiq = { workspace = true }
+aiqtoolkit = { workspace = true }
 
 
 [project.entry-points.'aiq.components']

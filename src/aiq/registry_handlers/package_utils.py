@@ -85,7 +85,7 @@ def build_wheel(package_root: str) -> WheelData:
     toml_project_name = toml_project.get("name", None)
 
     assert toml_project_name is not None, f"Package name '{toml_project_name}' not found in pyproject.toml"
-    # replace "agentiq" substring with "aiq" to get the import name
+    # replace "aiqtoolkit" substring with "aiq" to get the import name
     module_name = get_module_name_from_distribution(toml_project_name)
     assert module_name is not None, f"No modules found for package name '{toml_project_name}'"
 
