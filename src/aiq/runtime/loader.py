@@ -63,8 +63,8 @@ class PluginTypes(IntFlag):
 
 def load_config(config_file: StrPath) -> AIQConfig:
     """
-    This is the primary entry point for loading an AIQ Toolkit configuration file. It ensures that all plugins are loaded
-    and then validates the configuration file against the AIQConfig schema.
+    This is the primary entry point for loading an AIQ Toolkit configuration file. It ensures that all plugins are
+    loaded and then validates the configuration file against the AIQConfig schema.
 
     Parameters
     ----------

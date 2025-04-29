@@ -37,7 +37,8 @@ class PulledPackage(BaseModel):
 
 class PullResponse(BaseModel):
     """
-    Represents a data model of the expected respones from a AIQ Toolkit pull request, including detailed status information.
+    Represents a data model of the expected respones from a AIQ Toolkit pull request, including detailed status
+    information.
 
     Args:
         packages (list[PulledPackage]): A list of pulled packages included in the pull request.

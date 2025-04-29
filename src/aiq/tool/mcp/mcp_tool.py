@@ -29,7 +29,8 @@ logger = logging.getLogger(__name__)
 
 class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
     """
-    Function which connects to a Model Context Protocol (MCP) server and wraps the selected tool as an AIQ Toolkit function.
+    Function which connects to a Model Context Protocol (MCP) server and wraps the selected tool as an AIQ Toolkit
+    function.
     """
     # Add your custom configuration parameters here
     url: HttpUrl = Field(description="The URL of the MCP server")
