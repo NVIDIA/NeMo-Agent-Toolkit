@@ -14,7 +14,7 @@ dependencies = [
   "markdown-it-py~=3.0",
   "nvidia-haystack==0.1.2",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 description = "Custom AgentIQ Workflow"
 classifiers = ["Programming Language :: Python"]
 
