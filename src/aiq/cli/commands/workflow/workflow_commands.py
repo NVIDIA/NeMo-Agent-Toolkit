@@ -123,8 +123,8 @@ def get_workflow_path_from_name(workflow_name: str):
 @click.option(
     "--workflow-dir",
     default=".",
-    help="Output directory for saving the created workflow. A new folder with the workflow name will be created within."
-    "Defaults to the present working directory.")
+    help="Output directory for saving the created workflow. A new folder with the workflow name will be created "
+    "within. Defaults to the present working directory.")
 @click.option(
     "--description",
     default="AIQ Toolkit function template. Please update the description.",
@@ -170,6 +170,8 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         (new_workflow_dir / 'src' / package_name).mkdir(parents=True)
         # Create config directory
         (new_workflow_dir / 'src' / package_name / 'configs').mkdir(parents=True)
+        # Create package level configs directory
+        (new_workflow_dir / 'configs').mkdir(parents=True)
 
         # Initialize Jinja2 environment
         env = Environment(loader=FileSystemLoader(str(template_dir)))
@@ -196,7 +198,6 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
             'python_safe_workflow_name': workflow_name.replace("-", "_"),
             'package_name': package_name,
             'rel_path_to_repo_root': rel_path_to_repo_root,
-            # 'workflow_class_name': f"{workflow_name.capitalize().replace("-", "").replace("_", "")}WorkflowConfig",
             'workflow_class_name': f"{_generate_valid_classname(workflow_name)}FunctionConfig",
             'workflow_description': description
         }
@@ -206,6 +207,11 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
             content = template.render(context)
             with open(output_path, 'w', encoding="utf-8") as f:
                 f.write(content)
+
+        # Create symlink for config.yml
+        config_source = new_workflow_dir / 'src' / package_name / 'configs' / 'config.yml'
+        config_link = new_workflow_dir / 'configs' / 'config.yml'
+        os.symlink(config_source, config_link)
 
         if install:
             # Install the new package without changing directories
