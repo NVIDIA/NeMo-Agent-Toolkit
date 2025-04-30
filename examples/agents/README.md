@@ -27,11 +27,9 @@ The examples showcase 5 distinct AI Agent architectures solving a similar proble
 By leveraging AIQ Toolkit’s plugin system and the `Builder` object, we can utilize both pre-built and custom agentic workflows and tools in a flexible manner.
 
 
-1. [ReAct Agent Example](./react/configs/config.yml)
-2. [ReAct Agent + Reasoning Agent Example](./react/configs/config-reasoning.yml)
-3. [Tool Calling Agent Example](./tool_calling/configs/config.yml)
-4. [Tool Calling Agent + Reasoning Agent Example](./tool_calling/configs/config-reasoning.yml)
-5. [Mixture of Agents Example](./mixture_of_agents/configs/config.yml) - A ReAct Agent calling multiple Tool Calling Agents
+* [ReAct Agent Example](./react/README.md)
+* [Tool Calling Agent Example](./tool_calling/README.md)
+* [Mixture of Agents Example](./mixture_of_agents/README.md) - A ReAct Agent calling multiple Tool Calling Agents
 
 ## Learn More
 
