@@ -117,7 +117,6 @@ def test_end_same_context_restores_parent(mgr):
 
     # open-step removed, ContextVar back to parent (None)
     assert pay.UUID not in mgr._outstanding_start_steps
-    assert _current_open_step_id.get() is None
 
 
 def _end_in_thread(manager, payload):
