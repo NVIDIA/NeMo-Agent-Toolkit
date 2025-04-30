@@ -33,8 +33,8 @@ logger = logging.getLogger(__name__)
 
 class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
     """
-    Defines an AgentIQ function that uses a ReWOO Agent performs reasoning inbetween tool calls, and utilizes the tool
-    names and descriptions to select the optimal tool.
+    Defines an AIQ Toolkit function that uses a ReWOO Agent performs reasoning inbetween tool calls, and utilizes the
+    tool names and descriptions to select the optimal tool.
     """
 
     tool_names: list[FunctionRef] = Field(default_factory=list,

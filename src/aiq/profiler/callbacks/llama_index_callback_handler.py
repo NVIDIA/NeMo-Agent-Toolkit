@@ -167,7 +167,7 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
                 except Exception as e:
                     logger.exception("Error getting model name: %s", e, exc_info=True)
 
-                # Append usage data to AgentIQ usage stats
+                # Append usage data to AIQ Toolkit usage stats
                 with self._lock:
                     stats = IntermediateStepPayload(
                         event_type=IntermediateStepType.LLM_END,

@@ -21,13 +21,13 @@ limitations under the License.
   SPDX-License-Identifier: Apache-2.0
 -->
 
-# Sharing NVIDIA AgentIQ Components
+# Sharing NVIDIA Agent Intelligence Toolkit Components
 
-Every AgentIQ component is an AgentIQ plugin and is designed to be sharable with the community of AgentIQ
-developers. Workflows and functions are by far the most common AgentIQ components, however that is not a comprehensive
-list. In fact, this list includes all pieces that leverage an AgentIQ registration decorator
+Every AIQ Toolkit component is an AIQ Toolkit plugin and is designed to be sharable with the community of AIQ Toolkit
+developers. Workflows and functions are by far the most common AIQ Toolkit components, however that is not a comprehensive
+list. In fact, this list includes all pieces that leverage an AIQ Toolkit registration decorator
 (e.g. `register_function`, `register_llm_client`, `register_evaluator`, etc.). This guide will discuss the requirements
-for developing registered components that can be shared, discovered, and integrated leveraged with any AgentIQ
+for developing registered components that can be shared, discovered, and integrated leveraged with any AIQ Toolkit
 application.
 
 ## Enabling Local and Remote Discovery
@@ -35,26 +35,26 @@ The first step in building a sharable components is their implementation. The im
 key elements: 1) the configuration object as described in
 [Customizing the Configuration Object](../concepts/workflow-configuration.md#workflow-configuration), and 2) the
 implementation, as described in
-[Create and Customize AgentIQ Workflows](../guides/create-customize-workflows.md).
+[Create and Customize AIQ Toolkit Workflows](../guides/create-customize-workflows.md).
 This section emphasizes the details of configuration objects that facilitate component discovery.
 
-After installing the AgentIQ library, and potentially other AgentIQ plugin packages, a developer may want to know what
+After installing the AIQ Toolkit library, and potentially other AIQ Toolkit plugin packages, a developer may want to know what
 components are available for workflow development or evaluation. A great tool for this is the `aiq info components` CLI
 utility described in [Components Information](../concepts/cli.md#components-information). This command produces a
-table containing information dynamically accumulated from each AgentIQ component. The `details` column is sourced from
+table containing information dynamically accumulated from each AIQ Toolkit component. The `details` column is sourced from
 each configuration object's docstring and field descriptions. Behind the scenes, these data (and others) are aggregated
 into a component's `DiscoveryMetadata` to enable local and remote discovery. This object includes the following key
 fields:
 
-- `package`: The name of the package containing the AgentIQ component.
-- `version`: The version number of the package containing the AgentIQ component.
-- `component_type`: The type of AgentIQ component this metadata represents (e.g. `function`, `llm`, `embedder`, etc.)
-- `component_name`: The registered name of the AgentIQ component to be used in the `_type` field when configuring a
+- `package`: The name of the package containing the AIQ Toolkit component.
+- `version`: The version number of the package containing the AIQ Toolkit component.
+- `component_type`: The type of AIQ Toolkit component this metadata represents (e.g. `function`, `llm`, `embedder`, etc.)
+- `component_name`: The registered name of the AIQ Toolkit component to be used in the `_type` field when configuring a
 workflow configuration object.
-- `description`: Description of the AgentIQ component pulled from its config objects docstrings and field metadata.
+- `description`: Description of the AIQ Toolkit component pulled from its config objects docstrings and field metadata.
 - `developer_notes`: Other notes to a developers to aid in the use of the component.
 
-For this feature to provide useful information, there are a few hygiene requirements placed on AgentIQ component
+For this feature to provide useful information, there are a few hygiene requirements placed on AIQ Toolkit component
 configuration object implementations.
 
 1. Specify a name: This will be pulled into the `component_name` column and will be used in the `_type` field of a
@@ -83,7 +83,7 @@ By incorporating these elements, the `description` field in the `aiq info compon
 information:
 
 ```bash
-                                                                                        AgentIQ Search Results
+                                                                                        AIQ Toolkit Search Results
 ┏━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃ package                ┃ version                ┃ component_type ┃ component_name          ┃ description                                                                                        ┃
 ┡━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
@@ -100,21 +100,21 @@ when it should be used and its configuration options. This significantly reduces
 
 ## Package Distribution
 
-After completing AgentIQ development of component plugin, the next step is to create a package that will allow the
-plugin to be installed and registered with the AgentIQ environment. Because each AgentIQ plugin package is a pip
+After completing AIQ Toolkit development of component plugin, the next step is to create a package that will allow the
+plugin to be installed and registered with the AIQ Toolkit environment. Because each AIQ Toolkit plugin package is a pip
 installable package, this process it is straightforward, and follows standard Python `pyproject.toml` packaging steps.
 If you are unfamiliar with this process, consider reviewing the [Python Packaging User Guide](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/).
 
 When building the `pyproject.toml` file, there are two critical sections:
 
-1. Dependencies: Ensure you include the necessary AgentIQ dependencies. An example is provided below:
+1. Dependencies: Ensure you include the necessary AIQ Toolkit dependencies. An example is provided below:
 
     ```
     dependencies = [
     "aiq[langchain]",
     ]
     ```
-2. Entrypoints: Provide the path to your plugins so they are registered with AgentIQ when installed.
+2. Entrypoints: Provide the path to your plugins so they are registered with AIQ Toolkit when installed.
 An example is provided below:
     ```
     [project.entry-points.'aiq.components']
@@ -132,16 +132,16 @@ While simple, this process does not take advantage of the `DiscoveryMetadata` to
 
 ### Publish to a Remote Registry
 
-Alternatively, AgentIQ provides an extensible interface that allows developers to publish packages and their
+Alternatively, AIQ Toolkit provides an extensible interface that allows developers to publish packages and their
 `DiscoveryMetadata`  arbitrary remote registries. The benefit of this approach comes from improved utilization of
 captured `DiscoveryMetadata` to improve discovery of useful components.
 
 By including this additional metadata, registry owners are empowered to extend their search interface and accelerate the
-process of discovering useful components and development of AgentIQ based applications.
+process of discovering useful components and development of AIQ Toolkit based applications.
 
 ### Share Source Code
 
-The last option for distribution is through source code. Since each AgentIQ package is a pip installable Python package,
+The last option for distribution is through source code. Since each AIQ Toolkit package is a pip installable Python package,
 each can be installed directly from source. Examples of this installation path are provided in the
 [Get Started](../intro/get-started.md) guide.
 
@@ -149,5 +149,5 @@ each can be installed directly from source. Examples of this installation path a
 
 There are several methods for component distribution, each of which depends on constructing a pip installable Python
 packages that point to the hygienic implementations of component plugins. This lightweight, but extensible approach
-provides a straightforward path for distributing AgentIQ agentic applications and their components to the developer
+provides a straightforward path for distributing AIQ Toolkit agentic applications and their components to the developer
 community.

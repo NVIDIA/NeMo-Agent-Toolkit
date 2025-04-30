@@ -44,7 +44,7 @@ class AgnoProfilerHandler(BaseProfilerCallback):
       - LLM Calls
 
     to collect usage statistics (tokens, inputs, outputs, time intervals, etc.)
-    and store them in AgentIQ's usage_stats queue for subsequent analysis.
+    and store them in AIQ Toolkit's usage_stats queue for subsequent analysis.
     """
 
     def __init__(self) -> None:
@@ -73,7 +73,7 @@ class AgnoProfilerHandler(BaseProfilerCallback):
 
         # Note: Agno doesn't have a class-based tool structure to patch directly.
         # Instead, it uses decorators to convert functions to tools.
-        # In AgentIQ, tool executions are captured at the execute_agno_tool level
+        # In AIQ Toolkit, tool executions are captured at the execute_agno_tool level
         # in packages/aiqtoolkit_agno/src/aiq/plugins/agno/tool_wrapper.py
 
         # To properly monitor Agno tool executions, we would need to either:

@@ -21,11 +21,11 @@ A minimal example using Semantic Kernel showcasing a multi-agent travel planning
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AIQ Toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AgentIQ library, run the following commands:
+From the root directory of the AIQ Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/semantic_kernel_demo
@@ -41,7 +41,7 @@ export OPENAI_API_KEY=<YOUR_API_KEY>
 
 ## Adding Long-Term Memory
 
- With AgentIQ, adding Long Term Memory (LTM) is as simple as adding a new section in the configuration file.
+ With AIQ Toolkit, adding Long Term Memory (LTM) is as simple as adding a new section in the configuration file.
 
 Once you add the LTM configuration, export your Mem0 API key, which is a prerequisite for using the LTM service. To create an API key, refer to the instructions in the [Mem0 Platform Guide](https://docs.mem0.ai/platform/quickstart).
 

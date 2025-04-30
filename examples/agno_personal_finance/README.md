@@ -19,7 +19,7 @@ limitations under the License.
 # Personal Finance
 
 <!-- Note: "Agno" is the official product name despite Vale spelling checker warnings -->
-Built on [Agno](https://github.com/agno-agi/agno) and AgentIQ, this workflow is a personal financial planner that generates personalized financial plans using NVIDIA NIM (can be customized to use OpenAI models). It automates the process of researching, planning, and creating tailored budgets, investment strategies, and savings goals, empowering you to take control of your financial future with ease.
+Built on [Agno](https://github.com/agno-agi/agno) and AIQ Toolkit, this workflow is a personal financial planner that generates personalized financial plans using NVIDIA NIM (can be customized to use OpenAI models). It automates the process of researching, planning, and creating tailored budgets, investment strategies, and savings goals, empowering you to take control of your financial future with ease.
 
 This personal financial planner was revised based on the [Awesome-LLM-App](https://github.com/Shubhamsaboo/awesome-llm-apps) GitHub repo's [AI Personal Finance Planner](https://github.com/Shubhamsaboo/awesome-llm-apps/tree/main/ai_agent_tutorials/ai_personal_finance_agent) sample.
 
@@ -30,7 +30,7 @@ This personal financial planner was revised based on the [Awesome-LLM-App](https
   - [Table of Contents](#table-of-contents)
   - [Key Features](#key-features)
   - [Installation and Setup](#installation-and-setup)
-    - [Setup Virtual Environment and Install AgentIQ](#setup-virtual-environment-and-install-agentiq)
+    - [Setup Virtual Environment and Install AIQ Toolkit](#setup-virtual-environment-and-install-aiqtoolkit)
     - [Install this Workflow:](#install-this-workflow)
     - [Set Up API Keys](#set-up-api-keys)
   - [Example Usage](#example-usage)
@@ -44,9 +44,9 @@ This personal financial planner was revised based on the [Awesome-LLM-App](https
 
 ## Key Features
 
-### AgentIQ
+### AIQ Toolkit
 
-- **Pre-built Tools:** Leverages core AgentIQ library agent and tools.
+- **Pre-built Tools:** Leverages core AIQ Toolkit library agent and tools.
 - **ReAct Agent:** Performs reasoning between tool call; utilizes tool names and descriptions to appropriately route to the correct tool
 - **Custom Plugin System:** Developers can bring in new tools using plugins.
 - **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
@@ -60,11 +60,11 @@ Agno is a lightweight library for building multimodal agents. Some of the key fe
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AIQ Toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AgentIQ library, run the following commands:
+From the root directory of the AIQ Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/agno_personal_finance
@@ -82,7 +82,7 @@ export SERP_API_KEY=<SERP_API_KEY>
 
 ### Run the Workflow
 
-Run the following command from the root of the AgentIQ repo to execute this workflow with the specified input:
+Run the following command from the root of the AIQ Toolkit repo to execute this workflow with the specified input:
 
 ```bash
 aiq run --config_file examples/agno_personal_finance/src/aiq_agno_personal_finance/configs/config.yml --input "My financial goal is to retire at age 60.  I am currently 40 years old, working as a Machine Learning engineer at NVIDIA."
@@ -92,7 +92,7 @@ aiq run --config_file examples/agno_personal_finance/src/aiq_agno_personal_finan
 ```console
 $ aiq run --config_file examples/agno_personal_finance/src/aiq_agno_personal_finance/configs/config.yml --input "My financial goal is to retire at age 60.  I am currently 40 years old, working as a Machine Learning engineer at NVIDIA."
 2025-04-23 15:11:38,790 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (501.427889 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:11:39,122 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/agno_personal_finance/src/aiq_agno_personal_finance/configs/config.yml'
+2025-04-23 15:11:39,122 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/agno_personal_finance/src/aiq_agno_personal_finance/configs/config.yml'
 2025-04-23 15:11:39,126 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-04-23 15:11:40,035 - httpx - INFO - HTTP Request: GET https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json "HTTP/1.1 200 OK"
 2025-04-23 15:11:40,990 - aiq.profiler.decorators.framework_wrapper - INFO - Agno callback handler registered
@@ -134,9 +134,9 @@ For a production deployment, use Docker:
 
 ### Build the Docker Image
 
-Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AgentIQ virtual environment.
+Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AIQ Toolkit virtual environment.
 
-From the root directory of the `agentiq` repository, build the Docker image:
+From the root directory of the `aiqtoolkit` repository, build the Docker image:
 
 ```bash
 docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t agno_personal_finance -f examples/agno_personal_finance/Dockerfile .
