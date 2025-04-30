@@ -15,7 +15,6 @@
 
 import typing
 
-from pydantic import BaseModel
 from pydantic import Field
 
 from .common import BaseModelRegistryTag
@@ -29,17 +28,26 @@ class AuthenticationBaseConfig(TypedBaseModel, BaseModelRegistryTag):
 AuthenticationBaseConfigT = typing.TypeVar("AuthenticationBaseConfigT", bound=AuthenticationBaseConfig)
 
 
-class OAuth2Config(BaseModel):
+class OAuth2Config(AuthenticationBaseConfig):
     """
     OAuth 2.0 authentication configuration model.
     """
+    type: typing.Literal["oauth2"] = Field(alias="_type", default="oauth2", description="OAuth 2.0 Config.")
     client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
     audience: str = Field(description="The audience for OAuth 2.0 authentication.")
     scope: list[str] = Field(description="The scope for OAuth 2.0 authentication.")
 
 
-class APIKeyConfig(BaseModel):
+class APIKeyConfig(AuthenticationBaseConfig):
     """
     API Key authentication configuration model.
     """
-    pass
+    type: typing.Literal["api_key"] = Field(alias="_type", default="api_key", description="API Key Config.")
+    api_key: str = Field(description="The API key for authentication.")
+    header_name: str = Field(
+        description="The HTTP header corresponding to the API provider. i.e. 'Authorization', X-API-Key.")
+    header_prefix: str = Field(
+        description="The HTTP header prefix corresponding to the API provider. i.e 'Bearer', 'JWT'.")
+
+
+AuthenticationProvider = typing.Annotated[OAuth2Config | APIKeyConfig, Field(discriminator="type")]

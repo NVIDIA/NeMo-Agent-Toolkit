@@ -15,6 +15,7 @@
 
 import typing
 import uuid
+import httpx
 from collections.abc import Awaitable
 from collections.abc import Callable
 from contextlib import contextmanager
@@ -22,6 +23,7 @@ from contextvars import ContextVar
 
 from aiq.builder.intermediate_step_manager import IntermediateStepManager
 from aiq.builder.user_interaction_manager import AIQUserInteractionManager
+from aiq.authentication.interfaces import RequestManagerBase
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
 from aiq.data_models.intermediate_step import IntermediateStep
@@ -75,6 +77,10 @@ class AIQContextState(metaclass=Singleton):
                                              | None] = ContextVar(
                                                  "user_input_callback",
                                                  default=AIQUserInteractionManager.default_callback_handler)
+
+        self.user_request_callback: ContextVar[Callable[[RequestManagerBase], Awaitable[httpx.Response | None]]
+                                               | None] = ContextVar("user_request_callback",
+                                                                    default=RequestManagerBase.default_request_handler)
 
     @staticmethod
     def get() -> "AIQContextState":

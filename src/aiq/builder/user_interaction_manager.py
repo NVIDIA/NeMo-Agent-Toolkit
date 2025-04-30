@@ -15,6 +15,7 @@
 
 import time
 import uuid
+import httpx
 
 from aiq.data_models.interactive import HumanPrompt
 from aiq.data_models.interactive import HumanResponse
@@ -69,3 +70,12 @@ class AIQUserInteractionManager:
         sys_human_interaction = InteractionResponse(id=uuid_req, status=status, timestamp=timestamp, content=resp)
 
         return sys_human_interaction
+
+    async def make_api_request(self,
+                               authentication_provider: str,
+                               url: str,
+                               method: str,
+                               headers: dict,
+                               params: dict,
+                               data: dict) -> httpx.Response | None:
+        pass

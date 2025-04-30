@@ -25,8 +25,7 @@ from pydantic import ValidationInfo
 from pydantic import ValidatorFunctionWrapHandler
 from pydantic import field_validator
 
-from aiq.data_models.authentication import OAuth2Config
-from aiq.data_models.authentication import APIKeyConfig
+from aiq.data_models.authentication import AuthenticationProvider
 from aiq.data_models.evaluate import EvalConfig
 from aiq.data_models.front_end import FrontEndBaseConfig
 from aiq.data_models.function import EmptyFunctionConfig
@@ -253,7 +252,7 @@ class AIQConfig(HashableBaseModel):
     workflow: FunctionBaseConfig = EmptyFunctionConfig()
 
     # Authentication Configuration
-    authentication: dict[str, OAuth2Config | APIKeyConfig] = {}
+    authentication: dict[str, AuthenticationProvider] = {}
 
     # Evaluation Options
     eval: EvalConfig = EvalConfig()

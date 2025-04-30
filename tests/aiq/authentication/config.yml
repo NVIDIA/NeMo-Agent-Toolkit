@@ -1,0 +1,14 @@
+authentication:
+  jira:
+    _type: oauth2
+    client_id: mock_client_id
+    audience: mock_audience
+    scope:
+      - report:mock
+      - read:mock
+      - manage:mock
+  jira_api_key:
+    _type: api_key
+    api_key: mock_api_key
+    header_name: Authorization
+    header_prefix: Bearer
