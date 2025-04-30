@@ -44,28 +44,6 @@ def _interpolate_variables(value: str | int | float | bool | None) -> str | int 
     return expandvars.expandvars(value)
 
 
-def _process_config(
-        config_data: dict | list | str | int | float | bool | None) -> dict | list | str | int | float | bool | None:
-    """
-    Recursively process a configuration dictionary to interpolate variables.
-
-    Args:
-        config_data (dict): The configuration dictionary to process.
-
-    Returns:
-        dict: The processed configuration dictionary.
-    """
-
-    if isinstance(config_data, dict):
-        return {k: _process_config(v) for k, v in config_data.items()}
-    if isinstance(config_data, list):
-        return [_process_config(item) for item in config_data]
-    if isinstance(config_data, (str, int, float, bool, type(None))):
-        return _interpolate_variables(config_data)
-
-    raise ValueError(f"Unsupported type: {type(config_data)}")
-
-
 def yaml_load(config_path: StrPath) -> dict:
     """
     Load a YAML file and interpolate variables in the format

@@ -26,7 +26,6 @@ from aiq.data_models.config import AIQConfig
 from aiq.data_models.config import HashableBaseModel
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.utils.io.yaml_tools import _interpolate_variables
-from aiq.utils.io.yaml_tools import _process_config
 from aiq.utils.io.yaml_tools import yaml_dump
 from aiq.utils.io.yaml_tools import yaml_dumps
 from aiq.utils.io.yaml_tools import yaml_load
@@ -107,107 +106,6 @@ def test_interpolate_variables(env_vars: dict):
     assert _interpolate_variables(123) == 123
     assert _interpolate_variables(0.123) == 0.123
     assert _interpolate_variables(None) is None
-
-
-def test_process_config_with_basic_types():
-    # Test with unsupported type
-    with pytest.raises(ValueError, match="Unsupported type"):
-        _process_config(complex(1, 2))  # type: ignore
-
-    # Test with boolean values
-    assert _process_config(True) is True
-    assert _process_config(False) is False
-
-    # Test with None value
-    assert _process_config(None) is None
-
-    # Test with integer
-    assert _process_config(42) == 42
-
-    # Test with float
-    assert _process_config(3.14) == 3.14
-
-    # Test with string
-    assert _process_config("hello") == "hello"
-
-    # Test with empty containers
-    assert _process_config({}) == {}
-    assert _process_config([]) == []
-
-
-def test_process_config_with_nested_containers(env_vars: dict):
-    # Test with nested containers containing all data types
-    nested_config = {
-        "string":
-            "plain_text",
-        "string_with_var":
-            "${TEST_VAR}",
-        "integer":
-            42,
-        "float":
-            3.14,
-        "boolean_true":
-            True,
-        "boolean_false":
-            False,
-        "none_value":
-            None,
-        "nested_dict": {
-            "inner_string": "nested_text",
-            "inner_var": "${NESTED_VAR:-default}",
-            "inner_int": 100,
-            "inner_float": 2.718,
-            "inner_bool": False,
-            "inner_none": None
-        },
-        "nested_list": [
-            "list_string", "${LIST_VAR}", 123, 4.56, True, None, ["deeply_nested", "${NESTED_VAR:-fallback}", 999]
-        ]
-    }
-
-    processed_nested = _process_config(nested_config)
-    assert isinstance(processed_nested, dict)
-    nested_dict = processed_nested["nested_dict"]
-    assert isinstance(nested_dict, dict)
-
-    # Verify string values
-    assert processed_nested["string"] == "plain_text"
-    assert processed_nested["string_with_var"] == env_vars["TEST_VAR"]
-
-    # Verify numeric values
-    assert processed_nested["integer"] == 42
-    assert processed_nested["float"] == 3.14
-
-    # Verify boolean values
-    assert processed_nested["boolean_true"] is True
-    assert processed_nested["boolean_false"] is False
-
-    # Verify None value
-    assert processed_nested["none_value"] is None
-
-    # Verify nested dictionary
-    assert nested_dict["inner_string"] == "nested_text"
-    assert nested_dict["inner_var"] == env_vars["NESTED_VAR"]
-    assert nested_dict["inner_int"] == 100
-    assert nested_dict["inner_float"] == 2.718
-    assert nested_dict["inner_bool"] is False
-    assert nested_dict["inner_none"] is None
-
-    # Verify nested lists
-    nested_list = processed_nested["nested_list"]
-    assert isinstance(nested_list, list)
-    assert nested_list[0] == "list_string"
-    assert nested_list[1] == env_vars["LIST_VAR"]
-    assert nested_list[2] == 123
-    assert nested_list[3] == 4.56
-    assert nested_list[4] is True
-    assert nested_list[5] is None
-
-    deep_list = nested_list[6]
-    assert isinstance(deep_list, list)
-    assert deep_list[0] == "deeply_nested"
-    assert deep_list[1] == env_vars["NESTED_VAR"]
-    assert deep_list[2] == 999
 
 
 def test_yaml_load(env_vars: dict):
