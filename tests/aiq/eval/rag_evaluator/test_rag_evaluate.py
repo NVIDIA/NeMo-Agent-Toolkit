@@ -78,7 +78,7 @@ def test_eval_input_to_ragas(rag_evaluator, rag_eval_input, intermediate_step_ad
 
 
 def test_ragas_to_eval_output(rag_evaluator, rag_eval_input, rag_user_inputs, metric_name):
-    """Test ragas ouput mapping to AgentIQ's EvalOuput"""
+    """Test ragas ouput mapping to AIQ Toolkit's EvalOuput"""
     mock_results_dataset = MagicMock()
 
     # Mock scores

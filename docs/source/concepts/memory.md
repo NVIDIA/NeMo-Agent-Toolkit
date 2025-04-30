@@ -15,22 +15,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA AgentIQ Memory Module
+# NVIDIA Agent Intelligence Toolkit Memory Module
 
-AgentIQ's Memory subsystem is designed to store and retrieve a user's conversation history, preferences, and other "long-term memory." This is especially useful for building stateful LLM-based applications that recall user-specific data or interactions across multiple steps.
+The AIQ Toolkit Memory subsystem is designed to store and retrieve a user's conversation history, preferences, and other "long-term memory." This is especially useful for building stateful LLM-based applications that recall user-specific data or interactions across multiple steps.
 
-This document explains the **AgentIQ Memory Module** in detail:
+This document explains the **AIQ Toolkit Memory Module** in detail:
 - How it is structured internally (interfaces, data models, and configuration).
 - How developers can **register** a new memory module.
-- How users can **bring a custom memory client** and wire it up in their AgentIQ workflows.
+- How users can **bring a custom memory client** and wire it up in their AIQ Toolkit workflows.
 - An **example** of usage from the provided `aiq_agent_memory` plugin code.
 
-> **Note**: This documentation presumes familiarity with AgentIQ's plugin architecture, the concept of "function registration" via `@register_function`, and how we define tool/workflow configurations in the AgentIQ config.
+> **Note**: This documentation presumes familiarity with the AIQ Toolkit plugin architecture, the concept of "function registration" via `@register_function`, and how we define tool/workflow configurations in the AIQ Toolkit config.
 
 ### Key Components
 
 1. **Memory Data Models**
-   - **{py:class}`~aiq.data_models.memory.MemoryBaseConfig`**: A Pydantic base class that all memory config classes must extend. This is used for specifying memory registration in the AgentIQ config file.
+   - **{py:class}`~aiq.data_models.memory.MemoryBaseConfig`**: A Pydantic base class that all memory config classes must extend. This is used for specifying memory registration in the AIQ Toolkit config file.
    - **{py:class}`~aiq.data_models.memory.MemoryBaseConfigT`**: A generic type alias for memory config classes.
 
 2. **Memory Interfaces**
@@ -53,7 +53,7 @@ This document explains the **AgentIQ Memory Module** in detail:
 
 ## Registering a Memory Module
 
-In the AgentIQ system, anything that extends {py:class}`~aiq.data_models.memory.MemoryBaseConfig` and is declared with a `name="some_memory"` can be discovered as a *Memory type* by AgentIQ's global type registry. This allows you to define a custom memory class to handle your own backends (Redis, custom database, a vector store, etc.). Then your memory class can be selected in the AgentIQ config YAML via `_type: <your memory type>`.
+In the AIQ Toolkit system, anything that extends {py:class}`~aiq.data_models.memory.MemoryBaseConfig` and is declared with a `name="some_memory"` can be discovered as a *Memory type* by the AIQ Toolkit global type registry. This allows you to define a custom memory class to handle your own backends (Redis, custom database, a vector store, etc.). Then your memory class can be selected in the AIQ Toolkit config YAML via `_type: <your memory type>`.
 
 ### Basic Steps
 
@@ -66,7 +66,7 @@ In the AgentIQ system, anything that extends {py:class}`~aiq.data_models.memory.
        connection_url: str
        api_key: str
    ```
-   > **Note**: The `name="my_custom_memory"` ensures that AgentIQ can recognize it when the user places `_type: my_custom_memory` in the memory config.
+   > **Note**: The `name="my_custom_memory"` ensures that AIQ Toolkit can recognize it when the user places `_type: my_custom_memory` in the memory config.
 
 2. **Implement a {py:class}`~aiq.memory.interfaces.MemoryEditor`** that uses your backend**:
    ```python
@@ -90,10 +90,10 @@ In the AgentIQ system, anything that extends {py:class}`~aiq.data_models.memory.
            # Implement your deletion logic
            ...
    ```
-3. **Tell AgentIQ how to build your MemoryEditor**. Typically, you do this by hooking into the builder system so that when `builder.get_memory_client("my_custom_memory")` is called, it returns an instance of `MyCustomMemoryEditor`.
+3. **Tell AIQ Toolkit how to build your MemoryEditor**. Typically, you do this by hooking into the builder system so that when `builder.get_memory_client("my_custom_memory")` is called, it returns an instance of `MyCustomMemoryEditor`.
    - For example, you might define a `@register_memory` or do it manually with the global type registry. (The standard pattern is to see how `mem0_memory` or `zep` memory is integrated in the code under `aiq/memory/<provider>`.)
 
-4. **Use in config**: Now in your AgentIQ config, you can do something like:
+4. **Use in config**: Now in your AIQ Toolkit config, you can do something like:
    ```yaml
    memory:
      my_store:
@@ -147,7 +147,7 @@ class MyCustomMemoryEditor(MemoryEditor):
 
 Then either:
 - Write a small plugin method that `@register_memory` or `@register_function` with `framework_wrappers`, or
-- Add a snippet to your plugin's `__init__.py` that calls the AgentIQ TypeRegistry, passing your config.
+- Add a snippet to your plugin's `__init__.py` that calls the AIQ Toolkit TypeRegistry, passing your config.
 
 ---
 
@@ -270,7 +270,7 @@ To **bring your own memory**:
 
 1. **Implement** a custom {py:class}`~aiq.data_models.memory.MemoryBaseConfig` (with a unique `_type`).
 2. **Implement** a custom {py:class}`~aiq.memory.interfaces.MemoryEditor` that can handle `add_items`, `search`, `remove_items` calls.
-3. **Register** your config class so that the AgentIQ type registry is aware of `_type: <your memory>`.
+3. **Register** your config class so that the AIQ Toolkit type registry is aware of `_type: <your memory>`.
 4. In your `.yml` config, specify:
    ```yaml
    memory:
@@ -284,13 +284,13 @@ To **bring your own memory**:
 
 ## Summary
 
-- The **Memory** module in AgentIQ revolves around the {py:class}`~aiq.memory.interfaces.MemoryEditor` interface and {py:class}`~aiq.memory.models.MemoryItem` model.
+- The **Memory** module in AIQ Toolkit revolves around the {py:class}`~aiq.memory.interfaces.MemoryEditor` interface and {py:class}`~aiq.memory.models.MemoryItem` model.
 - **Configuration** is done via a subclass of {py:class}`~aiq.data_models.memory.MemoryBaseConfig` that is *discriminated* by the `_type` field in the YAML config.
-- **Registration** can be as simple as adding `name="my_custom_memory"` to your config class and letting AgentIQ discover it.
+- **Registration** can be as simple as adding `name="my_custom_memory"` to your config class and letting AIQ Toolkit discover it.
 - Tools and workflows then seamlessly **read/write** user memory by calling `builder.get_memory_client(...)`.
 
 This modular design allows any developer to **plug in** a new memory backend—like `Zep`, a custom embedding store, or even a simple dictionary-based store—by following these steps. Once integrated, your **agent** (or tools) will treat it just like any other memory in the system.
 
 ---
 
-**That's it!** You now know how to create, register, and use a **custom memory client** in AgentIQ. Feel free to explore the existing memory clients in the `aiq/memory` directory for reference and see how they are integrated into the overall framework.
+**That's it!** You now know how to create, register, and use a **custom memory client** in AIQ Toolkit. Feel free to explore the existing memory clients in the `aiq/memory` directory for reference and see how they are integrated into the overall framework.

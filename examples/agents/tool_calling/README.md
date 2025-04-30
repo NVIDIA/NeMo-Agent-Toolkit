@@ -22,11 +22,11 @@ limitations under the License.
 
 # Tool Calling Agent
 
-A configurable Tool Calling Agent. This agent leverages the AgentIQ plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
+A configurable Tool Calling Agent. This agent leverages the AIQ Toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AgentIQ library agent and tools.
+- **Pre-built Tools:** Leverages core AIQ Toolkit library agent and tools.
 - **Tool Calling / Function calling Agent:** Leverages tool / function input schema to appropriately route to the correct tool
 - **Custom Plugin System:** Developers can bring in new tools using plugins.
 - **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
@@ -35,17 +35,17 @@ A configurable Tool Calling Agent. This agent leverages the AgentIQ plugin syste
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/intro/install.md) to create the development environment and install AIQ Toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AgentIQ library, run the following commands:
+From the root directory of the AIQ Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e .
 ```
 
-The `code_generation` and `wiki_search` tools are part of the `agentiq[langchain]` package.  To install the package run the following command:
+The `code_generation` and `wiki_search` tools are part of the `aiqtoolkit[langchain]` package.  To install the package run the following command:
 ```bash
 # local package install from source
 uv pip install -e '.[langchain]'
@@ -68,7 +68,7 @@ To see the Tool Calling Agent used as a function within a workflow, alongside th
 This README primarily covers the former case, where the Tool Calling Agent functions as the main workflow, in config.yml.
 For more details, refer to the [ReAct Agent documentation](../../../docs/source/components/tool-calling-agent.md) and the [Reasoning Agent documentation](../../../docs/source/components/react-agent.md)
 
-Run the following command from the root of the AgentIQ repo to execute this workflow with the specified input:
+Run the following command from the root of the AIQ Toolkit repo to execute this workflow with the specified input:
 
 ```bash
 aiq run  --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
@@ -79,7 +79,7 @@ aiq run  --config_file=examples/agents/tool_calling/configs/config.yml --input "
 ```console
 $ aiq run  --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
 2025-04-23 15:03:46,312 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (499.885559 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:03:46,573 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/agents/tool_calling/configs/config.yml'
+2025-04-23 15:03:46,573 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/agents/tool_calling/configs/config.yml'
 2025-04-23 15:03:46,581 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-04-23 15:03:46,613 - aiq.profiler.utils - WARNING - Discovered frameworks: {<LLMFrameworkEnum.LANGCHAIN: 'langchain'>} in function code_generation_tool by inspecting source. It is recommended and more reliable to instead add the used LLMFrameworkEnum types in the framework_wrappers argument when calling @register_function.
 2025-04-23 15:03:46,614 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Initializing code generation tool
@@ -132,9 +132,9 @@ Workflow Result:
 ```
 ---
 
-### Starting the AgentIQ Server
+### Starting the AIQ Toolkit Server
 
-You can start the AgentIQ server using the `aiq serve` command with the appropriate configuration file.
+You can start the AIQ Toolkit server using the `aiq serve` command with the appropriate configuration file.
 
 **Starting the Tool Calling Agent Example Workflow**
 
@@ -142,7 +142,7 @@ You can start the AgentIQ server using the `aiq serve` command with the appropri
 aiq serve --config_file=examples/agents/tool_calling/configs/config.yml
 ```
 
-### Making Requests to the AgentIQ Server
+### Making Requests to the AIQ Toolkit Server
 
 Once the server is running, you can make HTTP requests to interact with the workflow.
 

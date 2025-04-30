@@ -43,7 +43,7 @@ class ComponentRefNode(HashableBaseModel):
 
     Args:
         ref_name (ComponentRef): The name of the component runtime instance.
-        component_group (ComponentGroup): The component group in an AgentIQ configuration object.
+        component_group (ComponentGroup): The component group in an AIQ Toolkit configuration object.
     """
 
     ref_name: "ComponentRef"
@@ -70,7 +70,7 @@ class ComponentRef(str, ABC):
         """Provides the component group this ComponentRef object represents.
 
         Returns:
-            ComponentGroup: A component group of the AgentIQ configuration object
+            ComponentGroup: A component group of the AIQ Toolkit configuration object
         """
 
         pass
@@ -82,7 +82,7 @@ class ComponentRef(str, ABC):
 
 class EmbedderRef(ComponentRef):
     """
-    A reference to an embedder in an AgentIQ configuration object.
+    A reference to an embedder in an AIQ Toolkit configuration object.
     """
 
     @property
@@ -93,7 +93,7 @@ class EmbedderRef(ComponentRef):
 
 class FunctionRef(ComponentRef):
     """
-    A reference to a function in an AgentIQ configuration object.
+    A reference to a function in an AIQ Toolkit configuration object.
     """
 
     @property
@@ -104,7 +104,7 @@ class FunctionRef(ComponentRef):
 
 class LLMRef(ComponentRef):
     """
-    A reference to an LLM in an AgentIQ configuration object.
+    A reference to an LLM in an AIQ Toolkit configuration object.
     """
 
     @property
@@ -115,7 +115,7 @@ class LLMRef(ComponentRef):
 
 class MemoryRef(ComponentRef):
     """
-    A reference to a memory in an AgentIQ configuration object.
+    A reference to a memory in an AIQ Toolkit configuration object.
     """
 
     @property
@@ -126,7 +126,7 @@ class MemoryRef(ComponentRef):
 
 class RetrieverRef(ComponentRef):
     """
-    A reference to a retriever in an AgentIQ configuration object.
+    A reference to a retriever in an AIQ Toolkit configuration object.
     """
 
     @property

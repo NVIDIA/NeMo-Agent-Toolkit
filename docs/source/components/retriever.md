@@ -17,21 +17,21 @@ limitations under the License.
 
 # Retrievers
 
-Retrievers are an important component of AI workflows utilizing Retrieval Augmented Generation (RAG) which allow LLMs to search a data store for content which is semantically similar to a query which can be used as context by the LLM when providing a response to the query. Within AgentIQ, retrievers are a configurable component which can be used within functions, similar to LLMs and Embedders, to provide a consistent read-only interface for connecting to different data store providers.
+Retrievers are an important component of AI workflows utilizing Retrieval Augmented Generation (RAG) which allow LLMs to search a data store for content which is semantically similar to a query which can be used as context by the LLM when providing a response to the query. Within AIQ Toolkit, retrievers are a configurable component which can be used within functions, similar to LLMs and Embedders, to provide a consistent read-only interface for connecting to different data store providers.
 
 ## Features
  - **Standard Interface**: Retrievers implement a standard search interface, allowing for compatibility across different retriever implementations.
  - **Standard Output Format**: Retrievers also implement a standard output format along with conversion functions to provide retriever output as a dictionary or string.
  - **Extensible Via Plugins**: Additional retrievers can be added as plugins by developers to support more data stores.
- - **Additional Framework Implementations**: Retrievers can be loaded using a framework implementation rather than the default AgentIQ retriever implementation.
+ - **Additional Framework Implementations**: Retrievers can be loaded using a framework implementation rather than the default AIQ Toolkit retriever implementation.
 
 ## Included Retrievers
- - Milvus 
+ - Milvus
  - NeMo Retriever
 
 ## Usage
 ### Configuration
-Retrievers are configured similarly to other AgentIQ components, such as Functions and LLMs. Each Retriever provider (e.g., Milvus) has a Pydantic config object which defines its configurable parameters and type. These parameters can then be configured in the config file under the `retrievers` section.
+Retrievers are configured similarly to other AIQ Toolkit components, such as Functions and LLMs. Each Retriever provider (e.g., Milvus) has a Pydantic config object which defines its configurable parameters and type. These parameters can then be configured in the config file under the `retrievers` section.
 
 Below is an example config object for the NeMo Retriever:
 ```python
@@ -77,7 +77,7 @@ class AIQRetrieverConfig(FunctionBaseConfig, name="aiq_retriever"):
     )
     topic: str = Field(default=None, description="Used to provide a more detailed tool description to the agent")
     description: str = Field(default=None, description="If present it will be used as the tool description")
-``` 
+```
 
 Here is an example configuration of an `aiq_retriever` function that uses a `nemo_retriever`:
 ```yaml
@@ -93,7 +93,7 @@ functions:
         _type: aiq_retriever
         retriever: my_retriever
         topic: "AIQ documentation"
-``` 
+```
 
 ### Developing with Retrievers
 Alternatively, you can use a retriever as a component in your own function, such as a custom built RAG workflow. When building a function that uses a retriever you can instantiate the retriever using the builder. Like other components, you can reference the retriever by name and specify the framework you want to use. Unlike other components, you can also omit the framework to get an instance of an `AIQRetriever`.
@@ -109,10 +109,10 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
     langchain_retriever = await builder.get_retriever(config.retriever, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 ```
 
-Retrievers expose a `search` method for retrieving data that takes a single required argument, "query", and any number of optional keyword arguments. AgentIQ Retrievers support a `bind` method which can be used to set or override defaults for these optional keyword arguments. Any additional required, unbound, parameters can be inspected using the `get_unbound_params` method. This provides flexibility in how retrievers are used in functions, allowing for all search parameters to be specified in the config, or allowing some to be specified by the agent when the function is called.
+Retrievers expose a `search` method for retrieving data that takes a single required argument, "query", and any number of optional keyword arguments. AIQ Toolkit Retrievers support a `bind` method which can be used to set or override defaults for these optional keyword arguments. Any additional required, unbound, parameters can be inspected using the `get_unbound_params` method. This provides flexibility in how retrievers are used in functions, allowing for all search parameters to be specified in the config, or allowing some to be specified by the agent when the function is called.
 
 ## Adding a Retriever Provider
-New retrievers can be added to AgentIQ by creating a plugin. The general process is the same as for most plugins, but the retriever-specific steps are outlined here. 
+New retrievers can be added to AIQ Toolkit by creating a plugin. The general process is the same as for most plugins, but the retriever-specific steps are outlined here.
 
 First, create a retriever for the provider that implements the Retriever interface:
 ```python
@@ -134,7 +134,7 @@ class AIQRetriever(ABC):
         raise NotImplementedError
 ```
 
-Next, create the config for the provider and register it with AgentIQ:
+Next, create the config for the provider and register it with AIQ Toolkit:
 
 ```python
 class ExampleRetrieverConfig(RetrieverBaseConfig, name="example_retriever"):

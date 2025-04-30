@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA AgentIQ References
+# NVIDIA Agent Intelligence Toolkit References
 
 ```{toctree}
 :maxdepth: 20

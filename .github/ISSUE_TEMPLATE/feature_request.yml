@@ -52,7 +52,7 @@ body:
     attributes:
       label: Please provide a clear description of problem this feature solves
       description: Real usage examples are especially helpful, non-code.
-      placeholder: I want AgentIQ to do _____, because I need to _____.
+      placeholder: I want AIQ Toolkit to do _____, because I need to _____.
     validations:
       required: true
 
@@ -80,9 +80,9 @@ body:
     id: terms
     attributes:
       label: Code of Conduct
-      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/NVIDIA/AgentIQ/blob/develop/CODE-OF-CONDUCT.md)
+      description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/NVIDIA/AIQToolkit/blob/develop/CODE-OF-CONDUCT.md)
       options:
         - label: I agree to follow this project's Code of Conduct
           required: true
-        - label: I have searched the [open feature requests](https://github.com/NVIDIA/AgentIQ/issues?q=is%3Aopen+is%3Aissue+label%3A%22feature+request%22%2Cimprovement%2Cenhancement) and have found no duplicates for this feature request
+        - label: I have searched the [open feature requests](https://github.com/NVIDIA/AIQToolkit/issues?q=is%3Aopen+is%3Aissue+label%3A%22feature+request%22%2Cimprovement%2Cenhancement) and have found no duplicates for this feature request
           required: true
