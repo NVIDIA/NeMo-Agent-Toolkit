@@ -15,6 +15,6 @@ dependencies = [
   # Keep sorted!!!
   "aiqtoolkit-langchain"
 ]
-readme = "../pypi.md"
+readme = "pypi.md"
 description = "Transitional package for aiqtoolkit-langchain, this package is deprecated and will be removed in the future."
 classifiers = ["Programming Language :: Python"]

@@ -11,6 +11,6 @@ dynamic = ["version"]
 dependencies = [
   "aiqtoolkit-semantic-kernel"
 ]
-readme = "../pypi.md"
+readme = "pypi.md"
 description = "Transitional package for aiqtoolkit-semantic-kernel, this package is deprecated and will be removed in the future."
 classifiers = ["Programming Language :: Python"]

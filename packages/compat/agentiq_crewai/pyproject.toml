@@ -11,6 +11,6 @@ dynamic = ["version"]
 dependencies = [
   "aiqtoolkit-crewai",
 ]
-readme = "../pypi.md"
+readme = "pypi.md"
 description = "Transitional package for aiqtoolkit-crewai, this package is deprecated and will be removed in the future."
 classifiers = ["Programming Language :: Python"]

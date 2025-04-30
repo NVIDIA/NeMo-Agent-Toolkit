@@ -12,6 +12,6 @@ dynamic = ["version"]
 dependencies = [
   "aiqtoolkit-agno"
 ]
-readme = "../pypi.md"
+readme = "pypi.md"
 description = "Transitional package for aiqtoolkit-agno, this package is deprecated and will be removed in the future."
 classifiers = ["Programming Language :: Python"]
