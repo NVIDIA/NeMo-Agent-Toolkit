@@ -14,7 +14,7 @@ dependencies = [
   "markdown-it-py~=3.0",
   "nvidia-haystack==0.1.2",
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"
 description = "Custom AIQ Toolkit Workflow"
 classifiers = ["Programming Language :: Python"]
 

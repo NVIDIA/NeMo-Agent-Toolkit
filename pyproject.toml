@@ -45,7 +45,7 @@ dependencies = [
   "uvicorn[standard]~=0.32.0",
   "wikipedia~=1.4",
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"
 description = "Agent Intelligence Toolkit (AIQ Toolkit)"
 readme = "src/aiq/meta/pypi.md"
 license = { file = "LICENSE.md" }
