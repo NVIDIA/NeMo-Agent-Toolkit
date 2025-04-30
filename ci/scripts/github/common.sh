@@ -23,6 +23,7 @@ wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz
 
 AIQ_EXAMPLES=($(find ./examples/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
 AIQ_PACKAGES=($(find ./packages/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
+AIQ_COMPAT_PACKAGES=($(find ./packages/compat -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
 
 # Ensure the workspace tmp directory exists
 mkdir -p ${WORKSPACE_TMP}
