@@ -46,15 +46,6 @@ for AIQ_EXAMPLE in ${AIQ_EXAMPLES[@]}; do
     build_wheel ${AIQ_EXAMPLE} "examples"
 done
 
-function build_package_wheel()
-{
-    AIQ_PACKAGE=$1
-    PACKAGE_DIR_NAME="${AIQ_PACKAGE#packages/}"
-    PACKAGE_DIR_NAME="${AIQ_PACKAGE#./packages/}"
-    # Replace "aiq_" with "aiqtoolkit_"
-    PACKAGE_DIR_NAME="${PACKAGE_DIR_NAME//aiq_/aiqtoolkit_}"
-    build_wheel "${AIQ_PACKAGE}" "${PACKAGE_DIR_NAME}/${GIT_TAG}"
-}
 
 # Build all packages with a pyproject.toml in the first directory below packages
 for AIQ_PACKAGE in "${AIQ_PACKAGES[@]}"; do
