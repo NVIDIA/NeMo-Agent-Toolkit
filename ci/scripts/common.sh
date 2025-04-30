@@ -114,6 +114,9 @@ function build_package_wheel()
     pkg_dir_name="${pkg#./packages/}"
     # Replace "aiq_" with "aiqtoolkit_"
     pkg_dir_name="${pkg_dir_name//aiq_/aiqtoolkit_}"
+
+    # Remove compat/
+    pkg_dir_name="${pkg_dir_name/compat\/}"
     build_wheel "${pkg}" "${pkg_dir_name}/${GIT_TAG}"
 }
 
