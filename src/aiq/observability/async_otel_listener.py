@@ -25,7 +25,11 @@ from pydantic import TypeAdapter
 from aiq.builder.context import AIQContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepState
+from aiq.utils.optional_imports import DummySpan
 from aiq.utils.optional_imports import OptionalImportError
+from aiq.utils.optional_imports import dummy_set_span_in_context
+from aiq.utils.optional_imports import get_dummy_trace
+from aiq.utils.optional_imports import get_dummy_tracer_provider
 from aiq.utils.optional_imports import get_opentelemetry
 from aiq.utils.optional_imports import get_opentelemetry_sdk
 
@@ -43,50 +47,10 @@ try:
     from opentelemetry.trace.propagation import set_span_in_context
 except OptionalImportError as e:
     logger.warning("OpenTelemetry not available: %s", e)
-
-    # Define dummy classes/functions for when OpenTelemetry is not available
-    class DummySpan:
-
-        def __init__(self, *args, **kwargs):
-            pass
-
-        def end(self, *args, **kwargs):
-            pass
-
-        def set_attribute(self, *args, **kwargs):
-            pass
-
+    trace = get_dummy_trace()
+    TracerProvider = type(get_dummy_tracer_provider())
     Span = DummySpan
-
-    def set_span_in_context(*args, **kwargs):
-        return None
-
-    class DummyTracer:
-
-        def start_span(self, *args, **kwargs):
-            return DummySpan()
-
-    class DummyTracerProvider:
-
-        def get_tracer(self, *args, **kwargs):
-            return DummyTracer()
-
-        def add_span_processor(self, *args, **kwargs):
-            pass
-
-    class DummyTrace:
-
-        def get_tracer_provider(self):
-            return DummyTracerProvider()
-
-        def set_tracer_provider(self, *args, **kwargs):
-            pass
-
-        def get_tracer(self, *args, **kwargs):
-            return DummyTracer()
-
-    trace = DummyTrace()
-    TracerProvider = DummyTracerProvider
+    set_span_in_context = dummy_set_span_in_context
 
 
 def _ns_timestamp(seconds_float: float) -> int:

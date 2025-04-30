@@ -71,17 +71,8 @@ try:
     SpanExporter = opentelemetry.sdk.trace.export.SpanExporter
 except OptionalImportError as e:
     logger.warning("OpenTelemetry not available: %s", e)
-
-    # Define dummy classes for when OpenTelemetry is not available
-    class DummySpanExporter:
-
-        def export(self, *args, **kwargs):
-            pass
-
-        def shutdown(self, *args, **kwargs):
-            pass
-
-    SpanExporter = DummySpanExporter
+    from aiq.utils.optional_imports import DummySpanExporter
+    SpanExporter = type(DummySpanExporter())
 
     class DummyBatchSpanProcessor:
 
@@ -103,7 +94,7 @@ except OptionalImportError as e:
     class DummyTrace:
 
         def get_tracer_provider(self):
-            return DummyTracerProvider()
+            return TracerProvider()
 
         def set_tracer_provider(self, *args, **kwargs):
             pass

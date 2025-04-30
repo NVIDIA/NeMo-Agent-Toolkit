@@ -43,17 +43,8 @@ try:
     from opentelemetry.sdk.trace.export import SpanExporter
 except OptionalImportError as e:
     logger.warning("OpenTelemetry not available: %s", e)
-
-    # Define dummy SpanExporter for when OpenTelemetry is not available
-    class DummySpanExporter:
-
-        def export(self, *args, **kwargs):
-            pass
-
-        def shutdown(self, *args, **kwargs):
-            pass
-
-    SpanExporter = DummySpanExporter
+    from aiq.utils.optional_imports import DummySpanExporter
+    SpanExporter = type(DummySpanExporter())
 
 
 class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):

@@ -24,21 +24,12 @@ from aiq.cli.register_workflow import register_logging_method
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from aiq.utils.optional_imports import DummySpanExporter
 from aiq.utils.optional_imports import OptionalImportError
 from aiq.utils.optional_imports import get_opentelemetry
 from aiq.utils.optional_imports import get_phoenix
 
 logger = logging.getLogger(__name__)
-
-
-# Define a dummy SpanExporter for when OpenTelemetry is not available
-class DummySpanExporter:
-
-    def export(self, *args, **kwargs):
-        pass
-
-    def shutdown(self, *args, **kwargs):
-        pass
 
 
 class PhoenixTelemetryExporter(TelemetryExporterBaseConfig, name="phoenix"):
