@@ -21,7 +21,7 @@ limitations under the License.
 <!-- Note: "Agno" is the official product name despite Vale spelling checker warnings -->
 Built on [Agno](https://github.com/agno-agi/agno) and AIQ Toolkit, this workflow is a personal financial planner that generates personalized financial plans using NVIDIA NIM (can be customized to use OpenAI models). It automates the process of researching, planning, and creating tailored budgets, investment strategies, and savings goals, empowering you to take control of your financial future with ease.
 
-This personal financial planner was revised based on the [Awesome-LLM-App](https://github.com/Shubhamsaboo/awesome-llm-apps) GitHub repo's [AI Personal Finance Planner](https://github.com/Shubhamsaboo/awesome-llm-apps/tree/main/ai_agent_tutorials/ai_personal_finance_agent) sample.
+This personal financial planner was revised based on the [Awesome-LLM-App](https://github.com/Shubhamsaboo/awesome-llm-apps) GitHub repo's [AI Personal Finance Planner](https://github.com/Shubhamsaboo/awesome-llm-apps/tree/main/advanced_ai_agents/single_agent_apps/ai_personal_finance_agent) sample.
 
 
 ## Table of Contents
@@ -30,7 +30,6 @@ This personal financial planner was revised based on the [Awesome-LLM-App](https
   - [Table of Contents](#table-of-contents)
   - [Key Features](#key-features)
   - [Installation and Setup](#installation-and-setup)
-    - [Setup Virtual Environment and Install AIQ Toolkit](#setup-virtual-environment-and-install-aiqtoolkit)
     - [Install this Workflow:](#install-this-workflow)
     - [Set Up API Keys](#set-up-api-keys)
   - [Example Usage](#example-usage)

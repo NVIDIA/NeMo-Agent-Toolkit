@@ -14,8 +14,13 @@
 # limitations under the License.
 
 import os
-import typing
+import sys
 from unittest import mock
+
+if sys.version_info >= (3, 12):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 import networkx as nx
 import pytest
@@ -216,7 +221,7 @@ def test_recursive_componentref_discovery():
         class NestedFns(BaseModel):
             tool_names: list[FunctionRef]
 
-        class MemoryTypedDict(typing.TypedDict):
+        class MemoryTypedDict(TypedDict):
             memory: MemoryRef
 
         # Not testing tuple or set based types due to limited Pydantic support

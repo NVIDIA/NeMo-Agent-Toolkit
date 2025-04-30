@@ -35,13 +35,11 @@ docker info
 ```
 
 # Quickstart
-1. Setup Virtual Environment and install AIQ Toolkit using the instructions in the base AIQ Toolkit repo [README.md](../../README.md)
-
-2. Install the `swe_bench` example:
+1. Install the `swe_bench` example:
 ```bash
 uv pip install -e examples/swe_bench
 ```
-3. Run the example via the `aiq eval` CLI command:
+2. Run the example via the `aiq eval` CLI command:
 ```bash
 aiq eval --config_file examples/swe_bench/configs/config_gold.yml
 ```
