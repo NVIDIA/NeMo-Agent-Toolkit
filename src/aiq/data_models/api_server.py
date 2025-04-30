@@ -32,8 +32,57 @@ from aiq.data_models.interactive import HumanPrompt
 from aiq.utils.type_converter import GlobalTypeConverter
 
 
+class ChatContentType(str, Enum):
+    """
+    ChatContentType is an Enum that represents the type of Chat content.
+    """
+    TEXT = "text"
+    IMAGE_URL = "image_url"
+    INPUT_AUDIO = "input_audio"
+
+
+class InputAudio(BaseModel):
+    data: str = "default"
+    format: str = "default"
+
+
+class AudioContent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: typing.Literal[ChatContentType.INPUT_AUDIO] = ChatContentType.INPUT_AUDIO
+    input_audio: InputAudio = InputAudio()
+
+
+class ImageUrl(BaseModel):
+    url: HttpUrl = HttpUrl(url="http://default.com")
+
+
+class ImageContent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: typing.Literal[ChatContentType.IMAGE_URL] = ChatContentType.IMAGE_URL
+    image_url: ImageUrl = ImageUrl()
+
+
+class TextContent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: typing.Literal[ChatContentType.TEXT] = ChatContentType.TEXT
+    text: str = "default"
+
+
+class Security(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    api_key: str = "default"
+    token: str = "default"
+
+
+UserContent = typing.Annotated[TextContent | ImageContent | AudioContent, Discriminator("type")]
+
+
 class Message(BaseModel):
-    content: str
+    content: str | list[UserContent]
     role: str
 
 
@@ -60,6 +109,20 @@ class AIQChatRequest(BaseModel):
                     top_p: float | None = None) -> "AIQChatRequest":
 
         return AIQChatRequest(messages=[Message(content=data, role="user")],
+                              model=model,
+                              temperature=temperature,
+                              max_tokens=max_tokens,
+                              top_p=top_p)
+
+    @staticmethod
+    def from_content(content: list[UserContent],
+                     *,
+                     model: str | None = None,
+                     temperature: float | None = None,
+                     max_tokens: int | None = None,
+                     top_p: float | None = None) -> "AIQChatRequest":
+
+        return AIQChatRequest(messages=[Message(content=content, role="user")],
                               model=model,
                               temperature=temperature,
                               max_tokens=max_tokens,
@@ -231,15 +294,6 @@ class UserMessageContentRoleType(str, Enum):
     ASSISTANT = "assistant"
 
 
-class ChatContentType(str, Enum):
-    """
-    ChatContentType is an Enum that represents the type of Chat content.
-    """
-    TEXT = "text"
-    IMAGE_URL = "image_url"
-    INPUT_AUDIO = "input_audio"
-
-
 class WebSocketMessageType(str, Enum):
     """
     WebSocketMessageType is an Enum that represents WebSocket Message types.
@@ -268,46 +322,6 @@ class WebSocketMessageStatus(str, Enum):
     """
     IN_PROGRESS = "in_progress"
     COMPLETE = "complete"
-
-
-class InputAudio(BaseModel):
-    data: str = "default"
-    format: str = "default"
-
-
-class AudioContent(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    type: typing.Literal[ChatContentType.INPUT_AUDIO] = ChatContentType.INPUT_AUDIO
-    input_audio: InputAudio = InputAudio()
-
-
-class ImageUrl(BaseModel):
-    url: HttpUrl = HttpUrl(url="http://default.com")
-
-
-class ImageContent(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    type: typing.Literal[ChatContentType.IMAGE_URL] = ChatContentType.IMAGE_URL
-    image_url: ImageUrl = ImageUrl()
-
-
-class TextContent(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    type: typing.Literal[ChatContentType.TEXT] = ChatContentType.TEXT
-    text: str = "default"
-
-
-class Security(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    api_key: str = "default"
-    token: str = "default"
-
-
-UserContent = typing.Annotated[TextContent | ImageContent | AudioContent, Discriminator("type")]
 
 
 class UserMessages(BaseModel):
@@ -487,7 +501,9 @@ GlobalTypeConverter.register_converter(_generate_response_to_chat_response)
 
 # ======== AIQChatRequest Converters ========
 def _aiq_chat_request_to_string(data: AIQChatRequest) -> str:
-    return data.messages[-1].content
+    if isinstance(data.messages[-1].content, str):
+        return data.messages[-1].content
+    return str(data.messages[-1].content)
 
 
 GlobalTypeConverter.register_converter(_aiq_chat_request_to_string)
