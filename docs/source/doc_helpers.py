@@ -129,14 +129,40 @@ def rewrite_markdown(doc_path: str, dest_path: str, root_dir: str, github_file_u
 
 
 def write_examples_index(destination_docs: list[str], index_path: str, doc_examples_dir: str):
+    skipped_docs = set()
     with open(index_path, "a", encoding="utf-8") as f:
         f.write("\n\n```{toctree}\n:maxdepth: 1\n")
 
         for doc in destination_docs:
             relative_path = os.path.relpath(doc, doc_examples_dir)
-            f.write(relative_path + "\n")
+
+            if relative_path.count(os.sep) == 1:
+                f.write(relative_path + "\n")
+            else:
+                # Skip files that are not in the top-level directory
+                skipped_docs.add(doc)
 
         f.write("\n```\n")
+
+    while len(skipped_docs) > 0:
+        skipped_doc = skipped_docs.pop()
+
+        parent_example_dir = os.path.relpath(skipped_doc, doc_examples_dir)
+        while parent_example_dir.count(os.sep) > 0:
+            parent_example_dir = os.path.dirname(parent_example_dir)
+
+        print(f"\n----------------------------")
+        parent_example_dir = os.path.join(doc_examples_dir, parent_example_dir)
+        parent_example = os.path.join(parent_example_dir, "README.md")
+        child_docs = [skipped_doc]
+        for doc in skipped_docs:
+            if doc.startswith(parent_example_dir):
+                child_docs.append(doc)
+
+        skipped_docs.difference_update(child_docs)
+
+        write_examples_index(child_docs, index_path=parent_example, doc_examples_dir=doc_examples_dir)
+
 
 
 def copy_examples(src_dir: str, dest_dir: str, ignore_files: tuple[str], root_dir: str,
