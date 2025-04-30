@@ -22,6 +22,7 @@ dependencies = [
   "arize-phoenix~=6.1",
   "click~=8.1",
   "colorama~=0.4.6",
+  "expandvars~=1.0",
   "fastapi~=0.115.5",
   "httpx~=0.27",
   "jinja2~=3.1",
