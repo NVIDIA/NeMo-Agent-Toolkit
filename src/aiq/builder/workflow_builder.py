@@ -21,11 +21,6 @@ from contextlib import AbstractAsyncContextManager
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.sdk.trace.export import SpanExporter
-
 from aiq.builder.builder import Builder
 from aiq.builder.builder import UserManagerHolder
 from aiq.builder.component_utils import build_dependency_sequence
@@ -59,9 +54,61 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.memory.interfaces import MemoryEditor
 from aiq.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
 from aiq.profiler.utils import detect_llm_frameworks_in_build_fn
+from aiq.utils.optional_imports import OptionalImportError
+from aiq.utils.optional_imports import get_opentelemetry
+from aiq.utils.optional_imports import get_opentelemetry_sdk
 from aiq.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
+
+# Import OpenTelemetry modules
+try:
+    opentelemetry = get_opentelemetry()
+    opentelemetry_sdk = get_opentelemetry_sdk()
+    trace = opentelemetry.trace
+    TracerProvider = opentelemetry_sdk.trace.TracerProvider
+    BatchSpanProcessor = opentelemetry_sdk.trace.export.BatchSpanProcessor
+    SpanExporter = opentelemetry.sdk.trace.export.SpanExporter
+except OptionalImportError as e:
+    logger.warning("OpenTelemetry not available: %s", e)
+
+    # Define dummy classes for when OpenTelemetry is not available
+    class DummySpanExporter:
+
+        def export(self, *args, **kwargs):
+            pass
+
+        def shutdown(self, *args, **kwargs):
+            pass
+
+    SpanExporter = DummySpanExporter
+
+    class DummyBatchSpanProcessor:
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def shutdown(self, *args, **kwargs):
+            pass
+
+    BatchSpanProcessor = DummyBatchSpanProcessor
+
+    class DummyTracerProvider:
+
+        def add_span_processor(self, *args, **kwargs):
+            pass
+
+    TracerProvider = DummyTracerProvider
+
+    class DummyTrace:
+
+        def get_tracer_provider(self):
+            return DummyTracerProvider()
+
+        def set_tracer_provider(self, *args, **kwargs):
+            pass
+
+    trace = DummyTrace()
 
 
 @dataclasses.dataclass

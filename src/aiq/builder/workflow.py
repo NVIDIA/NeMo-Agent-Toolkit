@@ -13,11 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import Any
-
-from opentelemetry.sdk.trace.export import SpanExporter
 
 from aiq.builder.context import AIQContextState
 from aiq.builder.embedder import EmbedderProviderInfo
@@ -31,8 +30,30 @@ from aiq.builder.retriever import RetrieverProviderInfo
 from aiq.data_models.config import AIQConfig
 from aiq.memory.interfaces import MemoryEditor
 from aiq.runtime.runner import AIQRunner
+from aiq.utils.optional_imports import OptionalImportError
+from aiq.utils.optional_imports import get_opentelemetry_sdk
+
+logger = logging.getLogger(__name__)
 
 callback_handler_var: ContextVar[Any | None] = ContextVar("callback_handler_var", default=None)
+
+# Import OpenTelemetry modules
+try:
+    opentelemetry_sdk = get_opentelemetry_sdk()
+    from opentelemetry.sdk.trace.export import SpanExporter
+except OptionalImportError as e:
+    logger.warning("OpenTelemetry not available: %s", e)
+
+    # Define dummy SpanExporter for when OpenTelemetry is not available
+    class DummySpanExporter:
+
+        def export(self, *args, **kwargs):
+            pass
+
+        def shutdown(self, *args, **kwargs):
+            pass
+
+    SpanExporter = DummySpanExporter
 
 
 class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):

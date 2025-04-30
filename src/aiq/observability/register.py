@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import logging
+from collections.abc import AsyncIterator
+from typing import Any
 
 from pydantic import Field
 
@@ -22,8 +24,21 @@ from aiq.cli.register_workflow import register_logging_method
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from aiq.utils.optional_imports import OptionalImportError
+from aiq.utils.optional_imports import get_opentelemetry
+from aiq.utils.optional_imports import get_phoenix
 
 logger = logging.getLogger(__name__)
+
+
+# Define a dummy SpanExporter for when OpenTelemetry is not available
+class DummySpanExporter:
+
+    def export(self, *args, **kwargs):
+        pass
+
+    def shutdown(self, *args, **kwargs):
+        pass
 
 
 class PhoenixTelemetryExporter(TelemetryExporterBaseConfig, name="phoenix"):
@@ -34,15 +49,17 @@ class PhoenixTelemetryExporter(TelemetryExporterBaseConfig, name="phoenix"):
 
 
 @register_telemetry_exporter(config_type=PhoenixTelemetryExporter)
-async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: Builder):
-
-    from phoenix.otel import HTTPSpanExporter
+async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: Builder) -> AsyncIterator[Any]:
     try:
-        yield HTTPSpanExporter(endpoint=config.endpoint)
+        phoenix = get_phoenix()
+        yield phoenix.otel.HTTPSpanExporter(endpoint=config.endpoint)
+    except OptionalImportError as e:
+        logger.warning("Phoenix not available: %s", e)
+        yield DummySpanExporter()
     except ConnectionError as ex:
-        logger.warning("Unable to connect to Phoenix at port 6006. Are you sure Phoenix is running?\n %s",
-                       ex,
-                       exc_info=True)
+        logger.error("Unable to connect to Phoenix at port 6006. Are you sure Phoenix is running?\n %s",
+                     ex,
+                     exc_info=True)
     except Exception as ex:
         logger.error("Error in Phoenix telemetry Exporter\n %s", ex, exc_info=True)
 
@@ -55,11 +72,16 @@ class OtelCollectorTelemetryExporter(TelemetryExporterBaseConfig, name="otelcoll
 
 
 @register_telemetry_exporter(config_type=OtelCollectorTelemetryExporter)
-async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder):
-
-    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-
-    yield OTLPSpanExporter(endpoint=config.endpoint)
+async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder) -> AsyncIterator[Any]:
+    try:
+        opentelemetry = get_opentelemetry()
+        yield opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter(endpoint=config.endpoint)
+    except OptionalImportError as e:
+        logger.warning("OpenTelemetry not available: %s", e)
+        yield DummySpanExporter()
+    except Exception as ex:
+        logger.error("Error in OTel telemetry Exporter\n %s", ex, exc_info=True)
+        yield DummySpanExporter()
 
 
 class ConsoleLoggingMethod(LoggingBaseConfig, name="console"):

@@ -23,7 +23,6 @@ from copy import deepcopy
 from functools import cached_property
 from logging import Handler
 
-from opentelemetry.sdk.trace.export import SpanExporter
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
@@ -67,8 +66,28 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterConfigT
 from aiq.memory.interfaces import MemoryEditor
 from aiq.registry_handlers.registry_handler_base import AbstractRegistryHandler
+from aiq.utils.optional_imports import OptionalImportError
+from aiq.utils.optional_imports import get_opentelemetry_sdk
 
 logger = logging.getLogger(__name__)
+
+# Import OpenTelemetry modules
+try:
+    opentelemetry_sdk = get_opentelemetry_sdk()
+    from opentelemetry.sdk.trace.export import SpanExporter
+except OptionalImportError as e:
+    logger.warning("OpenTelemetry not available: %s", e)
+
+    # Define dummy SpanExporter for when OpenTelemetry is not available
+    class DummySpanExporter:
+
+        def export(self, *args, **kwargs):
+            pass
+
+        def shutdown(self, *args, **kwargs):
+            pass
+
+    SpanExporter = DummySpanExporter
 
 FrontEndBuildCallableT = Callable[[FrontEndConfigT, AIQConfig], AsyncIterator[FrontEndBase]]
 TelemetryExporterBuildCallableT = Callable[[TelemetryExporterConfigT, Builder], AsyncIterator[SpanExporter]]

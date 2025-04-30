@@ -20,24 +20,78 @@ from typing import Any
 
 from openinference.semconv.trace import OpenInferenceSpanKindValues
 from openinference.semconv.trace import SpanAttributes
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.trace import Span
-from opentelemetry.trace.propagation import set_span_in_context
 from pydantic import TypeAdapter
 
 from aiq.builder.context import AIQContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepState
+from aiq.utils.optional_imports import OptionalImportError
+from aiq.utils.optional_imports import get_opentelemetry
+from aiq.utils.optional_imports import get_opentelemetry_sdk
 
 logger = logging.getLogger(__name__)
 
 OPENINFERENCE_SPAN_KIND = SpanAttributes.OPENINFERENCE_SPAN_KIND
 
+# Import OpenTelemetry modules
+try:
+    opentelemetry = get_opentelemetry()
+    opentelemetry_sdk = get_opentelemetry_sdk()
+    from opentelemetry import trace
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.trace import Span
+    from opentelemetry.trace.propagation import set_span_in_context
+except OptionalImportError as e:
+    logger.warning("OpenTelemetry not available: %s", e)
+
+    # Define dummy classes/functions for when OpenTelemetry is not available
+    class DummySpan:
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def end(self, *args, **kwargs):
+            pass
+
+        def set_attribute(self, *args, **kwargs):
+            pass
+
+    Span = DummySpan
+
+    def set_span_in_context(*args, **kwargs):
+        return None
+
+    class DummyTracer:
+
+        def start_span(self, *args, **kwargs):
+            return DummySpan()
+
+    class DummyTracerProvider:
+
+        def get_tracer(self, *args, **kwargs):
+            return DummyTracer()
+
+        def add_span_processor(self, *args, **kwargs):
+            pass
+
+    class DummyTrace:
+
+        def get_tracer_provider(self):
+            return DummyTracerProvider()
+
+        def set_tracer_provider(self, *args, **kwargs):
+            pass
+
+        def get_tracer(self, *args, **kwargs):
+            return DummyTracer()
+
+    trace = DummyTrace()
+    TracerProvider = DummyTracerProvider
+
 
 def _ns_timestamp(seconds_float: float) -> int:
     """
-    Convert AgentIQ’s float `event_timestamp` (in seconds) into an integer number
+    Convert AgentIQ's float `event_timestamp` (in seconds) into an integer number
     of nanoseconds, as OpenTelemetry expects.
     """
     return int(seconds_float * 1e9)
@@ -50,7 +104,7 @@ class AsyncOtelSpanListener:
 
     - On FUNCTION_START => open a new top-level span
     - On any other intermediate step => open a child subspan (immediate open/close)
-    - On FUNCTION_END => close the function’s top-level span
+    - On FUNCTION_END => close the function's top-level span
 
     This runs fully independently from the normal AgentIQ workflow, so that
     the workflow is not blocking or entangled by OTel calls.
@@ -79,7 +133,7 @@ class AsyncOtelSpanListener:
             tracer_provider = TracerProvider()
             trace.set_tracer_provider(tracer_provider)
 
-        # We’ll optionally attach exporters if you want (out of scope to do it here).
+        # We'll optionally attach exporters if you want (out of scope to do it here).
         # Example: tracer_provider.add_span_processor(BatchSpanProcessor(your_exporter))
 
         self._tracer = trace.get_tracer("aiq-async-otel-listener")
