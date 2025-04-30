@@ -111,8 +111,10 @@ package:wheel:
     paths:
       # match - .tmp/wheels/aiqtoolkit/aiqtoolkit/<version>/*.whl, .tmp/wheels/aiqtoolkit/aiqtoolkit-crewai/<version>/*.whl etc.
       - .tmp/wheels/aiqtoolkit/*/*/*.whl
+      # Match the example wheels
       - .tmp/wheels/aiqtoolkit/examples/*.whl
-      - .tmp/wheels/aiqtoolkit/compat/*/*/*.whl
+      # Match  the transitional wheels
+      - .tmp/wheels/agentiq/*/*/*.whl
     expire_in: 1 week
 
 
