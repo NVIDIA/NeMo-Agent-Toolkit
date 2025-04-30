@@ -19,13 +19,16 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+IS_OTEL_AVAILABLE = None
+IS_PHOENIX_AVAILABLE = None
+
 
 class OptionalImportError(Exception):
     """Raised when an optional import fails."""
 
     def __init__(self, module_name: str):
         super().__init__(f"Optional dependency '{module_name}' not found. "
-                         "Please install it with: uv pip install aiq[telemetry]")
+                         "If you want to use this feature, please install it with: uv pip install -e '.[telemetry]'")
 
 
 def optional_import(module_name: str) -> Any:
@@ -38,12 +41,32 @@ def optional_import(module_name: str) -> Any:
 
 def try_import_opentelemetry() -> Any:
     """Get the opentelemetry module if available."""
-    return optional_import("opentelemetry")
+    global IS_OTEL_AVAILABLE
+    try:
+        module = optional_import("opentelemetry")
+        IS_OTEL_AVAILABLE = True
+        return module
+    except OptionalImportError as e:
+        if IS_OTEL_AVAILABLE is None:
+            # Show the warning only once
+            logger.warning("OpenTelemetry not available: %s", e)
+            IS_OTEL_AVAILABLE = False
+        raise OptionalImportError("opentelemetry") from e
 
 
 def try_import_phoenix() -> Any:
     """Get the phoenix module if available."""
-    return optional_import("phoenix")
+    global IS_PHOENIX_AVAILABLE
+    try:
+        module = optional_import("phoenix")
+        IS_PHOENIX_AVAILABLE = True
+        return module
+    except OptionalImportError as e:
+        if IS_PHOENIX_AVAILABLE is None:
+            # Show the warning only once
+            logger.warning("Phoenix not available: %s", e)
+            IS_PHOENIX_AVAILABLE = False
+        raise OptionalImportError("phoenix") from e
 
 
 # Dummy OpenTelemetry classes for when the package is not available

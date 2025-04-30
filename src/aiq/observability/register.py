@@ -40,11 +40,10 @@ class PhoenixTelemetryExporter(TelemetryExporterBaseConfig, name="phoenix"):
 async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: Builder):
     """Create a Phoenix telemetry exporter."""
     try:
-        phoenix = try_import_phoenix()
+        phoenix = try_import_phoenix()  # noqa: F841
         from phoenix.otel import HTTPSpanExporter
         yield HTTPSpanExporter(config.endpoint)
-    except OptionalImportError as e:
-        logger.warning("Phoenix not available: %s", e)
+    except OptionalImportError:
         from aiq.utils.optional_imports import DummySpanExporter
         yield DummySpanExporter()
     except ConnectionError as ex:
