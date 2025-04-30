@@ -50,7 +50,7 @@ def rag_streamed_intermediate_payloads(rag_intermediate_steps) -> list[str]:
 @pytest.fixture
 def stream_response_app(rag_eval_input, rag_streamed_intermediate_payloads):
     """
-    Returns an aiohttp app with a /generate/stream/full route that simulates streaming:
+    Returns an aiohttp app with a /generate/full route that simulates streaming:
     - One final output (data line)
     - Several intermediate steps (intermediate_data lines)
     """
@@ -72,7 +72,7 @@ def stream_response_app(rag_eval_input, rag_streamed_intermediate_payloads):
         return resp
 
     app = web.Application()
-    app.router.add_post("/generate/stream/full", stream_response)
+    app.router.add_post("/generate/full", stream_response)
     return app
 
 
@@ -140,7 +140,7 @@ async def test_run_workflow_remote_single_with_invalid_intermediate_data(rag_eva
         return resp
 
     app = web.Application()
-    app.router.add_post("/generate/stream/full", stream_response)
+    app.router.add_post("/generate/full", stream_response)
     server = TestServer(app)
     await server.start_server()
 

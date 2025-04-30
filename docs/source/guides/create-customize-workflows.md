@@ -15,14 +15,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Create and Customize NVIDIA AgentIQ Workflows
+# Create and Customize NVIDIA Agent Intelligence Toolkit Workflows
 
-Workflows are the heart of AgentIQ because they define which agentic tools and models are used to perform a given task or series of tasks. This document will walk through the process of running an existing workflow, customizing an existing workflow, adding tools to a workflow, creating a new tool, and creating a new workflows.
+Workflows are the heart of AIQ Toolkit because they define which agentic tools and models are used to perform a given task or series of tasks. This document will walk through the process of running an existing workflow, customizing an existing workflow, adding tools to a workflow, creating a new tool, and creating a new workflows.
 
 ## Prerequisites
 
 1. Set up your environment by following the instructions in the [Install From Source](../intro/install.md#install-from-source) section of the install guide.
-1. Install AgentIQ and the AgentIQ Simple example workflow.
+1. Install AIQ Toolkit and the AIQ Toolkit Simple example workflow.
     ```bash
     uv pip install -e .
     uv pip install -e examples/simple
@@ -30,7 +30,7 @@ Workflows are the heart of AgentIQ because they define which agentic tools and m
 
 ## Running a Workflow
 
-A workflow is defined by a YAML configuration file that specifies the tools and models to use. AgentIQ provides the following ways to run a workflow:
+A workflow is defined by a YAML configuration file that specifies the tools and models to use. AIQ Toolkit provides the following ways to run a workflow:
 - Using the `aiq run` command.
    - This is the simplest and most common way to run a workflow.
 - Using the `aiq serve` command.
@@ -62,7 +62,7 @@ aiq run --config_file examples/simple/configs/config.yml --input_file .tmp/input
 ```
 
 ### Using the `aiq eval` Command
-The `aiq eval` command is similar to the `aiq run` command, however in addition to running the workflow it also evaluates the accuracy of the workflow, refer to [Evaluating AgentIQ Workflows](../guides/evaluate.md) for more information.
+The `aiq eval` command is similar to the `aiq run` command, however in addition to running the workflow it also evaluates the accuracy of the workflow, refer to [Evaluating AIQ Toolkit Workflows](../guides/evaluate.md) for more information.
 
 ### Using the `aiq serve` Command
 The `aiq serve` command starts a web server that listens for incoming requests and runs the specified workflow. The server can be accessed with a web browser or by sending a POST request to the server's endpoint. Similar to the `aiq run` command, the `aiq serve` command requires a configuration file specified by the `--config_file` flag.
@@ -178,7 +178,7 @@ aiq info components -t llm_provider -q nim
 
 In the previous section, we discussed how to customize a workflow by overriding parameters. In this section, we will discuss how to add new tools to a workflow. Adding a new tool to a workflow requires copying and modifying the workflow configuration file, which, in effect, creates a new customized workflow.
 
-AgentIQ includes several built-in tools (functions) that can be used in any workflow. To query for a list of installed tools, run the following command:
+AIQ Toolkit includes several built-in tools (functions) that can be used in any workflow. To query for a list of installed tools, run the following command:
 ```bash
 aiq info components -t function
 ```
@@ -252,7 +252,7 @@ workflow:
 ```
 
 :::{note}
-The resulting YAML is located at `examples/documentation_guides/workflows/custom_workflow/custom_config.yml` in the AgentIQ repository.
+The resulting YAML is located at `examples/documentation_guides/workflows/custom_workflow/custom_config.yml` in the AIQ Toolkit repository.
 :::
 
 When we rerun the workflow with the updated configuration file:
@@ -268,9 +268,9 @@ Workflow Result:
 ```
 
 ### Alternate Method Using a Web Search Tool
-Adding individual web pages to a workflow can be cumbersome, especially when dealing with multiple web pages. An alternative method is to use a web search tool. One of the tools available in AgentIQ is the `tavily_internet_search` tool, which utilizes the [Tavily Search API](https://tavily.com/).
+Adding individual web pages to a workflow can be cumbersome, especially when dealing with multiple web pages. An alternative method is to use a web search tool. One of the tools available in AIQ Toolkit is the `tavily_internet_search` tool, which utilizes the [Tavily Search API](https://tavily.com/).
 
-The `tavily_internet_search` tool is part of the `agentiq[langchain]` package, to install the package run:
+The `tavily_internet_search` tool is part of the `aiqtoolkit[langchain]` package, to install the package run:
 ```bash
 # local package install from source
 uv pip install -e '.[langchain]'
@@ -297,7 +297,7 @@ workflow:
   tool_names: [internet_search, current_datetime]
 ```
 
-The resulting configuration file is located at `examples/documentation_guides/workflows/custom_workflow/search_config.yml` in the AgentIQ repository.
+The resulting configuration file is located at `examples/documentation_guides/workflows/custom_workflow/search_config.yml` in the AIQ Toolkit repository.
 
 When we re-run the workflow with the updated configuration file:
 ```bash
@@ -349,7 +349,7 @@ examples/
 ```
 
 :::{note}
-The completed code for this example can be found in the `examples/documentation_guides/workflows/text_file_ingest` directory of the AgentIQ repository.
+The completed code for this example can be found in the `examples/documentation_guides/workflows/text_file_ingest` directory of the AIQ Toolkit repository.
 :::
 
 By convention, tool implementations are defined within or imported into the `register.py` file. In this example, the tool implementation exists within the `text_file_ingest_function.py` file and is imported into the `register.py` file. The `pyproject.toml` file contains the package metadata and dependencies for the tool. The `text_file_ingest_function.py` that was created for us will contain a configuration object (`TextFileIngestFunctionConfig`) along with the tool function (`text_file_ingest_function`). The next two sections will walk through customizing these.
@@ -393,7 +393,7 @@ class TextFileIngestToolConfig(FunctionBaseConfig, name="text_file_ingest"):
 
 :::{note}
 The `name` parameter; the value of this will need to match the `_type` value in the workflow configuration file.
-For more details on AgentIQ configuration objects, refer to the [Configuration Object Details](../concepts/workflow-configuration.md#configuration-object) section of the [Workflow Configuration](../concepts/workflow-configuration.md) document.
+For more details on AIQ Toolkit configuration objects, refer to the [Configuration Object Details](../concepts/workflow-configuration.md#configuration-object) section of the [Workflow Configuration](../concepts/workflow-configuration.md) document.
 :::
 
 ### Customizing the Tool Function
@@ -429,7 +429,7 @@ Next, update the retrieval tool definition changing the `name` parameter to `tex
     )
 ```
 
-The rest of the code largely remains the same resulting in the following code, the full code of this example is located at `examples/documentation_guides/workflows/text_file_ingest/src/text_file_ingest/register.py` in the AgentIQ repository:
+The rest of the code largely remains the same resulting in the following code, the full code of this example is located at `examples/documentation_guides/workflows/text_file_ingest/src/text_file_ingest/register.py` in the AIQ Toolkit repository:
 ```python
 @register_function(config_type=TextFileIngestToolConfig)
 async def text_file_ingest_tool(config: TextFileIngestToolConfig, builder: Builder):
@@ -495,32 +495,32 @@ workflow:
   tool_names: [doca_documents, current_datetime]
 ```
 
-The resulting YAML file is located at `examples/documentation_guides/workflows/text_file_ingest/configs/config.yml` in the AgentIQ repository.
+The resulting YAML file is located at `examples/documentation_guides/workflows/text_file_ingest/configs/config.yml` in the AIQ Toolkit repository.
 
 ### Understanding `pyproject.toml`
 
-The `pyproject.toml` file defines your package metadata and dependencies. In this case, the `pyproject.toml` file that was created for us is sufficient; however, that might not always be the case. The most common need to update the `pyproject.toml` file is to add additional dependencies not included with AgentIQ.
+The `pyproject.toml` file defines your package metadata and dependencies. In this case, the `pyproject.toml` file that was created for us is sufficient; however, that might not always be the case. The most common need to update the `pyproject.toml` file is to add additional dependencies not included with AIQ Toolkit.
 
 - **Dependencies**: Ensure all required libraries are listed under `[project]`.
-  In the example, the tool was created inside the AgentIQ repo and simply needed to declare a dependency on `agentiq[langchain]`. If, however, your tool is intended to be distributed independently then your tool will need to declare a dependency on the specific version of AgentIQ that it was built against. To determine the version of AgentIQ run:
+  In the example, the tool was created inside the AIQ Toolkit repo and simply needed to declare a dependency on `aiqtoolkit[langchain]`. If, however, your tool is intended to be distributed independently then your tool will need to declare a dependency on the specific version of AIQ Toolkit that it was built against. To determine the version of AIQ Toolkit run:
   ```bash
   aiq --version
   ```
 
- Use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `agentiq[langchain]~=1.0`.
+ Use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `aiqtoolkit[langchain]~=1.0`.
 
   ```toml
   dependencies = [
-    "agentiq[langchain]~=1.0",
+    "aiqtoolkit[langchain]~=1.0",
     # Add any additional dependencies your workflow needs
   ]
   ```
 
-  In this example we have been using AgentIQ with LangChain, and thus we declared our dependency on `agentiq[langchain]`, that is to say AgentIQ with the LangChain integration plugin. If however we wished to use LlamaIndex, we would declare our dependency on `agentiq[llama-index]`. This is described in more detail in [Framework Integrations](../concepts/plugins.md#framework-integrations).
+  In this example we have been using AIQ Toolkit with LangChain, and thus we declared our dependency on `aiqtoolkit[langchain]`, that is to say AIQ Toolkit with the LangChain integration plugin. If however we wished to use LlamaIndex, we would declare our dependency on `aiqtoolkit[llama-index]`. This is described in more detail in [Framework Integrations](../concepts/plugins.md#framework-integrations).
 
   we wished to use an alternate framework or other optional dependencies
 
-- **Entry Points**: This tells AgentIQ where to find your workflow registration.
+- **Entry Points**: This tells AIQ Toolkit where to find your workflow registration.
 
   ```toml
   [project.entry-points.'aiq.components']

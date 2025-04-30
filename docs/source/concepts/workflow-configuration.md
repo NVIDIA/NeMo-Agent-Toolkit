@@ -17,12 +17,12 @@ limitations under the License.
 
 # Workflow Configuration
 
-AgentIQ workflows are defined by a [YAML configuration file](#workflow-configuration-file), which specifies which entities (functions, LLMs, embedders, etc.) to use in the workflow, along with general configuration settings.
+AIQ Toolkit workflows are defined by a [YAML configuration file](#workflow-configuration-file), which specifies which entities (functions, LLMs, embedders, etc.) to use in the workflow, along with general configuration settings.
 
-The configuration attributes of each entity in AgentIQ is defined by a [Configuration Object](#configuration-object). This object defines both the type and optionally the default value of each attribute. Any attribute without a default value is required to be specified in the configuration file.
+The configuration attributes of each entity in AIQ Toolkit is defined by a [Configuration Object](#configuration-object). This object defines both the type and optionally the default value of each attribute. Any attribute without a default value is required to be specified in the configuration file.
 
 ## Configuration Object
-Each AgentIQ tool requires a configuration object which inherits from {py:class}`~aiq.data_models.function.FunctionBaseConfig`. The `FunctionBaseConfig` class and ultimately all AgentIQ configuration objects are subclasses of the [`pydantic.BaseModel `](https://docs.pydantic.dev/2.9/api/base_model/#pydantic.BaseModel) class from the [Pydantic Library](https://docs.pydantic.dev/2.9/), which provides a way to define and validate configuration objects. Each configuration object defines the parameters used to create runtime instances of functions (or other component type), each with different functionality based on configuration settings. It is possible to define nested functions that access other component runtime instances by name. These could be other `functions`, `llms`, `embedders`, `retrievers`, or `memory`. To facilitate nested runtime instance discovery, each component must be initialized in order based on the dependency tree. Enabling this feature requires configuration object parameters that refer to other component instances by name use a `ComponentRef` `dtype` that matches referred component type. The supported `ComponentRef` types are enumerated below:
+Each AIQ Toolkit tool requires a configuration object which inherits from {py:class}`~aiq.data_models.function.FunctionBaseConfig`. The `FunctionBaseConfig` class and ultimately all AIQ Toolkit configuration objects are subclasses of the [`pydantic.BaseModel `](https://docs.pydantic.dev/2.9/api/base_model/#pydantic.BaseModel) class from the [Pydantic Library](https://docs.pydantic.dev/2.9/), which provides a way to define and validate configuration objects. Each configuration object defines the parameters used to create runtime instances of functions (or other component type), each with different functionality based on configuration settings. It is possible to define nested functions that access other component runtime instances by name. These could be other `functions`, `llms`, `embedders`, `retrievers`, or `memory`. To facilitate nested runtime instance discovery, each component must be initialized in order based on the dependency tree. Enabling this feature requires configuration object parameters that refer to other component instances by name use a `ComponentRef` `dtype` that matches referred component type. The supported `ComponentRef` types are enumerated below:
 
 - `FunctionRef`: Refers to a registered function by its instance name in the `functions` section configuration object.
 - `LLMRef`: Refers to a registered LLM by its instance name in the `llms` section of the configuration object.
@@ -102,7 +102,7 @@ general:
 :::
 
 ### `eval`
-This section contains the evaluation settings for the workflow. Refer to [Evaluating AgentIQ Workflows](../guides/evaluate.md) for more information.
+This section contains the evaluation settings for the workflow. Refer to [Evaluating AIQ Toolkit Workflows](../guides/evaluate.md) for more information.
 
 ### `memory`
 
@@ -111,3 +111,29 @@ This section configures integration of memory layers with tools such as the [Mem
 ### `retrievers`
 
 This section configures retrievers for vector stores. It follows the same format as the `llms` section. Refer to the `examples/rag_demo` example workflow for an example on how this is used.
+
+### Environment Variable Interpolation
+
+AIQ Toolkit supports environment variable interpolation in YAML configuration files using the format `${VAR:-default_value}`. This allows you to:
+
+1. Reference environment variables in your configuration
+2. Provide default values if the environment variable is not set
+3. Use empty strings as default values if needed
+
+To illustrate this concept, an example from the `llms` section of the configuration file is provided below.
+
+```yaml
+llms:
+  nim_llm:
+    _type: nim
+    base_url: ${NIM_BASE_URL:-"http://default.com"}  # Optional with default value
+    api_key: ${NIM_API_KEY}  # Will use empty string if `NIM_API_KEY` not set
+    model_name: ${MODEL_NAME:-}  # Will use empty string if `MODEL_NAME` not set
+    temperature: 0.0
+```
+
+The environment variable interpolation process follow the rules enumerated below.
+
+- `${VAR}` - Uses the value of environment variable `VAR`, or empty string if not set
+- `${VAR:-default}` - Uses the value of environment variable `VAR`, or `default` if not set
+- `${VAR:-}` - Uses the value of environment variable `VAR`, or empty string if not set

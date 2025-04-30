@@ -43,7 +43,7 @@ class OpenStep:
 
 class IntermediateStepManager:
     """
-    Manages updates to the AgentIQ Event Stream for intermediate steps
+    Manages updates to the AIQ Toolkit Event Stream for intermediate steps
     """
 
     def __init__(self, context_state: "AIQContextState"):  # noqa: F821
@@ -53,7 +53,7 @@ class IntermediateStepManager:
 
     def push_intermediate_step(self, payload: IntermediateStepPayload) -> None:
         """
-        Pushes an intermediate step to the AgentIQ Event Stream
+        Pushes an intermediate step to the AIQ Toolkit Event Stream
         """
 
         if not isinstance(payload, IntermediateStepPayload):
@@ -81,13 +81,15 @@ class IntermediateStepManager:
                 logger.warning("Step id %s not found in outstanding start steps", payload.UUID)
                 return
 
-            # If we are in the same coroutine, we should have the same parent step id. If so, unset the current step id.
-            if (parent_step_id == payload.UUID):
-                _current_open_step_id.reset(open_step.token)
-
+            # Restore the parent step ID directly instead of using a cross‑context token.
+            if parent_step_id == payload.UUID:
+                _current_open_step_id.set(open_step.step_parent_id)
             else:
-                # Manually set the parent step ID. This happens when running on the thread pool
+                # Different context (e.g. thread‑pool); safely restore the parent ID **without**
+                # trying to use a token that belongs to another Context.
+                _current_open_step_id.set(open_step.step_parent_id)
                 parent_step_id = open_step.step_parent_id
+
         elif (payload.event_state == IntermediateStepState.CHUNK):
 
             # Get the current step from the outstanding steps
@@ -119,7 +121,7 @@ class IntermediateStepManager:
                   on_error: OnError = None,
                   on_complete: OnComplete = None) -> Subscription:
         """
-        Subscribes to the AgentIQ Event Stream for intermediate steps
+        Subscribes to the AIQ Toolkit Event Stream for intermediate steps
         """
 
         return self._context_state.event_stream.get().subscribe(on_next, on_error, on_complete)

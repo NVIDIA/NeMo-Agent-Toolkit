@@ -15,14 +15,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Solving problems in a SWE bench dataset using AgentIQ
+# Solving problems in a SWE bench dataset using AIQ Toolkit
 This example provides a skeleton workflow which can be used to implement predictors to solve problems in a SWE bench dataset.
 
 # Pre-requisites
 SWE bench evaluations run inside a Docker container. Ensure that Docker is installed and the Docker service is running before proceeding.
 
 ## Installation & Running Docker
-- Install AgentIQ: If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md)
+- Install AIQ Toolkit: If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md)
 - Install Docker: Follow the official installation guide for your platform: [Docker Installation Guide](https://docs.docker.com/engine/install/)
 - Start Docker Service:
   - Linux: Run`sudo systemctl start docker` (ensure your user has permission to run Docker).
@@ -35,7 +35,7 @@ docker info
 ```
 
 # Quickstart
-1. Setup Virtual Environment and install AgentIQ using the instructions in the base AgentIQ repo [README.md](../../README.md)
+1. Setup Virtual Environment and install AIQ Toolkit using the instructions in the base AIQ Toolkit repo [README.md](../../README.md)
 
 2. Install the `swe_bench` example:
 ```bash
@@ -128,7 +128,7 @@ in the input instance.
 
 That information is only used for evaluation. Using it can taint the predictor and lead to overfitting.
 
-These predictors are provided in this AgentIQ example:
+These predictors are provided in this AIQ Toolkit example:
 - `gold` - Uses the patch from the `SWEBenchInput` instance, bypassing problem-solving logic. See [predict_gold_stub.py](src/aiq_swe_bench/predictors/predict_gold/predict_gold_stub.py) and configuration file `examples/swe_bench/configs/config_gold.yml`.
 - `skeleton` - Skeleton code for creating a problem-solving workflow. This code can be copied to create a net-new predictor. See [predict_skeleton.py](src/aiq_swe_bench/predictors/predict_skeleton/predict_skeleton.py) and configuration file `examples/swe_bench/configs/config_skeleton.yml`.
 
@@ -136,7 +136,7 @@ These predictors are provided in this AgentIQ example:
 To add a new predictor:
 - Create a new directory in the predictors directory, copy over the contents of [predictors/predict_skeleton](src/aiq_swe_bench/predictors/predict_skeleton/). Rename the files and fill in the logic to solve the problem.
 - Register the new predictor class with an unique name using the `@register_predictor` decorator.
-- Import the new predictor class in [predictors/register.py](src/aiq_swe_bench/predictors/register.py) to make it discoverable by the AgentIQ `swe_bench` harness.
+- Import the new predictor class in [predictors/register.py](src/aiq_swe_bench/predictors/register.py) to make it discoverable by the AIQ Toolkit `swe_bench` harness.
 
 ## Evaluation
 The `model_patch` returned by the `swe_bench` workflow is run through the `swe_bench` evaluation harness. This harness -

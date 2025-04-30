@@ -26,7 +26,7 @@ By default the script will perform a `git clone` and checkout the latest commit.
 
 ## Prerequisites
 - [Docker](https://docs.docker.com/get-docker/)
-- AgentIQ source repository cloned locally with both the `origin` and `upstream` remotes set up. Refer to [Creating the Environment](./contributing.md#creating-the-environment) for more details.
+- AIQ Toolkit source repository cloned locally with both the `origin` and `upstream` remotes set up. Refer to [Creating the Environment](./contributing.md#creating-the-environment) for more details.
 
 ## Usage
 Typical usage is as follows:
@@ -51,7 +51,7 @@ To debug a CI issue, you can use the `bash` pseudo-stage. This will perform a gi
 ./ci/scripts/run_ci_local.sh bash
 ```
 
-From this point you can manually copy/paste the commands which would normally be run by the CI scripts one command at a time. The GitHub Actions CI scripts for AgentIQ are located in the `ci/scripts/github` directory, these scripts are GitHub Actions specific wrappers for scripts located in the `ci/scripts` directory.
+From this point you can manually copy/paste the commands which would normally be run by the CI scripts one command at a time. The GitHub Actions CI scripts for AIQ Toolkit are located in the `ci/scripts/github` directory, these scripts are GitHub Actions specific wrappers for scripts located in the `ci/scripts` directory.
 
 ## CI Artifacts and Cache
 

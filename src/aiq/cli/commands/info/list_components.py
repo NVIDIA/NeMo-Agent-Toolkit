@@ -60,7 +60,7 @@ async def search_artifacts(  # pylint: disable=R0917
             registry_handler.save_search_results(search_response=search_response, save_path=save_path)
 
 
-@click.group(name=__name__, invoke_without_command=True, help="List the locally registered AgentIQ components.")
+@click.group(name=__name__, invoke_without_command=True, help="List the locally registered AIQ Toolkit components.")
 @click.option(
     "-t",
     "--types",
@@ -68,7 +68,7 @@ async def search_artifacts(  # pylint: disable=R0917
     multiple=True,
     type=click.Choice([e.value for e in AIQComponentEnum], case_sensitive=False),
     required=False,
-    help=("Filter the search by AgentIQ component type."),
+    help=("Filter the search by AIQ Toolkit component type."),
 )
 @click.option(
     "-o",

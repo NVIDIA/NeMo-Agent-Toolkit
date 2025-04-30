@@ -19,10 +19,10 @@ limitations under the License.
 
 ## Overview
 
-While the AgentIQ library provides the capability to implement components that come together to form Agentic AI
+While the AIQ Toolkit library provides the capability to implement components that come together to form Agentic AI
 workflow,the command line interface (CLI) provides a no code entrypoint to configure settings, access the features of
 pre-built components, and mechanisms to launch workflows from configuration files. This document describes the layout
-and functionality of the AgentIQ CLI. To begin, the command hierarchy is depicted below. Each command will be introduced
+and functionality of the AIQ Toolkit CLI. To begin, the command hierarchy is depicted below. Each command will be introduced
 throughout the remainder of this document.
 
 ```
@@ -62,7 +62,7 @@ in the following sections.
 
 The `aiq start fastapi` command will serve a FastAPI endpoint for the workflow based on the supplied configuration file
 in the `--config_file` option. This command is ideal for serving a workflow as a microservice that allows client
-applications to submit requests to a workflow. The aiq serve command is a good option when deploying this workflow into
+applications to submit requests to a workflow. The `aiq serve` command is a good option when deploying this workflow into
 production as the entrypoint of a containerized application. Additional options are available to serve this workflow
 are made available via the `aiq start fastapi --help` utility:
 
@@ -84,14 +84,14 @@ Options:
   --step_adaptor STEPADAPTORCONFIG
   --workflow ENDPOINTBASE         Endpoint for the default workflow.
   --endpoints ENDPOINT            Additional endpoints to add to the FastAPI
-                                  app which run functions within the AgentIQ
+                                  app which run functions within the AIQ Toolkit
                                   configuration. Each endpoint must have a
                                   unique path.
   --use_gunicorn BOOLEAN          Use Gunicorn to run the FastAPI app
-  --runner_class TEXT             The AgentIQ runner class to use when launching
+  --runner_class TEXT             The AIQ Toolkit runner class to use when launching
                                   the FastAPI app from multiple processes.
                                   Each runner is responsible for loading and
-                                  running the AgentIQ workflow. Note: This is
+                                  running the AIQ Toolkit workflow. Note: This is
                                   different from the worker class used by
                                   Gunicorn.
   --help                          Show this message and exit.
@@ -111,7 +111,7 @@ The Swagger API docs will be available at: [http://localhost:8000/docs](http://l
 
 ### Console
 
-The `aiq start console` command will run an AgentIQ workflow from a provided configuration file against inputs supplied
+The `aiq start console` command will run an AIQ Toolkit workflow from a provided configuration file against inputs supplied
 at the command line or from file using the `--inputs` and `--input_file` options, respectively. Additionally, fields in
 the configuration file can be overridden by command line using the `--override` flag and dot notation to traverse to the
 configuration hierarchy to the field being overridden. The run command can be useful running one off tests when
@@ -137,7 +137,7 @@ Options:
 
 ### MCP
 
-The `aiq start mcp` command (or simply `aiq mcp`) will start a Model Context Protocol (MCP) server that exposes workflow functions as MCP tools. This allows other applications that support the MCP protocol to use your AgentIQ functions directly. MCP is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. The MCP front-end is especially useful for integrating AgentIQ workflows with MCP-compatible clients.
+The `aiq start mcp` command (or simply `aiq mcp`) will start a Model Context Protocol (MCP) server that exposes workflow functions as MCP tools. This allows other applications that support the MCP protocol to use your AIQ Toolkit functions directly. MCP is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. The MCP front-end is especially useful for integrating AIQ Toolkit workflows with MCP-compatible clients.
 
 The MCP front-end can be configured using the following options:
 
@@ -170,7 +170,7 @@ This will start an MCP server exposing the `mcp_retriever_tool` function from th
 
 ## Run
 
-The `aiq run` is an alias for the `aiq start console` command and will run an AgentIQ workflow from a provided configuration file against inputs supplied at the
+The `aiq run` is an alias for the `aiq start console` command and will run an AIQ Toolkit workflow from a provided configuration file against inputs supplied at the
 command line or from file using the `--inputs` and `--input_file` options, respectively. Additionally, fields in the
 configuration file can be overridden by command line using the `--override` flag and dot notation to traverse to the
 configuration hierarchy to the field being overridden. The run command can be useful running one off tests when
@@ -197,7 +197,7 @@ Options:
 ## Serve
 The `aiq serve` is an alias for the `aiq start fastapi` command and will serve a FastAPI endpoint for the workflow based
 on the supplied configuration file in the `--config_file` option. This command is ideal for serving a workflow as a
-microservice that allows client applications to submit requests to a workflow. The aiq serve command is a good option
+microservice that allows client applications to submit requests to a workflow. The `aiq serve` command is a good option
 when deploying this workflow into production as the entrypoint of a containerized application. Additional options are
 available to serve this workflow are made available via the `aiq serve --help` utility:
 
@@ -219,14 +219,14 @@ Options:
   --step_adaptor STEPADAPTORCONFIG
   --workflow ENDPOINTBASE         Endpoint for the default workflow.
   --endpoints ENDPOINT            Additional endpoints to add to the FastAPI
-                                  app which run functions within the AgentIQ
+                                  app which run functions within the AIQ Toolkit
                                   configuration. Each endpoint must have a
                                   unique path.
   --use_gunicorn BOOLEAN          Use Gunicorn to run the FastAPI app
-  --runner_class TEXT             The AgentIQ runner class to use when launching
+  --runner_class TEXT             The AIQ Toolkit runner class to use when launching
                                   the FastAPI app from multiple processes.
                                   Each runner is responsible for loading and
-                                  running the AgentIQ workflow. Note: This is
+                                  running the AIQ Toolkit workflow. Note: This is
                                   different from the worker class used by
                                   Gunicorn.
   --help                          Show this message and exit.
@@ -244,9 +244,9 @@ aiq serve --config_file=path/to/config --host 0.0.0.0 --port 8000
 The Swagger API docs will be available at: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ## Evaluation
-The `aiq eval` command provides access a set of evaluators designed to assessing the accuracy of AgentIQ workflows as
+The `aiq eval` command provides access a set of evaluators designed to assessing the accuracy of AIQ Toolkit workflows as
 well as instrumenting their performance characteristics. Please reference
-[Evaluating AgentIQ Workflows](../guides/evaluate.md) for a detailed overview of the
+[Evaluating AIQ Toolkit Workflows](../guides/evaluate.md) for a detailed overview of the
 suite of evaluation capabilities.
 
 The `aiq eval --help` utility provides a brief overview of the command and its available options.
@@ -286,14 +286,14 @@ Options:
 
 When a package and its corresponding components are no longer needed, they can be removed from the local environment.
 This can help if certain packages are creating dependency conflicts. To remove packages from the local environment, use
-the `aiq uninstall` command. This command can be used with one or more aiq packages. The `aiq uninstall --help` utility
+the `aiq uninstall` command. This command can be used with one or more packages. The `aiq uninstall --help` utility
 illustrates is usage:
 
 ```console
 $ aiq uninstall --help
 Usage: aiq uninstall [OPTIONS] PACKAGES COMMAND [ARGS]...
 
-  Uninstall an AgentIQ plugin packages from the local environment.
+  Uninstall an AIQ Toolkit plugin packages from the local environment.
 
 Options:
   --help  Show this message and exit.
@@ -301,7 +301,7 @@ Options:
 
 ## Validate
 
-Running an AgentIQ workflow from the CLI requires a valid workflow configuration file. Use the `aiq validate` command to
+Running an AIQ Toolkit workflow from the CLI requires a valid workflow configuration file. Use the `aiq validate` command to
 ensure a configuration files has been created with the right settings, components and parameters. It can be useful to
 each components valid configuration settings using the `aiq info components` command and corresponding filters.
 The `aiq validate` help utility illustrates its usage.
@@ -319,23 +319,23 @@ Options:
 
 ## Workflow
 
-The extensibility of AgentIQ is made possible through its plugin system. To install these plugins, they must be part of
-a Python package that gets installed in an environment where the AgentIQ library is installed. Creating boiler plate
-package files (e.g. `pyproject.toml`) and aiq component code scaffolding can be tedious. This section provides an overview
+The extensibility of AIQ Toolkit is made possible through its plugin system. To install these plugins, they must be part of
+a Python package that gets installed in an environment where the AIQ Toolkit library is installed. Creating boiler plate
+package files (e.g. `pyproject.toml`) and component code scaffolding can be tedious. This section provides an overview
 of commands that automate some of these steps.
 
 ### Create
 
 The `aiq workflow create` command generates a valid `pyproject.toml` file with a plugin section that points to a
-register.py file that has been pre-populated with AgentIQ programming model boiler plate code. This boiler plate code
-should be further customized to implement the desired custom workflow and necessary AgentIQ components. The
+register.py file that has been pre-populated with AIQ Toolkit programming model boiler plate code. This boiler plate code
+should be further customized to implement the desired custom workflow and necessary AIQ Toolkit components. The
 `aiq workflow create --help` utility provides a description of its usage.
 
 ```console
 $ aiq workflow create --help
 Usage: aiq workflow create [OPTIONS] WORKFLOW_NAME
 
-  Create a new AgentIQ workflow using templates.
+  Create a new AIQ Toolkit workflow using templates.
 
   Args:     workflow_name (str): The name of the new workflow.     install
   (bool): Whether to install the workflow package immediately.
@@ -353,7 +353,7 @@ Options:
                             be used to populate the docstring and will
                             describe the component when inspecting installed
                             components using 'aiq info component'  [default:
-                            AgentIQ function template. Please update the
+                            AIQ Toolkit function template. Please update the
                             description.]
   --help                    Show this message and exit.
 ```
@@ -372,7 +372,7 @@ into the local environment. To remove a workflow package from the local environm
 $ aiq workflow delete --help
 Usage: aiq workflow delete [OPTIONS] WORKFLOW_NAME
 
-  Delete an AgentIQ workflow and uninstall its package.
+  Delete an AIQ Toolkit workflow and uninstall its package.
 
   Args:     workflow_name (str): The name of the workflow to delete.
 
@@ -383,21 +383,21 @@ Options:
 
 ## Information Commands
 
-The `aiq info` command group provides utilities that facilitate the discovery of registered AgentIQ components and
-retrieval of information about the locally configured AgentIQ environment.
+The `aiq info` command group provides utilities that facilitate the discovery of registered AIQ Toolkit components and
+retrieval of information about the locally configured AIQ Toolkit environment.
 
 ### Components Information
 
-When defining an AgentIQ workflow's configuration file, it can be helpful to discover the locally registered components,
+When defining an AIQ Toolkit workflow's configuration file, it can be helpful to discover the locally registered components,
 possible configuration settings, and their default values. The `aiq info components` will provide this information in
 tabular format with the following columns.
 
-- `package`: The Python package containing this row's AgentIQ component.
-- `version`: The version of the Python package containing the AgentIQ component.
-- `component_type`: The type of AgentIQ component this row represents
+- `package`: The Python package containing this row's AIQ Toolkit component.
+- `version`: The version of the Python package containing the AIQ Toolkit component.
+- `component_type`: The type of AIQ Toolkit component this row represents
 (e.g. `front_end`, `function`, `tool_wrapper`, `llm_provider`, `llm_client`, `embedder_provider`, `embedder_client`,
 `evaluator`, `memory`, `retriever_provider`, `retriever_client`, `registry_handler`, `package`).
-- `component_name`: The name of the AgentIQ component to be specified in the `_type` field of the component's section
+- `component_name`: The name of the AIQ Toolkit component to be specified in the `_type` field of the component's section
 of the configuration file.
 - `description`: A description of the component's uses, configuration parameters, and any default values. These
 parameters are what will need to be specified in the configuration object.
@@ -408,11 +408,11 @@ The `aiq info components --help` utility provides an overview of usage and filte
 $ aiq info components --help
 Usage: aiq info components [OPTIONS] COMMAND [ARGS]...
 
-  List the locally registered AgentIQ components.
+  List the locally registered AIQ Toolkit components.
 
 Options:
   -t, --types [front_end|function|tool_wrapper|llm_provider|llm_client|embedder_provider|embedder_client|evaluator|memory|retriever_provider|retriever_client|registry_handler|logging|tracing|package|undefined]
-                                  Filter the search by AgentIQ component type.
+                                  Filter the search by AIQ Toolkit component type.
   -o, --output_path TEXT          Path to save search results.
   -q, --query TEXT                The query string.  [default: ""]
   -n, --num_results INTEGER       Number of results to return.  [default: -1]
@@ -444,17 +444,17 @@ Options:
 
 ## Configuration Commands
 
-An AgentIQ developer may want to configure persistent settings for their development environment. These settings would
+An AIQ Toolkit developer may want to configure persistent settings for their development environment. These settings would
 be configured once to setup their development environment so they can focus on software development from that point
-forward. This section discusses the various configuration settings available for AgentIQ developers.
+forward. This section discusses the various configuration settings available for AIQ Toolkit developers.
 
 ### Remote Registry Configuration
 
-One of the core value propositions of the AgentIQ library is the redistribution of components with other developers.
+One of the core value propositions of the AIQ Toolkit library is the redistribution of components with other developers.
 Being able to package and distribute packages such that other developers can leverage them is critical to accelerating
 developer velocity. Similarly, being able to discover and install components built by others will improve the
-current developer’s velocity. To facilitate this process, AgentIQ implements a remote registry `channel` concept that
-allows AgentIQ developers to subscribe to registries that store published AgentIQ packages, each container containing
+current developer’s velocity. To facilitate this process, AIQ Toolkit implements a remote registry `channel` concept that
+allows AIQ Toolkit developers to subscribe to registries that store published AIQ Toolkit packages, each container containing
 usable components. A `channel` is analogous to a Conda channel for Anaconda users or a PyPI registry for pip users.
 
 
@@ -463,19 +463,19 @@ Currently, there are two channel types that facilitate remote discovery and reus
  - `rest` – provides a contract driven interface to a registry service behind a REST endpoint
  - `pypi` – a simple interface to publish packages to a private PyPI registry.
 
-Invoking the aiq info components command provides an description of the available channel settings:
+Invoking the `aiq info components` command provides a description of the available channel settings.
 
 Here we provide a example that configures a remote rest channel. To use this channel, there must exists a remote
-registry that adheres to the contracts defined in the AgentIQ's rest handler.
+registry that adheres to the contracts defined in the rest handler in AIQ Toolkit.
 
 ```console
 $ aiq configure channel add rest
 Channel Name: my_rest_channel  # A user defined locally unique name used to reference this configured channel
 Endpoint: http://my_rest_channel_url.com  # The endpoint to the remote rest registry service
 Token: my_rest_token  # The authentication token to interact with this rest registry service
-Publish Route: publish  # The route to use when publishing AgentIQ packages
-Pull Route: pull  # The route to use when downloading AgentIQ packages
-Search Route: search  # The route use when searching for relevant AgentIQ packages
+Publish Route: publish  # The route to use when publishing AIQ Toolkit packages
+Pull Route: pull  # The route to use when downloading AIQ Toolkit packages
+Search Route: search  # The route use when searching for relevant AIQ Toolkit packages
 Remove Route: remove  # The route to use when removing a published package from a remote rest registy
 ```
 
@@ -486,9 +486,9 @@ $ aiq configure channel add pypi
 Channel Name: my_pypi_channel  # A user defined locally unique name used to reference this configured channel
 Endpoint: http://my_pypi_channel_url.com  # The endpoint to the private pypi registry service
 Token: my_pypi_token  # The authentication token to interact with this pypi registry service
-Publish Route:  # The route to use when publishing AgentIQ packages, setting an empty value here
-Pull Route: # The route to use when downloading AgentIQ packages, setting an empty value here
-Search Route: simple  # The route use when searching for relevant AgentIQ packages
+Publish Route:  # The route to use when publishing AIQ Toolkit packages, setting an empty value here
+Pull Route: # The route to use when downloading AIQ Toolkit packages, setting an empty value here
+Search Route: simple  # The route use when searching for relevant AIQ Toolkit packages
 ```
 
 #### Updating a Remote Registry Channel Configuration
@@ -525,10 +525,10 @@ Note, once a channel is removed, it will no longer be able to support `aiq regis
 
 ## Remote Registry Interactions
 
-AgentIQ is designed to be a community oriented library. This means that developer productivity is maximized when others
-distribute AgentIQ plugin packages that will benefit others. This section will introduce the mechanisms the AgentIQ CLI
-exposes to facilitate publishing, discovering, downloading, and removing AgentIQ packages from a configured remote
-registry. Here we define a remote registry as a centralized location that stores plugin wheel packages and AgentIQ
+AIQ Toolkit is designed to be a community oriented library. This means that developer productivity is maximized when others
+distribute AIQ Toolkit plugin packages that will benefit others. This section will introduce the mechanisms the AIQ Toolkit CLI
+exposes to facilitate publishing, discovering, downloading, and removing AIQ Toolkit packages from a configured remote
+registry. Here we define a remote registry as a centralized location that stores plugin wheel packages and AIQ Toolkit
 specific metadata to that describes its usage details. Before these commands can be used, a remote registry must be
 available and a developer must have configured the corresponding channel using the `aiq configure channel add` command.
 See [Adding a Remote Registry Channel](../concepts/cli.md#adding-a-remote-registry-channel) for more details on
@@ -540,51 +540,51 @@ The `aiq registry` help command will provide the available commands in this grou
 $ aiq registry --help
 Usage: aiq registry [OPTIONS] COMMAND [ARGS]...
 
-  Utility to configure AgentIQ remote registry channels.
+  Utility to configure AIQ Toolkit remote registry channels.
 
 Options:
   --help  Show this message and exit.
 
 Commands:
-  publish  Publish local AgentIQ artifacts to a remote registry from package...
-  pull     Pull AgentIQ artifacts from a remote registry by package name.
-  remove   Remove AgentIQ artifact from a remote registry by name and version.
-  search   Search for AgentIQ artifacts from remote registry.
+  publish  Publish local AIQ Toolkit artifacts to a remote registry from package...
+  pull     Pull AIQ Toolkit artifacts from a remote registry by package name.
+  remove   Remove AIQ Toolkit artifact from a remote registry by name and version.
+  search   Search for AIQ Toolkit artifacts from remote registry.
   ```
 
-#### Publishing AgentIQ Components
+#### Publishing AIQ Toolkit Components
 
-AgentIQ developers may want to distribute their components with the broader ecosystem. The AgentIQ publish CLI utility
-provides a mechanism to publish an AgentIQ plugin package to a remote registry channel so that other developers can
+AIQ Toolkit developers may want to distribute their components with the broader ecosystem. The AIQ Toolkit publish CLI utility
+provides a mechanism to publish an AIQ Toolkit plugin package to a remote registry channel so that other developers can
 benefit from it's implemented components. Invoking the `aiq registry publish` command will build a package wheel, gather
 all component metadata, and transmit to the specified remote registry by channel name. Note, a package must be first
-installed locally so the discovery hooks can pull in necessary AgentIQ component metadata.
+installed locally so the discovery hooks can pull in necessary AIQ Toolkit component metadata.
 
-The aiq registry publish --help utility provides an overview of its usage:
+The `aiq registry publish --help` utility provides an overview of its usage:
 
 ```console
 $ aiq registry publish --help
 Usage: aiq registry publish [OPTIONS] PACKAGE_ROOT COMMAND [ARGS]...
 
-  Publish local AgentIQ artifacts to a remote registry from package
+  Publish local AIQ Toolkit artifacts to a remote registry from package
   repository.
 
 Options:
   --config_file FILE  A YAML file to override configured channel settings.
   -c, --channel TEXT  The remote registry channel to use when publishing the
-                      AgentIQ artifact.  [required]
+                      AIQ Toolkit artifact.  [required]
   --help              Show this message and exit.
 
 ```
 
-#### Discovering AgentIQ Components
+#### Discovering AIQ Toolkit Components
 
-When developing and deploying AgentIQ workflows, it is most efficient to leverage pre-built components. When using
+When developing and deploying AIQ Toolkit workflows, it is most efficient to leverage pre-built components. When using
 pre-built components will, only configuration settings are required to integration with the rest of a workflow. These
-pre-built exist in the core library, as well as, within other AgentIQ plugin packages. Remote registry channels are the
+pre-built exist in the core library, as well as, within other AIQ Toolkit plugin packages. Remote registry channels are the
 formal mechanism to publish reusable components to the community. The `aiq registry search` command allows developers
 to search relevant pre-built components that might benefit their application. The search command is usually followed up
-by an aiq registry pull command, once a useful package has been identified.
+by an `aiq registry pull` command, once a useful package has been identified.
 
 The `aiq registry search --help` utility provides an overview of its usage:
 
@@ -592,13 +592,13 @@ The `aiq registry search --help` utility provides an overview of its usage:
 $ aiq registry search --help
 Usage: aiq registry search [OPTIONS] COMMAND [ARGS]...
 
-  Search for AgentIQ artifacts from remote registry.
+  Search for AIQ Toolkit artifacts from remote registry.
 
 Options:
   --config_file FILE              A JSON/YAML file that sets the parameters
                                   for the workflow.
   -c, --channel TEXT              The remote registry channel to use when
-                                  pulling the AgentIQ artifact.  [required]
+                                  pulling the AIQ Toolkit artifact.  [required]
   -o, --output_path TEXT          Path to save search results.
   -f, --fields [all|package|version|component_name|description|developer_notes]
                                   The fields to include in the search.
@@ -610,10 +610,10 @@ Options:
   --help                          Show this message and exit.
 ```
 
-#### Pulling in AgentIQ Components
-Once a useful AgentIQ component has been discovered using the `aiq registry search` command, the containing package can be
-pulled in and installed from a configured remote registry, so that it can be used withing the local AgentIQ environment.
-Once installed, all components in the package can be referenced by name in an AgentIQ workflow YAML configuration file.
+#### Pulling in AIQ Toolkit Components
+Once a useful AIQ Toolkit component has been discovered using the `aiq registry search` command, the containing package can be
+pulled in and installed from a configured remote registry, so that it can be used withing the local AIQ Toolkit environment.
+Once installed, all components in the package can be referenced by name in an AIQ Toolkit workflow YAML configuration file.
 In many cases, components can be stitched together in YAML without having to write much integration code.
 
 The `aiq registry pull --help` command provides an overview of its usage:
@@ -622,19 +622,19 @@ The `aiq registry pull --help` command provides an overview of its usage:
 $ aiq registry pull --help
 Usage: aiq registry pull [OPTIONS] PACKAGES COMMAND [ARGS]...
 
-  Pull AgentIQ artifacts from a remote registry by package name.
+  Pull AIQ Toolkit artifacts from a remote registry by package name.
 
 Options:
   --config_file FILE  A YAML file to override the channel settings.
   -c, --channel TEXT  The remote registry channel to use when pulling the
-                      AgentIQ artifact.  [required]
+                      AIQ Toolkit artifact.  [required]
   --help              Show this message and exit.
 ```
 
 Note, the supplied package takes the following format: `package_name==version`, where the package version is optional.
 
 
-#### Removing AgentIQ Components
+#### Removing AIQ Toolkit Components
 In rare cases, it might make sense to remove a package from a remote registry over a configured remote registry channel.
 This the `aiq registry remove` command provides support for this feature, assuming the remote registry provides and
 allows this interaction.
@@ -645,11 +645,11 @@ The `aiq registry remove --help` utility provides an overview of its usage.
 $ aiq registry remove --help
 Usage: aiq registry remove [OPTIONS] PACKAGES COMMAND [ARGS]...
 
-  Remove AgentIQ artifact from a remote registry by name and version.
+  Remove AIQ Toolkit artifact from a remote registry by name and version.
 
 Options:
   --config_file FILE  A YAML file to override the channel settings.
-  -c, --channel TEXT  The remote registry channel that will remove the AgentIQ
+  -c, --channel TEXT  The remote registry channel that will remove the AIQ Toolkit
                       artifact.  [required]
   --help              Show this message and exit.
 ```

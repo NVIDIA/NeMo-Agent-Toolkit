@@ -12,7 +12,7 @@ dependencies = [
   "aiqtoolkit[langchain]",
 ]
 requires-python = ">=3.11"
-description = "Simple Calculator AgentIQ example"
+description = "Simple Calculator AIQ Toolkit example"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 

@@ -50,7 +50,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # p
     completion_tokens: int = 0
     successful_requests: int = 0
     raise_error = True  # Override to raise error and run inline
-    run_inline = False
+    run_inline = True
 
     def __init__(self) -> None:
         super().__init__()
