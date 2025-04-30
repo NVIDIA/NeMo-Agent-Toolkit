@@ -5,6 +5,9 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 [tool.setuptools_scm]
 root = "../../.."
 
+[tool.setuptools.packages.find]
+where = ["."]
+
 [project]
 name = "agentiq"
 dynamic = ["version"]
