@@ -144,9 +144,8 @@ class TunableRagEvaluator:
                         relevance_score = parsed_response["relevance_score"]
                         reasoning = parsed_response["reasoning"]
                     except KeyError as e:
-                        logger.error(
-                            f"Missing required keys in default scoring response: {', '.join(str(arg) for arg in e.args)}"
-                        )
+                        logger.error("Missing required keys in default scoring response: %s",
+                                     ", ".join(str(arg) for arg in e.args))
                         reasoning = f"Error in evaluator from parsing judge LLM response. Missing required key(s): {', '.join(str(arg) for arg in e.args)}"
                         raise
 
@@ -171,13 +170,12 @@ class TunableRagEvaluator:
                         score = parsed_response["score"]
                         reasoning = parsed_response["reasoning"]
                     except KeyError as e:
-                        logger.error(
-                            f"Missing required keys in custom scoring response: {', '.join(str(arg) for arg in e.args)}"
-                        )
+                        logger.error("Missing required keys in custom scoring response: %s",
+                                     ", ".join(str(arg) for arg in e.args))
                         reasoning = f"Error in evaluator from parsing judge LLM response. Missing required key(s): {', '.join(str(arg) for arg in e.args)}"
                         raise
             except (KeyError, ValueError) as e:
-                logger.error(f"Error parsing judge LLM response: {e}")
+                logger.error("Error parsing judge LLM response: %s", e)
                 score = 0.0
                 reasoning = "Error in evaluator from parsing judge LLM response."
 
