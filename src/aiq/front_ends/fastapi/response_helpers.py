@@ -117,13 +117,13 @@ async def generate_single_response(
         return await runner.result(to_type=result_type)
 
 
-async def generate_streaming_response_raw(payload: typing.Any,
-                                          *,
-                                          session_manager: AIQSessionManager,
-                                          streaming: bool,
-                                          result_type: type | None = None,
-                                          output_type: type | None = None,
-                                          filter_steps: str | None = None) -> AsyncGenerator[AIQResponseSerializable]:
+async def generate_streaming_response_full(payload: typing.Any,
+                                           *,
+                                           session_manager: AIQSessionManager,
+                                           streaming: bool,
+                                           result_type: type | None = None,
+                                           output_type: type | None = None,
+                                           filter_steps: str | None = None) -> AsyncGenerator[AIQResponseSerializable]:
     """
     Similar to generate_streaming_response but provides raw AIQResponseIntermediateStep objects
     without any step adaptor translations.
@@ -172,22 +172,22 @@ async def generate_streaming_response_raw(payload: typing.Any,
             await q.close()
 
 
-async def generate_streaming_response_raw_as_str(payload: typing.Any,
-                                                 *,
-                                                 session_manager: AIQSessionManager,
-                                                 streaming: bool,
-                                                 result_type: type | None = None,
-                                                 output_type: type | None = None,
-                                                 filter_steps: str | None = None) -> AsyncGenerator[str]:
+async def generate_streaming_response_full_as_str(payload: typing.Any,
+                                                  *,
+                                                  session_manager: AIQSessionManager,
+                                                  streaming: bool,
+                                                  result_type: type | None = None,
+                                                  output_type: type | None = None,
+                                                  filter_steps: str | None = None) -> AsyncGenerator[str]:
     """
-    Similar to generate_streaming_response_raw but converts the response to a string format.
+    Similar to generate_streaming_response but converts the response to a string format.
     """
-    async for item in generate_streaming_response_raw(payload,
-                                                      session_manager=session_manager,
-                                                      streaming=streaming,
-                                                      result_type=result_type,
-                                                      output_type=output_type,
-                                                      filter_steps=filter_steps):
+    async for item in generate_streaming_response_full(payload,
+                                                       session_manager=session_manager,
+                                                       streaming=streaming,
+                                                       result_type=result_type,
+                                                       output_type=output_type,
+                                                       filter_steps=filter_steps):
         if (isinstance(item, AIQResponseIntermediateStep) or isinstance(item, AIQResponsePayloadOutput)):
             yield item.get_stream_data()
         else:

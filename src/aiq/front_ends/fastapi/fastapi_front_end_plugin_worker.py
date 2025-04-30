@@ -49,7 +49,7 @@ from aiq.front_ends.fastapi.job_store import JobInfo
 from aiq.front_ends.fastapi.job_store import JobStore
 from aiq.front_ends.fastapi.response_helpers import generate_single_response
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
-from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_raw_as_str
+from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
 from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
 from aiq.front_ends.fastapi.websocket import AIQWebSocket
 from aiq.runtime.session import AIQSessionManager
@@ -399,12 +399,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             async def get_stream(filter_steps: str | None = None):
 
                 return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                         content=generate_streaming_response_raw_as_str(None,
-                                                                                        session_manager=session_manager,
-                                                                                        streaming=streaming,
-                                                                                        result_type=result_type,
-                                                                                        output_type=output_type,
-                                                                                        filter_steps=filter_steps))
+                                         content=generate_streaming_response_full_as_str(
+                                             None,
+                                             session_manager=session_manager,
+                                             streaming=streaming,
+                                             result_type=result_type,
+                                             output_type=output_type,
+                                             filter_steps=filter_steps))
 
             return get_stream
 
@@ -447,12 +448,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             async def post_stream(payload: request_type, filter_steps: str | None = None):
 
                 return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                         content=generate_streaming_response_raw_as_str(payload,
-                                                                                        session_manager=session_manager,
-                                                                                        streaming=streaming,
-                                                                                        result_type=result_type,
-                                                                                        output_type=output_type,
-                                                                                        filter_steps=filter_steps))
+                                         content=generate_streaming_response_full_as_str(
+                                             payload,
+                                             session_manager=session_manager,
+                                             streaming=streaming,
+                                             result_type=result_type,
+                                             output_type=output_type,
+                                             filter_steps=filter_steps))
 
             return post_stream
 
