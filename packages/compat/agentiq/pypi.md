@@ -15,9 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA Agent Intelligence Toolkit](https://media.githubusercontent.com/media/NVIDIA/AIQToolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AIQ Toolkit banner image")
-
-# NVIDIA Agent Intelligence Toolkit Subpackage
-This is a subpackage for CrewAI integration in AIQ Toolkit.
+# Transitional Package for `aiqtoolkit`
+This is a transitional package for `aiqtoolkit` to help ease the migration to `aiqtoolkit`, and will be removed in a future release. It is recommended to use `aiqtoolkit` directly for new projects.
 
 For more information about AIQ Toolkit, please visit the [AIQ Toolkit package](https://pypi.org/project/aiqtoolkit/).

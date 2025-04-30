@@ -20,9 +20,6 @@ source ${SCRIPT_DIR}/common.sh
 
 export AIQ_AVOID_GH_CLI=1 # gh cli not working with gitlab, todo look into seeing if this can be fixed
 
-AIQ_EXAMPLES=($(find ./examples/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
-AIQ_PACKAGES=($(find ./packages/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
-
 function get_git_tag() {
     FT=$(git fetch --all --tags)
 

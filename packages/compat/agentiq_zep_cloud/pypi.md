@@ -15,9 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA Agent Intelligence Toolkit](https://media.githubusercontent.com/media/NVIDIA/AIQToolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AIQ Toolkit banner image")
+# Transitional Package for `aiqtoolkit-zep-cloud`
+This is a transitional package for `aiqtoolkit-zep-cloud` to help ease the migration to `aiqtoolkit-zep-cloud`, and will be removed in a future release. It is recommended to use `aiqtoolkit-zep-cloud` directly for new projects.
 
-# NVIDIA Agent Intelligence Toolkit Subpackage
-This is a subpackage for CrewAI integration in AIQ Toolkit.
-
-For more information about AIQ Toolkit, please visit the [AIQ Toolkit package](https://pypi.org/project/aiqtoolkit/).
+For more information about AIQ Toolkit, please visit the [AIQ Toolkit package](https://pypi.org/project/aiqtoolkit-zep-cloud/).
