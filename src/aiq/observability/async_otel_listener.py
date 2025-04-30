@@ -103,7 +103,7 @@ class AsyncOtelSpanListener:
             try:
                 # Try to get the weave client, but don't fail if Weave isn't initialized
                 self.gc = weave_client_context.require_weave_client()
-            except Exception as e:
+            except Exception:
                 # Weave is not initialized, so we don't do anything
                 pass
 
