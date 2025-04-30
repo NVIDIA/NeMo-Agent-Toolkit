@@ -25,6 +25,8 @@ from pydantic import ValidationInfo
 from pydantic import ValidatorFunctionWrapHandler
 from pydantic import field_validator
 
+from aiq.data_models.authentication import OAuth2Config
+from aiq.data_models.authentication import APIKeyConfig
 from aiq.data_models.evaluate import EvalConfig
 from aiq.data_models.front_end import FrontEndBaseConfig
 from aiq.data_models.function import EmptyFunctionConfig
@@ -73,6 +75,8 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
                 registered_keys = GlobalTypeRegistry.get().get_registered_evaluators()
             elif (info.field_name == "front_ends"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_front_ends()
+            elif (info.field_name == "authentication"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_authentication_providers()
 
             else:
                 assert False, f"Unknown field name {info.field_name} in validator"
@@ -248,6 +252,9 @@ class AIQConfig(HashableBaseModel):
     # Workflow Configuration
     workflow: FunctionBaseConfig = EmptyFunctionConfig()
 
+    # Authentication Configuration
+    authentication: dict[str, OAuth2Config | APIKeyConfig] = {}
+
     # Evaluation Options
     eval: EvalConfig = EvalConfig()
 
@@ -264,8 +271,16 @@ class AIQConfig(HashableBaseModel):
         stream.write(f"Number of Embedders: {len(self.embedders)}\n")
         stream.write(f"Number of Memory: {len(self.memory)}\n")
         stream.write(f"Number of Retrievers: {len(self.retrievers)}\n")
+        stream.write(f"Number of Authentication Providers: {len(self.authentication)}\n")
 
-    @field_validator("functions", "llms", "embedders", "memory", "retrievers", "workflow", mode="wrap")
+    @field_validator("functions",
+                     "llms",
+                     "embedders",
+                     "memory",
+                     "retrievers",
+                     "workflow",
+                     "authentication",
+                     mode="wrap")
     @classmethod
     def validate_components(cls, value: typing.Any, handler: ValidatorFunctionWrapHandler, info: ValidationInfo):
 
@@ -304,6 +319,10 @@ class AIQConfig(HashableBaseModel):
 
         WorkflowAnnotation = typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig),
                                               Discriminator(TypedBaseModel.discriminator)]
+        #TODO EE: Update
+        # AuthenticationAnnotation = dict[str,
+        #                                 typing.Annotated[type_registry.compute_annotation(AuthenticationBaseConfig),
+        #                                                  Discriminator(TypedBaseModel.discriminator)]]
 
         should_rebuild = False
 
@@ -336,6 +355,11 @@ class AIQConfig(HashableBaseModel):
         if workflow_field is not None and workflow_field.annotation != WorkflowAnnotation:
             workflow_field.annotation = WorkflowAnnotation
             should_rebuild = True
+
+        # authentication_field = cls.model_fields.get("authentication") # TODO EE: Update
+        # if authentication_field is not None and authentication_field.annotation != AuthenticationAnnotation:
+        #     authentication_field.annotation = AuthenticationAnnotation
+        #     should_rebuild = True
 
         if (GeneralConfig.rebuild_annotations()):
             should_rebuild = True
