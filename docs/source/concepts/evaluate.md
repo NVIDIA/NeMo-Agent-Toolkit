@@ -209,8 +209,8 @@ eval:
 The swe-bench evaluator uses unstructured dataset entries. The entire row is provided as input to the workflow.
 
 ### Tunable RAG Evaluator
-The tunable RAG evaluator is a customizable LLM evaluator that allows for flexible evaluation of RAG workflows. 
-It includes a default scoring mechanism based on an expected answer description rather than a ground truth answer. 
+The tunable RAG evaluator is a customizable LLM evaluator that allows for flexible evaluation of RAG workflows.
+It includes a default scoring mechanism based on an expected answer description rather than a ground truth answer.
 
 The judge LLM prompt is tunable and can be provided in the `config.yml` file.
 
@@ -225,10 +225,11 @@ The default scoring can be overridden by setting the config boolean `default_sco
 Note: if you do choose to use the default scoring method, you are still able to tune the judge LLM prompt.
 
 **Example:**
+`example/simple_calculator/configs/config-tunable-rag-eval.yml`:
 ```yaml
 eval:
   evaluators:
-    custom_rag_evaluation:
+    tuneable_eval:
       _type: tunable_rag_evaluator
       llm_name: nim_rag_eval_llm
       default_scoring: false
@@ -249,12 +250,18 @@ eval:
 Note: In your evaluation dataset, make sure that the `answer` field is a description of the expected answer with details on what is expected from the generated answer.
 
 **Example:**
+`example/simple_calculator/configs/config-tunable-rag-eval.yml`:
 ```json
 {
   "id": 1,
   "question": "What is the product of 3 and 7, and is it greater than the current hour?",
   "answer": "Answer must have the answer of product of 3 and 7 and whether it is greater than the current hour"
 }
+```
+
+**Sample Usage:**
+```bash
+aiq eval --config_file=examples/simple_calculator/configs/config-tunable-rag-eval.yml
 ```
 
 ## Adding Custom Evaluators
