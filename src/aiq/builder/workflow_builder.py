@@ -60,7 +60,6 @@ from aiq.utils.optional_imports import DummyTracerProvider
 from aiq.utils.optional_imports import OptionalImportError
 from aiq.utils.optional_imports import get_dummy_trace
 from aiq.utils.optional_imports import get_opentelemetry
-from aiq.utils.optional_imports import get_opentelemetry_sdk
 from aiq.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
@@ -68,10 +67,9 @@ logger = logging.getLogger(__name__)
 # Import OpenTelemetry modules
 try:
     opentelemetry = get_opentelemetry()
-    opentelemetry_sdk = get_opentelemetry_sdk()
     trace = opentelemetry.trace
-    TracerProvider = opentelemetry_sdk.trace.TracerProvider
-    BatchSpanProcessor = opentelemetry_sdk.trace.export.BatchSpanProcessor
+    TracerProvider = opentelemetry.sdk.trace.TracerProvider
+    BatchSpanProcessor = opentelemetry.sdk.trace.export.BatchSpanProcessor
     SpanExporter = opentelemetry.sdk.trace.export.SpanExporter
 except OptionalImportError as e:
     logger.warning("OpenTelemetry not available: %s", e)

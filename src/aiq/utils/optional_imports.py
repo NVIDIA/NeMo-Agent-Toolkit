@@ -42,11 +42,6 @@ def get_opentelemetry() -> Any:
     return optional_import("opentelemetry")
 
 
-def get_opentelemetry_sdk() -> Any:
-    """Get the opentelemetry.sdk module if available."""
-    return optional_import("opentelemetry.sdk")
-
-
 def get_phoenix() -> Any:
     """Get the phoenix module if available."""
     return optional_import("phoenix")
@@ -106,6 +101,16 @@ class DummySpanExporter:
         pass
 
 
+class DummyBatchSpanProcessor:
+    """Dummy implementation of BatchSpanProcessor for when OpenTelemetry is not available."""
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def shutdown(self, *args, **kwargs):
+        pass
+
+
 # Dummy functions for when OpenTelemetry is not available
 def dummy_set_span_in_context(*args, **kwargs) -> None:
     """Dummy function that does nothing."""
@@ -140,13 +145,3 @@ def get_dummy_span_exporter() -> DummySpanExporter:
     if _dummy_span_exporter is None:
         _dummy_span_exporter = DummySpanExporter()
     return _dummy_span_exporter
-
-
-class DummyBatchSpanProcessor:
-    """Dummy implementation of BatchSpanProcessor for when OpenTelemetry is not available."""
-
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def shutdown(self, *args, **kwargs):
-        pass

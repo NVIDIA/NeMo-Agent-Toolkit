@@ -31,16 +31,14 @@ from aiq.utils.optional_imports import dummy_set_span_in_context
 from aiq.utils.optional_imports import get_dummy_trace
 from aiq.utils.optional_imports import get_dummy_tracer_provider
 from aiq.utils.optional_imports import get_opentelemetry
-from aiq.utils.optional_imports import get_opentelemetry_sdk
 
 logger = logging.getLogger(__name__)
 
 OPENINFERENCE_SPAN_KIND = SpanAttributes.OPENINFERENCE_SPAN_KIND
 
-# Import OpenTelemetry modules
+# Try to import OpenTelemetry modules
 try:
     opentelemetry = get_opentelemetry()
-    opentelemetry_sdk = get_opentelemetry_sdk()
     from opentelemetry import trace
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.trace import Span

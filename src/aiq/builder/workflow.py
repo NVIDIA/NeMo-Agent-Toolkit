@@ -31,7 +31,7 @@ from aiq.data_models.config import AIQConfig
 from aiq.memory.interfaces import MemoryEditor
 from aiq.runtime.runner import AIQRunner
 from aiq.utils.optional_imports import OptionalImportError
-from aiq.utils.optional_imports import get_opentelemetry_sdk
+from aiq.utils.optional_imports import get_opentelemetry
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ callback_handler_var: ContextVar[Any | None] = ContextVar("callback_handler_var"
 
 # Import OpenTelemetry modules
 try:
-    opentelemetry_sdk = get_opentelemetry_sdk()
+    opentelemetry = get_opentelemetry()
     from opentelemetry.sdk.trace.export import SpanExporter
 except OptionalImportError as e:
     logger.warning("OpenTelemetry not available: %s", e)

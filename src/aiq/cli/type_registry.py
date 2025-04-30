@@ -67,13 +67,13 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterConfigT
 from aiq.memory.interfaces import MemoryEditor
 from aiq.registry_handlers.registry_handler_base import AbstractRegistryHandler
 from aiq.utils.optional_imports import OptionalImportError
-from aiq.utils.optional_imports import get_opentelemetry_sdk
+from aiq.utils.optional_imports import get_opentelemetry
 
 logger = logging.getLogger(__name__)
 
 # Import OpenTelemetry modules
 try:
-    opentelemetry_sdk = get_opentelemetry_sdk()
+    opentelemetry = get_opentelemetry()
     from opentelemetry.sdk.trace.export import SpanExporter
 except OptionalImportError as e:
     logger.warning("OpenTelemetry not available: %s", e)
