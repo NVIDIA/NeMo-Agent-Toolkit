@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 from typing import Optional
 
 from pydantic import Field
@@ -26,10 +25,7 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
     """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
     project: str = Field(description="The W&B project name.")
-    entity: Optional[str] = Field(
-        default=None,
-        description="The W&B username or team name."
-    )
+    entity: Optional[str] = Field(default=None, description="The W&B username or team name.")
 
 
 @register_telemetry_exporter(config_type=WeaveTelemetryExporter)
@@ -42,6 +38,7 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
         _ = weave.init(project_name=config.project)
 
     class NoOpSpanExporter:
+
         def export(self, spans):
             return None
 
