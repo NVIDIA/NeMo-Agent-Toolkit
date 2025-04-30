@@ -69,7 +69,9 @@ class TunableRagEvaluator:
         self.semaphore = asyncio.Semaphore(self.max_concurrency)
         self.default_scoring = default_scoring
         # Use user-provided weights if available; otherwise, set equal weights for each score
-        self.default_score_weights = default_score_weights if default_score_weights else {"coverage": 1 / 3, "correctness": 1 / 3, "relevance": 1 / 3}
+        self.default_score_weights = default_score_weights if default_score_weights else {
+            "coverage": 1 / 3, "correctness": 1 / 3, "relevance": 1 / 3
+        }
 
     async def evaluate(self, eval_input: EvalInput) -> EvalOutput:
         '''Evaluate function'''
