@@ -113,7 +113,7 @@ aiq_agno_personal_finance = { path = "examples/agno_personal_finance", editable 
 
 [tool.uv.workspace]
 members = ["packages/*"]
-
+exclude = ["packages/compat"]
 
 [dependency-groups]
 # Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
