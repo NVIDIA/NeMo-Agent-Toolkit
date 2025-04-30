@@ -54,29 +54,28 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.memory.interfaces import MemoryEditor
 from aiq.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
 from aiq.profiler.utils import detect_llm_frameworks_in_build_fn
-from aiq.utils.optional_imports import DummyBatchSpanProcessor
-from aiq.utils.optional_imports import DummySpanExporter
-from aiq.utils.optional_imports import DummyTracerProvider
 from aiq.utils.optional_imports import OptionalImportError
-from aiq.utils.optional_imports import get_dummy_trace
-from aiq.utils.optional_imports import get_opentelemetry
+from aiq.utils.optional_imports import try_import_opentelemetry
 from aiq.utils.type_utils import override
 
-logger = logging.getLogger(__name__)
-
-# Import OpenTelemetry modules
+# Try to import OpenTelemetry modules
 try:
-    opentelemetry = get_opentelemetry()
-    trace = opentelemetry.trace
-    TracerProvider = opentelemetry.sdk.trace.TracerProvider
-    BatchSpanProcessor = opentelemetry.sdk.trace.export.BatchSpanProcessor
-    SpanExporter = opentelemetry.sdk.trace.export.SpanExporter
-except OptionalImportError as e:
-    logger.warning("OpenTelemetry not available: %s", e)
-    SpanExporter = type(DummySpanExporter())
-    BatchSpanProcessor = DummyBatchSpanProcessor
+    opentelemetry = try_import_opentelemetry()
+    from opentelemetry import trace
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    from opentelemetry.sdk.trace.export import SpanExporter
+except OptionalImportError:
+    from aiq.utils.optional_imports import DummyBatchSpanProcessor  # pylint: disable=ungrouped-imports
+    from aiq.utils.optional_imports import DummySpanExporter  # pylint: disable=ungrouped-imports
+    from aiq.utils.optional_imports import DummyTrace  # pylint: disable=ungrouped-imports
+    from aiq.utils.optional_imports import DummyTracerProvider  # pylint: disable=ungrouped-imports
+    trace = DummyTrace
     TracerProvider = DummyTracerProvider
-    trace = get_dummy_trace()
+    BatchSpanProcessor = DummyBatchSpanProcessor
+    SpanExporter = DummySpanExporter
+
+logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass

@@ -25,12 +25,8 @@ from pydantic import TypeAdapter
 from aiq.builder.context import AIQContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepState
-from aiq.utils.optional_imports import DummySpan
 from aiq.utils.optional_imports import OptionalImportError
-from aiq.utils.optional_imports import dummy_set_span_in_context
-from aiq.utils.optional_imports import get_dummy_trace
-from aiq.utils.optional_imports import get_dummy_tracer_provider
-from aiq.utils.optional_imports import get_opentelemetry
+from aiq.utils.optional_imports import try_import_opentelemetry
 
 logger = logging.getLogger(__name__)
 
@@ -38,15 +34,18 @@ OPENINFERENCE_SPAN_KIND = SpanAttributes.OPENINFERENCE_SPAN_KIND
 
 # Try to import OpenTelemetry modules
 try:
-    opentelemetry = get_opentelemetry()
+    opentelemetry = try_import_opentelemetry()
     from opentelemetry import trace
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.trace import Span
     from opentelemetry.trace.propagation import set_span_in_context
-except OptionalImportError as e:
-    logger.warning("OpenTelemetry not available: %s", e)
-    trace = get_dummy_trace()
-    TracerProvider = type(get_dummy_tracer_provider())
+except OptionalImportError:
+    from aiq.utils.optional_imports import DummySpan  # pylint: disable=ungrouped-imports
+    from aiq.utils.optional_imports import DummyTrace  # pylint: disable=ungrouped-imports
+    from aiq.utils.optional_imports import DummyTracerProvider  # pylint: disable=ungrouped-imports
+    from aiq.utils.optional_imports import dummy_set_span_in_context  # pylint: disable=ungrouped-imports
+    trace = DummyTrace
+    TracerProvider = DummyTracerProvider
     Span = DummySpan
     set_span_in_context = dummy_set_span_in_context
 

@@ -31,20 +31,19 @@ from aiq.data_models.config import AIQConfig
 from aiq.memory.interfaces import MemoryEditor
 from aiq.runtime.runner import AIQRunner
 from aiq.utils.optional_imports import OptionalImportError
-from aiq.utils.optional_imports import get_opentelemetry
+from aiq.utils.optional_imports import try_import_opentelemetry
+
+# Try to import OpenTelemetry modules
+try:
+    opentelemetry = try_import_opentelemetry()
+    from opentelemetry.sdk.trace.export import SpanExporter
+except OptionalImportError:
+    from aiq.utils.optional_imports import DummySpanExporter  # pylint: disable=ungrouped-imports
+    SpanExporter = DummySpanExporter
 
 logger = logging.getLogger(__name__)
 
 callback_handler_var: ContextVar[Any | None] = ContextVar("callback_handler_var", default=None)
-
-# Import OpenTelemetry modules
-try:
-    opentelemetry = get_opentelemetry()
-    from opentelemetry.sdk.trace.export import SpanExporter
-except OptionalImportError as e:
-    logger.warning("OpenTelemetry not available: %s", e)
-    from aiq.utils.optional_imports import DummySpanExporter
-    SpanExporter = type(DummySpanExporter())
 
 
 class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):

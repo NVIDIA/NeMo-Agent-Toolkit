@@ -24,10 +24,10 @@ from aiq.cli.register_workflow import register_logging_method
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from aiq.utils.optional_imports import DummySpanExporter
 from aiq.utils.optional_imports import OptionalImportError
-from aiq.utils.optional_imports import get_dummy_span_exporter
-from aiq.utils.optional_imports import get_opentelemetry
-from aiq.utils.optional_imports import get_phoenix
+from aiq.utils.optional_imports import try_import_opentelemetry
+from aiq.utils.optional_imports import try_import_phoenix
 
 logger = logging.getLogger(__name__)
 
@@ -43,15 +43,18 @@ class PhoenixTelemetryExporter(TelemetryExporterBaseConfig, name="phoenix"):
 async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: Builder) -> AsyncIterator[Any]:
     """Create a Phoenix telemetry exporter."""
     try:
-        phoenix = get_phoenix()
+        phoenix = try_import_phoenix()
         from phoenix.otel import HTTPSpanExporter
         yield HTTPSpanExporter(config.endpoint)
     except OptionalImportError as e:
         logger.warning("Phoenix not available: %s", e)
-        yield get_dummy_span_exporter()
-    except Exception as e:
-        logger.error("Failed to create Phoenix exporter: %s", e)
-        yield get_dummy_span_exporter()
+        yield DummySpanExporter()
+    except ConnectionError as ex:
+        logger.warning("Unable to connect to Phoenix at port 6006. Are you sure Phoenix is running?\n %s",
+                       ex,
+                       exc_info=True)
+    except Exception as ex:
+        logger.error("Error in Phoenix telemetry Exporter\n %s", ex, exc_info=True)
 
 
 class OtelCollectorTelemetryExporter(TelemetryExporterBaseConfig, name="otelcollector"):
@@ -65,7 +68,7 @@ class OtelCollectorTelemetryExporter(TelemetryExporterBaseConfig, name="otelcoll
 async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder) -> AsyncIterator[Any]:
     """Create an OpenTelemetry telemetry exporter."""
     try:
-        opentelemetry = get_opentelemetry()
+        opentelemetry = try_import_opentelemetry()
         yield opentelemetry.sdk.trace.export.OTLPSpanExporter(config.endpoint)
     except OptionalImportError as e:
         logger.warning("OpenTelemetry not available: %s", e)

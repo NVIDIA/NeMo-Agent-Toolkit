@@ -67,18 +67,17 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterConfigT
 from aiq.memory.interfaces import MemoryEditor
 from aiq.registry_handlers.registry_handler_base import AbstractRegistryHandler
 from aiq.utils.optional_imports import OptionalImportError
-from aiq.utils.optional_imports import get_opentelemetry
+from aiq.utils.optional_imports import try_import_opentelemetry
+
+# Try to import OpenTelemetry modules
+try:
+    opentelemetry = try_import_opentelemetry()
+    from opentelemetry.sdk.trace.export import SpanExporter
+except OptionalImportError:
+    from aiq.utils.optional_imports import DummySpanExporter  # pylint: disable=ungrouped-imports
+    SpanExporter = DummySpanExporter
 
 logger = logging.getLogger(__name__)
-
-# Import OpenTelemetry modules
-try:
-    opentelemetry = get_opentelemetry()
-    from opentelemetry.sdk.trace.export import SpanExporter
-except OptionalImportError as e:
-    logger.warning("OpenTelemetry not available: %s", e)
-    from aiq.utils.optional_imports import DummySpanExporter
-    SpanExporter = type(DummySpanExporter())
 
 FrontEndBuildCallableT = Callable[[FrontEndConfigT, AIQConfig], AsyncIterator[FrontEndBase]]
 TelemetryExporterBuildCallableT = Callable[[TelemetryExporterConfigT, Builder], AsyncIterator[SpanExporter]]
