@@ -35,6 +35,7 @@ variables:
   UV_CACHE_DIR: .uv-cache
   GIT_SUBMODULE_STRATEGY: recursive
   GIT_SUBMODULE_FORCE_HTTPS: "true"
+  BUILD_AIQ_COMPAT: "true"
 
 default:
   image: rapidsai/ci-conda:cuda12.5.1-ubuntu22.04-py3.12
@@ -110,7 +111,10 @@ package:wheel:
     paths:
       # match - .tmp/wheels/aiqtoolkit/aiqtoolkit/<version>/*.whl, .tmp/wheels/aiqtoolkit/aiqtoolkit-crewai/<version>/*.whl etc.
       - .tmp/wheels/aiqtoolkit/*/*/*.whl
+      # Match the example wheels
       - .tmp/wheels/aiqtoolkit/examples/*.whl
+      # Match  the transitional wheels
+      - .tmp/wheels/agentiq/*/*/*.whl
     expire_in: 1 week
 
 
