@@ -49,7 +49,7 @@ from aiq.front_ends.fastapi.job_store import JobInfo
 from aiq.front_ends.fastapi.job_store import JobStore
 from aiq.front_ends.fastapi.response_helpers import generate_single_response
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
-from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_raw_as_str
+from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
 from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
 from aiq.front_ends.fastapi.websocket import AIQWebSocket
 from aiq.runtime.session import AIQSessionManager
@@ -396,14 +396,16 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         def get_streaming_raw_endpoint(streaming: bool, result_type: type | None, output_type: type | None):
 
-            async def get_stream():
+            async def get_stream(filter_steps: str | None = None):
 
                 return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                         content=generate_streaming_response_raw_as_str(None,
-                                                                                        session_manager=session_manager,
-                                                                                        streaming=streaming,
-                                                                                        result_type=result_type,
-                                                                                        output_type=output_type))
+                                         content=generate_streaming_response_full_as_str(
+                                             None,
+                                             session_manager=session_manager,
+                                             streaming=streaming,
+                                             result_type=result_type,
+                                             output_type=output_type,
+                                             filter_steps=filter_steps))
 
             return get_stream
 
@@ -443,14 +445,16 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             Stream raw intermediate steps without any step adaptor translations.
             """
 
-            async def post_stream(payload: request_type):
+            async def post_stream(payload: request_type, filter_steps: str | None = None):
 
                 return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
-                                         content=generate_streaming_response_raw_as_str(payload,
-                                                                                        session_manager=session_manager,
-                                                                                        streaming=streaming,
-                                                                                        result_type=result_type,
-                                                                                        output_type=output_type))
+                                         content=generate_streaming_response_full_as_str(
+                                             payload,
+                                             session_manager=session_manager,
+                                             streaming=streaming,
+                                             result_type=result_type,
+                                             output_type=output_type,
+                                             filter_steps=filter_steps))
 
             return post_stream
 
@@ -478,11 +482,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 )
 
                 app.add_api_route(
-                    path=f"{endpoint.path}/stream/full",
+                    path=f"{endpoint.path}/full",
                     endpoint=get_streaming_raw_endpoint(streaming=True,
                                                         result_type=GenerateStreamResponseType,
                                                         output_type=GenerateStreamResponseType),
                     methods=[endpoint.method],
+                    description="Stream raw intermediate steps without any step adaptor translations.\n"
+                    "Use filter_steps query parameter to filter steps by type (comma-separated list) or\
+                        set to 'none' to suppress all intermediate steps.",
                 )
 
             elif (endpoint.method == "POST"):
@@ -510,14 +517,16 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 )
 
                 app.add_api_route(
-                    path=f"{endpoint.path}/stream/full",
+                    path=f"{endpoint.path}/full",
                     endpoint=post_streaming_raw_endpoint(request_type=GenerateBodyType,
                                                          streaming=True,
                                                          result_type=GenerateStreamResponseType,
                                                          output_type=GenerateStreamResponseType),
                     methods=[endpoint.method],
                     response_model=GenerateStreamResponseType,
-                    description="Stream raw intermediate steps without any step adaptor translations",
+                    description="Stream raw intermediate steps without any step adaptor translations.\n"
+                    "Use filter_steps query parameter to filter steps by type (comma-separated list) or \
+                        set to 'none' to suppress all intermediate steps.",
                     responses={500: response_500},
                 )
 

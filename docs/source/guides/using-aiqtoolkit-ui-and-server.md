@@ -111,14 +111,15 @@ result back to the client. The transaction schema is defined by the workflow.
   ```json
   "data": { "value": "No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 15)." }
   ```
-### Generate Streaming Raw Transaction
-  - **Route:** `/generate/stream/full`
+### Generate Streaming Full Transaction
+  - **Route:** `/generate/full`
   - **Description:** Same as `/generate/stream` but provides raw `IntermediateStep` objects
-    without any step adaptor translations. This endpoint is used for remote evaluation of workflows.
+    without any step adaptor translations. Use the `filter_steps` query parameter to filter
+    steps by type (comma-separated list) or set to 'none' to suppress all intermediate steps.
   - **HTTP Request Example:**
     ```bash
     curl --request POST \
-    --url http://localhost:8000/generate/stream/full \
+    --url http://localhost:8000/generate/full \
     --header 'Content-Type: application/json' \
     --data '{
       "input_message": "Is 4 + 4 greater than the current hour of the day"
@@ -131,6 +132,23 @@ result back to the client. The transaction schema is defined by the workflow.
 - **HTTP Response Example:**
   ```json
   "data": {"value":"No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 11)."}
+  ```
+- **HTTP Request Example with Filter:**
+  By default, all intermediate steps are streamed. Use the `filter_steps` query parameter to filter steps by type (comma-separated list) or set to `none` to suppress all intermediate steps.
+
+  Suppress all intermediate steps (only get final output):
+  ```bash
+  curl --request POST \
+    --url 'http://localhost:8000/generate/full?filter_steps=none' \
+    --header 'Content-Type: application/json' \
+    --data '{"input_message": "Is 4 + 4 greater than the current hour of the day"}'
+  ```
+  Get only specific step types:
+  ```bash
+  curl --request POST \
+    --url 'http://localhost:8000/generate/full?filter_steps=LLM_END,TOOL_END' \
+    --header 'Content-Type: application/json' \
+    --data '{"input_message": "Is 4 + 4 greater than the current hour of the day"}'
   ```
 
 ### Chat Non-Streaming Transaction
