@@ -91,7 +91,7 @@ except OptionalImportError as e:
 
 def _ns_timestamp(seconds_float: float) -> int:
     """
-    Convert AIQ Toolkit’s float `event_timestamp` (in seconds) into an integer number
+    Convert AIQ Toolkit's float `event_timestamp` (in seconds) into an integer number
     of nanoseconds, as OpenTelemetry expects.
     """
     return int(seconds_float * 1e9)
