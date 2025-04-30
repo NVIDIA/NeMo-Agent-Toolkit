@@ -60,7 +60,7 @@ Before you begin using AIQ Toolkit, ensure that you meet the following software 
 - Install [Git](https://git-scm.com/)
 - Install [Git Large File Storage](https://git-lfs.github.com/) (LFS)
 - Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- Install [Python (3.11 or above)](https://www.python.org/downloads/)
+- Install [Python (3.11 or 3.12)](https://www.python.org/downloads/)
 
 ### Install From Source
 
@@ -87,12 +87,12 @@ Before you begin using AIQ Toolkit, ensure that you meet the following software 
     uv venv --seed .venv
     source .venv/bin/activate
     ```
-    Make sure the environment is built with Python version `3.11` or above. If you have multiple Python versions installed,
+    Make sure the environment is built with Python version `3.11` or `3.12`. If you have multiple Python versions installed,
     you can specify the desired version using the `--python` flag. For example, to use Python 3.11:
     ```bash
     uv venv --seed .venv --python 3.11
     ```
-    You can replace `--python 3.11` with any other Python version (3.11 or above) that you have installed.
+    You can replace `--python 3.11` with any other Python version (`3.11` or `3.12`) that you have installed.
 
 5. Install the AIQ Toolkit library.
     To install the AIQ Toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
