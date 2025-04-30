@@ -22,7 +22,7 @@ dependencies = [
   "aiqtoolkit",
   "pytest~=8.3",
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"
 description = "Testing utilities for AIQToolkit"
 readme = "src/aiq/meta/pypi.md"
 keywords = ["ai", "rag", "agents"]
