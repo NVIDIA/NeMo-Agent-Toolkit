@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Transitional Package for aiqtoolkit
+# Transitional Package for `aiqtoolkit`
 This is a transitional package for `aiqtoolkit` to help ease the migration to `aiqtoolkit`, and will be removed in a future release. It is recommended to use `aiqtoolkit` directly for new projects.
 
 For more information about AIQ Toolkit, please visit the [AIQ Toolkit package](https://pypi.org/project/aiqtoolkit/).

@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Transitional Package for aiqtoolkit-zep-cloud
+# Transitional Package for `aiqtoolkit-zep-cloud`
 This is a transitional package for `aiqtoolkit-zep-cloud` to help ease the migration to `aiqtoolkit-zep-cloud`, and will be removed in a future release. It is recommended to use `aiqtoolkit-zep-cloud` directly for new projects.
 
 For more information about AIQ Toolkit, please visit the [AIQ Toolkit package](https://pypi.org/project/aiqtoolkit-zep-cloud/).
