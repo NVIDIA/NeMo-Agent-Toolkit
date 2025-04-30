@@ -32,11 +32,6 @@ WHEELS_DIR=${CI_PROJECT_DIR}/.tmp/wheels/aiqtoolkit
 
 create_env extra:all
 
-function build_wheel() {
-    rapids-logger "Building Wheel for $1"
-    uv build --wheel --no-progress --out-dir "${WHEELS_DIR}/$2" --directory $1
-}
-
 build_wheel . "aiqtoolkit/${GIT_TAG}"
 
 
@@ -48,13 +43,14 @@ done
 
 # Build all packages with a pyproject.toml in the first directory below packages
 for AIQ_PACKAGE in "${AIQ_PACKAGES[@]}"; do
-    # drop each package into a separate directory
-    PACKAGE_DIR_NAME="${AIQ_PACKAGE#packages/}"
-    PACKAGE_DIR_NAME="${AIQ_PACKAGE#./packages/}"
-    # Replace "aiq_" with "aiqtoolkit_"
-    PACKAGE_DIR_NAME="${PACKAGE_DIR_NAME//aiq_/aiqtoolkit_}"
-    build_wheel "${AIQ_PACKAGE}" "${PACKAGE_DIR_NAME}/${GIT_TAG}"
+    build_package_wheel ${AIQ_PACKAGE}
 done
+
+if [[ "${BUILD_AIQ_COMPAT}" == "true" ]]; then
+    for AIQ_COMPAT_PACKAGE in "${AIQ_COMPAT_PACKAGES[@]}"; do
+        build_package_wheel ${AIQ_COMPAT_PACKAGE}
+    done
+fi
 
 if [[ "${CI_COMMIT_BRANCH}" == "${CI_DEFAULT_BRANCH}" || "${CI_COMMIT_BRANCH}" == "main" ]]; then
     rapids-logger "Uploading Wheels"
