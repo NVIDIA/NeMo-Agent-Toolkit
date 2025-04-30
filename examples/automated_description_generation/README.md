@@ -31,11 +31,7 @@ The documentation will also cover configuration considerations and how to set up
 * [Key Features](#key-features)
 * [Installation and Usage](#installation-and-setup)
 * [Example Usage](#example-usage)
-* [Deployment-Oriented Setup](#deployment-oriented-setup)
-   - [Build the Docker Image](#build-the-docker-image)
-   - [Run the Docker Container](#run-the-docker-container)
-   - [Test the API](#test-the-api)
-   - [Expected API Output](#expected-api-output)
+
 
 ## Key Features
 
