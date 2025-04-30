@@ -52,7 +52,6 @@ for AIQ_PACKAGE in "${AIQ_PACKAGES[@]}"; do
     build_package_wheel ${AIQ_PACKAGE}
 done
 
-BUILD_AIQ_COMPAT="true"
 if [[ "${BUILD_AIQ_COMPAT}" == "true" ]]; then
     for AIQ_COMPAT_PACKAGE in "${AIQ_COMPAT_PACKAGES[@]}"; do
         build_package_wheel ${AIQ_COMPAT_PACKAGE}
