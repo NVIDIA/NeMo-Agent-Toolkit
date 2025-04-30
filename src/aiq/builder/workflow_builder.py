@@ -54,7 +54,11 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.memory.interfaces import MemoryEditor
 from aiq.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
 from aiq.profiler.utils import detect_llm_frameworks_in_build_fn
+from aiq.utils.optional_imports import DummyBatchSpanProcessor
+from aiq.utils.optional_imports import DummySpanExporter
+from aiq.utils.optional_imports import DummyTracerProvider
 from aiq.utils.optional_imports import OptionalImportError
+from aiq.utils.optional_imports import get_dummy_trace
 from aiq.utils.optional_imports import get_opentelemetry
 from aiq.utils.optional_imports import get_opentelemetry_sdk
 from aiq.utils.type_utils import override
@@ -71,35 +75,10 @@ try:
     SpanExporter = opentelemetry.sdk.trace.export.SpanExporter
 except OptionalImportError as e:
     logger.warning("OpenTelemetry not available: %s", e)
-    from aiq.utils.optional_imports import DummySpanExporter
     SpanExporter = type(DummySpanExporter())
-
-    class DummyBatchSpanProcessor:
-
-        def __init__(self, *args, **kwargs):
-            pass
-
-        def shutdown(self, *args, **kwargs):
-            pass
-
     BatchSpanProcessor = DummyBatchSpanProcessor
-
-    class DummyTracerProvider:
-
-        def add_span_processor(self, *args, **kwargs):
-            pass
-
     TracerProvider = DummyTracerProvider
-
-    class DummyTrace:
-
-        def get_tracer_provider(self):
-            return TracerProvider()
-
-        def set_tracer_provider(self, *args, **kwargs):
-            pass
-
-    trace = DummyTrace()
+    trace = get_dummy_trace()
 
 
 @dataclasses.dataclass

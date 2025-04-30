@@ -140,3 +140,13 @@ def get_dummy_span_exporter() -> DummySpanExporter:
     if _dummy_span_exporter is None:
         _dummy_span_exporter = DummySpanExporter()
     return _dummy_span_exporter
+
+
+class DummyBatchSpanProcessor:
+    """Dummy implementation of BatchSpanProcessor for when OpenTelemetry is not available."""
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def shutdown(self, *args, **kwargs):
+        pass
