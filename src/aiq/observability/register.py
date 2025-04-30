@@ -14,8 +14,6 @@
 # limitations under the License.
 
 import logging
-from collections.abc import AsyncIterator
-from typing import Any
 
 from pydantic import Field
 
@@ -24,7 +22,6 @@ from aiq.cli.register_workflow import register_logging_method
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.utils.optional_imports import DummySpanExporter
 from aiq.utils.optional_imports import OptionalImportError
 from aiq.utils.optional_imports import try_import_opentelemetry
 from aiq.utils.optional_imports import try_import_phoenix
@@ -40,7 +37,7 @@ class PhoenixTelemetryExporter(TelemetryExporterBaseConfig, name="phoenix"):
 
 
 @register_telemetry_exporter(config_type=PhoenixTelemetryExporter)
-async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: Builder) -> AsyncIterator[Any]:
+async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: Builder):
     """Create a Phoenix telemetry exporter."""
     try:
         phoenix = try_import_phoenix()
@@ -48,6 +45,7 @@ async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: 
         yield HTTPSpanExporter(config.endpoint)
     except OptionalImportError as e:
         logger.warning("Phoenix not available: %s", e)
+        from aiq.utils.optional_imports import DummySpanExporter
         yield DummySpanExporter()
     except ConnectionError as ex:
         logger.warning("Unable to connect to Phoenix at port 6006. Are you sure Phoenix is running?\n %s",
@@ -65,17 +63,17 @@ class OtelCollectorTelemetryExporter(TelemetryExporterBaseConfig, name="otelcoll
 
 
 @register_telemetry_exporter(config_type=OtelCollectorTelemetryExporter)
-async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder) -> AsyncIterator[Any]:
+async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder):
     """Create an OpenTelemetry telemetry exporter."""
     try:
         opentelemetry = try_import_opentelemetry()
         yield opentelemetry.sdk.trace.export.OTLPSpanExporter(config.endpoint)
     except OptionalImportError as e:
         logger.warning("OpenTelemetry not available: %s", e)
-        yield get_dummy_span_exporter()
+        from aiq.utils.optional_imports import DummySpanExporter
+        yield DummySpanExporter()
     except Exception as e:
         logger.error("Failed to create OpenTelemetry exporter: %s", e)
-        yield get_dummy_span_exporter()
 
 
 class ConsoleLoggingMethod(LoggingBaseConfig, name="console"):
