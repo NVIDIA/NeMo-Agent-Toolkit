@@ -97,12 +97,15 @@ class AsyncOtelSpanListener:
         self._tracer = trace.get_tracer("aiq-async-otel-listener")
 
         # Initialize Weave-specific components if available
+        self.gc = None
+        self._weave_calls = {}
         if WEAVE_AVAILABLE:
-            # get the weave client
-            self.gc = weave_client_context.require_weave_client()
-            self._weave_calls: dict[str, Call] = {}
-        else:
-            self._weave_calls = {}
+            try:
+                # Try to get the weave client, but don't fail if Weave isn't initialized
+                self.gc = weave_client_context.require_weave_client()
+            except Exception as e:
+                # Weave is not initialized, so we don't do anything
+                pass
 
     def _on_next(self, step: IntermediateStep) -> None:
         """
@@ -179,8 +182,8 @@ class AsyncOtelSpanListener:
 
         self._span_stack.clear()
 
-        # Clean up any lingering Weave calls if Weave is available
-        if WEAVE_AVAILABLE:
+        # Clean up any lingering Weave calls if Weave is available and initialized
+        if self.gc is not None and self._weave_calls:
             for _, call in list(self._weave_calls.items()):
                 self.gc.finish_call(call, {"status": "incomplete"})
             self._weave_calls.clear()
@@ -260,8 +263,8 @@ class AsyncOtelSpanListener:
 
         self._outstanding_spans[step.UUID] = sub_span
 
-        # Create corresponding Weave call if Weave is available
-        if WEAVE_AVAILABLE:
+        # Create corresponding Weave call if Weave is available and initialized
+        if self.gc is not None:
             self._create_weave_call(step, sub_span)
 
     def _process_end_event(self, step: IntermediateStep):
@@ -299,8 +302,8 @@ class AsyncOtelSpanListener:
         # End the subspan
         sub_span.end(end_time=end_ns)
 
-        # Finish corresponding Weave call if Weave is available
-        if WEAVE_AVAILABLE:
+        # Finish corresponding Weave call if Weave is available and initialized
+        if self.gc is not None:
             self._finish_weave_call(step, sub_span)
 
     @contextmanager
