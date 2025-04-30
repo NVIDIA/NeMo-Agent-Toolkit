@@ -30,7 +30,6 @@ This personal financial planner was revised based on the [Awesome-LLM-App](https
   - [Table of Contents](#table-of-contents)
   - [Key Features](#key-features)
   - [Installation and Setup](#installation-and-setup)
-    - [Setup Virtual Environment and Install AIQ Toolkit](#setup-virtual-environment-and-install-aiqtoolkit)
     - [Install this Workflow:](#install-this-workflow)
     - [Set Up API Keys](#set-up-api-keys)
   - [Example Usage](#example-usage)
