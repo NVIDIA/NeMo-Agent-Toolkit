@@ -111,3 +111,29 @@ This section configures integration of memory layers with tools such as the [Mem
 ### `retrievers`
 
 This section configures retrievers for vector stores. It follows the same format as the `llms` section. Refer to the `examples/rag_demo` example workflow for an example on how this is used.
+
+### Environment Variable Interpolation
+
+AIQ Toolkit supports environment variable interpolation in YAML configuration files using the format `${VAR:-default_value}`. This allows you to:
+
+1. Reference environment variables in your configuration
+2. Provide default values if the environment variable is not set
+3. Use empty strings as default values if needed
+
+To illustrate this concept, an example from the `llms` section of the configuration file is provided below.
+
+```yaml
+llms:
+  nim_llm:
+    _type: nim
+    base_url: ${NIM_BASE_URL:-"http://default.com"}  # Optional with default value
+    api_key: ${NIM_API_KEY}  # Will use empty string if `NIM_API_KEY` not set
+    model_name: ${MODEL_NAME:-}  # Will use empty string if `MODEL_NAME` not set
+    temperature: 0.0
+```
+
+The environment variable interpolation process follow the rules enumerated below.
+
+- `${VAR}` - Uses the value of environment variable `VAR`, or empty string if not set
+- `${VAR:-default}` - Uses the value of environment variable `VAR`, or `default` if not set
+- `${VAR:-}` - Uses the value of environment variable `VAR`, or empty string if not set
