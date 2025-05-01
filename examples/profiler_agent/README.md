@@ -5,7 +5,7 @@ An agent-based system for analyzing and profiling LLM applications.
 
 ## Installation
 
-0. Start the pheonix server locally or use a remote phoenix server
+0. Start the Phoenix server locally or use a remote Phoenix server
 ```
 docker run -p 6006:6006 -p 4317:4317 -i -t arizephoenix/phoenix:latest 
 ```
