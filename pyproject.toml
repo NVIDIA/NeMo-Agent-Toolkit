@@ -45,7 +45,7 @@ dependencies = [
   "uvicorn[standard]~=0.32.0",
   "wikipedia~=1.4",
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"
 description = "Agent Intelligence Toolkit (AIQ Toolkit)"
 readme = "src/aiq/meta/pypi.md"
 license = { file = "LICENSE.md" }
@@ -115,7 +115,7 @@ aiq_agno_personal_finance = { path = "examples/agno_personal_finance", editable 
 
 [tool.uv.workspace]
 members = ["packages/*"]
-
+exclude = ["packages/compat"]
 
 [dependency-groups]
 # Dependency groups are only for developers to aid in managing dependencies local to a dev machine.

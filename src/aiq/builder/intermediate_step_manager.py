@@ -81,13 +81,15 @@ class IntermediateStepManager:
                 logger.warning("Step id %s not found in outstanding start steps", payload.UUID)
                 return
 
-            # If we are in the same coroutine, we should have the same parent step id. If so, unset the current step id.
-            if (parent_step_id == payload.UUID):
-                _current_open_step_id.reset(open_step.token)
-
+            # Restore the parent step ID directly instead of using a cross‑context token.
+            if parent_step_id == payload.UUID:
+                _current_open_step_id.set(open_step.step_parent_id)
             else:
-                # Manually set the parent step ID. This happens when running on the thread pool
+                # Different context (e.g. thread‑pool); safely restore the parent ID **without**
+                # trying to use a token that belongs to another Context.
+                _current_open_step_id.set(open_step.step_parent_id)
                 parent_step_id = open_step.step_parent_id
+
         elif (payload.event_state == IntermediateStepState.CHUNK):
 
             # Get the current step from the outstanding steps
