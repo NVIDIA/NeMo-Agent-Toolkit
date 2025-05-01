@@ -41,6 +41,7 @@ env:
   GH_TOKEN: "${{ github.token }}"
   GIT_COMMIT: "${{ github.sha }}"
   BASE_SHA: "${{ inputs.base_sha }}"
+  BUILD_AIQ_COMPAT: "true"
   RAPIDS_CONDA_RETRY_MAX: "5"
   WORKSPACE: "${{ github.workspace }}/aiqtoolkit"
   WORKSPACE_TMP: "${{ github.workspace }}/tmp"
