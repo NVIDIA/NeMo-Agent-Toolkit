@@ -71,6 +71,7 @@ Components <./components/index.md>
 Advanced <./advanced/index.md>
 References <./references/index.md>
 Troubleshooting <./troubleshooting.md>
+Support <./support.md>
 Release Notes <./release-notes.md>
 Code of Conduct <./code-of-conduct.md>
 ```

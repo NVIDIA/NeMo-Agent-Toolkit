@@ -20,13 +20,13 @@
 Contributions to AIQ Toolkit fall into the following three categories.
 
 1. To report a bug, request a new feature, or report a problem with
-    documentation, file a [bug](https://github.com/NVIDIA/AIQToolkit/issues)
+    documentation, file a [bug](https://github.com/NVIDIA/AIQToolkit/issues/new/choose)
     describing in detail the problem or new feature. The AIQ Toolkit team evaluates
     and triages bugs and schedules them for a release. If you believe the
     bug needs priority attention, comment on the bug to notify the
     team.
 2. To propose and implement a new Feature, file a new feature request
-    [issue](https://github.com/NVIDIA/AIQToolkit/issues). Describe the
+    [issue](https://github.com/NVIDIA/AIQToolkit/issues/new/choose). Describe the
     intended feature and discuss the design and implementation with the team and
     community. Once the team agrees that the plan is good, go ahead and
     implement it, using the [code contributions](#code-contributions) guide below.
