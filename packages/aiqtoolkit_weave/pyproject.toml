@@ -1,0 +1,41 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["aiq.*"]
+
+
+[tool.setuptools_scm]
+root = "../.."
+
+
+[project]
+name = "aiqtoolkit-weave"
+dynamic = ["version"]
+dependencies = [
+  # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
+  # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
+  # Keep sorted!!!
+  "aiqtoolkit",
+  "weave>=0.51.44"
+]
+requires-python = ">=3.12"
+description = "Subpackage for Weave integration in AIQToolkit"
+readme = "src/aiq/meta/pypi.md"
+keywords = ["ai", "observability", "wandb"]
+classifiers = ["Programming Language :: Python"]
+
+
+[tool.uv]
+config-settings = { editable_mode = "compat" }
+
+
+[tool.uv.sources]
+aiqtoolkit = { workspace = true }
+
+
+[project.entry-points.'aiq.components']
+aiqtoolkit_weave = "aiq.plugins.weave.register"
