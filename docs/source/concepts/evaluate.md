@@ -276,11 +276,11 @@ aiq eval --config_file=examples/simple/configs/eval_config.yml --reps=5
 This will allow you to get an average score across multiple runs and analyze the variation in the generated outputs.
 
 ## Running evaluation on large datasets
-Similar to how evaluators are run in parallel, entries in the dataset are also processed in parallel. Concurrency is configurable using the `eval.general.concurrency` parameter in the `config.yml` file. The default value is 8. Increase or decrease the value based on the available resources.
+Similar to how evaluators are run in parallel, entries in the dataset are also processed in parallel. Concurrency is configurable using the `eval.general.max_concurrency` parameter in the `config.yml` file. The default value is 8. Increase or decrease the value based on the available resources.
 ```yaml
 eval:
   general:
-    concurrency: 4
+    max_concurrency: 4
 ```
 
 ## Pickup where you left off
