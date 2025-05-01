@@ -15,15 +15,24 @@
 
 
 class RequestManagerBase:
+    """
+    Base class for handling API requests.
+    This class provides an interface for making API requests.
+    """
     pass
 
-    @staticmethod
-    async def default_request_handler(request: "RequestManagerBase") -> None:
-        """
-        Default request callback handler for making API request. This is a pass-through function
-        that returns None if no callback function has been explicitly set.
 
-        Args:
-            request (RequestManagerBase): Request Manager Interface.
-        """
-        return None
+class ResponseManagerBase:
+    """
+    Base class for handling API responses.
+    This class provides an interface for handling API responses.
+    """
+    pass
+
+
+class AuthenticationManagerBase:
+    """
+    Base class for authenticating to API services.
+    This class provides an interface for authenticating to API services.
+    """
+    pass

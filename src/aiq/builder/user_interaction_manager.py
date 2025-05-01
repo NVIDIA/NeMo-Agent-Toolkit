@@ -15,8 +15,10 @@
 
 import time
 import uuid
+
 import httpx
 
+from aiq.authentication.request_manager import RequestManager
 from aiq.data_models.interactive import HumanPrompt
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
@@ -78,4 +80,9 @@ class AIQUserInteractionManager:
                                headers: dict,
                                params: dict,
                                data: dict) -> httpx.Response | None:
-        pass
+
+        request = RequestManager(authentication_provider, url, method, headers, params, data)
+
+        response = await self._context_state.user_request_callback.get()(request)
+
+        return response

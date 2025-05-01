@@ -13,11 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 from aiq.builder.context import Singleton
 from aiq.data_models.authentication import AuthenticationProvider
 
+logger = logging.getLogger(__name__)
 
-class CredentialsManager(metaclass=Singleton):
+
+class _CredentialsManager(metaclass=Singleton):
 
     def __init__(self):
         """
@@ -36,6 +40,10 @@ class CredentialsManager(metaclass=Singleton):
             authentication_providers.clear()
             self.__swap_flag = False
 
-    def _get_authentication_providers(self, authentication_provider: str) -> AuthenticationProvider | None:
+    def _get_authentication_provider(self, authentication_provider: str) -> AuthenticationProvider | None:
         """Retrieve the stored authentication providers."""
+        if authentication_provider not in self.__authentication_providers:
+            logger.warning("Authorization provider not found: %s", authentication_provider, exc_info=True)
+            return None
+
         return self.__authentication_providers.get(authentication_provider)

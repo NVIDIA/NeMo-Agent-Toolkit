@@ -40,8 +40,8 @@ from aiq.builder.function_base import FunctionBase
 from aiq.builder.function_info import FunctionInfo
 from aiq.builder.llm import LLMProviderInfo
 from aiq.builder.retriever import RetrieverProviderInfo
-from aiq.data_models.authentication import AuthenticationBaseConfig
-from aiq.data_models.authentication import AuthenticationBaseConfigT
+# from aiq.data_models.authentication import AuthenticationBaseConfig # TODO EE: Update
+# from aiq.data_models.authentication import AuthenticationBaseConfigT # TODO EE: Update
 from aiq.data_models.common import TypedBaseModelT
 from aiq.data_models.component import AIQComponentEnum
 from aiq.data_models.config import AIQConfig

@@ -13,19 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.builder.builder import Builder
-from aiq.data_models.authentication import AuthenticationBaseConfig
+# TODO EE: To be implemented
+# from aiq.builder.builder import Builder
+# from aiq.data_models.authentication import AuthenticationBaseConfig
 
+# class JiraConfig(LLMBaseConfig, name="jira_api"):
+#     pass
 
-class JiraConfig(LLMBaseConfig, name="jira_api"):
-    pass
+# @register_api_provider(config_type=JiraConfig)
+# async def jira_provider(api_config: JiraConfig, builder: Builder):
+#     pass
 
-
-@register_api_provider(config_type=JiraConfig)
-async def jira_provider(api_config: JiraConfig, builder: Builder):
-    pass
-
-
-@register_api_client(config_type=JiraConfig, wrapper_type=None)
-async def jira_client(api_config: JiraConfig, builder: Builder):
-    pass
+# @register_api_client(config_type=JiraConfig, wrapper_type=None)
+# async def jira_client(api_config: JiraConfig, builder: Builder):
+#     pass

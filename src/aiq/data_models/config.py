@@ -25,6 +25,7 @@ from pydantic import ValidationInfo
 from pydantic import ValidatorFunctionWrapHandler
 from pydantic import field_validator
 
+from aiq.authentication.credentials_manager import _CredentialsManager
 from aiq.data_models.authentication import AuthenticationProvider
 from aiq.data_models.evaluate import EvalConfig
 from aiq.data_models.front_end import FrontEndBaseConfig
@@ -272,6 +273,11 @@ class AIQConfig(HashableBaseModel):
         stream.write(f"Number of Retrievers: {len(self.retrievers)}\n")
         stream.write(f"Number of Authentication Providers: {len(self.authentication)}\n")
 
+    def model_post_init(self, context: typing.Any) -> None:
+        # Persist the authentication credentials after the model is initialized.
+        if (self.authentication):
+            _CredentialsManager()._swap_authorization_providers(self.authentication)
+
     @field_validator("functions",
                      "llms",
                      "embedders",
@@ -318,7 +324,7 @@ class AIQConfig(HashableBaseModel):
 
         WorkflowAnnotation = typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig),
                                               Discriminator(TypedBaseModel.discriminator)]
-        #TODO EE: Update
+        # TODO EE: Update
         # AuthenticationAnnotation = dict[str,
         #                                 typing.Annotated[type_registry.compute_annotation(AuthenticationBaseConfig),
         #                                                  Discriminator(TypedBaseModel.discriminator)]]

@@ -13,12 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import httpx
-
 from aiq.authentication.interfaces import RequestManagerBase
 
 
 class RequestManager(RequestManagerBase):
 
-    def __init__(self):
-        pass
+    def __init__(self, authentication_provider: str, url: str, method: str, headers: dict, params: dict,
+                 data: dict) -> None:
+        self._authentication_provider: str = authentication_provider
+        self._url: str = url
+        self._method: str = method
+        self._headers: dict = headers
+        self._params: dict = params
+        self._data: dict = data
