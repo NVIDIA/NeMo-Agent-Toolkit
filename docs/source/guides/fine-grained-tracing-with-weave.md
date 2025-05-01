@@ -39,7 +39,7 @@ uv pip install -e examples/simple_calculator
 
 ### Step 3: Modify Workflow Configuration
 
-Update your workflow configuration file (`examples/simple_calculator/configs/config.yml`) to include the weave telemetry settings as follows:
+Update your workflow configuration file to include the weave telemetry settings. For example, `examples/simple_calculator/configs/config-weave.yml` has the following weave settings:
 
 ```bash
 general:
