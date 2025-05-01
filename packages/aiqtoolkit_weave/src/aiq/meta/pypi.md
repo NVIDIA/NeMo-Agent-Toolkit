@@ -17,7 +17,7 @@ limitations under the License.
 
 ![NVIDIA AgentIQ](https://media.githubusercontent.com/media/NVIDIA/AgentIQ/refs/heads/main/docs/source/_static/agentiq_banner.png "AgentIQ banner image")
 
-# NVIDIA AgentIQ Subpackage
+# NVIDIA Agent Intelligence Toolkit Subpackage
 This is a subpackage for Weights and Biases Weave integration for observability.
 
-For more information about AgentIQ, please visit the [AgentIQ package](https://pypi.org/project/agentiq/).
+For more information about AIQ Toolkit, please visit the [AIQ Toolkit package](https://pypi.org/project/aiqtoolkit/).
