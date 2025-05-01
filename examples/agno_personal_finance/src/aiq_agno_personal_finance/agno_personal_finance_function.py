@@ -45,7 +45,7 @@ async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConf
     config : AgnoPersonalFinanceFunctionConfig
         Configuration for the financial planning function
     builder : Builder
-        The AgentIQ builder instance
+        The AIQ Toolkit builder instance
 
     Returns
     -------

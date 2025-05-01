@@ -52,7 +52,7 @@ class EvaluationRemoteWorkflowHandler:
 
         try:
             # Use the streaming endpoint
-            endpoint = f"{self.config.endpoint}/generate/stream/full"
+            endpoint = f"{self.config.endpoint}/generate/full"
             async with session.post(endpoint, json=payload) as response:
                 response.raise_for_status()  # Raise an exception for HTTP errors
 

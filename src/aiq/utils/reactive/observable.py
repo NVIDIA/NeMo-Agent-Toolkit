@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import typing
 from collections.abc import Callable
 from typing import TypeVar
 
@@ -21,6 +20,7 @@ from aiq.utils.reactive.base.observable_base import ObservableBase
 from aiq.utils.reactive.base.observer_base import ObserverBase
 from aiq.utils.reactive.observer import Observer
 from aiq.utils.reactive.subscription import Subscription
+from aiq.utils.type_utils import override
 
 # Covariant type param: An Observable producing type X can also produce
 # a subtype of X.
@@ -47,7 +47,7 @@ class Observable(ObservableBase[_T_out_co]):
         """
         raise NotImplementedError("Observable._subscribe_core must be implemented by subclasses")
 
-    @typing.override
+    @override
     def subscribe(self,
                   on_next: ObserverBase[_T_out_co] | OnNext[_T_out_co] | None = None,
                   on_error: OnError | None = None,

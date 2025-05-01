@@ -22,11 +22,11 @@ limitations under the License.
 
 # Tool Calling Agent
 
-A configurable Tool Calling Agent. This agent leverages the AgentIQ plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
+A configurable Tool Calling Agent. This agent leverages the AIQ Toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AgentIQ library agent and tools.
+- **Pre-built Tools:** Leverages core AIQ Toolkit library agent and tools.
 - **Tool Calling / Function calling Agent:** Leverages tool / function input schema to appropriately route to the correct tool
 - **Custom Plugin System:** Developers can bring in new tools using plugins.
 - **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
@@ -35,17 +35,17 @@ A configurable Tool Calling Agent. This agent leverages the AgentIQ plugin syste
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/intro/install.md) to create the development environment and install AIQ Toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AgentIQ library, run the following commands:
+From the root directory of the AIQ Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e .
 ```
 
-The `code_generation` and `wiki_search` tools are part of the `agentiq[langchain]` package.  To install the package run the following command:
+The `code_generation` and `wiki_search` tools are part of the `aiqtoolkit[langchain]` package.  To install the package run the following command:
 ```bash
 # local package install from source
 uv pip install -e '.[langchain]'
@@ -68,7 +68,7 @@ To see the Tool Calling Agent used as a function within a workflow, alongside th
 This README primarily covers the former case, where the Tool Calling Agent functions as the main workflow, in config.yml.
 For more details, refer to the [ReAct Agent documentation](../../../docs/source/components/tool-calling-agent.md) and the [Reasoning Agent documentation](../../../docs/source/components/react-agent.md)
 
-Run the following command from the root of the AgentIQ repo to execute this workflow with the specified input:
+Run the following command from the root of the AIQ Toolkit repo to execute this workflow with the specified input:
 
 ```bash
 aiq run  --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
@@ -78,46 +78,63 @@ aiq run  --config_file=examples/agents/tool_calling/configs/config.yml --input "
 
 ```console
 $ aiq run  --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
-2025-02-07 16:56:25,350 - aiq.cli.run - INFO - Loading configuration from: examples/agents/tool_calling/configs/config.yml
-2025-02-07 16:56:26,743 - aiq.profiler.callbacks.crewai_callback_handler - ERROR - Failed to import crewAI or a sub-module: No module named 'litellm'
-2025-02-07 16:56:27,566 - aiq.profiler.callbacks.crewai_callback_handler - ERROR - Failed to import crewAI or a sub-module: No module named 'litellm'
-2025-02-07 16:56:27,664 - aiq.profiler.callbacks.crewai_callback_handler - ERROR - Failed to import crewAI or a sub-module: No module named 'litellm'
-2025-02-07 16:56:27,665 - aiq.profiler.callbacks.crewai_callback_handler - ERROR - Failed to import crewAI or a sub-module: No module named 'litellm'
-2025-02-07 16:56:27,665 - aiq.tool.code_generation_tool - INFO - Initializing code generation tool
+2025-04-23 15:03:46,312 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (499.885559 ms). Ensure all imports are inside your registered functions.
+2025-04-23 15:03:46,573 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/agents/tool_calling/configs/config.yml'
+2025-04-23 15:03:46,581 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
+2025-04-23 15:03:46,613 - aiq.profiler.utils - WARNING - Discovered frameworks: {<LLMFrameworkEnum.LANGCHAIN: 'langchain'>} in function code_generation_tool by inspecting source. It is recommended and more reliable to instead add the used LLMFrameworkEnum types in the framework_wrappers argument when calling @register_function.
+2025-04-23 15:03:46,614 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Initializing code generation tool
 Getting tool LLM from config
-2025-02-07 16:56:27,805 - aiq.tool.code_generation_tool - INFO - Filling tool's prompt variable from config
-2025-02-07 16:56:27,805 - aiq.tool.code_generation_tool - INFO - Initialized code generation tool
-2025-02-07 16:56:27,806 - aiq.profiler.callbacks.crewai_callback_handler - ERROR - Failed to import crewAI or a sub-module: No module named 'litellm'
-/Users/sjaviya/Documents/AgentIQ/sjaviya/ai-query-engine/.tempvenv/lib/python3.12/site-packages/langchain_nvidia_ai_endpoints/chat_models.py:591: UserWarning: Model 'meta/llama-3.1-70b-instruct' is not known to support tools. Your tool binding may fail at inference time.
-  warnings.warn(
-2025-02-07 16:56:27,960 - aiq.agent.tool_calling_agent.agent - INFO - Initialized Tool Calling Agent Graph
-2025-02-07 16:56:27,960 - aiq.agent.tool_calling_agent.agent - INFO - Tool Calling Agent Graph built and compiled successfully
+2025-04-23 15:03:46,632 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Filling tool's prompt variable from config
+2025-04-23 15:03:46,632 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Initialized code generation tool
 
 Configuration Summary:
 --------------------
-Workflow Type: EmptyFunctionConfig
-Number of Functions: 0
-Number of LLMs: 0
+Workflow Type: tool_calling_agent
+Number of Functions: 3
+Number of LLMs: 1
 Number of Embedders: 0
 Number of Memory: 0
+Number of Retrievers: 0
 
-2025-02-07 16:56:27,961 - aiq.cli.run - INFO - Processing input: ('who was Djikstra?',)
-2025-02-07 16:56:27,962 - aiq.agent.tool_calling_agent.agent - INFO - Calling agent
-2025-02-07 16:56:28,906 - aiq.agent.tool_calling_agent.agent - INFO - Calling tools: ['wikipedia_search']
-2025-02-07 16:56:31,272 - aiq.agent.tool_calling_agent.agent - INFO - Calling agent
-2025-02-07 16:56:35,354 - aiq.cli.run - INFO - --------------------------------------------------
-Workflow Result:
-['Edsger Wybe Dijkstra was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist. He is best known for his work on the shortest path problem, which he solved in 1956, and for his development of the first compiler for the programming language ALGOL 60. Dijkstra was also a pioneer in the field of computer science, and his work had a significant impact on the development of the field. He was awarded the Turing Award in 1972 for his contributions to the development of structured programming languages.']
+2025-04-23 15:03:47,601 - aiq.agent.tool_calling_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: who was Djikstra?
+Agent's thoughts:
+content='' additional_kwargs={'tool_calls': [{'id': 'chatcmpl-tool-25c373f4cc544ab995e2b424c30eb00a', 'type': 'function', 'function': {'name': 'wikipedia_search', 'arguments': '{"question": "Djikstra"}'}}]} response_metadata={'role': 'assistant', 'content': None, 'tool_calls': [{'id': 'chatcmpl-tool-25c373f4cc544ab995e2b424c30eb00a', 'type': 'function', 'function': {'name': 'wikipedia_search', 'arguments': '{"question": "Djikstra"}'}}], 'token_usage': {'prompt_tokens': 451, 'total_tokens': 465, 'completion_tokens': 14}, 'finish_reason': 'tool_calls', 'model_name': 'meta/llama-3.1-70b-instruct'} id='run-f82d064d-422a-4241-9d95-e56dd76ed447-0' tool_calls=[{'name': 'wikipedia_search', 'args': {'question': 'Djikstra'}, 'id': 'chatcmpl-tool-25c373f4cc544ab995e2b424c30eb00a', 'type': 'tool_call'}] usage_metadata={'input_tokens': 451, 'output_tokens': 14, 'total_tokens': 465} role='assistant'
+------------------------------
+2025-04-23 15:03:51,894 - aiq.agent.tool_calling_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: ['wikipedia_search']
+Tool's input: content='' additional_kwargs={'tool_calls': [{'id': 'chatcmpl-tool-25c373f4cc544ab995e2b424c30eb00a', 'type': 'function', 'function': {'name': 'wikipedia_search', 'arguments': '{"question": "Djikstra"}'}}]} response_metadata={'role': 'assistant', 'content': None, 'tool_calls': [{'id': 'chatcmpl-tool-25c373f4cc544ab995e2b424c30eb00a', 'type': 'function', 'function': {'name': 'wikipedia_search', 'arguments': '{"question": "Djikstra"}'}}], 'token_usage': {'prompt_tokens': 451, 'total_tokens': 465, 'completion_tokens': 14}, 'finish_reason': 'tool_calls', 'model_name': 'meta/llama-3.1-70b-instruct'} id='run-f82d064d-422a-4241-9d95-e56dd76ed447-0' tool_calls=[{'name': 'wikipedia_search', 'args': {'question': 'Djikstra'}, 'id': 'chatcmpl-tool-25c373f4cc544ab995e2b424c30eb00a', 'type': 'tool_call'}] usage_metadata={'input_tokens': 451, 'output_tokens': 14, 'total_tokens': 465} role='assistant'
+Tool's response:
+<Document source="https://en.wikipedia.org/wiki/Edsger_W._Dijkstra" page=""/>
+Edsger Wybe Dijkstra ( DYKE-strə; Dutch: [ˈɛtsxər ˈʋibə ˈdɛikstraː] ; 11 May 1930 – 6 August 2002) was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist.
+Born in Rotterdam in the Netherlands, Dijkstra studied mathematics and physics and then theoretical physics at the University of Leiden. Adriaan van Wijngaarden offered him a job as the first computer programmer in the Netherlands at the Mathematical Centre in Amsterdam, where he worked from 1952 until 1962. He formulated and solved the shortest path problem in 1956, and in 1960 developed the first compiler for the programming language ALGOL 60 in conjunction with colleague Jaap A. Zonneveld. In 1962 he moved to Eindhoven, and later to Nuenen, where he became a professor in the Mathematics Department at the Technische Hogeschool Eindhoven. In the late 1960s he built the THE multiprogramming system, which influence...
+------------------------------
+2025-04-23 15:03:59,211 - aiq.agent.tool_calling_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: who was Djikstra?
+
+<Document source="https://en.wikipedia.org/wiki/Edsger_W._Dijkstra" page=""/>
+Edsger Wybe Dijkstra ( DYKE-strə; Dutch: [ˈɛtsxər ˈʋibə ˈdɛikstraː] ; 11 May 1930 – 6 August 2002) was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist.
+Born in Rotterdam in the Netherlands, Dijkstra studied mathematics and physics and then theoretical physics at the University of Leiden. Adriaan van Wijngaarden offered him a job as the first computer programmer in the Netherlands at the Mathematical Centre in Amsterdam, where he worked from 1952 until 1962. He formulated and solved the shortest path problem in 1956, and in 1960 developed the first compiler for the programming language ALGOL 60 in conjunction with colleague Jaap A. Zonneveld. In 1962 he moved to Eindhoven, and later to Nuenen, where he became a professor in the Mathematics Department at the Technische Hogeschool Eindhoven. In the late 1960s he built the THE multiprogramming system, which influence...
+Agent's thoughts:
+content='Edsger Wybe Dijkstra was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist. He was born on May 11, 1930, in Rotterdam, Netherlands, and studied mathematics and physics at the University of Leiden. Dijkstra worked as the first computer programmer in the Netherlands at the Mathematical Centre in Amsterdam from 1952 to 1962. He formulated and solved the shortest path problem in 1956 and developed the first compiler for the programming language ALGOL 60 in 1960. Dijkstra moved to Eindhoven in 1962 and became a professor in the Mathematics Department at the Technische Hogeschool Eindhoven. He built the THE multiprogramming system in the late 1960s, which influenced the development of operating systems.' additional_kwargs={} response_metadata={'role': 'assistant', 'content': 'Edsger Wybe Dijkstra was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist. He was born on May 11, 1930, in Rotterdam, Netherlands, and studied mathematics and physics at the University of Leiden. Dijkstra worked as the first computer programmer in the Netherlands at the Mathematical Centre in Amsterdam from 1952 to 1962. He formulated and solved the shortest path problem in 1956 and developed the first compiler for the programming language ALGOL 60 in 1960. Dijkstra moved to Eindhoven in 1962 and became a professor in the Mathematics Department at the Technische Hogeschool Eindhoven. He built the THE multiprogramming system in the late 1960s, which influenced the development of operating systems.', 'token_usage': {'prompt_tokens': 747, 'total_tokens': 911, 'completion_tokens': 164}, 'finish_reason': 'stop', 'model_name': 'meta/llama-3.1-70b-instruct'} id='run-51b93700-cd12-40dc-9ee4-632bf30b4a5e-0' usage_metadata={'input_tokens': 747, 'output_tokens': 164, 'total_tokens': 911} role='assistant'
+------------------------------
+2025-04-23 15:03:59,215 - aiq.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
-Cleaning up react_agent workflow.
-2025-02-07 16:56:35,361 - aiq.cli.entrypoint - INFO - Total time: 10.05 sec
-2025-02-07 16:56:35,361 - aiq.cli.entrypoint - INFO - Pipeline runtime: 7.40 sec
+Workflow Result:
+['Edsger Wybe Dijkstra was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist. He was born on May 11, 1930, in Rotterdam, Netherlands, and studied mathematics and physics at the University of Leiden. Dijkstra worked as the first computer programmer in the Netherlands at the Mathematical Centre in Amsterdam from 1952 to 1962. He formulated and solved the shortest path problem in 1956 and developed the first compiler for the programming language ALGOL 60 in 1960. Dijkstra moved to Eindhoven in 1962 and became a professor in the Mathematics Department at the Technische Hogeschool Eindhoven. He built the THE multiprogramming system in the late 1960s, which influenced the development of operating systems.']
+--------------------------------------------------
 ```
 ---
 
-### Starting the AgentIQ Server
+### Starting the AIQ Toolkit Server
 
-You can start the AgentIQ server using the `aiq serve` command with the appropriate configuration file.
+You can start the AIQ Toolkit server using the `aiq serve` command with the appropriate configuration file.
 
 **Starting the Tool Calling Agent Example Workflow**
 
@@ -125,7 +142,7 @@ You can start the AgentIQ server using the `aiq serve` command with the appropri
 aiq serve --config_file=examples/agents/tool_calling/configs/config.yml
 ```
 
-### Making Requests to the AgentIQ Server
+### Making Requests to the AIQ Toolkit Server
 
 Once the server is running, you can make HTTP requests to interact with the workflow.
 

@@ -26,7 +26,7 @@ from aiq.utils.type_converter import GlobalTypeConverter
 
 class AIQDocument(BaseModel):
     """
-    Object representing a retrieved document/chunk from a standard AgentIQ Retriever.
+    Object representing a retrieved document/chunk from a standard AIQ Toolkit Retriever.
     """
     page_content: str = Field(description="Primary content of the document to insert or retrieve")
     metadata: dict[str, Any] = Field(description="Metadata dictionary attached to the AIQDocument")

@@ -42,10 +42,10 @@ class LocalRegistryHandler(AbstractRegistryHandler):
 
     @asynccontextmanager
     async def publish(self, artifact: AIQArtifact) -> AsyncGenerator[PublishResponse]:
-        """Publishes an AgentIQ artifact to a local registry.
+        """Publishes an AIQ Toolkit artifact to a local registry.
 
         Args:
-            artifact (AIQArtifact): An artifact that contain AgentIQ plugin wheel and it's corrosponding discovery
+            artifact (AIQArtifact): An artifact that contain AIQ Toolkit plugin wheel and it's corrosponding discovery
             metadata.
 
         Yields:
@@ -62,10 +62,10 @@ class LocalRegistryHandler(AbstractRegistryHandler):
 
     @asynccontextmanager
     async def pull(self, packages: PullRequestPackages) -> AsyncGenerator[PullResponse]:
-        """Download and install AgentIQ artifacts from a local registry.
+        """Download and install AIQ Toolkit artifacts from a local registry.
 
         Args:
-            packages (PullRequestPackages): Parameters used to pull the AgentIQ artifact.
+            packages (PullRequestPackages): Parameters used to pull the AIQ Toolkit artifact.
 
         Yields:
             Iterator[AsyncGenerator[PullResponse]]: A response message that includes a the pulled packages and a
@@ -83,7 +83,7 @@ class LocalRegistryHandler(AbstractRegistryHandler):
 
     @asynccontextmanager
     async def search(self, query: SearchQuery) -> AsyncGenerator[SearchResponse]:
-        """Searches the local aiq registry for relevant AgentIQ components.
+        """Searches the local aiq registry for relevant AIQ Toolkit components.
 
         Args:
             query (SearchQuery): Parameters of the search to be performed.

@@ -37,7 +37,7 @@ OPENINFERENCE_SPAN_KIND = SpanAttributes.OPENINFERENCE_SPAN_KIND
 
 def _ns_timestamp(seconds_float: float) -> int:
     """
-    Convert AgentIQ’s float `event_timestamp` (in seconds) into an integer number
+    Convert AIQ Toolkit’s float `event_timestamp` (in seconds) into an integer number
     of nanoseconds, as OpenTelemetry expects.
     """
     return int(seconds_float * 1e9)
@@ -45,14 +45,14 @@ def _ns_timestamp(seconds_float: float) -> int:
 
 class AsyncOtelSpanListener:
     """
-    A separate, async class that listens to the AgentIQ intermediate step
+    A separate, async class that listens to the AIQ Toolkit intermediate step
     event stream and creates proper Otel spans:
 
     - On FUNCTION_START => open a new top-level span
     - On any other intermediate step => open a child subspan (immediate open/close)
     - On FUNCTION_END => close the function’s top-level span
 
-    This runs fully independently from the normal AgentIQ workflow, so that
+    This runs fully independently from the normal AIQ Toolkit workflow, so that
     the workflow is not blocking or entangled by OTel calls.
     """
 
@@ -70,7 +70,7 @@ class AsyncOtelSpanListener:
         self._outstanding_spans: dict[str, Span] = {}
 
         # Stack of spans, for when we need to create a child span
-        self._span_stack: list[Span] = []
+        self._span_stack: dict[str, Span] = {}
 
         self._running = False
 
@@ -100,7 +100,7 @@ class AsyncOtelSpanListener:
         logger.error("Error in intermediate step subscription: %s", exc, exc_info=True)
 
     def _on_complete(self) -> None:
-        logger.info("Intermediate step stream completed. No more events will arrive.")
+        logger.debug("Intermediate step stream completed. No more events will arrive.")
 
     @asynccontextmanager
     async def start(self):
@@ -109,11 +109,11 @@ class AsyncOtelSpanListener:
 
             otel_listener = AsyncOtelSpanListener()
             async with otel_listener.start():
-                # run your AgentIQ workflow
+                # run your AIQ Toolkit workflow
                 ...
             # cleans up
 
-        This sets up the subscription to the AgentIQ event stream and starts the background loop.
+        This sets up the subscription to the AIQ Toolkit event stream and starts the background loop.
         """
         try:
             # Subscribe to the event stream
@@ -152,7 +152,7 @@ class AsyncOtelSpanListener:
 
         self._outstanding_spans.clear()
 
-        if self._span_stack:
+        if len(self._span_stack) > 0:
             logger.error(
                 "Not all spans were closed. Ensure all start events have a corresponding end event. Remaining: %s",
                 self._span_stack)
@@ -175,7 +175,10 @@ class AsyncOtelSpanListener:
         parent_ctx = None
 
         if (len(self._span_stack) > 0):
-            parent_span = self._span_stack[-1]
+            parent_span = self._span_stack.get(step.function_ancestry.parent_id, None)
+            if parent_span is None:
+                logger.warning("No parent span found for step %s", step.UUID)
+                return
 
             parent_ctx = set_span_in_context(parent_span)
 
@@ -230,7 +233,7 @@ class AsyncOtelSpanListener:
                 sub_span.set_attribute(SpanAttributes.INPUT_VALUE, serialized_input)
                 sub_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE, "application/json" if is_json else "text/plain")
 
-        self._span_stack.append(sub_span)
+        self._span_stack[step.UUID] = sub_span
 
         self._outstanding_spans[step.UUID] = sub_span
 
@@ -243,7 +246,7 @@ class AsyncOtelSpanListener:
             logger.warning("No subspan found for step %s", step.UUID)
             return
 
-        self._span_stack.pop()
+        self._span_stack.pop(step.UUID, None)
 
         # Optionally add more attributes from usage_info or data
         usage_info = step.payload.usage_info

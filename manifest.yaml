@@ -20,12 +20,12 @@ x-git-defaults: &git_defaults
 
 repos:
 
-- name: AgentIQ
-  path: dev/AgentIQ
+- name: AIQToolkit
+  path: dev/AIQToolkit
   python:
   - name: aiq
     sub_dir: python
     depends: []
   git:
     <<: *git_defaults
-    repo: AgentIQ
+    repo: AIQToolkit

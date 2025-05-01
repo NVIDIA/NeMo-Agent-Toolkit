@@ -48,7 +48,7 @@ class InferenceOptimizationHolder(BaseModel):
 
 class ProfilerRunner:
     """
-    A utility to run a series of prompts through an AgentIQ workflow for profiling:
+    A utility to run a series of prompts through an AIQ Toolkit workflow for profiling:
 
     - can load prompts from a file
     - or generate them via an LLM
