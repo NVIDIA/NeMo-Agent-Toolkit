@@ -164,6 +164,10 @@ class TunableRagEvaluator:
                         reasoning = f"Error in evaluator from parsing judge LLM response. Missing required key(s): {', '.join(str(arg) for arg in e.args)}"
                         raise
 
+                    coverage_weight = self.default_score_weights.get("coverage", 1 / 3)
+                    correctness_weight = self.default_score_weights.get("correctness", 1 / 3)
+                    relevance_weight = self.default_score_weights.get("relevance", 1 / 3)
+
                     # Calculate score
                     total_weight = coverage_weight + correctness_weight + relevance_weight
                     coverage_weight = coverage_weight / total_weight
