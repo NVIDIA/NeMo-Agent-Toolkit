@@ -102,12 +102,35 @@ function get_num_proc() {
    echo "${NUM_PROC}"
 }
 
+function build_wheel() {
+    rapids-logger "Building Wheel for $1"
+    uv build --wheel --no-progress --out-dir "${WHEELS_DIR}/$2" --directory $1
+}
+
+function build_package_wheel()
+{
+    local pkg=$1
+    pkg_dir_name="${pkg#packages/}"
+    pkg_dir_name="${pkg#./packages/}"
+    # Replace "aiq_" with "aiqtoolkit_"
+    pkg_dir_name="${pkg_dir_name//aiq_/aiqtoolkit_}"
+
+    # Remove compat/
+    pkg_dir_name="${pkg_dir_name/compat\/}"
+    build_wheel "${pkg}" "${pkg_dir_name}/${GIT_TAG}"
+}
+
 function cleanup {
    # Restore the original directory
    popd &> /dev/null
 }
 
+
 trap cleanup EXIT
 
 # Change directory to the repo root
 pushd "${PROJECT_ROOT}" &> /dev/null
+
+AIQ_EXAMPLES=($(find ./examples/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
+AIQ_PACKAGES=($(find ./packages/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
+AIQ_COMPAT_PACKAGES=($(find ./packages/compat -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
