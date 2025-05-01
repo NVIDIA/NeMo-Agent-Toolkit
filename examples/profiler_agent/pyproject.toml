@@ -4,10 +4,7 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools_scm]
 # intentionally empty, the section is required for setuptools_scm to work but we don't need to set anything
-<<<<<<< HEAD
 root = "../.."
-=======
->>>>>>> ea51d86 (add profiler agent to the examples folder)
 
 [project]
 name = "aiq_profiler_agent"
@@ -18,31 +15,19 @@ dependencies = [
   # of precision in the version specifier. For example, use `~=1.2` instead of `~=1.2.3` and `~=0.1.3` instead of
   # `~=0.1.3.5`.
   # Keep sorted!!!
-<<<<<<< HEAD
-  "agentiq[profiling, langchain]",
+  "aiqtoolkit[profiling, langchain]",
   "pydantic ~= 2.10.0, <2.11.0",
-=======
-  "agentiq[profiling, langchain, llama-index, crewai, semantic_kernel, mem0ai, zep_cloud]",
-  "pydantic ~= 2.10.0, <2.11.0",
-
->>>>>>> ea51d86 (add profiler agent to the examples folder)
 ]
 requires-python = "==3.12.*"
-description = "AgentIQ"
+description = "AIQ Toolkit Profiler Agent"
 license = { file = "LICENSE.md" }
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 authors = [{ name = "NVIDIA Corporation" }]
 maintainers = [{ name = "NVIDIA Corporation" }]
 
-[dependency-groups]
-dev = [
-    "black>=25.1.0",
-    "ipdb>=0.13.13",
-    "ipython>=9.0.2",
-    "mypy>=1.15.0",
-    "pre-commit>=4.2.0",
-]
+[tool.uv.sources]
+aiqtoolkit = { path = "../../", editable = true }
 
 [project.entry-points.'aiq.plugins']
 aiq_profiler_agent = "aiq_profiler_agent.register"
@@ -63,8 +48,6 @@ skip-magic-trailing-comma = false
 
 # Like Black, automatically detect the appropriate line ending.
 line-ending = "auto"
-<<<<<<< HEAD
-=======
 
 [tool.black]
 line-length = 120
@@ -795,4 +778,3 @@ indent_dictionary_value = true
 [tool.pyright]
 deprecateTypingAliases = true
 reportInvalidTypeForm = "warning"
->>>>>>> ea51d86 (add profiler agent to the examples folder)
