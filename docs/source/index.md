@@ -62,6 +62,12 @@ We would love to hear from you! Please file an issue on [GitHub](https://github.
 
 ```{toctree}
 :hidden:
+:caption: About NVIDIA Agent Intelligence Toolkit
+Release Notes <./release-notes.md>
+```
+
+```{toctree}
+:hidden:
 :caption: Introduction
 
 ./intro/why-aiqtoolkit.md
@@ -116,8 +122,6 @@ Code Execution Tool <./components/code-execution.md>
 :hidden:
 :caption: Advanced
 
-Contributing <./advanced/contributing.md>
-./advanced/licensing
 Running CI Locally <./advanced/running-ci-locally.md>
 ```
 
@@ -125,18 +129,20 @@ Running CI Locally <./advanced/running-ci-locally.md>
 :hidden:
 :caption: References
 
+./api/index.rst
 ./references/interactive-models.md
 ./references/websockets.md
+Troubleshooting <./troubleshooting.md>
 ```
 
 ```{toctree}
 :hidden:
-:caption: TODO Move these
-Troubleshooting <./troubleshooting.md>
-Support <./support.md>
-Release Notes <./release-notes.md>
+:caption: Resources
+
 Code of Conduct <./code-of-conduct.md>
-./api/index.rst
+Contributing <./advanced/contributing.md>
+Support <./support.md>
+./advanced/licensing
 ```
 
 ## Indices and tables
