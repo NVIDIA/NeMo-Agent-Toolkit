@@ -150,6 +150,13 @@ class TunableRagEvaluator:
             ]
 
             response = await self.llm.ainvoke(messages)
+
+            # Initialize default values to handle service errors
+            coverage_score = 0.0
+            correctness_score = 0.0
+            relevance_score = 0.0
+            reasoning = "Error in evaluator from parsing judge LLM response."
+
             try:
                 parsed_response = llm_input_response_parser.parse(response.content)
                 if self.default_scoring:
@@ -162,7 +169,6 @@ class TunableRagEvaluator:
                         logger.error("Missing required keys in default scoring response: %s",
                                      ", ".join(str(arg) for arg in e.args))
                         reasoning = f"Error in evaluator from parsing judge LLM response. Missing required key(s): {', '.join(str(arg) for arg in e.args)}"
-                        raise
 
                     coverage_weight = self.default_score_weights.get("coverage", 1 / 3)
                     correctness_weight = self.default_score_weights.get("correctness", 1 / 3)
