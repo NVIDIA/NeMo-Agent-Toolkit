@@ -97,7 +97,7 @@ async def run_and_evaluate(config: EvaluationRunConfig):
 
 @eval_command.result_callback(replace=True)
 def process_aiq_eval(
-    processors,  # pylint: disable=unused-argument
+    processors,
     *,
     config_file: Path,
     dataset: Path,
