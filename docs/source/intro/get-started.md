@@ -73,4 +73,4 @@ Replace `<YOUR_API_KEY>` with your actual NVIDIA API key.
 ## Next Steps
 
 * AIQ Toolkit contains several examples which demonstrate how AIQ Toolkit can be used to build custom workflows and tools. These examples are located in the `examples` directory of the AIQ Toolkit repository.
-* Refer to the [AIQ Toolkit Guides](../guides/index.md) for more detailed information on how to use AIQ Toolkit.
+* Refer to the AIQ Toolkit tutorials for more detailed information on how to use AIQ Toolkit.

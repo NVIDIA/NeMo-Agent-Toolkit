@@ -60,20 +60,83 @@ To learn more about AIQ Toolkit, see the following links:
 
 We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AIQToolkit/issues) if you have any feedback or feature requests.
 
+```{toctree}
+:hidden:
+:caption: Introduction
+
+./intro/why-aiqtoolkit.md
+Install AIQ Toolkit <./intro/install.md>
+Get Started <./intro/get-started.md>
+```
 
 ```{toctree}
-:maxdepth: 3
+:hidden:
+:caption: Guides
 
-Introduction <./intro/index.md>
-Guides <./guides/index.md>
-Concepts <./concepts/index.md>
-Components <./components/index.md>
-Advanced <./advanced/index.md>
-References <./references/index.md>
+Create and Customize Workflows <./guides/create-customize-workflows.md>
+Share Components <./guides/sharing-workflows-and-tools.md>
+Evaluate <./guides/evaluate.md>
+Add Custom Evaluators <./guides/custom-evaluator.md>
+Evaluation Endpoints <./guides/evaluate-api.md>
+./guides/observe-workflow-with-phoenix.md
+Use User Interface and API Server <./guides/using-aiqtoolkit-ui-and-server.md>
+MCP Server Front-End <./guides/mcp-server.md>
+Profile a Workflow <./guides/profiler.md>
+Locally and Self-Hosted LLMs <./guides/locally-hosted-llms.md>
+Adding an LLM Provider <./guides/adding-an-llm-provider.md>
+```
+
+```{toctree}
+:hidden:
+:caption: Concepts
+
+Functions <./concepts/functions.md>
+Workflow Configuration <./concepts/workflow-configuration.md>
+Profile and Monitor Performance <./concepts/profiler.md>
+Evaluate <./concepts/evaluate.md>
+Memory Module <./concepts/memory.md>
+Observability <./concepts/observability.md>
+Command Line Interface (CLI) <./concepts/cli.md>
+Plugins <./concepts/plugins.md>
+```
+
+```{toctree}
+:hidden:
+:caption: Components
+
+ReAct Agent <./components/react-agent.md>
+Reasoning Agent <./components/reasoning-agent.md>
+Tool Calling Agent <./components/tool-calling-agent.md>
+Retriever <./components/retriever.md>
+Model Context Protocol (MCP) <./components/mcp.md>
+Code Execution Tool <./components/code-execution.md>
+```
+
+```{toctree}
+:hidden:
+:caption: Advanced
+
+Contributing <./advanced/contributing.md>
+./advanced/licensing
+Running CI Locally <./advanced/running-ci-locally.md>
+```
+
+```{toctree}
+:hidden:
+:caption: References
+
+./references/interactive-models.md
+./references/websockets.md
+```
+
+```{toctree}
+:hidden:
+:caption: TODO Move these
 Troubleshooting <./troubleshooting.md>
 Support <./support.md>
 Release Notes <./release-notes.md>
 Code of Conduct <./code-of-conduct.md>
+./api/index.rst
 ```
 
 ## Indices and tables
