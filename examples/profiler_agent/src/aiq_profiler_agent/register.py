@@ -1,20 +1,6 @@
 import logging
 from datetime import datetime
 
-from aiq_profiler_agent.agent import ProfilerAgent
-from aiq_profiler_agent.agent import ProfilerAgentState
-from aiq_profiler_agent.data_models import ExecPlan
-<<<<<<< HEAD
-from aiq_profiler_agent.prompts import RETRY_PROMPT
-from aiq_profiler_agent.prompts import SYSTEM_PROMPT
-from aiq_profiler_agent.tool import flow_chart  # noqa: F401
-=======
-from aiq_profiler_agent.tool import flow_chart  # noqa: F401
-from langchain_core.messages import SystemMessage
-from langchain_core.output_parsers import PydanticOutputParser
-from langchain_core.prompts import PromptTemplate
-from langgraph.graph.graph import CompiledGraph
->>>>>>> ea51d86 (add profiler agent to the examples folder)
 from pydantic import Field
 
 from aiq.builder.builder import Builder
@@ -23,6 +9,12 @@ from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
+from aiq_profiler_agent.agent import ProfilerAgent
+from aiq_profiler_agent.agent import ProfilerAgentState
+from aiq_profiler_agent.data_models import ExecPlan
+from aiq_profiler_agent.prompts import RETRY_PROMPT
+from aiq_profiler_agent.prompts import SYSTEM_PROMPT
+from aiq_profiler_agent.tool import flow_chart  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -37,52 +29,12 @@ class ProfilerAgentConfig(FunctionBaseConfig, name="profiler_agent"):
     tools: list[str] = Field(..., description="The tools to use for the profiler agent")
 
     sys_prompt: str = Field(
-<<<<<<< HEAD
         SYSTEM_PROMPT,
-=======
-        """You are a helpful assistant that analyzes LLM traces from Phoenix server.
-
-IMPORTANT: You MUST ONLY return a valid JSON object matching the format below.
-Do not include any explanations or text outside the JSON.
-
-Based on the user query, create an execution plan:
-1. First determine which tools to use from: {tools}
-2. Create a list of these tools in the exact order to execute them
-
-Your response MUST follow these strict requirements:
-- You MUST use px_query tool FIRST
-- You SHOULD use each tool at most once
-- For queries not specifying tools, use all available tools
-- Start time and end time should be in ISO format (YYYY-MM-DD HH:MM:SS)
-
-RESPONSE FORMAT:
-{output_parser}
-
-USER QUERY: {query}
-CURRENT TIME: {current_time}
-""",
->>>>>>> ea51d86 (add profiler agent to the examples folder)
         description="The prompt to use for the PxQuery tool.",
     )
 
     retry_prompt: str = Field(
-<<<<<<< HEAD
         RETRY_PROMPT,
-=======
-        """The output you provided wasn't in the expected format. Please fix the issues below and try again:
-
-{error}
-
-IMPORTANT REMINDER:
-1. Your response must ONLY contain a valid JSON object
-2. DO NOT include any explanation text before or after the JSON
-3. Make sure the 'tools' field is a list of strings in the exact order they should be executed
-4. Include px_query first.
-
-EXPECTED FORMAT:
-{output_parser}
-""",
->>>>>>> ea51d86 (add profiler agent to the examples folder)
         description="Prompt to use when retrying after parser failure",
     )
 
@@ -92,11 +44,7 @@ EXPECTED FORMAT:
     )
 
 
-<<<<<<< HEAD
 @register_function(config_type=ProfilerAgentConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-=======
-@register_function(config_type=ProfilerAgentConfig)
->>>>>>> ea51d86 (add profiler agent to the examples folder)
 async def profiler_agent(config: ProfilerAgentConfig, builder: Builder):
     """
     Profiler agent that uses Phoenix to analyze LLM telemetry data
@@ -104,18 +52,12 @@ async def profiler_agent(config: ProfilerAgentConfig, builder: Builder):
     and analyzes the data to provide insights about LLM usage, performance,
     and issues.
     """
-<<<<<<< HEAD
     from langchain_core.messages import SystemMessage
     from langchain_core.output_parsers import PydanticOutputParser
     from langchain_core.prompts import PromptTemplate
     from langgraph.graph.graph import CompiledGraph
 
     # Create the agent executor
-=======
-
-    # Create the agent executor
-    # llm = builder.get_llm(config.llm_name)  # type: ignore
->>>>>>> ea51d86 (add profiler agent to the examples folder)
     tools = builder.get_tools(tool_names=config.tools, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     output_parser = PydanticOutputParser(pydantic_object=ExecPlan)
