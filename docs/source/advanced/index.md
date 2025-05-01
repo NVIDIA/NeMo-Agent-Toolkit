@@ -21,5 +21,6 @@ limitations under the License.
 :maxdepth: 20
 
 Contributing <./contributing.md>
+licensing
 Running CI Locally <./running-ci-locally.md>
 ```
