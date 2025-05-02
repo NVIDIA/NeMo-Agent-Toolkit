@@ -1,6 +1,12 @@
 import logging
 from datetime import datetime
 
+from aiq_profiler_agent.agent import ProfilerAgent
+from aiq_profiler_agent.agent import ProfilerAgentState
+from aiq_profiler_agent.data_models import ExecPlan
+from aiq_profiler_agent.prompts import RETRY_PROMPT
+from aiq_profiler_agent.prompts import SYSTEM_PROMPT
+from aiq_profiler_agent.tool import flow_chart  # noqa: F401
 from pydantic import Field
 
 from aiq.builder.builder import Builder
@@ -9,12 +15,6 @@ from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
-from aiq_profiler_agent.agent import ProfilerAgent
-from aiq_profiler_agent.agent import ProfilerAgentState
-from aiq_profiler_agent.data_models import ExecPlan
-from aiq_profiler_agent.prompts import RETRY_PROMPT
-from aiq_profiler_agent.prompts import SYSTEM_PROMPT
-from aiq_profiler_agent.tool import flow_chart  # noqa: F401
 
 logger = logging.getLogger(__name__)
 

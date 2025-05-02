@@ -21,13 +21,14 @@ import uuid
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from aiq_profiler_agent.data_models import TokenUsageInfo
+from pydantic import BaseModel
+from pydantic import Field
+
 from aiq.builder.builder import Builder
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
 from aiq.data_models.function import FunctionBaseConfig
-from pydantic import BaseModel, Field
-
-from aiq_profiler_agent.data_models import TokenUsageInfo
 
 logger = logging.getLogger(__name__)
 

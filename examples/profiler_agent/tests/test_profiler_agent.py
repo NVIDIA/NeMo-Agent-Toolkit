@@ -16,18 +16,18 @@
 import logging
 from pathlib import Path
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.workflow_builder import WorkflowBuilder
-
 from aiq_profiler_agent.tool.flow_chart import FlowChartConfig
 from aiq_profiler_agent.tool.token_usage import TokenUsageConfig
 
+from aiq.builder.framework_enum import LLMFrameworkEnum
+from aiq.builder.workflow_builder import WorkflowBuilder
+
 logger = logging.getLogger(__name__)
+
+
 # To run this test, a phoenix server must be running.
 # The phoenix server can be started by running the following command:
 # docker run -p 6006:6006 -p 4317:4317  arizephoenix/phoenix:latest
-
-
 async def test_flow_chart_tool():
     async with WorkflowBuilder() as builder:
         await builder.add_function("flow_chart", FlowChartConfig())
@@ -47,7 +47,5 @@ async def test_token_usage_tool():
         result = await token_usage_tool.ainvoke(input={"df_path": str(data_path)})
         assert len(result.trace_id_to_token_usage) == 1
         token_usage_info = result.trace_id_to_token_usage.popitem()[1]
-        assert (
-            token_usage_info.token_usage_detail_chart_path is not None
-            and Path(token_usage_info.token_usage_detail_chart_path).exists()
-        )
+        assert (token_usage_info.token_usage_detail_chart_path is not None
+                and Path(token_usage_info.token_usage_detail_chart_path).exists())
