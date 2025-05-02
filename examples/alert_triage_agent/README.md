@@ -14,11 +14,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-# Triaging Host Monitoring Alerts using Agent Intelligence Toolkit
+# Alert Triage using Agent Intelligence Toolkit
 This example demonstrates how to build an intelligent alert triage system using AIQ Toolkit and LangGraph. The system analyzes system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization. It showcases how to combine LLMs with domain-specific diagnostic tools to create an automated troubleshooting workflow.
 
 ## Table of contents
-- [Triaging Host Monitoring Alerts using Agent Intelligence Toolkit](#triaging-host-monitoring-alerts-using-agent-intelligence-toolkit)
+- [Alert Triage using Agent Intelligence Toolkit](#alert-triage-using-agent-intelligence-toolkit)
   - [Table of contents](#table-of-contents)
   - [Use case description](#use-case-description)
     - [Why use an agentic design?](#why-use-an-agentic-design)
@@ -72,7 +72,7 @@ the agent autonomously:
 
 An agentic design powered by LLMs provides key benefits over traditional rule-based systems:
 
-- **Handles many alert types**: Traditional triage systems break down when alert types grow in number and complexity. Agentic systems adapt on the fly—no need to hardcode every investigation path.
+- **Handles many alert types**: Traditional triage systems break down when alert types grow in number and complexity. Agentic systems adapt on the fly—no need to hard-code every investigation path.
 - **Chooses the right tools dynamically**: Based on the alert context, the system can select the most relevant tools and data sources without manual intervention.
 - **Built-in Reporting**: Every investigation ends with a natural language summary (with analysis, findings, and next steps), saving time and providing traceability.
 
@@ -82,7 +82,7 @@ Here's a step-by-step breakdown of the workflow:
 ![Alert Triage Agent Architecture](./src/aiq_alert_triage_agent/data/ata_diagram.png)
 
 #### 1. Alert Received
-- A new alert is triggered by a monitoring system, containing details like `host_id` and `activeAt` timestamp
+- A new alert is triggered by a monitoring system, containing details like `host_id` and `timestamp`
 - Initiates the investigation process by passing a JSON-formatted alert message
 
 #### 2. Maintenance Check
@@ -104,7 +104,7 @@ The triage agent may call one or more of the following tools based on the alert 
 - [Network Connectivity Check](./src/aiq_alert_triage_agent/network_connectivity_check_tool.py)
   - Verifies if the host is reachable over the network.
 - [Monitoring Process Check](./src/aiq_alert_triage_agent/monitoring_process_check_tool.py)
-  - Connects to the host to verify monitoring service status (e.g. Telegraf)
+  - Connects to the host to verify monitoring service status (e.g. `telegraf`)
   - Checks if monitoring processes are running as expected
 - [Host Performance Check](./src/aiq_alert_triage_agent/host_performance_check_tool.py)
   - Retrieves system performance metrics like:
@@ -122,7 +122,7 @@ The triage agent may call one or more of the following tools based on the alert 
 #### 5. Root Cause Categorization
 - The agent correlates data gathered from all diagnostic tools
 - The [Categorizer](./src/aiq_alert_triage_agent/categorizer.py) uses LLM reasoning capabilities to determine the most likely root cause
-- Classifies the issue into predefined categories (see [categorizer prompt](./src/aiq_alert_triage_agent/prompts.py#L44)):
+- Classifies the issue into predefined categories (see the [categorizer prompt](./src/aiq_alert_triage_agent/prompts.py#L44)):
   - `software`: Malfunctioning or inactive monitoring services
   - `network_connectivity`: Host unreachable or connection issues
   - `hardware`: Hardware failures or degradation
@@ -187,7 +187,7 @@ In live mode, each tool used by the triage agent connects to real systems to col
 To run the agent live, follow these steps:
 
 1. **Configure all tools with real environment details**
-   By default, the agent includes placeholder values for API endpoints, host IPs, credentials, and other access parameters. You must:
+   By default, the agent includes placeholder values for API endpoints, host IP addresses, credentials, and other access parameters. You must:
    - Replace these placeholders with the actual values specific to your systems
    - Ensure the agent has access permissions to query APIs or connect to hosts
    - Test each tool in isolation to confirm it works end-to-end
@@ -208,7 +208,7 @@ This will trigger a full end-to-end triage process using live data sources.
 
 #### Note on credentials and access
 
-We recommend managing secrets (for example, API keys, SSH keys) using a secure method such as environment variables, secret management tools, or encrypted `.env` files. Never hardcode sensitive values into the source code.
+We recommend managing secrets (for example, API keys, SSH keys) using a secure method such as environment variables, secret management tools, or encrypted `.env` files. Never hard-code sensitive values into the source code.
 
 ### Running live with a HTTP server listening for alerts
 The example includes a Flask-based HTTP server ([`run.py`](./src/aiq_alert_triage_agent/run.py)) that can continuously listen for and process alerts. This allows integration with monitoring systems that send alerts via HTTP POST requests.
@@ -309,7 +309,7 @@ Follow the instructions in the [Set up environment variables](#set-up-environmen
 
 2. **How it works**
 - The **main test CSV** provides both alert details and a mock environment. For each alert, expected tool return values are included. These simulate how the environment would behave if the alert occurred on a real system.
-- The **benign fallback dataset** fills in tool responses when the agent calls a tool not explicitly defined in the alert's test data. These fallback responses mimic healthy system behavior and help provide the "background scenary" without obscuring the true root cause.
+- The **benign fallback dataset** fills in tool responses when the agent calls a tool not explicitly defined in the alert's test data. These fallback responses mimic healthy system behavior and help provide the "background scenery" without obscuring the true root cause.
 
 3. **Run the agent in test mode**
 After setting up the environment variables, export the variables in your `.env` file:
