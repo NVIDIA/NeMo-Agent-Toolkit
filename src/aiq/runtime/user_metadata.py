@@ -19,13 +19,9 @@ from starlette.datastructures import QueryParams
 from aiq.data_models.api_server import Request
 
 
-class UserManagerBase:
-    pass
-
-
-class UserAttributes:
+class RequestAttributes:
     """
-    UserAttributes class is responsible for managing user-defined
+    The RequestAttributes class is responsible for managing user-defined
     metadata and attributes. It provides a way to store and
     expose user-defined attributes to workflow tools.
     """

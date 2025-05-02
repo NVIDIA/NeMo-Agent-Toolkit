@@ -33,6 +33,10 @@ from aiq.data_models.interactive import InteractionPrompt
 _T = typing.TypeVar("_T")
 
 
+class UserManagerBase:
+    pass
+
+
 class AIQSessionManager:
 
     def __init__(self, workflow: Workflow, max_concurrency: int = 8):
@@ -120,13 +124,13 @@ class AIQSessionManager:
         """
         Extracts and sets request attributes from an HTTP request.
         """
-        self._context.user_attributes._request.method = request.method
-        self._context.user_attributes._request.url_path = request.url.path
-        self._context.user_attributes._request.url_port = request.url.port
-        self._context.user_attributes._request.url_scheme = request.url.scheme
-        self._context.user_attributes._request.headers = request.headers
-        self._context.user_attributes._request.query_params = request.query_params
-        self._context.user_attributes._request.path_params = request.path_params
-        self._context.user_attributes._request.client_host = request.client.host
-        self._context.user_attributes._request.client_port = request.client.port
-        self._context.user_attributes._request.cookies = request.cookies
+        self._context.metadata._request.method = request.method
+        self._context.metadata._request.url_path = request.url.path
+        self._context.metadata._request.url_port = request.url.port
+        self._context.metadata._request.url_scheme = request.url.scheme
+        self._context.metadata._request.headers = request.headers
+        self._context.metadata._request.query_params = request.query_params
+        self._context.metadata._request.path_params = request.path_params
+        self._context.metadata._request.client_host = request.client.host
+        self._context.metadata._request.client_port = request.client.port
+        self._context.metadata._request.cookies = request.cookies
