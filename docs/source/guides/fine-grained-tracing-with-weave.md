@@ -59,7 +59,7 @@ This setup enables logging trace data to W&B weave. The weave integration requir
 | `entity` (optional) | Your W&B username or team name | `"your-wandb-username-or-teamname"` |
 
 ### Step 4: Run Your Workflow
-Install `simple_calculator` example using the instructions in [A Simple LLM Calculator](../../../examples/simple_calculator/README.md) guide.
+Install `simple_calculator` example using the instructions in the `examples/simple_calculator/README.md` guide.
 Run the workflow using `config-weave.yml` configuration file:
 
 ```bash
