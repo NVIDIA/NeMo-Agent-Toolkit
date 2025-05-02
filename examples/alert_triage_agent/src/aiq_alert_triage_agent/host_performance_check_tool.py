@@ -99,9 +99,9 @@ async def _parse_stdout_lines(config, builder, stdout_lines):
 
     prompt = ToolReasoningLayerPrompts.HOST_PERFORMANCE_CHECK_PARSING.format(input_data=input_data)
 
-    response = await utils.llm_ainvoke(config, builder, user_prompt=prompt)
-
+    response = None
     try:
+        response = await utils.llm_ainvoke(config, builder, user_prompt=prompt)
         structured_data = response
     except Exception as e:
         structured_data = f'{{"error": "Failed to parse nvda_nim response", "exception": "{str(e)}", "raw_response": "{response}"}}'
