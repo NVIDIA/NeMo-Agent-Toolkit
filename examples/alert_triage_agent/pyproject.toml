@@ -10,10 +10,10 @@ name = "aiq_alert_triage_agent"
 dynamic = ["version"]
 dependencies = [
   "aiqtoolkit[langchain]",
-  "langchain-core>=0.1.0",
+  "langchain-core, # version determined by aiqtoolkit[langchain]
   "pandas>=2.0.0",
   "ansible-runner>=2.3.0",
-  "langgraph>=0.0.10",
+  "langgraph>=0.0.10", # version determined by aiqtoolkit[langchain]
   "flask>=3.0.0"
 ]
 requires-python = ">=3.12"
