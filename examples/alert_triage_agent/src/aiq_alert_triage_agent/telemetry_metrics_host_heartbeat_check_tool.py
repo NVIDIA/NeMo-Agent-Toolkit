@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pydantic import Field
 import requests
+from pydantic import Field
 
 from aiq.builder.builder import Builder
 from aiq.builder.function_info import FunctionInfo
@@ -26,19 +26,24 @@ from . import utils
 from .prompts import TelemetryMetricsAnalysisPrompts
 
 
-class TelemetryMetricsHostHeartbeatCheckToolConfig(FunctionBaseConfig, name="telemetry_metrics_host_heartbeat_check"):
+class TelemetryMetricsHostHeartbeatCheckToolConfig(
+        FunctionBaseConfig, name="telemetry_metrics_host_heartbeat_check"):
     description: str = Field(
-        default="This tool checks if a host's telemetry monitoring service is reporting heartbeat metrics. This tells us if the host is up and running. Args: host_id: str",
-        description="Description of the tool for the agent."
-    )
+        default=
+        "This tool checks if a host's telemetry monitoring service is reporting heartbeat metrics. This tells us if the host is up and running. Args: host_id: str",
+        description="Description of the tool for the agent.")
     llm_name: LLMRef
 
 
 @register_function(config_type=TelemetryMetricsHostHeartbeatCheckToolConfig)
-async def telemetry_metrics_host_heartbeat_check_tool(config: TelemetryMetricsHostHeartbeatCheckToolConfig, builder: Builder):
+async def telemetry_metrics_host_heartbeat_check_tool(
+        config: TelemetryMetricsHostHeartbeatCheckToolConfig,
+        builder: Builder):
+
     async def _arun(host_id: str) -> str:
         is_test_mode = utils.is_test_mode()
-        utils.log_header("Telemetry Metrics Host Heartbeat Check", dash_length=50)
+        utils.log_header("Telemetry Metrics Host Heartbeat Check",
+                         dash_length=50)
 
         try:
             if not is_test_mode:
@@ -64,15 +69,18 @@ async def telemetry_metrics_host_heartbeat_check_tool(config: TelemetryMetricsHo
                 data = utils.load_column_or_static(
                     df=df,
                     host_id=host_id,
-                    column="telemetry_metrics_host_heartbeat_check_tool:heartbeat_check_output"
+                    column=
+                    "telemetry_metrics_host_heartbeat_check_tool:heartbeat_check_output"
                 )
 
             # Additional LLM reasoning layer on playbook output to provide a summary of the results
             utils.log_header("LLM Reasoning", dash_length=30)
 
             conclusion = await utils.llm_ainvoke(
-                config, builder, user_prompt=TelemetryMetricsAnalysisPrompts.HOST_HEARTBEAT_CHECK.format(data=data)
-            )
+                config,
+                builder,
+                user_prompt=TelemetryMetricsAnalysisPrompts.
+                HOST_HEARTBEAT_CHECK.format(data=data))
 
             utils.logger.debug(conclusion)
             utils.log_footer(dash_length=50)
@@ -80,7 +88,9 @@ async def telemetry_metrics_host_heartbeat_check_tool(config: TelemetryMetricsHo
             return conclusion
 
         except Exception as e:
-            utils.logger.error(f"Error during telemetry metrics host heartbeat check: {str(e)}")
+            utils.logger.error(
+                f"Error during telemetry metrics host heartbeat check: {str(e)}"
+            )
             raise e
 
     yield FunctionInfo.from_fn(

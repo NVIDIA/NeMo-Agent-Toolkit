@@ -18,109 +18,179 @@
 # NOTE: This is just an example implementation of Linux monitoring commands.
 # Users should implement their own monitoring commands specific to their environment and
 # infrastructure setup.
-HOST_PERFORMANCE_CHECK_PLAYBOOK = [
-    {
-        "name": "Monitor system performance",
-        "hosts": "all",
-        "tasks": [
-            # CPU usage collection
-            {
-                "name": "Collect CPU usage data",
-                "ansible.builtin.shell": {"cmd": "mpstat -P ALL 1 1"},
-                "register": "cpu_usage",
+HOST_PERFORMANCE_CHECK_PLAYBOOK = [{
+    "name":
+    "Monitor system performance",
+    "hosts":
+    "all",
+    "tasks": [
+        # CPU usage collection
+        {
+            "name": "Collect CPU usage data",
+            "ansible.builtin.shell": {
+                "cmd": "mpstat -P ALL 1 1"
             },
-            {"name": "CPU usage data", "debug": {"msg": "{{ cpu_usage.stdout }}"}},
+            "register": "cpu_usage",
+        },
+        {
+            "name": "CPU usage data",
+            "debug": {
+                "msg": "{{ cpu_usage.stdout }}"
+            }
+        },
 
-            # Memory usage collection
-            {
-                "name": "Collect memory usage data",
-                "ansible.builtin.shell": {"cmd": "free -m"},
-                "register": "memory_usage",
+        # Memory usage collection
+        {
+            "name": "Collect memory usage data",
+            "ansible.builtin.shell": {
+                "cmd": "free -m"
             },
-            {"name": "memory usage data", "debug": {"msg": "{{ memory_usage.stdout }}"}},
+            "register": "memory_usage",
+        },
+        {
+            "name": "memory usage data",
+            "debug": {
+                "msg": "{{ memory_usage.stdout }}"
+            }
+        },
 
-            # Disk I/O collection
-            {
-                "name": "Collect disk I/O statistics",
-                "ansible.builtin.shell": {"cmd": "iostat -dx"},
-                "register": "disk_io_stats",
+        # Disk I/O collection
+        {
+            "name": "Collect disk I/O statistics",
+            "ansible.builtin.shell": {
+                "cmd": "iostat -dx"
             },
-            {"name": "disk I/O statistics", "debug": {"msg": "{{ disk_io_stats.stdout }}"}},
+            "register": "disk_io_stats",
+        },
+        {
+            "name": "disk I/O statistics",
+            "debug": {
+                "msg": "{{ disk_io_stats.stdout }}"
+            }
+        },
 
-            # High CPU usage check (threshold: 80%)
-            {
-                "name": "Check for high CPU usage",
-                "ansible.builtin.shell": {"cmd": "mpstat 1 1 | awk '/Average/ && $NF > 80 {exit 1}'"},
-                "register": "cpu_check",
-                "failed_when": "cpu_check.rc == 1",
-                "ignore_errors": True,
+        # High CPU usage check (threshold: 80%)
+        {
+            "name": "Check for high CPU usage",
+            "ansible.builtin.shell": {
+                "cmd": "mpstat 1 1 | awk '/Average/ && $NF > 80 {exit 1}'"
             },
-            {"name": "CPU usage check", "debug": {"msg": "{{ cpu_check.stdout }}"}},
+            "register": "cpu_check",
+            "failed_when": "cpu_check.rc == 1",
+            "ignore_errors": True,
+        },
+        {
+            "name": "CPU usage check",
+            "debug": {
+                "msg": "{{ cpu_check.stdout }}"
+            }
+        },
 
-            # High memory usage check (threshold: 80%)
-            {
-                "name": "Check for high memory usage",
-                "ansible.builtin.shell": {"cmd": "free -m | awk '/Mem:/ {if ($3/$2 * 100.0 > 80.0) exit 1}'"},
-                "register": "memory_check",
-                "failed_when": "memory_check.rc == 1",
-                "ignore_errors": True,
+        # High memory usage check (threshold: 80%)
+        {
+            "name": "Check for high memory usage",
+            "ansible.builtin.shell": {
+                "cmd":
+                "free -m | awk '/Mem:/ {if ($3/$2 * 100.0 > 80.0) exit 1}'"
             },
-            {"name": "memory usage check", "debug": {"msg": "{{ memory_check.stdout }}"}},
+            "register": "memory_check",
+            "failed_when": "memory_check.rc == 1",
+            "ignore_errors": True,
+        },
+        {
+            "name": "memory usage check",
+            "debug": {
+                "msg": "{{ memory_check.stdout }}"
+            }
+        },
 
-            # High disk I/O wait check (threshold: 10%)
-            {
-                "name": "Check for high disk I/O wait",
-                "ansible.builtin.shell": {
-                    "cmd": "iostat -dx 1 1 | awk '/^Device:/ {getline; if ($10 > 10.0) exit 1}'"
-                },
-                "register": "disk_io_check",
-                "failed_when": "disk_io_check.rc == 1",
-                "ignore_errors": True,
+        # High disk I/O wait check (threshold: 10%)
+        {
+            "name": "Check for high disk I/O wait",
+            "ansible.builtin.shell": {
+                "cmd":
+                "iostat -dx 1 1 | awk '/^Device:/ {getline; if ($10 > 10.0) exit 1}'"
             },
-            {"name": "disk I/O wait check", "debug": {"msg": "{{ disk_io_check.stdout }}"}},
+            "register": "disk_io_check",
+            "failed_when": "disk_io_check.rc == 1",
+            "ignore_errors": True,
+        },
+        {
+            "name": "disk I/O wait check",
+            "debug": {
+                "msg": "{{ disk_io_check.stdout }}"
+            }
+        },
 
-            # Alert notifications for threshold violations
-            {
-                "name": "Notify admin of high CPU usage",
-                "ansible.builtin.debug": {"msg": "High CPU usage detected on {{ instance_name }}"},
-                "when": "cpu_check.rc == 1",
+        # Alert notifications for threshold violations
+        {
+            "name": "Notify admin of high CPU usage",
+            "ansible.builtin.debug": {
+                "msg": "High CPU usage detected on {{ instance_name }}"
             },
-            {"name": "Notify admin of high CPU usage", "debug": {"msg": "{{ cpu_check.stdout }}"}},
-            {
-                "name": "Notify admin of high memory usage",
-                "ansible.builtin.debug": {"msg": "High memory usage detected on {{ instance_name }}"},
-                "when": "memory_check.rc == 1",
+            "when": "cpu_check.rc == 1",
+        },
+        {
+            "name": "Notify admin of high CPU usage",
+            "debug": {
+                "msg": "{{ cpu_check.stdout }}"
+            }
+        },
+        {
+            "name": "Notify admin of high memory usage",
+            "ansible.builtin.debug": {
+                "msg": "High memory usage detected on {{ instance_name }}"
             },
-            {
-                "name": "Notify admin of high disk I/O wait",
-                "ansible.builtin.debug": {"msg": "High disk I/O wait detected on {{ instance_name }}"},
-                "when": "disk_io_check.rc == 1",
+            "when": "memory_check.rc == 1",
+        },
+        {
+            "name": "Notify admin of high disk I/O wait",
+            "ansible.builtin.debug": {
+                "msg": "High disk I/O wait detected on {{ instance_name }}"
             },
-        ],
-    }
-]
+            "when": "disk_io_check.rc == 1",
+        },
+    ],
+}]
 
 # Example playbook to check critical service status on a host
 # This playbook runs commands to verify if key services related to alert monitoring are running properly
 # NOTE: In this example, we check the Telegraf service, but users should modify the commands to check
 # whatever services are critical for monitoring and alerting in their environment
-MONITOR_PROCESS_CHECK_PLAYBOOK = [
-    {
-        "name": "Monitor Telegraf process", # Playbook name
-        "hosts": "all",
-        "tasks": [
-            {
-                "name": "ps telegraf process", # Task to check if Telegraf process is running
-                "ansible.builtin.shell": {"cmd": "ps -ef | grep telegraf"}, # List processes and filter for telegraf
-                "register": "ps_usage",      # Store output in ps_usage variable
-            },
-            {"name": "ps telegraf process", "debug": {"msg": "{{ ps_usage.stdout }}"}}, # Print process list output
-            {
-                "name": "systemctl status telegraf", # Task to check Telegraf service status
-                "ansible.builtin.shell": {"cmd": "systemctl status telegraf"}, # Get service status from systemd
-                "register": "systemctl_usage",       # Store output in systemctl_usage variable
-            },
-            {"name": "systemctl status telegraf", "debug": {"msg": "{{ systemctl_usage.stdout }}"}}, # Print service status
-        ],
-    }
-]
+MONITOR_PROCESS_CHECK_PLAYBOOK = [{
+    "name":
+    "Monitor Telegraf process",  # Playbook name
+    "hosts":
+    "all",
+    "tasks": [
+        {
+            "name":
+            "ps telegraf process",  # Task to check if Telegraf process is running
+            "ansible.builtin.shell": {
+                "cmd": "ps -ef | grep telegraf"
+            },  # List processes and filter for telegraf
+            "register": "ps_usage",  # Store output in ps_usage variable
+        },
+        {
+            "name": "ps telegraf process",
+            "debug": {
+                "msg": "{{ ps_usage.stdout }}"
+            }
+        },  # Print process list output
+        {
+            "name":
+            "systemctl status telegraf",  # Task to check Telegraf service status
+            "ansible.builtin.shell": {
+                "cmd": "systemctl status telegraf"
+            },  # Get service status from systemd
+            "register":
+            "systemctl_usage",  # Store output in systemctl_usage variable
+        },
+        {
+            "name": "systemctl status telegraf",
+            "debug": {
+                "msg": "{{ systemctl_usage.stdout }}"
+            }
+        },  # Print service status
+    ],
+}]

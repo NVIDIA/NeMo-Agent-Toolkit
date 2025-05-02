@@ -14,7 +14,9 @@
 # limitations under the License.
 
 import subprocess
+
 from pydantic import Field
+
 from aiq.builder.builder import Builder
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
@@ -23,6 +25,8 @@ from aiq.data_models.function import FunctionBaseConfig
 
 from . import utils
 from .prompts import ToolReasoningLayerPrompts
+
+
 def _get_ipmi_monitor_data(ip_address, username, password):
     """
     Capture IPMI monitoring data using the ipmimonitoring command.
@@ -41,28 +45,38 @@ def _get_ipmi_monitor_data(ip_address, username, password):
         str: The command's output if successful, otherwise None.
     """
     # Construct the ipmimonitoring command with required parameters
-    command = ["ipmimonitoring", "-h", ip_address, "-u", username, "-p", password, "--privilege-level=USER"]
+    command = [
+        "ipmimonitoring", "-h", ip_address, "-u", username, "-p", password,
+        "--privilege-level=USER"
+    ]
 
     try:
         # Execute the ipmimonitoring command and capture output
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        result = subprocess.run(command,
+                                capture_output=True,
+                                text=True,
+                                check=True)
         return result.stdout
 
     except subprocess.CalledProcessError as e:
         # Log error and return None if command fails
-        utils.logger.error(f"Error executing IPMI monitoring command. Details: {e.stderr}")
+        utils.logger.error(
+            f"Error executing IPMI monitoring command. Details: {e.stderr}")
         return None
 
 
 class HardwareCheckToolConfig(FunctionBaseConfig, name="hardware_check"):
     description: str = Field(
-        default="This tool checks hardware health status using IPMI monitoring to detect power state, hardware degradation, and anomalies that could explain alerts. Args: host_id: str",
-        description="Description of the tool for the agent."
-    )
+        default=
+        "This tool checks hardware health status using IPMI monitoring to detect power state, hardware degradation, and anomalies that could explain alerts. Args: host_id: str",
+        description="Description of the tool for the agent.")
     llm_name: LLMRef
 
+
 @register_function(config_type=HardwareCheckToolConfig)
-async def hardware_check_tool(config: HardwareCheckToolConfig, builder: Builder):
+async def hardware_check_tool(config: HardwareCheckToolConfig,
+                              builder: Builder):
+
     async def _arun(host_id: str) -> str:
         is_test_mode = utils.is_test_mode()
         utils.log_header("Hardware Status Checker")
@@ -88,7 +102,8 @@ async def hardware_check_tool(config: HardwareCheckToolConfig, builder: Builder)
                 # Additional LLM reasoning layer on playbook output to provide a summary of the results
                 utils.log_header("LLM Reasoning", dash_length=50)
 
-                prompt = ToolReasoningLayerPrompts.HARDWARE_CHECK.format(input_data=monitoring_data)
+                prompt = ToolReasoningLayerPrompts.HARDWARE_CHECK.format(
+                    input_data=monitoring_data)
 
                 # Get analysis from LLM
                 conclusion = await utils.llm_ainvoke(config, builder, prompt)

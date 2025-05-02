@@ -13,14 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import math
-import ansible_runner
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage
-import os, json
-import pandas as pd
+import json
 import logging
+import math
+import os
+
+import ansible_runner
+import pandas as pd
+from langchain_core.messages import HumanMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+
+from aiq.builder.framework_enum import LLMFrameworkEnum
 
 logger = logging.getLogger("aiq_alert_triage_agent")
 
@@ -30,6 +33,7 @@ _test_df_cache = None
 
 # Cache LLMs by name and wrapper type
 _LLM_CACHE = {}
+
 
 async def _get_llm(builder, llm_name, wrapper_type):
     """
@@ -46,10 +50,9 @@ async def _get_llm(builder, llm_name, wrapper_type):
     cache_key = (llm_name, wrapper_type)
     if cache_key not in _LLM_CACHE:
         _LLM_CACHE[cache_key] = await builder.get_llm(
-            llm_name=llm_name,
-            wrapper_type=wrapper_type
-        )
+            llm_name=llm_name, wrapper_type=wrapper_type)
     return _LLM_CACHE[cache_key]
+
 
 async def llm_ainvoke(config, builder, user_prompt, system_prompt=None):
     """
@@ -59,7 +62,8 @@ async def llm_ainvoke(config, builder, user_prompt, system_prompt=None):
     llm = await _get_llm(builder, config.llm_name, LLMFrameworkEnum.LANGCHAIN)
 
     if system_prompt:
-        prompt = ChatPromptTemplate([("system", system_prompt), MessagesPlaceholder("msgs")])
+        prompt = ChatPromptTemplate([("system", system_prompt),
+                                     MessagesPlaceholder("msgs")])
     else:
         prompt = ChatPromptTemplate([MessagesPlaceholder("msgs")])
     chain = prompt | llm
@@ -77,8 +81,7 @@ def log_header(log_str: str,
     logger.log(level, header)
 
 
-def log_footer(dash_length: int = 100,
-               level: int = logging.DEBUG):
+def log_footer(dash_length: int = 100, level: int = logging.DEBUG):
     """Logs a full line of '=' dashes at the given log level."""
     footer = "=" * dash_length
     logger.log(level, footer)
@@ -99,14 +102,18 @@ def load_test_data():
     if _test_df_cache is None:
         rel_path = os.getenv("TEST_DATA_RELATIVE_FILEPATH")
         if not rel_path:
-            raise ValueError("TEST_DATA_RELATIVE_FILEPATH environment variable must be set")
-        abs_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), rel_path)
+            raise ValueError(
+                "TEST_DATA_RELATIVE_FILEPATH environment variable must be set")
+        abs_path = os.path.join(os.path.abspath(os.path.dirname(__file__)),
+                                rel_path)
         _test_df_cache = pd.read_csv(abs_path)
 
     return _test_df_cache
 
+
 def is_test_mode():
     return os.getenv("TEST_MODE", "false").lower() == "true"
+
 
 def _get_static_data(env_var):
     """
@@ -134,16 +141,18 @@ def _get_static_data(env_var):
         filepath = os.getenv(env_var)
         if filepath is None:
             raise ValueError(f"{env_var} environment variable must be set")
-        path = os.path.join(
-            os.path.abspath(os.path.dirname(__file__)),
-            filepath
-        )
+        path = os.path.join(os.path.abspath(os.path.dirname(__file__)),
+                            filepath)
         # Load and cache the JSON data
         with open(path, "r") as f:
             _static_data_cache = json.load(f)
     return _static_data_cache
 
-def load_column_or_static(df, host_id, column, static_env_var="TEST_BENIGN_DATA_RELATIVE_FILEPATH"):
+
+def load_column_or_static(df,
+                          host_id,
+                          column,
+                          static_env_var="TEST_BENIGN_DATA_RELATIVE_FILEPATH"):
     """
     Attempts to load data from a DataFrame column, falling back to static JSON if needed.
 
@@ -178,16 +187,15 @@ def load_column_or_static(df, host_id, column, static_env_var="TEST_BENIGN_DATA_
     if subset.empty:
         raise KeyError(f"No row for host_id='{host_id}' in DataFrame")
     if len(subset) > 1:
-        raise ValueError(f"Multiple rows found for host_id='{host_id}' in DataFrame. Expected unique host_ids.")
+        raise ValueError(
+            f"Multiple rows found for host_id='{host_id}' in DataFrame. Expected unique host_ids."
+        )
     return subset.values[0]
 
-async def run_ansible_playbook(
-    playbook: list,
-    ansible_host: str,
-    ansible_user: str,
-    ansible_port: int,
-    ansible_private_key_path: str
-) -> dict:
+
+async def run_ansible_playbook(playbook: list, ansible_host: str,
+                               ansible_user: str, ansible_port: int,
+                               ansible_private_key_path: str) -> dict:
     """
     Execute an Ansible playbook against a remote host and return structured output.
 
@@ -219,11 +227,9 @@ async def run_ansible_playbook(
     current_dir = os.path.dirname(os.path.abspath(__file__))
 
     # Execute the ansible playbook using ansible-runner
-    runner = ansible_runner.run(
-        private_data_dir=current_dir,
-        playbook=playbook,
-        inventory=inventory
-    )
+    runner = ansible_runner.run(private_data_dir=current_dir,
+                                playbook=playbook,
+                                inventory=inventory)
 
     # Initialize output dictionary with basic run info
     output = {
@@ -234,7 +240,8 @@ async def run_ansible_playbook(
 
     # If no events available, return raw stdout output
     if not hasattr(runner, "events") or not runner.events:
-        output["raw_output"] = runner.stdout.read() if runner.stdout else "No output captured."
+        output["raw_output"] = runner.stdout.read(
+        ) if runner.stdout else "No output captured."
         return output
 
     # Process each event and extract task results

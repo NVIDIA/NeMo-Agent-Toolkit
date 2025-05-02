@@ -17,10 +17,7 @@ import logging
 import os
 
 from langchain.schema import SystemMessage
-from langchain_core.messages import (
-    HumanMessage,
-    SystemMessage,
-)
+from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import START, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 
@@ -29,21 +26,17 @@ from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_function
 from aiq.data_models.function import FunctionBaseConfig
 
-from . import (
-    categorizer,
-    hardware_check_tool,
-    host_performance_check_tool,
-    maintenance_check,
-    monitoring_process_check_tool,
-    network_connectivity_check_tool,
-    telemetry_metrics_analysis_agent,
-    telemetry_metrics_host_heartbeat_check_tool,
-    telemetry_metrics_host_performance_check_tool,
-    utils,
-)
+from . import (categorizer, hardware_check_tool, host_performance_check_tool,
+               maintenance_check, monitoring_process_check_tool,
+               network_connectivity_check_tool,
+               telemetry_metrics_analysis_agent,
+               telemetry_metrics_host_heartbeat_check_tool,
+               telemetry_metrics_host_performance_check_tool, utils)
 from .prompts import ALERT_TRIAGE_AGENT_PROMPT
 
-class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agent"):
+
+class AlertTriageAgentWorkflowConfig(FunctionBaseConfig,
+                                     name="alert_triage_agent"):
     """
     Configuration for the Alert Triage Agent workflow. This agent orchestrates multiple diagnostic tools to analyze and triage alerts by:
     1. Checking for maintenance windows and known issues
@@ -55,36 +48,43 @@ class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agen
     llm_name: str
 
 
-@register_function(config_type=AlertTriageAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, builder: Builder):
+@register_function(config_type=AlertTriageAgentWorkflowConfig,
+                   framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
+async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig,
+                                      builder: Builder):
 
-
-
-    llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    llm = await builder.get_llm(config.llm_name,
+                                wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     # Get tools for alert triage
     tool_names = config.tool_names
     tools = []
     for tool_name in tool_names:
-        tool = builder.get_tool(tool_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        tool = builder.get_tool(tool_name,
+                                wrapper_type=LLMFrameworkEnum.LANGCHAIN)
         tools.append(tool)
     llm_n_tools = llm.bind_tools(tools, parallel_tool_calls=True)
 
-    categorizer_tool = builder.get_tool("categorizer", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    maintenance_check_tool = builder.get_tool("maintenance_check", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    categorizer_tool = builder.get_tool(
+        "categorizer", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    maintenance_check_tool = builder.get_tool(
+        "maintenance_check", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     # Define assistant function that processes messages with the LLM
     def ata_assistant(state: MessagesState):
         # Create system message with prompt
         sys_msg = SystemMessage(content=ALERT_TRIAGE_AGENT_PROMPT)
         # Invoke LLM with system message and conversation history
-        return {"messages": [llm_n_tools.invoke([sys_msg] + state["messages"])]}
+        return {
+            "messages": [llm_n_tools.invoke([sys_msg] + state["messages"])]
+        }
 
     # Initialize state graph for managing conversation flow
     builder_graph = StateGraph(MessagesState)
 
     # Get tools specified in config
-    tools = builder.get_tools(config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tools = builder.get_tools(config.tool_names,
+                              wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     # Add nodes to graph
     builder_graph.add_node("ata_assistant", ata_assistant)
@@ -113,9 +113,8 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
             return maintenance_result
 
         # Process alert through agent since no maintenance is occurring
-        output = await agent_executor.ainvoke({
-            "messages": [HumanMessage(content=input_message)]
-        })
+        output = await agent_executor.ainvoke(
+            {"messages": [HumanMessage(content=input_message)]})
         result = output["messages"][-1].content
 
         # Determine and append root cause category
@@ -144,7 +143,9 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
         """
         output_filepath = os.getenv("TEST_OUTPUT_RELATIVE_FILEPATH")
         if output_filepath is None:
-            raise ValueError("TEST_OUTPUT_RELATIVE_FILEPATH environment variable must be set")
+            raise ValueError(
+                "TEST_OUTPUT_RELATIVE_FILEPATH environment variable must be set"
+            )
 
         # Load test alerts from CSV file
         df = utils.load_test_data()
@@ -162,10 +163,8 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
         utils.log_header("Saving Results")
 
         # Write results to output CSV
-        output_path = os.path.join(
-            os.path.abspath(os.path.dirname(__file__)),
-            output_filepath
-        )
+        output_path = os.path.join(os.path.abspath(os.path.dirname(__file__)),
+                                   output_filepath)
         # Create output directory if it doesn't exist
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         df.to_csv(output_path, index=False)
@@ -173,11 +172,12 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
         utils.log_footer()
         return f"Successfully processed {len(df)} alerts. Results saved to {output_filepath}"
 
-
     is_test_mode = utils.is_test_mode()
     try:
         if is_test_mode:
-            utils.log_header("Running in test mode", dash_length=120, level=logging.INFO)
+            utils.log_header("Running in test mode",
+                             dash_length=120,
+                             level=logging.INFO)
             yield _response_test_fn
         else:
             yield _response_fn

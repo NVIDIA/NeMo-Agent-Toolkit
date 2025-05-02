@@ -14,7 +14,10 @@
 # limitations under the License.
 
 import json
+import statistics
+from datetime import UTC, datetime, timedelta
 
+import requests
 from pydantic import Field
 
 from aiq.builder.builder import Builder
@@ -23,18 +26,18 @@ from aiq.cli.register_workflow import register_function
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
 
-import requests
-from datetime import datetime, timedelta, UTC
-import statistics
-from datetime import datetime
 from . import utils
 from .prompts import TelemetryMetricsAnalysisPrompts
-class TelemetryMetricsHostPerformanceCheckToolConfig(FunctionBaseConfig, name="telemetry_metrics_host_performance_check"):
+
+
+class TelemetryMetricsHostPerformanceCheckToolConfig(
+        FunctionBaseConfig, name="telemetry_metrics_host_performance_check"):
     description: str = Field(
-        default="This tool checks the performance of the host by analyzing the CPU usage timeseries. Args: host_id: str",
-        description="Description of the tool for the agent."
-    )
+        default=
+        "This tool checks the performance of the host by analyzing the CPU usage timeseries. Args: host_id: str",
+        description="Description of the tool for the agent.")
     llm_name: LLMRef
+
 
 def _timeseries_stats(ts):
     """Calculate and format summary statistics for a time series.
@@ -86,7 +89,8 @@ def _get_llm_analysis_input(timestamp_value_list):
     """
     # Convert Unix timestamps to ISO format datetime strings and preserve values
     # Example: "2022-01-17 12:00:00" for timestamp 1642435200
-    data = [[datetime.fromtimestamp(l[0]).strftime("%Y-%m-%d %H:%M:%S"), l[1]] for l in timestamp_value_list]
+    data = [[datetime.fromtimestamp(l[0]).strftime("%Y-%m-%d %H:%M:%S"), l[1]]
+            for l in timestamp_value_list]
 
     # Extract metric values and convert to float for statistical analysis
     # Assumes values are numeric strings or numbers
@@ -100,10 +104,14 @@ def _get_llm_analysis_input(timestamp_value_list):
 
 
 @register_function(config_type=TelemetryMetricsHostPerformanceCheckToolConfig)
-async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetricsHostPerformanceCheckToolConfig, builder: Builder):
+async def telemetry_metrics_host_performance_check_tool(
+        config: TelemetryMetricsHostPerformanceCheckToolConfig,
+        builder: Builder):
+
     async def _arun(host_id: str) -> str:
         is_test_mode = utils.is_test_mode()
-        utils.log_header("Telemetry Metrics CPU Usage Pattern Analysis", dash_length=100)
+        utils.log_header("Telemetry Metrics CPU Usage Pattern Analysis",
+                         dash_length=100)
 
         try:
             if not is_test_mode:
@@ -123,7 +131,12 @@ async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetrics
 
                 start_time_str = start_time.isoformat()
                 end_time_str = end_time.isoformat()
-                params = {"query": query, "start": start_time_str, "end": end_time_str, "step": step}
+                params = {
+                    "query": query,
+                    "start": start_time_str,
+                    "end": end_time_str,
+                    "step": step
+                }
 
                 response = requests.get(url, params=params)
                 response.raise_for_status()
@@ -135,7 +148,8 @@ async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetrics
                 data = utils.load_column_or_static(
                     df=df,
                     host_id=host_id,
-                    column="telemetry_metrics_host_performance_check_tool:performance_check_output"
+                    column=
+                    "telemetry_metrics_host_performance_check_tool:performance_check_output"
                 )
 
             # Additional LLM reasoning layer on playbook output to provide a summary of the results
@@ -146,14 +160,17 @@ async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetrics
                 config,
                 builder,
                 user_prompt=data_input,
-                system_prompt=TelemetryMetricsAnalysisPrompts.HOST_PERFORMANCE_CHECK,
+                system_prompt=TelemetryMetricsAnalysisPrompts.
+                HOST_PERFORMANCE_CHECK,
             )
             utils.logger.debug(conclusion)
             utils.log_footer(dash_length=50)
             return conclusion
 
         except Exception as e:
-            utils.logger.error(f"Error during telemetry metrics host performance check: {str(e)}")
+            utils.logger.error(
+                f"Error during telemetry metrics host performance check: {str(e)}"
+            )
             raise e
 
     yield FunctionInfo.from_fn(

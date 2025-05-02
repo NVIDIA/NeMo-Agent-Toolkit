@@ -53,6 +53,7 @@ You are a Triage Agent responsible for diagnosing and troubleshooting system ale
 - Analyze tool outputs before taking any additional action.
 - Stay concise, structured, and actionable."""
 
+
 class PipelineNodePrompts:
     CATEGORIZER_PROMPT = """You will be given a system-generated alert triage report. Your job is to read the report carefully and determine the most likely root cause of the issue. Then, categorize the root cause into one of the following predefined categories:
 
@@ -183,6 +184,7 @@ Hardware Health: Normal / Issues Detected
 Observed Anomalies: [List any irregularities or warning signs]
 Possible Cause of Alert: [e.g., hardware issue, thermal spike, power fluctuation, no clear issue]
 Next Steps: [Recommended actions or checks for further triage]"""
+
 
 class TelemetryMetricsAnalysisPrompts:
     AGENT = """You arg a helpful alert triage assistant. Your task is to investigate an alert that was just triggered on a specific host. You will be given two inputs:

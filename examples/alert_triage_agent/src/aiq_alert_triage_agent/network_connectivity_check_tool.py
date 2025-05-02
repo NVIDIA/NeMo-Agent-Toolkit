@@ -28,15 +28,19 @@ from . import utils
 from .prompts import ToolReasoningLayerPrompts
 
 
-class NetworkConnectivityCheckToolConfig(FunctionBaseConfig, name="network_connectivity_check"):
+class NetworkConnectivityCheckToolConfig(FunctionBaseConfig,
+                                         name="network_connectivity_check"):
     description: str = Field(
-        default="This tool checks network connectivity of a host by running ping and telnet tests. Args: host_id: str",
-        description="Description of the tool for the agent."
-    )
+        default=
+        "This tool checks network connectivity of a host by running ping and telnet tests. Args: host_id: str",
+        description="Description of the tool for the agent.")
     llm_name: LLMRef
 
+
 @register_function(config_type=NetworkConnectivityCheckToolConfig)
-async def network_connectivity_check_tool(config: NetworkConnectivityCheckToolConfig, builder: Builder):
+async def network_connectivity_check_tool(
+        config: NetworkConnectivityCheckToolConfig, builder: Builder):
+
     async def _arun(host_id: str) -> str:
         is_test_mode = utils.is_test_mode()
         utils.log_header("Network Connectivity Tester")
@@ -62,7 +66,8 @@ async def network_connectivity_check_tool(config: NetworkConnectivityCheckToolCo
                 # Example telnet command to test service availability
                 telnet_port = 80  # example HTTP port
                 telnet_timeout = 10
-                with telnetlib.Telnet(host_id, telnet_port, telnet_timeout) as tn:
+                with telnetlib.Telnet(host_id, telnet_port,
+                                      telnet_timeout) as tn:
                     # Read until a prompt or timeout
                     output = tn.read_until(b"Escape character is '^]'.", 10)
                     telnet_data = output.decode("utf-8")
@@ -75,22 +80,19 @@ async def network_connectivity_check_tool(config: NetworkConnectivityCheckToolCo
                 ping_data = utils.load_column_or_static(
                     df=df,
                     host_id=host_id,
-                    column="network_connectivity_check_tool:ping_output"
-                )
+                    column="network_connectivity_check_tool:ping_output")
 
                 # Get telnet data from test data, falling back to static data if needed
                 telnet_data = utils.load_column_or_static(
                     df=df,
                     host_id=host_id,
-                    column="network_connectivity_check_tool:telnet_output"
-                )
+                    column="network_connectivity_check_tool:telnet_output")
 
             # Additional LLM reasoning layer on playbook output to provide a summary of the results
             utils.log_header("LLM Reasoning", dash_length=50)
 
             prompt = ToolReasoningLayerPrompts.NETWORK_CONNECTIVITY_CHECK.format(
-                ping_data=ping_data, telnet_data=telnet_data
-            )
+                ping_data=ping_data, telnet_data=telnet_data)
             conclusion = await utils.llm_ainvoke(config, builder, prompt)
 
             utils.logger.debug(conclusion)
