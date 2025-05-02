@@ -21,15 +21,13 @@ from typing import Any
 
 from openinference.semconv.trace import OpenInferenceSpanKindValues
 from openinference.semconv.trace import SpanAttributes
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.trace import Span
-from opentelemetry.trace.propagation import set_span_in_context
 from pydantic import TypeAdapter
 
 from aiq.builder.context import AIQContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepState
+from aiq.utils.optional_imports import TelemetryOptionalImportError
+from aiq.utils.optional_imports import try_import_opentelemetry
 
 try:
     from weave.trace.context import weave_client_context
@@ -46,10 +44,28 @@ logger = logging.getLogger(__name__)
 
 OPENINFERENCE_SPAN_KIND = SpanAttributes.OPENINFERENCE_SPAN_KIND
 
+# Try to import OpenTelemetry modules
+# If the dependencies are not installed, use dummy objects here
+try:
+    opentelemetry = try_import_opentelemetry()
+    from opentelemetry import trace
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.trace import Span
+    from opentelemetry.trace.propagation import set_span_in_context
+except TelemetryOptionalImportError:
+    from aiq.utils.optional_imports import DummySpan  # pylint: disable=ungrouped-imports
+    from aiq.utils.optional_imports import DummyTrace  # pylint: disable=ungrouped-imports
+    from aiq.utils.optional_imports import DummyTracerProvider  # pylint: disable=ungrouped-imports
+    from aiq.utils.optional_imports import dummy_set_span_in_context  # pylint: disable=ungrouped-imports
+    trace = DummyTrace
+    TracerProvider = DummyTracerProvider
+    Span = DummySpan
+    set_span_in_context = dummy_set_span_in_context
+
 
 def _ns_timestamp(seconds_float: float) -> int:
     """
-    Convert AIQ Toolkit’s float `event_timestamp` (in seconds) into an integer number
+    Convert AIQ Toolkit's float `event_timestamp` (in seconds) into an integer number
     of nanoseconds, as OpenTelemetry expects.
     """
     return int(seconds_float * 1e9)
@@ -62,7 +78,7 @@ class AsyncOtelSpanListener:
 
     - On FUNCTION_START => open a new top-level span
     - On any other intermediate step => open a child subspan (immediate open/close)
-    - On FUNCTION_END => close the function’s top-level span
+    - On FUNCTION_END => close the function's top-level span
 
     This runs fully independently from the normal AIQ Toolkit workflow, so that
     the workflow is not blocking or entangled by OTel calls.
@@ -91,7 +107,7 @@ class AsyncOtelSpanListener:
             tracer_provider = TracerProvider()
             trace.set_tracer_provider(tracer_provider)
 
-        # We’ll optionally attach exporters if you want (out of scope to do it here).
+        # We'll optionally attach exporters if you want (out of scope to do it here).
         # Example: tracer_provider.add_span_processor(BatchSpanProcessor(your_exporter))
 
         self._tracer = trace.get_tracer("aiq-async-otel-listener")

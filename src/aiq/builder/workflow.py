@@ -17,8 +17,6 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import Any
 
-from opentelemetry.sdk.trace.export import SpanExporter
-
 from aiq.builder.context import AIQContextState
 from aiq.builder.embedder import EmbedderProviderInfo
 from aiq.builder.function import Function
@@ -31,6 +29,17 @@ from aiq.builder.retriever import RetrieverProviderInfo
 from aiq.data_models.config import AIQConfig
 from aiq.memory.interfaces import MemoryEditor
 from aiq.runtime.runner import AIQRunner
+from aiq.utils.optional_imports import TelemetryOptionalImportError
+from aiq.utils.optional_imports import try_import_opentelemetry
+
+# Try to import OpenTelemetry modules
+# If the dependencies are not installed, use a dummy span exporter here
+try:
+    opentelemetry = try_import_opentelemetry()
+    from opentelemetry.sdk.trace.export import SpanExporter
+except TelemetryOptionalImportError:
+    from aiq.utils.optional_imports import DummySpanExporter  # pylint: disable=ungrouped-imports
+    SpanExporter = DummySpanExporter
 
 callback_handler_var: ContextVar[Any | None] = ContextVar("callback_handler_var", default=None)
 

@@ -24,6 +24,18 @@ The AIQ Toolkit Observability Module provides support for configurable telemetry
 
 These features enable AIQ Toolkit developers to test their workflows locally and integrate observability seamlessly.
 
+## Installation
+
+The core observability features (console and file logging) are included by default. For advanced telemetry features like OpenTelemetry and Phoenix tracing, you need to install the optional telemetry dependencies:
+
+```bash
+uv pip install -e '.[telemetry]'
+```
+
+This will install:
+- OpenTelemetry API and SDK for distributed tracing
+- Arize Phoenix for visualization and analysis of LLM traces
+
 ## Configurable Components
 
 Users can set up telemetry configuration within the workflow configuration file.
@@ -41,12 +53,12 @@ Users can write logs to:
 
 ### **Tracing Configuration**
 Users can set up tracing using:
-- **Phoenix**
+- **Phoenix** (requires `[telemetry]` extra)
 - **Custom providers** *(See registration section below.)*
 
 #### **Configuration Fields**
 - **`_type`**: The name of the registered provider.
-- **`endpoint`**: The provider’s listening endpoint.
+- **`endpoint`**: The provider's listening endpoint.
 - **`project`**: The associated project name.
 
 
