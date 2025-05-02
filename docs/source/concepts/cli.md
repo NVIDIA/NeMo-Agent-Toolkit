@@ -494,7 +494,7 @@ Search Route: simple  # The route use when searching for relevant AIQ Toolkit pa
 #### Updating a Remote Registry Channel Configuration
 
 At some point, a developer might need to update a remote registry channel's configuration settings. In this case,
-using the `aiq configure registry update` command will select a remote registry by its locally unique name and allow
+using the `aiq configure channel update` command will select a remote registry channel by its locally unique name and allow
 the developer to override the configuration settings.
 
 A usage example is provided below:
