@@ -31,7 +31,7 @@ def validate_schema(metadata, Schema):  # pylint: disable=invalid-name
 
 
 @yaml_exception_handler
-def validate_yaml(ctx, param, value):
+def validate_yaml(ctx, param, value): # pylint: disable=unused-argument
     """
     Validate that the file is a valid YAML file
 

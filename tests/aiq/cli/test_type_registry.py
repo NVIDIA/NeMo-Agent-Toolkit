@@ -25,7 +25,7 @@ def test_register_function(registry: TypeRegistry):
     with pytest.raises(KeyError):
         registry.get_function(FunctionTestConfig)
 
-    def tool_fn(builder: Builder):
+    def tool_fn(builder: Builder):  # pylint: disable=unused-argument
         pass
 
     registry.register_function(
