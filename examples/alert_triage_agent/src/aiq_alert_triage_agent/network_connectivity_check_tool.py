@@ -1,5 +1,21 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import subprocess
 import telnetlib
+
 from pydantic import Field
 
 from aiq.builder.builder import Builder
@@ -10,6 +26,7 @@ from aiq.data_models.function import FunctionBaseConfig
 
 from . import utils
 from .prompts import ToolReasoningLayerPrompts
+
 
 class NetworkConnectivityCheckToolConfig(FunctionBaseConfig, name="network_connectivity_check"):
     description: str = Field(
@@ -23,7 +40,7 @@ async def network_connectivity_check_tool(config: NetworkConnectivityCheckToolCo
     async def _arun(host_id: str) -> str:
         is_test_mode = utils.is_test_mode()
         utils.log_header("Network Connectivity Tester")
-        
+
         try:
             if not is_test_mode:
                 # NOTE: The ping and telnet commands below are example implementations of network connectivity checking.
@@ -33,7 +50,7 @@ async def network_connectivity_check_tool(config: NetworkConnectivityCheckToolCo
                 # Example ping command to test basic connectivity
                 result = subprocess.run(
                     ["ping", "-c", "3", host_id],
-                    capture_output=True, 
+                    capture_output=True,
                     text=True,
                 )
 
@@ -61,7 +78,7 @@ async def network_connectivity_check_tool(config: NetworkConnectivityCheckToolCo
                     column="network_connectivity_check_tool:ping_output"
                 )
 
-                # Get telnet data from test data, falling back to static data if needed 
+                # Get telnet data from test data, falling back to static data if needed
                 telnet_data = utils.load_column_or_static(
                     df=df,
                     host_id=host_id,
@@ -75,7 +92,7 @@ async def network_connectivity_check_tool(config: NetworkConnectivityCheckToolCo
                 ping_data=ping_data, telnet_data=telnet_data
             )
             conclusion = await utils.llm_ainvoke(config, builder, prompt)
-            
+
             utils.logger.debug(conclusion)
             utils.log_footer()
             return conclusion

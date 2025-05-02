@@ -16,7 +16,7 @@ dependencies = [
   "langgraph>=0.0.10",
   "flask>=3.0.0"
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.11,<3.13"
 description = "Alert Triage AIQ Toolkit example"
 classifiers = ["Programming Language :: Python"]
 

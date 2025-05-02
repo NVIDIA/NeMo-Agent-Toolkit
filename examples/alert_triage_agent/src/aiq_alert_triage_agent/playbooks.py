@@ -1,3 +1,18 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Example playbook to monitor host performance metrics including CPU, memory and disk I/O
 # This playbook runs commands to collect system performance data and check for threshold violations
 # NOTE: This is just an example implementation of Linux monitoring commands.
@@ -15,15 +30,15 @@ HOST_PERFORMANCE_CHECK_PLAYBOOK = [
                 "register": "cpu_usage",
             },
             {"name": "CPU usage data", "debug": {"msg": "{{ cpu_usage.stdout }}"}},
-            
+
             # Memory usage collection
             {
-                "name": "Collect memory usage data", 
+                "name": "Collect memory usage data",
                 "ansible.builtin.shell": {"cmd": "free -m"},
                 "register": "memory_usage",
             },
             {"name": "memory usage data", "debug": {"msg": "{{ memory_usage.stdout }}"}},
-            
+
             # Disk I/O collection
             {
                 "name": "Collect disk I/O statistics",
@@ -92,7 +107,7 @@ HOST_PERFORMANCE_CHECK_PLAYBOOK = [
 MONITOR_PROCESS_CHECK_PLAYBOOK = [
     {
         "name": "Monitor Telegraf process", # Playbook name
-        "hosts": "all",                  
+        "hosts": "all",
         "tasks": [
             {
                 "name": "ps telegraf process", # Task to check if Telegraf process is running

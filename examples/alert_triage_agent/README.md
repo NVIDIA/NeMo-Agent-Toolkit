@@ -14,12 +14,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-
-# Triaging Host Monitoring Alerts using an Agentic System
+# Triaging Host Monitoring Alerts using Agent Intelligence Toolkit
 This example demonstrates how to build an intelligent alert triage system using AIQ Toolkit and LangGraph. The system analyzes system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization. It showcases how to combine LLMs with domain-specific diagnostic tools to create an automated troubleshooting workflow.
 
 ## Table of contents
-- [Triaging Host Monitoring Alerts using an Agentic System](#triaging-host-monitoring-alerts-using-an-agentic-system)
+- [Triaging Host Monitoring Alerts using Agent Intelligence Toolkit](#triaging-host-monitoring-alerts-using-agent-intelligence-toolkit)
   - [Table of contents](#table-of-contents)
   - [Use case description](#use-case-description)
     - [Why use an agentic design?](#why-use-an-agentic-design)
@@ -281,10 +280,14 @@ To use this mode, first ensure you have configured your live environment as desc
    The server will respond with:
    ```json
    {
-     "received_alert_count": 2,  // number of alerts received in the latest request
-     "total_launched": 5  // cumulative count of all alerts processed
+     "received_alert_count": 2,
+     "total_launched": 5
    }
    ```
+
+   Where:
+   - `received_alert_count` shows the number of alerts received in the latest request
+   - `total_launched` shows the cumulative count of all alerts processed
 
    Each alert will trigger an automated triage process.
 

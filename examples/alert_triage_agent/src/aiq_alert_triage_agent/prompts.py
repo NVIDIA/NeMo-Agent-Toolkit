@@ -1,3 +1,18 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 ALERT_TRIAGE_AGENT_PROMPT = """**Role**
 You are a Triage Agent responsible for diagnosing and troubleshooting system alerts in real time. Your goal is to determine whether an alert indicates a true issue, identify the root cause, and provide a clear, structured triage report to assist system analysts.
 
@@ -117,7 +132,7 @@ Format your response as a structured summary:
 Monitoring Output:
 {input_data}"""
 
-    HOST_PERFORMANCE_CHECK = """You are given system performance data captured from a host. Your task is to extract and organize the information into a clean, structured JSON format. The input contains system details and performance metrics, such as CPU, memory, and disk I/O.
+    HOST_PERFORMANCE_CHECK_PARSING = """You are given system performance data captured from a host. Your task is to extract and organize the information into a clean, structured JSON format. The input contains system details and performance metrics, such as CPU, memory, and disk I/O.
 
 Follow these instructions:
 
@@ -129,6 +144,26 @@ Follow these instructions:
 
 Here is the input data:
 {input_data}"""
+
+    HOST_PERFORMANCE_CHECK_ANALYSIS = """You are analyzing system metrics to assess CPU and memory usage. Use the output below to determine whether CPU or memory usage is abnormally high, identify which processes are consuming the most resources, and assess whether the usage patterns could explain a recent alert.
+
+Instructions:
+1. Evaluate overall CPU and memory usage levels.
+2. List the top resource-consuming processes, including their name, PID, %CPU, and %MEM.
+3. Identify any potential causes of high usage (e.g., memory leak, runaway process, legitimate high load).
+4. Recommend possible next steps for investigation or mitigation.
+
+Format your response as a structured summary:
+
+CPU Usage: Normal / High (X% usage)
+Memory Usage: Normal / High (X% usage)
+Top Resource-Consuming Processes: [Process name, PID, %CPU, %MEM]
+Potential Cause of High Usage: [e.g., runaway process, heavy load, memory leak]
+Next Steps: [Suggested mitigation actions]
+
+System Metrics Output:
+{input_data}
+"""
 
     HARDWARE_CHECK = """You are analyzing IPMI metrics to support host monitoring and alert triage. Use the provided IPMI output to assess overall system status. Your goals are to:
 

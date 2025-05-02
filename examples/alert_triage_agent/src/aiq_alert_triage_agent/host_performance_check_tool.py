@@ -1,14 +1,31 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from pydantic import Field
 
 from aiq.builder.builder import Builder
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
-from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.component_ref import LLMRef
+from aiq.data_models.function import FunctionBaseConfig
 
 from . import utils
 from .playbooks import HOST_PERFORMANCE_CHECK_PLAYBOOK
 from .prompts import ToolReasoningLayerPrompts
+
+
 class HostPerformanceCheckToolConfig(FunctionBaseConfig, name="host_performance_check"):
     description: str = Field(
         default="This is the Host Performance Check Tool. This tool retrieves CPU usage, memory usage, and hardware I/O usage details for a given host. Args: host_id: str",
@@ -37,7 +54,7 @@ async def _run_ansible_playbook_for_host_performance_check(
     # NOTE: This is an example playbook - users should customize the playbook
     # to collect metrics relevant to their specific monitoring requirements
     playbook = HOST_PERFORMANCE_CHECK_PLAYBOOK
-    
+
     output = await utils.run_ansible_playbook(
         playbook=playbook,
         ansible_host=ansible_host,
@@ -67,7 +84,7 @@ async def _run_ansible_playbook_for_host_performance_check(
     return extracted_tasks
 
 
-async def _parse_stdout_lines(config, builder, stdout_lines): 
+async def _parse_stdout_lines(config, builder, stdout_lines):
     """
     Parses the stdout_lines output using nvda_nim to extract structured JSON data.
 
@@ -80,7 +97,7 @@ async def _parse_stdout_lines(config, builder, stdout_lines):
     # Join the list of lines into a single text block
     input_data = "\n".join(stdout_lines) if stdout_lines else ""
 
-    prompt = ToolReasoningLayerPrompts.HOST_PERFORMANCE_CHECK.format(input_data=input_data)
+    prompt = ToolReasoningLayerPrompts.HOST_PERFORMANCE_CHECK_PARSING.format(input_data=input_data)
 
     response = await utils.llm_ainvoke(config, builder, user_prompt=prompt)
 
@@ -111,7 +128,7 @@ async def host_performance_check_tool(config: HostPerformanceCheckToolConfig, bu
                     config=config,
                     builder=builder,
                     ansible_host=ansible_host,
-                    ansible_user=ansible_user, 
+                    ansible_user=ansible_user,
                     ansible_port=ansible_port,
                     ansible_private_key_path=ansible_private_key_path
                 )
@@ -135,31 +152,14 @@ async def host_performance_check_tool(config: HostPerformanceCheckToolConfig, bu
 
             # Additional LLM reasoning layer on playbook output to provide a summary of the results
             utils.log_header("LLM Reasoning", dash_length=50)
-            
-            prompt_template = f"""You are analyzing system metrics to assess CPU and memory usage. Use the output below to determine whether CPU or memory usage is abnormally high, identify which processes are consuming the most resources, and assess whether the usage patterns could explain a recent alert.
 
-Instructions:
-1. Evaluate overall CPU and memory usage levels.
-2. List the top resource-consuming processes, including their name, PID, %CPU, and %MEM.
-3. Identify any potential causes of high usage (e.g., memory leak, runaway process, legitimate high load).
-4. Recommend possible next steps for investigation or mitigation.
+            prompt_template = ToolReasoningLayerPrompts.HOST_PERFORMANCE_CHECK_ANALYSIS.format(input_data=output)
 
-Format your response as a structured summary:
-
-CPU Usage: Normal / High (X% usage)
-Memory Usage: Normal / High (X% usage)
-Top Resource-Consuming Processes: [Process name, PID, %CPU, %MEM]
-Potential Cause of High Usage: [e.g., runaway process, heavy load, memory leak]
-Next Steps: [Suggested mitigation actions]
-
-System Metrics Output:
-{output}
-"""
             conclusion = await utils.llm_ainvoke(config, builder, user_prompt=prompt_template)
 
             utils.logger.debug(conclusion)
             utils.log_footer()
-            
+
             return conclusion
 
         except Exception as e:
