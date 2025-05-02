@@ -164,7 +164,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # If tracing is configured, try to import telemetry dependencies and set up tracing
         if telemetry_config.tracing:
             # If the dependencies are not installed, a TelemetryOptionalImportError will be raised
-            opentelemetry = try_import_opentelemetry()  # pylint: disable=unused-variable
+
+            # pylint: disable=unused-variable,redefined-outer-name
+            opentelemetry = try_import_opentelemetry()
             from opentelemetry import trace
             from opentelemetry.sdk.trace import TracerProvider
             from opentelemetry.sdk.trace.export import BatchSpanProcessor
