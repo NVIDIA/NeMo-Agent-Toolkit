@@ -24,6 +24,7 @@ from aiq.data_models.common import TypedBaseModel
 from aiq.data_models.dataset_handler import EvalDatasetConfig
 from aiq.data_models.dataset_handler import EvalS3Config
 from aiq.data_models.evaluator import EvaluatorBaseConfig
+from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.data_models.profiler import ProfilerConfig
 
 
@@ -45,6 +46,8 @@ class EvalOutputConfig(BaseModel):
     s3: EvalS3Config | None = None
     # Whether to cleanup the output directory before running the workflow
     cleanup: bool = True
+    # Filter for the workflow output steps
+    workflow_output_step_filter: list[IntermediateStepType] | None = None
 
 
 class EvalGeneralConfig(BaseModel):
