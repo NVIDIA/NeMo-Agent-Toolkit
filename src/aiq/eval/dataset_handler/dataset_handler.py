@@ -20,6 +20,7 @@ import pandas as pd
 from aiq.data_models.dataset_handler import EvalDatasetConfig
 from aiq.data_models.dataset_handler import EvalDatasetJsonConfig
 from aiq.data_models.intermediate_step import IntermediateStep
+from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.eval.dataset_handler.dataset_downloader import DatasetDownloader
 from aiq.eval.dataset_handler.dataset_filter import DatasetFilter
 from aiq.eval.evaluator.evaluator_model import EvalInput
@@ -132,20 +133,24 @@ class DatasetHandler:
         # Convert the DataFrame to a list of EvalInput objects
         return self.get_eval_input_from_df(input_df)
 
-    def filter_intermediate_steps(self, intermediate_steps: list[IntermediateStep]) -> list[dict]:
+    def filter_intermediate_steps(self,
+                                  intermediate_steps: list[IntermediateStep],
+                                  event_filter: list[IntermediateStepType] = None) -> list[dict]:
         """
         Filter out the intermediate steps that are not relevant for evaluation.
         The output is written with with the intention of re-running the evaluation using the original config file.
         """
-        filtered_steps = self.intermediate_step_adapter.filter_intermediate_steps(
-            intermediate_steps, self.intermediate_step_adapter.DEFAULT_EVENT_FILTER)
+        if event_filter is None:
+            event_filter = self.intermediate_step_adapter.DEFAULT_EVENT_FILTER
+        filtered_steps = self.intermediate_step_adapter.filter_intermediate_steps(intermediate_steps, event_filter)
         return self.intermediate_step_adapter.serialize_intermediate_steps(filtered_steps)
 
-    def publish_eval_input(self, eval_input) -> str:
+    def publish_eval_input(self, eval_input, workflow_output_step_filter: list[IntermediateStepType] = None) -> str:
         """
         Convert the EvalInput object to a JSON output for storing in a file. Use the orginal keys to
         allow re-running evaluation using the orignal config file and '--skip_workflow' option.
         """
+
         indent = 2
         if self.is_structured_input():
             # Extract structured data from EvalInputItems
@@ -154,7 +159,7 @@ class DatasetHandler:
                 self.question_key: item.input_obj,
                 self.answer_key: item.expected_output_obj,
                 self.generated_answer_key: item.output_obj,
-                self.trajectory_key: self.filter_intermediate_steps(item.trajectory),
+                self.trajectory_key: self.filter_intermediate_steps(item.trajectory, workflow_output_step_filter),
                 self.expected_trajectory_key: self.filter_intermediate_steps(item.expected_trajectory),
             } for item in eval_input.eval_input_items]
         else:
