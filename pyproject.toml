@@ -64,6 +64,7 @@ mem0ai = ["aiqtoolkit-mem0ai"]
 semantic-kernel = ["aiqtoolkit-semantic-kernel"]
 zep-cloud = ["aiqtoolkit-zep-cloud"]
 agno = ["aiqtoolkit-agno"]
+weave = ["aiqtoolkit-weave"]
 
 examples = [
   "aiq_email_phishing_analyzer",
@@ -98,6 +99,7 @@ aiqtoolkit-semantic-kernel = { workspace = true }
 aiqtoolkit-test = { workspace = true }
 aiqtoolkit-zep-cloud = { workspace = true }
 aiqtoolkit-agno = { workspace = true }
+aiqtoolkit-weave = { workspace = true }
 
 # All examples here
 aiq_email_phishing_analyzer = { path = "examples/email_phishing_analyzer", editable = true }
