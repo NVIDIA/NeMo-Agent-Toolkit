@@ -1,0 +1,22 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+root = "../.."
+
+[project]
+name = "agentic_workflow"
+dynamic = ["version"]
+dependencies = [
+  "agentiq[langchain]",
+]
+requires-python = ">=3.12"
+description = "Custom AgentIQ Workflow"
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+agentiq = { path = "../..", editable = true }
+
+[project.entry-points.'aiq.components']
+agentic_workflow = "agentic_workflow.register"

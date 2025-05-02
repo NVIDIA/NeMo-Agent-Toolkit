@@ -1,0 +1,50 @@
+
+
+general:
+  use_uvloop: true
+  front_end:
+    _type: fastapi
+    cors:
+      allow_origins: ['*']
+    step_adaptor:
+      mode: default
+
+memory:
+  saas_memory:
+    _type: mem0_memory
+
+functions:
+  parse_order_function:
+    _type: parse_order_agent
+  decision_agent:
+    _type: decision_agent
+  discount_agent:
+    _type: discount_agent
+  forecast_agent:
+    _type: forecast_agent
+  add_memory:
+    _type: add_memory
+    memory: saas_memory
+    description: |
+      Add any facts about user preferences to long term memory. Always use this if users mention a preference.
+      The input to this tool should be a string that describes the user's preference, not the question or answer.
+
+  get_memory:
+    _type: get_memory
+    memory: saas_memory
+    description: |
+      Always call this tool before calling any other tools, even if the user does not mention to use it.
+      The question should be about user preferences which will help you format your response.
+      For example: "How does the user like responses formatted?". Example of inputs are
+
+
+llms:
+  openai_llm:
+    _type: openai
+    model_name: o3-mini
+
+workflow:
+  _type: orders
+  tool_names: [parse_order_function,decision_agent, discount_agent, forecast_agent]
+  llm_name: openai_llm
+  verbose: true
