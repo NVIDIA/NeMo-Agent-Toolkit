@@ -40,10 +40,12 @@ docker run -p 6006:6006 -p 4317:4317 -i -t arizephoenix/phoenix:latest
 
 2. Run the profiler agent:
    ```
-   aiq serve --config_file=configs/config.yml  --host 0.0.0.0 --port 8088
+   aiq serve --config_file=examples/profiler_agent/configs/config.yml  --host 0.0.0.0 --port 8088
    ```
 
-3. Query the agent with natural language:
+3. Launch the AIQ Toolkit User Interface by using the instructions in the [Using AIQ Toolkit UI and Server](https://github.com/NVIDIA/aiq/blob/main/docs/source/guides/using-aiqtoolkit-ui-and-server.md) guide.
+
+4. Query the agent with natural language via the UI:
    ```
    "Show me flowchart of last 3 runs"
    "Show me the token usage of last run"
