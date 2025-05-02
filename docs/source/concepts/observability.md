@@ -15,14 +15,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA AgentIQ Observability
+# NVIDIA Agent Intelligence Toolkit Observability
 
-The AgentIQ Observability Module provides support for configurable telemetry setup to do logging tracing and metrics for AgentIQ workflows.
+The AIQ Toolkit Observability Module provides support for configurable telemetry setup to do logging tracing and metrics for AIQ Toolkit workflows.
 - Enables users to configure telemetry options from a predefined list based on their preferences.
 - Listens real-time usage statistics pushed by `IntermediateStepManager`.
 - Translates the usage statistics to OpenTelemetry format and push to the configured provider/method. (e.g., phoenix, OTelCollector, console, file)
 
-These features enable AgentIQ developers to test their workflows locally and integrate observability seamlessly.
+These features enable AIQ Toolkit developers to test their workflows locally and integrate observability seamlessly.
+
+## Installation
+
+The core observability features (console and file logging) are included by default. For advanced telemetry features like OpenTelemetry and Phoenix tracing, you need to install the optional telemetry dependencies:
+
+```bash
+uv pip install -e '.[telemetry]'
+```
+
+This will install:
+- OpenTelemetry API and SDK for distributed tracing
+- Arize Phoenix for visualization and analysis of LLM traces
 
 ## Configurable Components
 
@@ -41,12 +53,12 @@ Users can write logs to:
 
 ### **Tracing Configuration**
 Users can set up tracing using:
-- **Phoenix**
+- **Phoenix** (requires `[telemetry]` extra)
 - **Custom providers** *(See registration section below.)*
 
 #### **Configuration Fields**
 - **`_type`**: The name of the registered provider.
-- **`endpoint`**: The provider’s listening endpoint.
+- **`endpoint`**: The provider's listening endpoint.
 - **`project`**: The associated project name.
 
 
@@ -70,20 +82,20 @@ general:
 ```
 
 
-### AgentIQ Observability Components
+### AIQ Toolkit Observability Components
 
-The Observability components `AsyncOtelSpanListener`, leverage the Subject-Observer pattern to subscribe to the `IntermediateStep` event stream pushed by `IntermediateStepManager`. Acting as an asynchronous event listener, `AsyncOtelSpanListener` listens for AgentIQ intermediate step events, collects and efficiently translates them into OpenTelemetry spans, enabling seamless tracing and monitoring.
+The Observability components `AsyncOtelSpanListener`, leverage the Subject-Observer pattern to subscribe to the `IntermediateStep` event stream pushed by `IntermediateStepManager`. Acting as an asynchronous event listener, `AsyncOtelSpanListener` listens for AIQ Toolkit intermediate step events, collects and efficiently translates them into OpenTelemetry spans, enabling seamless tracing and monitoring.
 
 - **Process events asynchronously** using a dedicated event loop.
 - **Transform function execution boundaries** (`FUNCTION_START`, `FUNCTION_END`) and intermediate operations (`LLM_END`, `TOOL_END`) into OpenTelemetry spans.
 - **Maintain function ancestry context** using `InvocationNode` objects, ensuring **distributed tracing across nested function calls**, while preserving execution hierarchy.
 - **{py:class}`aiq.profiler.decorators`**: Defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
-- **{py:class}`~aiq.profiler.callbacks`**: Directory that implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the AgentIQ usage stats queue. AgentIQ profiling supports callback handlers for LangChain, LLama Index, CrewAI, and Semantic Kernel.
+- **{py:class}`~aiq.profiler.callbacks`**: Directory that implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the AIQ Toolkit usage stats queue. AIQ Toolkit profiling supports callback handlers for LangChain, LLama Index, CrewAI, and Semantic Kernel.
 
 
 ### Registering a New Telemetry Provider as a Plugin
 
-AgentIQ allows users to register custom telemetry providers using the `@register_telemetry_exporter` decorator in {py:class}`aiq.observability.register`.
+AIQ Toolkit allows users to register custom telemetry providers using the `@register_telemetry_exporter` decorator in {py:class}`aiq.observability.register`.
 
 Example:
 ```bash

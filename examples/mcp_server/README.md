@@ -105,7 +105,7 @@ The MCP server will be available at `http://localhost:${SERVER_PORT}/sse`. You c
 
 ## Client Configuration
 
-To use the MCP service in your AgentIQ application, configure the MCP tool wrapper in your config file:
+To use the MCP service in your AIQ Toolkit application, configure the MCP tool wrapper in your config file:
 
 ```yaml
 functions:

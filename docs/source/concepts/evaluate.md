@@ -15,13 +15,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Evaluating NVIDIA AgentIQ Workflows Details
+# Evaluating NVIDIA Agent Intelligence Toolkit Workflows Details
 
 :::{note}
-It is recommended that the [Evaluating AgentIQ Workflows](../guides/evaluate.md) guide be read before proceeding with this detailed documentation.
+It is recommended that the [Evaluating AIQ Toolkit Workflows](../guides/evaluate.md) guide be read before proceeding with this detailed documentation.
 :::
 
-AgentIQ provides a set of evaluators to run and evaluate the AgentIQ workflows. In addition to the built-in evaluators, AgentIQ provides a plugin system to add custom evaluators.
+AIQ Toolkit provides a set of evaluators to run and evaluate the AIQ Toolkit workflows. In addition to the built-in evaluators, AIQ Toolkit provides a plugin system to add custom evaluators.
 
 Example:
 ```bash
@@ -31,7 +31,7 @@ aiq eval --config_file=examples/simple/configs/eval_config.yml
 ## Using Datasets
 Run and evaluate the workflow on a specified dataset. The dataset files types are `json`, `jsonl`, `csv`, `xls`, or `parquet`.
 
-Download and use datasets provided by AgentIQ examples by running the following.
+Download and use datasets provided by AIQ Toolkit examples by running the following.
 
 ```bash
 git lfs fetch
@@ -131,16 +131,16 @@ eval:
               - sympy__sympy-21055
 ```
 
-## AgentIQ Built-in Evaluators
-AgentIQ provides the following built-in evaluator:
+## AIQ Toolkit Built-in Evaluators
+AIQ Toolkit provides the following built-in evaluator:
 - `ragas` - An evaluator to run and evaluate RAG-like workflows using the public RAGAS API.
 - `trajectory` - An evaluator to run and evaluate the LangChain agent trajectory.
 - `swe_bench` - An evaluator to run and evaluate the workflow on the SWE-Bench dataset.
 
 ### RAGAS Evaluator
 [RAGAS](https://docs.ragas.io/) is an OSS evaluation framework that enables end-to-end
-evaluation of RAG workflows. AgentIQ provides an interface to RAGAS to evaluate the performance
-of RAG-like AgentIQ workflows.
+evaluation of RAG workflows. AIQ Toolkit provides an interface to RAGAS to evaluate the performance
+of RAG-like AIQ Toolkit workflows.
 
 RAGAS provides a set of evaluation metrics to configure in the `config.yml` file
 by adding an evaluator section with type`ragas`.
@@ -208,8 +208,64 @@ eval:
 ```
 The swe-bench evaluator uses unstructured dataset entries. The entire row is provided as input to the workflow.
 
+### Tunable RAG Evaluator
+The tunable RAG evaluator is a customizable LLM evaluator that allows for flexible evaluation of RAG workflows.
+It includes a default scoring mechanism based on an expected answer description rather than a ground truth answer.
+
+The judge LLM prompt is tunable and can be provided in the `config.yml` file.
+
+A default scoring method is provided as follows:
+- Coverage: Evaluates if the answer covers all mandatory elements of the expected answer.
+- Correctness: Evaluates if the answer is correct compared to the expected answer.
+- Relevance: Evaluates if the answer is relevant to the question.
+
+These weights can be optionally tuned by setting the `default_score_weights` parameter in the `config.yml` file. If not set, each score will be equally weighted.
+
+The default scoring can be overridden by setting the config boolean `default_scoring` to false and providing your own scoring mechanism which you describe in your custom judge LLM prompt.
+Note: if you do choose to use the default scoring method, you are still able to tune the judge LLM prompt.
+
+**Example:**
+`example/simple_calculator/configs/config-tunable-rag-eval.yml`:
+```yaml
+eval:
+  evaluators:
+    tuneable_eval:
+      _type: tunable_rag_evaluator
+      llm_name: nim_rag_eval_llm
+      default_scoring: false
+      default_score_weights:
+        coverage: 0.5
+        correctness: 0.3
+        relevance: 0.2
+      judge_llm_prompt: >
+        You are an intelligent evaluator that scores the generated answer based on the description of the expected answer.
+        The score is a measure of how well the generated answer matches the description of the expected answer based on the question.
+        Take into account the question, the relevance of the answer to the question and the quality compared to the description of the expected answer.
+
+        Rules:
+        - The score must be a float of any value between 0.0 and 1.0 on a sliding scale.
+        - The reasoning string must be concise and to the point. It should be 1 sentence and 2 only if extra description is needed. It must explain why the score was given and what is different between the generated answer and the expected answer.
+```
+
+Note: In your evaluation dataset, make sure that the `answer` field is a description of the expected answer with details on what is expected from the generated answer.
+
+**Example:**
+`example/simple_calculator/configs/config-tunable-rag-eval.yml`:
+```json
+{
+  "id": 1,
+  "question": "What is the product of 3 and 7, and is it greater than the current hour?",
+  "answer": "Answer must have the answer of product of 3 and 7 and whether it is greater than the current hour"
+}
+```
+
+**Sample Usage:**
+```bash
+aiq eval --config_file=examples/simple_calculator/configs/config-tunable-rag-eval.yml
+```
+
 ## Adding Custom Evaluators
-You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the AgentIQ evaluator system. See the [Custom Evaluator](../guides/custom-evaluator.md) documentation for more information.
+You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the AIQ Toolkit evaluator system. See the [Custom Evaluator](../guides/custom-evaluator.md) documentation for more information.
 
 
 ## Running multiple repetitions
@@ -220,11 +276,11 @@ aiq eval --config_file=examples/simple/configs/eval_config.yml --reps=5
 This will allow you to get an average score across multiple runs and analyze the variation in the generated outputs.
 
 ## Running evaluation on large datasets
-Similar to how evaluators are run in parallel, entries in the dataset are also processed in parallel. Concurrency is configurable using the `eval.general.concurrency` parameter in the `config.yml` file. The default value is 8. Increase or decrease the value based on the available resources.
+Similar to how evaluators are run in parallel, entries in the dataset are also processed in parallel. Concurrency is configurable using the `eval.general.max_concurrency` parameter in the `config.yml` file. The default value is 8. Increase or decrease the value based on the available resources.
 ```yaml
 eval:
   general:
-    concurrency: 4
+    max_concurrency: 4
 ```
 
 ## Pickup where you left off
@@ -314,6 +370,18 @@ The output of the evaluators are stored in distinct files in the same `output_di
 }
 ```
 
+## Workflow Output Intermediate Step Filtering
+The workflow_output.json file contains the intermediate steps for each entry in the dataset. The intermediate steps are filtered using the `eval.general.output.workflow_output_step_filter` parameter in the `config.yml` file. The default value for the filter is `[LLM_END, TOOL_END]`. You can customize the filter by providing a list of intermediate step types to include in the output file.
+
+**Example:**
+`examples/simple/configs/eval_config.yml` can be modified to include the intermediate steps in the output by adding the following configuration:
+```yaml
+eval:
+  general:
+    output:
+    workflow_output_step_filter: [LLM_END, TOOL_START, TOOL_END]
+```
+
 ## Customizing the output
 You can customize the output of the pipeline by providing custom scripts. One or more Python scripts can be provided in the `eval.general.output_scripts` section of the `config.yml` file.
 
@@ -380,5 +448,5 @@ eval:
 ```
 Output directory cleanup is disabled by default for easy troubleshooting.
 
-## Profiling and Performance Monitoring of AgentIQ Workflows
-You can profile workflows via the AgentIQ evaluation system. For more information, see the [Profiler](profiler.md) documentation.
+## Profiling and Performance Monitoring of AIQ Toolkit Workflows
+You can profile workflows via the AIQ Toolkit evaluation system. For more information, see the [Profiler](profiler.md) documentation.

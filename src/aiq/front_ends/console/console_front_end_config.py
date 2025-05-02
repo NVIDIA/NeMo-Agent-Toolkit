@@ -22,7 +22,7 @@ from aiq.data_models.front_end import FrontEndBaseConfig
 
 class ConsoleFrontEndConfig(FrontEndBaseConfig, name="console"):
     """
-    A front end that allows an AgentIQ workflow to be run from the console.
+    A front end that allows an AIQ Toolkit workflow to be run from the console.
     """
 
     input_query: list[str] | None = Field(default=None,

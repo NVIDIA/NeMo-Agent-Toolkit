@@ -16,15 +16,15 @@ limitations under the License.
 -->
 
 # WebSocket Message Schema
-This document defines the schema for WebSocket messages exchanged between the client and the AgentIQ server. Its primary
-purpose is to guide users on how to interact with the AgentIQ server via WebSocket connection. Users can reliably
+This document defines the schema for WebSocket messages exchanged between the client and the AIQ Toolkit server. Its primary
+purpose is to guide users on how to interact with the AIQ Toolkit server via WebSocket connection. Users can reliably
 send and receive data while ensuring compatibility with the web server’s expected format. Additionally, this schema
 provides flexibility for users to build and customize their own user interface by defining how different message types
 should be handled, displayed, and processed. With a clear understanding of the message structure, developers can
-seamlessly integrate their customized user interfaces with the AgentIQ server.
+seamlessly integrate their customized user interfaces with the AIQ Toolkit server.
 
 ## Overview
-The message schema described below facilitates transactional interactions with the AgentIQ server. The messages follow a
+The message schema described below facilitates transactional interactions with the AIQ Toolkit server. The messages follow a
 structured JSON format to ensure consistency in communication and can be categorized into two main types: `User Messages`
 and `System Messages`. User messages are sent from the client to the server. System messages are sent from the server
 to the client.

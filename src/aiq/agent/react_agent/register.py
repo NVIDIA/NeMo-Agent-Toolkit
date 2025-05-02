@@ -34,8 +34,8 @@ logger = logging.getLogger(__name__)
 
 class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
     """
-    Defines an AgentIQ function that uses a ReAct Agent performs reasoning inbetween tool calls, and utilizes the tool
-    names and descriptions to select the optimal tool.
+    Defines an AIQ Toolkit function that uses a ReAct Agent performs reasoning inbetween tool calls, and utilizes the
+    tool names and descriptions to select the optimal tool.
     """
 
     tool_names: list[FunctionRef] = Field(default_factory=list,
@@ -92,6 +92,8 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     # the agent can run any installed tool, simply install the tool and add it to the config file
     # the sample tool provided can easily be copied or changed
     tools = builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    if not tools:
+        raise ValueError(f"No tools specified for ReAct Agent '{config.llm_name}'")
     # configure callbacks, for sending intermediate steps
     # construct the ReAct Agent Graph from the configured llm, prompt, and tools
     graph: CompiledGraph = await ReActAgentGraph(llm=llm,

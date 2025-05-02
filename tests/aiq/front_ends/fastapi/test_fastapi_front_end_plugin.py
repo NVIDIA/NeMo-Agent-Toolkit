@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import typing
 from contextlib import asynccontextmanager
 
 import pytest
@@ -34,11 +33,12 @@ from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfi
 from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 from aiq.test.functions import EchoFunctionConfig
 from aiq.test.functions import StreamingEchoFunctionConfig
+from aiq.utils.type_utils import override
 
 
 class TestCustomWorker(FastApiFrontEndPluginWorker):
 
-    @typing.override
+    @override
     async def add_routes(self, app: FastAPI, builder: WorkflowBuilder):
 
         await super().add_routes(app, builder)

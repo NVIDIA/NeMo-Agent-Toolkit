@@ -22,7 +22,7 @@ limitations under the License.
 
 # A Simple Plot Chart Agent
 
-A minimal example demonstrating an E2E chart plotting agentic workflow fully configured by a YAML file. This workflow leverages the AgentIQ plugin system and `Builder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
+A minimal example demonstrating an E2E chart plotting agentic workflow fully configured by a YAML file. This workflow leverages the AIQ Toolkit plugin system and `Builder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
 
 ## Table of Contents
 
@@ -32,7 +32,7 @@ A minimal example demonstrating an E2E chart plotting agentic workflow fully con
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AgentIQ library tools.
+- **Pre-built Tools:** Leverages core AIQ Toolkit library tools.
 - **Custom Plugin System:** Developers can bring in new tools using plugins.
 - **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
 - **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
@@ -40,13 +40,13 @@ A minimal example demonstrating an E2E chart plotting agentic workflow fully con
 
 ## Installation and Setup
 
-### Setup Virtual Environment and Install AgentIQ
+### Setup Virtual Environment and Install AIQ Toolkit
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AIQ Toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AgentIQ library, run the following commands:
+From the root directory of the AIQ Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/plot_charts
@@ -63,7 +63,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ### Run the Workflow
 
-Run the following command from the root of the AgentIQ repo to execute this workflow with the specified input:
+Run the following command from the root of the AIQ Toolkit repo to execute this workflow with the specified input:
 
 ```bash
 aiq run --config_file examples/plot_charts/configs/config.yml  --input "make a line chart for me"
@@ -107,7 +107,7 @@ Workflow Result:
 2024-11-19 17:13:35,244 - aiq.cli.entrypoint - INFO - Pipeline runtime: 114.41 sec
 ```
 
-Note: in this run, the image is saved to **./USA vs EMEA Data by Year.png** in the root folder of the AgentIQ repository. Depending on the input, your run might have a different image name, please check the **`bot_message`** output to find the image.
+Note: in this run, the image is saved to **./USA vs EMEA Data by Year.png** in the root folder of the AIQ Toolkit repository. Depending on the input, your run might have a different image name, please check the **`bot_message`** output to find the image.
 
 
 
@@ -122,7 +122,7 @@ aiq run --config_file examples/plot_charts/configs/config.yml  --input "tell me 
 
 ### Launch the Workflow Server
 
-Run the following command from the root of the AgentIQ repo to serve this workflow:
+Run the following command from the root of the AIQ Toolkit repo to serve this workflow:
 
 ```bash
 aiq serve --config_file examples/plot_charts/configs/config.yml
@@ -158,4 +158,4 @@ curl --request POST   --url http://localhost:8000/generate   --header 'Content-T
 {"value":"Saved output to ./USA vs EMEA Performance Over Time.png"}
 ```
 
-Find the image in the root folder of the AgentIQ repository with the image name displayed above
+Find the image in the root folder of the AIQ Toolkit repository with the image name displayed above

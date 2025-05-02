@@ -15,53 +15,53 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Plugin System in NVIDIA AgentIQ
+# Plugin System in NVIDIA Agent Intelligence Toolkit
 
-AgentIQ has a very extensible plugin system that allows you to add new tools, agents, workflows and more to the library. The plugin system is designed to be easy to use and allow developers to extend the library to their needs.
+AIQ Toolkit has a very extensible plugin system that allows you to add new tools, agents, workflows and more to the library. The plugin system is designed to be easy to use and allow developers to extend the library to their needs.
 
 The plugin system is designed around two main concepts:
 
-- **Entry Points**: Python entry points allow AgentIQ to discover plugins from any installed distribution package in a Python environment.
+- **Entry Points**: Python entry points allow AIQ Toolkit to discover plugins from any installed distribution package in a Python environment.
 - **Decorators**: Decorators allow developers register their plugins with library.
 
-These two concepts allow the library to be extended by installing any compatible plugins from a Python package index. Once installed, the plugin will be automatically discovered and loaded by AgentIQ.
+These two concepts allow the library to be extended by installing any compatible plugins from a Python package index. Once installed, the plugin will be automatically discovered and loaded by AIQ Toolkit.
 
-AgentIQ utilizes the this plugin system for all first party components. This allows the library to be modular and extendable by default. Plugins from external libraries are treated exactly the same as first party plugins.
+AIQ Toolkit utilizes the this plugin system for all first party components. This allows the library to be modular and extendable by default. Plugins from external libraries are treated exactly the same as first party plugins.
 
 
 ## Supported Plugins
 
-AgentIQ currently supports the following plugins:
+AIQ Toolkit currently supports the following plugins:
 
 - **Embedder Clients**: Embedder Clients are implementations of embedder providers which are specific to a LLM framework. For example, when using the OpenAI embedder provider with the LangChain framework, the a LangChain OpenAI embedder client needs to be registered. To register an embedder client, you can use the {py:deco}`~aiq.cli.register_workflow.register_embedder_client` decorator.
 - **Embedder Providers**: Embedder Providers are services which provide a way to embed text. For example, OpenAI and NVIDIA NIMs are embedder providers. To register an embedder provider, you can use the {py:deco}`~aiq.cli.register_workflow.register_embedder_provider` decorator.
-- **Evaluators**: Evaluators are used by the evaluation framework to evaluate the performance of AgentIQ workflows. To register an evaluator, you can use the {py:deco}`~aiq.cli.register_workflow.register_evaluator` decorator.
-- **Front Ends**: Front ends are the mechanism by which AgentIQ workflows are executed. Examples of front ends include a FastAPI server or a CLI. To register a front end, you can use the {py:deco}`~aiq.cli.register_workflow.register_front_end` decorator.
-- **Functions**: Functions are one of the core building blocks of AgentIQ. They are used to define the tools and agents that can be used in a workflow. To register a function, you can use the {py:deco}`~aiq.cli.register_workflow.register_function` decorator.
+- **Evaluators**: Evaluators are used by the evaluation framework to evaluate the performance of AIQ Toolkit workflows. To register an evaluator, you can use the {py:deco}`~aiq.cli.register_workflow.register_evaluator` decorator.
+- **Front Ends**: Front ends are the mechanism by which AIQ Toolkit workflows are executed. Examples of front ends include a FastAPI server or a CLI. To register a front end, you can use the {py:deco}`~aiq.cli.register_workflow.register_front_end` decorator.
+- **Functions**: Functions are one of the core building blocks of AIQ Toolkit. They are used to define the tools and agents that can be used in a workflow. To register a function, you can use the {py:deco}`~aiq.cli.register_workflow.register_function` decorator.
 - **LLM Clients**: LLM Clients are implementations of LLM providers which are specific to a LLM framework. For example, when using the NVIDIA NIMs LLM provider with the LangChain framework, the a NVIDIA LangChain LLM client needs to be registered. To register an LLM client, you can use the {py:deco}`~aiq.cli.register_llm_client` decorator.
 - **LLM Providers**: An LLM provider is a service which provides a way to interact with an LLM. For example, OpenAI and NVIDIA NIMs are LLM providers. To register an LLM provider, you can use the {py:deco}`~aiq.cli.register_workflow.register_llm_provider` decorator.
 - **Logging Methods**: Logging methods control the destination and format of log messages. To register a logging method, you can use the {py:deco}`~aiq.cli.register_workflow.register_logging_method` decorator.
 - **Memory**: Memory plugins are used to store and retrieve information from a database to be used by an LLM. Examples of memory plugins include Zep and Mem0. To register a memory plugin, you can use the {py:deco}`~aiq.cli.register_workflow.register_memory` decorator.
-- **Registry Handlers**: Registry handlers are used to register custom agent registries with AgentIQ. An agent registry is a collection of tools, agents, and workflows that can be used in a workflow. To register a registry handler, you can use the {py:deco}`~aiq.cli.register_workflow.register_registry_handler` decorator.
+- **Registry Handlers**: Registry handlers are used to register custom agent registries with AIQ Toolkit. An agent registry is a collection of tools, agents, and workflows that can be used in a workflow. To register a registry handler, you can use the {py:deco}`~aiq.cli.register_workflow.register_registry_handler` decorator.
 - **Retriever Clients**: Retriever clients are implementations of retriever providers which are specific to a LLM framework. For example, when using the Milvus retriever provider with the LangChain framework, the a LangChain Milvus retriever client needs to be registered. To register a retriever client, you can use the {py:deco}`~aiq.cli.register_workflow.register_retriever_client` decorator.
 - **Retriever Providers**: Retriever providers are services which provide a way to retrieve information from a database. Examples of retriever providers include Chroma and Milvus. To register a retriever provider, you can use the {py:deco}`~aiq.cli.register_workflow.register_retriever_provider` decorator.
 - **Telemetry Exporters**: Telemetry exporters send telemetry data to a telemetry service. To register a telemetry exporter, you can use the {py:deco}`~aiq.cli.register_workflow.register_telemetry_exporter` decorator.
-- **Tool Wrappers**: Tool wrappers are used to wrap functions in a way that is specific to a LLM framework. For example, when using the LangChain framework, AgentIQ functions need to be wrapped in `BaseTool` class to be compatible with LangChain. To register a tool wrapper, you can use the {py:deco}`~aiq.cli.register_workflow.register_tool_wrapper` decorator.
+- **Tool Wrappers**: Tool wrappers are used to wrap functions in a way that is specific to a LLM framework. For example, when using the LangChain framework, AIQ Toolkit functions need to be wrapped in `BaseTool` class to be compatible with LangChain. To register a tool wrapper, you can use the {py:deco}`~aiq.cli.register_workflow.register_tool_wrapper` decorator.
 
 
 ## Framework Integrations
 
-To keep the library lightweight, many of the first party plugins supported by AgentIQ are located in separate distribution packages. For example, the `agentiq-langchain` distribution contains all the LangChain specific plugins and the `agentiq-mem0ai` distribution contains the Mem0 specific plugins.
+To keep the library lightweight, many of the first party plugins supported by AIQ Toolkit are located in separate distribution packages. For example, the `aiqtoolkit-langchain` distribution contains all the LangChain specific plugins and the `aiqtoolkit-mem0ai` distribution contains the Mem0 specific plugins.
 
-To install these first-party plugin libraries, you can use the full distribution name (for example, `agentiq-langchain`) or use the `agentiq[langchain]` extra distribution. A full list of the supported extras is listed below:
+To install these first-party plugin libraries, you can use the full distribution name (for example, `aiqtoolkit-langchain`) or use the `aiqtoolkit[langchain]` extra distribution. A full list of the supported extras is listed below:
 
-- `agentiq[crewai]` or `agentiq-crewai` - CrewAI specific plugins
-- `agentiq[langchain]` or `agentiq-langchain` - LangChain specific plugins
-- `agentiq[llama-index]` or `agentiq-llama-index` - LlamaIndex specific plugins
-- `agentiq[mem0ai]` or `agentiq-mem0ai` - Mem0AI specific plugins
-- `agentiq[semantic-kernel]` or `agentiq-semantic-kernel` - Semantic Kernel specific plugins
-- `agentiq[test]` or `agentiq-test` - Test specific plugins
-- `agentiq[zep-cloud]` or `agentiq-zep-cloud` - Zep Cloud specific plugins
+- `aiqtoolkit[crewai]` or `aiqtoolkit-crewai` - CrewAI specific plugins
+- `aiqtoolkit[langchain]` or `aiqtoolkit-langchain` - LangChain specific plugins
+- `aiqtoolkit[llama-index]` or `aiqtoolkit-llama-index` - LlamaIndex specific plugins
+- `aiqtoolkit[mem0ai]` or `aiqtoolkit-mem0ai` - Mem0AI specific plugins
+- `aiqtoolkit[semantic-kernel]` or `aiqtoolkit-semantic-kernel` - Semantic Kernel specific plugins
+- `aiqtoolkit[test]` or `aiqtoolkit-test` - Test specific plugins
+- `aiqtoolkit[zep-cloud]` or `aiqtoolkit-zep-cloud` - Zep Cloud specific plugins
 
 
 ## Anatomy of a Plugin
@@ -99,16 +99,16 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
 
 ### Entry Point
 
-Determining which plugins are available in a given environment is done through the use of [python entry points](https://packaging.python.org/en/latest/specifications/entry-points/). In AgentIQ, we scan the python environment for entry points which have the name `agentiq.components`. The value of the entry point is a python module that will be imported when the entry point is loaded.
+Determining which plugins are available in a given environment is done through the use of [python entry points](https://packaging.python.org/en/latest/specifications/entry-points/). In AIQ Toolkit, we scan the python environment for entry points which have the name `aiqtoolkit.components`. The value of the entry point is a python module that will be imported when the entry point is loaded.
 
-For example, the `agentiq-langchain` distribution has the following entry point specified in the `pyproject.toml` file:
+For example, the `aiqtoolkit-langchain` distribution has the following entry point specified in the `pyproject.toml` file:
 
 ```toml
 [project.entry-points.'aiq.components']
 aiq_langchain = "aiq.plugins.langchain.register"
 ```
 
-What this means is that when the `agentiq-langchain` distribution is installed, the `aiq.plugins.langchain.register` module will be imported when the entry point is loaded. This module must contain all the `@register_<plugin_type>` decorators which need to be loaded when the library is initialized.
+What this means is that when the `aiqtoolkit-langchain` distribution is installed, the `aiq.plugins.langchain.register` module will be imported when the entry point is loaded. This module must contain all the `@register_<plugin_type>` decorators which need to be loaded when the library is initialized.
 
 > [!NOTE]
 > The above syntax in the `pyproject.toml` file is specific to [uv](https://docs.astral.sh/uv/concepts/projects/config/#plugin-entry-points). Other package managers may have a different syntax for specifying entry points.
@@ -116,7 +116,7 @@ What this means is that when the `agentiq-langchain` distribution is installed, 
 
 #### Multiple Plugins in a Single Distribution
 
-It is possible to have multiple plugins in a single distribution. For example, the `agentiq-langchain` distribution contains both the LangChain LLM client and the LangChain embedder client.
+It is possible to have multiple plugins in a single distribution. For example, the `aiqtoolkit-langchain` distribution contains both the LangChain LLM client and the LangChain embedder client.
 
 To register multiple plugins in a single distribution, there are two options:
 

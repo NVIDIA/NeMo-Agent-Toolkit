@@ -28,7 +28,7 @@ class WheelData(BaseModel):
         package_name (str): The name of the python package.
         toml_project (dict): A dictionary containing data about the python project.
         toml_dependencies (set): The list of dependencies provided in the pyproject.toml file.
-        toml_aiq_packages (set): The AgentIQ plugins listed in the pyproject.toml.
+        toml_aiq_packages (set): The AIQ Toolkit plugins listed in the pyproject.toml.
         union_dependencies (set): The union of toml_dependencies and toml_aiq_packages.
         whl_path (str): The path to the package wheel file.
         whl_base64 (str): Base64 encoded string of the wheel file.
