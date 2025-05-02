@@ -15,13 +15,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Install NVIDIA Agent Intelligence Toolkit
+# NVIDIA Agent Intelligence Toolkit Quick Start Guide
+
+This guide will help you set up your development environment, run existing workflows, and create your own custom workflows using the `aiq` command-line interface.
+
+## Supported LLM APIs:
+- NIM (such as Llama-3.1-70b-instruct and Llama-3.3-70b-instruct)
+- OpenAI
+
+## Supported LLM Frameworks:
+- LangChain
+- LlamaIndex
+- CrewAI
+- Semantic Kernel
+
+## Prerequisites
+
 Agent Intelligence Toolkit (AIQ Toolkit) is a Python library that doesn’t require a GPU to run the workflow by default. You can deploy the core workflows using one of the following:
 - Ubuntu or other Linux distributions, including WSL, in a Python virtual environment.
-
-## Install From Source
-
-### Prerequisites
 
 Before you begin using AIQ Toolkit, ensure that you meet the following software prerequisites.
 
@@ -29,6 +40,7 @@ Before you begin using AIQ Toolkit, ensure that you meet the following software 
 - Install [Git Large File Storage](https://git-lfs.github.com/) (LFS)
 - Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
+## Install From Source
 
 1. Clone the AIQ Toolkit repository to your local machine.
     ```bash
@@ -79,9 +91,7 @@ Before you begin using AIQ Toolkit, ensure that you meet the following software 
     ```bash
     uv pip install -e .[profiling]
     ```
-
-
-2. Verify that you've installed the AIQ Toolkit library.
+1. Verify that you've installed the AIQ Toolkit library.
 
      ```bash
      aiq --help
@@ -90,6 +100,43 @@ Before you begin using AIQ Toolkit, ensure that you meet the following software 
 
      If the installation succeeded, the `aiq` command will log the help message and its current version.
 
+
+## Obtaining API Keys
+Depending which workflows you are running, you may need to obtain API keys from the respective services. Most AIQ Toolkit workflows require an NVIDIA API key defined with the `NVIDIA_API_KEY` environment variable. An API key can be obtained by visiting [`build.nvidia.com`](https://build.nvidia.com/) and creating an account.
+
+## Running Example Workflows
+
+Before running any of the AIQ Toolkit examples, set your NVIDIA API key as an
+environment variable to access NVIDIA AI services.
+
+```bash
+export NVIDIA_API_KEY=<YOUR_API_KEY>
+```
+
+:::{note}
+Replace `<YOUR_API_KEY>` with your actual NVIDIA API key.
+:::
+
+### Running the Simple Workflow
+
+1. Install the `aiq_simple` Workflow
+
+    ```bash
+    uv pip install -e examples/simple
+    ```
+
+2. Run the `aiq_simple` Workflow
+
+    ```bash
+    aiq run --config_file=examples/simple/configs/config.yml --input "What is LangSmith"
+    ```
+
+3. **Run and evaluate the `aiq_simple` Workflow**
+
+    The `eval_config.yml` YAML is a super-set of the `config.yml` containing additional fields for evaluation. To evaluate the `aiq_simple` workflow, run the following command:
+    ```bash
+    aiq eval --config_file=examples/simple/configs/eval_config.yml
+    ```
 
 
 ## AIQ Toolkit Packages
@@ -110,6 +157,7 @@ Alternately for projects using a `requirements.txt` file:
 aiqtoolkit[langchain]==1.0.*
 ```
 
-
 ## Next Steps
-After installing AIQ Toolkit, you can start using AIQ Toolkit agentic workflows. For more information, refer to [Get Started with AIQ Toolkit](get-started.md).
+
+* AIQ Toolkit contains several examples which demonstrate how AIQ Toolkit can be used to build custom workflows and tools. These examples are located in the `examples` directory of the AIQ Toolkit repository.
+* Refer to the AIQ Toolkit tutorials for more detailed information on how to use AIQ Toolkit.

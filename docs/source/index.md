@@ -102,15 +102,14 @@ Release Notes <./release-notes.md>
 
 ```{toctree}
 :hidden:
-:caption: Introduction
+:caption: Get Started
 
-Install AIQ Toolkit <./intro/install.md>
-Get Started <./intro/get-started.md>
+Quick Start Guide <./get-started/quick-start.md>
 ```
 
 ```{toctree}
 :hidden:
-:caption: Guides
+:caption: Beginner Tutorials
 
 Create and Customize Workflows <./guides/create-customize-workflows.md>
 Share Components <./guides/sharing-workflows-and-tools.md>
