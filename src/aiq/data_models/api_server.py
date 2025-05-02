@@ -23,6 +23,7 @@ from enum import Enum
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Discriminator
+from pydantic import Field
 from pydantic import HttpUrl
 from pydantic import conlist
 from pydantic import field_validator
@@ -30,6 +31,27 @@ from pydantic_core.core_schema import ValidationInfo
 
 from aiq.data_models.interactive import HumanPrompt
 from aiq.utils.type_converter import GlobalTypeConverter
+
+
+class Request(BaseModel):
+    """
+    Request is a data model that represents HTTP request attributes.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    method: str | None = Field(default=None,
+                               description="HTTP method used for the request (e.g., GET, POST, PUT, DELETE).")
+    url_path: str | None = Field(default=None, description="URL request path.")
+    url_port: int | None = Field(default=None, description="URL request port number.")
+    url_scheme: str | None = Field(default=None, description="URL scheme indicating the protocol (e.g., http, https).")
+    headers: typing.Any | None = Field(default=None, description="HTTP headers associated with the request.")
+    query_params: typing.Any | None = Field(default=None, description="Query parameters included in the request URL.")
+    path_params: dict[str, str] | None = Field(default=None,
+                                               description="Path parameters extracted from the request URL.")
+    client_host: str | None = Field(default=None, description="Client host address from which the request originated.")
+    client_port: int | None = Field(default=None, description="Client port number from which the request originated.")
+    cookies: dict[str, str] | None = Field(
+        default=None, description="Cookies sent with the request, stored in a dictionary-like object.")
 
 
 class ChatContentType(str, Enum):

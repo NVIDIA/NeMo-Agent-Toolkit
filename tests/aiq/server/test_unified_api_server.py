@@ -22,9 +22,11 @@ import pytest
 import pytest_asyncio
 import yaml
 from asgi_lifespan import LifespanManager
+from httpx import ASGITransport
 from pydantic import BaseModel
 from pydantic import ValidationError
 
+from aiq.builder.context import AIQContext
 from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.api_server import AIQChatResponseChunk
 from aiq.data_models.api_server import AIQChoice
@@ -296,7 +298,9 @@ async def client_fixture(config):
     fastapi_app = front_end_worker.build_app()
 
     async with LifespanManager(fastapi_app) as manager:
-        async with httpx.AsyncClient(app=manager.app, base_url=f"http://{config.app.host}:{config.app.port}") as client:
+        transport = ASGITransport(app=manager.app)
+        async with httpx.AsyncClient(transport=transport,
+                                     base_url=f"http://{config.app.host}:{config.app.port}") as client:
             yield client
 
 
@@ -336,6 +340,24 @@ async def test_chat_stream_endpoint(client: httpx.AsyncClient, config: Config):
     data_match_dict: dict = json.loads(data_match.group(1))
     validated_response = AIQChatResponseChunk(**data_match_dict)
     assert isinstance(validated_response, AIQChatResponseChunk)
+
+
+@pytest.mark.e2e
+async def test_user_attributes_from_http_request(client: httpx.AsyncClient, config: Config):
+    """Tests setting user attributes from HTTP request."""
+    input_message = {"input_message": f"{config.app.input}"}
+    headers = {"Header-Test": "application/json"}
+    query_params = {"param1": "value1"}
+    response = await client.post(
+        f"{config.endpoint.generate}",
+        json=input_message,
+        headers=headers,
+        params=query_params,
+    )
+    aiq_context = AIQContext.get()
+    assert aiq_context.metadata.headers['header-test'] == headers["Header-Test"]
+    assert aiq_context.metadata.query_params['param1'] == query_params["param1"]
+    assert response.status_code == 200
 
 
 async def test_valid_user_message():
