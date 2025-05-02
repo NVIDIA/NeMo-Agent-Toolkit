@@ -27,7 +27,7 @@ Regardless of the model you choose, the process is the same for downloading the 
 ### Requirements
 - An NVIDIA GPU with CUDA support (exact requirements depend on the model you are using)
 - [The NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installation)
-- An NVIDIA API key, refer to [Obtaining API Keys](../intro/get-started.md#obtaining-api-keys) for more information.
+- An NVIDIA API key, refer to [Obtaining API Keys](../get-started/quick-start.md#obtaining-api-keys) for more information.
 
 ### Downloading the NIM Containers
 

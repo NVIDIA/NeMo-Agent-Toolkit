@@ -80,8 +80,7 @@ AIQ Toolkit is still under active development. Here are some of the features we 
 ## Links
 
 To learn more about AIQ Toolkit, see the following links:
-* [Install AIQ Toolkit](./intro/install.md)
-* [Get Started](./intro/get-started.md)
+* [Get Started](./get-started/quick-start.md)
 * [Create and Customize Workflows](./guides/create-customize-workflows.md)
 * [Sharing Components](./guides/sharing-workflows-and-tools.md)
 * [Evaluating Workflows](./guides/evaluate.md)

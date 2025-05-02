@@ -36,7 +36,6 @@ With AIQ Toolkit, you can move quickly, experiment freely, and ensure reliabilit
 
 ## Links
  * [Documentation](https://docs.nvidia.com/aiqtoolkit/latest/index.html): Explore the full documentation for AIQ Toolkit.
- * [About AIQ Toolkit](https://docs.nvidia.com/aiqtoolkit/latest/intro/why-aiqtoolkit.html): Learn more about the benefits of using AIQ Toolkit.
 
 ## First time user?
  If this is your first time using AIQ Toolkit, it is recommended to install the latest version from the [source repository](https://github.com/NVIDIA/AIQToolkit?tab=readme-ov-file#get-started) on GitHub. This package is intended for users who are familiar with AIQ Toolkit applications and need to add AIQ Toolkit as a dependency to their project.

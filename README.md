@@ -45,8 +45,8 @@ The following diagram illustrates the key components of AIQ Toolkit and how they
 ## Links
 
  * [Documentation](https://docs.nvidia.com/aiqtoolkit/latest/index.html): Explore the full documentation for AIQ Toolkit.
- * [About AIQ Toolkit](https://docs.nvidia.com/aiqtoolkit/latest/intro/why-aiqtoolkit.html): Learn more about the benefits of using AIQ Toolkit.
- * [Get Started Guide](https://docs.nvidia.com/aiqtoolkit/latest/intro/get-started.html): Set up your environment and start building with AIQ Toolkit.
+ * [About AIQ Toolkit](https://docs.nvidia.com/aiqtoolkit/latest/): Learn more about the benefits of using AIQ Toolkit.
+ * [Get Started Guide](https://docs.nvidia.com/aiqtoolkit/latest/get-started/quick-start.md.html): Set up your environment and start building with AIQ Toolkit.
  * [Examples](https://github.com/NVIDIA/AIQToolkit/tree/main/examples#readme): Explore examples of AIQ Toolkit workflows.
  * [Create and Customize AIQ Toolkit Workflows](https://docs.nvidia.com/aiqtoolkit/latest/guides/create-customize-workflows.html): Learn how to create and customize AIQ Toolkit workflows.
  * [Evaluate with AIQ Toolkit](https://docs.nvidia.com/aiqtoolkit/latest/guides/evaluate.html): Learn how to evaluate your AIQ Toolkit workflows.
