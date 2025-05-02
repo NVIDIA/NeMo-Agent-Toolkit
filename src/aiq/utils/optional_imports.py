@@ -15,23 +15,30 @@
 
 import importlib
 import logging
-from typing import Any
+from types import ModuleType
 
 logger = logging.getLogger(__name__)
-
-IS_OTEL_AVAILABLE = None
-IS_PHOENIX_AVAILABLE = None
 
 
 class OptionalImportError(Exception):
     """Raised when an optional import fails."""
 
+    def __init__(self, module_name: str, additional_message: str = ""):
+        super().__init__(f"Optional dependency '{module_name}' is not installed. {additional_message}")
+
+
+class TelemetryOptionalImportError(OptionalImportError):
+    """Raised when an optional import of telemetry dependencies fails."""
+
     def __init__(self, module_name: str):
-        super().__init__(f"Optional dependency '{module_name}' not found. "
-                         "If you want to use this feature, please install it with: uv pip install -e '.[telemetry]'")
+        super().__init__(
+            module_name,
+            "But the configuration file contains tracing exporters. "
+            "If you want to use this feature, please install it with: uv pip install -e '.[telemetry]'",
+        )
 
 
-def optional_import(module_name: str) -> Any:
+def optional_import(module_name: str) -> ModuleType:
     """Attempt to import a module, raising OptionalImportError if it fails."""
     try:
         return importlib.import_module(module_name)
@@ -39,34 +46,22 @@ def optional_import(module_name: str) -> Any:
         raise OptionalImportError(module_name) from e
 
 
-def try_import_opentelemetry() -> Any:
+def telemetry_optional_import(module_name: str) -> ModuleType:
+    """Attempt to import a module, raising TelemetryOptionalImportError if it fails."""
+    try:
+        return importlib.import_module(module_name)
+    except ImportError as e:
+        raise TelemetryOptionalImportError(module_name) from e
+
+
+def try_import_opentelemetry() -> ModuleType:
     """Get the opentelemetry module if available."""
-    global IS_OTEL_AVAILABLE
-    try:
-        module = optional_import("opentelemetry")
-        IS_OTEL_AVAILABLE = True
-        return module
-    except OptionalImportError as e:
-        if IS_OTEL_AVAILABLE is None:
-            # Show the warning only once
-            logger.warning("OpenTelemetry not available: %s", e)
-            IS_OTEL_AVAILABLE = False
-        raise OptionalImportError("opentelemetry") from e
+    return telemetry_optional_import("opentelemetry")
 
 
-def try_import_phoenix() -> Any:
+def try_import_phoenix() -> ModuleType:
     """Get the phoenix module if available."""
-    global IS_PHOENIX_AVAILABLE
-    try:
-        module = optional_import("phoenix")
-        IS_PHOENIX_AVAILABLE = True
-        return module
-    except OptionalImportError as e:
-        if IS_PHOENIX_AVAILABLE is None:
-            # Show the warning only once
-            logger.warning("Phoenix not available: %s", e)
-            IS_PHOENIX_AVAILABLE = False
-        raise OptionalImportError("phoenix") from e
+    return telemetry_optional_import("phoenix")
 
 
 # Dummy OpenTelemetry classes for when the package is not available

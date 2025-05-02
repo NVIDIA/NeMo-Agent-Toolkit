@@ -32,10 +32,11 @@ fi
 # Define variables
 AIQ_ARCH="any"
 AIQ_OS="any"
-AIQ_COMPONENT_NAME="aiqtoolkit"
+
+AIQ_COMPONENTS=("aiqtoolkit" "agentiq")
 
 WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
-WHEELS_DIR="${WHEELS_BASE_DIR}/${AIQ_COMPONENT_NAME}"
+
 # Define the subdirectories to be exclude
 EXCLUDE_SUBDIRS=("examples")
 
@@ -70,8 +71,8 @@ if [[ "${UPLOAD_TO_ARTIFACTORY}" != "true" && "${LIST_ARTIFACTORY_CONTENTS}" != 
 fi
 
 # Ensure wheels exist before uploading (including subdirectories)
-if [[ ! -d "$WHEELS_DIR" || -z "$(find "$WHEELS_DIR" -type f -name "*.whl" 2>/dev/null)" ]]; then
-    echo "No wheels found in $WHEELS_DIR or its subdirectories. Exiting."
+if [[ ! -d "$WHEELS_BASE_DIR" || -z "$(find "$WHEELS_BASE_DIR" -type f -name "*.whl" 2>/dev/null)" ]]; then
+    echo "No wheels found in $WHEELS_BASE_DIR or its subdirectories. Exiting."
     exit 1
 fi
 
@@ -86,33 +87,39 @@ install_jfrog_cli
 
 # Upload wheels if enabled
 if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
-    for SUBDIR in $(find "${WHEELS_DIR}" -mindepth 1 -maxdepth 1 -type d); do
-        SUBDIR_NAME=$(basename "${SUBDIR}")
+    for AIQ_COMPONENT_NAME  in ${AIQ_COMPONENTS[@]}; do
+        WHEELS_DIR="${WHEELS_BASE_DIR}/${AIQ_COMPONENT_NAME}"
+        rapids-logger "AIQ Component : ${AIQ_COMPONENT_NAME} Dir : ${WHEELS_DIR}"
 
-        # Skip directories listed in EXCLUDE_SUBDIRS
-        if [[ " ${EXCLUDE_SUBDIRS[@]} " =~ " ${SUBDIR_NAME} " ]]; then
-            echo "Skipping excluded directory: ${SUBDIR_NAME}"
-            continue
-        fi
+        for SUBDIR in $(find "${WHEELS_DIR}" -mindepth 1 -maxdepth 1 -type d); do
+            SUBDIR_NAME=$(basename "${SUBDIR}")
+            
+            # Skip directories listed in EXCLUDE_SUBDIRS
+            if [[ " ${EXCLUDE_SUBDIRS[@]} " =~ " ${SUBDIR_NAME} " ]]; then
+                echo "Skipping excluded directory: ${SUBDIR_NAME}"
+                continue
+            fi
 
-        echo "Uploading wheels from ${SUBDIR} to Artifactory..."
+            echo "Uploading wheels from ${SUBDIR} to Artifactory..."
 
-        # Find all .whl files in the current subdirectory (no depth limit)
-        find "${SUBDIR}" -type f -name "*.whl" | while read -r WHEEL_FILE; do
-            # Extract relative path to preserve directory structure
-            RELATIVE_PATH="${WHEEL_FILE#${WHEELS_BASE_DIR}/}"
-            ARTIFACTORY_PATH="${AIQ_ARTIFACTORY_NAME}/${RELATIVE_PATH}"
+            # Find all .whl files in the current subdirectory (no depth limit)
+            find "${SUBDIR}" -type f -name "*.whl" | while read -r WHEEL_FILE; do
+                # Extract relative path to preserve directory structure
+                RELATIVE_PATH="${WHEEL_FILE#${WHEELS_BASE_DIR}/}"
+                ARTIFACTORY_PATH="${AIQ_ARTIFACTORY_NAME}/${RELATIVE_PATH}"
 
-            echo "Uploading ${WHEEL_FILE} to ${ARTIFACTORY_PATH}..."
+                echo "Uploading ${WHEEL_FILE} to ${ARTIFACTORY_PATH}..."
 
-            CI=true jf rt u --fail-no-op --url="${AIQ_ARTIFACTORY_URL}" \
-                --user="${URM_USER}" --password="${URM_API_KEY}" \
-                --flat=false "${WHEEL_FILE}" "${ARTIFACTORY_PATH}" \
-                --target-props "arch=${AIQ_ARCH};os=${AIQ_OS};branch=${GIT_TAG};component_name=${AIQ_COMPONENT_NAME};version=${GIT_TAG};release_approver=${RELEASE_APPROVER};release_status=${RELEASE_STATUS}"
+                CI=true jf rt u --fail-no-op --url="${AIQ_ARTIFACTORY_URL}" \
+                    --user="${URM_USER}" --password="${URM_API_KEY}" \
+                    --flat=false "${WHEEL_FILE}" "${ARTIFACTORY_PATH}" \
+                    --target-props "arch=${AIQ_ARCH};os=${AIQ_OS};branch=${GIT_TAG};component_name=${AIQ_COMPONENT_NAME};version=${GIT_TAG};release_approver=${RELEASE_APPROVER};release_status=${RELEASE_STATUS}"
+            done
         done
     done
+    rapids-logger "All wheels uploaded to Artifactory."
 else
-    echo "UPLOAD_TO_ARTIFACTORY is set to 'false'. Skipping upload."
+    rapids-logger "UPLOAD_TO_ARTIFACTORY is set to 'false'. Skipping upload."
 fi
 
 # List Artifactory contents (disabled by default as the output is very verbose)

@@ -54,26 +54,14 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.memory.interfaces import MemoryEditor
 from aiq.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
 from aiq.profiler.utils import detect_llm_frameworks_in_build_fn
-from aiq.utils.optional_imports import OptionalImportError
+from aiq.utils.optional_imports import TelemetryOptionalImportError
 from aiq.utils.optional_imports import try_import_opentelemetry
 from aiq.utils.type_utils import override
 
-# Try to import OpenTelemetry modules
-try:
-    opentelemetry = try_import_opentelemetry()
-    from opentelemetry import trace
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    from opentelemetry.sdk.trace.export import SpanExporter
-except OptionalImportError:
-    from aiq.utils.optional_imports import DummyBatchSpanProcessor  # pylint: disable=ungrouped-imports
-    from aiq.utils.optional_imports import DummySpanExporter  # pylint: disable=ungrouped-imports
-    from aiq.utils.optional_imports import DummyTrace  # pylint: disable=ungrouped-imports
-    from aiq.utils.optional_imports import DummyTracerProvider  # pylint: disable=ungrouped-imports
-    trace = DummyTrace
-    TracerProvider = DummyTracerProvider
-    BatchSpanProcessor = DummyBatchSpanProcessor
-    SpanExporter = DummySpanExporter
+# Import DummySpanExporter since OpenTelemetry might not be installed
+from aiq.utils.optional_imports import DummySpanExporter
+
+SpanExporter = DummySpanExporter
 
 logger = logging.getLogger(__name__)
 
@@ -170,19 +158,29 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Now attach to AIQ Toolkit's root logger
             logging.getLogger().addHandler(handler)
 
-        provider = TracerProvider()
-        trace.set_tracer_provider(provider)
+        # If tracing is configured, try to import telemetry dependencies and set up tracing
+        if telemetry_config.tracing:
+            # If the dependencies are not installed, a TelemetryOptionalImportError will be raised
+            opentelemetry = try_import_opentelemetry()  # pylint: disable=unused-variable
+            from opentelemetry import trace
+            from opentelemetry.sdk.trace import TracerProvider
+            from opentelemetry.sdk.trace.export import BatchSpanProcessor
+            from opentelemetry.sdk.trace.export import SpanExporter  # pylint: disable=unused-variable
 
-        for key, trace_exporter_config in telemetry_config.tracing.items():
+            provider = TracerProvider()
+            trace.set_tracer_provider(provider)
 
-            exporter_info = self._registry.get_telemetry_exporter(type(trace_exporter_config))
+            for key, trace_exporter_config in telemetry_config.tracing.items():
 
-            instance = await self._exit_stack.enter_async_context(exporter_info.build_fn(trace_exporter_config, self))
+                exporter_info = self._registry.get_telemetry_exporter(type(trace_exporter_config))
 
-            span_processor_instance = BatchSpanProcessor(instance)
-            provider.add_span_processor(span_processor_instance)
+                instance = await self._exit_stack.enter_async_context(
+                    exporter_info.build_fn(trace_exporter_config, self))
 
-            self._exporters[key] = ConfiguredExporter(config=trace_exporter_config, instance=instance)
+                span_processor_instance = BatchSpanProcessor(instance)
+                provider.add_span_processor(span_processor_instance)
+
+                self._exporters[key] = ConfiguredExporter(config=trace_exporter_config, instance=instance)
 
         return self
 

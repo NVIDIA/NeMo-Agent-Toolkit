@@ -30,14 +30,15 @@ from aiq.builder.retriever import RetrieverProviderInfo
 from aiq.data_models.config import AIQConfig
 from aiq.memory.interfaces import MemoryEditor
 from aiq.runtime.runner import AIQRunner
-from aiq.utils.optional_imports import OptionalImportError
+from aiq.utils.optional_imports import TelemetryOptionalImportError
 from aiq.utils.optional_imports import try_import_opentelemetry
 
 # Try to import OpenTelemetry modules
+# If the dependencies are not installed, use a dummy span exporter here
 try:
     opentelemetry = try_import_opentelemetry()
     from opentelemetry.sdk.trace.export import SpanExporter
-except OptionalImportError:
+except TelemetryOptionalImportError:
     from aiq.utils.optional_imports import DummySpanExporter  # pylint: disable=ungrouped-imports
     SpanExporter = DummySpanExporter
 

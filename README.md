@@ -6,7 +6,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http:/www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,6 +20,8 @@ limitations under the License.
 # NVIDIA Agent Intelligence Toolkit
 
 Agent Intelligence Toolkit (AIQ Toolkit) is a flexible library designed to seamlessly integrate your enterprise agents—regardless of framework—with various data sources and tools. By treating agents, tools, and agentic workflows as simple function calls, AIQ Toolkit enables true composability: build once and reuse anywhere.
+
+> Note: Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `aiqtoolkit` instead of `agentiq`. I transitional package named `agentiq` is available for backwards compatibility, but will be removed in the future.
 
 ## Key Features
 
@@ -60,7 +62,7 @@ Before you begin using AIQ Toolkit, ensure that you meet the following software 
 - Install [Git](https://git-scm.com/)
 - Install [Git Large File Storage](https://git-lfs.github.com/) (LFS)
 - Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- Install [Python (3.11 or above)](https://www.python.org/downloads/)
+- Install [Python (3.11 or 3.12)](https://www.python.org/downloads/)
 
 ### Install From Source
 
@@ -87,12 +89,12 @@ Before you begin using AIQ Toolkit, ensure that you meet the following software 
     uv venv --seed .venv
     source .venv/bin/activate
     ```
-    Make sure the environment is built with Python version `3.11` or above. If you have multiple Python versions installed,
+    Make sure the environment is built with Python version `3.11` or `3.12`. If you have multiple Python versions installed,
     you can specify the desired version using the `--python` flag. For example, to use Python 3.11:
     ```bash
     uv venv --seed .venv --python 3.11
     ```
-    You can replace `--python 3.11` with any other Python version (3.11 or above) that you have installed.
+    You can replace `--python 3.11` with any other Python version (`3.11` or `3.12`) that you have installed.
 
 5. Install the AIQ Toolkit library.
     To install the AIQ Toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
