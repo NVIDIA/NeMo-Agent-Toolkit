@@ -60,15 +60,16 @@ def _get_ipmi_monitor_data(ip_address, username, password):
 
     except subprocess.CalledProcessError as e:
         # Log error and return None if command fails
-        utils.logger.error(
-            f"Error executing IPMI monitoring command. Details: {e.stderr}")
+        utils.logger.error("Error executing IPMI monitoring command. Details: %s", e.stderr)
         return None
 
 
 class HardwareCheckToolConfig(FunctionBaseConfig, name="hardware_check"):
     description: str = Field(
-        default=
-        "This tool checks hardware health status using IPMI monitoring to detect power state, hardware degradation, and anomalies that could explain alerts. Args: host_id: str",
+        default=(
+            "This tool checks hardware health status using IPMI monitoring to detect power state, "
+            "hardware degradation, and anomalies that could explain alerts. Args: host_id: str"
+        ),
         description="Description of the tool for the agent.")
     llm_name: LLMRef
 
@@ -112,14 +113,18 @@ async def hardware_check_tool(config: HardwareCheckToolConfig,
                 utils.log_footer()
 
                 return conclusion
-            else:
-                # Handle case where no IPMI data could be retrieved
-                utils.logger.debug("No hardware data available")
-                return "Hardware check failed: Unable to retrieve hardware monitoring data. This could indicate connectivity issues with the IPMI interface, invalid credentials, or that the IPMI service is not responding."
+
+            # Handle case where no IPMI data could be retrieved
+            utils.logger.debug("No hardware data available")
+            return (
+                "Hardware check failed: Unable to retrieve hardware monitoring data. "
+                "This could indicate connectivity issues with the IPMI interface, "
+                "invalid credentials, or that the IPMI service is not responding."
+            )
 
         except Exception as e:
             # Log and re-raise any errors that occur
-            utils.logger.error(f"Error during hardware check: {str(e)}")
+            utils.logger.error("Error during hardware check: %s", str(e))
             raise e
 
     yield FunctionInfo.from_fn(

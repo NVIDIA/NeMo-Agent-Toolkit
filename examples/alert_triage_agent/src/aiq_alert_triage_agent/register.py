@@ -16,29 +16,36 @@
 import logging
 import os
 
-from langchain.schema import SystemMessage
 from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.graph import START, MessagesState, StateGraph
-from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.graph import START
+from langgraph.graph import MessagesState
+from langgraph.graph import StateGraph
+from langgraph.prebuilt import ToolNode
+from langgraph.prebuilt import tools_condition
 
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_function
 from aiq.data_models.function import FunctionBaseConfig
 
-from . import (categorizer, hardware_check_tool, host_performance_check_tool,
-               maintenance_check, monitoring_process_check_tool,
-               network_connectivity_check_tool,
-               telemetry_metrics_analysis_agent,
-               telemetry_metrics_host_heartbeat_check_tool,
-               telemetry_metrics_host_performance_check_tool, utils)
+from . import categorizer
+from . import hardware_check_tool
+from . import host_performance_check_tool
+from . import maintenance_check
+from . import monitoring_process_check_tool
+from . import network_connectivity_check_tool
+from . import telemetry_metrics_analysis_agent
+from . import telemetry_metrics_host_heartbeat_check_tool
+from . import telemetry_metrics_host_performance_check_tool
+from . import utils
 from .prompts import ALERT_TRIAGE_AGENT_PROMPT
 
 
 class AlertTriageAgentWorkflowConfig(FunctionBaseConfig,
                                      name="alert_triage_agent"):
     """
-    Configuration for the Alert Triage Agent workflow. This agent orchestrates multiple diagnostic tools to analyze and triage alerts by:
+    Configuration for the Alert Triage Agent workflow. This agent orchestrates multiple diagnostic tools
+    to analyze and triage alerts by:
     1. Checking for maintenance windows and known issues
     2. Gathering system metrics, hardware status, and connectivity information
     3. Analyzing telemetry data for patterns and anomalies
@@ -154,9 +161,9 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig,
 
         # Analyze each alert and store results
         for i, (index, row) in enumerate(df.iterrows()):
-            input = row["alert"]
+            alert_msg = row["alert"]
             utils.log_header(f"Alert {i + 1}/{len(df)}", dash_length=50)
-            report = await _process_alert(input)
+            report = await _process_alert(alert_msg)
             df.loc[df.index == index, "output"] = report
             utils.log_footer(dash_length=50)
 

@@ -33,8 +33,10 @@ from .prompts import TelemetryMetricsAnalysisPrompts
 class TelemetryMetricsHostPerformanceCheckToolConfig(
         FunctionBaseConfig, name="telemetry_metrics_host_performance_check"):
     description: str = Field(
-        default=
-        "This tool checks the performance of the host by analyzing the CPU usage timeseries. Args: host_id: str",
+        default=(
+            "This tool checks the performance of the host by analyzing the CPU "
+            "usage timeseries. Args: host_id: str"
+        ),
         description="Description of the tool for the agent.")
     llm_name: LLMRef
 
@@ -138,7 +140,7 @@ async def telemetry_metrics_host_performance_check_tool(
                     "step": step
                 }
 
-                response = requests.get(url, params=params)
+                response = requests.get(url, params=params, timeout=30)
                 response.raise_for_status()
                 data = response.json()
 
@@ -169,7 +171,8 @@ async def telemetry_metrics_host_performance_check_tool(
 
         except Exception as e:
             utils.logger.error(
-                f"Error during telemetry metrics host performance check: {str(e)}"
+                "Error during telemetry metrics host performance check: %s",
+                str(e)
             )
             raise e
 

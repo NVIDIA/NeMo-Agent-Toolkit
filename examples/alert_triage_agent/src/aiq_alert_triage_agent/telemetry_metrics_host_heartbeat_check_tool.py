@@ -29,8 +29,10 @@ from .prompts import TelemetryMetricsAnalysisPrompts
 class TelemetryMetricsHostHeartbeatCheckToolConfig(
         FunctionBaseConfig, name="telemetry_metrics_host_heartbeat_check"):
     description: str = Field(
-        default=
-        "This tool checks if a host's telemetry monitoring service is reporting heartbeat metrics. This tells us if the host is up and running. Args: host_id: str",
+        default=(
+            "This tool checks if a host's telemetry monitoring service is reporting heartbeat metrics. "
+            "This tells us if the host is up and running. Args: host_id: str"
+        ),
         description="Description of the tool for the agent.")
     llm_name: LLMRef
 
@@ -58,7 +60,7 @@ async def telemetry_metrics_host_heartbeat_check_tool(
                 url = f"{monitoring_url}/api/query"
                 params = {"query": query}
 
-                response = requests.get(url, params=params)
+                response = requests.get(url, params=params, timeout=30)
                 response.raise_for_status()
                 data = response.json()
                 if data is not None:
@@ -89,7 +91,7 @@ async def telemetry_metrics_host_heartbeat_check_tool(
 
         except Exception as e:
             utils.logger.error(
-                f"Error during telemetry metrics host heartbeat check: {str(e)}"
+                "Error during telemetry metrics host heartbeat check: %s", str(e)
             )
             raise e
 

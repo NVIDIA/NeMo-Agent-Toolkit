@@ -37,8 +37,10 @@ NO_ONGOING_MAINTENANCE_STR = "No ongoing maintenance found for the host."
 
 class MaintenanceCheckToolConfig(FunctionBaseConfig, name="maintenance_check"):
     description: str = Field(
-        default=
-        "Check if a host is under maintenance during the time of an alert to help determine if the alert can be deprioritized.",
+        default=(
+            "Check if a host is under maintenance during the time of an alert to help determine "
+            "if the alert can be deprioritized."
+        ),
         description="Description of the tool for the agent.")
     llm_name: LLMRef
 
@@ -78,6 +80,7 @@ def _load_maintenance_data(path: str) -> pd.DataFrame:
     required = {"host_id", "maintenance_start", "maintenance_end"}
     missing = required - set(df.columns)
     if missing:
+        utils.logger.error("Missing required columns: %s", ", ".join(missing))
         raise ValueError(f"Missing required columns: {', '.join(missing)}")
 
     df["maintenance_start"] = pd.to_datetime(df["maintenance_start"],
@@ -115,7 +118,7 @@ def _parse_alert_data(input_message: str) -> dict | None:
     try:
         return json.loads(alert_json_str.replace("'", '"'))
     except Exception as e:
-        utils.logger.error(f"Failed to parse alert from input message: {e}")
+        utils.logger.error("Failed to parse alert from input message: %s", e)
         return None
 
 
@@ -206,68 +209,51 @@ async def maintenance_check(config: MaintenanceCheckToolConfig,
 
         utils.log_header("Maintenance Checker")
 
-        MAINTENANCE_STATIC_DATA_PATH = os.getenv(
-            "MAINTENANCE_STATIC_DATA_PATH")
-        if not MAINTENANCE_STATIC_DATA_PATH:
-            utils.logger.info(
-                "No maintenance data path provided, skipping maintenance check"
-            )
+        maintenance_data_path = os.getenv("MAINTENANCE_STATIC_DATA_PATH")
+        if not maintenance_data_path:
+            utils.logger.info("No maintenance data path provided, skipping maintenance check")
             return NO_ONGOING_MAINTENANCE_STR  # the triage agent will run as usual
 
         filepath = os.path.join(os.path.abspath(os.path.dirname(__file__)),
-                                MAINTENANCE_STATIC_DATA_PATH)
+                                maintenance_data_path)
         if not os.path.exists(filepath):
-            utils.logger.info(
-                f"Maintenance data file does not exist: {filepath}. Skipping maintenance check."
-            )
+            utils.logger.info("Maintenance data file does not exist: %s. Skipping maintenance check.", filepath)
             return NO_ONGOING_MAINTENANCE_STR  # the triage agent will run as usual
 
         maintenance_df = _load_maintenance_data(filepath)
 
         alert = _parse_alert_data(input_message)
         if alert is None:
-            utils.logger.info(
-                "Failed to parse alert from input message, skipping maintenance check"
-            )
+            utils.logger.info("Failed to parse alert from input message, skipping maintenance check")
             return NO_ONGOING_MAINTENANCE_STR
 
         host = alert.get("host_id")
         alert_time_str = alert.get("timestamp")
         if not (alert and host and alert_time_str):
-            utils.logger.info(
-                "Failed to parse alert or the host or alert time from input message, skipping maintenance check"
-            )
+            utils.logger.info("Failed to parse alert or the host or alert time from input message, skipping maintenance check")
             return NO_ONGOING_MAINTENANCE_STR
 
         try:
             alert_time = datetime.strptime(alert_time_str,
                                            "%Y-%m-%dT%H:%M:%S.%f")
-        except Exception as e:
-            utils.logger.error(
-                f"Failed to parse alert time from input message: {e}, skipping maintenance check"
-            )
+        except ValueError as e:
+            utils.logger.error("Failed to parse alert time from input message: %s, skipping maintenance check", e)
             return NO_ONGOING_MAINTENANCE_STR
 
         maintenance_info = _get_active_maintenance(maintenance_df, host,
                                                    alert_time)
         if not maintenance_info:
-            utils.logger.info(
-                f"Host: [{host}] is NOT under maintenance according to the maintenance database"
-            )
+            utils.logger.info("Host: [%s] is NOT under maintenance according to the maintenance database", host)
             return NO_ONGOING_MAINTENANCE_STR
 
         try:
             maintenance_start_str, maintenance_end_str = maintenance_info
-        except:
-            utils.logger.error(
-                f"Failed to parse maintenance info into start and end times: {maintenance_info}, skipping maintenance check"
-            )
+        except ValueError as e:
+            utils.logger.error("Failed to parse maintenance info into start and end times: %s, skipping maintenance check", maintenance_info)
             return NO_ONGOING_MAINTENANCE_STR
 
         # maintenance info found, summarize alert and return a report (agent execution will be skipped)
-        utils.logger.info(
-            f"Host: [{host}] is under maintenance according to the maintenance database"
-        )
+        utils.logger.info("Host: [%s] is under maintenance according to the maintenance database", host)
 
         report = _summarize_alert(llm, alert, maintenance_start_str,
                                   maintenance_end_str)

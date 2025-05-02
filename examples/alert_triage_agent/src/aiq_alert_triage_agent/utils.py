@@ -21,15 +21,18 @@ import os
 import ansible_runner
 import pandas as pd
 from langchain_core.messages import HumanMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import MessagesPlaceholder
 
 from aiq.builder.framework_enum import LLMFrameworkEnum
 
 logger = logging.getLogger("aiq_alert_triage_agent")
 
 # module‐level variable; loaded on first use
-_static_data_cache = None
-_test_df_cache = None
+_DATA_CACHE = {
+    'test_data': None,
+    'benign_fallback_test_data': None,
+}
 
 # Cache LLMs by name and wrapper type
 _LLM_CACHE = {}
@@ -97,18 +100,16 @@ def load_test_data():
     Raises:
         ValueError: If TEST_DATA_RELATIVE_FILEPATH environment variable is not set
     """
-    global _test_df_cache
-
-    if _test_df_cache is None:
+    if _DATA_CACHE['test_data'] is None:
         rel_path = os.getenv("TEST_DATA_RELATIVE_FILEPATH")
         if not rel_path:
             raise ValueError(
                 "TEST_DATA_RELATIVE_FILEPATH environment variable must be set")
         abs_path = os.path.join(os.path.abspath(os.path.dirname(__file__)),
                                 rel_path)
-        _test_df_cache = pd.read_csv(abs_path)
+        _DATA_CACHE['test_data'] = pd.read_csv(abs_path)
 
-    return _test_df_cache
+    return _DATA_CACHE['test_data']
 
 
 def is_test_mode():
@@ -135,8 +136,7 @@ def _get_static_data(env_var):
         FileNotFoundError: If the JSON file does not exist
     """
     # Use module-level cache to implement singleton pattern
-    global _static_data_cache
-    if _static_data_cache is None:
+    if _DATA_CACHE['benign_fallback_test_data'] is None:
         # First time - need to load data from file
         filepath = os.getenv(env_var)
         if filepath is None:
@@ -145,8 +145,8 @@ def _get_static_data(env_var):
                             filepath)
         # Load and cache the JSON data
         with open(path, "r") as f:
-            _static_data_cache = json.load(f)
-    return _static_data_cache
+            _DATA_CACHE['benign_fallback_test_data'] = json.load(f)
+    return _DATA_CACHE['benign_fallback_test_data']
 
 
 def load_column_or_static(df,
@@ -178,8 +178,8 @@ def load_column_or_static(df,
         static_data = _get_static_data(static_env_var)
         try:
             return static_data[column]
-        except KeyError:
-            raise KeyError(f"Column '{column}' not found in static data")
+        except KeyError as exc:
+            raise KeyError(f"Column '{column}' not found in static data") from exc
     # Column exists in DataFrame, get value for this host
     # Assumption: In test dataset, host_ids are unique and used to locate specific tool return values
     # If multiple rows found for a host_id, this indicates data inconsistency

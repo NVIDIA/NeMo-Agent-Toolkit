@@ -32,8 +32,13 @@ from .prompts import TelemetryMetricsAnalysisPrompts
 class TelemetryMetricsAnalysisAgentConfig(
         FunctionBaseConfig, name="telemetry_metrics_analysis_agent"):
     description: str = Field(
-        default=
-        "This is a telemetry metrics tool used to monitor remotely collected telemetry data. It checks server heartbeat data to determine whether the server is up and running and analyzes CPU usage patterns over the past 14 days to identify potential CPU issues. Args: host_id: str, alert_type: str",
+        default=(
+            "This is a telemetry metrics tool used to monitor remotely collected "
+            "telemetry data. It checks server heartbeat data to determine whether "
+            "the server is up and running and analyzes CPU usage patterns over "
+            "the past 14 days to identify potential CPU issues. Args: host_id: "
+            "str, alert_type: str"
+        ),
         description="Description of the tool for the agent.")
     tool_names: list[str] = []
     llm_name: LLMRef

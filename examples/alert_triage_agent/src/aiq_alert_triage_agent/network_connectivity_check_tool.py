@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import subprocess
-import telnetlib
+import socket
 
 from pydantic import Field
 
@@ -28,11 +28,38 @@ from . import utils
 from .prompts import ToolReasoningLayerPrompts
 
 
+def _check_service_banner(host: str, port: int = 80, connect_timeout: float = 10, read_timeout: float = 10) -> str:
+    """
+    Connects to host:port, reads until the Telnet banner (‘Escape character is '^]'.’) or times out.
+    Returns whatever was read (decoded to utf‑8), or an empty string on failure/timeout.
+    """
+    pattern = b"Escape character is '^]'."
+    buffer = b''
+    try:
+        # 1) Open the TCP connection (replaces telnetlib.Telnet)
+        with socket.create_connection((host, port), timeout=connect_timeout) as sock:
+            # 2) Set a timeout on subsequent reads
+            sock.settimeout(read_timeout)
+
+            # 3) Keep reading until we see the banner or EOF
+            while pattern not in buffer:
+                chunk = sock.recv(1024)
+                if not chunk:
+                    break
+                buffer += chunk
+
+        # 4) Decode what we got (ignore any non‑UTF8 bytes)
+        return buffer.decode('utf-8', errors='ignore')
+
+    except (socket.timeout, ConnectionRefusedError, OSError):
+        # timed out or could not connect
+        return ''
+
 class NetworkConnectivityCheckToolConfig(FunctionBaseConfig,
                                          name="network_connectivity_check"):
     description: str = Field(
         default=
-        "This tool checks network connectivity of a host by running ping and telnet tests. Args: host_id: str",
+        "This tool checks network connectivity of a host by running ping and socket connection tests. Args: host_id: str",
         description="Description of the tool for the agent.")
     llm_name: LLMRef
 
@@ -56,6 +83,7 @@ async def network_connectivity_check_tool(
                     ["ping", "-c", "3", host_id],
                     capture_output=True,
                     text=True,
+                    check=False
                 )
 
                 if result.returncode == 0:
@@ -64,13 +92,11 @@ async def network_connectivity_check_tool(
                     ping_data = result.stderr
 
                 # Example telnet command to test service availability
-                telnet_port = 80  # example HTTP port
-                telnet_timeout = 10
-                with telnetlib.Telnet(host_id, telnet_port,
-                                      telnet_timeout) as tn:
-                    # Read until a prompt or timeout
-                    output = tn.read_until(b"Escape character is '^]'.", 10)
-                    telnet_data = output.decode("utf-8")
+                telnet_port = 80  # example port
+                telnet_data = _check_service_banner(host_id,
+                                                  port=telnet_port,
+                                                  connect_timeout=10,
+                                                  read_timeout=10)
 
             else:
                 # Load test data
@@ -99,7 +125,7 @@ async def network_connectivity_check_tool(
             utils.log_footer()
             return conclusion
         except Exception as e:
-            utils.logger.error(f"Error during connectivity check: {str(e)}")
+            utils.logger.error("Error during connectivity check: %s", str(e))
             raise e
 
     yield FunctionInfo.from_fn(

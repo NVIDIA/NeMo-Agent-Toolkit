@@ -29,8 +29,10 @@ from .prompts import ToolReasoningLayerPrompts
 class MonitoringProcessCheckToolConfig(FunctionBaseConfig,
                                        name="monitoring_process_check"):
     description: str = Field(
-        default=
-        "This tool checks the status of critical monitoring processes and services on a target host by executing system commands. Args: host_id: str",
+        default=(
+            "This tool checks the status of critical monitoring processes and services "
+            "on a target host by executing system commands. Args: host_id: str"
+        ),
         description="Description of the tool for the agent.")
     llm_name: LLMRef
 
@@ -78,7 +80,7 @@ async def monitoring_process_check_tool(
         try:
             if not is_test_mode:
                 # In production mode, use actual Ansible connection details
-                # TODO: Replace these placeholder values with actual connection info
+                # Replace placeholder values with connection info from configuration
                 ansible_host = "your.host.example.name"  # Input your target host
                 ansible_user = "ansible_user"  # Input your SSH user
                 ansible_port = 22  # Input your SSH port
@@ -122,7 +124,7 @@ async def monitoring_process_check_tool(
 
         except Exception as e:
             utils.logger.error(
-                f"Error during monitoring process check: {str(e)}")
+                "Error during monitoring process check: %s", str(e))
             raise e
 
     yield FunctionInfo.from_fn(

@@ -29,8 +29,10 @@ from .prompts import ToolReasoningLayerPrompts
 class HostPerformanceCheckToolConfig(FunctionBaseConfig,
                                      name="host_performance_check"):
     description: str = Field(
-        default=
-        "This is the Host Performance Check Tool. This tool retrieves CPU usage, memory usage, and hardware I/O usage details for a given host. Args: host_id: str",
+        default=(
+            "This is the Host Performance Check Tool. This tool retrieves CPU usage, memory usage, "
+            "and hardware I/O usage details for a given host. Args: host_id: str"
+        ),
         description="Description of the tool for the agent.")
     llm_name: LLMRef
 
@@ -111,7 +113,10 @@ async def _parse_stdout_lines(config, builder, stdout_lines):
         response = await utils.llm_ainvoke(config, builder, user_prompt=prompt)
         structured_data = response
     except Exception as e:
-        structured_data = f'{{"error": "Failed to parse nvda_nim response", "exception": "{str(e)}", "raw_response": "{response}"}}'
+        structured_data = (
+            '{{"error": "Failed to parse nvda_nim response", '
+            '"exception": "{}", "raw_response": "{}"}}'
+        ).format(str(e), response)
     return structured_data
 
 
@@ -126,7 +131,7 @@ async def host_performance_check_tool(config: HostPerformanceCheckToolConfig,
         try:
             if not is_test_mode:
                 # In production mode, use actual Ansible connection details
-                # TODO: Replace these placeholder values with actual connection info
+                # Replace placeholder values with connection info from configuration
                 ansible_host = "your.host.example.name"  # Input your target host
                 ansible_user = "ansible_user"  # Input your SSH user
                 ansible_port = 22  # Input your SSH port
@@ -173,7 +178,7 @@ async def host_performance_check_tool(config: HostPerformanceCheckToolConfig,
 
         except Exception as e:
             utils.logger.error(
-                f"Error during host performance check: {str(e)}")
+                "Error during host performance check: %s", str(e))
             raise e
 
     yield FunctionInfo.from_fn(

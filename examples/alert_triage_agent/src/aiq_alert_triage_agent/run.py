@@ -39,7 +39,9 @@ Example Usage:
         "alert_name": "InstanceDown",
         "host_id": "test-instance-1.example.com",
         "severity": "critical",
-        "description": "Instance test-instance-1.example.com is not available for scrapping for the last 5m. Please check: - instance is up and running; - monitoring service is in place and running; - network connectivity is ok",
+        "description": "Instance test-instance-1.example.com is not available for scrapping for the last 5m. " \
+                      "Please check: - instance is up and running; - monitoring service is in place and running; " \
+                      "- network connectivity is ok",
         "summary": "Instance test-instance-1.example.com is down",
         "timestamp": "2025-04-28T05:00:00.000000"
      }'
@@ -52,7 +54,9 @@ Example Usage:
         "alert_name": "InstanceDown",
         "host_id": "test-instance-1.example.com",
         "severity": "critical",
-        "description": "Instance test-instance-1.example.com is not available for scrapping for the last 5m. Please check: - instance is up and running; - monitoring service is in place and running; - network connectivity is ok",
+        "description": "Instance test-instance-1.example.com is not available for scrapping for the last 5m. " \
+                      "Please check: - instance is up and running; - monitoring service is in place and running; " \
+                      "- network connectivity is ok",
         "summary": "Instance test-instance-1.example.com is down",
         "timestamp": "2025-04-28T05:00:00.000000"
      }, {
@@ -60,7 +64,9 @@ Example Usage:
         "alert_name": "CPUUsageHighError",
         "host_id": "test-instance-2.example.com",
         "severity": "critical",
-        "description": "CPU Overall usage on test-instance-2.example.com is high ( current value 100% ).  Please check: - trend of cpu usage for all cpus; - running processes for investigate issue; - is there any hardware related issues (e.g. IO bottleneck)",
+        "description": "CPU Overall usage on test-instance-2.example.com is high ( current value 100% ). " \
+                      "Please check: - trend of cpu usage for all cpus; - running processes for investigate issue; " \
+                      "- is there any hardware related issues (e.g. IO bottleneck)",
         "summary": "CPU Usage on test-instance-2.example.com is high (error state)",
         "timestamp": "2025-04-28T06:00:00.000000"
      }]'
@@ -108,7 +114,8 @@ def start_process(alert: dict, env_file: str) -> None:
         print(
             f"[start_process] Launching triage for alert '{alert.get('alertname')}' on host '{alert.get('host_id')}'"
         )
-        subprocess.Popen(cmd)
+        with subprocess.Popen(cmd) as process:
+            process.wait()
     except Exception as e:
         print(f"[start_process] Failed to start process: {e}")
 
@@ -166,7 +173,7 @@ if __name__ == "__main__":
     ENV_FILE = args.env_file
 
     print("---------------[ Alert Triage HTTP Server ]-----------------")
-    print(f"Protocol   : HTTP")
+    print("Protocol   : HTTP")
     print(f"Listening  : {args.host}:{args.port}")
     print(f"Env File   : {args.env_file}")
     print("Endpoint   : POST /alerts with JSON payload\n")
