@@ -112,7 +112,8 @@ def start_process(alert: dict, env_file: str) -> None:
         payload,
     ]
     try:
-        print(f"[start_process] Launching triage for alert '{alert.get('alertname')}' on host '{alert.get('host_id')}'")
+        print(
+            f"[start_process] Launching triage for alert '{alert.get('alert_name')}' on host '{alert.get('host_id')}'")
         with subprocess.Popen(cmd) as process:
             process.wait()
     except Exception as e:
