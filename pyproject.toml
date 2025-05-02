@@ -68,7 +68,6 @@ telemetry = [
 ]
 zep-cloud = ["aiqtoolkit-zep-cloud"]
 
-
 examples = [
   "aiq_email_phishing_analyzer",
   "aiq_multi_frameworks",

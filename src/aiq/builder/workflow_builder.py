@@ -54,14 +54,17 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.memory.interfaces import MemoryEditor
 from aiq.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
 from aiq.profiler.utils import detect_llm_frameworks_in_build_fn
-from aiq.utils.optional_imports import TelemetryOptionalImportError
 from aiq.utils.optional_imports import try_import_opentelemetry
+from aiq.utils.optional_imports import TelemetryOptionalImportError
 from aiq.utils.type_utils import override
 
-# Import DummySpanExporter since OpenTelemetry might not be installed
-from aiq.utils.optional_imports import DummySpanExporter
-
-SpanExporter = DummySpanExporter
+# SpanExporter is needed to define ConfiguredExporter. Handling when OpenTelemetry is not installed here.
+try:
+    opentelemetry = try_import_opentelemetry()
+    from opentelemetry.sdk.trace.export import SpanExporter
+except TelemetryOptionalImportError:
+    from aiq.utils.optional_imports import DummySpanExporter  # pylint: disable=ungrouped-imports
+    SpanExporter = DummySpanExporter
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +168,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             from opentelemetry import trace
             from opentelemetry.sdk.trace import TracerProvider
             from opentelemetry.sdk.trace.export import BatchSpanProcessor
-            from opentelemetry.sdk.trace.export import SpanExporter  # pylint: disable=unused-variable
 
             provider = TracerProvider()
             trace.set_tracer_provider(provider)
