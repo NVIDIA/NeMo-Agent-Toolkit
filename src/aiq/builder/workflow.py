@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import Any
@@ -41,8 +40,6 @@ try:
 except TelemetryOptionalImportError:
     from aiq.utils.optional_imports import DummySpanExporter  # pylint: disable=ungrouped-imports
     SpanExporter = DummySpanExporter
-
-logger = logging.getLogger(__name__)
 
 callback_handler_var: ContextVar[Any | None] = ContextVar("callback_handler_var", default=None)
 
