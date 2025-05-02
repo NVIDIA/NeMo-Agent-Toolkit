@@ -13,9 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.graph import START, MessagesState, StateGraph
-from langgraph.prebuilt import ToolNode, tools_condition
+from langchain_core.messages import HumanMessage
+from langchain_core.messages import SystemMessage
+from langgraph.graph import START
+from langgraph.graph import MessagesState
+from langgraph.graph import StateGraph
+from langgraph.prebuilt import ToolNode
+from langgraph.prebuilt import tools_condition
 from pydantic import Field
 
 from aiq.builder.builder import Builder
@@ -29,24 +33,19 @@ from . import utils
 from .prompts import TelemetryMetricsAnalysisPrompts
 
 
-class TelemetryMetricsAnalysisAgentConfig(
-        FunctionBaseConfig, name="telemetry_metrics_analysis_agent"):
-    description: str = Field(
-        default=(
-            "This is a telemetry metrics tool used to monitor remotely collected "
-            "telemetry data. It checks server heartbeat data to determine whether "
-            "the server is up and running and analyzes CPU usage patterns over "
-            "the past 14 days to identify potential CPU issues. Args: host_id: "
-            "str, alert_type: str"
-        ),
-        description="Description of the tool for the agent.")
+class TelemetryMetricsAnalysisAgentConfig(FunctionBaseConfig, name="telemetry_metrics_analysis_agent"):
+    description: str = Field(default=("This is a telemetry metrics tool used to monitor remotely collected "
+                                      "telemetry data. It checks server heartbeat data to determine whether "
+                                      "the server is up and running and analyzes CPU usage patterns over "
+                                      "the past 14 days to identify potential CPU issues. Args: host_id: "
+                                      "str, alert_type: str"),
+                             description="Description of the tool for the agent.")
     tool_names: list[str] = []
     llm_name: LLMRef
 
 
 @register_function(config_type=TelemetryMetricsAnalysisAgentConfig)
-async def telemetry_metrics_analysis_agent_tool(
-        config: TelemetryMetricsAnalysisAgentConfig, builder: Builder):
+async def telemetry_metrics_analysis_agent_tool(config: TelemetryMetricsAnalysisAgentConfig, builder: Builder):
 
     async def _arun(host_id: str, alert_type: str) -> str:
         """
@@ -61,28 +60,21 @@ async def telemetry_metrics_analysis_agent_tool(
         """
         utils.log_header("Telemetry Metrics Analysis Agent")
 
-        tools = builder.get_tools(tool_names=config.tool_names,
-                                  wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-        llm = await builder.get_llm(llm_name=config.llm_name,
-                                    wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        tools = builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        llm = await builder.get_llm(llm_name=config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
         # Bind tools to LLM for parallel execution
         llm_n_tools = llm.bind_tools(tools, parallel_tool_calls=True)
 
         # Define agent function that processes messages with LLM
         def telemetry_metrics_analysis_agent(state: MessagesState):
-            sys_msg = SystemMessage(
-                content=TelemetryMetricsAnalysisPrompts.AGENT)
-            return {
-                "messages":
-                [llm_n_tools.invoke([sys_msg] + state["messages"])]
-            }
+            sys_msg = SystemMessage(content=TelemetryMetricsAnalysisPrompts.AGENT)
+            return {"messages": [llm_n_tools.invoke([sys_msg] + state["messages"])]}
 
         # Build the agent execution graph
         builder_graph = StateGraph(MessagesState)
 
         # Add nodes for agent and tools
-        builder_graph.add_node("telemetry_metrics_analysis_agent",
-                               telemetry_metrics_analysis_agent)
+        builder_graph.add_node("telemetry_metrics_analysis_agent", telemetry_metrics_analysis_agent)
         builder_graph.add_node("tools", ToolNode(tools))
 
         # Configure graph edges for execution flow
@@ -98,8 +90,7 @@ async def telemetry_metrics_analysis_agent_tool(
 
         # Execute analysis and get response
         input_message = f"Host to investigate: {host_id}. Alert type: {alert_type}"
-        response = await agent_executor.ainvoke(
-            {"messages": [HumanMessage(content=input_message)]})
+        response = await agent_executor.ainvoke({"messages": [HumanMessage(content=input_message)]})
 
         conclusion = response["messages"][-1].content
 

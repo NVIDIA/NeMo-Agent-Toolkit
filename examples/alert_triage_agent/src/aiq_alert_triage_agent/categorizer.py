@@ -14,7 +14,8 @@
 # limitations under the License.
 
 from langchain_core.messages import HumanMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import MessagesPlaceholder
 from pydantic import Field
 
 from aiq.builder.builder import Builder
@@ -29,30 +30,24 @@ from .prompts import PipelineNodePrompts
 
 
 class CategorizerToolConfig(FunctionBaseConfig, name="categorizer"):
-    description: str = Field(
-        default=
-        "This is a categorization tool used at the end of the pipeline.",
-        description="Description of the tool.")
+    description: str = Field(default="This is a categorization tool used at the end of the pipeline.",
+                             description="Description of the tool.")
     llm_name: LLMRef
 
 
 @register_function(config_type=CategorizerToolConfig)
 async def categorizer_tool(config: CategorizerToolConfig, builder: Builder):
     # Set up LLM and chain
-    llm = await builder.get_llm(config.llm_name,
-                                wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    prompt_template = ChatPromptTemplate([
-        ("system", PipelineNodePrompts.CATEGORIZER_PROMPT),
-        MessagesPlaceholder("msgs")
-    ])
+    llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    prompt_template = ChatPromptTemplate([("system", PipelineNodePrompts.CATEGORIZER_PROMPT),
+                                          MessagesPlaceholder("msgs")])
     categorization_chain = prompt_template | llm
 
     async def _arun(report: str) -> str:
         tool_name = "Root Cause Categorizer"
         utils.log_header(tool_name)
 
-        result = await categorization_chain.ainvoke(
-            {"msgs": [HumanMessage(content=report)]})
+        result = await categorization_chain.ainvoke({"msgs": [HumanMessage(content=report)]})
 
         # Extract the markdown heading level from first line of report (e.g. '#' or '##')
         pound_signs = report.split('\n')[0].split(' ')[0]

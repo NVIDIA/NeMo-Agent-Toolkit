@@ -45,17 +45,11 @@ def _get_ipmi_monitor_data(ip_address, username, password):
         str: The command's output if successful, otherwise None.
     """
     # Construct the ipmimonitoring command with required parameters
-    command = [
-        "ipmimonitoring", "-h", ip_address, "-u", username, "-p", password,
-        "--privilege-level=USER"
-    ]
+    command = ["ipmimonitoring", "-h", ip_address, "-u", username, "-p", password, "--privilege-level=USER"]
 
     try:
         # Execute the ipmimonitoring command and capture output
-        result = subprocess.run(command,
-                                capture_output=True,
-                                text=True,
-                                check=True)
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
         return result.stdout
 
     except subprocess.CalledProcessError as e:
@@ -66,17 +60,14 @@ def _get_ipmi_monitor_data(ip_address, username, password):
 
 class HardwareCheckToolConfig(FunctionBaseConfig, name="hardware_check"):
     description: str = Field(
-        default=(
-            "This tool checks hardware health status using IPMI monitoring to detect power state, "
-            "hardware degradation, and anomalies that could explain alerts. Args: host_id: str"
-        ),
+        default=("This tool checks hardware health status using IPMI monitoring to detect power state, "
+                 "hardware degradation, and anomalies that could explain alerts. Args: host_id: str"),
         description="Description of the tool for the agent.")
     llm_name: LLMRef
 
 
 @register_function(config_type=HardwareCheckToolConfig)
-async def hardware_check_tool(config: HardwareCheckToolConfig,
-                              builder: Builder):
+async def hardware_check_tool(config: HardwareCheckToolConfig, builder: Builder):
 
     async def _arun(host_id: str) -> str:
         is_test_mode = utils.is_test_mode()
@@ -103,8 +94,7 @@ async def hardware_check_tool(config: HardwareCheckToolConfig,
                 # Additional LLM reasoning layer on playbook output to provide a summary of the results
                 utils.log_header("LLM Reasoning", dash_length=50)
 
-                prompt = ToolReasoningLayerPrompts.HARDWARE_CHECK.format(
-                    input_data=monitoring_data)
+                prompt = ToolReasoningLayerPrompts.HARDWARE_CHECK.format(input_data=monitoring_data)
 
                 # Get analysis from LLM
                 conclusion = await utils.llm_ainvoke(config, builder, prompt)
@@ -116,11 +106,9 @@ async def hardware_check_tool(config: HardwareCheckToolConfig,
 
             # Handle case where no IPMI data could be retrieved
             utils.logger.debug("No hardware data available")
-            return (
-                "Hardware check failed: Unable to retrieve hardware monitoring data. "
-                "This could indicate connectivity issues with the IPMI interface, "
-                "invalid credentials, or that the IPMI service is not responding."
-            )
+            return ("Hardware check failed: Unable to retrieve hardware monitoring data. "
+                    "This could indicate connectivity issues with the IPMI interface, "
+                    "invalid credentials, or that the IPMI service is not responding.")
 
         except Exception as e:
             # Log and re-raise any errors that occur

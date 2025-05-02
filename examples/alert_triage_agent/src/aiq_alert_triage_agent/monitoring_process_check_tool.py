@@ -26,20 +26,17 @@ from .playbooks import MONITOR_PROCESS_CHECK_PLAYBOOK
 from .prompts import ToolReasoningLayerPrompts
 
 
-class MonitoringProcessCheckToolConfig(FunctionBaseConfig,
-                                       name="monitoring_process_check"):
-    description: str = Field(
-        default=(
-            "This tool checks the status of critical monitoring processes and services "
-            "on a target host by executing system commands. Args: host_id: str"
-        ),
-        description="Description of the tool for the agent.")
+class MonitoringProcessCheckToolConfig(FunctionBaseConfig, name="monitoring_process_check"):
+    description: str = Field(default=("This tool checks the status of critical monitoring processes and services "
+                                      "on a target host by executing system commands. Args: host_id: str"),
+                             description="Description of the tool for the agent.")
     llm_name: LLMRef
 
 
-async def _run_ansible_playbook_for_monitor_process_check(
-        ansible_host: str, ansible_user: str, ansible_port: int,
-        ansible_private_key_path: str) -> list[dict]:
+async def _run_ansible_playbook_for_monitor_process_check(ansible_host: str,
+                                                          ansible_user: str,
+                                                          ansible_port: int,
+                                                          ansible_private_key_path: str) -> list[dict]:
     """
     This function runs a playbook that checks the status of critical monitoring processes
     on the target host. The playbook executes system commands to gather process information
@@ -48,12 +45,11 @@ async def _run_ansible_playbook_for_monitor_process_check(
     NOTE: The playbook provided is an example implementation. Users should customize the
     playbook to check processes specific to their monitoring infrastructure.
     """
-    output = await utils.run_ansible_playbook(
-        playbook=MONITOR_PROCESS_CHECK_PLAYBOOK,
-        ansible_host=ansible_host,
-        ansible_user=ansible_user,
-        ansible_port=ansible_port,
-        ansible_private_key_path=ansible_private_key_path)
+    output = await utils.run_ansible_playbook(playbook=MONITOR_PROCESS_CHECK_PLAYBOOK,
+                                              ansible_host=ansible_host,
+                                              ansible_user=ansible_user,
+                                              ansible_port=ansible_port,
+                                              ansible_private_key_path=ansible_private_key_path)
 
     extracted_tasks = []
     # Iterate over task_results if available; otherwise use an empty list.
@@ -71,8 +67,7 @@ async def _run_ansible_playbook_for_monitor_process_check(
 
 
 @register_function(config_type=MonitoringProcessCheckToolConfig)
-async def monitoring_process_check_tool(
-        config: MonitoringProcessCheckToolConfig, builder: Builder):
+async def monitoring_process_check_tool(config: MonitoringProcessCheckToolConfig, builder: Builder):
 
     async def _arun(host_id: str) -> str:
         is_test_mode = utils.is_test_mode()
@@ -97,23 +92,20 @@ async def monitoring_process_check_tool(
                 df = utils.load_test_data()
 
                 # Load process status data from ps command output
-                ps_data = utils.load_column_or_static(
-                    df=df,
-                    host_id=host_id,
-                    column="monitor_process_check_tool:ps_output")
+                ps_data = utils.load_column_or_static(df=df,
+                                                      host_id=host_id,
+                                                      column="monitor_process_check_tool:ps_output")
                 # Load systemd service status data from systemctl command output
-                systemctl_data = utils.load_column_or_static(
-                    df=df,
-                    host_id=host_id,
-                    column="monitor_process_check_tool:systemctl_output")
+                systemctl_data = utils.load_column_or_static(df=df,
+                                                             host_id=host_id,
+                                                             column="monitor_process_check_tool:systemctl_output")
 
                 output_for_prompt = f"`ps` result:{ps_data} and `systemctl` result:{systemctl_data}"
 
             # Additional LLM reasoning layer on playbook output to provide a summary of the results
             utils.log_header("LLM Reasoning", dash_length=50)
 
-            prompt = ToolReasoningLayerPrompts.MONITORING_PROCESS_CHECK.format(
-                input_data=output_for_prompt)
+            prompt = ToolReasoningLayerPrompts.MONITORING_PROCESS_CHECK.format(input_data=output_for_prompt)
 
             conclusion = await utils.llm_ainvoke(config, builder, prompt)
 
@@ -123,8 +115,7 @@ async def monitoring_process_check_tool(
             return conclusion
 
         except Exception as e:
-            utils.logger.error(
-                "Error during monitoring process check: %s", str(e))
+            utils.logger.error("Error during monitoring process check: %s", str(e))
             raise e
 
     yield FunctionInfo.from_fn(

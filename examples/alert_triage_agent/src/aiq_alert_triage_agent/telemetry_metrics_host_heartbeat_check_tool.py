@@ -26,26 +26,21 @@ from . import utils
 from .prompts import TelemetryMetricsAnalysisPrompts
 
 
-class TelemetryMetricsHostHeartbeatCheckToolConfig(
-        FunctionBaseConfig, name="telemetry_metrics_host_heartbeat_check"):
+class TelemetryMetricsHostHeartbeatCheckToolConfig(FunctionBaseConfig, name="telemetry_metrics_host_heartbeat_check"):
     description: str = Field(
-        default=(
-            "This tool checks if a host's telemetry monitoring service is reporting heartbeat metrics. "
-            "This tells us if the host is up and running. Args: host_id: str"
-        ),
+        default=("This tool checks if a host's telemetry monitoring service is reporting heartbeat metrics. "
+                 "This tells us if the host is up and running. Args: host_id: str"),
         description="Description of the tool for the agent.")
     llm_name: LLMRef
 
 
 @register_function(config_type=TelemetryMetricsHostHeartbeatCheckToolConfig)
-async def telemetry_metrics_host_heartbeat_check_tool(
-        config: TelemetryMetricsHostHeartbeatCheckToolConfig,
-        builder: Builder):
+async def telemetry_metrics_host_heartbeat_check_tool(config: TelemetryMetricsHostHeartbeatCheckToolConfig,
+                                                      builder: Builder):
 
     async def _arun(host_id: str) -> str:
         is_test_mode = utils.is_test_mode()
-        utils.log_header("Telemetry Metrics Host Heartbeat Check",
-                         dash_length=50)
+        utils.log_header("Telemetry Metrics Host Heartbeat Check", dash_length=50)
 
         try:
             if not is_test_mode:
@@ -69,20 +64,13 @@ async def telemetry_metrics_host_heartbeat_check_tool(
                 # In test mode, load test data from CSV file
                 df = utils.load_test_data()
                 data = utils.load_column_or_static(
-                    df=df,
-                    host_id=host_id,
-                    column=
-                    "telemetry_metrics_host_heartbeat_check_tool:heartbeat_check_output"
-                )
+                    df=df, host_id=host_id, column="telemetry_metrics_host_heartbeat_check_tool:heartbeat_check_output")
 
             # Additional LLM reasoning layer on playbook output to provide a summary of the results
             utils.log_header("LLM Reasoning", dash_length=30)
 
             conclusion = await utils.llm_ainvoke(
-                config,
-                builder,
-                user_prompt=TelemetryMetricsAnalysisPrompts.
-                HOST_HEARTBEAT_CHECK.format(data=data))
+                config, builder, user_prompt=TelemetryMetricsAnalysisPrompts.HOST_HEARTBEAT_CHECK.format(data=data))
 
             utils.logger.debug(conclusion)
             utils.log_footer(dash_length=50)
@@ -90,9 +78,7 @@ async def telemetry_metrics_host_heartbeat_check_tool(
             return conclusion
 
         except Exception as e:
-            utils.logger.error(
-                "Error during telemetry metrics host heartbeat check: %s", str(e)
-            )
+            utils.logger.error("Error during telemetry metrics host heartbeat check: %s", str(e))
             raise e
 
     yield FunctionInfo.from_fn(

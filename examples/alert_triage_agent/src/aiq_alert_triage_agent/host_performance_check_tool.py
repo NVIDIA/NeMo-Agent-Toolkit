@@ -26,21 +26,20 @@ from .playbooks import HOST_PERFORMANCE_CHECK_PLAYBOOK
 from .prompts import ToolReasoningLayerPrompts
 
 
-class HostPerformanceCheckToolConfig(FunctionBaseConfig,
-                                     name="host_performance_check"):
+class HostPerformanceCheckToolConfig(FunctionBaseConfig, name="host_performance_check"):
     description: str = Field(
-        default=(
-            "This is the Host Performance Check Tool. This tool retrieves CPU usage, memory usage, "
-            "and hardware I/O usage details for a given host. Args: host_id: str"
-        ),
+        default=("This is the Host Performance Check Tool. This tool retrieves CPU usage, memory usage, "
+                 "and hardware I/O usage details for a given host. Args: host_id: str"),
         description="Description of the tool for the agent.")
     llm_name: LLMRef
 
 
-async def _run_ansible_playbook_for_host_performance_check(
-        config: HostPerformanceCheckToolConfig, builder: Builder,
-        ansible_host: str, ansible_user: str, ansible_port: int,
-        ansible_private_key_path: str) -> list[dict]:
+async def _run_ansible_playbook_for_host_performance_check(config: HostPerformanceCheckToolConfig,
+                                                           builder: Builder,
+                                                           ansible_host: str,
+                                                           ansible_user: str,
+                                                           ansible_port: int,
+                                                           ansible_private_key_path: str) -> list[dict]:
     """
     This function runs a playbook that gathers CPU, memory, and disk I/O metrics and performs
     threshold checks for high resource usage. The playbook executes various system commands
@@ -55,37 +54,27 @@ async def _run_ansible_playbook_for_host_performance_check(
     # to collect metrics relevant to their specific monitoring requirements
     playbook = HOST_PERFORMANCE_CHECK_PLAYBOOK
 
-    output = await utils.run_ansible_playbook(
-        playbook=playbook,
-        ansible_host=ansible_host,
-        ansible_user=ansible_user,
-        ansible_port=ansible_port,
-        ansible_private_key_path=ansible_private_key_path)
+    output = await utils.run_ansible_playbook(playbook=playbook,
+                                              ansible_host=ansible_host,
+                                              ansible_user=ansible_user,
+                                              ansible_port=ansible_port,
+                                              ansible_private_key_path=ansible_private_key_path)
 
     # Extract and structure task results
     extracted_tasks = []
     for task in output.get("task_results", []):
         result = task.get("result", {})
         task_details = {
-            "task":
-            task.get("task"),
-            "host":
-            task.get("host"),
-            "cmd":
-            result.get("cmd"),
-            "start":
-            result.get("start"),
-            "end":
-            result.get("end"),
-            "delta":
-            result.get("delta"),
-            "stdout_lines":
-            result.get("stdout_lines"),
+            "task": task.get("task"),
+            "host": task.get("host"),
+            "cmd": result.get("cmd"),
+            "start": result.get("start"),
+            "end": result.get("end"),
+            "delta": result.get("delta"),
+            "stdout_lines": result.get("stdout_lines"),
             # Run additional LLM reasoning layer on playbook output to break down the task and improve
             # the LLM's understanding of non-natural language system output
-            "structured_data":
-            await _parse_stdout_lines(config, builder,
-                                      result.get("stdout_lines")),
+            "structured_data": await _parse_stdout_lines(config, builder, result.get("stdout_lines")),
         }
         extracted_tasks.append(task_details)
 
@@ -105,24 +94,20 @@ async def _parse_stdout_lines(config, builder, stdout_lines):
     # Join the list of lines into a single text block
     input_data = "\n".join(stdout_lines) if stdout_lines else ""
 
-    prompt = ToolReasoningLayerPrompts.HOST_PERFORMANCE_CHECK_PARSING.format(
-        input_data=input_data)
+    prompt = ToolReasoningLayerPrompts.HOST_PERFORMANCE_CHECK_PARSING.format(input_data=input_data)
 
     response = None
     try:
         response = await utils.llm_ainvoke(config, builder, user_prompt=prompt)
         structured_data = response
     except Exception as e:
-        structured_data = (
-            '{{"error": "Failed to parse nvda_nim response", '
-            '"exception": "{}", "raw_response": "{}"}}'
-        ).format(str(e), response)
+        structured_data = ('{{"error": "Failed to parse nvda_nim response", '
+                           '"exception": "{}", "raw_response": "{}"}}').format(str(e), response)
     return structured_data
 
 
 @register_function(config_type=HostPerformanceCheckToolConfig)
-async def host_performance_check_tool(config: HostPerformanceCheckToolConfig,
-                                      builder: Builder):
+async def host_performance_check_tool(config: HostPerformanceCheckToolConfig, builder: Builder):
 
     async def _arun(host_id: str) -> str:
         is_test_mode = utils.is_test_mode()
@@ -150,26 +135,21 @@ async def host_performance_check_tool(config: HostPerformanceCheckToolConfig,
                 df = utils.load_test_data()
 
                 # Get CPU metrics from test data, falling back to static data if needed
-                data_top_cpu = utils.load_column_or_static(
-                    df=df,
-                    host_id=host_id,
-                    column="host_performance_check_tool:top_output")
-                data_ps_cpu = utils.load_column_or_static(
-                    df=df,
-                    host_id=host_id,
-                    column="host_performance_check_tool:ps_output")
+                data_top_cpu = utils.load_column_or_static(df=df,
+                                                           host_id=host_id,
+                                                           column="host_performance_check_tool:top_output")
+                data_ps_cpu = utils.load_column_or_static(df=df,
+                                                          host_id=host_id,
+                                                          column="host_performance_check_tool:ps_output")
 
                 output = f"`top` :{data_top_cpu} and `ps` :{data_ps_cpu}"
 
             # Additional LLM reasoning layer on playbook output to provide a summary of the results
             utils.log_header("LLM Reasoning", dash_length=50)
 
-            prompt_template = ToolReasoningLayerPrompts.HOST_PERFORMANCE_CHECK_ANALYSIS.format(
-                input_data=output)
+            prompt_template = ToolReasoningLayerPrompts.HOST_PERFORMANCE_CHECK_ANALYSIS.format(input_data=output)
 
-            conclusion = await utils.llm_ainvoke(config,
-                                                 builder,
-                                                 user_prompt=prompt_template)
+            conclusion = await utils.llm_ainvoke(config, builder, user_prompt=prompt_template)
 
             utils.logger.debug(conclusion)
             utils.log_footer()
@@ -177,8 +157,7 @@ async def host_performance_check_tool(config: HostPerformanceCheckToolConfig,
             return conclusion
 
         except Exception as e:
-            utils.logger.error(
-                "Error during host performance check: %s", str(e))
+            utils.logger.error("Error during host performance check: %s", str(e))
             raise e
 
     yield FunctionInfo.from_fn(

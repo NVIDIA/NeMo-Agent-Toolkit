@@ -20,9 +20,9 @@
 # infrastructure setup.
 HOST_PERFORMANCE_CHECK_PLAYBOOK = [{
     "name":
-    "Monitor system performance",
+        "Monitor system performance",
     "hosts":
-    "all",
+        "all",
     "tasks": [
         # CPU usage collection
         {
@@ -33,8 +33,7 @@ HOST_PERFORMANCE_CHECK_PLAYBOOK = [{
             "register": "cpu_usage",
         },
         {
-            "name": "CPU usage data",
-            "debug": {
+            "name": "CPU usage data", "debug": {
                 "msg": "{{ cpu_usage.stdout }}"
             }
         },
@@ -48,8 +47,7 @@ HOST_PERFORMANCE_CHECK_PLAYBOOK = [{
             "register": "memory_usage",
         },
         {
-            "name": "memory usage data",
-            "debug": {
+            "name": "memory usage data", "debug": {
                 "msg": "{{ memory_usage.stdout }}"
             }
         },
@@ -63,8 +61,7 @@ HOST_PERFORMANCE_CHECK_PLAYBOOK = [{
             "register": "disk_io_stats",
         },
         {
-            "name": "disk I/O statistics",
-            "debug": {
+            "name": "disk I/O statistics", "debug": {
                 "msg": "{{ disk_io_stats.stdout }}"
             }
         },
@@ -80,8 +77,7 @@ HOST_PERFORMANCE_CHECK_PLAYBOOK = [{
             "ignore_errors": True,
         },
         {
-            "name": "CPU usage check",
-            "debug": {
+            "name": "CPU usage check", "debug": {
                 "msg": "{{ cpu_check.stdout }}"
             }
         },
@@ -90,16 +86,14 @@ HOST_PERFORMANCE_CHECK_PLAYBOOK = [{
         {
             "name": "Check for high memory usage",
             "ansible.builtin.shell": {
-                "cmd":
-                "free -m | awk '/Mem:/ {if ($3/$2 * 100.0 > 80.0) exit 1}'"
+                "cmd": "free -m | awk '/Mem:/ {if ($3/$2 * 100.0 > 80.0) exit 1}'"
             },
             "register": "memory_check",
             "failed_when": "memory_check.rc == 1",
             "ignore_errors": True,
         },
         {
-            "name": "memory usage check",
-            "debug": {
+            "name": "memory usage check", "debug": {
                 "msg": "{{ memory_check.stdout }}"
             }
         },
@@ -108,16 +102,14 @@ HOST_PERFORMANCE_CHECK_PLAYBOOK = [{
         {
             "name": "Check for high disk I/O wait",
             "ansible.builtin.shell": {
-                "cmd":
-                "iostat -dx 1 1 | awk '/^Device:/ {getline; if ($10 > 10.0) exit 1}'"
+                "cmd": "iostat -dx 1 1 | awk '/^Device:/ {getline; if ($10 > 10.0) exit 1}'"
             },
             "register": "disk_io_check",
             "failed_when": "disk_io_check.rc == 1",
             "ignore_errors": True,
         },
         {
-            "name": "disk I/O wait check",
-            "debug": {
+            "name": "disk I/O wait check", "debug": {
                 "msg": "{{ disk_io_check.stdout }}"
             }
         },
@@ -131,8 +123,7 @@ HOST_PERFORMANCE_CHECK_PLAYBOOK = [{
             "when": "cpu_check.rc == 1",
         },
         {
-            "name": "Notify admin of high CPU usage",
-            "debug": {
+            "name": "Notify admin of high CPU usage", "debug": {
                 "msg": "{{ cpu_check.stdout }}"
             }
         },
@@ -159,36 +150,31 @@ HOST_PERFORMANCE_CHECK_PLAYBOOK = [{
 # whatever services are critical for monitoring and alerting in their environment
 MONITOR_PROCESS_CHECK_PLAYBOOK = [{
     "name":
-    "Monitor Telegraf process",  # Playbook name
+        "Monitor Telegraf process",  # Playbook name
     "hosts":
-    "all",
+        "all",
     "tasks": [
         {
-            "name":
-            "ps telegraf process",  # Task to check if Telegraf process is running
+            "name": "ps telegraf process",  # Task to check if Telegraf process is running
             "ansible.builtin.shell": {
                 "cmd": "ps -ef | grep telegraf"
             },  # List processes and filter for telegraf
             "register": "ps_usage",  # Store output in ps_usage variable
         },
         {
-            "name": "ps telegraf process",
-            "debug": {
+            "name": "ps telegraf process", "debug": {
                 "msg": "{{ ps_usage.stdout }}"
             }
         },  # Print process list output
         {
-            "name":
-            "systemctl status telegraf",  # Task to check Telegraf service status
+            "name": "systemctl status telegraf",  # Task to check Telegraf service status
             "ansible.builtin.shell": {
                 "cmd": "systemctl status telegraf"
             },  # Get service status from systemd
-            "register":
-            "systemctl_usage",  # Store output in systemctl_usage variable
+            "register": "systemctl_usage",  # Store output in systemctl_usage variable
         },
         {
-            "name": "systemctl status telegraf",
-            "debug": {
+            "name": "systemctl status telegraf", "debug": {
                 "msg": "{{ systemctl_usage.stdout }}"
             }
         },  # Print service status

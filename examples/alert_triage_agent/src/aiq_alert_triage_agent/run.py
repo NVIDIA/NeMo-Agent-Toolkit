@@ -82,7 +82,9 @@ import argparse
 import json
 import subprocess
 
-from flask import Flask, jsonify, request
+from flask import Flask
+from flask import jsonify
+from flask import request
 
 app = Flask(__name__)
 processed_alerts = []
@@ -97,8 +99,7 @@ def start_process(alert: dict, env_file: str) -> None:
     :param alert: Dictionary of alert metric labels
     :param env_file: Path to the .env file
     """
-    payload = "Here is the alert in JSON format to investigate:\n" + json.dumps(
-        alert)
+    payload = "Here is the alert in JSON format to investigate:\n" + json.dumps(alert)
     cmd = [
         "dotenv",
         "-f",
@@ -111,9 +112,7 @@ def start_process(alert: dict, env_file: str) -> None:
         payload,
     ]
     try:
-        print(
-            f"[start_process] Launching triage for alert '{alert.get('alertname')}' on host '{alert.get('host_id')}'"
-        )
+        print(f"[start_process] Launching triage for alert '{alert.get('alertname')}' on host '{alert.get('host_id')}'")
         with subprocess.Popen(cmd) as process:
             process.wait()
     except Exception as e:
@@ -141,29 +140,17 @@ def receive_alert():
             raise ValueError("ENV_FILE must be set before processing alerts")
         start_process(alert, ENV_FILE)
 
-    return jsonify({
-        "received_alert_count": len(alerts),
-        "total_launched": len(processed_alerts)
-    }), 200
+    return jsonify({"received_alert_count": len(alerts), "total_launched": len(processed_alerts)}), 200
 
 
 def parse_args():
     """
     Parse command-line arguments for server configuration.
     """
-    parser = argparse.ArgumentParser(
-        description=
-        "Run an HTTP server to accept alert POSTs and trigger triage.")
-    parser.add_argument("--host",
-                        default="0.0.0.0",
-                        help="Host/IP to bind to (default: 0.0.0.0)")
-    parser.add_argument("--port",
-                        type=int,
-                        default=5000,
-                        help="Port to listen on (default: 5000)")
-    parser.add_argument("--env_file",
-                        default=".env",
-                        help="Path to the .env file (default: .env)")
+    parser = argparse.ArgumentParser(description="Run an HTTP server to accept alert POSTs and trigger triage.")
+    parser.add_argument("--host", default="0.0.0.0", help="Host/IP to bind to (default: 0.0.0.0)")
+    parser.add_argument("--port", type=int, default=5000, help="Port to listen on (default: 5000)")
+    parser.add_argument("--env_file", default=".env", help="Path to the .env file (default: .env)")
     return parser.parse_args()
 
 
