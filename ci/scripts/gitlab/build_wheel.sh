@@ -27,8 +27,8 @@ if [[ "${CI_CRON_NIGHTLY}" == "1" ]]; then
     export SETUPTOOLS_SCM_PRETEND_VERSION="${GIT_TAG}"
 fi
 
-
-WHEELS_DIR=${CI_PROJECT_DIR}/.tmp/wheels/aiqtoolkit
+WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
+WHEELS_DIR="${WHEELS_BASE_DIR}/aiqtoolkit"
 
 create_env extra:all
 
@@ -47,6 +47,7 @@ for AIQ_PACKAGE in "${AIQ_PACKAGES[@]}"; do
 done
 
 if [[ "${BUILD_AIQ_COMPAT}" == "true" ]]; then
+    WHEELS_DIR="${WHEELS_BASE_DIR}/agentiq"
     for AIQ_COMPAT_PACKAGE in "${AIQ_COMPAT_PACKAGES[@]}"; do
         build_package_wheel ${AIQ_COMPAT_PACKAGE}
     done
@@ -65,5 +66,5 @@ if [[ "${CI_COMMIT_BRANCH}" == "${CI_DEFAULT_BRANCH}" || "${CI_COMMIT_BRANCH}" =
             --non-interactive \
             --repository-url "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi" \
             "${WHEEL_FILE}"
-    done < <(find "${WHEELS_DIR}" -type f -name "*.whl")
+    done < <(find "${WHEELS_BASE_DIR}" -type f -name "*.whl")
 fi

@@ -18,6 +18,9 @@ import pytest
 
 from aiq.data_models.dataset_handler import EvalDatasetJsonConfig
 from aiq.data_models.dataset_handler import EvalDatasetStructureConfig
+from aiq.data_models.intermediate_step import IntermediateStep
+from aiq.data_models.intermediate_step import IntermediateStepPayload
+from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.eval.dataset_handler.dataset_handler import DatasetHandler
 from aiq.eval.evaluator.evaluator_model import EvalInput
 
@@ -232,3 +235,46 @@ def test_setup_reps(dataset_handler, mock_input_df, dataset_id_key):
 
     assert len(replicated_df) == len(mock_input_df) * dataset_handler.reps, "Dataset should be replicated correctly"
     assert all("_rep" in str(i) for i in replicated_df[dataset_id_key]), "IDs should be suffixed with `_repX`"
+
+
+@pytest.fixture
+def mock_intermediate_steps():
+    """Create a list of mock intermediate steps with different event types."""
+    steps = []
+    # Add LLM_START step
+    steps.append(
+        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_START, name="llm_start")))
+    # Add LLM_END step
+    steps.append(
+        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_END, name="llm_end")))
+    # Add TOOL_START step
+    steps.append(
+        IntermediateStep(
+            payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START, name="tool_start")))
+    # Add TOOL_END step
+    steps.append(
+        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END, name="tool_end")))
+    return steps
+
+
+def test_filter_intermediate_steps(dataset_handler, mock_intermediate_steps):
+    """Test that filter_intermediate_steps correctly filters steps based on event types."""
+    # Define the filter to include only LLM_END, TOOL_START, and TOOL_END
+    event_filter = [IntermediateStepType.LLM_END, IntermediateStepType.TOOL_START, IntermediateStepType.TOOL_END]
+
+    # Get the filtered steps
+    filtered_steps = dataset_handler.filter_intermediate_steps(mock_intermediate_steps, event_filter)
+
+    # Verify that only the specified event types are included (LLM_START is filtered out)
+    event_types = [step["payload"]["event_type"] for step in filtered_steps]
+    assert IntermediateStepType.LLM_START not in event_types, "LLM_START should be filtered out"
+    assert IntermediateStepType.LLM_END in event_types, "LLM_END should be included"
+    assert IntermediateStepType.TOOL_START in event_types, "TOOL_START should be included"
+    assert IntermediateStepType.TOOL_END in event_types, "TOOL_END should be included"
+
+    # Verify the order of steps is preserved
+    assert len(filtered_steps) == 3, "Should have exactly 3 steps after filtering"
+    assert filtered_steps[0]["payload"]["event_type"] == IntermediateStepType.LLM_END, "First step should be LLM_END"
+    assert filtered_steps[1]["payload"]["event_type"] == IntermediateStepType.TOOL_START, \
+        "Second step should be TOOL_START"
+    assert filtered_steps[2]["payload"]["event_type"] == IntermediateStepType.TOOL_END, "Third step should be TOOL_END"

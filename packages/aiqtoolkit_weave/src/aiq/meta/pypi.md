@@ -15,21 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA Agent Intelligence Toolkit Guides
+![NVIDIA Agent Intelligence Toolkit](https://media.githubusercontent.com/media/NVIDIA/AIQToolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AIQ Toolkit banner image"
 
-```{toctree}
-:maxdepth: 20
+# NVIDIA Agent Intelligence Toolkit Subpackage
+This is a subpackage for Weights and Biases Weave integration for observability.
 
-Create and Customize Workflows <./create-customize-workflows.md>
-Share Components <./sharing-workflows-and-tools.md>
-Evaluate <./evaluate.md>
-Add Custom Evaluators <./custom-evaluator.md>
-Evaluation Endpoints <./evaluate-api.md>
-./fine-grained-tracing-with-weave.md
-./observe-workflow-with-phoenix.md
-Use User Interface and API Server <./using-aiqtoolkit-ui-and-server.md>
-MCP Server Front-End <./mcp-server.md>
-Profile a Workflow <./profiler.md>
-Locally and Self-Hosted LLMs <./locally-hosted-llms.md>
-Adding an LLM Provider <./adding-an-llm-provider.md>
-```
+For more information about AIQ Toolkit, please visit the [AIQ Toolkit package](https://pypi.org/project/aiqtoolkit/).
