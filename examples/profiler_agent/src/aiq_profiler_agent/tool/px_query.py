@@ -19,13 +19,14 @@ import tempfile
 import uuid
 from datetime import datetime
 
+from aiq_profiler_agent.tool.utils import first_valid_query
+from pydantic import BaseModel
+from pydantic import Field
+
 from aiq.builder.builder import Builder
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
 from aiq.data_models.function import FunctionBaseConfig
-from pydantic import BaseModel, Field
-
-from aiq_profiler_agent.tool.utils import first_valid_query
 
 logger = logging.getLogger(__name__)
 
@@ -115,18 +116,15 @@ async def px_query(config: PxQueryConfig, builder: Builder):
         )
 
         logger.info("Phoenix query px_api_input: %s", px_api_input)
-        logger.info(
-            "Querying Phoenix server for traces between %s and %s", px_api_input.start_time, px_api_input.end_time
-        )
+        logger.info("Querying Phoenix server for traces between %s and %s",
+                    px_api_input.start_time,
+                    px_api_input.end_time)
 
         # filter out last n traces based, sorted by start time
         if px_api_input.last_n:
-            df = px_client.get_spans_dataframe(
-                project_name=px_api_input.project_name,
-            )
-            trace_latest_times = (
-                df.groupby("context.trace_id")["start_time"].min().sort_values(ascending=False).reset_index()
-            )
+            df = px_client.get_spans_dataframe(project_name=px_api_input.project_name, )
+            trace_latest_times = (df.groupby("context.trace_id")["start_time"].min().sort_values(
+                ascending=False).reset_index())
             if len(trace_latest_times) < px_api_input.last_n:
                 logger.warning(
                     "Not enough traces found in the time range %s to %s",
@@ -134,8 +132,7 @@ async def px_query(config: PxQueryConfig, builder: Builder):
                     px_api_input.end_time,
                 )
                 raise ValueError(
-                    f"Not enough traces found in the time range {px_api_input.start_time} to {px_api_input.end_time}"
-                )
+                    f"Not enough traces found in the time range {px_api_input.start_time} to {px_api_input.end_time}")
             last_n_trace_ids = trace_latest_times.head(px_api_input.last_n)["context.trace_id"].tolist()
             df = df[df["context.trace_id"].isin(last_n_trace_ids)]
             logger.info("Filtered dataframe to last %d traces", px_api_input.last_n)
