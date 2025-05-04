@@ -81,7 +81,6 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
     @property
     def front_end_config(self) -> FastApiFrontEndConfig:
-
         return self._front_end_config
 
     def build_app(self) -> FastAPI:
@@ -209,6 +208,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         await self.add_default_route(app, AIQSessionManager(builder.build()))
         await self.add_evaluate_route(app, AIQSessionManager(builder.build()))
+        await self.add_authorization_route(app, AIQSessionManager(builder.build()))
 
         for ep in self.front_end_config.endpoints:
 
@@ -624,6 +624,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 return _job_status_to_response(job)
 
         if (endpoint.path):
+
             if (endpoint.method == "GET"):
 
                 app.add_api_route(
@@ -768,3 +769,26 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             else:
                 raise ValueError(f"Unsupported method {endpoint.method}")
+
+    async def add_authorization_route(self, app: FastAPI, session_manager: AIQSessionManager):
+
+        from fastapi import Request
+        from fastapi.responses import JSONResponse
+
+        from aiq.authentication.credentials_manager import _CredentialsManager
+
+        async def redirect_uri(request: Request):
+
+            print("\nUPDATING CREDENTIALS\n")
+
+            # TODO EE: Handle Redirect codes.
+            await _CredentialsManager()._set_credentials()
+
+            return JSONResponse({"message": "Received OAuth callback"})
+
+        if self.front_end_config.authorization.path:
+            app.add_api_route(
+                path=self.front_end_config.authorization.path,
+                endpoint=redirect_uri,
+                methods=["GET"],
+                description="Handles the authorization code and state returned from the OAuth2.0 provider.")

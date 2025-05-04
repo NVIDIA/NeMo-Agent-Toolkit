@@ -36,6 +36,7 @@ class OAuth2Config(AuthenticationBaseConfig):
     client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
     audience: str = Field(description="The audience for OAuth 2.0 authentication.")
     scope: list[str] = Field(description="The scope for OAuth 2.0 authentication.")
+    access_token: str | None = Field(default=None, description="The access token for OAuth 2.0 authentication.")
 
 
 class APIKeyConfig(AuthenticationBaseConfig):

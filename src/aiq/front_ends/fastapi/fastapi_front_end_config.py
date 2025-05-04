@@ -192,6 +192,11 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         description="Evaluates the performance and accuracy of the workflow on a dataset",
     )
 
+    authorization: typing.Annotated[EndpointBase, Field(description="OAuth2.0 redirect URI endpoint.")] = EndpointBase(
+        method="GET",
+        path="/auth/redirect",
+        description="OAuth2.0 redirect endpoint to handle authentication server parameters.")
+
     endpoints: list[Endpoint] = Field(
         default_factory=list,
         description=(

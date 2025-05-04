@@ -81,8 +81,10 @@ class AIQUserInteractionManager:
                                params: dict,
                                data: dict) -> httpx.Response | None:
 
-        request = RequestManager(authentication_provider, url, method, headers, params, data)
+        request = RequestManager(url, method, headers, params, data)
+        await request.authentication_manager.validate_authentication_provider_credentials(authentication_provider)
 
-        response = await self._context_state.user_request_callback.get()(request)
+        # response = await self._context_state.user_request_callback.get()(request)
 
-        return response
+        # return response
+        return None

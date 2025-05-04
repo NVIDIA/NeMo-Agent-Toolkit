@@ -187,6 +187,11 @@ class StartCommandGroup(click.Group):
 
         config = validate_schema(config_dict, AIQConfig)
 
+        # Store the full config and command in the credential manager to spin up a FastAPI server for authentication
+        from aiq.authentication.credentials_manager import _CredentialsManager
+        _CredentialsManager().full_config = config
+        _CredentialsManager().command_name = cmd_name
+
         # Check that we have the right kind of front end
         if (not isinstance(config.general.front_end, front_end.config_type)):
             logger.warning(

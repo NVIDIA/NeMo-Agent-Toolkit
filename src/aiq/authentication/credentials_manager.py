@@ -13,10 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
+import typing
 
 from aiq.builder.context import Singleton
 from aiq.data_models.authentication import AuthenticationProvider
+
+if (typing.TYPE_CHECKING):
+    from aiq.data_models.config import AIQConfig
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +34,10 @@ class _CredentialsManager(metaclass=Singleton):
         """
         super().__init__()
         self.__authentication_providers: dict[str, AuthenticationProvider] = {}
-        self.__swap_flag = True
+        self.__swap_flag: bool = True
+        self.__full_config: "AIQConfig" = None
+        self.__command_name: str = None  # TODO EE: Need to get a list of command names.
+        self.__credentials_flag: asyncio.Event = asyncio.Event()
 
     def _swap_authorization_providers(self, authentication_providers: dict[str, AuthenticationProvider]) -> None:
         """Atomically transfer ownership of the sensitive AIQ Authorization configuration attributes to the
@@ -47,3 +55,29 @@ class _CredentialsManager(metaclass=Singleton):
             return None
 
         return self.__authentication_providers.get(authentication_provider)
+
+    async def _get_credentials(self):
+        await self.__credentials_flag.wait()  # TODO EE: Maybe add a future here
+
+    async def _set_credentials(self):
+        self.__credentials_flag.set()
+
+    @property
+    def full_config(self) -> "AIQConfig":
+        """Get the full configuration."""
+        return self.__full_config
+
+    @full_config.setter
+    def full_config(self, full_config: "AIQConfig") -> None:
+        """Set the full configuration."""
+        self.__full_config = full_config
+
+    @property
+    def command_name(self) -> str:
+        """Get the front end command name."""
+        return self.__command_name
+
+    @command_name.setter
+    def command_name(self, command_name: str) -> None:
+        """Set the front end command name."""
+        self.__command_name = command_name
