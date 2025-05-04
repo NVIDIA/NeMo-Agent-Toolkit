@@ -370,6 +370,18 @@ The output of the evaluators are stored in distinct files in the same `output_di
 }
 ```
 
+## Workflow Output Intermediate Step Filtering
+The workflow_output.json file contains the intermediate steps for each entry in the dataset. The intermediate steps are filtered using the `eval.general.output.workflow_output_step_filter` parameter in the `config.yml` file. The default value for the filter is `[LLM_END, TOOL_END]`. You can customize the filter by providing a list of intermediate step types to include in the output file.
+
+**Example:**
+`examples/simple/configs/eval_config.yml` can be modified to include the intermediate steps in the output by adding the following configuration:
+```yaml
+eval:
+  general:
+    output:
+    workflow_output_step_filter: [LLM_END, TOOL_START, TOOL_END]
+```
+
 ## Customizing the output
 You can customize the output of the pipeline by providing custom scripts. One or more Python scripts can be provided in the `eval.general.output_scripts` section of the `config.yml` file.
 

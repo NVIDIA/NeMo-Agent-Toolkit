@@ -382,7 +382,6 @@ name = "aiqtoolkit"
 source = { editable = "." }
 dependencies = [
     { name = "aioboto3" },
-    { name = "arize-phoenix" },
     { name = "click" },
     { name = "colorama" },
     { name = "expandvars" },
@@ -395,8 +394,6 @@ dependencies = [
     { name = "numpy" },
     { name = "openinference-semantic-conventions" },
     { name = "openpyxl" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-sdk" },
     { name = "pkginfo" },
     { name = "platformdirs" },
     { name = "pydantic" },
@@ -442,6 +439,11 @@ profiling = [
 ]
 semantic-kernel = [
     { name = "aiqtoolkit-semantic-kernel" },
+]
+telemetry = [
+    { name = "arize-phoenix" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-sdk" },
 ]
 zep-cloud = [
     { name = "aiqtoolkit-zep-cloud" },
@@ -499,7 +501,7 @@ requires-dist = [
     { name = "aiqtoolkit-mem0ai", marker = "extra == 'mem0ai'", editable = "packages/aiqtoolkit_mem0ai" },
     { name = "aiqtoolkit-semantic-kernel", marker = "extra == 'semantic-kernel'", editable = "packages/aiqtoolkit_semantic_kernel" },
     { name = "aiqtoolkit-zep-cloud", marker = "extra == 'zep-cloud'", editable = "packages/aiqtoolkit_zep_cloud" },
-    { name = "arize-phoenix", specifier = "~=6.1" },
+    { name = "arize-phoenix", marker = "extra == 'telemetry'", specifier = "~=6.1" },
     { name = "click", specifier = "~=8.1" },
     { name = "colorama", specifier = "~=0.4.6" },
     { name = "expandvars", specifier = "~=1.0" },
@@ -513,8 +515,8 @@ requires-dist = [
     { name = "numpy", specifier = "~=1.26" },
     { name = "openinference-semantic-conventions", specifier = "~=0.1.14" },
     { name = "openpyxl", specifier = "~=3.1" },
-    { name = "opentelemetry-api", specifier = "~=1.2" },
-    { name = "opentelemetry-sdk", specifier = "~=1.3" },
+    { name = "opentelemetry-api", marker = "extra == 'telemetry'", specifier = "~=1.2" },
+    { name = "opentelemetry-sdk", marker = "extra == 'telemetry'", specifier = "~=1.3" },
     { name = "pkginfo", specifier = "~=1.12" },
     { name = "platformdirs", specifier = "~=4.3" },
     { name = "prefixspan", marker = "extra == 'profiling'", specifier = "~=0.5.2" },
@@ -527,6 +529,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
+provides-extras = ["crewai", "langchain", "llama-index", "mem0ai", "semantic-kernel", "zep-cloud", "agno", "telemetry", "examples", "profiling"]
 
 [package.metadata.requires-dev]
 dev = [
