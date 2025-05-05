@@ -18,7 +18,7 @@
 # Building Documentation
 
 ## Prerequisites
-If you don't already have a uv environment setup, refer to the [Get Started](./source/get-started/quick-start.md) guide.
+If you don't already have a uv environment setup, refer to the [Get Started](./source/get-started/install.md) guide.
 
 ## Install Documentation Dependencies
 ```bash

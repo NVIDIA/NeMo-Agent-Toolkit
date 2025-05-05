@@ -80,7 +80,7 @@ AIQ Toolkit is still under active development. Here are some of the features we 
 ## Links
 
 To learn more about AIQ Toolkit, see the following links:
-* [Get Started](./get-started/quick-start.md)
+* [Get Started](./get-started/install.md)
 * [Create and Customize Workflows](./guides/create-customize-workflows.md)
 * [Sharing Components](./guides/sharing-workflows-and-tools.md)
 * [Evaluating Workflows](./guides/evaluate.md)
@@ -103,7 +103,7 @@ Release Notes <./release-notes.md>
 :hidden:
 :caption: Get Started
 
-Quick Start Guide <./get-started/quick-start.md>
+Quick Start Guide <./get-started/index.md>
 ```
 
 ```{toctree}
