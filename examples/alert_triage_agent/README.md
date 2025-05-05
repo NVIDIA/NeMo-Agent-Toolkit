@@ -155,10 +155,8 @@ uv pip install -e ./examples/alert_triage_agent
 ```
 
 ### Set up environment variables
-The required environment variables are demonstrated in the [.env_example](.env_example) file:
+In addition to the `NVIDIA_API_KEY` required by AIQ Toolkit, the following environment variables are required for this example. A sample `.env` file is provided in the [.env_example](.env_example) file:
 
-- `NVIDIA_API_KEY`: Required for accessing NVIDIA AI services
-  - If you have not already done so, follow the [Obtaining API Keys](../../docs/source/intro/get-started.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
 - `TEST_MODE`: Set to "true" to run the agent in test mode which processes alerts using test data instead of live systems
 - `MAINTENANCE_STATIC_DATA_PATH`: Path to CSV file containing static maintenance window data
 - `TEST_DATA_RELATIVE_FILEPATH`: Main source of test data in CSV format, containing alerts and their simulated environments to process
@@ -171,12 +169,15 @@ The required environment variables are demonstrated in the [.env_example](.env_e
   - Used when the agent queries tools beyond those relevant to the test case, simulating healthy parts of the system
 - `TEST_OUTPUT_RELATIVE_FILEPATH`: Path where test results will be saved in CSV format
 
+
 To load the environment variables from your .env file, run:
 ```bash
 export $(grep -v '^#' .env | xargs)
 ```
 
 ## Example Usage
+You can run the agent in [test mode](#running-in-test-mode) or [live mode](#running-live-with-a-http-server-listening-for-alerts). Test mode allows you to evaluate the agent in a controlled, offline environment using synthetic data. Live mode allows you to run the agent in a real environment.
+
 ### Running in a live environment
 In live mode, each tool used by the triage agent connects to real systems to collect data. These systems can include:
 
