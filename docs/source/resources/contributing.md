@@ -34,7 +34,7 @@ Contributions to AIQ Toolkit fall into the following three categories.
     follow the [code contributions](#code-contributions) guide below. If you
     need more context on a particular issue, ask in a comment.
 
-As contributors and maintainers of AIQ Toolkit, you are expected to abide by the AIQ Toolkit code of conduct. More information can be found at: [Contributor Code of Conduct](../code-of-conduct.md).
+As contributors and maintainers of AIQ Toolkit, you are expected to abide by the AIQ Toolkit code of conduct. More information can be found at: [Contributor Code of Conduct](./code-of-conduct.md).
 
 ## Set Up Your Development Environment
 ### Prerequisites

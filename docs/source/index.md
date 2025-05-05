@@ -164,10 +164,10 @@ Troubleshooting <./troubleshooting.md>
 :hidden:
 :caption: Resources
 
-Code of Conduct <./code-of-conduct.md>
+Code of Conduct <./resources/code-of-conduct.md>
 Contributing <./resources/contributing.md>
-Running CI Locally <./resources/running-ci-locally.md>
-Support <./support.md>
+./resources/running-ci-locally.md
+./support.md
 ./resources/licensing
 ```
 
