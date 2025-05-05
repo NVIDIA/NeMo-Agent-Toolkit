@@ -2,15 +2,12 @@
 build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["aiq.*"]
-
 [tool.setuptools_scm]
 # intentionally empty, the section is required for setuptools_scm to work but we don't need to set anything
+root = "../.."
 
 [project]
-name = "aiqtoolkit"
+name = "aiq_profiler_agent"
 dynamic = ["version"]
 dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
@@ -18,192 +15,42 @@ dependencies = [
   # of precision in the version specifier. For example, use `~=1.2` instead of `~=1.2.3` and `~=0.1.3` instead of
   # `~=0.1.3.5`.
   # Keep sorted!!!
-  "aioboto3>=11.0.0",
-  "click~=8.1",
-  "colorama~=0.4.6",
-  "expandvars~=1.0",
-  "fastapi~=0.115.5",
-  "httpx~=0.27",
-  "jinja2~=3.1",
-  "jsonpath-ng~=1.7",
-  "mcp>=1.0.0",
-  "networkx~=3.4",
-  "numpy~=1.26",
-  "openinference-semantic-conventions~=0.1.14",
-  "openpyxl~=3.1",
-  "pkginfo~=1.12",
-  "platformdirs~=4.3",
-  # work-around for arize-phoenix==6.1.0 incompatibility with pydantic==2.11.*, remove once we update arize-phoenix
-  "pydantic==2.10.*",
-  "pymilvus~=2.4",
-  "PyYAML~=6.0",
-  "ragas~=0.2.14",
-  "rich~=13.9",
-  "uvicorn[standard]~=0.32.0",
-  "wikipedia~=1.4",
+  "aiqtoolkit[profiling, langchain]",
+  "pydantic ~= 2.10.0, <2.11.0",
 ]
-requires-python = ">=3.11,<3.13"
-description = "Agent Intelligence Toolkit (AIQ Toolkit)"
-readme = "src/aiq/meta/pypi.md"
+requires-python = "==3.12.*"
+description = "AIQ Toolkit Profiler Agent"
 license = { file = "LICENSE.md" }
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 authors = [{ name = "NVIDIA Corporation" }]
 maintainers = [{ name = "NVIDIA Corporation" }]
 
-
-[project.optional-dependencies]
-# Optional dependencies are things that users would want to install with AIQToolkit. i.e. `uv pip install aiq[langchain]`
-# Keep sorted!!!
-agno = ["aiqtoolkit-agno"]
-crewai = ["aiqtoolkit-crewai"]
-langchain = ["aiqtoolkit-langchain"]
-llama-index = ["aiqtoolkit-llama-index"]
-mem0ai = ["aiqtoolkit-mem0ai"]
-semantic-kernel = ["aiqtoolkit-semantic-kernel"]
-telemetry = [
-  "arize-phoenix~=6.1",
-  "opentelemetry-api~=1.2",
-  "opentelemetry-sdk~=1.3",
-]
-weave = ["aiqtoolkit-weave"]
-zep-cloud = ["aiqtoolkit-zep-cloud"]
-
-examples = [
-  "aiq_alert_triage_agent",
-  "aiq_email_phishing_analyzer",
-  "aiq_multi_frameworks",
-  "aiq_plot_charts",
-  "aiq_semantic_kernel_demo",
-  "aiq_simple_calculator",
-  "aiq_simple",
-  "aiq_swe_bench",
-  "aiq_automated_description_generation",
-  "aiq_agno_personal_finance",
-  "aiq_profiler_agent"
-]
-
-profiling = [
-  "matplotlib~=3.9",
-  "prefixspan~=0.5.2",
-  "scikit-learn~=1.6",
-]
-
-
-[tool.uv]
-config-settings = { editable_mode = "compat" }
-
-
 [tool.uv.sources]
-# Workspace members
-aiqtoolkit-crewai = { workspace = true }
-aiqtoolkit-langchain = { workspace = true }
-aiqtoolkit-llama-index = { workspace = true }
-aiqtoolkit-mem0ai = { workspace = true }
-aiqtoolkit-semantic-kernel = { workspace = true }
-aiqtoolkit-test = { workspace = true }
-aiqtoolkit-zep-cloud = { workspace = true }
-aiqtoolkit-agno = { workspace = true }
-aiqtoolkit-weave = { workspace = true }
+aiqtoolkit = { path = "../../", editable = true }
 
-# All examples here
-aiq_alert_triage_agent = { path = "examples/alert_triage_agent", editable = true }
-aiq_email_phishing_analyzer = { path = "examples/email_phishing_analyzer", editable = true }
-aiq_multi_frameworks = { path = "examples/multi_frameworks", editable = true }
-aiq_plot_charts = { path = "examples/plot_charts", editable = true }
-aiq_semantic_kernel_demo = { path = "examples/semantic_kernel_demo", editable = true }
-aiq_simple = { path = "examples/simple", editable = true }
-aiq_simple_calculator = { path = "examples/simple_calculator", editable = true }
-aiq_swe_bench = { path = "examples/swe_bench", editable = true }
-aiq_automated_description_generation = { path = "examples/automated_description_generation", editable = true }
-aiq_agno_personal_finance = { path = "examples/agno_personal_finance", editable = true }
-aiq_profiler_agent = {path = "examples/profiler_agent", editable = true}
+[project.entry-points.'aiq.plugins']
+aiq_profiler_agent = "aiq_profiler_agent.register"
 
+[tool.ruff]
+# Basic settings
+line-length = 120  # Match your existing standards
 
-[tool.uv.workspace]
-members = ["packages/*"]
-exclude = ["packages/compat"]
+[tool.ruff.format]
+# Like Black, use double quotes for strings.
+quote-style = "double"
 
-[dependency-groups]
-# Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
-dev = [
-  "aiqtoolkit_test",
-  "asgi-lifespan~=2.1",
-  "flake8-pyproject~=1.2",
-  "flake8~=7.1",
-  "httpx-sse~=0.4",
-  "isort==5.12.0",
-  "pip>=24.3.1",
-  "pre-commit>=4.0,<5.0",
-  "pylint==3.3.*",
-  "pytest_httpserver==1.1.*",
-  "pytest-asyncio==0.24.*",
-  "pytest-cov~=6.1",
-  "pytest~=8.3",
-  "python-docx~=1.1.0",
-  "setuptools >= 64",
-  "setuptools_scm>=8",
-  "tomlkit~=0.13.2",
-  "twine~=6.0",
-  "yapf==0.43.*",
-]
+# Like Black, indent with spaces, rather than tabs.
+indent-style = "space"
 
-docs = [
-  "ipython~=8.31",
-  "myst-parser~=4.0",
-  "nbsphinx~=0.9",
-  "nvidia-sphinx-theme>=0.0.7",
-  "sphinx~=8.2",
-  "sphinx-copybutton>=0.5",
-  "sphinx-autoapi>=3.6",
-  "sphinx-mermaid",
-  "vale==3.9.5",
-]
+# Like Black, respect magic trailing commas.
+skip-magic-trailing-comma = false
 
+# Like Black, automatically detect the appropriate line ending.
+line-ending = "auto"
 
-[project.entry-points.'aiq.components']
-aiq_agents = "aiq.agent.register"
-aiq_embedders = "aiq.embedder.register"
-aiq_llms = "aiq.llm.register"
-aiq_retrievers = "aiq.retriever.register"
-aiq_tools = "aiq.tool.register"
-aiq_evaluators = "aiq.eval.register"
-aiq_observability = "aiq.observability.register"
-
-
-[project.entry-points.'aiq.front_ends']
-aiq_front_ends = "aiq.front_ends.register"
-
-
-[project.entry-points.'aiq.registry_handlers']
-aiq_registry_handlers = "aiq.registry_handlers.register"
-
-
-[project.scripts]
-aiq = "aiq.cli.main:run_cli"
-
-[tool.setuptools]
-include-package-data = true
-
-[tool.setuptools.package-data]
-aiq = ["meta/module_to_distro.json"]
-
-# List any markers that users would reasonably want to filter by.
-# These show up when querying `pytest --markers`
-[tool.pytest.ini_options]
-markers = [
-  "benchmark: Benchmarks",
-  "e2e: End-to-end tests",
-  "integration: Integration tests which do not use mocks and may require external services",
-  "requires_cache: Tests that require a reverse-proxy cache to be running",
-  "slow: Slow tests",
-]
-filterwarnings = [
-  # Add warnings to ignore as a part of pytest here
-]
-testpaths = ["tests", "examples/*/tests", "packages/*/tests"]
-asyncio_mode = "auto"
-pytest_plugins = ["aiqtoolkit-test"]
+[tool.black]
+line-length = 120
 
 ## Pylint configuration begins here
 
@@ -287,7 +134,7 @@ persistent = true
 
 # Minimum Python version to use for version dependent checks. Will default to the
 # version used to run pylint.
-py-version = "3.11"
+py-version = "3.12"
 
 # Discover python modules and packages in the file system subtree.
 # recursive =
@@ -318,7 +165,8 @@ argument-naming-style = "snake_case"
 attr-naming-style = "snake_case"
 
 # Regular expression matching correct attribute names. Overrides attr-naming-
-# style. If left empty, attribute names will be checked with the set naming style.
+# style. If left empty, attribute names will be checked with the set naming
+# style.
 # attr-rgx =
 
 # Bad variable names which should always be refused, separated by a comma.
@@ -626,7 +474,7 @@ disable = [
   "too-many-statements",
   "unnecessary-lambda",            # We pass lambdas around a lot, so this is not useful
   "unnecessary-pass",              # Allow empty classes/methods with only a `pass` statement in the body
-  "unused-argument",               # Allow unused arguments in functions for rapid prototyping (delete after initial AIQToolkit prototype)
+  "unused-argument",               # Allow unused arguments in functions for rapid prototyping (delete after initial AgentIQ prototype)
   "use-symbolic-message-instead",
   "useless-suppression",
   "wrong-import-order",            # pylint mistakenly thinks that the test utils are third party, and we have isort for this
@@ -890,7 +738,7 @@ skip = [
 ]
 known_first_party = ["aiq"]
 # Need to declare known third party for namespace packages which have the same name
-known_third_party = ["langchain", "llama_index", "crewai", "semantic_kernel", "mem0ai", "zep_cloud", "agno"]
+known_third_party = ["langchain", "llama_index", "crewai", "semantic_kernel", "mem0ai", "zep_cloud"]
 namespace_packages = ["aiq", "aiq.plugins"]
 
 [tool.flake8]
