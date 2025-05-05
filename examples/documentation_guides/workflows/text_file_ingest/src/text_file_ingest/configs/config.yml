@@ -35,9 +35,7 @@ llms:
   nim_rag_eval_llm:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
-    temperature: 0.0000001
-    top_p: 0.0001
-    max_tokens: 2
+    max_tokens: 8
   nim_rag_eval_large_llm:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct

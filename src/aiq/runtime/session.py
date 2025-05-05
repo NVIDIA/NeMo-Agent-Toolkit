@@ -21,6 +21,8 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from contextlib import nullcontext
 
+from fastapi import Request
+
 from aiq.builder.context import AIQContext
 from aiq.builder.context import AIQContextState
 from aiq.builder.workflow import Workflow
@@ -84,6 +86,7 @@ class AIQSessionManager:
     @asynccontextmanager
     async def session(self,
                       user_manager=None,
+                      request: Request = None,
                       user_input_callback: Callable[[InteractionPrompt], Awaitable[HumanResponse]] = None):
 
         token_user_input = None
@@ -93,6 +96,8 @@ class AIQSessionManager:
         token_user_manager = None
         if user_manager is not None:
             token_user_manager = self._context_state.user_manager.set(user_manager)
+
+        self.set_request_attributes(request)
 
         try:
             yield self
@@ -114,3 +119,18 @@ class AIQSessionManager:
 
             async with self._workflow.run(message) as runner:
                 yield runner
+
+    def set_request_attributes(self, request: Request) -> None:
+        """
+        Extracts and sets request attributes from an HTTP request.
+        """
+        self._context.metadata._request.method = request.method
+        self._context.metadata._request.url_path = request.url.path
+        self._context.metadata._request.url_port = request.url.port
+        self._context.metadata._request.url_scheme = request.url.scheme
+        self._context.metadata._request.headers = request.headers
+        self._context.metadata._request.query_params = request.query_params
+        self._context.metadata._request.path_params = request.path_params
+        self._context.metadata._request.client_host = request.client.host
+        self._context.metadata._request.client_port = request.client.port
+        self._context.metadata._request.cookies = request.cookies

@@ -177,7 +177,8 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         workflow_output_file.parent.mkdir(parents=True, exist_ok=True)
 
         # Write the workflow output to a file (this can be used for re-running the evaluation)
-        workflow_output = dataset_handler.publish_eval_input(self.eval_input)
+        workflow_output = dataset_handler.publish_eval_input(
+            self.eval_input, self.eval_config.general.output.workflow_output_step_filter)
         with open(workflow_output_file, "w", encoding="utf-8") as f:
             # set indent to 2 for pretty printing
             f.write(workflow_output)
