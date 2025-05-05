@@ -26,6 +26,8 @@ def first_valid_query(series):
     extracted_values = series.apply(extract_user_query)
 
     # Return the first non-None result
+    # If there are multiple non-None results, return the first one
+    # Otherwise, we return the trace_id instead.
     non_none_results = extracted_values.dropna()
     if not non_none_results.empty:
         return non_none_results.iloc[0]
@@ -44,13 +46,12 @@ def extract_user_query(input_value):
                 if isinstance(item, dict) and item.get("type") == "human":
                     content = item.get("content", "")
                     # Extract the actual query which is often at the end
-                    query_marker = "Here is the user's query: "
-                    if query_marker in content:
-                        return content.split(query_marker)[-1].strip()
-            return None
+                    return content.strip()
+            return input_value[:20] + "..."
         elif isinstance(data, dict) and "input_message" in data:
             return data.get("input_message")
+        else:
+            return input_value[:20] + "..."
     except Exception as e:
         logger.warning("Error extracting user query: %s", e)
-        return input_value
-    return None
+        return input_value[:20] + "..."
