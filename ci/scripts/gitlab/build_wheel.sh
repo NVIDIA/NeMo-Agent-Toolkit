@@ -25,6 +25,8 @@ rapids-logger "Git Version: ${GIT_TAG}"
 
 if [[ "${CI_CRON_NIGHTLY}" == "1" ]]; then
     export SETUPTOOLS_SCM_PRETEND_VERSION="${GIT_TAG}"
+    export USE_FULL_VERSION="1"
+    ${PROJECT_ROOT}/ci/release/update-version.sh "${GIT_TAG}"
 fi
 
 WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
