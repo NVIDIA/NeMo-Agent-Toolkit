@@ -58,5 +58,6 @@ def main(toml_file_path: str, new_version: str, package_name: str, version_match
     with open(toml_file_path, "w", encoding="utf-8") as fh:
         tomlkit.dump(toml_data, fh)
 
+
 if __name__ == "__main__":
     main()
