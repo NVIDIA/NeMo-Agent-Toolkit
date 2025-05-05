@@ -70,6 +70,7 @@ weave = ["aiqtoolkit-weave"]
 zep-cloud = ["aiqtoolkit-zep-cloud"]
 
 examples = [
+  "aiq_alert_triage_agent",
   "aiq_email_phishing_analyzer",
   "aiq_multi_frameworks",
   "aiq_plot_charts",
@@ -105,6 +106,7 @@ aiqtoolkit-agno = { workspace = true }
 aiqtoolkit-weave = { workspace = true }
 
 # All examples here
+aiq_alert_triage_agent = { path = "examples/alert_triage_agent", editable = true }
 aiq_email_phishing_analyzer = { path = "examples/email_phishing_analyzer", editable = true }
 aiq_multi_frameworks = { path = "examples/multi_frameworks", editable = true }
 aiq_plot_charts = { path = "examples/plot_charts", editable = true }
@@ -313,8 +315,7 @@ argument-naming-style = "snake_case"
 attr-naming-style = "snake_case"
 
 # Regular expression matching correct attribute names. Overrides attr-naming-
-# style. If left empty, attribute names will be checked with the set naming
-# style.
+# style. If left empty, attribute names will be checked with the set naming style.
 # attr-rgx =
 
 # Bad variable names which should always be refused, separated by a comma.
