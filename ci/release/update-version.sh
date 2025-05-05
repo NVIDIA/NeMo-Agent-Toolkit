@@ -57,6 +57,6 @@ fi
 # the `.venv` directory, and updating the root pyproject.toml file
 AIQ_PACKAGE_TOMLS=$(find ./packages -name "pyproject.toml")
 AIQ_EXAMPLE_TOMLS=$(find ./examples -name "pyproject.toml")
-sed_runner "s|"aiqtoolkit\(\[\w*\]\)==.*"|"aiqtoolkit\1==${AIQ_VERSION}"|g" \
+sed_runner 's|"aiqtoolkit\(\[\w*\]\)==.*"|"aiqtoolkit\1==${AIQ_VERSION}"|g' \
    ${AIQ_PACKAGE_TOMLS} \
    ${AIQ_EXAMPLE_TOMLS}
