@@ -26,7 +26,7 @@ if [[ "$#" -ne 1 ]]; then
    echo "No versions were provided."
    exit 1;
 else
-   NEXT_VERSION=$2
+   NEXT_VERSION=$1
 fi
 
 export SCRIPT_DIR=${SCRIPT_DIR:-"$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"}
