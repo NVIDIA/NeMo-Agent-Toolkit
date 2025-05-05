@@ -151,13 +151,6 @@ Code Execution Tool <./components/code-execution.md>
 
 ```{toctree}
 :hidden:
-:caption: Advanced
-
-Running CI Locally <./advanced/running-ci-locally.md>
-```
-
-```{toctree}
-:hidden:
 :caption: References
 
 ./api/index.rst
@@ -172,9 +165,10 @@ Troubleshooting <./troubleshooting.md>
 :caption: Resources
 
 Code of Conduct <./code-of-conduct.md>
-Contributing <./advanced/contributing.md>
+Contributing <./resources/contributing.md>
+Running CI Locally <./resources/running-ci-locally.md>
 Support <./support.md>
-./advanced/licensing
+./resources/licensing
 ```
 
 ## Indices and tables
