@@ -32,7 +32,7 @@ graph TD
 ```
 
 ## Start AIQ Toolkit API Server
-See AIQ Toolkit [UI and Server](./using-aiqtoolkit-ui-and-server.md) guide for instructions on starting the AIQ Toolkit server.
+See AIQ Toolkit [UI and Server](./../get-started/launching-ui.md) guide for instructions on starting the AIQ Toolkit server.
 Sample Usage:
 ```bash
 aiq serve --config_file=examples/simple/configs/config.yml

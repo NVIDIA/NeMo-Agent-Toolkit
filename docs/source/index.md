@@ -43,7 +43,7 @@ Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 - [**Profiling:**](./guides/profiler.md) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
 - [**Observability:**](./guides/observe-workflow-with-phoenix.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
 - [**Evaluation System:**](./guides/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
-- [**User Interface:**](./guides/using-aiqtoolkit-ui-and-server.md) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
+- [**User Interface:**](./get-started/launching-ui.md) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 - [**MCP Compatibility**](./components/mcp.md) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
 
 
@@ -117,7 +117,6 @@ Add Custom Evaluators <./guides/custom-evaluator.md>
 Evaluation Endpoints <./guides/evaluate-api.md>
 ./guides/fine-grained-tracing-with-weave.md
 ./guides/observe-workflow-with-phoenix.md
-Use User Interface and API Server <./guides/using-aiqtoolkit-ui-and-server.md>
 MCP Server Front-End <./guides/mcp-server.md>
 Profile a Workflow <./guides/profiler.md>
 Locally and Self-Hosted LLMs <./guides/locally-hosted-llms.md>
@@ -163,6 +162,7 @@ Running CI Locally <./advanced/running-ci-locally.md>
 
 ./api/index.rst
 ./references/interactive-models.md
+API Server Endpoints <./references/api-server-endpoints.md>
 ./references/websockets.md
 Troubleshooting <./troubleshooting.md>
 ```
