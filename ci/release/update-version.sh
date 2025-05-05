@@ -45,19 +45,18 @@ function sed_runner() {
    done
 }
 
-
-# Update the dependencies that the examples and packages depend on aiqtoolkit, we are explicitly specifying the
-# `examples` and `packages` directories in order to avoid accidentally updating toml files of third-party packages in
-# the `.venv` directory, and updating the root pyproject.toml file
-AIQ_PACKAGE_TOMLS=$(find ./packages -name "pyproject.toml")
-AIQ_EXAMPLE_TOMLS=$(find ./examples -name "pyproject.toml")
-
 if [[ "${USE_FULL_VERSION}" == "1" ]]; then
    AIQ_VERSION=${NEXT_VERSION}
 else
    AIQ_VERSION=${NEXT_SHORT_TAG}
 fi
 
-sed_runner "s|"aiqtoolkit(\[\w*\])==.*"|"aiqtoolkit\1==${AIQ_VERSION}"|g" \
-   ${DOCS_MD_FILES} \
-   ${EXAMPLES_MD_FILES}
+
+# Update the dependencies that the examples and packages depend on aiqtoolkit, we are explicitly specifying the
+# `examples` and `packages` directories in order to avoid accidentally updating toml files of third-party packages in
+# the `.venv` directory, and updating the root pyproject.toml file
+AIQ_PACKAGE_TOMLS=$(find ./packages -name "pyproject.toml")
+AIQ_EXAMPLE_TOMLS=$(find ./examples -name "pyproject.toml")
+sed_runner "s|"aiqtoolkit\(\[\w*\]\)==.*"|"aiqtoolkit\1==${AIQ_VERSION}"|g" \
+   ${AIQ_PACKAGE_TOMLS} \
+   ${AIQ_EXAMPLE_TOMLS}
