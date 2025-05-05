@@ -9,7 +9,7 @@ root = "../../.."
 name = "agentiq-test"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit-test"
+  "aiqtoolkit[test]~=1.1"
 ]
 readme = "pypi.md"
 description = "Transitional package for aiqtoolkit-test, this package is deprecated and will be removed in the future."
