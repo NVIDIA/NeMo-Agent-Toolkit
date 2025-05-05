@@ -28,7 +28,7 @@ from packaging.specifiers import SpecifierSet
 @click.option("--version-match", default="~=", help="Version match specifier to use for the dependency.")
 def main(toml_file_path: str, new_version: str, package_name: str, version_match: str):
     """
-    Update the depdendency version of aiqtoolkit that a plugin depends on in the pyproject.toml file.
+    Update the dependency version of aiqtoolkit that a plugin depends on in the pyproject.toml file.
 
     Parameters
     ----------
