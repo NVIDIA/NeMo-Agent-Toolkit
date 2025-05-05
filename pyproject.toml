@@ -70,6 +70,7 @@ weave = ["aiqtoolkit-weave"]
 zep-cloud = ["aiqtoolkit-zep-cloud"]
 
 examples = [
+  "aiq_alert_triage_agent",
   "aiq_email_phishing_analyzer",
   "aiq_multi_frameworks",
   "aiq_plot_charts",
@@ -78,7 +79,8 @@ examples = [
   "aiq_simple",
   "aiq_swe_bench",
   "aiq_automated_description_generation",
-  "aiq_agno_personal_finance"
+  "aiq_agno_personal_finance",
+  "aiq_profiler_agent"
 ]
 
 profiling = [
@@ -105,6 +107,7 @@ aiqtoolkit-agno = { workspace = true }
 aiqtoolkit-weave = { workspace = true }
 
 # All examples here
+aiq_alert_triage_agent = { path = "examples/alert_triage_agent", editable = true }
 aiq_email_phishing_analyzer = { path = "examples/email_phishing_analyzer", editable = true }
 aiq_multi_frameworks = { path = "examples/multi_frameworks", editable = true }
 aiq_plot_charts = { path = "examples/plot_charts", editable = true }
@@ -114,6 +117,7 @@ aiq_simple_calculator = { path = "examples/simple_calculator", editable = true }
 aiq_swe_bench = { path = "examples/swe_bench", editable = true }
 aiq_automated_description_generation = { path = "examples/automated_description_generation", editable = true }
 aiq_agno_personal_finance = { path = "examples/agno_personal_finance", editable = true }
+aiq_profiler_agent = {path = "examples/profiler_agent", editable = true}
 
 
 [tool.uv.workspace]
@@ -139,6 +143,7 @@ dev = [
   "python-docx~=1.1.0",
   "setuptools >= 64",
   "setuptools_scm>=8",
+  "tomlkit~=0.13.2",
   "twine~=6.0",
   "yapf==0.43.*",
 ]
@@ -313,8 +318,7 @@ argument-naming-style = "snake_case"
 attr-naming-style = "snake_case"
 
 # Regular expression matching correct attribute names. Overrides attr-naming-
-# style. If left empty, attribute names will be checked with the set naming
-# style.
+# style. If left empty, attribute names will be checked with the set naming style.
 # attr-rgx =
 
 # Bad variable names which should always be refused, separated by a comma.
