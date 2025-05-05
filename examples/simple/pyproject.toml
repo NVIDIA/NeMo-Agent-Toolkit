@@ -9,7 +9,7 @@ root = "../.."
 name = "aiq_simple"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain]",
+  "aiqtoolkit[langchain]~=1.1",
   "faiss-cpu==1.9.0",
 ]
 requires-python = ">=3.11,<3.13"
