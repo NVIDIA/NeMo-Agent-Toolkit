@@ -439,6 +439,7 @@ dev = [
     { name = "python-docx" },
     { name = "setuptools" },
     { name = "setuptools-scm" },
+    { name = "tomlkit" },
     { name = "twine" },
     { name = "yapf" },
 ]
@@ -521,6 +522,7 @@ dev = [
     { name = "python-docx", specifier = "~=1.1.0" },
     { name = "setuptools", specifier = ">=64" },
     { name = "setuptools-scm", specifier = ">=8" },
+    { name = "tomlkit", specifier = "~=0.13.2" },
     { name = "twine", specifier = "~=6.0" },
     { name = "yapf", specifier = "==0.43.*" },
 ]
@@ -5186,8 +5188,8 @@ name = "secretstorage"
 version = "3.3.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cryptography" },
-    { name = "jeepney" },
+    { name = "cryptography", marker = "sys_platform == 'linux'" },
+    { name = "jeepney", marker = "sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/53/a4/f48c9d79cb507ed1373477dbceaba7401fd8a23af63b837fa61f1dcd3691/SecretStorage-3.3.3.tar.gz", hash = "sha256:2403533ef369eca6d2ba81718576c5e0f564d5cca1b58f73a8b23e7d4eeebd77", size = 19739 }
 wheels = [
