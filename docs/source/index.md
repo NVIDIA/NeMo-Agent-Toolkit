@@ -125,6 +125,21 @@ Adding an LLM Provider <./guides/adding-an-llm-provider.md>
 
 ```{toctree}
 :hidden:
+:caption: Workflows
+```
+
+```{toctree}
+:hidden:
+:caption: Evaluate
+```
+
+```{toctree}
+:hidden:
+:caption: Store and Retrieve
+```
+
+```{toctree}
+:hidden:
 :caption: Concepts
 
 Functions <./concepts/functions.md>
