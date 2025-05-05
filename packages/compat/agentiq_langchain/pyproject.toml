@@ -13,7 +13,7 @@ dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
   # Keep sorted!!!
-  "aiqtoolkit-langchain"
+  "aiqtoolkit[langchain]~=1.1"
 ]
 readme = "pypi.md"
 description = "Transitional package for aiqtoolkit-langchain, this package is deprecated and will be removed in the future."
