@@ -143,6 +143,8 @@ async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetrics
                     df=df,
                     host_id=host_id,
                     column="telemetry_metrics_host_performance_check_tool:performance_check_output")
+                data = json.loads(data)
+                data = data["data"]["result"][0]["values"]
 
             # Additional LLM reasoning layer on playbook output to provide a summary of the results
             utils.log_header("LLM Reasoning", dash_length=30)
