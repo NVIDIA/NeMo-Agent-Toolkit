@@ -9,7 +9,7 @@ root = "../../.."
 name = "agentiq-crewai"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit-crewai",
+  "aiqtoolkit[crewai]~=1.1",
 ]
 readme = "pypi.md"
 description = "Transitional package for aiqtoolkit-crewai, this package is deprecated and will be removed in the future."
