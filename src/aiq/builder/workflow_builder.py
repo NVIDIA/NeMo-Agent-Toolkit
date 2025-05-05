@@ -21,11 +21,6 @@ from contextlib import AbstractAsyncContextManager
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.sdk.trace.export import SpanExporter
-
 from aiq.builder.builder import Builder
 from aiq.builder.builder import UserManagerHolder
 from aiq.builder.component_utils import build_dependency_sequence
@@ -59,7 +54,17 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.memory.interfaces import MemoryEditor
 from aiq.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
 from aiq.profiler.utils import detect_llm_frameworks_in_build_fn
+from aiq.utils.optional_imports import TelemetryOptionalImportError
+from aiq.utils.optional_imports import try_import_opentelemetry
 from aiq.utils.type_utils import override
+
+# SpanExporter is needed to define ConfiguredExporter. Handling when OpenTelemetry is not installed here.
+try:
+    opentelemetry = try_import_opentelemetry()
+    from opentelemetry.sdk.trace.export import SpanExporter
+except TelemetryOptionalImportError:
+    from aiq.utils.optional_imports import DummySpanExporter  # pylint: disable=ungrouped-imports
+    SpanExporter = DummySpanExporter
 
 logger = logging.getLogger(__name__)
 
@@ -156,19 +161,30 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Now attach to AIQ Toolkit's root logger
             logging.getLogger().addHandler(handler)
 
-        provider = TracerProvider()
-        trace.set_tracer_provider(provider)
+        # If tracing is configured, try to import telemetry dependencies and set up tracing
+        if telemetry_config.tracing:
+            # If the dependencies are not installed, a TelemetryOptionalImportError will be raised
 
-        for key, trace_exporter_config in telemetry_config.tracing.items():
+            # pylint: disable=unused-variable,redefined-outer-name
+            opentelemetry = try_import_opentelemetry()  # noqa: F841
+            from opentelemetry import trace
+            from opentelemetry.sdk.trace import TracerProvider
+            from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-            exporter_info = self._registry.get_telemetry_exporter(type(trace_exporter_config))
+            provider = TracerProvider()
+            trace.set_tracer_provider(provider)
 
-            instance = await self._exit_stack.enter_async_context(exporter_info.build_fn(trace_exporter_config, self))
+            for key, trace_exporter_config in telemetry_config.tracing.items():
 
-            span_processor_instance = BatchSpanProcessor(instance)
-            provider.add_span_processor(span_processor_instance)
+                exporter_info = self._registry.get_telemetry_exporter(type(trace_exporter_config))
 
-            self._exporters[key] = ConfiguredExporter(config=trace_exporter_config, instance=instance)
+                instance = await self._exit_stack.enter_async_context(
+                    exporter_info.build_fn(trace_exporter_config, self))
+
+                span_processor_instance = BatchSpanProcessor(instance)
+                provider.add_span_processor(span_processor_instance)
+
+                self._exporters[key] = ConfiguredExporter(config=trace_exporter_config, instance=instance)
 
         return self
 
