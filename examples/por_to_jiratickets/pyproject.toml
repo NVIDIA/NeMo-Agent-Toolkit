@@ -9,7 +9,7 @@ root = "../.."
 name = "aiq_por_to_jiratickets"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain]",
+  "aiqtoolkit[langchain]~=1.1",
 ]
 requires-python = ">=3.10"
 description = "Custom AIQ Toolkit Workflow"

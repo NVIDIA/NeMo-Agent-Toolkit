@@ -19,7 +19,7 @@ dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
   # Keep sorted!!!
-  "aiqtoolkit",
+  "aiqtoolkit~=1.1",
   # We ran into pydantic validation errors with newer versions of llama-index, not sure which version introduced the
   # error
   "llama-index-core==0.12.15",
