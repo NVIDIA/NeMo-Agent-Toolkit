@@ -203,7 +203,7 @@ Review the unassigned issues and choose an issue that you are comfortable contri
 
 ## Developing with AIQ Toolkit
 
-Refer to the [Get Started](../get-started/install.md) guide to quickly begin development.
+Refer to the [Get Started](../get-started/installing.md) guide to quickly begin development.
 
 ## Documentation
 
