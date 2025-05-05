@@ -29,34 +29,44 @@ else
    NEXT_VERSION=$2
 fi
 
+export SCRIPT_DIR=${SCRIPT_DIR:-"$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"}
+
+# The root to the AIQ Toolkit repo
+export PROJECT_ROOT=${PROJECT_ROOT:-"$(realpath ${SCRIPT_DIR}/../..)"}
+
 NEXT_MAJOR=$(echo ${NEXT_VERSION} | awk '{split($0, a, "."); print a[1]}')
 NEXT_MINOR=$(echo ${NEXT_VERSION} | awk '{split($0, a, "."); print a[2]}')
 NEXT_PATCH=$(echo ${NEXT_VERSION} | awk '{split($0, a, "."); print a[3]}')
 NEXT_SHORT_TAG=${NEXT_MAJOR}.${NEXT_MINOR}
 
-# Inplace sed replace; workaround for Linux and Mac. Accepts multiple files
-function sed_runner() {
-
-   pattern=$1
-   shift
-
-   for f in $@ ; do
-      sed -i.bak ''"$pattern"'' "$f" && rm -f "$f.bak"
-   done
-}
-
 if [[ "${USE_FULL_VERSION}" == "1" ]]; then
    AIQ_VERSION=${NEXT_VERSION}
+   VERSION_MATCH="=="
 else
    AIQ_VERSION=${NEXT_SHORT_TAG}
+   VERSION_MATCH="~="
 fi
 
+# Change directory to the repo root
+pushd "${PROJECT_ROOT}" &> /dev/null
 
 # Update the dependencies that the examples and packages depend on aiqtoolkit, we are explicitly specifying the
 # `examples` and `packages` directories in order to avoid accidentally updating toml files of third-party packages in
-# the `.venv` directory, and updating the root pyproject.toml file
-AIQ_PACKAGE_TOMLS=$(find ./packages -name "pyproject.toml")
-AIQ_EXAMPLE_TOMLS=$(find ./examples -name "pyproject.toml")
-sed -i 's|"aiqtoolkit\(\[[[:alnum:]]*\]\)==.*"|"aiqtoolkit\1==${AIQ_VERSION}"|g' \
-   ${AIQ_PACKAGE_TOMLS} \
-   ${AIQ_EXAMPLE_TOMLS}
+# the `.venv` directory, and updating the root pyproject.toml file. The sort is not really needed, but it makes the
+# output deterministic and easier to read.
+AIQ_PACKAGE_TOMLS=($(find ./packages -name "pyproject.toml" | sort ))
+AIQ_EXAMPLE_TOMLS=($(find ./examples -name "pyproject.toml" | sort ))
+
+for TOML_FILE in ${AIQ_EXAMPLE_TOMLS[@]}; do
+    ${SCRIPT_DIR}/update_toml_dep.py \
+      --toml-file-path=${TOML_FILE} \
+      --new-version="${AIQ_VERSION}" \
+      --version-match="${VERSION_MATCH}"
+done
+
+for TOML_FILE in "${AIQ_PACKAGE_TOMLS[@]}"; do
+    ${SCRIPT_DIR}/update_toml_dep.py \
+      --toml-file-path=${TOML_FILE} \
+      --new-version="${AIQ_VERSION}" \
+      --version-match="${VERSION_MATCH}"
+done
