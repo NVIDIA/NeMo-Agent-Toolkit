@@ -24,7 +24,7 @@ GIT_TAG=$(get_git_tag)
 IS_TAGGED=$(is_current_commit_tagged)
 rapids-logger "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
 
-if [[ "${CI_CRON_NIGHTLY}" == "1" || ( ${IS_TAGGED} == "0" && "${CI_COMMIT_BRANCH}" != "main" ) ]]; then
+if [[ "${CI_CRON_NIGHTLY}" == "1" || ( ${IS_TAGGED} == "1" && "${CI_COMMIT_BRANCH}" != "main" ) ]]; then
     export SETUPTOOLS_SCM_PRETEND_VERSION="${GIT_TAG}"
     export USE_FULL_VERSION="1"
     ${PROJECT_ROOT}/ci/release/update-version.sh "${GIT_TAG}"

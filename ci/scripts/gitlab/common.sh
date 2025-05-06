@@ -44,9 +44,15 @@ function is_current_commit_tagged() {
     # Check if the current commit is tagged
     set +e
     git describe --tags --exact-match HEAD >/dev/null 2>&1
-    local result=$?
+    local status_code=$?
     set -e
-    echo ${result}
+
+    # Convert the unix status code to a boolean value
+    local is_tagged=0
+    if [[ ${status_code} -eq 0 ]]; then
+        is_tagged=1
+    fi
+    echo ${is_tagged}
 }
 
 function create_env() {
