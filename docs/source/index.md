@@ -112,30 +112,35 @@ Quick Start Guide <./get-started/index.md>
 
 Create and Customize Workflows <./guides/create-customize-workflows.md>
 Share Components <./guides/sharing-workflows-and-tools.md>
-Evaluate <./guides/evaluate.md>
-Add Custom Evaluators <./guides/custom-evaluator.md>
-Evaluation Endpoints <./guides/evaluate-api.md>
 ./guides/fine-grained-tracing-with-weave.md
 ./guides/observe-workflow-with-phoenix.md
 MCP Server Front-End <./guides/mcp-server.md>
 Profile a Workflow <./guides/profiler.md>
 Locally and Self-Hosted LLMs <./guides/locally-hosted-llms.md>
-Adding an LLM Provider <./guides/adding-an-llm-provider.md>
 ```
 
 ```{toctree}
 :hidden:
 :caption: Workflows
+
+Workflow Configuration <./concepts/workflow-configuration.md>
 ```
 
 ```{toctree}
 :hidden:
 :caption: Evaluate
+
+About Evaluation <./guides/evaluate.md>
+Evaluate <./concepts/evaluate.md>
+Add Custom Evaluators <./guides/custom-evaluator.md>
+Evaluation Endpoints <./guides/evaluate-api.md>
 ```
 
 ```{toctree}
 :hidden:
 :caption: Store and Retrieve
+
+Memory Module <./concepts/memory.md>
 ```
 
 ```{toctree}
@@ -143,10 +148,7 @@ Adding an LLM Provider <./guides/adding-an-llm-provider.md>
 :caption: Concepts
 
 Functions <./concepts/functions.md>
-Workflow Configuration <./concepts/workflow-configuration.md>
 Profile and Monitor Performance <./concepts/profiler.md>
-Evaluate <./concepts/evaluate.md>
-Memory Module <./concepts/memory.md>
 Observability <./concepts/observability.md>
 Command Line Interface (CLI) <./concepts/cli.md>
 Plugins <./concepts/plugins.md>
@@ -172,6 +174,7 @@ Code Execution Tool <./components/code-execution.md>
 ./references/interactive-models.md
 API Server Endpoints <./references/api-server-endpoints.md>
 ./references/websockets.md
+Adding an LLM Provider <./guides/adding-an-llm-provider.md>
 Troubleshooting <./troubleshooting.md>
 ```
 
