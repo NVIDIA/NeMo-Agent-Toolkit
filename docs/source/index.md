@@ -61,7 +61,7 @@ Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 - **An attempt to solve agent-to-agent communication.** Agent communication is best handled over existing protocols, such as HTTP, gRPC, and sockets.
 - **An observability platform.** While AIQ Toolkit is able to collect and transmit fine-grained telemetry to help with optimization and evaluation, it does not replace your preferred observability platform and data collection application.
 
-
+<!-->
 ## Links
 
 To learn more about AIQ Toolkit, see the following links:
@@ -72,6 +72,7 @@ To learn more about AIQ Toolkit, see the following links:
 * [Profiling a Workflow](./guides/profiler.md)
 * [Observing a Workflow with Phoenix](./guides/observe-workflow-with-phoenix.md)
 * [Command Line Interface](./concepts/cli.md)
+-->
 
 ## Feedback
 
@@ -173,8 +174,3 @@ Contributing <./resources/contributing.md>
 ./support.md
 ./resources/licensing
 ```
-
-## Indices and tables
-
-* {ref}`genindex`
-* {ref}`modindex`
