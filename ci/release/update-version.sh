@@ -29,10 +29,10 @@ else
    NEXT_VERSION=$1
 fi
 
-export SCRIPT_DIR=${SCRIPT_DIR:-"$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"}
+export CUR_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # The root to the AIQ Toolkit repo
-export PROJECT_ROOT=${PROJECT_ROOT:-"$(realpath ${SCRIPT_DIR}/../..)"}
+export PROJECT_ROOT=${PROJECT_ROOT:-"$(realpath ${CUR_DIR}/../..)"}
 
 NEXT_MAJOR=$(echo ${NEXT_VERSION} | awk '{split($0, a, "."); print a[1]}')
 NEXT_MINOR=$(echo ${NEXT_VERSION} | awk '{split($0, a, "."); print a[2]}')
@@ -58,14 +58,14 @@ AIQ_PACKAGE_TOMLS=($(find ./packages -name "pyproject.toml" | sort ))
 AIQ_EXAMPLE_TOMLS=($(find ./examples -name "pyproject.toml" | sort ))
 
 for TOML_FILE in ${AIQ_EXAMPLE_TOMLS[@]}; do
-    ${SCRIPT_DIR}/update_toml_dep.py \
+    ${CUR_DIR}/update_toml_dep.py \
       --toml-file-path=${TOML_FILE} \
       --new-version="${AIQ_VERSION}" \
       --version-match="${VERSION_MATCH}"
 done
 
 for TOML_FILE in "${AIQ_PACKAGE_TOMLS[@]}"; do
-    ${SCRIPT_DIR}/update_toml_dep.py \
+    ${CUR_DIR}/update_toml_dep.py \
       --toml-file-path=${TOML_FILE} \
       --new-version="${AIQ_VERSION}" \
       --version-match="${VERSION_MATCH}"
