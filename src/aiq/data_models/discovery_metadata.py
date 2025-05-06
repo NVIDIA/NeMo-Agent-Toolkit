@@ -150,7 +150,11 @@ class DiscoveryMetadata(BaseModel):
                 logger.error("Encountered issue getting distro_name for module %s", module.__name__)
                 return DiscoveryMetadata(status=DiscoveryStatusEnum.FAILURE)
 
-            version = importlib.metadata.version(distro_name) if distro_name != "" else ""
+            try:
+                version = importlib.metadata.version(distro_name) if distro_name != "" else ""
+            except importlib.metadata.PackageNotFoundError:
+                logger.warning("Package metadata not found for %s", distro_name)
+                version = ""
         except Exception as e:
             logger.exception("Encountered issue extracting module metadata for %s: %s", config_type, e, exc_info=True)
             return DiscoveryMetadata(status=DiscoveryStatusEnum.FAILURE)
@@ -185,7 +189,11 @@ class DiscoveryMetadata(BaseModel):
             module = inspect.getmodule(fn)
             root_package: str = module.__package__.split(".")[0]
             root_package = DiscoveryMetadata.get_distribution_name(root_package)
-            version = importlib.metadata.version(root_package) if root_package != "" else ""
+            try:
+                version = importlib.metadata.version(root_package) if root_package != "" else ""
+            except importlib.metadata.PackageNotFoundError:
+                logger.warning("Package metadata not found for %s", root_package)
+                version = ""
         except Exception as e:
             logger.exception("Encountered issue extracting module metadata for %s: %s", fn, e, exc_info=True)
             return DiscoveryMetadata(status=DiscoveryStatusEnum.FAILURE)
@@ -213,10 +221,15 @@ class DiscoveryMetadata(BaseModel):
 
         try:
             package_name = DiscoveryMetadata.get_distribution_name(package_name)
-            metadata = importlib.metadata.metadata(package_name)
-            description = metadata.get("Summary", "")
-            if (package_version is None):
-                package_version = importlib.metadata.version(package_name)
+            try:
+                metadata = importlib.metadata.metadata(package_name)
+                description = metadata.get("Summary", "")
+                if (package_version is None):
+                    package_version = importlib.metadata.version(package_name)
+            except importlib.metadata.PackageNotFoundError:
+                logger.warning("Package metadata not found for %s", package_name)
+                description = ""
+                package_version = package_version or ""
         except Exception as e:
             logger.exception("Encountered issue extracting module metadata for %s: %s", package_name, e, exc_info=True)
             return DiscoveryMetadata(status=DiscoveryStatusEnum.FAILURE)
@@ -252,7 +265,11 @@ class DiscoveryMetadata(BaseModel):
             module = inspect.getmodule(config_type)
             root_package: str = module.__package__.split(".")[0]
             root_package = DiscoveryMetadata.get_distribution_name(root_package)
-            version = importlib.metadata.version(root_package) if root_package != "" else ""
+            try:
+                version = importlib.metadata.version(root_package) if root_package != "" else ""
+            except importlib.metadata.PackageNotFoundError:
+                logger.warning("Package metadata not found for %s", root_package)
+                version = ""
         except Exception as e:
             logger.exception("Encountered issue extracting module metadata for %s: %s", config_type, e, exc_info=True)
             return DiscoveryMetadata(status=DiscoveryStatusEnum.FAILURE)
