@@ -150,8 +150,6 @@ Memory Module <./concepts/memory.md>
 Functions <./concepts/functions.md>
 Profile and Monitor Performance <./concepts/profiler.md>
 Observability <./concepts/observability.md>
-Command Line Interface (CLI) <./concepts/cli.md>
-Plugins <./concepts/plugins.md>
 ```
 
 ```{toctree}
@@ -175,6 +173,8 @@ Code Execution Tool <./components/code-execution.md>
 API Server Endpoints <./references/api-server-endpoints.md>
 ./references/websockets.md
 Adding an LLM Provider <./guides/adding-an-llm-provider.md>
+Command Line Interface (CLI) <./concepts/cli.md>
+Plugins <./concepts/plugins.md>
 Troubleshooting <./troubleshooting.md>
 ```
 
