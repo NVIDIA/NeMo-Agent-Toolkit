@@ -123,7 +123,11 @@ class AIQSessionManager:
     def set_request_attributes(self, request: Request) -> None:
         """
         Extracts and sets request attributes from an HTTP request.
+        If request is None, no attributes are set.
         """
+        if request is None:
+            return
+
         self._context.metadata._request.method = request.method
         self._context.metadata._request.url_path = request.url.path
         self._context.metadata._request.url_port = request.url.port

@@ -9,7 +9,7 @@ root = "../.."
 name = "aiq_swe_bench"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain]",
+  "aiqtoolkit[langchain]~=1.1",
   "swebench==3.0.3"
 ]
 requires-python = ">=3.11,<3.13"

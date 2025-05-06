@@ -19,7 +19,7 @@ dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
   # Keep sorted!!!
-  "aiqtoolkit",
+  "aiqtoolkit~=1.1",
   "langchain-core~=0.3.7",
   "langchain-nvidia-ai-endpoints~=0.3.5",
   "langchain-milvus~=0.1.5",
