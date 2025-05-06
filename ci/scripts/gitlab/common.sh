@@ -32,9 +32,8 @@ function get_git_tag() {
             exit 1;
         fi
 
-        # If the branch is a nightly build create an alpha tag which will be accepted by pypi
-        # Note: We are intentionally not pushing this tag, it exists for the sole purpose of generating a
-        # unique alpha version for nightly builds.
+        # If the branch is a nightly build create a version which will be accepted by pypi
+        # Note: We are intentionally creating an actual tag, just setting the variable
         GIT_TAG=$(echo $GIT_TAG | sed -e "s|-dev|a$(date +"%Y%m%d")|")
     fi
 
