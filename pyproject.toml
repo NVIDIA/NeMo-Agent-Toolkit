@@ -626,7 +626,6 @@ disable = [
   "too-many-statements",
   "unnecessary-lambda",            # We pass lambdas around a lot, so this is not useful
   "unnecessary-pass",              # Allow empty classes/methods with only a `pass` statement in the body
-  "unused-argument",               # Allow unused arguments in functions for rapid prototyping (delete after initial AIQToolkit prototype)
   "use-symbolic-message-instead",
   "useless-suppression",
   "wrong-import-order",            # pylint mistakenly thinks that the test utils are third party, and we have isort for this
