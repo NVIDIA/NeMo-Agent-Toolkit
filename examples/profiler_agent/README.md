@@ -59,7 +59,7 @@ aiq run --config_file examples/simple_calculator/configs/config-tracing.yml --in
    aiq serve --config_file=examples/profiler_agent/configs/config.yml
    ```
 
-4. Launch the AIQ Toolkit User Interface by using the instructions in the [Using AIQ Toolkit UI and Server](https://github.com/NVIDIA/aiq/blob/main/docs/source/guides/using-aiqtoolkit-ui-and-server.md) guide.
+4. Launch the AIQ Toolkit User Interface by using the instructions in the [Using AIQ Toolkit UI and Server](../../docs/source/guides/using-aiqtoolkit-ui-and-server.md) guide.
 
 5. Query the agent with natural language via the UI:
 ```
