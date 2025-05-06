@@ -40,8 +40,14 @@ function get_git_tag() {
     echo ${GIT_TAG}
 }
 
-
-
+function is_current_commit_tagged() {
+    # Check if the current commit is tagged
+    set +e
+    git describe --tags --exact-match HEAD >/dev/null 2>&1
+    local result=$?
+    set -e
+    echo ${result}
+}
 
 function create_env() {
 

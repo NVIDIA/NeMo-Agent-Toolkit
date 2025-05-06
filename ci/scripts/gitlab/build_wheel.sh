@@ -21,9 +21,10 @@ GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 source ${GITLAB_SCRIPT_DIR}/common.sh
 
 GIT_TAG=$(get_git_tag)
-rapids-logger "Git Version: ${GIT_TAG}"
+IS_TAGGED=$(is_current_commit_tagged)
+rapids-logger "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
 
-if [[ "${CI_CRON_NIGHTLY}" == "1" ]]; then
+if [[ "${CI_CRON_NIGHTLY}" == "1" || ${IS_TAGGED} == "0" ]]; then
     export SETUPTOOLS_SCM_PRETEND_VERSION="${GIT_TAG}"
     export USE_FULL_VERSION="1"
     ${PROJECT_ROOT}/ci/release/update-version.sh "${GIT_TAG}"
