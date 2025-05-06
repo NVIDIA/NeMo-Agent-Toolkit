@@ -46,21 +46,6 @@ Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 - [**User Interface:**](./get-started/launching-ui.md) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 - [**MCP Compatibility**](./components/mcp.md) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
 
-
-## Coming Soon
-
-AIQ Toolkit is still under active development. Here are some of the features we are working on adding in the near future:
-
-- Additional end-to-end agentic use case for software engineering (Q2 2025)
-<!-- vale off -->
-- AI-Q Blueprint customization guide (Q2 2025)
-<!-- vale on -->
-- Optional integration of NeMo Guardrails (Q2 2025)
-- Agentic system level accelerations in partnership with Dynamo (Q3 2025)
-- Flexible deployment and workflow instantiation option (Q4 2025)
-- Addition of data feedback and improvement loop (flywheel) (Q4 2025)
-
-
 ## What AIQ Toolkit Is
 
 - A **lightweight, unifying library** that makes every agent, tool, and workflow you already have work together, just as simple function calls work together in complex software applications.
