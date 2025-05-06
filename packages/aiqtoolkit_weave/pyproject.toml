@@ -22,7 +22,7 @@ dependencies = [
   "aiqtoolkit~=1.1",
   "weave>=0.51.44"
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.11,<3.13"
 description = "Subpackage for Weave integration in AIQToolkit"
 readme = "src/aiq/meta/pypi.md"
 keywords = ["ai", "observability", "wandb"]
