@@ -92,6 +92,7 @@ def preload_test_data(test_data_path: str | None, benign_fallback_data_path: str
 
     Args:
         test_data_path (str): Path to the test data CSV file
+        benign_fallback_data_path (str): Path to the benign fallback data JSON file
     """
     if test_data_path is None:
         raise ValueError("test_data_path must be provided")
@@ -108,7 +109,7 @@ def preload_test_data(test_data_path: str | None, benign_fallback_data_path: str
 
 
 def get_test_data() -> pd.DataFrame:
-    """ Returns the preloaded test data."""
+    """Returns the preloaded test data."""
     if _DATA_CACHE['test_data'] is None:
         raise ValueError("Test data not preloaded. Call preload_test_data() first.")
     return pd.DataFrame(_DATA_CACHE['test_data'])

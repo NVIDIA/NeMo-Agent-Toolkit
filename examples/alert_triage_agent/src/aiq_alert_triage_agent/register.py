@@ -21,7 +21,6 @@ import os
 
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import SystemMessage
-from langchain_core.runnables.utils import Output
 from langgraph.graph import START
 from langgraph.graph import MessagesState
 from langgraph.graph import StateGraph
@@ -151,6 +150,9 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
         Returns:
             Confirmation message after processing completes
         """
+        if config.test_output_path is None:
+            raise ValueError("test_output_path must be provided")
+        
         # Load test alerts from CSV file
         df = utils.get_test_data()
         df["output"] = ""  # Initialize output column
@@ -167,8 +169,6 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
         utils.log_header("Saving Results")
 
         # Write results to output CSV
-        if config.test_output_path is None:
-            raise ValueError("test_output_path must be provided")
         os.makedirs(os.path.dirname(config.test_output_path), exist_ok=True)
         df.to_csv(config.test_output_path, index=False)
 
