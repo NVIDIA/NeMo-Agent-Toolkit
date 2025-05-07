@@ -18,7 +18,7 @@ limitations under the License.
 
 # Creating a New Tool and Workflow
 
-In the [Customizing a Workflow](./customize-a-workflow.md) and [Adding Tools to a Workflow](./create-a-new-workflow.md) tutorials, we have been primarily utilizing tools that were able to ingest data from web pages and perform internet searches. In this tutorial we will create a tool that can ingest data from local files stored on disk.
+In the [Customizing a Workflow](./customize-a-workflow.md) and [Adding Tools to a Workflow](./create-a-new-workflow.md) tutorials, we have been primarily utilizing tools that were included with the AIQ Toolkit. In this tutorial we will create a new tool that can ingest data from local files stored on disk.
 
 For this purpose, we will create a new empty tool using the `aiq workflow create` command. This command automates the setup process by generating the necessary files and directory structure for your new workflow.
 ```bash
