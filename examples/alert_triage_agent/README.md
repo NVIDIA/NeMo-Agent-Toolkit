@@ -273,7 +273,7 @@ To run the agent live, follow these steps:
    Provide a live alert in JSON format and invoke the agent using:
 
    ```bash
-   aiq run --config_file=examples/alert_triage_agent/configs/config.yml --input {your_alert_in_json_format}
+   aiq run --config_file=examples/alert_triage_agent/configs/config_live_mode.yml --input {your_alert_in_json_format}
    ```
 This will trigger a full end-to-end triage process using live data sources.
 
@@ -387,7 +387,7 @@ To run in test mode:
 
    Run the agent with:
    ```bash
-   aiq run --config_file=examples/alert_triage_agent/configs/config.yml --input "test_mode"
+   aiq run --config_file=examples/alert_triage_agent/configs/config_test_mode.yml --input "test_mode"
    ```
     Note: The `--input` value is ignored in test mode.
 
