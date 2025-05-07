@@ -90,7 +90,7 @@ Release Notes <./release-notes.md>
 :caption: Get Started
 
 Quick Start Guide <./quick-start/index.md>
-./tutorials/index.md
+Tutorials <./tutorials/index.md>
 ```
 
 ```{toctree}
