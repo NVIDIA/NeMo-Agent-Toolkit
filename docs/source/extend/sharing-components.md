@@ -15,12 +15,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-<!--
-  SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA
-  CORPORATION & AFFILIATES. All rights reserved.
-  SPDX-License-Identifier: Apache-2.0
--->
-
 # Sharing NVIDIA Agent Intelligence Toolkit Components
 
 Every AIQ Toolkit component is is packaged inside of an AIQ Toolkit plugin and is designed to be sharable with the community of AIQ Toolkit  developers. Functions are by far the most common AIQ Toolkit component type. In fact, AIQ components include all pieces that leverage an AIQ Toolkit registration decorator (e.g. `register_function`, `register_llm_client`, `register_evaluator`, etc.). This guide will discuss the requirements for developing registered components that can be shared, discovered, and integrated leveraged with any AIQ Toolkit application.

@@ -26,7 +26,7 @@ Agent Intelligence Toolkit (AIQ Toolkit) is a flexible library designed to seaml
 ## Key Features
 
 - [**Framework Agnostic:**](https://docs.nvidia.com/aiqtoolkit/latest/concepts/plugins.html) Works with any agentic framework, so you can use your current technology stack without replatforming.
-- [**Reusability:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/sharing-workflows-and-tools.html) Every agent, tool, or workflow can be combined and repurposed, allowing developers to leverage existing work in new scenarios.
+- [**Reusability:**](https://docs.nvidia.com/aiqtoolkit/latest/extend/sharing-components.html) Every agent, tool, or workflow can be combined and repurposed, allowing developers to leverage existing work in new scenarios.
 - [**Rapid Development:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/create-customize-workflows.html) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
 - [**Profiling:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/profiler.html) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
 - [**Observability:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/observe-workflow-with-phoenix.html) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
