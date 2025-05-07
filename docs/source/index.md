@@ -90,19 +90,7 @@ Release Notes <./release-notes.md>
 :caption: Get Started
 
 Quick Start Guide <./quick-start/index.md>
-```
-
-```{toctree}
-:hidden:
-:caption: Beginner Tutorials
-
-Create and Customize Workflows <./guides/create-customize-workflows.md>
-Share Components <./guides/sharing-workflows-and-tools.md>
-./guides/fine-grained-tracing-with-weave.md
-./guides/observe-workflow-with-phoenix.md
-MCP Server Front-End <./guides/mcp-server.md>
-Profile a Workflow <./guides/profiler.md>
-Locally and Self-Hosted LLMs <./guides/locally-hosted-llms.md>
+./tutorials/index.md
 ```
 
 ```{toctree}
