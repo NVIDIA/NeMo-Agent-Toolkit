@@ -107,9 +107,10 @@ Locally and Self-Hosted LLMs <./guides/locally-hosted-llms.md>
 
 ```{toctree}
 :hidden:
-:caption: Workflows
+:caption: Manage Workflows
 
 Workflow Configuration <./concepts/workflow-configuration.md>
+./workflows/configuring_telemetry.md
 ```
 
 ```{toctree}
@@ -135,7 +136,6 @@ Memory Module <./concepts/memory.md>
 
 Functions <./concepts/functions.md>
 Profile and Monitor Performance <./concepts/profiler.md>
-Observability <./concepts/observability.md>
 ```
 
 ```{toctree}

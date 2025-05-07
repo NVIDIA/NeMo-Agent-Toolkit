@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA Agent Intelligence Toolkit Observability
+# Configuring Telemetry
 
 The AIQ Toolkit Observability Module provides support for configurable telemetry setup to do logging tracing and metrics for AIQ Toolkit workflows.
 - Enables users to configure telemetry options from a predefined list based on their preferences.
