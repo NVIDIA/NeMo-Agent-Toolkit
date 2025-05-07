@@ -64,10 +64,14 @@ Once configured, a Pydantic input schema will be generated based on the input sc
  * A python dictionary
  * Keyword arguments
 
+## Hosting tools via the AIQ Toolkit MCP Server
+In addition to the MCP Client Tool, the AIQ Toolkit provides an MCP frontend that can be used to serve tools as an MCP server.
+For instructions on how to host tools via the AIQ Toolkit MCP Server, please refer to the [MCP Server](../guides/mcp_server.md) guide.
+
 ## CLI Commands
 The `aiq info mcp` command can be used to list the tools served by an MCP server.
 ```bash
-aiq info mcp
+aiq info mcp --
 ```
 Sample output:
 ```
@@ -102,7 +106,3 @@ Input Schema:
 }
 ------------------------------------------------------------
 ```
-
-## Hosting tools via the AIQ Toolkit MCP Server
-The AIQ Toolkit provides an MCP frontend that can be used to serve tools as an MCP server.
-For instructions on how to host tools via the AIQ Toolkit MCP Server, please refer to the [MCP Server](../guides/mcp_server.md) guide.
