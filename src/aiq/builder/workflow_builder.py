@@ -586,7 +586,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     def get_user_manager(self):
         return UserManagerHolder(context=AIQContext(self._context_state))
 
-    async def populate_builder(self, config: AIQConfig):
+    async def populate_builder(self, config: AIQConfig, skip_workflow: bool = False):
 
         # Generate the build sequence
         build_sequence = build_dependency_sequence(config)
@@ -614,7 +614,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 raise ValueError(f"Unknown component group {component_instance.component_group}")
 
         # Instantiate the workflow
-        await self.set_workflow(config.workflow)
+        if not skip_workflow:
+            await self.set_workflow(config.workflow)
 
     @classmethod
     @asynccontextmanager
