@@ -17,7 +17,7 @@ limitations under the License.
 
 # Retrievers
 
-Retrievers are an important component of AI workflows utilizing Retrieval Augmented Generation (RAG) which allow LLMs to search a data store for content which is semantically similar to a query which can be used as context by the LLM when providing a response to the query. Within AIQ Toolkit, retrievers are a configurable component which can be used within functions, similar to LLMs and Embedders, to provide a consistent read-only interface for connecting to different data store providers.
+Retrievers are an important component of Retrieval Augmented Generation (RAG) workflows which allow LLMs to search a data store for content which is semantically similar to a query which can be used as context by the LLM when providing a response to the query. Within AIQ Toolkit, retrievers are a configurable component which can be used within functions, similar to LLMs and Embedders, to provide a consistent read-only interface for connecting to different data store providers.
 
 ## Features
  - **Standard Interface**: Retrievers implement a standard search interface, allowing for compatibility across different retriever implementations.
