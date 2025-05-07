@@ -101,6 +101,7 @@ About Workflows <./workflows/about.md>
 Workflow Configuration <./workflows/workflow-configuration.md>
 ./workflows/configuring_telemetry.md
 ./workflows/running_workflows.md
+./workflows/using-local-llms.md
 ```
 
 ```{toctree}
