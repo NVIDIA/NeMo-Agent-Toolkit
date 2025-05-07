@@ -172,7 +172,7 @@ async def add_memory_tool_action(item: MemoryItem, memory_name: str):
         raise ToolException(f"Error adding memory: {e}")
 ```
 
-### Example `Config` in `configs/config.yml`
+### Example `Config` in `configs/config.yml` - TODO this is out of date and incorrect>
 
 Here is an example snippet (from the `aiq_agent_memory/configs/config.yml` in the source):
 

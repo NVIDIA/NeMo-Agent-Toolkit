@@ -23,8 +23,8 @@ The memory module is designed to be extensible, allowing developers to create cu
 
 ## Included Memory Modules
 The AIQ Toolkit includes two memory module providers, both of which are available as plugins:
-* [Mem0](https://mem0.ai/) which is provided by the [aiqtoolkit-mem0ai](https://pypi.org/project/aiqtoolkit-mem0ai/) plugin.
-* [Zep](https://www.getzep.com/) which is provided by the [aiqtoolkit-zep-cloud](https://pypi.org/project/aiqtoolkit-zep-cloud/) plugin.
+* [Mem0](https://mem0.ai/) which is provided by the [`aiqtoolkit-mem0ai`](https://pypi.org/project/aiqtoolkit-mem0ai/) plugin.
+* [Zep](https://www.getzep.com/) which is provided by the [`aiqtoolkit-zep-cloud`](https://pypi.org/project/aiqtoolkit-zep-cloud/) plugin.
 
 ## Examples
 The following examples demonstrate how to use the memory module in the AIQ Toolkit:
@@ -32,4 +32,4 @@ The following examples demonstrate how to use the memory module in the AIQ Toolk
 * `examples/simple_rag`
 
 ## Additional Resources
-For information on how to write a new memroy module can be found in the [Adding a Memory Provider](../extend/memory.md) document.
+For information on how to write a new memory module can be found in the [Adding a Memory Provider](../extend/memory.md) document.

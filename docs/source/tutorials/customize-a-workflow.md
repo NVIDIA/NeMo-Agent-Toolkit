@@ -64,7 +64,7 @@ workflow:
 
 The  workflow file contains two tools: one that queries the LangSmith User Guide, and another that returns the current date and time. It also contains two models: an embedding model and an LLM model. After running the workflow, we can then ask it questions about LangSmith. In this tutorial, we will discuss how to customize this workflow.
 
-Each workflow contains several configuration parameters that can be modified to customize the workflow. While copying and modifying the file is possoble, it is not always necessary as some parameters can be overridden using the `--override` flag.
+Each workflow contains several configuration parameters that can be modified to customize the workflow. While copying and modifying the file is possible, it is not always necessary as some parameters can be overridden using the `--override` flag.
 
 Examining the `examples/simple/configs/config.yml` file, the `llms` section is as follows:
 ```yaml
