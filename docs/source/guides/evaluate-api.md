@@ -41,6 +41,8 @@ aiq serve --config_file=examples/simple/configs/config.yml
 ## Evaluate Request and Response
 The /evaluate endpoint allows you to start an evaluation job. The request is stored for background processing, and the server returns a job ID for tracking the job status.
 
+The `config_file` parameter is the path to the evaluation configuration file on the remote server. Only the `eval` section of the config file is used for evaluation. The `workflow` section is not required. If the `workflow` section is provided, it is instantiated but not used. So it is recommended to not provide a `workflow` section in the evaluation configuration file.
+
 ### Evaluate Request
 - **Route**: `/evaluate`
 - **Method**: `POST`
@@ -51,7 +53,7 @@ curl --request POST \
    --url http://localhost:8000/evaluate \
    --header 'Content-Type: application/json' \
    --data '{
-    "config_file": "examples/simple/configs/eval_config.yml",
+    "config_file": "examples/simple/configs/eval_only_config.yml",
     "expiry_seconds": 600
 }' | jq
 ```
@@ -104,7 +106,7 @@ The response contains the status of the job, including the job ID, status, and a
 {
   "job_id": "882317f0-6149-4b29-872b-9c8018d64784",
   "status": "success",
-  "config_file": "examples/simple/configs/eval_config.yml",
+  "config_file": "examples/simple/configs/eval_only_config.yml",
   "error": null,
   "output_path": ".tmp/aiq/examples/simple/jobs/882317f0-6149-4b29-872b-9c8018d64784",
   "created_at": "2025-04-11T17:33:38.018904Z",
@@ -141,7 +143,7 @@ curl --request GET \
   {
     "job_id": "df6fddd7-2adf-45dd-a105-8559a7569ec9",
     "status": "success",
-    "config_file": "examples/simple/configs/eval_config.yml",
+    "config_file": "examples/simple/configs/eval_only_config.yml",
     "error": null,
     "output_path": ".tmp/aiq/examples/simple/jobs/df6fddd7-2adf-45dd-a105-8559a7569ec9",
     "created_at": "2025-04-11T17:33:16.711636Z",
