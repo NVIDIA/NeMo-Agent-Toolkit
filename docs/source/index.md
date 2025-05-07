@@ -97,7 +97,7 @@ Tutorials <./tutorials/index.md>
 :hidden:
 :caption: Manage Workflows
 
-Workflow Configuration <./concepts/workflow-configuration.md>
+Workflow Configuration <./workflows/workflow-configuration.md>
 ./workflows/configuring_telemetry.md
 ./workflows/running_workflows.md
 ```

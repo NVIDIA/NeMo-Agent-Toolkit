@@ -98,7 +98,7 @@ class TextFileIngestToolConfig(FunctionBaseConfig, name="text_file_ingest"):
 
 :::{note}
 The `name` parameter; the value of this will need to match the `_type` value in the workflow configuration file.
-For more details on AIQ Toolkit configuration objects, refer to the [Configuration Object Details](../concepts/workflow-configuration.md#configuration-object) section of the [Workflow Configuration](../concepts/workflow-configuration.md) document.
+For more details on AIQ Toolkit configuration objects, refer to the [Configuration Object Details](../workflows/workflow-configuration.md#configuration-object) section of the [Workflow Configuration](../workflows/workflow-configuration.md) document.
 :::
 
 ## Customizing the Tool Function

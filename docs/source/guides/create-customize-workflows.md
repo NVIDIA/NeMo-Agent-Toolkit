@@ -72,4 +72,4 @@ The `description` entry is what is used to instruct the LLM when and how to use 
 
 The `webpage_query` tool makes use of the `nv-embedqa-e5-v5` embedder, which is defined in the `embedders` section.
 
-For details on workflow configuration, including sections not utilized in the above example, refer to the [Workflow Configuration](../concepts/workflow-configuration.md) document.
+For details on workflow configuration, including sections not utilized in the above example, refer to the [Workflow Configuration](../workflows/workflow-configuration.md) document.
