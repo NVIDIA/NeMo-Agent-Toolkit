@@ -27,6 +27,7 @@ from aiq.data_models.config import AIQConfig
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.evaluate import EvalGeneralConfig
 from aiq.data_models.evaluator import EvaluatorBaseConfig
+from aiq.data_models.function import EmptyFunctionConfig
 from aiq.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
@@ -102,7 +103,10 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
         return tools
 
     async def populate_builder(self, config: AIQConfig):
-        await super().populate_builder(config)
+        # Skip setting workflow if workflow config is EmptyFunctionConfig
+        skip_workflow = isinstance(config.workflow, EmptyFunctionConfig)
+
+        await super().populate_builder(config, skip_workflow)
         # Instantiate the evaluators
         for name, evaluator_config in config.eval.evaluators.items():
             await self.add_evaluator(name, evaluator_config)
