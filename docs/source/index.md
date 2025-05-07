@@ -119,6 +119,7 @@ Evaluation Endpoints <./guides/evaluate-api.md>
 :caption: Store and Retrieve
 
 About the Memory Module <./store-and-retrieve/memory.md>
+Retriever <./store-and-retrieve/retriever.md>
 ```
 
 ```{toctree}
@@ -136,7 +137,6 @@ Profile and Monitor Performance <./concepts/profiler.md>
 ReAct Agent <./components/react-agent.md>
 Reasoning Agent <./components/reasoning-agent.md>
 Tool Calling Agent <./components/tool-calling-agent.md>
-Retriever <./components/retriever.md>
 Model Context Protocol (MCP) <./components/mcp.md>
 Code Execution Tool <./components/code-execution.md>
 ```
