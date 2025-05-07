@@ -17,9 +17,54 @@ limitations under the License.
 
 # Customizing a Workflow
 
-In the previous sections, we have been looking at the `examples/simple` workflow that contains two tools: one that queries the LangSmith User Guide, and another that returns the current date and time. It also contains two models: an embedding model and an LLM model. After running the workflow, we can then ask it questions about LangSmith. In this section, we will discuss how to customize this workflow.
+## Prerequisites
 
-Each workflow YAML contains several configuration parameters that can be modified to customize the workflow. While copying and modifying the original, you can use the workflow YAML, which is not always necessary as some parameters can be overridden using the `--override` flag.
+1. Set up your environment by following the instructions in the [Install From Source](../quick-start/installing.md#install-from-source) section of the install guide.
+1. Install AIQ Toolkit and the AIQ Toolkit Simple example workflow.
+    ```bash
+    uv pip install -e .
+    uv pip install -e examples/simple
+    ```
+
+## Customizing the `examples/simple` Workflow
+
+The `examples/simple` workflow is defined by the `examples/simple/configs/config.yml` configuration file, to illustrate we will examine the configuration file contents.
+
+`examples/simple/configs/config.yml`:
+```yaml
+functions:
+  webpage_query:
+    _type: webpage_query
+    webpage_url: https://docs.smith.langchain.com
+    description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
+    embedder_name: nv-embedqa-e5-v5
+    chunk_size: 512
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+
+embedders:
+  nv-embedqa-e5-v5:
+    _type: nim
+    model_name: nvidia/nv-embedqa-e5-v5
+
+workflow:
+  _type: react_agent
+  tool_names: [webpage_query, current_datetime]
+  llm_name: nim_llm
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3
+```
+
+The  workflow file contains two tools: one that queries the LangSmith User Guide, and another that returns the current date and time. It also contains two models: an embedding model and an LLM model. After running the workflow, we can then ask it questions about LangSmith. In this tutorial, we will discuss how to customize this workflow.
+
+Each workflow contains several configuration parameters that can be modified to customize the workflow. While copying and modifying the file is possoble, it is not always necessary as some parameters can be overridden using the `--override` flag.
 
 Examining the `examples/simple/configs/config.yml` file, the `llms` section is as follows:
 ```yaml

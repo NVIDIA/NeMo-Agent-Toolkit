@@ -17,7 +17,7 @@ limitations under the License.
 
 # Adding Tools to a Workflow
 
-In the previous section, we discussed how to customize a workflow by overriding parameters. In this section, we will discuss how to add new tools to a workflow. Adding a new tool to a workflow requires copying and modifying the workflow configuration file, which, in effect, creates a new customized workflow.
+In the [Customizing a Workflow](./customize-a-workflow.md) tutorial we discussed how to customize a workflow by overriding parameters. In this tutorial, we will discuss how to add new tools to a workflow. Adding a new tool to a workflow requires copying and modifying the workflow configuration file, which, in effect, creates a new customized workflow.
 
 AIQ Toolkit includes several built-in tools (functions) that can be used in any workflow. To query for a list of installed tools, run the following command:
 ```bash

@@ -19,14 +19,7 @@ limitations under the License.
 
 Workflows are the heart of AIQ Toolkit because they define which agentic tools and models are used to perform a given task or series of tasks. This document will walk through the process of running an existing workflow, customizing an existing workflow, adding tools to a workflow, creating a new tool, and creating a new workflows.
 
-## Prerequisites
 
-1. Set up your environment by following the instructions in the [Install From Source](../quick-start/installing.md#install-from-source) section of the install guide.
-1. Install AIQ Toolkit and the AIQ Toolkit Simple example workflow.
-    ```bash
-    uv pip install -e .
-    uv pip install -e examples/simple
-    ```
 
 ## Understanding the Workflow Configuration File
 
