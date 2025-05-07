@@ -39,7 +39,7 @@ Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 
 - [**Framework Agnostic:**](./concepts/plugins.md) Works with any agentic framework, so you can use your current technology stack without replatforming.
 - [**Reusability:**](./extend/sharing-components.md) Every agent, tool, or workflow can be combined and repurposed, allowing developers to leverage existing work in new scenarios.
-- [**Rapid Development:**](./guides/create-customize-workflows.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
+- [**Rapid Development:**](./tutorials/index.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
 - [**Profiling:**](./guides/profiler.md) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
 - [**Observability:**](./guides/observe-workflow-with-phoenix.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
 - [**Evaluation System:**](./guides/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
@@ -66,7 +66,7 @@ Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 
 To learn more about AIQ Toolkit, see the following links:
 * [Get Started](./quick-start/installing.md)
-* [Create and Customize Workflows](./guides/create-customize-workflows.md)
+* [Create and Customize Workflows](./tutorials/index.md)
 * [Sharing Components](./extend/sharing-components.md)
 * [Evaluating Workflows](./guides/evaluate.md)
 * [Profiling a Workflow](./guides/profiler.md)
@@ -97,6 +97,7 @@ Tutorials <./tutorials/index.md>
 :hidden:
 :caption: Manage Workflows
 
+About Workflows <./workflows/about.md>
 Workflow Configuration <./workflows/workflow-configuration.md>
 ./workflows/configuring_telemetry.md
 ./workflows/running_workflows.md

@@ -15,15 +15,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Create and Customize NVIDIA Agent Intelligence Toolkit Workflows
+# About NVIDIA Agent Intelligence Toolkit Workflows
 
-Workflows are the heart of AIQ Toolkit because they define which agentic tools and models are used to perform a given task or series of tasks. This document will walk through the process of running an existing workflow, customizing an existing workflow, adding tools to a workflow, creating a new tool, and creating a new workflows.
-
-
+Workflows are the heart of AIQ Toolkit because they define which agentic tools and models are used to perform a given task or series of tasks.
 
 ## Understanding the Workflow Configuration File
 
-The workflow configuration file is a YAML file that specifies the tools and models to use in a workflow, along with general configuration settings. To illustrate how these are organized, we will examine the configuration of the simple workflow that we used in the previous section.
+The workflow configuration file is a YAML file that specifies the tools and models to use in a workflow, along with general configuration settings. To illustrate how these are organized, we will examine the configuration of the `examples/simple` workflow.
 
 `examples/simple/configs/config.yml`:
 ```yaml
@@ -57,11 +55,9 @@ workflow:
   max_retries: 3
 ```
 
-In the previous example, note that it is divided into four sections: `functions`, `llms`, `embedders`, and `workflow`. The `functions` section contains the tools used in the workflow, while `llms` and `embedders` define the models used in the workflow, and lastly the `workflow` section ties defines the workflow itself.
+This workflow configuration is divided into four sections: `functions`, `llms`, `embedders`, and `workflow`. The `functions` section contains the tools used in the workflow, while `llms` and `embedders` define the models used in the workflow, and lastly the `workflow` section ties the other sections together and defines the workflow itself.
 
-In the example workflow the `webpage_query` tool is used to query the LangSmith User Guide, and the `current_datetime` tool is used to get the current date and time. The questions we have asked the workflow have not involved time and the workflow would still run without the `current_datetime` tool.
-
-The `description` entry is what is used to instruct the LLM when and how to use the tool. In this case, we explicitly defined the `description` for the `webpage_query` tool.
+In this workflow the `webpage_query` tool is used to query the LangSmith User Guide, and the `current_datetime` tool is used to get the current date and time. The `description` entry is what is used to instruct the LLM when and how to use the tool. In this case, we explicitly defined the `description` for the `webpage_query` tool.
 
 The `webpage_query` tool makes use of the `nv-embedqa-e5-v5` embedder, which is defined in the `embedders` section.
 

@@ -18,7 +18,6 @@ limitations under the License.
 # NVIDIA Agent Intelligence Toolkit Tutorials
 
 ```{toctree}
-:hidden:
 :caption: Tutorials
 
 ./customize-a-workflow.md

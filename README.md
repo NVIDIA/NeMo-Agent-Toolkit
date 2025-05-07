@@ -27,7 +27,7 @@ Agent Intelligence Toolkit (AIQ Toolkit) is a flexible library designed to seaml
 
 - [**Framework Agnostic:**](https://docs.nvidia.com/aiqtoolkit/latest/concepts/plugins.html) Works with any agentic framework, so you can use your current technology stack without replatforming.
 - [**Reusability:**](https://docs.nvidia.com/aiqtoolkit/latest/extend/sharing-components.html) Every agent, tool, or workflow can be combined and repurposed, allowing developers to leverage existing work in new scenarios.
-- [**Rapid Development:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/create-customize-workflows.html) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
+- [**Rapid Development:**](https://docs.nvidia.com/aiqtoolkit/latest/tutorials/index.html) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
 - [**Profiling:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/profiler.html) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
 - [**Observability:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/observe-workflow-with-phoenix.html) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
 - [**Evaluation System:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/evaluate.html) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
@@ -48,7 +48,7 @@ The following diagram illustrates the key components of AIQ Toolkit and how they
  * [About AIQ Toolkit](https://docs.nvidia.com/aiqtoolkit/latest/): Learn more about the benefits of using AIQ Toolkit.
  * [Get Started Guide](https://docs.nvidia.com/aiqtoolkit/latest/quick-start/installing.html): Set up your environment and start building with AIQ Toolkit.
  * [Examples](https://github.com/NVIDIA/AIQToolkit/tree/main/examples#readme): Explore examples of AIQ Toolkit workflows.
- * [Create and Customize AIQ Toolkit Workflows](https://docs.nvidia.com/aiqtoolkit/latest/guides/create-customize-workflows.html): Learn how to create and customize AIQ Toolkit workflows.
+ * [Create and Customize AIQ Toolkit Workflows](https://docs.nvidia.com/aiqtoolkit/latest/tutorials/index.html): Learn how to create and customize AIQ Toolkit workflows.
  * [Evaluate with AIQ Toolkit](https://docs.nvidia.com/aiqtoolkit/latest/guides/evaluate.html): Learn how to evaluate your AIQ Toolkit workflows.
  * [Troubleshooting](https://docs.nvidia.com/aiqtoolkit/latest/troubleshooting.html): Get help with common issues.
 
