@@ -19,30 +19,10 @@ limitations under the License.
 
 The AIQ Toolkit Memory subsystem is designed to store and retrieve a user's conversation history, preferences, and other "long-term memory." This is especially useful for building stateful LLM-based applications that recall user-specific data or interactions across multiple steps.
 
-## Key Components
-
-* **Memory Data Models**
-   - **{py:class}`~aiq.data_models.memory.MemoryBaseConfig`**: A Pydantic base class that all memory config classes must extend. This is used for specifying memory registration in the AIQ Toolkit config file.
-   - **{py:class}`~aiq.data_models.memory.MemoryBaseConfigT`**: A generic type alias for memory config classes.
-
-* **Memory Interfaces**
-   - **{py:class}`~aiq.memory.interfaces.MemoryEditor`** (abstract interface): The low-level API for adding, searching, and removing memory items.
-   - **{py:class}`~aiq.memory.interfaces.MemoryReader`** and **{py:class}`~aiq.memory.interfaces.MemoryWriter`** (abstract classes): Provide structured read/write logic on top of the `MemoryEditor`.
-   - **{py:class}`~aiq.memory.interfaces.MemoryManager`** (abstract interface): Manages higher-level memory operations like summarization or reflection if needed.
-
-* **Memory Models**
-   - **{py:class}`~aiq.memory.models.MemoryItem`**: The main object representing a piece of memory. It includes:
-     ```python
-     conversation: list[dict[str, str]]  # user/assistant messages
-     tags: list[str] = []
-     metadata: dict[str, Any]
-     user_id: str
-     memory: str | None  # optional textual memory
-     ```
-   - Helper models for search or deletion input: **{py:class}`~aiq.memory.models.SearchMemoryInput`**, **{py:class}`~aiq.memory.models.DeleteMemoryInput`**.
+The memory module is designed to be extensible, allowing developers to create custom memory back-ends, providers in AIQ Toolkit terminology.
 
 ## Included Memory Modules
-The AIQ Toolkit includes two concrete memory module implementations:
+The AIQ Toolkit includes two memory module providers, both of which are available as plugins:
 * [Mem0](https://mem0.ai/) which is provided by the [aiqtoolkit-mem0ai](https://pypi.org/project/aiqtoolkit-mem0ai/) plugin.
 * [Zep](https://www.getzep.com/) which is provided by the [aiqtoolkit-zep-cloud](https://pypi.org/project/aiqtoolkit-zep-cloud/) plugin.
 
@@ -50,3 +30,6 @@ The AIQ Toolkit includes two concrete memory module implementations:
 The following examples demonstrate how to use the memory module in the AIQ Toolkit:
 * `examples/semantic_kernel_demo`
 * `examples/simple_rag`
+
+## Additional Resources
+For information on how to write a new memroy module can be found in the [Adding a Memory Provider](../extend/memory.md) document.

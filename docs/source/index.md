@@ -147,6 +147,7 @@ Code Execution Tool <./components/code-execution.md>
 
 Sharing Components <./extend/sharing-components.md>
 ./extend/adding-a-retriever.md
+./extend/memory.md
 ```
 
 ```{toctree}
