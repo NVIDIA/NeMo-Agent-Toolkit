@@ -23,12 +23,7 @@ limitations under the License.
 
 # Sharing NVIDIA Agent Intelligence Toolkit Components
 
-Every AIQ Toolkit component is an AIQ Toolkit plugin and is designed to be sharable with the community of AIQ Toolkit
-developers. Workflows and functions are by far the most common AIQ Toolkit components, however that is not a comprehensive
-list. In fact, this list includes all pieces that leverage an AIQ Toolkit registration decorator
-(e.g. `register_function`, `register_llm_client`, `register_evaluator`, etc.). This guide will discuss the requirements
-for developing registered components that can be shared, discovered, and integrated leveraged with any AIQ Toolkit
-application.
+Every AIQ Toolkit component is is packaged inside of an AIQ Toolkit plugin and is designed to be sharable with the community of AIQ Toolkit  developers. Functions are by far the most common AIQ Toolkit component type. In fact, AIQ components include all pieces that leverage an AIQ Toolkit registration decorator (e.g. `register_function`, `register_llm_client`, `register_evaluator`, etc.). This guide will discuss the requirements for developing registered components that can be shared, discovered, and integrated leveraged with any AIQ Toolkit application.
 
 ## Enabling Local and Remote Discovery
 The first step in building a sharable components is their implementation. The implementation is composed of two
