@@ -28,10 +28,6 @@ llms:
     temperature: 0.0
     max_tokens: 1024
 
-
-#workflow:
-#  _type: current_datetime
-
 eval:
   general:
     output:
