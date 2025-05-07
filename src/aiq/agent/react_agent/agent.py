@@ -125,7 +125,8 @@ class ReActAgentGraph(DualNodeAgent):
                     output_message = ""
                     async for event in self.agent.astream({"question": question},
                                                           config=RunnableConfig(callbacks=self.callbacks)):
-                        output_message += event.content
+                        # output_message += event.content
+                        continue
                     output_message = AIMessage(content=output_message)
                     if self.detailed_logs:
                         logger.info(AGENT_RESPONSE_LOG_MESSAGE, question, output_message.content)
@@ -147,7 +148,8 @@ class ReActAgentGraph(DualNodeAgent):
                             "question": question, "agent_scratchpad": agent_scratchpad
                     },
                                                           config=RunnableConfig(callbacks=self.callbacks)):
-                        output_message += event.content
+                        # output_message += event.content
+                        continue
                     output_message = AIMessage(content=output_message)
                     if self.detailed_logs:
                         logger.info(AGENT_RESPONSE_LOG_MESSAGE, question, output_message.content)
