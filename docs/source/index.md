@@ -43,7 +43,7 @@ Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 - [**Profiling:**](./guides/profiler.md) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
 - [**Observability:**](./guides/observe-workflow-with-phoenix.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
 - [**Evaluation System:**](./guides/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
-- [**User Interface:**](./get-started/launching-ui.md) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
+- [**User Interface:**](./quick-start/launching-ui.md) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 - [**MCP Compatibility**](./components/mcp.md) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
 
 ## What AIQ Toolkit Is
@@ -65,7 +65,7 @@ Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 ## Links
 
 To learn more about AIQ Toolkit, see the following links:
-* [Get Started](./get-started/installing.md)
+* [Get Started](./quick-start/installing.md)
 * [Create and Customize Workflows](./guides/create-customize-workflows.md)
 * [Sharing Components](./guides/sharing-workflows-and-tools.md)
 * [Evaluating Workflows](./guides/evaluate.md)
@@ -89,7 +89,7 @@ Release Notes <./release-notes.md>
 :hidden:
 :caption: Get Started
 
-Quick Start Guide <./get-started/index.md>
+Quick Start Guide <./quick-start/index.md>
 ```
 
 ```{toctree}

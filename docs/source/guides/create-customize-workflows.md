@@ -21,7 +21,7 @@ Workflows are the heart of AIQ Toolkit because they define which agentic tools a
 
 ## Prerequisites
 
-1. Set up your environment by following the instructions in the [Install From Source](../get-started/installing.md#install-from-source) section of the install guide.
+1. Set up your environment by following the instructions in the [Install From Source](../quick-start/installing.md#install-from-source) section of the install guide.
 1. Install AIQ Toolkit and the AIQ Toolkit Simple example workflow.
     ```bash
     uv pip install -e .

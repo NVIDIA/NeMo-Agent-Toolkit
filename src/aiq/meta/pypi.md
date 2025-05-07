@@ -29,7 +29,7 @@ AIQ Toolkit is a flexible library designed to seamlessly integrate your enterpri
 - [**Profiling:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/profiler.html) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
 - [**Observability:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/observe-workflow-with-phoenix.html) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool. (OpenTelemetry and Phoenix integration are optional and can be installed separately if needed.)
 - [**Evaluation System:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/evaluate.html) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
-- [**User Interface:**](https://docs.nvidia.com/aiqtoolkit/latest/get-started/launching-ui.html) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
+- [**User Interface:**](https://docs.nvidia.com/aiqtoolkit/latest/quick-start/launching-ui.html) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 - [**MCP Compatibility**](https://docs.nvidia.com/aiqtoolkit/latest/components/mcp.html) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
 
 With AIQ Toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
@@ -38,7 +38,7 @@ With AIQ Toolkit, you can move quickly, experiment freely, and ensure reliabilit
  * [Documentation](https://docs.nvidia.com/aiqtoolkit/latest/index.html): Explore the full documentation for AIQ Toolkit.
 
 ## First time user?
- If this is your first time using AIQ Toolkit, it is recommended to install the latest version from the [source repository](https://github.com/NVIDIA/AIQToolkit?tab=readme-ov-file#get-started) on GitHub. This package is intended for users who are familiar with AIQ Toolkit applications and need to add AIQ Toolkit as a dependency to their project.
+ If this is your first time using AIQ Toolkit, it is recommended to install the latest version from the [source repository](https://github.com/NVIDIA/AIQToolkit?tab=readme-ov-file#quick-start) on GitHub. This package is intended for users who are familiar with AIQ Toolkit applications and need to add AIQ Toolkit as a dependency to their project.
 
 ## Feedback
 
