@@ -124,11 +124,3 @@ def list_mcp(ctx, direct, url, tool, detail, json_output):
     else:
         for tool_dict in tools:
             click.echo(tool_dict['name'])
-
-
-# Make 'list' an alias for the group callback for backward compatibility
-def _list_alias(*args, **kwargs):
-    return list_mcp.callback(*args, **kwargs)
-
-
-list_mcp.command('list')(_list_alias)
