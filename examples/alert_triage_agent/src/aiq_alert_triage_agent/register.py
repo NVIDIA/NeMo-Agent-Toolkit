@@ -152,7 +152,7 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
         """
         if config.test_output_path is None:
             raise ValueError("test_output_path must be provided")
-        
+
         # Load test alerts from CSV file
         df = utils.get_test_data()
         df["output"] = ""  # Initialize output column
