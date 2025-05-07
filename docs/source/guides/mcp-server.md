@@ -109,3 +109,4 @@ To use the `math` tools exposed by the MCP server you can run the simple calcula
 ```bash
 aiq run --config_file examples/simple_calculator/configs/config-mcp-math.yml --input "Is 2 times 2 greater than the current hour?"
 ```
+With this configuration, the simple calculator workflow will act as a MCP client and connect to the MCP server running on the specified URL.
