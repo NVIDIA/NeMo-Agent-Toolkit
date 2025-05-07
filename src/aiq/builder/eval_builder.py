@@ -104,7 +104,7 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
 
     async def populate_builder(self, config: AIQConfig):
         # Skip setting workflow if workflow config is EmptyFunctionConfig
-        skip_workflow = True if isinstance(config.workflow, EmptyFunctionConfig) else False
+        skip_workflow = isinstance(config.workflow, EmptyFunctionConfig)
 
         await super().populate_builder(config, skip_workflow)
         # Instantiate the evaluators
