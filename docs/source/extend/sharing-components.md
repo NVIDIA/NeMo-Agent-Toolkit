@@ -20,7 +20,11 @@ limitations under the License.
 Every AIQ Toolkit component is is packaged inside of an AIQ Toolkit plugin and is designed to be sharable with the community of AIQ Toolkit  developers. Functions are by far the most common AIQ Toolkit component type. In fact, AIQ components include all pieces that leverage an AIQ Toolkit registration decorator (e.g. `register_function`, `register_llm_client`, `register_evaluator`, etc.). This guide will discuss the requirements for developing registered components that can be shared, discovered, and integrated leveraged with any AIQ Toolkit application.
 
 ## Enabling Local and Remote Discovery
-The first step in building a sharable components is their implementation. The implementation is composed of two key elements: first the configuration object as described in [Customizing the Configuration Object](../workflows/workflow-configuration.md), and second the implementation, as described in [Create and Customize AIQ Toolkit Workflows](../guides/create-customize-workflows.md). This section emphasizes the details of configuration objects that facilitate component discovery.
+The first step in building a sharable components is their implementation. The implementation is composed of two key elements:
+* The configuration object as described in [Customizing the Configuration Object](../workflows/workflow-configuration.md)
+* The function implementation, as described in [Creating a New Tool and Workflow](../tutorials/create-a-new-workflow.md).
+
+This section emphasizes the details of configuration objects that facilitate component discovery.
 
 After installing the AIQ Toolkit library, and potentially other AIQ Toolkit plugin packages, a developer may want to know what
 components are available for workflow development or evaluation. A great tool for this is the `aiq info components` CLI
