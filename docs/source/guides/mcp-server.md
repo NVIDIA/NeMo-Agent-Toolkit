@@ -50,7 +50,7 @@ aiq mcp --config_file examples/simple_calculator/configs/config.yml \
 
 ### Listing MCP Tools
 
-To list the tools exposed by the MCP server you can use the `aiq info mcp` command. This command acts as a MCP client and connects to the MCP server running on the specifed url (defaults to `http://localhost:9901/sse`).
+To list the tools exposed by the MCP server you can use the `aiq info mcp` command. This command acts as a MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/sse`).
 
 ```bash
 aiq info mcp
