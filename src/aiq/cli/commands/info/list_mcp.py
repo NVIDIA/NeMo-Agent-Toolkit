@@ -15,10 +15,15 @@
 
 import asyncio
 import json
+import logging
 
 import click
 
 from aiq.tool.mcp.mcp_client import MCPBuilder
+
+# Suppress verbose logs from mcp.client.sse and httpx
+logging.getLogger("mcp.client.sse").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
 def format_tool(tool):
@@ -40,15 +45,16 @@ def format_tool(tool):
     }
 
 
-def print_tool(tool_dict):
+def print_tool(tool_dict, detail=False):
     click.echo(f"Tool: {tool_dict['name']}")
-    click.echo(f"Description: {tool_dict['description']}")
-    if tool_dict["input_schema"]:
-        click.echo("Input Schema:")
-        click.echo(tool_dict["input_schema"])
-    else:
-        click.echo("Input Schema: None")
-    click.echo("-" * 60)
+    if detail or tool_dict.get('input_schema') or tool_dict.get('description'):
+        click.echo(f"Description: {tool_dict['description']}")
+        if tool_dict["input_schema"]:
+            click.echo("Input Schema:")
+            click.echo(tool_dict["input_schema"])
+        else:
+            click.echo("Input Schema: None")
+        click.echo("-" * 60)
 
 
 async def list_tools_and_schemas(url, tool_name=None):
@@ -90,25 +96,39 @@ async def list_tools_direct(url, tool_name=None):
         return []
 
 
-@click.group(invoke_without_command=True, help="Interact with tools on an MCP server.")
-@click.pass_context
-def list_mcp(ctx):
-    """Interact with tools on an MCP server."""
-    if ctx.invoked_subcommand is None:
-        ctx.invoke(list_tools)
-
-
-@list_mcp.command("list", help="List tools and their descriptions from an MCP server.")
+@click.group(invoke_without_command=True, help="List tool names (default), or show details with --detail or --tool.")
 @click.option('--direct', is_flag=True, help='Bypass MCPBuilder and use direct MCP protocol')
-@click.option('--url', default='http://localhost:8080/sse', show_default=True, help='MCP server URL')
+@click.option('--url', default='http://localhost:9901/sse', show_default=True, help='MCP server URL')
 @click.option('--tool', default=None, help='Get details for a specific tool by name')
+@click.option('--detail', is_flag=True, help='Show full details for all tools')
 @click.option('--json-output', is_flag=True, help='Output tool metadata in JSON format')
-def list_tools(direct, url, tool, json_output):
+@click.pass_context
+def list_mcp(ctx, direct, url, tool, detail, json_output):
+    """
+    List tool names (default). Use --detail for full output. If --tool is provided,
+    always show full output for that tool.
+    """
+    if ctx.invoked_subcommand is not None:
+        return
     fetcher = list_tools_direct if direct else list_tools_and_schemas
     tools = asyncio.run(fetcher(url, tool))
 
     if json_output:
         click.echo(json.dumps(tools, indent=2))
+    elif tool:
+        for tool_dict in tools:
+            print_tool(tool_dict, detail=True)
+    elif detail:
+        for tool_dict in tools:
+            print_tool(tool_dict, detail=True)
     else:
         for tool_dict in tools:
-            print_tool(tool_dict)
+            click.echo(tool_dict['name'])
+
+
+# Make 'list' an alias for the group callback for backward compatibility
+def _list_alias(*args, **kwargs):
+    return list_mcp.callback(*args, **kwargs)
+
+
+list_mcp.command('list')(_list_alias)
