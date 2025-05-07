@@ -26,12 +26,7 @@ limitations under the License.
 Every AIQ Toolkit component is is packaged inside of an AIQ Toolkit plugin and is designed to be sharable with the community of AIQ Toolkit  developers. Functions are by far the most common AIQ Toolkit component type. In fact, AIQ components include all pieces that leverage an AIQ Toolkit registration decorator (e.g. `register_function`, `register_llm_client`, `register_evaluator`, etc.). This guide will discuss the requirements for developing registered components that can be shared, discovered, and integrated leveraged with any AIQ Toolkit application.
 
 ## Enabling Local and Remote Discovery
-The first step in building a sharable components is their implementation. The implementation is composed of two
-key elements: 1) the configuration object as described in
-[Customizing the Configuration Object](../concepts/workflow-configuration.md#workflow-configuration), and 2) the
-implementation, as described in
-[Create and Customize AIQ Toolkit Workflows](../guides/create-customize-workflows.md).
-This section emphasizes the details of configuration objects that facilitate component discovery.
+The first step in building a sharable components is their implementation. The implementation is composed of two key elements: first the configuration object as described in [Customizing the Configuration Object](../concepts/workflow-configuration.md#workflow-configuration), and second the implementation, as described in [Create and Customize AIQ Toolkit Workflows](../guides/create-customize-workflows.md). This section emphasizes the details of configuration objects that facilitate component discovery.
 
 After installing the AIQ Toolkit library, and potentially other AIQ Toolkit plugin packages, a developer may want to know what
 components are available for workflow development or evaluation. A great tool for this is the `aiq info components` CLI
@@ -49,14 +44,13 @@ workflow configuration object.
 - `description`: Description of the AIQ Toolkit component pulled from its config objects docstrings and field metadata.
 - `developer_notes`: Other notes to a developers to aid in the use of the component.
 
-For this feature to provide useful information, there are a few hygiene requirements placed on AIQ Toolkit component
-configuration object implementations.
+For this feature to provide useful information, there are a few hygiene requirements placed on AIQ Toolkit component configuration object implementations.
 
-1. Specify a name: This will be pulled into the `component_name` column and will be used in the `_type` field of a
+* Specify a name: This will be pulled into the `component_name` column and will be used in the `_type` field of a
 workflow's configuration object.
-2. Include a Docstring: This information is pulled into the `description` column to describe the functionality of the
+* Include a Docstring: This information is pulled into the `description` column to describe the functionality of the
 component.
-3. Annotate fields with [`pydantic.Field`](https://docs.pydantic.dev/2.9/api/fields/#pydantic.fields.Field): This
+* Annotate fields with [`pydantic.Field`](https://docs.pydantic.dev/2.9/api/fields/#pydantic.fields.Field): This
 information is pulled into the `description` and provides developers with documentation on each configurable field,
 including `dtype`, field description, and any default values.
 
