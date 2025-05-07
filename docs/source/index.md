@@ -118,7 +118,7 @@ Evaluation Endpoints <./guides/evaluate-api.md>
 :hidden:
 :caption: Store and Retrieve
 
-Memory Module <./concepts/memory.md>
+About the Memory Module <./store-and-retrieve/memory.md>
 ```
 
 ```{toctree}

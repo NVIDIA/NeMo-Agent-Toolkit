@@ -15,45 +15,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA Agent Intelligence Toolkit Memory Module
-
-The AIQ Toolkit Memory subsystem is designed to store and retrieve a user's conversation history, preferences, and other "long-term memory." This is especially useful for building stateful LLM-based applications that recall user-specific data or interactions across multiple steps.
-
-This document explains the **AIQ Toolkit Memory Module** in detail:
-- How it is structured internally (interfaces, data models, and configuration).
-- How developers can **register** a new memory module.
-- How users can **bring a custom memory client** and wire it up in their AIQ Toolkit workflows.
-- An **example** of usage from the provided `aiq_agent_memory` plugin code.
-
-> **Note**: This documentation presumes familiarity with the AIQ Toolkit plugin architecture, the concept of "function registration" via `@register_function`, and how we define tool/workflow configurations in the AIQ Toolkit config.
-
-### Key Components
-
-1. **Memory Data Models**
-   - **{py:class}`~aiq.data_models.memory.MemoryBaseConfig`**: A Pydantic base class that all memory config classes must extend. This is used for specifying memory registration in the AIQ Toolkit config file.
-   - **{py:class}`~aiq.data_models.memory.MemoryBaseConfigT`**: A generic type alias for memory config classes.
-
-2. **Memory Interfaces**
-   - **{py:class}`~aiq.memory.interfaces.MemoryEditor`** (abstract interface): The low-level API for adding, searching, and removing memory items.
-   - **{py:class}`~aiq.memory.interfaces.MemoryReader`** and **{py:class}`~aiq.memory.interfaces.MemoryWriter`** (abstract classes): Provide structured read/write logic on top of the `MemoryEditor`.
-   - **{py:class}`~aiq.memory.interfaces.MemoryManager`** (abstract interface): Manages higher-level memory operations like summarization or reflection if needed.
-
-3. **Memory Models**
-   - **{py:class}`~aiq.memory.models.MemoryItem`**: The main object representing a piece of memory. It includes:
-     ```python
-     conversation: list[dict[str, str]]  # user/assistant messages
-     tags: list[str] = []
-     metadata: dict[str, Any]
-     user_id: str
-     memory: str | None  # optional textual memory
-     ```
-   - Helper models for search or deletion input: **{py:class}`~aiq.memory.models.SearchMemoryInput`**, **{py:class}`~aiq.memory.models.DeleteMemoryInput`**.
-
----
-
 ## Registering a Memory Module
 
 In the AIQ Toolkit system, anything that extends {py:class}`~aiq.data_models.memory.MemoryBaseConfig` and is declared with a `name="some_memory"` can be discovered as a *Memory type* by the AIQ Toolkit global type registry. This allows you to define a custom memory class to handle your own backends (Redis, custom database, a vector store, etc.). Then your memory class can be selected in the AIQ Toolkit config YAML via `_type: <your memory type>`.
+
+
+> **Note**: This documentation presumes familiarity with the AIQ Toolkit plugin architecture, the concept of "function registration" via `@register_function`, and how we define tool/workflow configurations in the AIQ Toolkit config.
 
 ### Basic Steps
 

@@ -106,7 +106,7 @@ This section contains the evaluation settings for the workflow. Refer to [Evalua
 
 ### `memory`
 
-This section configures integration of memory layers with tools such as the [Mem0 Platform](https://mem0.ai/). It follows the same format as the `llms` section. Refer to `docs/source/concepts/memory.md` for an example on how this is used.
+This section configures integration of memory layers with tools such as the [Mem0 Platform](https://mem0.ai/). It follows the same format as the `llms` section. Refer to the [Memory Module](../store-and-retrieve/memory.md) document for an example on how this is used.
 
 ### `retrievers`
 
