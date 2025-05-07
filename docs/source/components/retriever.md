@@ -26,8 +26,8 @@ Retrievers are an important component of AI workflows utilizing Retrieval Augmen
  - **Additional Framework Implementations**: Retrievers can be loaded using a framework implementation rather than the default AIQ Toolkit retriever implementation.
 
 ## Included Retrievers
- - Milvus
- - NeMo Retriever
+ - [Milvus](https://milvus.io/docs)
+ - [NeMo Retriever](https://docs.nvidia.com/nemo/retriever/index.html)
 
 ## Usage
 ### Configuration
