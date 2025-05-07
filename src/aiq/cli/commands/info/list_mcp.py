@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import json
 import logging
 
+import anyio
 import click
 
 from aiq.tool.mcp.mcp_client import MCPBuilder
@@ -111,7 +111,7 @@ def list_mcp(ctx, direct, url, tool, detail, json_output):
     if ctx.invoked_subcommand is not None:
         return
     fetcher = list_tools_direct if direct else list_tools_and_schemas
-    tools = asyncio.run(fetcher(url, tool))
+    tools = anyio.run(fetcher, url, tool)
 
     if json_output:
         click.echo(json.dumps(tools, indent=2))
