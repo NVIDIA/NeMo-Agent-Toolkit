@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 
-# Creating a New Tool and Workflow
+# Create a New Tool and Workflow
 
 In the [Customizing a Workflow](./customize-a-workflow.md) and [Adding Tools to a Workflow](./create-a-new-workflow.md) tutorials, we have been primarily utilizing tools that were included with the AIQ Toolkit. In this tutorial we will create a new tool that can ingest data from local files stored on disk.
 

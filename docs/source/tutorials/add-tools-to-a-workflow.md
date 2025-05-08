@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Adding Tools to a Workflow
+# Add Tools to a Workflow
 
 In the [Customizing a Workflow](./customize-a-workflow.md) tutorial we discussed how to customize a workflow by overriding parameters. In this tutorial, we will discuss how to add new tools to a workflow. Adding a new tool to a workflow requires copying and modifying the workflow configuration file, which, in effect, creates a new customized workflow.
 
