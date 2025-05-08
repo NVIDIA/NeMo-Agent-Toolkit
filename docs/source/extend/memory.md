@@ -172,25 +172,34 @@ async def add_memory_tool_action(item: MemoryItem, memory_name: str):
         raise ToolException(f"Error adding memory: {e}")
 ```
 
-### Example `Config` in `configs/config.yml` - TODO this is out of date and incorrect>
+### Example Configuration
 
-Here is an example snippet (from the `aiq_agent_memory/configs/config.yml` in the source):
+Here are the relevant sections from the `examples/simple_rag/configs/milvus_memory_rag_config.yml` in the source code repository:
 
 ```yaml
 memory:
   saas_memory:
     _type: mem0_memory
-
+```
+```yaml
 functions:
   add_memory:
     _type: add_memory
     memory: saas_memory
+    description: |
+      Add any facts about user preferences to long term memory. Always use this if users mention a preference.
+      The input to this tool should be a string that describes the user's preference, not the question or answer.
   get_memory:
     _type: get_memory
     memory: saas_memory
-
+    description: |
+      Always call this tool before calling any other tools, even if the user does not mention to use it.
+      The question should be about user preferences which will help you format your response.
+      For example: "How does the user like responses formatted?"
+```
+```yaml
 workflow:
-  _type: agent_memory
+  _type: react_agent
   tool_names:
     - add_memory
     - get_memory
@@ -199,61 +208,12 @@ workflow:
 
 Explanation:
 
-- We define a memory entry named `saas_memory` with `_type: mem0_memory`. (That's using a built-in memory implementation.)
-- Then we define two "functions" (tools) that reference `saas_memory`: `add_memory` and `get_memory`.
+- We define a memory entry named `saas_memory` with `_type: mem0_memory`. Using the [Mem0](https://mem0.ai/) provider included in the [`aiqtoolkit-mem0ai`](https://pypi.org/project/aiqtoolkit-mem0ai/) plugin.
+- Then we define two tools (functions in AIQ Toolkit terminology) that reference `saas_memory`: `add_memory` and `get_memory`.
 - Finally, the `agent_memory` workflow references these two tool names.
 
 ---
 
-## Example: `aiq_agent_memory` Workflow
-
-Below is an **excerpt** of how the `agent_memory_workflow` is registered:
-
-```python
-@register_function(config_type=AgentMemoryWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def agent_memory_workflow(config: AgentMemoryWorkflowConfig, builder: Builder):
-
-    # 1) Build tool references from config
-    tools = builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-
-    # 2) Grab the LLM reference
-    llm_n = await builder.get_llm(llm_name=config.llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-
-    # 3) Bind tools to the LLM
-    llm_n_tools = llm_n.bind_tools(tools, parallel_tool_calls=True)
-
-    # Some system prompt
-    sys_prompt_calc = ("You are a helpful assistant...")
-
-    # 4) Define a node that calls the LLM with the system message and user messages
-    def mem_assistant(state: MessagesState):
-        sys_msg = SystemMessage(content=sys_prompt_calc)
-        return {"messages": [llm_n_tools.invoke([sys_msg] + state["messages"])]}
-
-    # 5) Build a small state machine with edges to "tools" if needed
-    # omitted for brevity...
-
-    # 6) The core function that gets invoked
-    async def _response_fn(input_message: str) -> str:
-        ...
-        # Here you might see the memory prefix get appended:
-        # memory code references or storing the user_id.
-        # Then run the LLM through agent_executor
-        ...
-        return output["messages"][-1].content
-```
-
-You can see in the config, the `get_memory` or `add_memory` tools are configured. Those tools each do something like:
-
-```python
-# get_memory_tool.py
-memory_editor = builder.get_memory_client(config.memory)
-memories = await memory_editor.search(query=search_input.query, top_k=search_input.top_k)
-```
-
-Hence, the workflow can store or retrieve user memory as it processes each message.
-
----
 
 ## Putting It All Together
 
