@@ -39,6 +39,7 @@ class TelemetryMetricsHostPerformanceCheckToolConfig(FunctionBaseConfig,
                              description="Description of the tool for the agent.")
     llm_name: LLMRef
     test_mode: bool = Field(default=True, description="Whether to run in test mode")
+    metrics_url: str = Field(default="", description="URL of the monitoring system")
 
 
 def _timeseries_stats(ts):
@@ -114,7 +115,6 @@ async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetrics
 
         try:
             if not config.test_mode:
-                # NOTE: Replace these placeholder values with your actual telemetry monitoring system details
                 # Example implementation using a monitoring system's API to check host status
                 monitoring_url = config.metrics_url
 
