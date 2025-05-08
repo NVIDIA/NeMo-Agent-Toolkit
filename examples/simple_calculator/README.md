@@ -179,7 +179,7 @@ Workflow Result:
 Open your browser and navigate to `http://localhost:6006` to view the traces.
 
 ## Using Weave for Tracing
-You can use Weave to trace the workflow by following the instructions in the [Fine-grained Tracing with Weave](../../docs/source/guides/fine-grained-tracing-with-weave.md) guide.
+You can use Weave to trace the workflow by following the instructions in the [Fine-grained Tracing with Weave](../../docs/source/workflows/observe-workflow-with-weave.md) guide.
 Sample usage:
 ```bash
 aiq run --config_file examples/simple_calculator/configs/config-weave.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
