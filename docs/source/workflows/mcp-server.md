@@ -61,6 +61,6 @@ Once the MCP server is running, any MCP-compatible client can connect to it and 
 
 The AIQ Toolkit MCP front-end implements the Model Context Protocol specification, making it compatible with any MCP client. This allows for seamless integration with various systems that support MCP, including:
 
-1. MCP-compatible LLM frameworks
-2. Other agent frameworks that support MCP
-3. Custom applications that implement the MCP client specification
+* MCP-compatible LLM frameworks
+* Other agent frameworks that support MCP
+* Custom applications that implement the MCP client specification

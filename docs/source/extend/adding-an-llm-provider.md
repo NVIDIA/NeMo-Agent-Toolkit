@@ -114,7 +114,7 @@ In the above example, the `ChatOpenAI` class is imported lazily, allowing for th
 
 ## Packaging the Provider and Client
 
-The provider and client will need to be bundled into a Python package, which in turn will be registered with AIQ Toolkit as a [plugin](../concepts/plugins.md). In the `pyproject.toml` file of the package the `project.entry-points.'aiq.components'` section, defines a Python module as the entry point of the plugin. Details on how this is defined are found in the [Entry Point](../concepts/plugins.md#entry-point) section of the plugins document. By convention, the entry point module is named `register.py`, but this is not a requirement.
+The provider and client will need to be bundled into a Python package, which in turn will be registered with AIQ Toolkit as a [plugin](../extend/plugins.md). In the `pyproject.toml` file of the package the `project.entry-points.'aiq.components'` section, defines a Python module as the entry point of the plugin. Details on how this is defined are found in the [Entry Point](../extend/plugins.md#entry-point) section of the plugins document. By convention, the entry point module is named `register.py`, but this is not a requirement.
 
 In the entry point module it is important that the provider is defined first followed by the client, this ensures that the provider is added to the AIQ Toolkit registry before the client is registered. A hypothetical `register.py` file could be defined as follows:
 ```python

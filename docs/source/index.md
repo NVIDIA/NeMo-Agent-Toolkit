@@ -37,7 +37,7 @@ Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 
 ## Key Features
 
-- [**Framework Agnostic:**](./concepts/plugins.md) Works with any agentic framework, so you can use your current technology stack without replatforming.
+- [**Framework Agnostic:**](./extend/plugins.md) Works with any agentic framework, so you can use your current technology stack without replatforming.
 - [**Reusability:**](./extend/sharing-components.md) Every agent, tool, or workflow can be combined and repurposed, allowing developers to leverage existing work in new scenarios.
 - [**Rapid Development:**](./tutorials/index.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
 - [**Profiling:**](./workflows/profiler.md) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
@@ -113,6 +113,7 @@ Tutorials <./tutorials/index.md>
 
 About Workflows <./workflows/about.md>
 ./workflows/running_workflows.md
+./workflows/mcp-server.md
 Workflow Configuration <./workflows/workflow-configuration.md>
 Evaluate Workflows <./workflows/evaluate.md>
 Profiling Workflows <./workflows/profiler.md>
@@ -147,11 +148,12 @@ Code Execution Tool <./components/code-execution.md>
 :hidden:
 :caption: Extend
 
-Extending the AIQ Toolkit Using Plugins <./concepts/plugins.md>
+Extending the AIQ Toolkit Using Plugins <./extend/plugins.md>
 Sharing Components <./extend/sharing-components.md>
 Adding a Custom Evaluator <./extend/custom-evaluator.md>
 ./extend/adding-a-retriever.md
 ./extend/memory.md
+Adding an LLM Provider <./extend/adding-an-llm-provider.md>
 ```
 
 ```{toctree}
@@ -162,7 +164,6 @@ Adding a Custom Evaluator <./extend/custom-evaluator.md>
 ./reference/interactive-models.md
 API Server Endpoints <./reference/api-server-endpoints.md>
 ./reference/websockets.md
-Adding an LLM Provider <./guides/adding-an-llm-provider.md>
 Command Line Interface (CLI) <./concepts/cli.md>
 Evaluation <./reference/evaluate.md>
 Evaluation Endpoints <./reference/evaluate-api.md>
