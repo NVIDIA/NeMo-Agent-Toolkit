@@ -29,7 +29,7 @@ from aiq.builder.framework_enum import LLMFrameworkEnum
 logger = logging.getLogger("aiq_alert_triage_agent")
 
 # module‐level variable; loaded on first use
-_DATA_CACHE = {
+_DATA_CACHE: dict[str, pd.DataFrame | dict | None] = {
     'test_data': None,
     'benign_fallback_test_data': None,
 }
@@ -86,63 +86,43 @@ def log_footer(dash_length: int = 100, level: int = logging.DEBUG):
     logger.log(level, footer)
 
 
-def load_test_data():
+def preload_test_data(test_data_path: str | None, benign_fallback_data_path: str | None):
     """
-    Loads test data from a CSV file (only once per process).
-
-    Returns:
-        pandas.DataFrame: The loaded test data
-
-    Raises:
-        ValueError: If TEST_DATA_RELATIVE_FILEPATH environment variable is not set
-    """
-    if _DATA_CACHE['test_data'] is None:
-        rel_path = os.getenv("TEST_DATA_RELATIVE_FILEPATH")
-        if not rel_path:
-            raise ValueError("TEST_DATA_RELATIVE_FILEPATH environment variable must be set")
-        abs_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), rel_path)
-        _DATA_CACHE['test_data'] = pd.read_csv(abs_path)
-
-    return _DATA_CACHE['test_data']
-
-
-def is_test_mode():
-    return os.getenv("TEST_MODE", "false").lower() == "true"
-
-
-def _get_static_data(env_var):
-    """
-    Load and cache static test data from a JSON file specified by an environment variable.
-
-    This function implements a singleton pattern using a module-level cache to avoid
-    repeatedly reading the same JSON file. The first call loads and caches the data,
-    subsequent calls return the cached data.
+    Preloads test data from CSV and JSON files into module-level cache.
 
     Args:
-        env_var (str): Name of environment variable containing path to JSON file
-
-    Returns:
-        dict: Parsed JSON data from the file
-
-    Raises:
-        ValueError: If the specified environment variable is not set
-        json.JSONDecodeError: If the file contains invalid JSON
-        FileNotFoundError: If the JSON file does not exist
+        test_data_path (str): Path to the test data CSV file
+        benign_fallback_data_path (str): Path to the benign fallback data JSON file
     """
-    # Use module-level cache to implement singleton pattern
+    if test_data_path is None:
+        raise ValueError("test_data_path must be provided")
+
+    if benign_fallback_data_path is None:
+        raise ValueError("benign_fallback_data_path must be provided")
+
+    _DATA_CACHE['test_data'] = pd.read_csv(test_data_path)
+    logger.info(f"Preloaded test data from: {test_data_path}")
+
+    with open(benign_fallback_data_path, "r") as f:
+        _DATA_CACHE['benign_fallback_test_data'] = json.load(f)
+    logger.info(f"Preloaded benign fallback data from: {benign_fallback_data_path}")
+
+
+def get_test_data() -> pd.DataFrame:
+    """Returns the preloaded test data."""
+    if _DATA_CACHE['test_data'] is None:
+        raise ValueError("Test data not preloaded. Call preload_test_data() first.")
+    return pd.DataFrame(_DATA_CACHE['test_data'])
+
+
+def _get_static_data():
+    """Returns the preloaded benign fallback test data."""
     if _DATA_CACHE['benign_fallback_test_data'] is None:
-        # First time - need to load data from file
-        filepath = os.getenv(env_var)
-        if filepath is None:
-            raise ValueError(f"{env_var} environment variable must be set")
-        path = os.path.join(os.path.abspath(os.path.dirname(__file__)), filepath)
-        # Load and cache the JSON data
-        with open(path, "r") as f:
-            _DATA_CACHE['benign_fallback_test_data'] = json.load(f)
+        raise ValueError("Benign fallback test data not preloaded. Call preload_test_data() first.")
     return _DATA_CACHE['benign_fallback_test_data']
 
 
-def load_column_or_static(df, host_id, column, static_env_var="TEST_BENIGN_DATA_RELATIVE_FILEPATH"):
+def load_column_or_static(df, host_id, column):
     """
     Attempts to load data from a DataFrame column, falling back to static JSON if needed.
 
@@ -153,8 +133,6 @@ def load_column_or_static(df, host_id, column, static_env_var="TEST_BENIGN_DATA_
         df (pandas.DataFrame): DataFrame containing test data
         host_id (str): Host ID to look up in the DataFrame
         column (str): Column name to retrieve data from
-        static_env_var (str, optional): Environment variable pointing to static JSON file.
-            Defaults to "TEST_BENIGN_DATA_RELATIVE_FILEPATH".
 
     Returns:
         The value from either the DataFrame or static JSON for the given column.
@@ -165,7 +143,7 @@ def load_column_or_static(df, host_id, column, static_env_var="TEST_BENIGN_DATA_
     """
     if column not in df.columns:
         # Column missing from DataFrame, try loading from static JSON file
-        static_data = _get_static_data(static_env_var)
+        static_data = _get_static_data()
         try:
             return static_data[column]
         except KeyError as exc:

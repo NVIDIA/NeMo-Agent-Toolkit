@@ -79,7 +79,8 @@ examples = [
   "aiq_simple",
   "aiq_swe_bench",
   "aiq_automated_description_generation",
-  "aiq_agno_personal_finance"
+  "aiq_agno_personal_finance",
+  "aiq_profiler_agent"
 ]
 
 profiling = [
@@ -116,6 +117,7 @@ aiq_simple_calculator = { path = "examples/simple_calculator", editable = true }
 aiq_swe_bench = { path = "examples/swe_bench", editable = true }
 aiq_automated_description_generation = { path = "examples/automated_description_generation", editable = true }
 aiq_agno_personal_finance = { path = "examples/agno_personal_finance", editable = true }
+aiq_profiler_agent = {path = "examples/profiler_agent", editable = true}
 
 
 [tool.uv.workspace]
@@ -624,7 +626,6 @@ disable = [
   "too-many-statements",
   "unnecessary-lambda",            # We pass lambdas around a lot, so this is not useful
   "unnecessary-pass",              # Allow empty classes/methods with only a `pass` statement in the body
-  "unused-argument",               # Allow unused arguments in functions for rapid prototyping (delete after initial AIQToolkit prototype)
   "use-symbolic-message-instead",
   "useless-suppression",
   "wrong-import-order",            # pylint mistakenly thinks that the test utils are third party, and we have isort for this

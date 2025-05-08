@@ -242,7 +242,7 @@ curl -X 'POST' \
 
 ## Using MCP Services for running the workflow
 
-The `config-mcp-client.yml` file demonstrates how to use an MCP service as a tool in the AIQ Toolkit `simple_calculator` workflow.
+The `config-mcp-date.yml` file demonstrates how to use an MCP service as a tool in the AIQ Toolkit `simple_calculator` workflow.
 
 ### MCP Server Setup
 
@@ -250,10 +250,10 @@ Follow the instructions in the [MCP Server README](../mcp_server/README.md) to s
 
 ### Running the workflow with MCP service
 
-The `config-mcp-client.yml` file demonstrates how to use an MCP service as a tool in the AIQ Toolkit `simple_calculator` workflow.
+The `config-mcp-date.yml` file demonstrates how to use an MCP service as a tool in the AIQ Toolkit `simple_calculator` workflow.
 
 ```bash
-aiq run --config_file examples/simple_calculator/configs/config-mcp-client.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+aiq run --config_file examples/simple_calculator/configs/config-mcp-date.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
 **Expected Output**
@@ -287,3 +287,6 @@ Workflow Result:
 ['No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 21).']
 --------------------------------------------------
 ```
+
+## Hosting simple calculator tools via MCP
+You can publish the simple calculator tools via MCP by following the instructions in the [MCP Server README](../mcp_server/README.md).

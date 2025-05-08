@@ -13,27 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
+from .flow_chart import FlowChartConfig, flow_chart
+from .px_query import PxQueryConfig, px_query
+from .response_composer import ResponseComposerConfig, response_composer
+from .token_usage import TokenUsageConfig, token_usage
 
-import click
-
-from aiq.cli.commands.info.list_channels import list_channels
-from aiq.cli.commands.info.list_components import list_components
-from aiq.cli.commands.info.list_mcp import list_mcp
-
-logger = logging.getLogger(__name__)
-
-
-@click.group(name=__name__,
-             invoke_without_command=False,
-             help="Provide information about the local AIQ Toolkit environment.")
-def info_command(**kwargs):
-    """
-    Provide information about the local AIQ Toolkit environment.
-    """
-    pass
-
-
-info_command.add_command(list_components, name="components")
-info_command.add_command(list_channels, "channels")
-info_command.add_command(list_mcp, "mcp")
+__all__ = [
+    "PxQueryConfig",
+    "px_query",
+    "FlowChartConfig",
+    "flow_chart",
+    "ResponseComposerConfig",
+    "response_composer",
+    "TokenUsageConfig",
+    "token_usage",
+]

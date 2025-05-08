@@ -26,10 +26,12 @@ from langgraph.graph import MessagesState
 from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolNode
 from langgraph.prebuilt import tools_condition
+from pydantic.fields import Field
 
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_function
+from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
 
 # Import any tools which need to be automatically registered here
@@ -56,7 +58,16 @@ class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agen
     4. Categorizing the root cause based on collected evidence
     """
     tool_names: list[str] = []
-    llm_name: str
+    llm_name: LLMRef
+    test_mode: bool = Field(default=True, description="Whether to run in test mode")
+    test_data_path: str | None = Field(
+        default="examples/alert_triage_agent/data/test_data.csv",
+        description="Path to the main test dataset in CSV format containing alerts and their simulated environments")
+    benign_fallback_data_path: str | None = Field(
+        default="examples/alert_triage_agent/data/benign_fallback_test_data.json",
+        description="Path to the JSON file with baseline/normal system behavior data")
+    test_output_path: str | None = Field(default=".tmp/aiq/examples/alert_triage_agent/output/test_output.csv",
+                                         description="Path to save the test output CSV file")
 
 
 @register_function(config_type=AlertTriageAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -138,16 +149,12 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
 
         Returns:
             Confirmation message after processing completes
-
-        Raises:
-            ValueError: If TEST_OUTPUT_RELATIVE_FILEPATH environment variable is not set
         """
-        output_filepath = os.getenv("TEST_OUTPUT_RELATIVE_FILEPATH")
-        if output_filepath is None:
-            raise ValueError("TEST_OUTPUT_RELATIVE_FILEPATH environment variable must be set")
+        if config.test_output_path is None:
+            raise ValueError("test_output_path must be provided")
 
         # Load test alerts from CSV file
-        df = utils.load_test_data()
+        df = utils.get_test_data()
         df["output"] = ""  # Initialize output column
         utils.log_header(f"Processing {len(df)} Alerts")
 
@@ -162,17 +169,16 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
         utils.log_header("Saving Results")
 
         # Write results to output CSV
-        output_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), output_filepath)
-        # Create output directory if it doesn't exist
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        df.to_csv(output_path, index=False)
+        os.makedirs(os.path.dirname(config.test_output_path), exist_ok=True)
+        df.to_csv(config.test_output_path, index=False)
 
         utils.log_footer()
-        return f"Successfully processed {len(df)} alerts. Results saved to {output_filepath}"
+        return f"Successfully processed {len(df)} alerts. Results saved to {config.test_output_path}"
 
-    is_test_mode = utils.is_test_mode()
     try:
-        if is_test_mode:
+        if config.test_mode:
+            utils.preload_test_data(test_data_path=config.test_data_path,
+                                    benign_fallback_data_path=config.benign_fallback_data_path)
             utils.log_header("Running in test mode", dash_length=120, level=logging.INFO)
             yield _response_test_fn
         else:
