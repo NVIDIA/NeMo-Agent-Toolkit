@@ -75,10 +75,13 @@ examples = [
   "aiq_simple",
   "aiq_swe_bench",
   "aiq_automated_description_generation",
-  "aiq_agno_personal_finance",
+  "aiq_agno_personal_finance"
 ]
 
-profiling = ["matplotlib~=3.9", "prefixspan~=0.5.2", "scikit-learn~=1.6"]
+profiling = [
+  "matplotlib~=3.9",
+  "prefixspan~=0.5.2",
+  "scikit-learn~=1.6"]
 
 
 [tool.uv]
