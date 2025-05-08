@@ -133,16 +133,9 @@ Retriever <./store-and-retrieve/retriever.md>
 ```
 
 
-```{toctree}
-:hidden:
-:caption: Components
 
-ReAct Agent <./components/react-agent.md>
-Reasoning Agent <./components/reasoning-agent.md>
-Tool Calling Agent <./components/tool-calling-agent.md>
-Model Context Protocol (MCP) <./workflows/mcp_client.md>
-Code Execution Tool <./components/code-execution.md>
-```
+<!-- Code Execution Tool <./components/code-execution.md>
+-->
 
 ```{toctree}
 :hidden:

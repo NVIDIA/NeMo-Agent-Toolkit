@@ -34,6 +34,6 @@ By leveraging AIQ Toolkit’s plugin system and the `Builder` object, we can uti
 ## Learn More
 
 For a deeper dive into the AI Agents utilized in the examples, refer to the component documentation:
-- [ReAct Agent](../../docs/source/components/react-agent.md)
-- [Reasoning Agent](../../docs/source/components/reasoning-agent.md)
-- [Tool Calling Agent](../../docs/source/components/tool-calling-agent.md)
+- [ReAct Agent](../../docs/source/workflows/react-agent.md)
+- [Reasoning Agent](../../docs/source/workflows/reasoning-agent.md)
+- [Tool Calling Agent](../../docs/source/workflows/tool-calling-agent.md)
