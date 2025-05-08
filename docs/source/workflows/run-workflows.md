@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Running a Workflow
+# Run Agent Intelligence Toolkit Workflows
 
 A workflow is defined by a YAML configuration file that specifies the tools and models to use. AIQ Toolkit provides the following ways to run a workflow:
 - Using the `aiq run` command.

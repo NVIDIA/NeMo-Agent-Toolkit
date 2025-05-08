@@ -112,12 +112,12 @@ Tutorials <./tutorials/index.md>
 :caption: Manage Workflows
 
 About Workflows <./workflows/about/index.md>
-./workflows/running-workflows.md
+./workflows/run-workflows.md
 Workflow Configuration <./workflows/workflow-configuration.md>
+Functions <./workflows/functions/index.md>
+./workflows/mcp/index.md
 Evaluate Workflows <./workflows/evaluate.md>
 Profiling Workflows <./workflows/profiler.md>
-./workflows/mcp/index.md
-Functions <./workflows/functions/index.md>
 ./workflows/using-local-llms.md
 ./workflows/configuring-telemetry.md
 ./workflows/observe-workflow-with-phoenix.md
