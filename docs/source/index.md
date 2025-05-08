@@ -132,11 +132,6 @@ About the Memory Module <./store-and-retrieve/memory.md>
 Retriever <./store-and-retrieve/retriever.md>
 ```
 
-
-
-<!-- Code Execution Tool <./components/code-execution.md>
--->
-
 ```{toctree}
 :hidden:
 :caption: Extend

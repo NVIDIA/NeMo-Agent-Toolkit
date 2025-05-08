@@ -63,3 +63,9 @@ Utilizing asynchronous operations allows for better performance and scalability 
 
 ## Writing Functions
 For information about writing functions, refer to the [Writing Custom Functions](../extend/functions.md) document.
+
+
+## Using the Code Execution Function
+```{toctree}
+./code-execution.md
+```
