@@ -44,7 +44,7 @@ Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 - [**Observability:**](./workflows/observe-workflow-with-phoenix.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
 - [**Evaluation System:**](./workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 - [**User Interface:**](./quick-start/launching-ui.md) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
-- [**MCP Compatibility**](./components/mcp.md) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
+- [**MCP Compatibility**](./workflows/mcp_client.md) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
 
 ## Framework Integrations
 
@@ -113,7 +113,6 @@ Tutorials <./tutorials/index.md>
 
 About Workflows <./workflows/about.md>
 ./workflows/running_workflows.md
-./workflows/mcp-server.md
 Workflow Configuration <./workflows/workflow-configuration.md>
 Evaluate Workflows <./workflows/evaluate.md>
 Profiling Workflows <./workflows/profiler.md>
@@ -140,7 +139,7 @@ Retriever <./store-and-retrieve/retriever.md>
 ReAct Agent <./components/react-agent.md>
 Reasoning Agent <./components/reasoning-agent.md>
 Tool Calling Agent <./components/tool-calling-agent.md>
-Model Context Protocol (MCP) <./components/mcp.md>
+Model Context Protocol (MCP) <./workflows/mcp_client.md>
 Code Execution Tool <./components/code-execution.md>
 ```
 

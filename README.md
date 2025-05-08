@@ -32,7 +32,7 @@ Agent Intelligence Toolkit (AIQ Toolkit) is a flexible library designed to seaml
 - [**Observability:**](https://docs.nvidia.com/aiqtoolkit/latest/workflows/observe-workflow-with-phoenix.html) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
 - [**Evaluation System:**](https://docs.nvidia.com/aiqtoolkit/latest/workflows/evaluate.html) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 - [**User Interface:**](https://docs.nvidia.com/aiqtoolkit/latest/quick-start/launching-ui.html) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
-- [**MCP Compatibility**](https://docs.nvidia.com/aiqtoolkit/latest/components/mcp.html) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
+- [**MCP Compatibility**](https://docs.nvidia.com/aiqtoolkit/latest/workflows/mcp_client.html) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
 
 With AIQ Toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 
