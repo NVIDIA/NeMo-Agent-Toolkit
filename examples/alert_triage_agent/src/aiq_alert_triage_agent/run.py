@@ -93,6 +93,10 @@ app = Flask(__name__)
 def apply_hsts(response):
     # Tell browsers to only use HTTPS for the next year, on all sub‑domains, and enable preload
     response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains; preload'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+
     return response
 
 
