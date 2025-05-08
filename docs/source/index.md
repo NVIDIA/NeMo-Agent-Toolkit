@@ -44,7 +44,7 @@ Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 - [**Observability:**](./workflows/observe-workflow-with-phoenix.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
 - [**Evaluation System:**](./workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 - [**User Interface:**](./quick-start/launching-ui.md) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
-- [**MCP Compatibility**](./workflows/mcp_client.md) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
+- [**MCP Compatibility**](./workflows/mcp-client.md) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
 
 ## Framework Integrations
 
@@ -116,7 +116,7 @@ About Workflows <./workflows/about.md>
 Workflow Configuration <./workflows/workflow-configuration.md>
 Evaluate Workflows <./workflows/evaluate.md>
 Profiling Workflows <./workflows/profiler.md>
-./mcp.md
+./workflows/mcp.md
 Functions <./workflows/functions.md>
 ./workflows/using-local-llms.md
 ./workflows/configuring_telemetry.md

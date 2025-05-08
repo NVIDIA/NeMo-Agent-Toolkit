@@ -67,7 +67,7 @@ For details on workflow configuration, including sections not utilized in the ab
 
 ```{toctree}
 
-ReAct Agent <./workflows/react-agent.md>
-Reasoning Agent <./workflows/reasoning-agent.md>
-Tool Calling Agent <./workflows/tool-calling-agent.md>
+ReAct Agent <./react-agent.md>
+Reasoning Agent <./reasoning-agent.md>
+Tool Calling Agent <./tool-calling-agent.md>
 ```

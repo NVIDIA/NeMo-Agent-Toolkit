@@ -20,6 +20,6 @@ limitations under the License.
 ```{toctree}
 :caption: MCP
 
-Connecting to Remote Tools <./mcp_client.md>
-Serving AIQ Functions <./mcp_server.md>
+Connecting to Remote Tools <./mcp-client.md>
+Serving AIQ Functions <./mcp-server.md>
 ```
