@@ -274,4 +274,4 @@ Use streaming if you need real-time updates or live communication where users ex
 
 ## AIQ Toolkit API Server Interaction Guide
 A custom user interface can communicate with the API server using both HTTP requests and WebSocket connections.
-For details on proper WebSocket messaging integration, refer to the [WebSocket Messaging Interface](../references/websockets.md) documentation.
+For details on proper WebSocket messaging integration, refer to the [WebSocket Messaging Interface](../reference/websockets.md) documentation.

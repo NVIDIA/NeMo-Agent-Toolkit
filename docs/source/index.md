@@ -107,16 +107,6 @@ Workflow Configuration <./workflows/workflow-configuration.md>
 
 ```{toctree}
 :hidden:
-:caption: Evaluate
-
-
-
-Add Custom Evaluators <./guides/custom-evaluator.md>
-Evaluation Endpoints <./guides/evaluate-api.md>
-```
-
-```{toctree}
-:hidden:
 :caption: Store and Retrieve
 
 About the Memory Module <./store-and-retrieve/memory.md>
@@ -147,6 +137,7 @@ Code Execution Tool <./components/code-execution.md>
 :caption: Extend
 
 Sharing Components <./extend/sharing-components.md>
+Add Custom Evaluators <./guides/custom-evaluator.md>
 ./extend/adding-a-retriever.md
 ./extend/memory.md
 ```
@@ -156,13 +147,14 @@ Sharing Components <./extend/sharing-components.md>
 :caption: Reference
 
 ./api/index.rst
-./references/interactive-models.md
-API Server Endpoints <./references/api-server-endpoints.md>
-./references/websockets.md
+./reference/interactive-models.md
+API Server Endpoints <./reference/api-server-endpoints.md>
+./reference/websockets.md
 Adding an LLM Provider <./guides/adding-an-llm-provider.md>
 Command Line Interface (CLI) <./concepts/cli.md>
 Plugins <./concepts/plugins.md>
-Evaluation <./references/evaluate.md>
+Evaluation <./reference/evaluate.md>
+Evaluation Endpoints <./guides/evaluate-api.md>
 Troubleshooting <./troubleshooting.md>
 ```
 

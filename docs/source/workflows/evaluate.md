@@ -249,7 +249,7 @@ aiq eval --config_file examples/simple/configs/eval_config.yml \
 ```
 
 ## Additional Evaluation Options
-For details on other evaluators and evaluation options, refer to [AIQ Toolkit Evaluation Concepts](../references/evaluate.md) for more information.
+For details on other evaluators and evaluation options, refer to [AIQ Toolkit Evaluation Concepts](../reference/evaluate.md) for more information.
 
 ##  Profiling and Performance Monitoring of AIQ Toolkit Workflows
 You can profile workflows via the AIQ Toolkit evaluation system. For more information, refer to the [Profiler](profiler.md) documentation.
