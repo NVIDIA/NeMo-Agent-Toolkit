@@ -111,7 +111,7 @@ Tutorials <./tutorials/index.md>
 :hidden:
 :caption: Manage Workflows
 
-About Workflows <./workflows/about.md>
+About Workflows <./workflows/about/index.md>
 ./workflows/running-workflows.md
 Workflow Configuration <./workflows/workflow-configuration.md>
 Evaluate Workflows <./workflows/evaluate.md>
