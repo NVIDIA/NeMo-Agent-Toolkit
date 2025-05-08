@@ -99,7 +99,10 @@ async def hardware_check_tool(config: HardwareCheckToolConfig, builder: Builder)
                 # Get analysis from LLM
                 conclusion = await utils.llm_ainvoke(config, builder, prompt)
 
-                utils.logger.debug(conclusion)
+                # The conclusion from the LLM should not include any sensitive information around the provided
+                # credentials. We commented this out to be extra cautious. If you are testing and debugging in a safe
+                # environment, uncomment this line to see the conclusion.
+                # utils.logger.debug(conclusion)
                 utils.log_footer()
 
                 return conclusion

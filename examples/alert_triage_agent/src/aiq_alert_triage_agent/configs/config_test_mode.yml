@@ -37,10 +37,12 @@ functions:
     _type: telemetry_metrics_host_heartbeat_check
     llm_name: tool_reasoning_llm
     test_mode: true
+    metrics_url: http://your-monitoring-server:9090 # Replace with your monitoring system URL if running in live mode
   telemetry_metrics_host_performance_check:
     _type: telemetry_metrics_host_performance_check
     llm_name: tool_reasoning_llm
     test_mode: true
+    metrics_url: http://your-monitoring-server:9090 # Replace with your monitoring system URL if running in live mode
   telemetry_metrics_analysis_agent:
     _type: telemetry_metrics_analysis_agent
     tool_names:
