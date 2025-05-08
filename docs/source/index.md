@@ -117,7 +117,7 @@ Workflow Configuration <./workflows/workflow-configuration.md>
 Evaluate Workflows <./workflows/evaluate.md>
 Profiling Workflows <./workflows/profiler.md>
 ./workflows/mcp.md
-Functions <./workflows/functions.md>
+Functions <./workflows/functions/index.md.md>
 ./workflows/using-local-llms.md
 ./workflows/configuring-telemetry.md
 ./workflows/observe-workflow-with-phoenix.md
