@@ -66,7 +66,7 @@ Once configured, a Pydantic input schema will be generated based on the input sc
 
 ## Hosting tools via the AIQ Toolkit MCP Server
 In addition to the MCP Client Tool, the AIQ Toolkit provides an MCP frontend that can be used to serve tools as an MCP server.
-For instructions on how to host tools via the AIQ Toolkit MCP Server, please refer to the [MCP Server](../guides/mcp-server.md) guide.
+For instructions on how to host tools via the AIQ Toolkit MCP Server, please refer to the [MCP Server](./mcp-server.md) guide.
 
 ## CLI Commands
 The `aiq info mcp` command can be used to list the tools served by an MCP server.
