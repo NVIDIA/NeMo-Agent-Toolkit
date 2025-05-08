@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Extending the NVIDIA AIQ Toolkit Using Custom Functions
+# Writing Custom Functions
 
 Functions can be created in several ways:
 

@@ -85,7 +85,7 @@ To learn more about AIQ Toolkit, see the following links:
 * [Evaluating Workflows](./workflows/evaluate.md)
 * [Profiling a Workflow](./workflows/profiler.md)
 * [Observing a Workflow with Phoenix](./workflows/observe-workflow-with-phoenix.md)
-* [Command Line Interface](./concepts/cli.md)
+* [Command Line Interface](./reference/cli.md)
 -->
 
 ## Feedback
@@ -148,7 +148,7 @@ Code Execution Tool <./components/code-execution.md>
 :hidden:
 :caption: Extend
 
-Extending the AIQ Toolkit Using Custom Functions <./extend/functions.md>
+Writing Custom Functions <./extend/functions.md>
 Extending the AIQ Toolkit Using Plugins <./extend/plugins.md>
 Sharing Components <./extend/sharing-components.md>
 Adding a Custom Evaluator <./extend/custom-evaluator.md>
@@ -165,7 +165,7 @@ Adding an LLM Provider <./extend/adding-an-llm-provider.md>
 ./reference/interactive-models.md
 API Server Endpoints <./reference/api-server-endpoints.md>
 ./reference/websockets.md
-Command Line Interface (CLI) <./concepts/cli.md>
+Command Line Interface (CLI) <./reference/cli.md>
 Evaluation <./reference/evaluate.md>
 Evaluation Endpoints <./reference/evaluate-api.md>
 Troubleshooting <./troubleshooting.md>

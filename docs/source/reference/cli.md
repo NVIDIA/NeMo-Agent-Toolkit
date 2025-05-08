@@ -531,8 +531,7 @@ exposes to facilitate publishing, discovering, downloading, and removing AIQ Too
 registry. Here we define a remote registry as a centralized location that stores plugin wheel packages and AIQ Toolkit
 specific metadata to that describes its usage details. Before these commands can be used, a remote registry must be
 available and a developer must have configured the corresponding channel using the `aiq configure channel add` command.
-See [Adding a Remote Registry Channel](../concepts/cli.md#adding-a-remote-registry-channel) for more details on
-adding a remote registry channels.
+Refer to [Adding a Remote Registry Channel](#adding-a-remote-registry-channel) for more details on adding a remote registry channels.
 
 The `aiq registry` help command will provide the available commands in this group.
 

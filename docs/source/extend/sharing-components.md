@@ -28,7 +28,7 @@ This section emphasizes the details of configuration objects that facilitate com
 
 After installing the AIQ Toolkit library, and potentially other AIQ Toolkit plugin packages, a developer may want to know what
 components are available for workflow development or evaluation. A great tool for this is the `aiq info components` CLI
-utility described in [Components Information](../concepts/cli.md#components-information). This command produces a
+utility described in [Components Information](../reference/cli.md#components-information). This command produces a
 table containing information dynamically accumulated from each AIQ Toolkit component. The `details` column is sourced from
 each configuration object's docstring and field descriptions. Behind the scenes, these data (and others) are aggregated
 into a component's `DiscoveryMetadata` to enable local and remote discovery. This object includes the following key
