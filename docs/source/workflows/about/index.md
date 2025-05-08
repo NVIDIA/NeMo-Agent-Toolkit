@@ -69,5 +69,6 @@ For details on workflow configuration, including sections not utilized in the ab
 
 ReAct Agent <./react-agent.md>
 Reasoning Agent <./reasoning-agent.md>
+./rewoo-agent.md
 Tool Calling Agent <./tool-calling-agent.md>
 ```
