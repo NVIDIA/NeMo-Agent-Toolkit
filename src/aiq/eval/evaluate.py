@@ -17,7 +17,8 @@ import asyncio
 import logging
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypeVar, Generic
+from typing import Any
+from typing import List
 
 from pydantic import BaseModel
 from tqdm import tqdm
@@ -39,12 +40,13 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
     """
     Class to handle all Weave integration functionality.
     """
+
     def __init__(self):
         self.available = False
         self.client = None
         self.eval_logger = None
         self.pred_loggers = {}
-        
+
         try:
             from weave.flow.eval_imperative import EvaluationLogger
             from weave.flow.eval_imperative import ScoreLogger
@@ -57,12 +59,12 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             self.available = False
             # we simply don't do anything if weave is not available
             pass
-    
+
     def initialize_client(self):
         """Initialize the Weave client if available."""
         if not self.available:
             return False
-            
+
         try:
             self.client = self.weave_client_context.require_weave_client()
             return self.client is not None
@@ -82,12 +84,9 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             config_dict = config.model_dump(mode="json")
             # TODO: make this configurable
             config_dict["name"] = "aiqtoolkit-eval"
-            self.eval_logger = self.EvaluationLogger(
-                model=config_dict,
-                dataset=weave_dataset
-            )
+            self.eval_logger = self.EvaluationLogger(model=config_dict, dataset=weave_dataset)
             self.pred_loggers = {}
-            
+
             del weave_dataset
             del config_dict
             return True
@@ -100,11 +99,9 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         """Log a prediction to Weave."""
         if not self.eval_logger:
             return
-            
-        pred_logger = self.eval_logger.log_prediction(
-            inputs=item.model_dump(exclude={"output_obj", "trajectory"}),
-            output=output
-        )
+
+        pred_logger = self.eval_logger.log_prediction(inputs=item.model_dump(exclude={"output_obj", "trajectory"}),
+                                                      output=output)
         self.pred_loggers[item.id] = pred_logger
 
     def log_score(self, eval_output: EvalOutput, evaluator_name: str):
@@ -123,7 +120,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         """Finish all prediction loggers."""
         if not self.eval_logger:
             return
-            
+
         for pred_logger in self.pred_loggers.values():
             if hasattr(pred_logger, '_has_finished') and not pred_logger._has_finished:
                 pred_logger.finish()
@@ -132,14 +129,14 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         """Log summary statistics to Weave."""
         if not self.eval_logger:
             return
-            
+
         summary = {}
         for evaluator_name, eval_output in evaluation_results:
             # Calculate average score for this evaluator
             scores = [item.score for item in eval_output.eval_output_items if item.score is not None]
             if scores:
                 summary[f"{evaluator_name}_avg"] = sum(scores) / len(scores)
-        
+
         # Log the summary to finish the evaluation
         self.eval_logger.log_summary(summary)
 
@@ -317,7 +314,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                    "You can re-execute evaluation for incomplete results by running "
                    "`eval` with the --skip_completed_entries flag.")
             logger.warning(msg)
-            
+
         # Log summary statistics to Weave
         self.weave.log_summary(self.evaluation_results)
 
