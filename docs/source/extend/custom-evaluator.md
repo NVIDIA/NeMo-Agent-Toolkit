@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Custom Evaluator
+# Adding a Custom Evaluator
 :::{note}
 It is recommended that the [Evaluating AIQ Toolkit Workflows](../workflows/evaluate.md) guide be read before proceeding with this detailed documentation.
 :::

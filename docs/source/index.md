@@ -147,8 +147,9 @@ Code Execution Tool <./components/code-execution.md>
 :hidden:
 :caption: Extend
 
+Extending the AIQ Toolkit Using Plugins <./concepts/plugins.md>
 Sharing Components <./extend/sharing-components.md>
-Add Custom Evaluators <./extend/custom-evaluator.md>
+Adding a Custom Evaluator <./extend/custom-evaluator.md>
 ./extend/adding-a-retriever.md
 ./extend/memory.md
 ```
@@ -163,7 +164,6 @@ API Server Endpoints <./reference/api-server-endpoints.md>
 ./reference/websockets.md
 Adding an LLM Provider <./guides/adding-an-llm-provider.md>
 Command Line Interface (CLI) <./concepts/cli.md>
-Plugins <./concepts/plugins.md>
 Evaluation <./reference/evaluate.md>
 Evaluation Endpoints <./reference/evaluate-api.md>
 Troubleshooting <./troubleshooting.md>
