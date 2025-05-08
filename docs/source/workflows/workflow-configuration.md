@@ -102,7 +102,7 @@ general:
 :::
 
 ### `eval`
-This section contains the evaluation settings for the workflow. Refer to [Evaluating AIQ Toolkit Workflows](../guides/evaluate.md) for more information.
+This section contains the evaluation settings for the workflow. Refer to [Evaluating AIQ Toolkit Workflows](../workflows/evaluate.md) for more information.
 
 ### `memory`
 

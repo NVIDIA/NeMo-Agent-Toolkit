@@ -18,7 +18,7 @@ limitations under the License.
 # Evaluating NVIDIA Agent Intelligence Toolkit Workflows Details
 
 :::{note}
-It is recommended that the [Evaluating AIQ Toolkit Workflows](../guides/evaluate.md) guide be read before proceeding with this detailed documentation.
+It is recommended that the [Evaluating AIQ Toolkit Workflows](../workflows/evaluate.md) guide be read before proceeding with this detailed documentation.
 :::
 
 AIQ Toolkit provides a set of evaluators to run and evaluate the AIQ Toolkit workflows. In addition to the built-in evaluators, AIQ Toolkit provides a plugin system to add custom evaluators.

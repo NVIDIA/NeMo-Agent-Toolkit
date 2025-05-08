@@ -246,7 +246,7 @@ The Swagger API docs will be available at: [http://localhost:8000/docs](http://l
 ## Evaluation
 The `aiq eval` command provides access a set of evaluators designed to assessing the accuracy of AIQ Toolkit workflows as
 well as instrumenting their performance characteristics. Please reference
-[Evaluating AIQ Toolkit Workflows](../guides/evaluate.md) for a detailed overview of the
+[Evaluating AIQ Toolkit Workflows](../workflows/evaluate.md) for a detailed overview of the
 suite of evaluation capabilities.
 
 The `aiq eval --help` utility provides a brief overview of the command and its available options.

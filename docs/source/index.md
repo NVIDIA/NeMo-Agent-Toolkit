@@ -42,7 +42,7 @@ Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 - [**Rapid Development:**](./tutorials/index.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
 - [**Profiling:**](./workflows/profiler.md) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
 - [**Observability:**](./workflows/observe-workflow-with-phoenix.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
-- [**Evaluation System:**](./guides/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
+- [**Evaluation System:**](./workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 - [**User Interface:**](./quick-start/launching-ui.md) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 - [**MCP Compatibility**](./components/mcp.md) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
 
@@ -68,7 +68,7 @@ To learn more about AIQ Toolkit, see the following links:
 * [Get Started](./quick-start/installing.md)
 * [Create and Customize Workflows](./tutorials/index.md)
 * [Sharing Components](./extend/sharing-components.md)
-* [Evaluating Workflows](./guides/evaluate.md)
+* [Evaluating Workflows](./workflows/evaluate.md)
 * [Profiling a Workflow](./workflows/profiler.md)
 * [Observing a Workflow with Phoenix](./workflows/observe-workflow-with-phoenix.md)
 * [Command Line Interface](./concepts/cli.md)

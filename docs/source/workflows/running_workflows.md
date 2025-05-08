@@ -49,7 +49,7 @@ aiq run --config_file examples/simple/configs/config.yml --input_file .tmp/input
 ```
 
 ## Using the `aiq eval` Command
-The `aiq eval` command is similar to the `aiq run` command, however in addition to running the workflow it also evaluates the accuracy of the workflow, refer to [Evaluating AIQ Toolkit Workflows](../guides/evaluate.md) for more information.
+The `aiq eval` command is similar to the `aiq run` command, however in addition to running the workflow it also evaluates the accuracy of the workflow, refer to [Evaluating AIQ Toolkit Workflows](../workflows/evaluate.md) for more information.
 
 ## Using the `aiq serve` Command
 The `aiq serve` command starts a web server that listens for incoming requests and runs the specified workflow. The server can be accessed with a web browser or by sending a POST request to the server's endpoint. Similar to the `aiq run` command, the `aiq serve` command requires a configuration file specified by the `--config_file` flag.
