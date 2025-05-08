@@ -139,7 +139,7 @@ In a second terminal also from within the vLLM environment, run the following co
 vllm serve --task embed --override-pooler-config '{"pooling_type": "MEAN"}' --port 8001 ssmits/Qwen2-7B-Instruct-embed-base
 ```
 
-> Note: The `--override-pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/latest/models/supported_models.html#text-embedding-task-embed) documentation.
+> Note: The `--override-pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/latest/models/supported_models.html#text-embedding) documentation.
 
 
 ### AIQ Toolkit Configuration
