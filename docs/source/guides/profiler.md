@@ -28,7 +28,7 @@ Install these dependencies by running the following command:
 uv pip install -e .[profiling]
 ```
 
-Before you begin, ensure you have read the concepts of [AIQ Toolkit Profiler](../concepts/profiler.md) and have a basic understanding of how to build and run an AIQ Toolkit workflow. Also ensure you have read the [AIQ Toolkit Evaluation Concepts](../concepts/evaluate.md) guide.
+Before you begin, ensure you have read the concepts of [AIQ Toolkit Profiler](../concepts/profiler.md) and have a basic understanding of how to build and run an AIQ Toolkit workflow. Also ensure you have read the [Evaluating Workflows](../workflows/evaluate.md) guide.
 
 ## Defining a Workflow
 For this guide, we will use a simple, but useful, workflow that analyzes the body of a given email to determine if it is a Phishing email. We will define a single tool that takes an email body as input and returns a response on

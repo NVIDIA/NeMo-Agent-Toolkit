@@ -98,9 +98,10 @@ Tutorials <./tutorials/index.md>
 :caption: Manage Workflows
 
 About Workflows <./workflows/about.md>
+./workflows/running_workflows.md
+Evaluate Workflows <./workflows/evaluate.md>
 Workflow Configuration <./workflows/workflow-configuration.md>
 ./workflows/configuring_telemetry.md
-./workflows/running_workflows.md
 ./workflows/using-local-llms.md
 ```
 
@@ -108,8 +109,8 @@ Workflow Configuration <./workflows/workflow-configuration.md>
 :hidden:
 :caption: Evaluate
 
-About Evaluation <./guides/evaluate.md>
-Evaluate <./concepts/evaluate.md>
+
+
 Add Custom Evaluators <./guides/custom-evaluator.md>
 Evaluation Endpoints <./guides/evaluate-api.md>
 ```

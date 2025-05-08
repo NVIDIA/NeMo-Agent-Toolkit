@@ -32,4 +32,4 @@ The following examples demonstrate how to use the memory module in the AIQ Toolk
 * `examples/semantic_kernel_demo`
 
 ## Additional Resources
-For information on how to write a new memory module can be found in the [Adding a Memory Provider](../extend/memory.md) document.
+For information on how to write a new memory module provider can be found in the [Adding a Memory Provider](../extend/memory.md) document.
