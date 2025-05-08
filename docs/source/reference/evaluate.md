@@ -265,7 +265,7 @@ aiq eval --config_file=examples/simple_calculator/configs/config-tunable-rag-eva
 ```
 
 ## Adding Custom Evaluators
-You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the AIQ Toolkit evaluator system. See the [Custom Evaluator](../guides/custom-evaluator.md) documentation for more information.
+You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the AIQ Toolkit evaluator system. See the [Custom Evaluator](../extend/custom-evaluator.md) documentation for more information.
 
 
 ## Running multiple repetitions

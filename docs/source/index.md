@@ -40,8 +40,8 @@ Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 - [**Framework Agnostic:**](./concepts/plugins.md) Works with any agentic framework, so you can use your current technology stack without replatforming.
 - [**Reusability:**](./extend/sharing-components.md) Every agent, tool, or workflow can be combined and repurposed, allowing developers to leverage existing work in new scenarios.
 - [**Rapid Development:**](./tutorials/index.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
-- [**Profiling:**](./guides/profiler.md) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
-- [**Observability:**](./guides/observe-workflow-with-phoenix.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
+- [**Profiling:**](./workflows/profiler.md) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
+- [**Observability:**](./workflows/observe-workflow-with-phoenix.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
 - [**Evaluation System:**](./guides/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 - [**User Interface:**](./quick-start/launching-ui.md) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 - [**MCP Compatibility**](./components/mcp.md) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
@@ -69,8 +69,8 @@ To learn more about AIQ Toolkit, see the following links:
 * [Create and Customize Workflows](./tutorials/index.md)
 * [Sharing Components](./extend/sharing-components.md)
 * [Evaluating Workflows](./guides/evaluate.md)
-* [Profiling a Workflow](./guides/profiler.md)
-* [Observing a Workflow with Phoenix](./guides/observe-workflow-with-phoenix.md)
+* [Profiling a Workflow](./workflows/profiler.md)
+* [Observing a Workflow with Phoenix](./workflows/observe-workflow-with-phoenix.md)
 * [Command Line Interface](./concepts/cli.md)
 -->
 
@@ -99,10 +99,13 @@ Tutorials <./tutorials/index.md>
 
 About Workflows <./workflows/about.md>
 ./workflows/running_workflows.md
-Evaluate Workflows <./workflows/evaluate.md>
 Workflow Configuration <./workflows/workflow-configuration.md>
-./workflows/configuring_telemetry.md
+Evaluate Workflows <./workflows/evaluate.md>
+Profiling Workflows <./workflows/profiler.md>
+Functions <./workflows/functions.md>
 ./workflows/using-local-llms.md
+./workflows/configuring_telemetry.md
+./workflows/observe-workflow-with-phoenix.md
 ```
 
 ```{toctree}
@@ -113,13 +116,6 @@ About the Memory Module <./store-and-retrieve/memory.md>
 Retriever <./store-and-retrieve/retriever.md>
 ```
 
-```{toctree}
-:hidden:
-:caption: Concepts
-
-Functions <./concepts/functions.md>
-Profile and Monitor Performance <./concepts/profiler.md>
-```
 
 ```{toctree}
 :hidden:
@@ -137,7 +133,7 @@ Code Execution Tool <./components/code-execution.md>
 :caption: Extend
 
 Sharing Components <./extend/sharing-components.md>
-Add Custom Evaluators <./guides/custom-evaluator.md>
+Add Custom Evaluators <./extend/custom-evaluator.md>
 ./extend/adding-a-retriever.md
 ./extend/memory.md
 ```
@@ -154,7 +150,7 @@ Adding an LLM Provider <./guides/adding-an-llm-provider.md>
 Command Line Interface (CLI) <./concepts/cli.md>
 Plugins <./concepts/plugins.md>
 Evaluation <./reference/evaluate.md>
-Evaluation Endpoints <./guides/evaluate-api.md>
+Evaluation Endpoints <./reference/evaluate-api.md>
 Troubleshooting <./troubleshooting.md>
 ```
 

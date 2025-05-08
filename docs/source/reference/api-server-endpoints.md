@@ -267,7 +267,7 @@ result back to the client. The transaction schema is defined by the workflow.
   ```
 
 ## Evaluation Endpoint
-You can also evaluate workflows via the AIQ Toolkit `evaluate` endpoint. For more information, refer to the [AIQ Toolkit Evaluation Endpoint](../guides/evaluate-api.md) documentation.
+You can also evaluate workflows via the AIQ Toolkit `evaluate` endpoint. For more information, refer to the [AIQ Toolkit Evaluation Endpoint](../reference/evaluate-api.md) documentation.
 
 ## Choosing between Streaming and Non-Streaming
 Use streaming if you need real-time updates or live communication where users expect immediate feedback. Use non-streaming if your workflow responds with simple updates and less feedback is needed.
