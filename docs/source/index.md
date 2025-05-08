@@ -106,6 +106,7 @@ Functions <./workflows/functions.md>
 ./workflows/using-local-llms.md
 ./workflows/configuring_telemetry.md
 ./workflows/observe-workflow-with-phoenix.md
+./workflows/observe-workflow-with-weave.md
 ```
 
 ```{toctree}
