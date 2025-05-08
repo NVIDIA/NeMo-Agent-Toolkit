@@ -17,7 +17,7 @@ limitations under the License.
 
 # Custom Evaluator
 :::{note}
-It is recommended that the [Evaluating AIQ Toolkit Workflows](./evaluate.md) guide be read before proceeding with this detailed documentation.
+It is recommended that the [Evaluating AIQ Toolkit Workflows](../workflows/evaluate.md) guide be read before proceeding with this detailed documentation.
 :::
 
 AIQ Toolkit provides a set of evaluators to run and evaluate AIQ Toolkit workflows. In addition to the built-in evaluators, AIQ Toolkit provides a plugin system to add custom evaluators.
