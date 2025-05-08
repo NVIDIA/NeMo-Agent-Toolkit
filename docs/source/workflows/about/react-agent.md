@@ -35,6 +35,15 @@ paper.
 
 ---
 
+## Requirements
+The ReAct Agent requires the `aiqtoolkit[langchain]` plugin to be installed.
+
+Users who have performed a source code checkout can install this with the following command:
+
+```bash
+uv pip install -e '.[langchain]'
+```
+
 ## Configuration
 
 The ReAct Agent may be utilized as a Workflow or a Function.
@@ -65,11 +74,11 @@ functions:
       - calculator_multiply
       - calculator_inequality
       - calculator_divide
-    description: 'Useful for performing simple mathematical calculations.' 
+    description: 'Useful for performing simple mathematical calculations.'
 ```
 
 ### Configurable Options:
-<ul><li> 
+<ul><li>
 
 `tool_names`: A list of tools that the agent can call.  The tools must be functions configured in the YAML file
 </li><li>
@@ -80,9 +89,9 @@ functions:
 `verbose`: Defaults to False (useful to prevent logging of sensitive data).  If set to True, the Agent will log input, output, and intermediate steps.
 </li><li>
 
-`retry_parsing_errors`: Defaults to True.  Sometimes, the Agent may hallucinate and might not output exactly in the 
-ReAct output format (due to inherit LLM variability.  These hallucinations can be reduced by tweaking the prompt to be 
-more specific for your use-case.); if set to True, the Agent will identify the issue with the LLM output 
+`retry_parsing_errors`: Defaults to True.  Sometimes, the Agent may hallucinate and might not output exactly in the
+ReAct output format (due to inherit LLM variability.  These hallucinations can be reduced by tweaking the prompt to be
+more specific for your use-case.); if set to True, the Agent will identify the issue with the LLM output
 (how exactly are we missing the ReAct output format?) and will retry the LLM call, including the output format error information.
 </li><li>
 
@@ -97,8 +106,8 @@ getting into infinite hallucination loops.
 the tool description (for example, when used as a tool within another agent).
 </li><li>
 
-`system_prompt`:  Optional.  Allows us to override the system prompt for the ReAct Agent.  
-If modifying the prompt, please see the limitations section below.  
+`system_prompt`:  Optional.  Allows us to override the system prompt for the ReAct Agent.
+If modifying the prompt, please see the limitations section below.
 The prompt must have variables for tools, and must instruct the LLM to output in the ReAct output format.
 </li><li>
 
@@ -122,11 +131,11 @@ The Agent uses an LLM to make the decisions, and to summarize the tool responses
 
 ### **Step-by-Step Breakdown of a ReAct Agent**
 
-1. **Observation** – The agent receives an input or problem to solve.  
-2. **Reasoning (Thought)** – The agent thinks about what to do next.  
-3. **Action** – The agent calls a tool (like a search API, calculator, or database query).  
-4. **Observation (Feedback)** – The agent examines the tool’s response.  
-5. **Repeat** – If more steps are needed, it repeats the process.  
+1. **Observation** – The agent receives an input or problem to solve.
+2. **Reasoning (Thought)** – The agent thinks about what to do next.
+3. **Action** – The agent calls a tool (like a search API, calculator, or database query).
+4. **Observation (Feedback)** – The agent examines the tool’s response.
+5. **Repeat** – If more steps are needed, it repeats the process.
 
 ### Example Walkthrough
 
@@ -135,13 +144,13 @@ Imagine a ReAct agent needs to answer:
 > "What’s the current weather in New York?"
 
 #### Iteration 1
-- **Observation:** The agent sees the question.  
-- **Thought:** "I don’t have the weather data, but I can use a weather API."  
-- **Action:** Calls the weather API.  
+- **Observation:** The agent sees the question.
+- **Thought:** "I don’t have the weather data, but I can use a weather API."
+- **Action:** Calls the weather API.
 
 #### **Iteration 2**
-- **Observation:** The API returns `72°F, clear skies`.  
-- **Thought:** "Now I can answer the user’s question."  
+- **Observation:** The API returns `72°F, clear skies`.
+- **Thought:** "Now I can answer the user’s question."
 - **Action:** Returns: *"The weather in New York is 72°F with clear skies."*
 
 ### ReAct Prompting and Output Format
@@ -161,10 +170,10 @@ This is an example of the ReAct output format when the agent has the final answe
 Thought: I now know the final answer
 
 Final Answer: Djikstra was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist. He is best known for his work on the shortest path problem and the development of Dijkstra's algorithm, which is used to find the shortest path between nodes in a weighted graph.
- 
+
 ```
 
-We may tweak, modify, or completely change the ReAct Agent prompt, but the LLM output must match the ReAct output format, and the prompt must have a prompt variable named `{tools}` and `{tool_names}` 
+We may tweak, modify, or completely change the ReAct Agent prompt, but the LLM output must match the ReAct output format, and the prompt must have a prompt variable named `{tools}` and `{tool_names}`
 
 A sample ReAct Agent prompt is provided in prompt.py:
 ```
@@ -178,7 +187,7 @@ Use the following format exactly to ask the human to use a tool:
 Question: the input question you must answer
 Thought: you should always think about what to do
 Action: the action to take, should be one of [{tool_names}]
-Action Input: the input to the action (if there is no required input, include "Action Input: None")  
+Action Input: the input to the action (if there is no required input, include "Action Input: None")
 Observation: wait for the human to respond with the result from the tool, do not assume the response
 
 ... (this Thought/Action/Action Input/Observation can repeat N times. If you do not need to use a tool, or after asking the human to use any tools and waiting for the human to respond, you might know the final answer.)
@@ -218,4 +227,3 @@ ReAct agents execute sequentially:
 This prevents them from efficiently handling tasks that could be executed in parallel, such as making multiple API calls simultaneously. </li>
 </ol>
 In summary, ReAct Agents frequently require a bit of tuning to optimize performance and ensure the best results. Proper prompt engineering and configuration adjustments may be necessary depending on the complexity of the tasks required.
-

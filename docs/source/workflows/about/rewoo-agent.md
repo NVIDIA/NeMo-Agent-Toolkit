@@ -19,6 +19,15 @@ limitations under the License.
 
 A configurable [ReWOO](https://arxiv.org/abs/2305.18323) (Reasoning WithOut Observation) Agent. This agent leverages the AIQ Toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
 
+## Requirements
+The ReWOO Agent requires the `aiqtoolkit[langchain]` plugin to be installed.
+
+Users who have performed a source code checkout can install this with the following command:
+
+```bash
+uv pip install -e '.[langchain]'
+```
+
 ## Key Features
 
 - **Pre-built Tools:** Leverages core AIQ Toolkit library agent and tools.
