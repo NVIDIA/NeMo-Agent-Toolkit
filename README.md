@@ -25,14 +25,14 @@ Agent Intelligence Toolkit (AIQ Toolkit) is a flexible library designed to seaml
 
 ## Key Features
 
-- [**Framework Agnostic:**](https://docs.nvidia.com/aiqtoolkit/latest/extend/plugins.html) Works with any agentic framework, so you can use your current technology stack without replatforming.
-- [**Reusability:**](https://docs.nvidia.com/aiqtoolkit/latest/extend/sharing-components.html) Every agent, tool, or workflow can be combined and repurposed, allowing developers to leverage existing work in new scenarios.
-- [**Rapid Development:**](https://docs.nvidia.com/aiqtoolkit/latest/tutorials/index.html) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
-- [**Profiling:**](https://docs.nvidia.com/aiqtoolkit/latest/workflows/profiler.html) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
-- [**Observability:**](https://docs.nvidia.com/aiqtoolkit/latest/workflows/observe-workflow-with-phoenix.html) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
-- [**Evaluation System:**](https://docs.nvidia.com/aiqtoolkit/latest/workflows/evaluate.html) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
-- [**User Interface:**](https://docs.nvidia.com/aiqtoolkit/latest/quick-start/launching-ui.html) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
-- [**MCP Compatibility**](https://docs.nvidia.com/aiqtoolkit/latest/workflows/mcp/mcp-client.html) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
+- [**Framework Agnostic:**](./docs/source/extend/plugins.md) Works with any agentic framework, so you can use your current technology stack without replatforming.
+- [**Reusability:**](./docs/source/extend/sharing-components.md) Every agent, tool, or workflow can be combined and repurposed, allowing developers to leverage existing work in new scenarios.
+- [**Rapid Development:**](docs/source/tutorials/customize-a-workflow.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
+- [**Profiling:**](./docs/source/workflows/profiler.md) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
+- [**Observability:**](./docs/source/workflows/observe-workflow-with-phoenix.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
+- [**Evaluation System:**](./docs/source/workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
+- [**User Interface:**](./docs/source/quick-start/launching-ui.md) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
+- [**MCP Compatibility**](./docs/source/workflows/mcp/mcp-client.md) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
 
 With AIQ Toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 
@@ -44,13 +44,12 @@ The following diagram illustrates the key components of AIQ Toolkit and how they
 
 ## Links
 
- * [Documentation](https://docs.nvidia.com/aiqtoolkit/latest/index.html): Explore the full documentation for AIQ Toolkit.
- * [About AIQ Toolkit](https://docs.nvidia.com/aiqtoolkit/latest/): Learn more about the benefits of using AIQ Toolkit.
- * [Get Started Guide](https://docs.nvidia.com/aiqtoolkit/latest/quick-start/installing.html): Set up your environment and start building with AIQ Toolkit.
- * [Examples](https://github.com/NVIDIA/AIQToolkit/tree/main/examples#readme): Explore examples of AIQ Toolkit workflows.
- * [Create and Customize AIQ Toolkit Workflows](https://docs.nvidia.com/aiqtoolkit/latest/tutorials/index.html): Learn how to create and customize AIQ Toolkit workflows.
- * [Evaluate with AIQ Toolkit](https://docs.nvidia.com/aiqtoolkit/latest/workflows/evaluate.html): Learn how to evaluate your AIQ Toolkit workflows.
- * [Troubleshooting](https://docs.nvidia.com/aiqtoolkit/latest/troubleshooting.html): Get help with common issues.
+ * [Documentation](https://docs.nvidia.com/aiqtoolkit): Explore the full documentation for AIQ Toolkit.
+ * [Get Started Guide](./docs/source/quick-start/installing.md): Set up your environment and start building with AIQ Toolkit.
+ * [Examples](./examples/README.md): Explore examples of AIQ Toolkit workflows located in the [`examples`](./examples) directory of the source repository.
+ * [Create and Customize AIQ Toolkit Workflows](docs/source/tutorials/customize-a-workflow.md): Learn how to create and customize AIQ Toolkit workflows.
+ * [Evaluate with AIQ Toolkit](./docs/source/workflows/evaluate.md): Learn how to evaluate your AIQ Toolkit workflows.
+ * [Troubleshooting](./docs/source/troubleshooting.md): Get help with common issues.
 
 
 ## Get Started
