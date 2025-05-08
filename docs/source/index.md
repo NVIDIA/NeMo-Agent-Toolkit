@@ -128,8 +128,8 @@ Profiling Workflows <./workflows/profiler.md>
 :hidden:
 :caption: Store and Retrieve
 
-About the Memory Module <./store-and-retrieve/memory.md>
-Retriever <./store-and-retrieve/retriever.md>
+Memory Module <./store-and-retrieve/memory.md>
+./store-and-retrieve/retrievers.md
 ```
 
 ```{toctree}
