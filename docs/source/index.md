@@ -148,6 +148,7 @@ Code Execution Tool <./components/code-execution.md>
 :hidden:
 :caption: Extend
 
+Extending the AIQ Toolkit Using Custom Functions <./extend/functions.md>
 Extending the AIQ Toolkit Using Plugins <./extend/plugins.md>
 Sharing Components <./extend/sharing-components.md>
 Adding a Custom Evaluator <./extend/custom-evaluator.md>
