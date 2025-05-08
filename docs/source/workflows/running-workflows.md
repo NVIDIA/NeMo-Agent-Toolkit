@@ -27,7 +27,7 @@ A workflow is defined by a YAML configuration file that specifies the tools and 
 - Using the Python API
    - This is the most flexible way to run a workflow.
 
-![Running Workflows](../_static/running-workflows.png)
+![Running Workflows](../_static/running_workflows.png)
 
 ## Using the `aiq run` Command
 The `aiq run` command is the simplest way to run a workflow. `aiq run` receives a configuration file as specified by the `--config_file` flag, along with input that can be specified either directly with the `--input` flag or by providing a file path with the `--input_file` flag.
