@@ -16,6 +16,7 @@
 import json
 from contextlib import asynccontextmanager
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import mock_open
@@ -421,6 +422,26 @@ def test_write_output(evaluation_run, default_eval_config, eval_input, eval_outp
         # Ensure log format has not changed
         mock_logger.assert_any_call("Workflow output written to %s", workflow_output_path)
         mock_logger.assert_any_call("Evaluation results written to %s", evaluator_output_path)
+
+
+def test_write_output_handles_none_output(evaluation_run, eval_input):
+    """This test ensures that write_output does not access .output without a None check."""
+    # Setup minimal eval_config with output = None
+    evaluation_run.eval_config = SimpleNamespace(
+        general=SimpleNamespace(output=None, output_dir=Path(".tmp/aiq/examples/mock/")))
+    evaluation_run.eval_input = eval_input
+    # Mock dataset handler
+    mock_dataset_handler = MagicMock()
+    mock_dataset_handler.publish_eval_input.return_value = "[]"
+    # Patch file operations and logging
+    with patch("builtins.open", mock_open()), \
+         patch("pathlib.Path.mkdir"), \
+         patch("aiq.eval.evaluate.logger.info"):
+        # Should not raise AttributeError
+        try:
+            evaluation_run.write_output(mock_dataset_handler)
+        except AttributeError:
+            pytest.fail("write_output should not access .output without a None check")
 
 
 @pytest.mark.parametrize("skip_workflow", [True, False])

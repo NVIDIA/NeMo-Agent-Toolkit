@@ -21,9 +21,13 @@ GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 
 source ${GITLAB_SCRIPT_DIR}/common.sh
 
+GIT_TAG=$(get_git_tag)
+IS_TAGGED=$(is_current_commit_tagged)
+rapids-logger "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
+
 # change this to ready to publish. this should be done programmatically once
 # the release process is finalized.
-if [[ "${CI_CRON_NIGHTLY}" == "1" || "${CI_COMMIT_BRANCH}" == "main" ]]; then
+if [[ "${CI_CRON_NIGHTLY}" == "1" || ${IS_TAGGED} == "1" || "${CI_COMMIT_BRANCH}" == "main" ]]; then
     RELEASE_STATUS=ready
 else
     RELEASE_STATUS=preview
@@ -39,9 +43,6 @@ WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
 
 # Define the subdirectories to be exclude
 EXCLUDE_SUBDIRS=("examples")
-
-GIT_TAG=$(get_git_tag)
-rapids-logger "Git Version: ${GIT_TAG}"
 
 # Exit if required secrets are not set
 if [[ -z "${URM_USER}" || -z "${URM_API_KEY}" ]]; then
@@ -93,7 +94,7 @@ if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
 
         for SUBDIR in $(find "${WHEELS_DIR}" -mindepth 1 -maxdepth 1 -type d); do
             SUBDIR_NAME=$(basename "${SUBDIR}")
-            
+
             # Skip directories listed in EXCLUDE_SUBDIRS
             if [[ " ${EXCLUDE_SUBDIRS[@]} " =~ " ${SUBDIR_NAME} " ]]; then
                 echo "Skipping excluded directory: ${SUBDIR_NAME}"
