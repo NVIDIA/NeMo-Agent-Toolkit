@@ -153,7 +153,7 @@ Sharing Components <./extend/sharing-components.md>
 
 ```{toctree}
 :hidden:
-:caption: References
+:caption: Reference
 
 ./api/index.rst
 ./references/interactive-models.md
@@ -162,6 +162,7 @@ API Server Endpoints <./references/api-server-endpoints.md>
 Adding an LLM Provider <./guides/adding-an-llm-provider.md>
 Command Line Interface (CLI) <./concepts/cli.md>
 Plugins <./concepts/plugins.md>
+Evaluation <./references/evaluate.md>
 Troubleshooting <./troubleshooting.md>
 ```
 
