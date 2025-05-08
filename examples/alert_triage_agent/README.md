@@ -30,6 +30,10 @@ This example demonstrates how to build an intelligent alert triage system using 
       - [5. Root Cause Categorization](#5-root-cause-categorization)
       - [6. Report Generation](#6-report-generation)
       - [7. Analyst Review](#7-analyst-review)
+    - [Understanding the config](#understanding-the-config)
+      - [Functions](#functions)
+      - [Workflow](#workflow)
+      - [LLMs](#llms)
   - [Installation and setup](#installation-and-setup)
     - [Install this workflow](#install-this-workflow)
     - [Set up environment variables](#set-up-environment-variables)
@@ -141,6 +145,79 @@ The triage agent may call one or more of the following tools based on the alert 
 #### 7. Analyst Review
 - The final report is presented to an Analyst for review, action, or escalation.
 
+### Understanding the config
+
+#### Functions
+
+Each entry in the `functions` section defines a tool or sub-agent that can be invoked by the main workflow agent. Tools can operate in test mode, using mocked data for simulation.
+
+Example:
+
+```yaml
+hardware_check:
+  _type: hardware_check
+  llm_name: tool_reasoning_llm
+  test_mode: true
+```
+
+* `_type`: Identifies the name of the tool (matching the names in the tools' python files.)
+* `llm_name`: LLM used to support the tool’s reasoning of the raw fetched data.
+* `test_mode`: If `true`, the tool uses predefined mock results for offline testing.
+
+Some entries, like `telemetry_metrics_analysis_agent`, are sub-agents that coordinate multiple tools:
+
+```yaml
+telemetry_metrics_analysis_agent:
+  _type: telemetry_metrics_analysis_agent
+  tool_names:
+    - telemetry_metrics_host_heartbeat_check
+    - telemetry_metrics_host_performance_check
+  llm_name: telemetry_metrics_analysis_agent_llm
+```
+#### Workflow
+
+The `workflow` section defines the primary agent’s execution.
+
+```yaml
+workflow:
+  _type: alert_triage_agent
+  tool_names:
+    - hardware_check
+    - ...
+  llm_name: ata_agent_llm
+  test_mode: true
+  test_data_path: ...
+  benign_fallback_data_path: ...
+  test_output_path: ...
+```
+
+* `_type`: The name of the agent (matching the agent's name in `register.py`).
+* `tool_names`: List of tools (from the `functions` section) used in the triage process.
+* `llm_name`: Main LLM used by the agent for reasoning, tool-calling, and report generation.
+* `test_mode`: Enables test execution using predefined input/output instead of real systems.
+* `test_data_path`: CSV file containing test alerts and their corresponding mocked tool responses.
+* `benign_fallback_data_path`: JSON file with baseline healthy system responses for tools not explicitly mocked.
+* `test_output_path`: Output CSV file path where the agent writes triage results. Each processed alert adds a new `output` column with the generated report.
+
+#### LLMs
+
+The `llms` section defines the available LLMs for various parts of the system.
+
+Example:
+
+```yaml
+ata_agent_llm:
+  _type: nim
+  model_name: meta/llama-3.3-70b-instruct
+  temperature: 0.2
+  max_tokens: 2048
+```
+
+* `_type`: Backend type (e.g., `nim` for NVIDIA Inference Microservice).
+* `model_name`: LLM mode name.
+* `temperature`, `top_p`, `max_tokens`: LLM generation parameters (passed directly into the API).
+
+Each tool or agent can use a dedicated LLM tailored for its task.
 
 ## Installation and setup
 
@@ -155,22 +232,9 @@ uv pip install -e ./examples/alert_triage_agent
 ```
 
 ### Set up environment variables
-In addition to the `NVIDIA_API_KEY` required by AIQ Toolkit, the following environment variables are required for this example. A sample `.env` file is provided in the [.env_example](.env_example) file:
+As mentioned in the Install Guide, an `NVIDIA_API_KEY` environment variable is required to run AIQ Toolkit.
 
-- `TEST_MODE`: Set to "true" to run the agent in test mode which processes alerts using test data instead of live systems
-- `MAINTENANCE_STATIC_DATA_PATH`: Path to CSV file containing static maintenance window data
-- `TEST_DATA_RELATIVE_FILEPATH`: Main source of test data in CSV format, containing alerts and their simulated environments to process
-  - Contains alerts and their corresponding simulated environments represented by mocked tool return values
-  - When the agent queries tools to understand the alert environment, it receives these pre-configured synthetic responses
-  - Enables testing in a controlled environment without connecting to real hosts/systems
-- `TEST_BENIGN_DATA_RELATIVE_FILEPATH`: JSON file containing baseline/normal system behavior data
-  - Provides fallback responses for tools not explicitly mocked in the main test data
-  - Contains "benign" or normal system state data that tools should return when not part of the simulated issue
-  - Used when the agent queries tools beyond those relevant to the test case, simulating healthy parts of the system
-- `TEST_OUTPUT_RELATIVE_FILEPATH`: Path where test results will be saved in CSV format
-
-
-To load the environment variables from your .env file, run:
+If you have your key in a `.env` file, use the following command to load it:
 ```bash
 export $(grep -v '^#' .env | xargs)
 ```
@@ -188,22 +252,28 @@ In live mode, each tool used by the triage agent connects to real systems to col
 To run the agent live, follow these steps:
 
 1. **Configure all tools with real environment details**
+
    By default, the agent includes placeholder values for API endpoints, host IP addresses, credentials, and other access parameters. You must:
    - Replace these placeholders with the actual values specific to your systems
    - Ensure the agent has access permissions to query APIs or connect to hosts
    - Test each tool in isolation to confirm it works end-to-end
 
 2. **Add custom tools if needed**
+
    If your environment includes unique systems or data sources, you can define new tools or modify existing ones. This allows your triage agent to pull in the most relevant data for your alerts and infrastructure.
 
 3. **Disable test mode**
-   Set the environment variable `TEST_MODE=false` to ensure the agent uses real data instead of synthetic test datasets.
+
+   Set `test_mode: false` in the workflow section and for each tool in the functions section of your config file to ensure the agent uses real data instead of synthetic test datasets.
+
+   You can also selectively keep some tools in test mode by leaving their `test_mode: true` for more granular testing.
 
 4. **Run the agent with a real alert**
+
    Provide a live alert in JSON format and invoke the agent using:
 
    ```bash
-   aiq run --config_file=examples/alert_triage_agent/configs/config.yml --input {your_alert_in_json_format}
+   aiq run --config_file=examples/alert_triage_agent/configs/config_live_mode.yml --input {your_alert_in_json_format}
    ```
 This will trigger a full end-to-end triage process using live data sources.
 
@@ -306,9 +376,10 @@ Test mode lets you evaluate the triage agent in a controlled, offline environmen
 
 To run in test mode:
 1. **Set required environment variables**
-Follow the instructions in the [Set up environment variables](#set-up-environment-variables) section to make sure all variables are set. (`TEST_MODE=true`)
 
-2. **How it works**
+   Make sure `test_mode: true` is set in both the `workflow` section and individual tool sections of your config file (see [Understanding the config](#understanding-the-config) section).
+
+1. **How it works**
 - The **main test CSV** provides both alert details and a mock environment. For each alert, expected tool return values are included. These simulate how the environment would behave if the alert occurred on a real system.
 - The **benign fallback dataset** fills in tool responses when the agent calls a tool not explicitly defined in the alert's test data. These fallback responses mimic healthy system behavior and help provide the "background scenery" without obscuring the true root cause.
 
@@ -316,17 +387,17 @@ Follow the instructions in the [Set up environment variables](#set-up-environmen
 
    Run the agent with:
    ```bash
-   aiq run --config_file=examples/alert_triage_agent/configs/config.yml --input "test_mode"
+   aiq run --config_file=examples/alert_triage_agent/configs/config_test_mode.yml --input "test_mode"
    ```
     Note: The `--input` value is ignored in test mode.
 
     The agent will:
-   - Load alerts from the test dataset `TEST_DATA_RELATIVE_FILEPATH`
+   - Load alerts from the test dataset specified in `test_data_path` in the workflow config
    - Simulate an investigation using predefined tool results
    - Iterate through all the alerts in the dataset
-   - Save reports as a new column in a copy of the test CSV file to the path specified in `TEST_OUTPUT_RELATIVE_FILEPATH`
+   - Save reports as a new column in a copy of the test CSV file to the path specified in `test_output_path` in the workflow config
 
-4. **Understanding the output**
+2. **Understanding the output**
 
    The output file will contain a new column named `output`, which includes the markdown report generated by the agent for each data point (i.e., each row in the CSV). Navigate to that rightmost `output` column to view the report for each test entry.
 

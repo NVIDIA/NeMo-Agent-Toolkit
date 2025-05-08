@@ -20,21 +20,27 @@ functions:
   hardware_check:
     _type: hardware_check
     llm_name: tool_reasoning_llm
+    test_mode: false
   host_performance_check:
     _type: host_performance_check
     llm_name: tool_reasoning_llm
+    test_mode: false
   monitoring_process_check:
     _type: monitoring_process_check
     llm_name: tool_reasoning_llm
+    test_mode: false
   network_connectivity_check:
     _type: network_connectivity_check
     llm_name: tool_reasoning_llm
+    test_mode: false
   telemetry_metrics_host_heartbeat_check:
     _type: telemetry_metrics_host_heartbeat_check
     llm_name: tool_reasoning_llm
+    test_mode: false
   telemetry_metrics_host_performance_check:
     _type: telemetry_metrics_host_performance_check
     llm_name: tool_reasoning_llm
+    test_mode: false
   telemetry_metrics_analysis_agent:
     _type: telemetry_metrics_analysis_agent
     tool_names:
@@ -44,6 +50,7 @@ functions:
   maintenance_check:
     _type: maintenance_check
     llm_name: maintenance_check_llm
+    static_data_path: examples/alert_triage_agent/data/maintenance_static_dataset.csv
   categorizer:
     _type: categorizer
     llm_name: categorizer_llm
@@ -57,6 +64,11 @@ workflow:
     - network_connectivity_check
     - telemetry_metrics_analysis_agent
   llm_name: ata_agent_llm
+  test_mode: false
+  # The below paths are only used if test_mode is true
+  test_data_path: null
+  benign_fallback_data_path: null
+  test_output_path: null
 
 llms:
   ata_agent_llm:
