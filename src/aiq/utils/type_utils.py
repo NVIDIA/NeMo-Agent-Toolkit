@@ -56,6 +56,7 @@ else:
     def override(func):
         return func
 
+
 class DecomposedType:
 
     def __init__(self, original: type):
