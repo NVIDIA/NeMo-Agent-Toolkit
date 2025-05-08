@@ -234,11 +234,11 @@ aiq eval --config_file=examples/simple/configs/eval_config.yml --endpoint http:/
 ```
 
 ## Evaluation Endpoint
-You can also evaluate workflows via the AIQ Toolkit evaluation endpoint. The evaluation endpoint is a REST API that allows you to evaluate workflows using the same configuration file as the `aiq eval` command. The evaluation endpoint is available at `/evaluate` on the AIQ Toolkit server. For more information, refer to the [AIQ Toolkit Evaluation Endpoint](./evaluate-api.md) documentation.
+You can also evaluate workflows via the AIQ Toolkit evaluation endpoint. The evaluation endpoint is a REST API that allows you to evaluate workflows using the same configuration file as the `aiq eval` command. The evaluation endpoint is available at `/evaluate` on the AIQ Toolkit server. For more information, refer to the [AIQ Toolkit Evaluation Endpoint](../reference/evaluate-api.md) documentation.
 
 
 ## Adding Custom Evaluators
-You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the AIQ Toolkit evaluator system. See the [Custom Evaluator](custom-evaluator.md) documentation for more information.
+You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the AIQ Toolkit evaluator system. See the [Custom Evaluator](../extend/custom-evaluator.md) documentation for more information.
 
 ## Overriding Evaluation Configuration
 You can override the configuration in the `eval_config.yml` file using the `--override` command line flag. The following is an example of overriding the configuration:

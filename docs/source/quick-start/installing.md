@@ -142,7 +142,7 @@ Replace `<YOUR_API_KEY>` with your actual NVIDIA API key.
 ## AIQ Toolkit Packages
 Once an AIQ Toolkit workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `aiqtoolkit` package, along with the needed plugins. When declaring a dependency on AIQ Toolkit it is recommended to use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `1.0`.
 
-For more information on the available plugins, refer to the [Framework Integrations](../concepts/plugins.md#framework-integrations) section of the plugins documentation.
+For more information on the available plugins, refer to [Framework Integrations](../index.md#framework-integrations).
 
 Example dependency for AIQ Toolkit using the `langchain` plugin for projects using a `pyproject.toml` file:
 ```toml

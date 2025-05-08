@@ -46,6 +46,20 @@ Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 - [**User Interface:**](./quick-start/launching-ui.md) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 - [**MCP Compatibility**](./components/mcp.md) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
 
+## Framework Integrations
+
+To keep the library lightweight, many of the first party plugins supported by AIQ Toolkit are located in separate distribution packages. For example, the `aiqtoolkit-langchain` distribution contains all the LangChain specific plugins and the `aiqtoolkit-mem0ai` distribution contains the Mem0 specific plugins.
+
+To install these first-party plugin libraries, you can use the full distribution name (for example, `aiqtoolkit-langchain`) or use the `aiqtoolkit[langchain]` extra distribution. A full list of the supported extras is listed below:
+
+- `aiqtoolkit[crewai]` or `aiqtoolkit-crewai` - [CrewAI](https://www.crewai.com/) specific plugins
+- `aiqtoolkit[langchain]` or `aiqtoolkit-langchain` - [LangChain](https://www.langchain.com/) specific plugins
+- `aiqtoolkit[llama-index]` or `aiqtoolkit-llama-index` - [LlamaIndex](https://www.llamaindex.ai/) specific plugins
+- `aiqtoolkit[mem0ai]` or `aiqtoolkit-mem0ai` - [Mem0](https://mem0.ai/) specific plugins
+- `aiqtoolkit[semantic-kernel]` or `aiqtoolkit-semantic-kernel` - [Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/) specific plugins
+- `aiqtoolkit[test]` or `aiqtoolkit-test` - AIQ Toolkit Test specific plugins
+- `aiqtoolkit[zep-cloud]` or `aiqtoolkit-zep-cloud` - [Zep](https://www.getzep.com/) specific plugins
+
 ## What AIQ Toolkit Is
 
 - A **lightweight, unifying library** that makes every agent, tool, and workflow you already have work together, just as simple function calls work together in complex software applications.

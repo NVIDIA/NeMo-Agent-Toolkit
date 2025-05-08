@@ -29,9 +29,9 @@ These two concepts allow the library to be extended by installing any compatible
 AIQ Toolkit utilizes the this plugin system for all first party components. This allows the library to be modular and extendable by default. Plugins from external libraries are treated exactly the same as first party plugins.
 
 
-## Supported Plugins
+## Supported Plugin Types
 
-AIQ Toolkit currently supports the following plugins:
+AIQ Toolkit currently supports the following plugin types:
 
 - **Embedder Clients**: Embedder Clients are implementations of embedder providers which are specific to a LLM framework. For example, when using the OpenAI embedder provider with the LangChain framework, the a LangChain OpenAI embedder client needs to be registered. To register an embedder client, you can use the {py:deco}`aiq.cli.register_workflow.register_embedder_client` decorator.
 - **Embedder Providers**: Embedder Providers are services which provide a way to embed text. For example, OpenAI and NVIDIA NIMs are embedder providers. To register an embedder provider, you can use the {py:deco}`aiq.cli.register_workflow.register_embedder_provider` decorator.
@@ -47,22 +47,6 @@ AIQ Toolkit currently supports the following plugins:
 - **Retriever Providers**: Retriever providers are services which provide a way to retrieve information from a database. Examples of retriever providers include Chroma and Milvus. To register a retriever provider, you can use the {py:deco}`aiq.cli.register_workflow.register_retriever_provider` decorator.
 - **Telemetry Exporters**: Telemetry exporters send telemetry data to a telemetry service. To register a telemetry exporter, you can use the {py:deco}`aiq.cli.register_workflow.register_telemetry_exporter` decorator.
 - **Tool Wrappers**: Tool wrappers are used to wrap functions in a way that is specific to a LLM framework. For example, when using the LangChain framework, AIQ Toolkit functions need to be wrapped in `BaseTool` class to be compatible with LangChain. To register a tool wrapper, you can use the {py:deco}`aiq.cli.register_workflow.register_tool_wrapper` decorator.
-
-
-## Framework Integrations
-
-To keep the library lightweight, many of the first party plugins supported by AIQ Toolkit are located in separate distribution packages. For example, the `aiqtoolkit-langchain` distribution contains all the LangChain specific plugins and the `aiqtoolkit-mem0ai` distribution contains the Mem0 specific plugins.
-
-To install these first-party plugin libraries, you can use the full distribution name (for example, `aiqtoolkit-langchain`) or use the `aiqtoolkit[langchain]` extra distribution. A full list of the supported extras is listed below:
-
-- `aiqtoolkit[crewai]` or `aiqtoolkit-crewai` - CrewAI specific plugins
-- `aiqtoolkit[langchain]` or `aiqtoolkit-langchain` - LangChain specific plugins
-- `aiqtoolkit[llama-index]` or `aiqtoolkit-llama-index` - LlamaIndex specific plugins
-- `aiqtoolkit[mem0ai]` or `aiqtoolkit-mem0ai` - Mem0AI specific plugins
-- `aiqtoolkit[semantic-kernel]` or `aiqtoolkit-semantic-kernel` - Semantic Kernel specific plugins
-- `aiqtoolkit[test]` or `aiqtoolkit-test` - Test specific plugins
-- `aiqtoolkit[zep-cloud]` or `aiqtoolkit-zep-cloud` - Zep Cloud specific plugins
-
 
 ## Anatomy of a Plugin
 

@@ -21,10 +21,10 @@ Functions are the main building blocks of AIQ Toolkit and define the logic of yo
 
 In AIQ Toolkit, functions are a core abstraction that offer type-safe, asynchronous operations with support for both single and streaming outputs. They wrap callable objects (like Python functions or coroutines) and enhance them with:
 
-1. Type validation and conversion
-2. Schema-based input/output validation via Pydantic models
-3. Unified interfaces to improve composability
-4. Support for both streaming and non-streaming (single) outputs
+* Type validation and conversion
+* Schema-based input/output validation via Pydantic models
+* Unified interfaces to improve composability
+* Support for both streaming and non-streaming (single) outputs
 
 ## Key Concepts
 
@@ -117,7 +117,7 @@ Both of these methods will result in a function that can be used in the same way
 
 #### Function Configuration Object
 
-To use a function from an AIQ Toolkit configuration file, it must be registered with AIQ Toolkit. Registering a function is done with the {py:deco}`aiq.cli.register_workflow.register_function` decorator. More information about registering components can be found in the [Plugin System](./plugins.md) documentation.
+To use a function from an AIQ Toolkit configuration file, it must be registered with AIQ Toolkit. Registering a function is done with the {py:deco}`aiq.cli.register_workflow.register_function` decorator. More information about registering components can be found in the [Plugin System](../extend/plugins.md) documentation.
 
 When registering a function, we first need to define the function configuration object. This object is used to configure the function and is passed to the function when it is invoked. Any options that are available to the function must be specified in the configuration object.
 

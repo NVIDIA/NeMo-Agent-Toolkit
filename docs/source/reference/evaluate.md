@@ -449,4 +449,4 @@ eval:
 Output directory cleanup is disabled by default for easy troubleshooting.
 
 ## Profiling and Performance Monitoring of AIQ Toolkit Workflows
-You can profile workflows via the AIQ Toolkit evaluation system. For more information, see the [Profiler](profiler.md) documentation.
+You can profile workflows via the AIQ Toolkit evaluation system. For more information, see the [Profiler](../workflows/profiler.md) documentation.
