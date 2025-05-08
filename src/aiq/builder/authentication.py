@@ -15,7 +15,7 @@
 
 # from aiq.data_models.authentication import AuthenticationBaseConfig
 
-# class AuthenticationInfo:  #TODO EE: Update
+# class AuthenticationInfo:  # TODO EE: Update
 
 #     def __init__(self, *, config: AuthenticationBaseConfig, description: str):
 #         self.config = config

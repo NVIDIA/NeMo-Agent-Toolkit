@@ -115,7 +115,7 @@ RetrieverClientRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder], A
 RegistryHandlerRegisteredCallableT = Callable[[RegistryHandlerBaseConfigT],
                                               AbstractAsyncContextManager[AbstractRegistryHandler]]
 
-# #TODO EE: Update.
+# # TODO EE: Update.
 # AuthenticationProviderRegisteredCallableT = Callable[[AuthenticationBaseConfigT, Builder],
 #                                                      AbstractAsyncContextManager[AuthenticationInfo]]
 
@@ -276,7 +276,7 @@ class RegisteredRegistryHandlerInfo(RegisteredInfo[RegistryHandlerBaseConfig]):
 #     etc.
 #     """
 
-#     build_fn: AuthenticationProviderRegisteredCallableT = Field(repr=False)  #TODO EE: Update
+#     build_fn: AuthenticationProviderRegisteredCallableT = Field(repr=False)  # TODO EE: Update
 
 
 class RegisteredPackage(BaseModel):
@@ -651,7 +651,7 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
     # def get_registered_authentication_providers(self) -> list[RegisteredInfo[AuthenticationBaseConfig]]:
 
-    #     return list(self._registered_authentication_provider_infos.values())  #TODO EE: Update
+    #     return list(self._registered_authentication_provider_infos.values())  # TODO EE: Update
 
     def register_tool_wrapper(self, registration: RegisteredToolWrapper):
 
@@ -872,7 +872,7 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         if issubclass(cls, LoggingBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_logging_method())
 
-        # if issubclass(cls, AuthenticationBaseConfig):  #TODO EE: Update
+        # if issubclass(cls, AuthenticationBaseConfig):  # TODO EE: Update
         #     return self._do_compute_annotation(cls, self.get_registered_authentication_providers())
 
         raise ValueError(f"Supplied an unsupported component type {cls}")

@@ -1,5 +1,8 @@
+import pytest
+
 from aiq.authentication.credentials_manager import _CredentialsManager
 from aiq.cli.cli_utils.config_override import load_and_override_config
+from aiq.data_models.authentication import OAuth2Config
 from aiq.data_models.config import AIQConfig
 from aiq.utils.data_models.schema_validator import validate_schema
 
@@ -32,3 +35,15 @@ async def test_credential_persistence():
     # Ensure None is returned if the provider does not exist.
     test = _CredentialsManager()._get_authentication_provider("invalid_provider")
     assert test is None
+
+
+async def test_oauth_pydantic_model_state_field():
+    from pydantic import ValidationError
+    model = OAuth2Config(authorization_url="url_test",
+                         client_id="client_id_test",
+                         audience="audience_test",
+                         scope=["scope_test"])
+
+    # Throw error is state field is being modified.
+    with pytest.raises(ValidationError):
+        model.state = "mock_state"

@@ -19,6 +19,7 @@ import typing
 
 from aiq.builder.context import Singleton
 from aiq.data_models.authentication import AuthenticationProvider
+from aiq.data_models.authentication import OAuth2Config
 
 if (typing.TYPE_CHECKING):
     from aiq.data_models.config import AIQConfig
@@ -36,31 +37,51 @@ class _CredentialsManager(metaclass=Singleton):
         self.__authentication_providers: dict[str, AuthenticationProvider] = {}
         self.__swap_flag: bool = True
         self.__full_config: "AIQConfig" = None
-        self.__command_name: str = None  # TODO EE: Need to get a list of command names.
-        self.__credentials_flag: asyncio.Event = asyncio.Event()
+        # TODO EE:  Need to get a list of command names i.e console, fastapi etc and change name.
+        self.__command_name: str = None
+        self.__oauth_credentials_flag: asyncio.Event = asyncio.Event()
+        self.__consent_prompt_flag: asyncio.Event = asyncio.Event()
 
     def _swap_authorization_providers(self, authentication_providers: dict[str, AuthenticationProvider]) -> None:
-        """Atomically transfer ownership of the sensitive AIQ Authorization configuration attributes to the
-        CredentialsManager using the copy and swap idiom."""
-
+        """Transfer ownership of the sensitive AIQ Authorization configuration attributes to the
+        CredentialsManager."""
+        # TODO EE: Update docstrings
         if self.__swap_flag:
             self.__authentication_providers = authentication_providers.copy()
             authentication_providers.clear()
             self.__swap_flag = False
 
     def _get_authentication_provider(self, authentication_provider: str) -> AuthenticationProvider | None:
-        """Retrieve the stored authentication providers."""
+        """Retrieve the stored authentication provider by registered name."""
+
         if authentication_provider not in self.__authentication_providers:
-            logger.warning("Authorization provider not found: %s", authentication_provider, exc_info=True)
+            logger.error("Authentication provider not found: %s", authentication_provider)  # TODO EE: Check loggers
             return None
 
         return self.__authentication_providers.get(authentication_provider)
 
-    async def _get_credentials(self):
-        await self.__credentials_flag.wait()  # TODO EE: Maybe add a future here
+    def _get_authentication_provider_by_state(self, state: str) -> OAuth2Config | None:
+        """Retrieve the stored authentication provider by state."""
 
-    async def _set_credentials(self):
-        self.__credentials_flag.set()
+        for _, authentication_provider in self.__authentication_providers.items():
+            if isinstance(authentication_provider, OAuth2Config):
+                if authentication_provider.state == state:
+                    return authentication_provider
+
+        logger.error("Authentication provider not found")
+        return None
+
+    async def _wait_for_oauth_credentials(self):
+        await self.__oauth_credentials_flag.wait()
+
+    async def _set_oauth_credentials(self):
+        self.__oauth_credentials_flag.set()
+
+    async def _wait_for_consent_prompt_url(self):
+        await self.__consent_prompt_flag.wait()
+
+    async def _set_consent_prompt(self):
+        self.__consent_prompt_flag.set()
 
     @property
     def full_config(self) -> "AIQConfig":

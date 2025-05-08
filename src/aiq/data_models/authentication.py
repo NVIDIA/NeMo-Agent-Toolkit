@@ -13,8 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import secrets
 import typing
+from enum import Enum
 
+from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
 
 from .common import BaseModelRegistryTag
@@ -28,14 +32,59 @@ class AuthenticationBaseConfig(TypedBaseModel, BaseModelRegistryTag):
 AuthenticationBaseConfigT = typing.TypeVar("AuthenticationBaseConfigT", bound=AuthenticationBaseConfig)
 
 
+class HTTPMethod(str, Enum):
+    GET = "GET"
+    POST = "POST"
+    PUT = "PUT"
+    DELETE = "DELETE"
+    PATCH = "PATCH"
+    HEAD = "HEAD"
+    OPTIONS = "OPTIONS"
+
+
+class ConsentPromptMode(str, Enum):
+    BROWSER = "browser"
+    POLLING = "polling"
+
+
+class AuthenticationEndpoint(str, Enum):
+    REDIRECT_URI = "/redirect"
+    LOCATION_URL = "/location-url"
+
+
+class TokenRequestConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    grant_type: str = Field(default="authorization_code", description="Authorization flow identifier.")
+    client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
+    client_secret: str = Field(description="The client secret for OAuth 2.0 authentication.")
+    code: str = Field(description="Authorization code to be exchanged for an access token.")
+    redirect_uri: str = Field(description="Registered redirect uri.")
+
+
 class OAuth2Config(AuthenticationBaseConfig):
     """
     OAuth 2.0 authentication configuration model.
     """
     type: typing.Literal["oauth2"] = Field(alias="_type", default="oauth2", description="OAuth 2.0 Config.")
+    fastapi_url: str = Field(description="The base url of the running fastapi instance. "
+                             "This is needed to properly construct the redirect uri i.e: http://localhost:8000")
+    authorization_url: str = Field(description="The base url to the authorization server in which authorization "
+                                   "request are made to receive access codes..")
+    authorization_token_url: str = Field(
+        description="The base url to the authorization token server in which access codes "
+        "are exchanged for access tokens.")
+    consent_prompt_mode: ConsentPromptMode = Field(
+        default=ConsentPromptMode.BROWSER,
+        description="Specifies how the application handles the OAuth 2.0 consent prompt. "
+        "Options are 'browser' to open the system's default browser for login, "
+        "or 'polling' to store the login url retrievable via GET /auth/location-url.")
     client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
+    client_secret: str = Field(description="The client secret for OAuth 2.0 authentication.")
     audience: str = Field(description="The audience for OAuth 2.0 authentication.")
     scope: list[str] = Field(description="The scope for OAuth 2.0 authentication.")
+    state: str = Field(default=secrets.token_urlsafe(nbytes=16),
+                       description="A URL-safe base64 format 16 byte random string",
+                       frozen=True)
     access_token: str | None = Field(default=None, description="The access token for OAuth 2.0 authentication.")
 
 

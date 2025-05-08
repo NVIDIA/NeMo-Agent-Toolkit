@@ -40,12 +40,9 @@ class _FastApiFrontEndController:
         # Overwrite the front end config to default to spawn fastapi server.
         _CredentialsManager().full_config.general.front_end = FastApiFrontEndConfig()
 
-        print("\nSPAWNING SERVER\n")
-
         self._server_background_task = asyncio.create_task(self._server.serve())
 
-    async def stop_server(self) -> None:
-        print("\nSHUTTING SERVER DOWN\n")
+    async def stop_server(self) -> None:  # TODO EE: Add doc strings
 
         self._server.should_exit = True
 

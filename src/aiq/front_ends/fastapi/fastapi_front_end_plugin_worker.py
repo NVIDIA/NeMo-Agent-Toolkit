@@ -35,6 +35,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from pydantic import Field
 
+from aiq.authentication.request_manager import RequestManager
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
@@ -167,6 +168,10 @@ class RouteInfo(BaseModel):
 
 class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
+    def __init__(self, config: AIQConfig):
+        self._request_manager: RequestManager = None
+        super().__init__(config)
+
     @staticmethod
     async def _periodic_cleanup(name: str, job_store: JobStore, sleep_time_sec: int = 300):
         while True:
@@ -192,6 +197,16 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         asyncio.create_task(
                             self._periodic_cleanup(name=name, job_store=job_store, sleep_time_sec=sleep_time_sec)))
                     self._cleanup_tasks.append(attr_name)
+
+    @property
+    def request_manager(self) -> RequestManager:
+        """Get the RequestManager instance."""
+        return self._request_manager
+
+    @request_manager.setter
+    def request_manager(self, request_manager: RequestManager) -> None:
+        """Set the RequestManager instance."""
+        self._request_manager = request_manager
 
     def get_step_adaptor(self) -> StepAdaptor:
 
@@ -771,24 +786,65 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 raise ValueError(f"Unsupported method {endpoint.method}")
 
     async def add_authorization_route(self, app: FastAPI, session_manager: AIQSessionManager):
-
+        import httpx
         from fastapi import Request
         from fastapi.responses import JSONResponse
 
         from aiq.authentication.credentials_manager import _CredentialsManager
+        from aiq.data_models.authentication import AuthenticationEndpoint
+        from aiq.data_models.authentication import HTTPMethod
+        from aiq.data_models.authentication import OAuth2Config
+        from aiq.data_models.authentication import TokenRequestConfig
 
         async def redirect_uri(request: Request):
 
-            print("\nUPDATING CREDENTIALS\n")
+            authorization_code: str | None = request.query_params.get("code")
+            state: str | None = request.query_params.get("state")
 
-            # TODO EE: Handle Redirect codes.
-            await _CredentialsManager()._set_credentials()
+            if not authorization_code:  # TODO EE: Handle error cases.
+                pass
+
+            if not state:
+                pass
+
+            authentication_provider: OAuth2Config | None = _CredentialsManager()._get_authentication_provider_by_state(
+                state)
+
+            if authentication_provider is None:
+                pass
+
+            # TODO EE: Find better way to do this.
+            redirect_uri: str = f"{authentication_provider.fastapi_url}{FastApiFrontEndConfig().authorization.path}{AuthenticationEndpoint.REDIRECT_URI.value}"  # noqa: E501
+            data = TokenRequestConfig(client_id=authentication_provider.client_id,
+                                      client_secret=authentication_provider.client_secret,
+                                      code=authorization_code,
+                                      redirect_uri=redirect_uri)
+            token_url: str = authentication_provider.authorization_token_url
+            headers: httpx.Headers = httpx.Headers({"Content-Type": "application/json"})
+            response: httpx.Response = await self.request_manager.send_request(url=token_url,
+                                                                               http_method=HTTPMethod.POST.value,
+                                                                               headers=headers,
+                                                                               data=data.model_dump())
+
+            if response.json().get("access_token"):
+                authentication_provider.access_token = response.json().get("access_token")
+
+            await _CredentialsManager()._set_oauth_credentials()
 
             return JSONResponse({"message": "Received OAuth callback"})
 
+        async def location_url(request: Request):  # TODO EE: Update polling logic.
+            await _CredentialsManager()._set_consent_prompt()
+
         if self.front_end_config.authorization.path:
             app.add_api_route(
-                path=self.front_end_config.authorization.path,
+                path=f"{self.front_end_config.authorization.path}{AuthenticationEndpoint.REDIRECT_URI.value}",
                 endpoint=redirect_uri,
                 methods=["GET"],
                 description="Handles the authorization code and state returned from the OAuth2.0 provider.")
+
+            app.add_api_route(
+                path=f"{self.front_end_config.authorization.path}{AuthenticationEndpoint.LOCATION_URL.value}",
+                endpoint=location_url,
+                methods=["GET"],
+                description="OAuth2.0 302 HTTP location header polling endpoint.")
