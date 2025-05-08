@@ -18,7 +18,7 @@ limitations under the License.
 # Reasoning Agent
 
 Agents are a major use-case for language models. Agents are systems that use LLMs to determine what actions to take and what inputs to use for those actions.
-Some LLMs support reasoning, and can be used for Reasoning Agents. 
+Some LLMs support reasoning, and can be used for Reasoning Agents.
 
 ---
 
@@ -96,27 +96,27 @@ The **Reasoning Agent** is an AI system that directly invokes an underlying func
 
 ### Step-by-Step Breakdown of a Reasoning Agent
 
-1. **User Query** – The agent receives an input or problem to solve.  
-2. **Reasoning on top of Function** – The agent reasons the best plan of action to take, based on the input and the augmented underlying function.  
-3. **Instruction / Plan Execution** – The agent invokes the underlying function, passing its plan of action along to it.  
+1. **User Query** – The agent receives an input or problem to solve.
+2. **Reasoning on top of Function** – The agent reasons the best plan of action to take, based on the input and the augmented underlying function.
+3. **Instruction / Plan Execution** – The agent invokes the underlying function, passing its plan of action along to it.
 
 ### Comparing ReAct Agent With and Without the Reasoning Agent
 
 #### ReAct Agent Without Reasoning Agent
-![Running Workflows](../_static/agent_without_reasoning_wrapper.png)
+![Running Workflows](../../_static/agent_without_reasoning_wrapper.png)
 
 #### ReAct Agent With Reasoning Agent
-![Running Workflows](../_static/agent_with_reasoning_wrapper.png)
+![Running Workflows](../../_static/agent_with_reasoning_wrapper.png)
 
 ---
 
 ## Limitations
-<ol> 
+<ol>
 <li>Requires a thinking/reasoning LLM, such as DeepSeek R1.  There should be thought tags within the LLM output:
 
 >&lt;think&gt;&lt;/think&gt;
 </li>
 
-<li>Performs reasoning up front, and does not revisit the plan to revise strategy during execution like ReAct Agent does.  
+<li>Performs reasoning up front, and does not revisit the plan to revise strategy during execution like ReAct Agent does.
 Revising the strategy is beneficial if a tool returns a non-useful response (let's say our retriever tool did not have any relevant search results to the user's original question)</li>
 </ol>

@@ -61,7 +61,7 @@ In this workflow the `webpage_query` tool is used to query the LangSmith User Gu
 
 The `webpage_query` tool makes use of the `nv-embedqa-e5-v5` embedder, which is defined in the `embedders` section.
 
-For details on workflow configuration, including sections not utilized in the above example, refer to the [Workflow Configuration](../workflows/workflow-configuration.md) document.
+For details on workflow configuration, including sections not utilized in the above example, refer to the [Workflow Configuration](../workflow-configuration.md) document.
 
 ## Workflow Types
 
