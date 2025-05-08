@@ -17,7 +17,7 @@ import asyncio
 import logging
 import shutil
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Optional, TypeVar, Generic
 
 from pydantic import BaseModel
 from tqdm import tqdm
@@ -32,19 +32,116 @@ from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.utils.output_uploader import OutputUploader
 from aiq.runtime.session import AIQSessionManager
 
-try:
-    from weave.flow.eval_imperative import EvaluationLogger
-    from weave.flow.eval_imperative import ScoreLogger
-    from weave.trace.context import weave_client_context
-    WEAVE_AVAILABLE = True
-except ImportError:
-    WEAVE_AVAILABLE = False
-    # we simply don't do anything if weave is not available
-    pass
-
-print(f"WEAVE_AVAILABLE: {WEAVE_AVAILABLE}")
-
 logger = logging.getLogger(__name__)
+
+
+class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
+    """
+    Class to handle all Weave integration functionality.
+    """
+    def __init__(self):
+        self.available = False
+        self.client = None
+        self.eval_logger = None
+        self.pred_loggers = {}
+        
+        try:
+            from weave.flow.eval_imperative import EvaluationLogger
+            from weave.flow.eval_imperative import ScoreLogger
+            from weave.trace.context import weave_client_context
+            self.EvaluationLogger = EvaluationLogger
+            self.ScoreLogger = ScoreLogger
+            self.weave_client_context = weave_client_context
+            self.available = True
+        except ImportError:
+            self.available = False
+            # we simply don't do anything if weave is not available
+            pass
+    
+    def initialize_client(self):
+        """Initialize the Weave client if available."""
+        if not self.available:
+            return False
+            
+        try:
+            self.client = self.weave_client_context.require_weave_client()
+            return self.client is not None
+        except Exception:
+            self.client = None
+            return False
+
+    def initialize_logger(self, eval_input: EvalInput, config: Any):
+        """Initialize the Weave evaluation logger."""
+        if not self.client:
+            return False
+
+        try:
+            weave_dataset = [
+                item.model_dump(exclude={"output_obj", "trajectory"}) for item in eval_input.eval_input_items
+            ]
+            config_dict = config.model_dump(mode="json")
+            # TODO: make this configurable
+            config_dict["name"] = "aiqtoolkit-eval"
+            self.eval_logger = self.EvaluationLogger(
+                model=config_dict,
+                dataset=weave_dataset
+            )
+            self.pred_loggers = {}
+            
+            del weave_dataset
+            del config_dict
+            return True
+        except Exception as e:
+            self.eval_logger = None
+            logging.getLogger(__name__).warning("Failed to initialize Weave `EvaluationLogger`: %s", e)
+            return False
+
+    def log_prediction(self, item: EvalInputItem, output: Any):
+        """Log a prediction to Weave."""
+        if not self.eval_logger:
+            return
+            
+        pred_logger = self.eval_logger.log_prediction(
+            inputs=item.model_dump(exclude={"output_obj", "trajectory"}),
+            output=output
+        )
+        self.pred_loggers[item.id] = pred_logger
+
+    def log_score(self, eval_output: EvalOutput, evaluator_name: str):
+        """Log scores for evaluation outputs."""
+        if not self.eval_logger:
+            return
+
+        for eval_output_item in eval_output.eval_output_items:
+            if eval_output_item.id in self.pred_loggers:
+                self.pred_loggers[eval_output_item.id].log_score(
+                    scorer=evaluator_name,
+                    score=eval_output_item.score,
+                )
+
+    def finish_loggers(self):
+        """Finish all prediction loggers."""
+        if not self.eval_logger:
+            return
+            
+        for pred_logger in self.pred_loggers.values():
+            if hasattr(pred_logger, '_has_finished') and not pred_logger._has_finished:
+                pred_logger.finish()
+
+    def log_summary(self, evaluation_results: List[tuple[str, EvalOutput]]):
+        """Log summary statistics to Weave."""
+        if not self.eval_logger:
+            return
+            
+        summary = {}
+        for evaluator_name, eval_output in evaluation_results:
+            # Calculate average score for this evaluator
+            scores = [item.score for item in eval_output.eval_output_items if item.score is not None]
+            if scores:
+                summary[f"{evaluator_name}_avg"] = sum(scores) / len(scores)
+        
+        # Log the summary to finish the evaluation
+        self.eval_logger.log_summary(summary)
 
 
 class EvaluationRun:  # pylint: disable=too-many-public-methods
@@ -64,6 +161,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         # Helpers
         self.intermediate_step_adapter: IntermediateStepAdapter = IntermediateStepAdapter()
+        self.weave = WeaveEvaluationIntegration()
 
         # Metadata
         self.eval_input: EvalInput | None = None
@@ -137,13 +235,8 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                 item.output_obj = output
                 item.trajectory = self.intermediate_step_adapter.validate_intermediate_steps(intermediate_steps)
 
-                # log the input and output to weave if available
-                if hasattr(self, 'weave_eval_logger') and self.weave_eval_logger is not None:
-                    weave_pred_logger = self.weave_eval_logger.log_prediction(
-                        inputs=item.model_dump(exclude={"output_obj", "trajectory"}),
-                        output=output
-                    )
-                    self.weave_pred_loggers[item.id] = weave_pred_logger
+                # Use the WeaveIntegration class to log prediction
+                self.weave.log_prediction(item, output)
 
         async def wrapped_run(item: EvalInputItem) -> None:
             await run_one(item)
@@ -224,6 +317,9 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                    "You can re-execute evaluation for incomplete results by running "
                    "`eval` with the --skip_completed_entries flag.")
             logger.warning(msg)
+            
+        # Log summary statistics to Weave
+        self.weave.log_summary(self.evaluation_results)
 
     async def run_single_evaluator(self, evaluator_name: str, evaluator: Any):
         """Run a single evaluator and store its results."""
@@ -231,14 +327,8 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             eval_output = await evaluator.evaluate_fn(self.eval_input)
             self.evaluation_results.append((evaluator_name, eval_output))
 
-            # log the evaluation results to weave if available
-            if hasattr(self, 'weave_eval_logger') and self.weave_eval_logger is not None:
-                for eval_output_item in eval_output.eval_output_items:
-                    if eval_output_item.id in self.weave_pred_loggers:
-                        self.weave_pred_loggers[eval_output_item.id].log_score(
-                            scorer=evaluator_name,
-                            score=eval_output_item.score,
-                        )
+            # Log evaluation scores to Weave
+            self.weave.log_score(eval_output, evaluator_name)
         except Exception as e:
             logger.exception("An error occurred while running evaluator %s: %s", evaluator_name, e, exc_info=True)
 
@@ -253,11 +343,8 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         try:
             await asyncio.gather(*tasks)
 
-            # Now that all evaluators have logged their scores, finish the score loggers
-            if hasattr(self, 'weave_eval_logger') and self.weave_eval_logger is not None:
-                for pred_logger in self.weave_pred_loggers.values():
-                    if hasattr(pred_logger, '_has_finished') and not pred_logger._has_finished:
-                        pred_logger.finish()
+            # Finish prediction loggers in Weave
+            self.weave.finish_loggers()
         except Exception as e:
             logger.exception("An error occurred while running evaluators: %s", e, exc_info=True)
             raise
@@ -328,33 +415,10 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         # Run workflow and evaluate
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:
-            if WEAVE_AVAILABLE:
-                # the user might have weave installed but not initialized
-                try:
-                    self.weave_client = weave_client_context.require_weave_client()
-                except Exception:
-                    self.weave_client = None
-                    pass
-
-            if self.weave_client:
-                try:
-                    weave_dataset = [
-                        item.model_dump(exclude={"output_obj", "trajectory"}) for item in self.eval_input.eval_input_items
-                    ]
-                    config_dict = config.model_dump(mode="json")
-                    # TODO: make this configurable
-                    config_dict["name"] = "aiqtoolkit-eval"
-                    self.weave_eval_logger = EvaluationLogger(
-                        model=config_dict,
-                        dataset=weave_dataset
-                    )
-                    self.weave_pred_loggers = {}
-
-                    del weave_dataset
-                    del config_dict
-                except Exception as e:
-                    self.weave_eval_logger = None
-                    logger.warning("Failed to initialize Weave `EvaluationLogger`: %s", e)
+            # Initialize Weave integration
+            self.weave.initialize_client()
+            if self.weave.client:
+                self.weave.initialize_logger(self.eval_input, config)
 
             if self.config.endpoint:
                 await self.run_workflow_remote()
@@ -374,18 +438,6 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         # Write the results to the output directory
         self.write_output(dataset_handler)
-
-        # Finalize the Weave evaluation logger by logging summary if available
-        if hasattr(self, 'weave_eval_logger') and self.weave_eval_logger is not None:
-            summary = {}
-            for evaluator_name, eval_output in self.evaluation_results:
-                # Calculate average score for this evaluator
-                scores = [item.score for item in eval_output.eval_output_items if item.score is not None]
-                if scores:
-                    summary[f"{evaluator_name}_avg"] = sum(scores) / len(scores)
-            
-            # Log the summary to finish the evaluation
-            self.weave_eval_logger.log_summary(summary)
 
         # Run custom scripts and upload evaluation outputs to S3
         if self.eval_config.general.output:
