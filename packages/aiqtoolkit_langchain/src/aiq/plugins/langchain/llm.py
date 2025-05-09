@@ -42,4 +42,4 @@ async def aws_bedrock_langchain(llm_config: AWSBedrockModelConfig, builder: Buil
 
     from langchain_aws import ChatBedrockConverse
 
-    yield ChatBedrockConverse(**llm_config.model_dump(exclude={"type"}, by_alias=True))
+    yield ChatBedrockConverse(**llm_config.model_dump(exclude={"type", "context_size"}, by_alias=True))

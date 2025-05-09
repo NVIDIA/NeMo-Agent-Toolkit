@@ -48,9 +48,6 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, builder: Builder):
 
     llm = OpenAI(**kwargs)
 
-    # Disable content blocks
-    llm.supports_content_blocks = False
-
     yield llm
 
 
@@ -59,7 +56,7 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, builder: Bu
 
     from llama_index.llms.bedrock import Bedrock
 
-    kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
+    kwargs = llm_config.model_dump(exclude={"type", "max_tokens"}, by_alias=True)
 
     llm = Bedrock(**kwargs)
 

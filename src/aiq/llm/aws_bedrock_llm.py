@@ -16,7 +16,6 @@
 from pydantic import AliasChoices
 from pydantic import ConfigDict
 from pydantic import Field
-from pydantic import PositiveInt
 
 from aiq.builder.builder import Builder
 from aiq.builder.llm import LLMProviderInfo
@@ -34,7 +33,14 @@ class AWSBedrockModelConfig(LLMBaseConfig, name="aws_bedrock"):
                             serialization_alias="model",
                             description="The model name for the hosted AWS Bedrock.")
     temperature: float = Field(default=0.0, description="Sampling temperature in [0, 1].")
-    max_tokens: PositiveInt = Field(default=300, description="Maximum number of tokens to generate.")
+    max_tokens: int | None = Field(
+        default=1024,
+        description=
+        "Maximum number of tokens to generate. This field is ONLY required when using AWS Bedrock with Langchain.")
+    context_size: int | None = Field(
+        default=1024,
+        description=
+        "Maximum number of tokens to generate. This field is ONLY required when using AWS Bedrock with LlamaIndex.")
 
     # Client parameters
     region_name: str | None = Field(default="None", description="AWS region to use.")
