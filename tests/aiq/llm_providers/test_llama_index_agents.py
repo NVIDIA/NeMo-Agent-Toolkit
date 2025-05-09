@@ -1,3 +1,17 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from typing import Any
 
 import pytest
@@ -74,8 +88,11 @@ async def test_openai_minimal_agent():
 @pytest.mark.integration
 @pytest.mark.asyncio
 async def test_aws_bedrock_minimal_agent():
-    """Test AWS Bedrock LLM with minimal LlamaIndex agent.
-    Requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to be set."""
+    """
+    Test AWS Bedrock LLM with LangChain agent.
+    Requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to be set.
+    See https://docs.aws.amazon.com/bedrock/latest/userguide/setting-up.html for more information.
+    """
     llm_config = AWSBedrockModelConfig(model_name="us.meta.llama3-1-405b-instruct-v1:0",
                                        temperature=0.0,
                                        region_name="us-east-2",
