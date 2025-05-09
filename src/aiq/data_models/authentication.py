@@ -32,6 +32,11 @@ class AuthenticationBaseConfig(TypedBaseModel, BaseModelRegistryTag):
 AuthenticationBaseConfigT = typing.TypeVar("AuthenticationBaseConfigT", bound=AuthenticationBaseConfig)
 
 
+class RunMode(str, Enum):
+    CONSOLE = "console"
+    SERVER = "fastapi"
+
+
 class HTTPMethod(str, Enum):
     GET = "GET"
     POST = "POST"
@@ -52,7 +57,23 @@ class AuthenticationEndpoint(str, Enum):
     LOCATION_URL = "/location-url"
 
 
-class TokenRequestConfig(BaseModel):
+class OAuth2AuthQueryParams(BaseModel):
+    """
+    OAuth 2.0 authorization request query parameters model.
+    """
+    audience: str = Field(description="The audience for OAuth 2.0 authentication.")
+    client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
+    state: str = Field(description="A URL-safe base64 format 16 byte random string")
+    scope: str = Field(description="The scope for OAuth 2.0 authentication.")
+    redirect_uri: str = Field(description="Registered redirect uri.")
+    response_type: str = Field(description="Type of response the client expects from the authorization server.")
+    prompt: str = Field(description="Specifies what type of user consent prompt")
+
+
+class OAuth2TokenRequestBody(BaseModel):
+    """
+    OAuth 2.0 token request body model.
+    """
     model_config = ConfigDict(extra="forbid")
     grant_type: str = Field(default="authorization_code", description="Authorization flow identifier.")
     client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
@@ -66,8 +87,8 @@ class OAuth2Config(AuthenticationBaseConfig):
     OAuth 2.0 authentication configuration model.
     """
     type: typing.Literal["oauth2"] = Field(alias="_type", default="oauth2", description="OAuth 2.0 Config.")
-    fastapi_url: str = Field(description="The base url of the running fastapi instance. "
-                             "This is needed to properly construct the redirect uri i.e: http://localhost:8000")
+    client_server_url: str = Field(description="The base url of the API server instance. "
+                                   "This is needed to properly construct the redirect uri i.e: http://localhost:8000")
     authorization_url: str = Field(description="The base url to the authorization server in which authorization "
                                    "request are made to receive access codes..")
     authorization_token_url: str = Field(

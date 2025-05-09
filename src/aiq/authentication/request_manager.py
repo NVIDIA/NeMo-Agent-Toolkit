@@ -13,17 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
+import re
+import urllib.parse
 
 import httpx
+from pydantic import ValidationError
 
 from aiq.authentication.authentication_manager import AuthenticationManager
+from aiq.authentication.exceptions import BaseUrlValidationError
+from aiq.authentication.exceptions import BodyValidationError
+from aiq.authentication.exceptions import HeaderValidationError
+from aiq.authentication.exceptions import OAuthError
+from aiq.authentication.exceptions import QueryParameterValidationError
 from aiq.authentication.interfaces import RequestManagerBase
 from aiq.authentication.response_manager import ResponseManager
 from aiq.data_models.authentication import AuthenticationEndpoint
 from aiq.data_models.authentication import HTTPMethod
+from aiq.data_models.authentication import OAuth2AuthQueryParams
 from aiq.data_models.authentication import OAuth2Config
-from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 
 logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -44,7 +53,7 @@ class RequestManager(RequestManagerBase):
     def authentication_manager(self) -> AuthenticationManager:
         return self._authentication_manager
 
-    def validate_values(self, input_dict: dict) -> None:
+    def _validate_data(self, input_dict: dict) -> None:
         # Check to ensure all parameters have values
         invalid_values = [key for key, value in input_dict.items() if not value]
 
@@ -52,12 +61,27 @@ class RequestManager(RequestManagerBase):
             raise ValueError(f"Empty or invalid values for input: {input_dict}. "
                              f"Invalid Values: {', '.join(invalid_values)}")
 
-    def validate_url(self, url: str) -> None:  # TODO EE: Add more verbose general url validation logic.
-        if not url.startswith(("http://", "https://")):
-            # TODO EE: Add custom exceptions for url
-            raise ValueError("Base URL must start with http:// or https://")
+    def _validate_base_url(self, url: str | httpx.URL) -> None:
+        """Validates URL and Raises BaseUrlError if the URL is not a valid URL."""
 
-    def validate_http_method(self, http_method: str) -> None:
+        if isinstance(url, httpx.URL):
+            url = str(url)
+
+        parsed_url: urllib.parse.ParseResult = urllib.parse.urlparse(url)  # TODO EE: Add Tests.
+
+        # Ensure URL has both scheme and network location
+        if not parsed_url.scheme or not parsed_url.netloc:
+            raise BaseUrlValidationError("URL must have both scheme and network location.")
+
+        # Ensure URL scheme is (http or https)
+        if parsed_url.scheme not in ['http', 'https']:
+            raise BaseUrlValidationError(f"Unsupported URL scheme: {parsed_url.scheme}. Must be http or https.")
+
+        # Ensure URL starts with a '/'
+        if not parsed_url.path.startswith("/"):
+            raise BaseUrlValidationError("URL path should start with '/'")
+
+    def _validate_http_method(self, http_method: str | HTTPMethod) -> None:
         """
         Validates that the provided HTTP method is one of the allowed standard methods.
 
@@ -65,116 +89,164 @@ class RequestManager(RequestManagerBase):
             http_method (str): The HTTP method to validate (e.g., 'GET', 'POST').
         """
         try:
-            HTTPMethod(http_method.upper())
-        except ValueError:
+            HTTPMethod(http_method.upper())  # TODO EE: Add Tests
+        except ValueError as e:
             valid_http_methods = ', '.join([method.value for method in HTTPMethod])
-            raise ValueError(f"Invalid HTTP method: '{http_method}'. Must be one of {valid_http_methods}.")
+            raise ValueError(f"Invalid HTTP method: '{http_method}'. Must be one of {valid_http_methods}.") from e
 
-    def validate_headers(self, headers: dict) -> None:
-        # Check to ensure all headers have values
-        self.validate_values(headers)
-
-    def validate_query_parameters(self, query_params: dict) -> None:
-        # Check to ensure all query params have values
-        self.validate_values(query_params)
-
-    def validate_body_data(self, body_data) -> None:
-        # TODO EE: Update
-        pass
-
-    def validate_oauth_query_params(self, query_params: dict) -> None:
-        required_query_params: set = {
-            "audience", "client_id", "scope", "redirect_uri", "state", "response_type", "prompt"
-        }
-
-        # Check for missing OAuth2.0 query paramters
-        missing_query_paramters = [
-            query_param for query_param in required_query_params if query_param not in query_params
-        ]
-        if missing_query_paramters:
-            raise ValueError(f"Missing required query parameters: {', '.join(missing_query_paramters)}")
-
-        # Check to ensure all OAuth2.0 query parameters have values
-        self.validate_values(query_params)
-
-    async def build_authorization_url(self,
-                                      authentication_provider: str,
-                                      response_type: str = "code",
-                                      prompt: str = "consent") -> httpx.URL | None:
+    def _validate_headers(self, headers: dict | httpx.Headers | None) -> None:
         """
-        Construct an authorization URL using httpx.URL to initiate the OAuth2.0 Code Flow.
+        Validates that the provided headers are valid for HTTP request.
 
         Args:
-            authentication_provider (str): The name of the registered authentication provider.
-
-        Returns:
-            httpx.URL: Constructed URL if successful, or None if error occurs.
+            headers (dict): Dictionary of headers.
         """
-        from aiq.authentication.credentials_manager import _CredentialsManager
+        if headers is None:
+            return
+
+        if isinstance(headers, httpx.Headers):
+            headers = dict(headers)
+
+        self._validate_data(headers)
+
+        for key, value in headers.items():
+            # Checking for valid ascii characters.
+            if not re.fullmatch(r"[A-Za-z0-9-]+", key):  # TODO EE: Add Tests
+                raise HeaderValidationError(f"Invalid header name: {key}")
+
+            # Checking for any disallowed control characters.
+            if any(ord(char) < 32 and char != '\t' or ord(char) == 127 for char in str(value)):
+                raise HeaderValidationError(f"Invalid control character in header value: {key}: {value}")
+
+    def _validate_query_parameters(self, query_params: dict | httpx.QueryParams | None) -> None:
+        """
+        Validates that the provided query parameters are valid for HTTP request.
+
+        Args:
+            query_params (dict, httpx.QueryParams): Dictionary of query parameters.
+        """
+        if query_params is None:
+            return
+
+        if isinstance(query_params, httpx.QueryParams):
+            query_params = dict(query_params)
+
+        self._validate_data(query_params)
+
+        # Checking if the key can be safely encoded
+        for key, value in query_params.items():  # TODO EE: Add Tests
+            try:
+                urllib.parse.quote(str(key))
+                urllib.parse.quote(str(value))
+            except Exception as e:
+                raise QueryParameterValidationError(
+                    f"Unable to encode query parameters safely: ({key}: {value})") from e
+
+    def _validate_body_data(self, body_data: dict | None) -> None:
+        """
+        Validates that the provided body is valid for HTTP request.
+
+        Args:
+            body_data (dict): Dictionary representing HTTP body.
+        """
+        if body_data is None:
+            return
+        try:
+            json.dumps(body_data)
+        except (TypeError, ValueError) as e:
+            raise BodyValidationError(f"Request body is not JSON serializable: {e}") from e
+
+    async def _build_oauth_authorization_url(self,
+                                             authentication_provider: OAuth2Config,
+                                             response_type: str = "code",
+                                             prompt: str = "consent") -> httpx.URL:
+        """
+        Construct an authorization URL to initiate the OAuth2.0 Code Flow.
+
+        Args:
+            authentication_provider (OAuth2Config): The registered authentication provider.
+        """
+        from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 
         try:
-            authentication_provider: OAuth2Config | None = _CredentialsManager()._get_authentication_provider(
-                authentication_provider)
+            full_authorization_url: httpx.URL = None
 
-            if authentication_provider is None:
-                raise ValueError(f"Authentication provider '{authentication_provider}' not found.")
+            # Validate authorization url.
+            self._validate_base_url(authentication_provider.authorization_url)
 
-            self.validate_url(authentication_provider.authorization_url)
+            # Construct OAuth2.0 query parameters.
+            query_params: OAuth2AuthQueryParams = OAuth2AuthQueryParams(
+                audience=authentication_provider.audience,
+                client_id=authentication_provider.client_id,
+                state=authentication_provider.state,
+                scope=(" ".join(authentication_provider.scope)),
+                redirect_uri=(f"{authentication_provider.client_server_url}"
+                              f"{FastApiFrontEndConfig().authorization.path}"
+                              f"{AuthenticationEndpoint.REDIRECT_URI.value}"),
+                response_type=response_type,
+                prompt=prompt)
 
-            query_params: dict = authentication_provider.model_dump(include={"audience", "client_id", "state"})
-            query_params["scope"] = " ".join(authentication_provider.scope)
-            # TODO EE: Update this so you can the exact uri including the scheme.
-            query_params[
-                "redirect_uri"] = f"{authentication_provider.fastapi_url}{FastApiFrontEndConfig().authorization.path}{AuthenticationEndpoint.REDIRECT_URI.value}"  # noqa: E501
-            query_params["response_type"] = response_type
-            query_params["prompt"] = prompt
-
-            self.validate_oauth_query_params(query_params)
+            self._validate_query_parameters(query_params.model_dump())
 
             full_authorization_url = httpx.URL(authentication_provider.authorization_url).copy_merge_params(
-                query_params)  # TODO EE: NEED TO WRITE A FUNCTION TO VALIDATE FINAL URL!!!!!
+                query_params.model_dump())
 
-        except (Exception, ValueError) as e:
-            logger.error("Failed to properly construct URL for authentication provider: %s,  Error: %s",
-                         authentication_provider,
-                         str(e),
-                         exc_info=True)
-            return None
+        except (BaseUrlValidationError, QueryParameterValidationError, ValueError, ValidationError, Exception) as e:
+            logger.error("An error occured while building authorization url: %s", str(e), exc_info=True)
+            raise OAuthError("An error occured while building authorization url.") from e
 
         return full_authorization_url
 
-    async def send_authorization_request(self, authentication_provider: str):
+    async def send_oauth_authorization_request(self, authentication_provider: OAuth2Config):
+        """
+        Constructs OAuth2.0 Code Flow Authoriation URL and sends request to authentication server.
+
+        Args:
+            authentication_provider (OAuth2Config): The registered OAuth2.0 provider
+        """
         try:
-            authorization_url: httpx.URL | None = await self.build_authorization_url(authentication_provider)
+            authorization_url: httpx.URL = await self._build_oauth_authorization_url(authentication_provider)
 
-            if authorization_url is None:
-                raise ValueError(f"Error occurred while building authorization URL for "
-                                 f"authentication provider {authentication_provider}.")
-
-            response: httpx.Response | None = await self.send_request(url=authorization_url,
-                                                                      http_method=HTTPMethod.GET.value)
+            response: httpx.Response | None = await self.send_request(url=authorization_url, http_method="GET")
 
             await self._response_manager._handle_oauth_authorization_response(response, authentication_provider)
 
-        except (ValueError) as e:
-            logger.error("Failed to properly send authorization request. Error: %s", str(e), exc_info=True)
+        except Exception as e:
+            logger.error("Unexpected error occured during authorization request process: %s", str(e), exc_info=True)
+            raise OAuthError("Unexpected error occured during authorization request process:") from e
 
     async def send_request(self,
                            url: str | httpx.URL,
-                           http_method: str,
-                           headers: dict | httpx.Headers | None = None,
-                           query_params: dict | httpx.QueryParams | None = None,
-                           data: dict | None = None):  # TODO EE: Update return type.
+                           http_method: str | HTTPMethod,
+                           headers: dict | None = None,
+                           query_params: dict | None = None,
+                           data: dict | None = None) -> httpx.Response | None:
+        """
+        Makes an arbitrary HTTP request.
+
+        Args:
+            url (str | httpx.URL): The base URL to which the request will be sent.
+            http_method (str | HTTPMethod): The HTTP method to use for the request (e.g., "GET", "POST").
+            headers (dict | None): Optional dictionary of HTTP headers.
+            query_params (dict | None): Optional dictionary of query parameters.
+            data (dict | None): Optional dictionary representing the request body.
+        """
         try:
-            # self.validate_url(url)
 
-            # self.validate_http_method(http_method)
+            # Validate the incoming base url.
+            self._validate_base_url(url)
 
-            # self.validate_headers(headers)
+            # Validate the incoming http method.
+            self._validate_http_method(http_method)
 
-            # self.validate_query_parameters(query_params)
+            # Validate incoming header parameters.
+            self._validate_headers(headers)
 
-            # self.validate_body_data(data)
+            # Validate incoming query parameters.
+            self._validate_query_parameters(query_params)
+
+            # Validate incoming body
+            self._validate_body_data(data)
 
             response: httpx.Response | None = None
 
@@ -188,11 +260,21 @@ class RequestManager(RequestManagerBase):
                 if http_method.upper() == HTTPMethod.DELETE.value:
                     response = await client.delete(url, params=query_params, headers=headers, timeout=10.0)
 
-        except httpx.RequestError as e:  # TODO EE: Update exceptions
+        except (BaseUrlValidationError,
+                ValidationError,
+                HeaderValidationError,
+                QueryParameterValidationError,
+                BodyValidationError) as e:
+            logger.error("An error occured while building request url: %s", str(e), exc_info=True)
+            return None
+
+        except (httpx.RequestError, httpx.TimeoutException, httpx.HTTPStatusError, httpx.NetworkError) as e:
+
             logger.error("An error occured while sending request: %s", str(e), exc_info=True)
             return None
-        except (Exception, ValueError) as e:
-            logger.error("Failed to validate request inputs: %s", str(e), exc_info=True)
+
+        except Exception as e:
+            logger.error("Unexpected eror occured sending request %s", str(e), exc_info=True)
             return None
 
         return response

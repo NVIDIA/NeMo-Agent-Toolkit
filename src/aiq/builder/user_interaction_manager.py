@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import time
 import uuid
 
@@ -24,6 +25,8 @@ from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
 from aiq.data_models.interactive import InteractionResponse
 from aiq.data_models.interactive import InteractionStatus
+
+logger = logging.getLogger(__name__)
 
 
 class AIQUserInteractionManager:
@@ -82,9 +85,13 @@ class AIQUserInteractionManager:
                                data: dict) -> httpx.Response | None:
 
         request = RequestManager(url, method, headers, params, data)
-        await request.authentication_manager.validate_authentication_provider_credentials(authentication_provider)
 
-        # response = await self._context_state.user_request_callback.get()(request)
+        make_authenticated_request: bool = await request.authentication_manager.validate_auth_provider_credentials(
+            authentication_provider)
 
-        # return response
-        return None
+        if (make_authenticated_request):
+            # response = await self._context_state.user_request_callback.get()(request
+            pass  # TODO EE: Make request
+        else:
+            logger.error("Unable to authenticate provider: %s", authentication_provider, exc_info=True)
+            return None

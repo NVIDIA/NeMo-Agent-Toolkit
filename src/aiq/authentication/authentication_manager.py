@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING
 
 from aiq.authentication.interfaces import AuthenticationManagerBase
 from aiq.authentication.oauth2_authenticator import OAuth2Authenticator
+from aiq.data_models.authentication import APIKeyConfig
+from aiq.data_models.authentication import AuthenticationProvider
 from aiq.data_models.authentication import OAuth2Config
 
 logger = logging.getLogger(__name__)
@@ -31,7 +33,7 @@ class AuthenticationManager(AuthenticationManagerBase):
     def __init__(self, request_manager: "RequestManager") -> None:
         self._oauth2_authenticator: OAuth2Authenticator = OAuth2Authenticator(request_manager)
 
-    async def validate_authentication_provider_credentials(self, authentication_provider: str) -> None:
+    async def validate_auth_provider_credentials(self, authentication_provider: str) -> bool:
         """
         Validate the authentication provider credentials.
 
@@ -41,15 +43,35 @@ class AuthenticationManager(AuthenticationManagerBase):
         from aiq.authentication.credentials_manager import _CredentialsManager
 
         try:
-            if _CredentialsManager()._get_authentication_provider(authentication_provider) is None:
+            provider: AuthenticationProvider | None = _CredentialsManager()._get_authentication_provider(
+                authentication_provider)
+
+            if provider is None:
                 raise ValueError(f"Authentication provider {authentication_provider} not found.")
 
-            if isinstance(_CredentialsManager()._get_authentication_provider(authentication_provider), OAuth2Config):
-                await self._oauth2_authenticator.validate_credentials(authentication_provider)
+            if not isinstance(provider, (OAuth2Config | APIKeyConfig)):
+                raise TypeError(f"Authentication type for {authentication_provider} not supported. Supported types can "
+                                f"be found in \"aiq.data_models.authentication\" ")
 
-            raise TypeError(f"Authentication type for {authentication_provider} not supported. Supported types can be "
-                            f"found in \"aiq.data_models.authentication\" ")
+            if isinstance(provider, OAuth2Config):
+                # Set the provider of interest.
+                self._oauth2_authenticator.authentication_provider = provider
+
+                is_validated: bool = await self._oauth2_authenticator._validate_credentials()
+
+                # Reset the provider of interest.
+                self._oauth2_authenticator.authentication_provider = None
+
+                return is_validated
+
+            if isinstance(provider, APIKeyConfig):
+                pass  # TODO EE: Update API key authentication
 
         except (Exception, ValueError, TypeError) as e:
-            logger.error("Falied to validate authentication provider credentials: %s", str(e), exc_info=True)
-            return None
+            logger.error("Failed to validate authentication provider credentials: %s Error: %s",
+                         authentication_provider,
+                         str(e),
+                         exc_info=True)
+            return False
+
+        return False

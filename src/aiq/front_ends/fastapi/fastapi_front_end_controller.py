@@ -14,13 +14,20 @@
 # limitations under the License.
 
 import asyncio
+import logging
 
 from fastapi import FastAPI
 from uvicorn import Config
 from uvicorn import Server
 
+logger = logging.getLogger(__name__)
+
 
 class _FastApiFrontEndController:
+    """
+    _FastApiFrontEndController class controls the spawing and tear down of the API server in environments where
+    the server is needed and not already running.
+    """
 
     def __init__(self, app: FastAPI):
         from aiq.authentication.credentials_manager import _CredentialsManager
@@ -33,17 +40,29 @@ class _FastApiFrontEndController:
         self._server_background_task: asyncio.Task = None
 
     async def start_server(self) -> None:
+        "Starts the API server."
+        from aiq.authentication.oauth2_authenticator import OAuthError
+        try:
+            self._server_background_task = asyncio.create_task(self._server.serve())
 
-        from aiq.authentication.credentials_manager import _CredentialsManager
-        from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+        except asyncio.CancelledError as e:
+            logger.error("Task error occured while starting OAuth2.0 server: %s", str(e), exc_info=True)
+            raise OAuthError("Task error occured while starting OAuth2.0 server:") from e
 
-        # Overwrite the front end config to default to spawn fastapi server.
-        _CredentialsManager().full_config.general.front_end = FastApiFrontEndConfig()
+        except Exception as e:
+            logger.error("Unexpected error occured while starting OAuth2.0 server: %s", str(e), exc_info=True)
+            raise OAuthError("Unexpected error occured while starting OAuth2.0 server:") from e
 
-        self._server_background_task = asyncio.create_task(self._server.serve())
+    async def stop_server(self) -> None:
+        "Stops the API server."
+        try:
+            # Shut the server instance down.
+            self._server.should_exit = True
 
-    async def stop_server(self) -> None:  # TODO EE: Add doc strings
+            # Wait for the background task to clean up.
+            await self._server_background_task
 
-        self._server.should_exit = True
-
-        await self._server_background_task
+        except asyncio.CancelledError as e:
+            logger.error("Server shutdown failed: %s", str(e), exc_info=True)
+        except Exception as e:
+            logger.error("Unexpected error occured: %s", str(e), exc_info=True)

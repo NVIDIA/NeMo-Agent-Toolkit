@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from aiq.authentication.credentials_manager import _CredentialsManager
@@ -19,8 +21,6 @@ async def test_credential_manager_singleton():
 async def test_credential_persistence():
     """Test that the credential manager can swap authorization configuration and persist credentials."""
 
-    from pathlib import Path
-
     config_dict = load_and_override_config(Path("tests/aiq/authentication/config.yml"), overrides=())
 
     config = validate_schema(config_dict, AIQConfig)
@@ -39,10 +39,10 @@ async def test_credential_persistence():
 
 async def test_oauth_pydantic_model_state_field():
     from pydantic import ValidationError
-    model = OAuth2Config(authorization_url="url_test",
-                         client_id="client_id_test",
-                         audience="audience_test",
-                         scope=["scope_test"])
+
+    config_dict = load_and_override_config(Path("tests/aiq/authentication/config.yml"), overrides=())
+
+    model = OAuth2Config(**config_dict.get("authentication").get("jira"))
 
     # Throw error is state field is being modified.
     with pytest.raises(ValidationError):

@@ -31,21 +31,27 @@ class _CredentialsManager(metaclass=Singleton):
 
     def __init__(self):
         """
-        Initializes the Credentials Manager object with the specified AIQ Authorization configuration.
+        Credentials Manager to store AIQ Authorization configurations.
         """
         super().__init__()
         self.__authentication_providers: dict[str, AuthenticationProvider] = {}
         self.__swap_flag: bool = True
         self.__full_config: "AIQConfig" = None
-        # TODO EE:  Need to get a list of command names i.e console, fastapi etc and change name.
         self.__command_name: str = None
         self.__oauth_credentials_flag: asyncio.Event = asyncio.Event()
         self.__consent_prompt_flag: asyncio.Event = asyncio.Event()
 
     def _swap_authorization_providers(self, authentication_providers: dict[str, AuthenticationProvider]) -> None:
-        """Transfer ownership of the sensitive AIQ Authorization configuration attributes to the
-        CredentialsManager."""
-        # TODO EE: Update docstrings
+        """
+        Transfer ownership of the sensitive AIQ Authorization configuration attributes to the
+        CredentialsManager.
+
+        Args:
+            http_method (str): The HTTP method to validate (e.g., 'GET', 'POST').
+            authentication_providers (dict[str, AuthenticationProvider]): Dictionary of registered authentication
+            providers.
+
+        """
         if self.__swap_flag:
             self.__authentication_providers = authentication_providers.copy()
             authentication_providers.clear()
@@ -55,7 +61,7 @@ class _CredentialsManager(metaclass=Singleton):
         """Retrieve the stored authentication provider by registered name."""
 
         if authentication_provider not in self.__authentication_providers:
-            logger.error("Authentication provider not found: %s", authentication_provider)  # TODO EE: Check loggers
+            logger.error("Authentication provider not found: %s", authentication_provider)
             return None
 
         return self.__authentication_providers.get(authentication_provider)
@@ -68,19 +74,31 @@ class _CredentialsManager(metaclass=Singleton):
                 if authentication_provider.state == state:
                     return authentication_provider
 
-        logger.error("Authentication provider not found")
+        logger.error("Authentication provider not found by the provided state.")
         return None
 
-    async def _wait_for_oauth_credentials(self):
+    async def _wait_for_oauth_credentials(self) -> None:
+        """
+        Block until the oauth credentials are set in the redirect uri.
+        """
         await self.__oauth_credentials_flag.wait()
 
     async def _set_oauth_credentials(self):
+        """
+        Unblock until the oauth credentials are set in the redirect uri.
+        """
         self.__oauth_credentials_flag.set()
 
     async def _wait_for_consent_prompt_url(self):
+        """
+        Block until the consent prompt location header has been retrieved.
+        """
         await self.__consent_prompt_flag.wait()
 
     async def _set_consent_prompt(self):
+        """
+        Unblock until the consent prompt location header has been retrieved.
+        """
         self.__consent_prompt_flag.set()
 
     @property

@@ -791,47 +791,54 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         from fastapi.responses import JSONResponse
 
         from aiq.authentication.credentials_manager import _CredentialsManager
+        from aiq.authentication.exceptions import OAuthError
         from aiq.data_models.authentication import AuthenticationEndpoint
         from aiq.data_models.authentication import HTTPMethod
         from aiq.data_models.authentication import OAuth2Config
-        from aiq.data_models.authentication import TokenRequestConfig
+        from aiq.data_models.authentication import OAuth2TokenRequestBody
 
         async def redirect_uri(request: Request):
 
             authorization_code: str | None = request.query_params.get("code")
             state: str | None = request.query_params.get("state")
 
-            if not authorization_code:  # TODO EE: Handle error cases.
-                pass
-
-            if not state:
-                pass
+            if not (authorization_code and state):
+                raise OAuthError("Authorization code and state not provided by authorization provider.")
 
             authentication_provider: OAuth2Config | None = _CredentialsManager()._get_authentication_provider_by_state(
                 state)
 
             if authentication_provider is None:
-                pass
+                raise OAuthError("Authorization provider not found by state provided by authorization provider.")
 
-            # TODO EE: Find better way to do this.
-            redirect_uri: str = f"{authentication_provider.fastapi_url}{FastApiFrontEndConfig().authorization.path}{AuthenticationEndpoint.REDIRECT_URI.value}"  # noqa: E501
-            data = TokenRequestConfig(client_id=authentication_provider.client_id,
-                                      client_secret=authentication_provider.client_secret,
-                                      code=authorization_code,
-                                      redirect_uri=redirect_uri)
+            # Build Token HTTP Request
+            redirect_uri: str = (f"{authentication_provider.client_server_url}"
+                                 f"{FastApiFrontEndConfig().authorization.path}"
+                                 f"{AuthenticationEndpoint.REDIRECT_URI.value}")
+            data = OAuth2TokenRequestBody(client_id=authentication_provider.client_id,
+                                          client_secret=authentication_provider.client_secret,
+                                          code=authorization_code,
+                                          redirect_uri=redirect_uri)
             token_url: str = authentication_provider.authorization_token_url
             headers: httpx.Headers = httpx.Headers({"Content-Type": "application/json"})
-            response: httpx.Response = await self.request_manager.send_request(url=token_url,
-                                                                               http_method=HTTPMethod.POST.value,
-                                                                               headers=headers,
-                                                                               data=data.model_dump())
 
-            if response.json().get("access_token"):
-                authentication_provider.access_token = response.json().get("access_token")
+            # Send Token HTTP Request
+            response: httpx.Response | None = await self.request_manager.send_request(url=token_url,
+                                                                                      http_method=HTTPMethod.POST.value,
+                                                                                      headers=headers,
+                                                                                      data=data.model_dump())
 
+            if response is None:
+                raise OAuthError("Invalid response received while exchanging authorization code for access token.")
+
+            if response.json().get("access_token") is None:
+                raise OAuthError("No access token provided.")
+
+            # Claim the access token
+            authentication_provider.access_token = response.json().get("access_token")
             await _CredentialsManager()._set_oauth_credentials()
 
-            return JSONResponse({"message": "Received OAuth callback"})
+            return JSONResponse({"message": "Access token successfully retrieved."})
 
         async def location_url(request: Request):  # TODO EE: Update polling logic.
             await _CredentialsManager()._set_consent_prompt()

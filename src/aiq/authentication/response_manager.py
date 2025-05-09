@@ -18,7 +18,7 @@ import webbrowser
 
 import httpx
 
-from aiq.authentication.oauth2_authenticator import OAuthError
+from aiq.authentication.exceptions import OAuthError
 from aiq.data_models.authentication import ConsentPromptMode
 from aiq.data_models.authentication import OAuth2Config
 
@@ -33,40 +33,40 @@ class ResponseManager:
 
     async def _handle_oauth_authorization_response(self,
                                                    response: httpx.Response | None,
-                                                   authentication_provider: str | None) -> None:
+                                                   authentication_provider: OAuth2Config) -> None:
         """
         Handles an OAuth authorization response to extract and handle the redirect URL.
 
         Args:
             response (httpx.Response): The HTTP response from the authorization request.
         """
-        from aiq.authentication.credentials_manager import _CredentialsManager
         try:
-            auth_provider: OAuth2Config | None = _CredentialsManager()._get_authentication_provider(
-                authentication_provider)
+            if response is None:
+                raise OAuthError("Invalid response from authorization request.")
 
-            if auth_provider is None:
-                raise ValueError(f"Authorization provider not found: {authentication_provider}")
-
-            if not isinstance(auth_provider, OAuth2Config):
-                raise TypeError(f"Authorization provider: {authentication_provider} not of type: {OAuth2Config}.")
-
-            # TODO EE: Update a Status handler function
             if response.status_code == 302:
                 redirect_location_header: str | None = response.headers.get("Location")
 
                 if not redirect_location_header:
                     raise OAuthError("Missing 'Location' header in 302 response to redirect user to consent browser.")
 
-                await self._handle_oauth_consent_browser(redirect_location_header, auth_provider)
+                await self._handle_oauth_consent_browser(redirect_location_header, authentication_provider)
 
-        except (ValueError, Exception) as e:  # TODO EE: Update Error conditions.
-            logger.error("Unable to open defualt browser: %s", str(e), exc_info=True)
+        except Exception as e:
+            logger.error("Unexpected error occured while handling authorization request response: %s",
+                         str(e),
+                         exc_info=True)
+            raise OAuthError("Unexpected error occured while handling authorization request response") from e
 
-    async def _handle_oauth_consent_browser(
-            self, location_header: str, authentication_provider: OAuth2Config) -> None:  # TODO EE: Update doc string
+    async def _handle_oauth_consent_browser(self, location_header: str, authentication_provider: OAuth2Config) -> None:
+        """
+        Handles the consent prompt redirect for different run environments.
+
+        Args:
+            location_header (str) : Location header from authorization server HTTP 302 consent prompt redirect.
+            authentication_provider (OAuth2Config): The registered OAuth2.0 authentication provider.
+        """
         from aiq.authentication.credentials_manager import _CredentialsManager
-
         try:
             if authentication_provider.consent_prompt_mode == ConsentPromptMode.BROWSER:
                 default_browser = webbrowser.get()

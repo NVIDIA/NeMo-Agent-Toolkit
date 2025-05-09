@@ -1,8 +1,8 @@
 authentication:
   jira:
     _type: oauth2
-    consent_prompt_mode: "broswer"
-    fastapi_url: "mock_url"
+    consent_prompt_mode: "browser"
+    client_server_url: "mock_url"
     authorization_url: mock_authorization_url
     authorization_token_url: https://auth.atlassian.com/oauth/token
     client_id: mock_client_id
