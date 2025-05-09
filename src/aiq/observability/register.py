@@ -72,7 +72,7 @@ async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder
 
     secret_key = config.secret_key or os.environ.get("LANGFUSE_SECRET_KEY")
     public_key = config.public_key or os.environ.get("LANGFUSE_PUBLIC_KEY")
-    if not secret_key and public_key:
+    if not secret_key or not public_key:
         raise ValueError("secret and public keys are required for langfuse")
 
     credentials = f"{public_key}:{secret_key}".encode("utf-8")
@@ -86,7 +86,7 @@ class LangsmithTelemetryExporter(TelemetryExporterBaseConfig, name="langsmith"):
     """A telemetry exporter to transmit traces to externally hosted langsmith service."""
 
     endpoint: str = Field(
-        description="The langfuse OTEL endpoint",
+        description="The langsmith OTEL endpoint",
         default="https://api.smith.langchain.com/otel/v1/traces",
     )
     api_key: str = Field(description="The Langsmith API key", default="")
