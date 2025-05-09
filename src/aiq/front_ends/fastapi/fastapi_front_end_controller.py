@@ -35,7 +35,8 @@ class _FastApiFrontEndController:
         self._config: Config = Config(app=self._app,
                                       host=_CredentialsManager().full_config.general.front_end.host,
                                       port=_CredentialsManager().full_config.general.front_end.port,
-                                      workers=_CredentialsManager().full_config.general.front_end.workers)
+                                      workers=_CredentialsManager().full_config.general.front_end.workers,
+                                      log_level="warning")
         self._server: Server = Server(config=self._config)
         self._server_background_task: asyncio.Task = None
 
