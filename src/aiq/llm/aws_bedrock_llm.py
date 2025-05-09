@@ -39,7 +39,7 @@ class AWSBedrockModelConfig(LLMBaseConfig, name="aws_bedrock"):
     # Client parameters
     region_name: str | None = Field(default="None", description="AWS region to use.")
     base_url: str | None = Field(
-        default=None, description="Bedrock endpoint to use. Needed if you don’t want to default to us-east-1 endpoint.")
+        default=None, description="Bedrock endpoint to use. Needed if you don't want to default to us-east-1 endpoint.")
     credentials_profile_name: str | None = Field(
         default=None, description="The name of the profile in the ~/.aws/credentials or ~/.aws/config files.")
 
