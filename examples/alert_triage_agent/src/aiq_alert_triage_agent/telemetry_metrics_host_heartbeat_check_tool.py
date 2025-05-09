@@ -32,6 +32,8 @@ class TelemetryMetricsHostHeartbeatCheckToolConfig(FunctionBaseConfig, name="tel
                  "This tells us if the host is up and running. Args: host_id: str"),
         description="Description of the tool for the agent.")
     llm_name: LLMRef
+    test_mode: bool = Field(default=True, description="Whether to run in test mode")
+    metrics_url: str = Field(default="", description="URL of the monitoring system")
 
 
 @register_function(config_type=TelemetryMetricsHostHeartbeatCheckToolConfig)
@@ -39,14 +41,12 @@ async def telemetry_metrics_host_heartbeat_check_tool(config: TelemetryMetricsHo
                                                       builder: Builder):
 
     async def _arun(host_id: str) -> str:
-        is_test_mode = utils.is_test_mode()
         utils.log_header("Telemetry Metrics Host Heartbeat Check", dash_length=50)
 
         try:
-            if not is_test_mode:
-                # NOTE: Replace these placeholder values with your actual telemetry monitoring system details
+            if not config.test_mode:
                 # Example implementation using a monitoring system's API to check host status
-                monitoring_url = "http://your-monitoring-server:9090"  # Replace with your monitoring system URL
+                monitoring_url = config.metrics_url
 
                 # Customize query based on your monitoring setup and metrics
                 # This example checks if a host's monitoring agent is reporting as up
@@ -62,7 +62,7 @@ async def telemetry_metrics_host_heartbeat_check_tool(config: TelemetryMetricsHo
                     data = data["data"]
             else:
                 # In test mode, load test data from CSV file
-                df = utils.load_test_data()
+                df = utils.get_test_data()
                 data = utils.load_column_or_static(
                     df=df, host_id=host_id, column="telemetry_metrics_host_heartbeat_check_tool:heartbeat_check_output")
 

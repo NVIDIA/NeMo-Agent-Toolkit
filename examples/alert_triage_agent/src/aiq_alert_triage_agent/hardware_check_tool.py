@@ -64,24 +64,24 @@ class HardwareCheckToolConfig(FunctionBaseConfig, name="hardware_check"):
                  "hardware degradation, and anomalies that could explain alerts. Args: host_id: str"),
         description="Description of the tool for the agent.")
     llm_name: LLMRef
+    test_mode: bool = Field(default=True, description="Whether to run in test mode")
 
 
 @register_function(config_type=HardwareCheckToolConfig)
 async def hardware_check_tool(config: HardwareCheckToolConfig, builder: Builder):
 
     async def _arun(host_id: str) -> str:
-        is_test_mode = utils.is_test_mode()
         utils.log_header("Hardware Status Checker")
 
         try:
-            if not is_test_mode:
+            if not config.test_mode:
                 ip = "ipmi_ip"  # Replace with your actual IPMI IP address
                 user = "ipmi_user"  # Replace with your actual username
                 pwd = "ipmi_password"  # Replace with your actual password
                 monitoring_data = _get_ipmi_monitor_data(ip, user, pwd)
             else:
                 # In test mode, load test data from CSV file
-                df = utils.load_test_data()
+                df = utils.get_test_data()
 
                 # Get IPMI data from test data, falling back to static data if needed
                 monitoring_data = utils.load_column_or_static(
@@ -99,7 +99,10 @@ async def hardware_check_tool(config: HardwareCheckToolConfig, builder: Builder)
                 # Get analysis from LLM
                 conclusion = await utils.llm_ainvoke(config, builder, prompt)
 
-                utils.logger.debug(conclusion)
+                # The conclusion from the LLM should not include any sensitive information around the provided
+                # credentials. We commented this out to be extra cautious. If you are testing and debugging in a safe
+                # environment, uncomment this line to see the conclusion.
+                # utils.logger.debug(conclusion)
                 utils.log_footer()
 
                 return conclusion

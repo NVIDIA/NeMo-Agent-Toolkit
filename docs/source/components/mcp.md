@@ -63,3 +63,46 @@ Once configured, a Pydantic input schema will be generated based on the input sc
  * a string that represents a valid JSON
  * A python dictionary
  * Keyword arguments
+
+## Hosting tools via the AIQ Toolkit MCP Server
+In addition to the MCP Client Tool, the AIQ Toolkit provides an MCP frontend that can be used to serve tools as an MCP server.
+For instructions on how to host tools via the AIQ Toolkit MCP Server, please refer to the [MCP Server](../guides/mcp-server.md) guide.
+
+## CLI Commands
+The `aiq info mcp` command can be used to list the tools served by an MCP server.
+```bash
+aiq info mcp --
+```
+Sample output:
+```
+calculator_multiply
+calculator_inequality
+calculator_divide
+calculator_subtract
+```
+
+To get more detailed information about a specific tool, you can use the `--tool` flag.
+```bash
+aiq info mcp --tool calculator_multiply
+```
+Sample output:
+```
+Tool: calculator_multiply
+Description: This is a mathematical tool used to multiply two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.
+Input Schema:
+{
+  "properties": {
+    "text": {
+      "description": "",
+      "title": "Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "text"
+  ],
+  "title": "CalculatorMultiplyInputSchema",
+  "type": "object"
+}
+------------------------------------------------------------
+```

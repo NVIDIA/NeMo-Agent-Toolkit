@@ -38,6 +38,8 @@ class TelemetryMetricsHostPerformanceCheckToolConfig(FunctionBaseConfig,
                                       "usage timeseries. Args: host_id: str"),
                              description="Description of the tool for the agent.")
     llm_name: LLMRef
+    test_mode: bool = Field(default=True, description="Whether to run in test mode")
+    metrics_url: str = Field(default="", description="URL of the monitoring system")
 
 
 def _timeseries_stats(ts):
@@ -109,14 +111,12 @@ async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetrics
                                                         builder: Builder):
 
     async def _arun(host_id: str) -> str:
-        is_test_mode = utils.is_test_mode()
         utils.log_header("Telemetry Metrics CPU Usage Pattern Analysis", dash_length=100)
 
         try:
-            if not is_test_mode:
-                # NOTE: Replace these placeholder values with your actual telemetry monitoring system details
+            if not config.test_mode:
                 # Example implementation using a monitoring system's API to check host status
-                monitoring_url = "http://your-monitoring-server:9090"  # Replace with your monitoring system URL
+                monitoring_url = config.metrics_url
 
                 # Customize query based on your monitoring setup and metrics
                 # This example queries the CPU usage percentage by subtracting idle CPU from 100%
@@ -138,12 +138,12 @@ async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetrics
 
             else:
                 # In test mode, load test data from CSV file
-                df = utils.load_test_data()
-                data = utils.load_column_or_static(
+                df = utils.get_test_data()
+                data_str = utils.load_column_or_static(
                     df=df,
                     host_id=host_id,
                     column="telemetry_metrics_host_performance_check_tool:performance_check_output")
-                data = json.loads(data)
+                data = json.loads(data_str)
 
             # Extract the timestamp-value timeseries from the response
             data = data["data"]["result"][0]["values"]
