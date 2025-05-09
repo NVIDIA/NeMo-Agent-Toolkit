@@ -63,7 +63,6 @@ async def telemetry_metrics_host_heartbeat_check_tool(config: TelemetryMetricsHo
             else:
                 # In test mode, load test data from CSV file
                 df = utils.get_test_data()
-                df = utils.get_test_data()
                 data = utils.load_column_or_static(
                     df=df, host_id=host_id, column="telemetry_metrics_host_heartbeat_check_tool:heartbeat_check_output")
 

@@ -140,12 +140,9 @@ async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetrics
                 # In test mode, load test data from CSV file
                 df = utils.get_test_data()
                 data_str = utils.load_column_or_static(
-                df = utils.get_test_data()
-                data_str = utils.load_column_or_static(
                     df=df,
                     host_id=host_id,
                     column="telemetry_metrics_host_performance_check_tool:performance_check_output")
-                data = json.loads(data_str)
                 data = json.loads(data_str)
 
             # Extract the timestamp-value timeseries from the response
