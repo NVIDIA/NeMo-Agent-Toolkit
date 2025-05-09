@@ -59,10 +59,11 @@ This setup enables logging trace data to W&B weave. The weave integration requir
 | `entity` (optional) | Your W&B username or team name | `"your-wandb-username-or-teamname"` |
 
 ### Step 4: Run Your Workflow
-From the root directory of the AIQ Toolkit library, execute your workflow as shown below:
+Install `simple_calculator` example using the instructions in the `examples/simple_calculator/README.md` guide.
+Run the workflow using `config-weave.yml` configuration file:
 
 ```bash
-aiq run --config_file examples/simple_calculator/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+aiq run --config_file examples/simple_calculator/configs/config-weave.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
 If it is your first time running the workflow, you will be prompted to login to W&B Weave.

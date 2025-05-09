@@ -9,7 +9,7 @@ root = "../.."
 name = "aiq_agno_personal_finance"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[agno]",
+  "aiqtoolkit[agno]~=1.1",
   "openai~=1.66",
   "litellm~=1.63.14"
 ]
