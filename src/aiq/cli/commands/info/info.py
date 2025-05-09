@@ -19,6 +19,7 @@ import click
 
 from aiq.cli.commands.info.list_channels import list_channels
 from aiq.cli.commands.info.list_components import list_components
+from aiq.cli.commands.info.list_mcp import list_mcp
 
 logger = logging.getLogger(__name__)
 
@@ -35,3 +36,4 @@ def info_command(**kwargs):
 
 info_command.add_command(list_components, name="components")
 info_command.add_command(list_channels, "channels")
+info_command.add_command(list_mcp, "mcp")

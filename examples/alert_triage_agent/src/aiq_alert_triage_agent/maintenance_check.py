@@ -42,6 +42,10 @@ class MaintenanceCheckToolConfig(FunctionBaseConfig, name="maintenance_check"):
                  "if the alert can be deprioritized."),
         description="Description of the tool for the agent.")
     llm_name: LLMRef
+    static_data_path: str | None = Field(
+        default="examples/alert_triage_agent/data/maintenance_static_dataset.csv",
+        description=(
+            "Path to the static maintenance data CSV file. If not provided, the tool will not check for maintenance."))
 
 
 def _load_maintenance_data(path: str) -> pd.DataFrame:
@@ -188,6 +192,8 @@ async def maintenance_check(config: MaintenanceCheckToolConfig, builder: Builder
     # Set up LLM
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
+    maintenance_data_path = config.static_data_path
+
     async def _arun(input_message: str) -> str:
         # NOTE: This is just an example implementation of maintenance status checking using a CSV file.
         # Users should implement their own maintenance check logic specific to their environment
@@ -196,17 +202,14 @@ async def maintenance_check(config: MaintenanceCheckToolConfig, builder: Builder
 
         utils.log_header("Maintenance Checker")
 
-        maintenance_data_path = os.getenv("MAINTENANCE_STATIC_DATA_PATH")
         if not maintenance_data_path:
             utils.logger.info("No maintenance data path provided, skipping maintenance check")
             return NO_ONGOING_MAINTENANCE_STR  # the triage agent will run as usual
 
-        filepath = os.path.join(os.path.abspath(os.path.dirname(__file__)), maintenance_data_path)
-        if not os.path.exists(filepath):
-            utils.logger.info("Maintenance data file does not exist: %s. Skipping maintenance check.", filepath)
+        if not os.path.exists(maintenance_data_path):
+            utils.logger.info("Maintenance data file does not exist: %s. Skipping maintenance check.",
+                              maintenance_data_path)
             return NO_ONGOING_MAINTENANCE_STR  # the triage agent will run as usual
-
-        maintenance_df = _load_maintenance_data(filepath)
 
         alert = _parse_alert_data(input_message)
         if alert is None:
@@ -226,6 +229,7 @@ async def maintenance_check(config: MaintenanceCheckToolConfig, builder: Builder
             utils.logger.error("Failed to parse alert time from input message: %s, skipping maintenance check", e)
             return NO_ONGOING_MAINTENANCE_STR
 
+        maintenance_df = _load_maintenance_data(maintenance_data_path)
         maintenance_info = _get_active_maintenance(maintenance_df, host, alert_time)
         if not maintenance_info:
             utils.logger.info("Host: [%s] is NOT under maintenance according to the maintenance database", host)
