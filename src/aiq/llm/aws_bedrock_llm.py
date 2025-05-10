@@ -40,11 +40,6 @@ class AWSBedrockModelConfig(LLMBaseConfig, name="aws_bedrock"):
                                      description="Maximum number of tokens to generate."
                                      "This field is ONLY required when using AWS Bedrock with LlamaIndex.")
 
-    context_size: int | None = Field(
-        default=1024,
-        description=
-        "Maximum number of tokens to generate. This field is ONLY required when using AWS Bedrock with LlamaIndex.")
-
     # Client parameters
     region_name: str | None = Field(default="None", description="AWS region to use.")
     base_url: str | None = Field(
