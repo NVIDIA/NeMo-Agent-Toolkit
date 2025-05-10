@@ -33,10 +33,13 @@ class AWSBedrockModelConfig(LLMBaseConfig, name="aws_bedrock"):
                             serialization_alias="model",
                             description="The model name for the hosted AWS Bedrock.")
     temperature: float = Field(default=0.0, description="Sampling temperature in [0, 1].")
-    max_tokens: int | None = Field(
-        default=1024,
-        description=
-        "Maximum number of tokens to generate. This field is ONLY required when using AWS Bedrock with Langchain.")
+    max_tokens: int | None = Field(default=1024,
+                                   description="Maximum number of tokens to generate."
+                                   "This field is ONLY required when using AWS Bedrock with Langchain.")
+    context_size: int | None = Field(default=1024,
+                                     description="Maximum number of tokens to generate."
+                                     "This field is ONLY required when using AWS Bedrock with LlamaIndex.")
+
     context_size: int | None = Field(
         default=1024,
         description=
