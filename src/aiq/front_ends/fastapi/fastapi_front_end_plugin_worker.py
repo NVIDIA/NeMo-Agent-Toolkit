@@ -169,7 +169,7 @@ class RouteInfo(BaseModel):
 class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     def __init__(self, config: AIQConfig):
-        self._request_manager: RequestManager = None
+        self._request_manager: RequestManager = RequestManager()
         super().__init__(config)
 
     @staticmethod
@@ -198,12 +198,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                             self._periodic_cleanup(name=name, job_store=job_store, sleep_time_sec=sleep_time_sec)))
                     self._cleanup_tasks.append(attr_name)
 
-    @property
+    @property  # TODO EE: TBD
     def request_manager(self) -> RequestManager:
         """Get the RequestManager instance."""
         return self._request_manager
 
-    @request_manager.setter
+    @request_manager.setter  # TODO EE: TBD
     def request_manager(self, request_manager: RequestManager) -> None:
         """Set the RequestManager instance."""
         self._request_manager = request_manager
@@ -815,11 +815,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             redirect_uri: str = (f"{authentication_provider.client_server_url}"
                                  f"{FastApiFrontEndConfig().authorization.path}"
                                  f"{AuthenticationEndpoint.REDIRECT_URI.value}")
+
             data = OAuth2TokenRequestBody(client_id=authentication_provider.client_id,
                                           client_secret=authentication_provider.client_secret,
                                           code=authorization_code,
                                           redirect_uri=redirect_uri)
             token_url: str = authentication_provider.authorization_token_url
+
             headers: httpx.Headers = httpx.Headers({"Content-Type": "application/json"})
 
             # Send Token HTTP Request

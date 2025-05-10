@@ -40,12 +40,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 class RequestManager(RequestManagerBase):
 
-    def __init__(self, url: str, method: str, headers: dict, params: dict, data: dict) -> None:
-        self._url: str = url
-        self._method: str = method
-        self._headers: dict = headers
-        self._params: dict = params
-        self._data: dict = data
+    def __init__(self) -> None:
         self._authentication_manager: AuthenticationManager = AuthenticationManager(self)
         self._response_manager: ResponseManager = ResponseManager()
 
@@ -216,8 +211,9 @@ class RequestManager(RequestManagerBase):
             raise OAuthError("Unexpected error occured during authorization request process:") from e
 
     async def send_request(self,
-                           url: str | httpx.URL,
+                           url: str,
                            http_method: str | HTTPMethod,
+                           authentication_provider: str | None = None,
                            headers: dict | None = None,
                            query_params: dict | None = None,
                            data: dict | None = None) -> httpx.Response | None:
@@ -232,6 +228,8 @@ class RequestManager(RequestManagerBase):
             data (dict | None): Optional dictionary representing the request body.
         """
         try:
+            authentication_header: httpx.Headers | None = await self._get_authenticated_header(authentication_provider)
+            headers: httpx.Headers = httpx.Headers({**(headers or {}), **(authentication_header or {})})
 
             # Validate the incoming base url.
             self._validate_base_url(url)
@@ -278,3 +276,32 @@ class RequestManager(RequestManagerBase):
             return None
 
         return response
+
+    async def _get_authenticated_header(self, authentication_provider: str | None = None) -> httpx.Headers | None:
+        """
+        Gets the authenticated header for the registered authentication provider.
+
+        Args:
+            authentication_provider (str | None): The name of the registered authentication provider.
+
+        Returns:
+            httpx.Headers | None: _description_ #TODO EE: Check all doc strings
+        """
+
+        # If no authentication provider is passed, no authentication header is required, return None.
+        if authentication_provider is None:
+            return None
+
+        # Ensure authentication provider credentials are valid and functional.
+        is_validated: bool = await self.authentication_manager._validate_auth_provider_credentials(
+            authentication_provider)
+
+        if (is_validated):
+            return await self.authentication_manager._construct_authentication_header(authentication_provider)
+        else:
+            get_auth_header = await self._authentication_manager._set_auth_provider_credentials(authentication_provider)
+
+            if (get_auth_header):
+                return await self.authentication_manager._construct_authentication_header(authentication_provider)
+
+        return None

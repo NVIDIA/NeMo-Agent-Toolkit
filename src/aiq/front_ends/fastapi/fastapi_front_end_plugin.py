@@ -69,7 +69,8 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
                             workers=self.front_end_config.workers,
                             reload=self.front_end_config.reload,
                             factory=True,
-                            reload_excludes=reload_excludes)
+                            reload_excludes=reload_excludes,
+                            log_level="warning")  # TODO EE: Update this to not log any auth endpoints.
 
             else:
                 app = get_app()

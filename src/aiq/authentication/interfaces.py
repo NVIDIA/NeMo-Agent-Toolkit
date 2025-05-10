@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import ABC
+from abc import abstractmethod
+
 
 class RequestManagerBase:
     """
@@ -30,9 +33,16 @@ class ResponseManagerBase:
     pass
 
 
-class AuthenticationManagerBase:
+class AuthenticationBase(ABC):
     """
     Base class for authenticating to API services.
     This class provides an interface for authenticating to API services.
     """
-    pass
+
+    @abstractmethod
+    async def _validate_credentials(self) -> bool:
+        pass
+
+    @abstractmethod
+    async def _get_credentials(self) -> bool:
+        pass

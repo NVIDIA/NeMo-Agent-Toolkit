@@ -77,21 +77,32 @@ class AIQUserInteractionManager:
         return sys_human_interaction
 
     async def make_api_request(self,
-                               authentication_provider: str,
                                url: str,
-                               method: str,
-                               headers: dict,
-                               params: dict,
-                               data: dict) -> httpx.Response | None:
+                               http_method: str,
+                               authentication_provider: str | None = None,
+                               headers: dict | None = None,
+                               params: dict | None = None,
+                               data: dict | None = None) -> httpx.Response | None:
+        """
+        Args: # TODO EE: Update doc strings and error handling.
+            url (str | httpx.URL): The base URL to which the request will be sent.
+            http_method (str | HTTPMethod): The HTTP method to use for the request (e.g., "GET", "POST").
+            authentication_provider( str | None): The name of the registered authentication provider to make an
+            authenticated request.
+            headers (dict | None): Optional dictionary of HTTP headers.
+            query_params (dict | None): Optional dictionary of query parameters.
+            data (dict | None): Optional dictionary representing the request body.
+        Returns:
+            httpx.Response | None: _description_
+        """
 
-        request = RequestManager(url, method, headers, params, data)
+        request = RequestManager()
+        response: httpx.Response | None = None
 
-        make_authenticated_request: bool = await request.authentication_manager.validate_auth_provider_credentials(
-            authentication_provider)
-
-        if (make_authenticated_request):
-            # response = await self._context_state.user_request_callback.get()(request
-            pass  # TODO EE: Make request
-        else:
-            logger.error("Unable to authenticate provider: %s", authentication_provider, exc_info=True)
-            return None
+        response = await request.send_request(url=url,
+                                              http_method=http_method,
+                                              authentication_provider=authentication_provider,
+                                              headers=headers,
+                                              query_params=params,
+                                              data=data)
+        return response

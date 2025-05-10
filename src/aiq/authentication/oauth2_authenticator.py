@@ -17,6 +17,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from aiq.authentication.exceptions import OAuthError
+from aiq.authentication.interfaces import AuthenticationBase
 from aiq.data_models.authentication import OAuth2Config
 from aiq.data_models.authentication import RunMode
 from aiq.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEndController
@@ -27,12 +28,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class OAuth2Authenticator:
+class OAuth2Authenticator(AuthenticationBase):
 
     def __init__(self, request_manager: "RequestManager") -> None:
         self._request_manager: "RequestManager" = request_manager
         self._authentication_provider: OAuth2Config = None
         self._oauth2_client_server: _FastApiFrontEndController = None
+        super().__init__()
 
     @property
     def request_manager(self) -> "RequestManager":
@@ -48,9 +50,29 @@ class OAuth2Authenticator:
 
     async def _validate_credentials(self) -> bool:
         """
-        Validate the credentials for OAuth2 authentication.
+        Validates the credentials for OAuth2.0 authentication.
+        Returns True if the credentials are valid and False if they are not.
+
+        Returns:
+            bool: True if the credentials are valid and false if they are not.
         """
         # TODO EE: Need to handle refresh token etc....
+        # TODO EE: Need to make sure the credentials actually work. Update to see if the credentials actually work
+        if self._authentication_provider.access_token:
+            return True
+        else:
+            return False
+
+    async def _get_credentials(self) -> bool:
+        """
+        Get the credentials for OAuth2.0 authentication.
+        Returns True if the credentials are valid and False if they are not.
+
+        Returns:
+            bool: True if the credentials are valid and false if they are not.
+        """
+        # TODO EE: Need to handle refresh token etc....
+        # TODO EE: Need to robustly check all credentials are up to date and functional.
         if self._authentication_provider.access_token is None:
             await self._initiate_code_flow()
 
@@ -105,7 +127,7 @@ class OAuth2Authenticator:
             config=_CredentialsManager().full_config)
 
         # Pass request manager to OAuth2.0 server to manage request and responses.
-        oauth2_client.request_manager = self._request_manager
+        # oauth2_client.request_manager = self._request_manager # TODO EE: TBD.
 
         # Delegate setup and tear down of server to the controller.
         self._oauth2_client_server = _FastApiFrontEndController(oauth2_client.build_app())
