@@ -70,4 +70,4 @@ async def nemo_retriever_client(config: ExampleRetrieverConfig, builder: Builder
     yield retriever
 ```
 
-You can then implement and register framework-specific clients for the retriever provider, our use the config to instantiate an existing framework implementation.
+You can then implement and register framework-specific clients for the retriever provider, or use the config to instantiate an existing framework implementation.
