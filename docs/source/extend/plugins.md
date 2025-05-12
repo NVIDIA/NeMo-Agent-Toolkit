@@ -104,18 +104,18 @@ It is possible to have multiple plugins in a single distribution. For example, t
 
 To register multiple plugins in a single distribution, there are two options:
 
-1. Register all plugins in a single module which imports all the plugins.
-   1. This is the preferred method as it is more readable and easier to maintain.
-   2. For example, if you have a `register.py` module in a package called `my_plugin`, your `register.py` module can do the following:
+* Register all plugins in a single module which imports all the plugins.
+   * This is the preferred method as it is more readable and easier to maintain.
+   * For example, if you have a `register.py` module in a package called `my_plugin`, your `register.py` module can do the following:
 
       ```python
       from .llm import register_llm_client
       from .embedder import register_embedder_client
       ```
 
-2. Use multiple entry points to register all the plugins.
-   1. This method is functionally equivalent to the first method, but requires re-installing the distribution to reflect changes to the plugins.
-   2. For example, you could have two entry points in the `pyproject.toml` file:`
+* Use multiple entry points to register all the plugins.
+   * This method is functionally equivalent to the first method, but requires re-installing the distribution to reflect changes to the plugins.
+   * For example, you could have two entry points in the `pyproject.toml` file:`
 
       ```toml
       [project.entry-points.'aiq.components']
