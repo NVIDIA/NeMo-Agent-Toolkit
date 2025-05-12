@@ -59,10 +59,7 @@ async def langchain_research(tool_config: LangChainResearchConfig, builder: Buil
 
     prompt_template = """
     You are an expert of extracting topic from user query in order to search on web search engine on a
-    topic extracted from user input. When returning the search results, make sure to:
-    1. Remove any HTML tags or formatting
-    2. Return only the clean, readable text content
-    3. Preserve the actual information and meaning
+    topic extracted from user input.
     ------
     {inputs}
     ------
