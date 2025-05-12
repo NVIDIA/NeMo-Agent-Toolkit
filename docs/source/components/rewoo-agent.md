@@ -98,11 +98,11 @@ functions:
 
 A **ReWOO (Reasoning WithOut Observation) Agent** is an AI system that separates the reasoning process from external observations. Instead of interleaving reasoning and tool calls, it first creates a complete plan and then executes it. This decoupled architecture provides several key advantages:
 
-1. **Token Efficiency**: By planning all steps upfront and using placeholders (e.g., "#E1", "#E2") for intermediate results, ReWOO significantly reduces token consumption. These placeholders are replaced with actual values during execution, eliminating the need to include full tool outputs in each reasoning step.
+* **Token Efficiency**: By planning all steps upfront and using placeholders (e.g., "#E1", "#E2") for intermediate results, ReWOO significantly reduces token consumption. These placeholders are replaced with actual values during execution, eliminating the need to include full tool outputs in each reasoning step.
 
-2. **Cleaner Reasoning**: The separation of planning and execution allows the agent to focus purely on logical reasoning during the planning phase, without being distracted by intermediate results. The placeholder system makes data flow between steps explicit and manageable.
+* **Cleaner Reasoning**: The separation of planning and execution allows the agent to focus purely on logical reasoning during the planning phase, without being distracted by intermediate results. The placeholder system makes data flow between steps explicit and manageable.
 
-3. **Reduced Hallucination**: By having a clear plan before execution, the agent is less likely to make incorrect assumptions or get sidetracked by intermediate results.
+* **Reduced Hallucination**: By having a clear plan before execution, the agent is less likely to make incorrect assumptions or get sidetracked by intermediate results.
 
 ### **Step-by-Step Breakdown of a ReWOO Agent**
 
@@ -151,35 +151,25 @@ Generates the final answer using all gathered evidence.
 
 The ReWOO Agent uses two distinct prompts:
 
-1. **Planner Prompt**: Generates a JSON array of planning steps, each containing:
+* **Planner Prompt**: Generates a JSON array of planning steps, each containing:
    - A plan description
    - Evidence object with placeholder, tool name, and tool input
 
-2. **Solver Prompt**: Uses the plan and gathered evidence to generate the final answer.
+* **Solver Prompt**: Uses the plan and gathered evidence to generate the final answer.
 
 
 ## Limitations
 ReWOO agents, while efficient, come with several limitations:
-<ol>
-<li> Sequential Execution
 
-ReWOO agents execute steps sequentially, which means they cannot take advantage of parallel execution opportunities. This can lead to longer execution times for tasks that could be parallelized. </li>
+* Sequential Execution: ReWOO agents execute steps sequentially, which means they cannot take advantage of parallel execution opportunities. This can lead to longer execution times for tasks that could be parallelized.
 
-<li> Planning Overhead
+* Planning Overhead: The initial planning phase requires the agent to think through the entire task before starting execution. This can be inefficient for simple tasks that could be solved with fewer steps.
 
-The initial planning phase requires the agent to think through the entire task before starting execution. This can be inefficient for simple tasks that could be solved with fewer steps. </li>
+* Limited Adaptability: Since the plan is created upfront, the agent cannot easily adapt to unexpected tool failures or new information that might require a different approach.
 
-<li> Limited Adaptability
+* Complex Planning Requirements: The planning phase requires the agent to have a good understanding of all available tools and their capabilities. Poor tool descriptions or complex tool interactions can lead to suboptimal plans.
 
-Since the plan is created upfront, the agent cannot easily adapt to unexpected tool failures or new information that might require a different approach. </li>
+* Memory Constraints: The agent needs to maintain the entire plan and all intermediate results in memory, which could be challenging for very long or complex tasks.
 
-<li> Complex Planning Requirements
-
-The planning phase requires the agent to have a good understanding of all available tools and their capabilities. Poor tool descriptions or complex tool interactions can lead to suboptimal plans. </li>
-
-<li> Memory Constraints
-
-The agent needs to maintain the entire plan and all intermediate results in memory, which could be challenging for very long or complex tasks. </li>
-</ol>
 
 In summary, ReWOO Agents are most effective for tasks that benefit from upfront planning and where token efficiency is important. They may not be the best choice for tasks requiring high adaptability or parallel execution.
