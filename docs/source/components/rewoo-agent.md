@@ -21,183 +21,174 @@ limitations under the License.
 -->
 
 # ReWOO Agent
+The ReWOO (Reasoning WithOut Observation) Agent is an advanced AI system that decouples reasoning from observations to improve efficiency in augmented language models. Based on the [ReWOO paper](https://arxiv.org/abs/2305.18323), this agent separates the planning and execution phases to reduce token consumption and improve performance.
 
-A configurable [ReWOO](https://arxiv.org/abs/2305.18323) (Reasoning WithOut Observation) Agent. This agent leverages the AIQ Toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
+The ReWOO Agent's implementation follows the paper's methodology of decoupling reasoning from observations, which leads to more efficient tool usage and better performance in complex reasoning tasks.
 
-## Key Features
 
-- **Pre-built Tools:** Leverages core AIQ Toolkit library agent and tools.
-- **ReWOO Agent:** The ReWOO pattern eliminates the need to include the system prompt and all previous steps for every reasoning iteration, thereby reducing token usage and boosting performance.
-- **Custom Plugin System:** Developers can bring in new tools using plugins.
-- **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
-- **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
-- **Ease of Use:** Simplifies developer experience and deployment.
+## Features
+- **Decoupled Architecture**: Separates planning and execution phases for improved efficiency
+- **Pre-built Tools**: Leverages core library agent and tools
+- **Efficient Token Usage**: Reduces token consumption by decoupling reasoning from observations
+- **Custom Plugin System**: Developers can bring in new tools using plugins
+- **Customizable Prompts**: Modify planner and solver prompts for specific needs
+- **Agentic Workflows**: Fully configurable via YAML for flexibility and productivity
+- **Ease of Use**: Simplifies developer experience and deployment
 
-## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/intro/install.md) to create the development environment and install AIQ Toolkit.
+## Configuration
 
-### Install this Workflow:
+The ReWOO Agent may be utilized as a Workflow or a Function.
 
-From the root directory of the AIQ Toolkit library, run the following commands:
-
-```bash
-uv sync --all-groups --all-extras
-uv pip install -e .
+### Example `config.yml`
+In your YAML file, to use the ReWOO Agent as a workflow:
+```yaml
+workflow:
+  _type: rewoo_agent
+  tool_names: [wikipedia_search, current_datetime, code_generation, math_agent]
+  llm_name: nim_llm
+  verbose: true
+  use_tool_schema: true
 ```
 
-### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/intro/get-started.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
-
-```bash
-export NVIDIA_API_KEY=<YOUR_API_KEY>
+In your YAML file, to use the ReWOO Agent as a function:
+```yaml
+functions:
+  calculator_multiply:
+    _type: calculator_multiply
+  calculator_inequality:
+    _type: calculator_inequality
+  calculator_divide:
+    _type: aiq_simple_calculator/calculator_divide
+  math_agent:
+    _type: rewoo_agent
+    tool_names:
+      - calculator_multiply
+      - calculator_inequality
+      - calculator_divide
+    description: 'Useful for performing simple mathematical calculations.'
 ```
 
-Prior to using the `tavily_internet_search` tool, create an account at [`tavily.com``](https://tavily.com/) and obtain an API key. Once obtained, set the `TAVILY_API_KEY` environment variable to the API key:
-```bash
-export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
-```
----
+### Configurable Options:
+<ul><li>
 
-Run the following command from the root of the AIQ Toolkit repo to execute this workflow with the specified input:
+`tool_names`: A list of tools that the agent can call. The tools must be functions configured in the YAML file
+</li><li>
 
-```bash
-aiq run  --config_file=examples/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
-```
+`llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
+</li><li>
 
-**Expected Output**
+`verbose`: Defaults to False (useful to prevent logging of sensitive data). If set to True, the Agent will log input, output, and intermediate steps.
+</li><li>
 
-```console
-$ aiq run  --config_file=examples/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
-2025-04-23 15:02:08,778 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (498.780251 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:02:09,024 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/agents/rewoo/configs/config.yml'
-2025-04-23 15:02:09,032 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
-2025-04-23 15:02:09,088 - haystack.tracing.tracer - INFO - Auto-enabled tracing for 'OpenTelemetryTracer'
+`include_tool_input_schema_in_tool_description`: Defaults to True. If set to True, the agent will include tool input schemas in tool descriptions.
+</li><li>
 
-Configuration Summary:
---------------------
-Workflow Type: rewoo_agent
-Number of Functions: 6
-Number of LLMs: 1
-Number of Embedders: 0
-Number of Memory: 0
-Number of Retrievers: 0
+`description`: Defaults to "ReWOO Agent Workflow". When the ReWOO Agent is configured as a function, this config option allows us to control the tool description (for example, when used as a tool within another agent).
+</li><li>
 
-2025-04-23 15:02:11,038 - aiq.agent.rewoo_agent.agent - INFO - ReWOO agent planner output:
-------------------------------
-[AGENT]
-Agent input: Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?
-Agent's thoughts:
+`planner_prompt`: Optional. Allows us to override the planner prompt for the ReWOO Agent. The prompt must have variables for tools and must instruct the LLM to output in the ReWOO planner format.
+</li><li>
+
+`solver_prompt`: Optional. Allows us to override the solver prompt for the ReWOO Agent. The prompt must have variables for plan and task.
+</li><li>
+
+`max_history`:  Defaults to 15. Maximum number of messages to keep in the conversation history.
+</li><li>
+
+`use_openai_api`: Defaults to False.  If set to True, the ReWOO Agent will output in OpenAI API spec. If set to False, strings will be used.
+</li><li>
+
+`additional_instructions`: Optional. Default to None. Additional instructions to provide to the agent in addition to the base prompt.
+</li></ul>
+
+
+## How the ReWOO Agent works
+
+A **ReWOO (Reasoning WithOut Observation) Agent** is an AI system that separates the reasoning process from external observations. Instead of interleaving reasoning and tool calls, it first creates a complete plan and then executes it. This decoupled architecture provides several key advantages:
+
+1. **Token Efficiency**: By planning all steps upfront and using placeholders (e.g., "#E1", "#E2") for intermediate results, ReWOO significantly reduces token consumption. These placeholders are replaced with actual values during execution, eliminating the need to include full tool outputs in each reasoning step.
+
+2. **Cleaner Reasoning**: The separation of planning and execution allows the agent to focus purely on logical reasoning during the planning phase, without being distracted by intermediate results. The placeholder system makes data flow between steps explicit and manageable.
+
+3. **Reduced Hallucination**: By having a clear plan before execution, the agent is less likely to make incorrect assumptions or get sidetracked by intermediate results.
+
+### **Step-by-Step Breakdown of a ReWOO Agent**
+
+1. **Planning Phase** – The agent receives a task and creates a complete plan with all necessary tool calls and evidence placeholders.
+2. **Execution Phase** – The agent executes each step of the plan sequentially, replacing placeholders with actual tool outputs.
+3. **Solution Phase** – The agent uses all gathered evidence to generate the final answer.
+
+### Example Walkthrough
+
+Imagine a ReWOO agent needs to answer:
+
+> "What was the weather in New York last year on this date?"
+
+#### Planning Phase
+The agent creates a plan like:
+```json
 [
   {
-    "plan": "Compare the numbers 1996 and 2004 to determine the bigger number.",
+    "plan": "Get today's date",
     "evidence": {
       "placeholder": "#E1",
-      "tool": "calculator_inequality",
-      "tool_input": {"text": "2004 > 1996"}
+      "tool": "current_datetime",
+      "tool_input": {}
     }
   },
   {
-    "plan": "Since 2004 is indeed bigger, search for the city that held the Olympic Games in 2004.",
+    "plan": "Search for historical weather data",
     "evidence": {
       "placeholder": "#E2",
-      "tool": "internet_search",
-      "tool_input": {"question": "Which city held the Olympic Games in 2004?"}
+      "tool": "weather_search",
+      "tool_input": "New York weather on #E1 last year"
     }
   }
 ]
-------------------------------
-2025-04-23 15:02:11,047 - aiq.agent.rewoo_agent.agent - INFO - ReWOO agent executor output:
-------------------------------
-[AGENT]
-Calling tools: calculator_inequality
-Tool's input: {'text': '2004 > 1996'}
-Tool's response:
-First number 2004 is greater than the second number 1996
-------------------------------
-2025-04-23 15:02:13,096 - aiq.agent.rewoo_agent.agent - INFO - ReWOO agent executor output:
-------------------------------
-[AGENT]
-Calling tools: internet_search
-Tool's input: {'question': 'Which city held the Olympic Games in 2004?'}
-Tool's response:
-<Document href="https://en.wikipedia.org/wiki/2004_Summer_Olympics"/>
-The 2004 Summer Olympics (Greek: Θερινοί Ολυμπιακοί Αγώνες 2004, romanized: Theriní Olympiakí Agónes 2004),[b] officially the Games of the XXVIII Olympiad (Αγώνες της 28ης Ολυμπιάδας, Agónes tis 28is Olympiádas), and officially branded as Athens 2004 (Αθήνα 2004), were an international multi-sport event held from 13 to 29 August 2004 in Athens, Greece. [...] Emblem of the 2004 Summer Olympics[a]
-Location    Athens, Greece
-Motto   Welcome Home
-(Greek: Καλώς ήρθατε σπίτι, romanized: Kalós írthate spíti)
-Nations 201
-Athletes    10,557 (6,257 men, 4,300 women)
-Events  301 in 28 sports (40 disciplines)
-Opening 13 August 2004
-Closing 29 August 2004
-Opened by   President Konstantinos Stephanopoulos[1]
-Closed by   IOC President Jacques Rogge
-Cauldron    Nikolaos Kaklamanakis[1]
-Stadium Olympic Stadium
-Summer
-← Sydney 2000
-Beijing 2008 →
-Winter [...] See also[edit]
-    Olympic Games portal
-2004 Summer Paralympics
-Olympic Game...
-------------------------------
-2025-04-23 15:02:13,382 - aiq.agent.rewoo_agent.agent - INFO - ReWOO agent solver output:
-------------------------------
-[AGENT]
-Agent input: Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?
-Agent's thoughts:
-Athens
-------------------------------
-2025-04-23 15:02:13,385 - aiq.front_ends.console.console_front_end_plugin - INFO -
---------------------------------------------------
-Workflow Result:
-['Athens']
---------------------------------------------------
-```
----
-
-### Starting the AIQ Toolkit Server
-
-You can start the AIQ Toolkit server using the `aiq serve` command with the appropriate configuration file.
-
-**Starting the ReWOO Agent Example Workflow**
-
-```bash
-aiq serve --config_file=examples/agents/rewoo/configs/config.yml
 ```
 
-### Making Requests to the AIQ Toolkit Server
+#### Execution Phase
+1. Executes the first step to get today's date
+2. Uses that date to search for historical weather data
+3. Replaces placeholders with actual results
 
-Once the server is running, you can make HTTP requests to interact with the workflow.
+#### Solution Phase
+Generates the final answer using all gathered evidence.
 
-#### Non-Streaming Requests
+### ReWOO Prompting and Output Format
 
-**Non-Streaming Request to the ReWOO Agent Example Workflow**
+The ReWOO Agent uses two distinct prompts:
 
-```bash
-curl --request POST \
-  --url http://localhost:8000/generate \
-  --header 'Content-Type: application/json' \
-  --data '{"input_message": "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"}'
-```
+1. **Planner Prompt**: Generates a JSON array of planning steps, each containing:
+   - A plan description
+   - Evidence object with placeholder, tool name, and tool input
 
-#### Streaming Requests
+2. **Solver Prompt**: Uses the plan and gathered evidence to generate the final answer.
 
-**Streaming Request to the ReWOO Agent Example Workflow**
 
-```bash
-curl --request POST \
-  --url http://localhost:8000/generate/stream \
-  --header 'Content-Type: application/json' \
-  --data '{"input_message": "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"}'
-```
----
+## Limitations
+ReWOO agents, while efficient, come with several limitations:
+<ol>
+<li> Sequential Execution
 
-### Evaluating the ReWOO Agent Workflow
-**Run and evaluate the `rewoo_agent` example Workflow**
+ReWOO agents execute steps sequentially, which means they cannot take advantage of parallel execution opportunities. This can lead to longer execution times for tasks that could be parallelized. </li>
 
-```bash
-aiq eval --config_file=examples/agents/rewoo/configs/config.yml
-```
+<li> Planning Overhead
+
+The initial planning phase requires the agent to think through the entire task before starting execution. This can be inefficient for simple tasks that could be solved with fewer steps. </li>
+
+<li> Limited Adaptability
+
+Since the plan is created upfront, the agent cannot easily adapt to unexpected tool failures or new information that might require a different approach. </li>
+
+<li> Complex Planning Requirements
+
+The planning phase requires the agent to have a good understanding of all available tools and their capabilities. Poor tool descriptions or complex tool interactions can lead to suboptimal plans. </li>
+
+<li> Memory Constraints
+
+The agent needs to maintain the entire plan and all intermediate results in memory, which could be challenging for very long or complex tasks. </li>
+</ol>
+
+In summary, ReWOO Agents are most effective for tasks that benefit from upfront planning and where token efficiency is important. They may not be the best choice for tasks requiring high adaptability or parallel execution.
