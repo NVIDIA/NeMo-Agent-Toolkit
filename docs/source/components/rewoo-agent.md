@@ -89,8 +89,7 @@ functions:
 
 * `use_openai_api`: Defaults to False.  If set to True, the ReWOO Agent will output in OpenAI API spec. If set to False, strings will be used.
 
-
-`additional_instructions`: Optional. Default to None. Additional instructions to provide to the agent in addition to the base prompt.
+* `additional_instructions`: Optional. Default to None. Additional instructions to provide to the agent in addition to the base prompt.
 
 
 ## How the ReWOO Agent works
