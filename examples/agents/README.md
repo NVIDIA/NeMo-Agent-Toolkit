@@ -30,10 +30,11 @@ By leveraging AIQ Toolkit’s plugin system and the `Builder` object, we can uti
 * [ReAct Agent Example](./react/README.md)
 * [Tool Calling Agent Example](./tool_calling/README.md)
 * [Mixture of Agents Example](./mixture_of_agents/README.md) - A ReAct Agent calling multiple Tool Calling Agents
-
+* [ReWOO Agent Example](./rewoo/README.md)
 ## Learn More
 
 For a deeper dive into the AI Agents utilized in the examples, refer to the component documentation:
 - [ReAct Agent](../../docs/source/components/react-agent.md)
 - [Reasoning Agent](../../docs/source/components/reasoning-agent.md)
 - [Tool Calling Agent](../../docs/source/components/tool-calling-agent.md)
+- [ReWOO Agent](../../docs/source/components/rewoo-agent.md)

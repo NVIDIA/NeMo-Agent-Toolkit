@@ -68,6 +68,8 @@ async def simple_workflow(config: PlotChartsWorkflowConfig, builder: Builder):
         logger.info("---" * 10)
         logger.info("plotting agent output: %s", out)
         output_file = out["img_path"]
+        if output_file is None:
+            return out["bot_message"]
 
         return f"Saved output to {output_file}"
 
