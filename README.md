@@ -19,20 +19,27 @@ limitations under the License.
 
 # NVIDIA Agent Intelligence Toolkit
 
-Agent Intelligence Toolkit (AIQ Toolkit) is a flexible library designed to seamlessly integrate your enterprise agents—regardless of framework—with various data sources and tools. By treating agents, tools, and agentic workflows as simple function calls, AIQ Toolkit enables true composability: build once and reuse anywhere.
+Agent Intelligence Toolkit (AIQ Toolkit) is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
 
 > Note: Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `aiqtoolkit` instead of `agentiq`. I transitional package named `agentiq` is available for backwards compatibility, but will be removed in the future.
 
 ## Key Features
 
-- [**Framework Agnostic:**](./docs/source/extend/plugins.md) Works with any agentic framework, so you can use your current technology stack without replatforming.
-- [**Reusability:**](./docs/source/extend/sharing-components.md) Every agent, tool, or workflow can be combined and repurposed, allowing developers to leverage existing work in new scenarios.
-- [**Rapid Development:**](docs/source/tutorials/customize-a-workflow.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
-- [**Profiling:**](./docs/source/workflows/profiler.md) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
+- [**Framework Agnostic:**](./docs/source/quick-start/installing.md#framework-integrations) AIQ Toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), and [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. AIQ Toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
+
+- [**Reusability:**](./docs/source/extend/sharing-components.md) Every agent, tool, and agentic workflow in this library exists as a function call that works together in complex software applications. The composability between these agents, tools, and workflows allows you to build once and reuse in different scenarios.
+
+- [**Rapid Development:**](docs/source/tutorials/customize-a-workflow.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs. This allows you and your development teams to move quickly if you're already developing with agents.
+
+- [**Profiling:**](./docs/source/workflows/profiler.md) Use the profiler to profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks. While we encourage you to wrap (decorate) every tool and agent to get the most out of the profiler, you have the freedom to integrate your tools, agents, and workflows to whatever level you want. You have the freedom to start small and go to where you believe you'll see the most value and expand from there.
+
 - [**Observability:**](./docs/source/workflows/observe/index.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool, with examples using [Phoenix](./docs/source/workflows/observe/observe-workflow-with-phoenix.md) and [W&B Weave](./docs/source/workflows/observe/observe-workflow-with-weave.md).
+
 - [**Evaluation System:**](./docs/source/workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
+
 - [**User Interface:**](./docs/source/quick-start/launching-ui.md) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
-- [**MCP Compatibility**](./docs/source/workflows/mcp/mcp-client.md) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
+
+- [**MCP Compatibility**](./docs/source/workflows/mcp/mcp-client.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), allowing tools served by MCP Servers to be used as AIQ Toolkit functions, as well as serving AIQ Toolkit functions to be used by any MCP client.
 
 With AIQ Toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 
