@@ -91,7 +91,6 @@ functions:
 
 
 `additional_instructions`: Optional. Default to None. Additional instructions to provide to the agent in addition to the base prompt.
-</li></ul>
 
 
 ## How the ReWOO Agent works
