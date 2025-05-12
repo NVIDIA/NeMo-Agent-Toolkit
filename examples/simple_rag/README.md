@@ -40,7 +40,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
     export NVIDIA_API_KEY=<YOUR API KEY HERE>
     ```
 
-    Verify whether `lxml` is installed in your current environment. If it’s not installed, simply install it using `pip install lxml`. Next, execute the `bootstrap_milvus.sh` script as illustrated below.
+    Verify whether `lxml` is installed in your current environment. If it’s not installed, simply install it using `uv pip install lxml`. Next, execute the `bootstrap_milvus.sh` script as illustrated below.
     ```bash
     source .venv/bin/activate
     examples/simple_rag/ingestion/bootstrap_milvus.sh
