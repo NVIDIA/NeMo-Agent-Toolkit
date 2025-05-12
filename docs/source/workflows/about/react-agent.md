@@ -78,49 +78,29 @@ functions:
 ```
 
 ### Configurable Options:
-<ul><li>
+* `tool_names`: A list of tools that the agent can call. The tools must be functions configured in the YAML file
 
-`tool_names`: A list of tools that the agent can call.  The tools must be functions configured in the YAML file
-</li><li>
+* `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
 
-`llm_name`: The LLM the agent should use.  The LLM must be configured in the YAML file
-</li><li>
+* `verbose`: Defaults to `False` (useful to prevent logging of sensitive data).  If set to `True`, the Agent will log input, output, and intermediate steps.
 
-`verbose`: Defaults to False (useful to prevent logging of sensitive data).  If set to True, the Agent will log input, output, and intermediate steps.
-</li><li>
+* `retry_parsing_errors`: Defaults to `True`.  Sometimes, the Agent may hallucinate and might not output exactly in the ReAct output format (due to inherit LLM variability.  These hallucinations can be reduced by tweaking the prompt to be more specific for your use-case.); if set to `True`, the Agent will identify the issue with the LLM output (how exactly are we missing the ReAct output format?) and will retry the LLM call, including the output format error information.
 
-`retry_parsing_errors`: Defaults to True.  Sometimes, the Agent may hallucinate and might not output exactly in the
-ReAct output format (due to inherit LLM variability.  These hallucinations can be reduced by tweaking the prompt to be
-more specific for your use-case.); if set to True, the Agent will identify the issue with the LLM output
-(how exactly are we missing the ReAct output format?) and will retry the LLM call, including the output format error information.
-</li><li>
+* `max_retries`: Defaults to `1`.  Maximum amount of times the Agent may retry parsing errors.  Prevents the Agent from getting into infinite hallucination loops.
 
-`max_retries`: Defaults to 1.  Maximum amount of times the Agent may retry parsing errors.  Prevents the Agent from
-getting into infinite hallucination loops.
-</li><li>
+* `max_iterations`: Defaults to `15`.  The ReAct Agent may reason between tool calls, and might use multiple tools to answer the question; the maximum amount of tool calls the Agent may take before answering the original question.
 
-`max_iterations`: Defaults to 15.  The ReAct Agent may reason between tool calls, and might use multiple tools to answer the question; the maximum amount of tool calls the Agent may take before answering the original question.
-</li><li>
+* `description`:  Defaults to `"React Agent Workflow"`.  When the ReAct Agent is configured as a function, this config option allows us to control the tool description (for example, when used as a tool within another agent).
 
-`description`:  Defaults to "React Agent Workflow".  When the ReAct Agent is configured as a function, this config option allows us to control
-the tool description (for example, when used as a tool within another agent).
-</li><li>
+* `system_prompt`:  Optional.  Allows us to override the system prompt for the ReAct Agent.
+If modifying the prompt, please see the limitations section below. The prompt must have variables for tools, and must instruct the LLM to output in the ReAct output format.
 
-`system_prompt`:  Optional.  Allows us to override the system prompt for the ReAct Agent.
-If modifying the prompt, please see the limitations section below.
-The prompt must have variables for tools, and must instruct the LLM to output in the ReAct output format.
-</li><li>
+* `max_history`:  Defaults to `15`. Maximum number of messages to keep in the conversation history.
 
-`max_history`:  Defaults to 15. Maximum number of messages to keep in the conversation history.
-</li><li>
+* `use_openai_api`: Defaults to `False`.  If set to `True`, the ReAct Agent will output in OpenAI API spec. If set to `False`, strings will be used.
 
-`use_openai_api`: Defaults to False.  If set to True, the ReAct Agent will output in OpenAI API spec. If set to False, strings will be used.
-</li><li>
-
-`include_tool_input_schema_in_tool_description`: Defaults to True.  If set to True, the ReAct Agent will inspect its tools' input schemas, and append the following to each tool description:
->. Arguments must be provided as a valid JSON object following this format: {tool_schema}
-
-</li></ul>
+* `include_tool_input_schema_in_tool_description`: Defaults to `True`.  If set to `True`, the ReAct Agent will inspect its tools' input schemas, and append the following to each tool description:
+  >. Arguments must be provided as a valid JSON object following this format: {tool_schema}
 
 ---
 
@@ -200,30 +180,30 @@ Final Answer: the final answer to the original input question
 ---
 
 ## Limitations
-ReAct (Reasoning and Acting) agents are powerful but come with several limitations that make them less efficient in certain use cases compared to tool-calling agents or reasoning agents.
-<ol>
-<li> ReAct Agents Require More LLM Calls
+ReAct (Reasoning and Acting) agents are powerful but come with several limitations that make them less efficient in certain use cases compared to tool-calling agents or reasoning agents. The limitations are as follows:
 
-ReAct agents perform reasoning step-by-step, which means they first generate thoughts, then take an action, then reason again based on the result. This iterative process can lead to multiple LLM calls per task, increasing latency and API costs. </li>
+* ReAct Agents Require More LLM Calls
 
-<li> Prompt-Sensitivity & Tuning Overhead
+  ReAct agents perform reasoning step-by-step, which means they first generate thoughts, then take an action, then reason again based on the result. This iterative process can lead to multiple LLM calls per task, increasing latency and API costs.
 
-Since ReAct agents rely heavily on prompting, they require careful tuning. The quality of their decisions depends on the structure of the prompt and the examples given. A poorly tuned prompt can lead to inefficient reasoning or incorrect tool usage. </li>
+* Prompt-Sensitivity & Tuning Overhead
 
-<li> Possible Risk of Hallucination
+  Since ReAct agents rely heavily on prompting, they require careful tuning. The quality of their decisions depends on the structure of the prompt and the examples given. A poorly tuned prompt can lead to inefficient reasoning or incorrect tool usage.
 
-ReAct agents reason between steps, which sometimes results in hallucinations where the model makes incorrect assumptions or misinterprets tool responses. Unlike structured tool-calling agents, they lack built-in constraints to prevent invalid reasoning paths. Sometimes, the LLM does not output in the ReAct output format. </li>
+* Possible Risk of Hallucination
 
-<li> Increased Complexity in Long Chains
+  ReAct agents reason between steps, which sometimes results in hallucinations where the model makes incorrect assumptions or misinterprets tool responses. Unlike structured tool-calling agents, they lack built-in constraints to prevent invalid reasoning paths. Sometimes, the LLM does not output in the ReAct output format.
 
-For workflows that involve multiple steps and dependencies, ReAct agents may struggle with consistency. If an early reasoning step is flawed, it can propagate errors throughout the execution, making debugging difficult. </li>
+* Increased Complexity in Long Chains
 
-<li> Lack of Parallelism
+  For workflows that involve multiple steps and dependencies, ReAct agents may struggle with consistency. If an early reasoning step is flawed, it can propagate errors throughout the execution, making debugging difficult.
 
-ReAct agents execute sequentially:
+* Lack of Parallelism
 
-> Think → Act → Observe → Repeat.
+  ReAct agents execute sequentially:
 
-This prevents them from efficiently handling tasks that could be executed in parallel, such as making multiple API calls simultaneously. </li>
-</ol>
+  > Think → Act → Observe → Repeat.
+
+  This prevents them from efficiently handling tasks that could be executed in parallel, such as making multiple API calls simultaneously.
+
 In summary, ReAct Agents frequently require a bit of tuning to optimize performance and ensure the best results. Proper prompt engineering and configuration adjustments may be necessary depending on the complexity of the tasks required.
