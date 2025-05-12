@@ -111,12 +111,8 @@ The **Reasoning Agent** is an AI system that directly invokes an underlying func
 ---
 
 ## Limitations
-<ol>
-<li>Requires a thinking/reasoning LLM, such as DeepSeek R1.  There should be thought tags within the LLM output:
+The following are the limitations of Reasoning Agents:
+* Requires a thinking/reasoning LLM, such as DeepSeek R1.  There should be thought tags within the LLM output:
+  >&lt;think&gt;&lt;/think&gt;
 
->&lt;think&gt;&lt;/think&gt;
-</li>
-
-<li>Performs reasoning up front, and does not revisit the plan to revise strategy during execution like ReAct Agent does.
-Revising the strategy is beneficial if a tool returns a non-useful response (let's say our retriever tool did not have any relevant search results to the user's original question)</li>
-</ol>
+* Performs reasoning up front, and does not revisit the plan to revise strategy during execution like ReAct Agent does. Revising the strategy is beneficial if a tool returns a non-useful response (let's say our retriever tool did not have any relevant search results to the user's original question)

@@ -127,10 +127,10 @@ Since tool-calling agents execute function calls directly, they are more efficie
 ---
 
 ## Limitations
-<ol>
-<li>Requires an LLM that supports tool calling or function calling.</li>
+The following are the limitations of Tool Calling Agents:
 
-<li>Does not perform complex reasoning and decision-making between tool calls.</li>
+* Requires an LLM that supports tool calling or function calling.
 
-<li>Since it uses the tool name, description, and input parameters, it requires well-named input parameters for each tool.</li>
-</ol>
+* Does not perform complex reasoning and decision-making between tool calls.
+
+* Since it uses the tool name, description, and input parameters, it requires well-named input parameters for each tool.
