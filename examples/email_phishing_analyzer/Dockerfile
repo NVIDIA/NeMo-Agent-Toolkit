@@ -35,6 +35,7 @@ COPY ./ /workspace
 
 # Install the AIQ Toolkit package and the example package
 RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
+    export SETUPTOOLS_SCM_PRETEND_VERSION=${AIQ_VERSION} && \
     export SETUPTOOLS_SCM_PRETEND_VERSION_AIQTOOLKIT=${AIQ_VERSION} && \
     export SETUPTOOLS_SCM_PRETEND_VERSION_AIQTOOLKIT_TEST=${AIQ_VERSION} && \
     export SETUPTOOLS_SCM_PRETEND_VERSION_AIQTOOLKIT_LANGCHAIN=${AIQ_VERSION} && \

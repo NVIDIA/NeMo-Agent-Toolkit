@@ -42,7 +42,7 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_AIQ_AGNO_PERSONAL_FINANCE=${AIQ_VERSION} && \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     uv sync --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
-    uv pip install -e '.[agno]' && \
+    uv pip install -e '.[agno, langchain]' && \
     uv pip install --link-mode=copy ./examples/agno_personal_finance
 
 # Set the config file environment variable
