@@ -21,7 +21,7 @@ ARG PYTHON_VERSION=3.12
 ARG AIQ_VERSION=0.0.1
 
 FROM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG}
-COPY --from=ghcr.io/astral-sh/uv:0.6.5 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.6.17 /uv /uvx /bin/
 ARG AIQ_VERSION
 ARG PYTHON_VERSION
 
