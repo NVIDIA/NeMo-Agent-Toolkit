@@ -522,7 +522,7 @@ This workflow can be further enhanced by adding additional tools. Included with 
 ```bash
 uv pip install -e '.[langchain]'
 ```
-Prior to using the `tavily_internet_search` tool, create an account at [`tavily.com``](https://tavily.com/) and obtain an API key. Once obtained, set the `TAVILY_API_KEY` environment variable to the API key:
+Prior to using the `tavily_internet_search` tool, create an account at [`tavily.com`](https://tavily.com/) and obtain an API key. Once obtained, set the `TAVILY_API_KEY` environment variable to the API key:
 ```bash
 export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
 ```
