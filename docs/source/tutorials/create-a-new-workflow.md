@@ -221,7 +221,7 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
   ]
   ```
 
-  In this example we have been using AIQ Toolkit with LangChain, and thus we declared our dependency on `aiqtoolkit[langchain]`, that is to say AIQ Toolkit with the LangChain integration plugin. If however we wished to use LlamaIndex, we would declare our dependency on `aiqtoolkit[llama-index]`. This is described in more detail in [Framework Integrations](../index.md#framework-integrations).
+  In this example we have been using AIQ Toolkit with LangChain, and thus we declared our dependency on `aiqtoolkit[langchain]`, that is to say AIQ Toolkit with the LangChain integration plugin. If however we wished to use LlamaIndex, we would declare our dependency on `aiqtoolkit[llama-index]`. This is described in more detail in [Framework Integrations](../quick-start/installing.md#framework-integrations).
 
   we wished to use an alternate framework or other optional dependencies
 
