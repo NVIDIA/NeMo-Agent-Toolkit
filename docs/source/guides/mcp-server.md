@@ -23,39 +23,78 @@ The MCP front-end in AIQ Toolkit allows you to expose your workflow functions as
 
 ## Using the MCP Front-End
 
-The MCP front-end is invoked using the `aiq mcp` command (which is an alias for `aiq start mcp`). This command starts an MCP server that exposes the functions from your workflow as MCP tools.
+The MCP front-end is invoked using the `aiq mcp` command. This command starts an MCP server that exposes the functions from your workflow as MCP tools.
 
-### Configuration
+### Sample Usage
 
-The MCP front-end can be configured with the following options:
-
-```
---config_file FILE         A JSON/YAML file with the workflow configuration (required)
---override <TEXT TEXT>...  Override config values using dot notation
---name TEXT                Name of the MCP server
---host TEXT                Host to bind the server to
---port INTEGER             Port to bind the server to
---debug BOOLEAN            Enable debug mode
---log_level TEXT           Log level for the MCP server
---tool_names TEXT          Comma-separated list of tool names to expose
-```
-
-### Example Usage
-
-To start an MCP server exposing a specific tool from your workflow:
+To start an MCP server exposing all tools from your workflow:
 
 ```bash
-aiq mcp --config_file examples/agents/mixture_of_agents/configs/config.yml --tool_names math_agent
+aiq mcp --config_file examples/simple_calculator/configs/config.yml
 ```
 
 This will:
 1. Load the workflow configuration from the specified file
 2. Start an MCP server on the default host (localhost) and port (9901)
-3. Expose only the `math_agent` function from the workflow as an MCP tool
+3. Expose all tools from the workflow as MCP tools
+
+You can also specify a list of tool names to expose:
+
+```bash
+aiq mcp --config_file examples/simple_calculator/configs/config.yml \
+  --tool_names calculator_multiply \
+  --tool_names calculator_divide \
+  --tool_names calculator_subtract \
+  --tool_names calculator_inequality
+```
+
+### Listing MCP Tools
+
+To list the tools exposed by the MCP server you can use the `aiq info mcp` command. This command acts as a MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/sse`).
+
+```bash
+aiq info mcp
+```
+
+Sample output:
+```
+calculator_multiply
+calculator_inequality
+calculator_divide
+calculator_subtract
+```
+
+To get more information about a specific tool, use the `--detail` flag or the `--tool` flag followed by the tool name.
+
+```bash
+aiq info mcp --tool calculator_multiply
+```
+
+Sample output:
+```
+Tool: calculator_multiply
+Description: This is a mathematical tool used to multiply two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.
+Input Schema:
+{
+  "properties": {
+    "text": {
+      "description": "",
+      "title": "Text",
+      "type": "string"
+    }
+  },
+  "required": [
+    "text"
+  ],
+  "title": "CalculatorMultiplyInputSchema",
+  "type": "object"
+}
+------------------------------------------------------------
+```
 
 ### Accessing the MCP Tools
 
-Once the MCP server is running, any MCP-compatible client can connect to it and use the exposed tools. For example, an MCP client could connect to `http://localhost:9901/sse` and use the `math_agent`.
+Once the MCP server is running, any MCP-compatible client can connect to it and use the exposed tools. For example, an MCP client could connect to `http://localhost:9901/sse` and use the `calculator_multiply` tool.
 
 ## Integration with MCP Clients
 
@@ -63,4 +102,11 @@ The AIQ Toolkit MCP front-end implements the Model Context Protocol specificatio
 
 1. MCP-compatible LLM frameworks
 2. Other agent frameworks that support MCP
-3. Custom applications that implement the MCP client specification
+3. Custom applications including AIQ Toolkit applications that implement the MCP client specification
+
+### Sample Usage
+To use the `math` tools exposed by the MCP server you can run the simple calculator example with the `config-mcp-math.yml` config file.
+```bash
+aiq run --config_file examples/simple_calculator/configs/config-mcp-math.yml --input "Is 2 times 2 greater than the current hour?"
+```
+With this configuration, the simple calculator workflow will act as a MCP client and connect to the MCP server running on the specified URL.
