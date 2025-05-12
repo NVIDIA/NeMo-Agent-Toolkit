@@ -1,5 +1,4 @@
 version = 1
-revision = 1
 requires-python = ">=3.11, <3.13"
 resolution-markers = [
     "python_full_version >= '3.12.4' and sys_platform == 'linux'",
@@ -270,10 +269,14 @@ name = "aiq-automated-description-generation"
 source = { editable = "examples/automated_description_generation" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain"] },
+    { name = "lxml" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "aiqtoolkit", extras = ["langchain"], editable = "." }]
+requires-dist = [
+    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
+    { name = "lxml", specifier = "~=5.4" },
+]
 
 [[package]]
 name = "aiq-email-phishing-analyzer"
@@ -556,7 +559,6 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["agno", "crewai", "langchain", "llama-index", "mem0ai", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "profiling"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -5713,8 +5715,8 @@ name = "secretstorage"
 version = "3.3.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cryptography" },
-    { name = "jeepney" },
+    { name = "cryptography", marker = "sys_platform == 'linux'" },
+    { name = "jeepney", marker = "sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/53/a4/f48c9d79cb507ed1373477dbceaba7401fd8a23af63b837fa61f1dcd3691/SecretStorage-3.3.3.tar.gz", hash = "sha256:2403533ef369eca6d2ba81718576c5e0f564d5cca1b58f73a8b23e7d4eeebd77", size = 19739 }
 wheels = [
