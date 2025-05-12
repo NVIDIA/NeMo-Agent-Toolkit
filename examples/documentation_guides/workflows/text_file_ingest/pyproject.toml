@@ -15,5 +15,8 @@ description = "Ingest data from text files"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
+[tool.uv.sources]
+aiqtoolkit = { path = "../../../../", editable = true }
+
 [project.entry-points.'aiq.components']
 text_file_ingest = "text_file_ingest.register"
