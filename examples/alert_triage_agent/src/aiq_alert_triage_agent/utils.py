@@ -111,14 +111,14 @@ def preload_test_data(test_data_path: str | None, benign_fallback_data_path: str
 def get_test_data() -> pd.DataFrame:
     """Returns the preloaded test data."""
     if _DATA_CACHE['test_data'] is None:
-        raise ValueError("Test data not preloaded. Call preload_test_data() first.")
+        raise ValueError("Test data not preloaded. Call `preload_test_data` first.")
     return pd.DataFrame(_DATA_CACHE['test_data'])
 
 
 def _get_static_data():
     """Returns the preloaded benign fallback test data."""
     if _DATA_CACHE['benign_fallback_test_data'] is None:
-        raise ValueError("Benign fallback test data not preloaded. Call preload_test_data() first.")
+        raise ValueError("Benign fallback test data not preloaded. Call `preload_test_data` first.")
     return _DATA_CACHE['benign_fallback_test_data']
 
 
@@ -147,7 +147,7 @@ def load_column_or_static(df, host_id, column):
         try:
             return static_data[column]
         except KeyError as exc:
-            raise KeyError(f"Column '{column}' not found in static data") from exc
+            raise KeyError(f"Column '{column}' not found in test and benign fallback data") from exc
     # Column exists in DataFrame, get value for this host
     # Assumption: In test dataset, host_ids are unique and used to locate specific tool return values
     # If multiple rows found for a host_id, this indicates data inconsistency
