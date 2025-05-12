@@ -70,34 +70,25 @@ functions:
 ```
 
 ### Configurable Options:
-<ul><li>
 
-`tool_names`: A list of tools that the agent can call. The tools must be functions configured in the YAML file
-</li><li>
+* `tool_names`: A list of tools that the agent can call. The tools must be functions configured in the YAML file
 
-`llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
-</li><li>
+* `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
 
-`verbose`: Defaults to False (useful to prevent logging of sensitive data). If set to True, the Agent will log input, output, and intermediate steps.
-</li><li>
+* `verbose`: Defaults to False (useful to prevent logging of sensitive data). If set to True, the Agent will log input, output, and intermediate steps.
 
-`include_tool_input_schema_in_tool_description`: Defaults to True. If set to True, the agent will include tool input schemas in tool descriptions.
-</li><li>
+* `include_tool_input_schema_in_tool_description`: Defaults to True. If set to True, the agent will include tool input schemas in tool descriptions.
 
-`description`: Defaults to "ReWOO Agent Workflow". When the ReWOO Agent is configured as a function, this config option allows us to control the tool description (for example, when used as a tool within another agent).
-</li><li>
+* `description`: Defaults to "ReWOO Agent Workflow". When the ReWOO Agent is configured as a function, this config option allows us to control the tool description (for example, when used as a tool within another agent).
 
-`planner_prompt`: Optional. Allows us to override the planner prompt for the ReWOO Agent. The prompt must have variables for tools and must instruct the LLM to output in the ReWOO planner format.
-</li><li>
+* `planner_prompt`: Optional. Allows us to override the planner prompt for the ReWOO Agent. The prompt must have variables for tools and must instruct the LLM to output in the ReWOO planner format.
 
-`solver_prompt`: Optional. Allows us to override the solver prompt for the ReWOO Agent. The prompt must have variables for plan and task.
-</li><li>
+* `solver_prompt`: Optional. Allows us to override the solver prompt for the ReWOO Agent. The prompt must have variables for plan and task.
 
-`max_history`:  Defaults to 15. Maximum number of messages to keep in the conversation history.
-</li><li>
+* `max_history`:  Defaults to 15. Maximum number of messages to keep in the conversation history.
 
-`use_openai_api`: Defaults to False.  If set to True, the ReWOO Agent will output in OpenAI API spec. If set to False, strings will be used.
-</li><li>
+* `use_openai_api`: Defaults to False.  If set to True, the ReWOO Agent will output in OpenAI API spec. If set to False, strings will be used.
+
 
 `additional_instructions`: Optional. Default to None. Additional instructions to provide to the agent in addition to the base prompt.
 </li></ul>
