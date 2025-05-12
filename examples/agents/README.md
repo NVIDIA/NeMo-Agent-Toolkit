@@ -23,8 +23,7 @@ limitations under the License.
 # Agent Examples
 
 The agent examples demonstrate how AIQ Toolkit accelerates and enables AI Agent development.
-The examples showcase 5 distinct AI Agent architectures solving a similar problem in different ways.
-By leveraging AIQ Toolkit’s plugin system and the `Builder` object, we can utilize both pre-built and custom agentic workflows and tools in a flexible manner.
+The examples showcase 5 distinct AI Agent architectures solving a similar problem in different ways. By leveraging the AIQ Toolkit plugin system and the `Builder` object, we can utilize both pre-built and custom agentic workflows and tools in a flexible manner.
 
 
 * [ReAct Agent Example](./react/README.md)
