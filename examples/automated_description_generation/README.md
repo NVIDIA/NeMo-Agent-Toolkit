@@ -37,7 +37,7 @@ The documentation will also cover configuration considerations and how to set up
 
 The automated description generation workflow is responsible for intelligently generating descriptions from collections within a given VectorDB. This is useful for generating feature rich descriptions that are representative of the documents present within a given collection, reducing the need for human generated descriptions which may not fully capture general nature of the collection. The workflow is able to achieve this by performing the following steps:
 
-1. Take an input collection name - the collection is expected to be present within the vectorDB with documents already ingested.
+1. Take an input collection name - the collection is expected to be present within the VectorDB with documents already ingested.
 2. Using a dummy embedding vector, perform retrieval and return the top K entries within the target collection.
 3. Using retrieved documents, an LLM is used to generate a set of local summaries.
 4. Using an LLM and a map reduce approach, the local summaries are leveraged to generate a final description for the target collection.
@@ -70,10 +70,11 @@ the instructions in the `simple_rag` example of AIQ Toolkit [here](../simple_rag
 
 If you have a different Milvus database you would like to use, please modify the `./configs/config.yml` with the appropriate URLs to your database instance.
 
-To use this example, you will also need to create a `wikipedia_docs` collection in your Milvus database. You can do this by following the instructions in the `simple_rag` example of AIQ Toolkit [here](../simple_rag/README.md) and running the following command:
+To use this example, you will also need to create a `wikipedia_docs` and a `cuda_docs` collection in your Milvus database. You can do this by following the instructions in the `simple_rag` example of AIQ Toolkit [here](../simple_rag/README.md) and running the following command:
 
 ```bash
-python3 examples/simple_rag/ingestion/langchain_web_ingest.py --urls https://en.wikipedia.org/wiki/Aardvark --collection_name=wikipedia_docs
+python examples/simple_rag/ingestion/langchain_web_ingest.py
+python examples/simple_rag/ingestion/langchain_web_ingest.py --urls https://en.wikipedia.org/wiki/Aardvark --collection_name=wikipedia_docs
 ```
 ## Example Usage
 
@@ -119,8 +120,7 @@ workflow:
   llm_name: nim_llm
 ```
 
-Like in the `simple_rag` example, we demonstrate the use of the `react_agent` tool to execute the workflow. The `react_agent` tool will execute workflow
-with the given function. However, you have noticed that the `cuda_tool` is incorrectly named and labelled! it points to a retriever that contains documents
+Like in the `simple_rag` example, we demonstrate the use of the `react_agent` tool to execute the workflow. The `react_agent` tool will execute workflow with the given function. However, you have noticed that the `cuda_tool` is incorrectly named and labelled! it points to a retriever that contains documents
 from Wikipedia, but the agent may not know that because the description is inaccurate.
 
 Let us explore the output of running the agent without an automated description generation tool:
@@ -160,8 +160,7 @@ Workflow Result:
 --------------------------------------------------
 ```
 
-We see that the agent did not call tool for retrieval as it was incorrectly described. However, let us see what happens if we use the automated description generate function
-to intelligently sample the documents in the retriever and create an appropriate description. We could do so with the following configuration:
+We see that the agent did not call tool for retrieval as it was incorrectly described. However, let us see what happens if we use the automated description generate function to intelligently sample the documents in the retriever and create an appropriate description. We could do so with the following configuration:
 
 ```yaml
 llms:
@@ -207,8 +206,7 @@ workflow:
   verbose: true
   llm_name: nim_llm
 ```
-Here, we're searching for information about Wikipedia in a collection using a tool incorrectly described to contain documents about NVIDIA's CUDA library.
-We see above that we use the automated description generation tool to generate a description for the collection `wikipedia_docs`. The tool uses the `retriever` to retrieve documents from the collection, and then uses the `nim_llm` to generate a description for the collection.
+Here, we're searching for information about Wikipedia in a collection using a tool incorrectly described to contain documents about NVIDIA's CUDA library. We see above that we use the automated description generation tool to generate a description for the collection `wikipedia_docs`. The tool uses the `retriever` to retrieve documents from the collection, and then uses the `nim_llm` to generate a description for the collection.
 
 If we run the updated configuration, we see the following output:
 
@@ -276,5 +274,4 @@ Workflow Result:
 --------------------------------------------------
 ```
 
-We see that the agent called the `retrieve_tool`. This demonstrates how the automated description generation tool can be used to automatically generate descriptions for collections within a vector database.
-While this is a toy example, this can be quite helpful when descriptions are vague, or you have too many collections to describe!
+We see that the agent called the `retrieve_tool`. This demonstrates how the automated description generation tool can be used to automatically generate descriptions for collections within a vector database. While this is a toy example, this can be quite helpful when descriptions are vague, or you have too many collections to describe!
