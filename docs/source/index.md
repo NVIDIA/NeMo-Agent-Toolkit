@@ -75,19 +75,6 @@ To install these first-party plugin libraries, you can use the full distribution
 - **An attempt to solve agent-to-agent communication.** Agent communication is best handled over existing protocols, such as HTTP, gRPC, and sockets.
 - **An observability platform.** While AIQ Toolkit is able to collect and transmit fine-grained telemetry to help with optimization and evaluation, it does not replace your preferred observability platform and data collection application.
 
-<!-->
-## Links
-
-To learn more about AIQ Toolkit, see the following links:
-* [Get Started](./quick-start/installing.md)
-* [Create and Customize Workflows](./tutorials/index.md)
-* [Sharing Components](./extend/sharing-components.md)
-* [Evaluating Workflows](./workflows/evaluate.md)
-* [Profiling a Workflow](./workflows/profiler.md)
-* [Observing a Workflow with Phoenix](./workflows/observe/observe-workflow-with-phoenix.md)
-* [Command Line Interface](./reference/cli.md)
--->
-
 ## Feedback
 
 We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AIQToolkit/issues) if you have any feedback or feature requests.
