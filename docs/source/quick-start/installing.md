@@ -23,15 +23,24 @@ This guide will help you set up your development environment, run existing workf
 - NIM (such as Llama-3.1-70b-instruct and Llama-3.3-70b-instruct)
 - OpenAI
 
-## Supported LLM Frameworks:
-- LangChain
-- LlamaIndex
-- CrewAI
-- Semantic Kernel
+## Framework Integrations
+
+To keep the library lightweight, many of the first party plugins supported by AIQ Toolkit are located in separate distribution packages. For example, the `aiqtoolkit-langchain` distribution contains all the LangChain specific plugins and the `aiqtoolkit-mem0ai` distribution contains the Mem0 specific plugins.
+
+To install these first-party plugin libraries, you can use the full distribution name (for example, `aiqtoolkit-langchain`) or use the `aiqtoolkit[langchain]` extra distribution. A full list of the supported extras is listed below:
+
+- `aiqtoolkit[crewai]` or `aiqtoolkit-crewai` - [CrewAI](https://www.crewai.com/) specific plugins
+- `aiqtoolkit[langchain]` or `aiqtoolkit-langchain` - [LangChain](https://www.langchain.com/) specific plugins
+- `aiqtoolkit[llama-index]` or `aiqtoolkit-llama-index` - [LlamaIndex](https://www.llamaindex.ai/) specific plugins
+- `aiqtoolkit[mem0ai]` or `aiqtoolkit-mem0ai` - [Mem0](https://mem0.ai/) specific plugins
+- `aiqtoolkit[semantic-kernel]` or `aiqtoolkit-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/) specific plugins
+- `aiqtoolkit[test]` or `aiqtoolkit-test` - AIQ Toolkit Test specific plugins
+- `aiqtoolkit[zep-cloud]` or `aiqtoolkit-zep-cloud` - [Zep](https://www.getzep.com/) specific plugins
+
 
 ## Prerequisites
 
-Agent Intelligence Toolkit (AIQ Toolkit) is a Python library that doesn’t require a GPU to run the workflow by default. You can deploy the core workflows using one of the following:
+Agent Intelligence Toolkit (AIQ Toolkit) is a Python library that doesn't require a GPU to run the workflow by default. You can deploy the core workflows using one of the following:
 - Ubuntu or other Linux distributions, including WSL, in a Python virtual environment.
 
 Before you begin using AIQ Toolkit, ensure that you meet the following software prerequisites.
@@ -142,7 +151,7 @@ Replace `<YOUR_API_KEY>` with your actual NVIDIA API key.
 ## AIQ Toolkit Packages
 Once an AIQ Toolkit workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `aiqtoolkit` package, along with the needed plugins. When declaring a dependency on AIQ Toolkit it is recommended to use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `1.0`.
 
-For more information on the available plugins, refer to [Framework Integrations](../index.md#framework-integrations).
+For more information on the available plugins, refer to [Framework Integrations](#framework-integrations).
 
 Example dependency for AIQ Toolkit using the `langchain` plugin for projects using a `pyproject.toml` file:
 ```toml
