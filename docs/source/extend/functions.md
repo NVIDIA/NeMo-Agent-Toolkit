@@ -19,48 +19,48 @@ limitations under the License.
 
 Functions can be created in several ways:
 
-1. **From a callable**:
+* **From a callable**:
 
-```python
-# Create a function from a callable
-async def my_function(input_data: MyInputModel) -> MyOutputModel:
-    # Process input_data
-    return result
-
-# Create a function info
-function_info = FunctionInfo.from_fn(
-    my_function,
-    description="My function description"
-)
-
-# Create a lambda function
-my_function = LambdaFunction.from_info(
-    config=MyFunctionConfig(),
-    info=function_info
-)
-```
-
-2. **By deriving from the {py:class}`~aiq.builder.function.Function` class**:
-
-```python
-class MyCustomFunction(Function[MyInput, MyStreamingOutput, MySingleOutput]):
-    def __init__(self, config: MyFunctionConfig):
-        super().__init__(
-            config=config,
-            description="My function description"
-        )
-
-    async def _ainvoke(self, value: MyInput) -> MySingleOutput:
-        # Implement single output logic
+    ```python
+    # Create a function from a callable
+    async def my_function(input_data: MyInputModel) -> MyOutputModel:
+        # Process input_data
         return result
 
-    async def _astream(self, value: MyInput) -> AsyncGenerator[MyStreamingOutput]:
-        # Implement streaming logic
-        for item in process(value):
-            yield item
+    # Create a function info
+    function_info = FunctionInfo.from_fn(
+        my_function,
+        description="My function description"
+    )
 
-my_function = MyCustomFunction(config=MyFunctionConfig())
-```
+    # Create a lambda function
+    my_function = LambdaFunction.from_info(
+        config=MyFunctionConfig(),
+        info=function_info
+    )
+    ```
+
+* **By deriving from the {py:class}`~aiq.builder.function.Function` class**:
+
+    ```python
+    class MyCustomFunction(Function[MyInput, MyStreamingOutput, MySingleOutput]):
+        def __init__(self, config: MyFunctionConfig):
+            super().__init__(
+                config=config,
+                description="My function description"
+            )
+
+        async def _ainvoke(self, value: MyInput) -> MySingleOutput:
+            # Implement single output logic
+            return result
+
+        async def _astream(self, value: MyInput) -> AsyncGenerator[MyStreamingOutput]:
+            # Implement streaming logic
+            for item in process(value):
+                yield item
+
+    my_function = MyCustomFunction(config=MyFunctionConfig())
+    ```
 
 Both of these methods will result in a function that can be used in the same way. The only difference is that the first method is more concise and the second method is more flexible.
 
@@ -101,96 +101,96 @@ This additional metadata will ensure that the configuration object is properly v
 
 With the configuration object defined, there are several options available to register the function:
 
-1. **Register a function from a callable using {py:class}`~aiq.builder.function_info.FunctionInfo`**:
+* **Register a function from a callable using {py:class}`~aiq.builder.function_info.FunctionInfo`**:
 
-```python
-@register_function(config_type=MyFunctionConfig)
-async def my_function(config: MyFunctionConfig, builder: Builder):
+    ```python
+    @register_function(config_type=MyFunctionConfig)
+    async def my_function(config: MyFunctionConfig, builder: Builder):
 
-    async def _response_fn(input_message: str) -> str:
-        # Process the input_message and generate output.
-        # You can access the configuration options here.
-        output_message = f"{config.greeting} You said: {input_message}"
-        return output_message
+        async def _response_fn(input_message: str) -> str:
+            # Process the input_message and generate output.
+            # You can access the configuration options here.
+            output_message = f"{config.greeting} You said: {input_message}"
+            return output_message
 
-    # Yield the function info object which will be used to create a function
-    yield FunctionInfo.from_fn(
-        _response_fn,
-        description="My function description"
-    )
-```
+        # Yield the function info object which will be used to create a function
+        yield FunctionInfo.from_fn(
+            _response_fn,
+            description="My function description"
+        )
+    ```
 
-2. **Register a function directly from a callable**:
+* **Register a function directly from a callable**:
 
-For simple use cases, you can yield the function directly from the coroutine as shown below:
+    For simple use cases, you can yield the function directly from the coroutine as shown below:
 
-```python
-@register_function(config_type=MyFunctionConfig)
-async def my_function(config: MyFunctionConfig, builder: Builder):
+    ```python
+    @register_function(config_type=MyFunctionConfig)
+    async def my_function(config: MyFunctionConfig, builder: Builder):
 
-    # Implement your function logic here
-    async def _response_fn(input_message: str) -> str:
-        """
-        My function description
-        """
+        # Implement your function logic here
+        async def _response_fn(input_message: str) -> str:
+            """
+            My function description
+            """
 
-        # Process the input_message and generate output
-        output_message = f"Hello from my_custom_workflow workflow! You said: {input_message}"
-        return output_message
+            # Process the input_message and generate output
+            output_message = f"Hello from my_custom_workflow workflow! You said: {input_message}"
+            return output_message
 
-    # Return the function directly
-    yield _response_fn
-```
+        # Return the function directly
+        yield _response_fn
+    ```
 
-This is functionally equivalent to the first example but is more concise, pulling the description from the docstring.
+    This is functionally equivalent to the first example but is more concise, pulling the description from the docstring.
 
-3. **Register a function derived from {py:class}`~aiq.builder.function.Function`**:
+* **Register a function derived from {py:class}`~aiq.builder.function.Function`**:
 
-This method is useful when you need to create a function that is more complex than a simple coroutine. For example, you may need to create a function which derives from another function, or one that needs to share state between invocations. In this case, you can create the function instance directly in the register function and yield it.
+    This method is useful when you need to create a function that is more complex than a simple coroutine. For example, you may need to create a function which derives from another function, or one that needs to share state between invocations. In this case, you can create the function instance directly in the register function and yield it.
 
-```python
-@register_function(config_type=MyFunctionConfig)
-async def my_function(config: MyFunctionConfig, builder: Builder):
+    ```python
+    @register_function(config_type=MyFunctionConfig)
+    async def my_function(config: MyFunctionConfig, builder: Builder):
 
-    # Create a class that derives from Function
-    class MyCustomFunction(Function[MyInput, NoneType, MySingleOutput]):
-        def __init__(self, config: MyFunctionConfig):
-            super().__init__(config=config)
+        # Create a class that derives from Function
+        class MyCustomFunction(Function[MyInput, NoneType, MySingleOutput]):
+            def __init__(self, config: MyFunctionConfig):
+                super().__init__(config=config)
 
-        async def _ainvoke(self, value: MyInput) -> MySingleOutput:
-            # Implement single output logic
-            return result
+            async def _ainvoke(self, value: MyInput) -> MySingleOutput:
+                # Implement single output logic
+                return result
 
-    yield MyCustomFunction(config=config)
-```
+        yield MyCustomFunction(config=config)
+    ```
 
-:::{note}
-It's important to note that the class is intentionally defined _inside_ of the `my_function` registered coroutine. This is to prevent the class from being created unless the function is going to be instantiated. If the class is defined outside of the coroutine, all of the functions imports will be loaded and the class will be constructed, even if the function is not going to be created. To avoid this, the body of the function must be defined or imported inside of the register function.
+    :::{note}
+    It's important to note that the class is intentionally defined _inside_ of the `my_function` registered coroutine. This is to prevent the class from being created unless the function is going to be instantiated. If the class is defined outside of the coroutine, all of the functions imports will be loaded and the class will be constructed, even if the function is not going to be created. To avoid this, the body of the function must be defined or imported inside of the register function.
 
-For a more natural syntax, classes can be defined in a separate module and imported into the coroutine as shown below:
+    For a more natural syntax, classes can be defined in a separate module and imported into the coroutine as shown below:
 
-```python
-@register_function(config_type=MyFunctionConfig)
-async def my_function(config: MyFunctionConfig, builder: Builder):
+    ```python
+    @register_function(config_type=MyFunctionConfig)
+    async def my_function(config: MyFunctionConfig, builder: Builder):
 
-    # Import the class inside the coroutine
-    from my_module import MyCustomFunction
+        # Import the class inside the coroutine
+        from my_module import MyCustomFunction
 
-    yield MyCustomFunction(config=config)
-```
+        yield MyCustomFunction(config=config)
+    ```
 
-This also works for callables as shown below:
+    This also works for callables as shown below:
 
-```python
-@register_function(config_type=MyFunctionConfig)
-async def my_function(config: MyFunctionConfig, builder: Builder):
+    ```python
+    @register_function(config_type=MyFunctionConfig)
+    async def my_function(config: MyFunctionConfig, builder: Builder):
 
-    # Import the callable inside the coroutine
-    from my_module import my_callable
+        # Import the callable inside the coroutine
+        from my_module import my_callable
 
-    yield my_callable
-```
-:::
+        yield my_callable
+    ```
+    :::
 
 ## Initialization and Cleanup
 
@@ -441,21 +441,21 @@ async with WorkflowBuilder() as builder:
 
 Functions can be invoked in two ways:
 
-1. **For single outputs**:
+* **For single outputs**:
 
-```python
-# Get a single result
-result = await function.ainvoke(input_data)
-```
+    ```python
+    # Get a single result
+    result = await function.ainvoke(input_data)
+    ```
 
-2. **For streaming outputs**:
+* **For streaming outputs**:
 
-```python
-# Process streaming results
-async for item in function.astream(input_data):
-    # Use the streaming result
-    print(item)
-```
+    ```python
+    # Process streaming results
+    async for item in function.astream(input_data):
+        # Use the streaming result
+        print(item)
+    ```
 
 If the function only has a single output, using the {py:meth}`~aiq.builder.function.Function.astream` method will result in an error. Likewise, if the function only has a streaming output, using the {py:meth}`~aiq.builder.function.Function.ainvoke` method will result in an error. It's possible to check which output types a function supports using the {py:attr}`~aiq.builder.function.Function.has_single_output` and {py:attr}`~aiq.builder.function.Function.has_streaming_output` properties.
 

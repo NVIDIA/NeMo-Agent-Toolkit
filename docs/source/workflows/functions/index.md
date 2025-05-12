@@ -38,8 +38,8 @@ Functions use Python's type annotation system to:
 ### Dual Output Modes
 
 Functions support two output modes:
-1. **Single Output** - For operations that produce a single result
-2. **Streaming Output** - For operations that produce multiple results
+* **Single Output** - For operations that produce a single result
+* **Streaming Output** - For operations that produce multiple results
 
 A function can support either or both modes.
 

@@ -94,14 +94,14 @@ If you are unfamiliar with this process, consider reviewing the [Python Packagin
 
 When building the `pyproject.toml` file, there are two critical sections:
 
-1. Dependencies: Ensure you include the necessary AIQ Toolkit dependencies. An example is provided below:
+* Dependencies: Ensure you include the necessary AIQ Toolkit dependencies. An example is provided below:
 
     ```
     dependencies = [
     "aiq[langchain]",
     ]
     ```
-2. Entrypoints: Provide the path to your plugins so they are registered with AIQ Toolkit when installed.
+* Entrypoints: Provide the path to your plugins so they are registered with AIQ Toolkit when installed.
 An example is provided below:
     ```
     [project.entry-points.'aiq.components']
