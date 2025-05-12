@@ -41,7 +41,7 @@ Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 - [**Reusability:**](./extend/sharing-components.md) Every agent, tool, or workflow can be combined and repurposed, allowing developers to leverage existing work in new scenarios.
 - [**Rapid Development:**](./tutorials/index.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
 - [**Profiling:**](./workflows/profiler.md) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
-- [**Observability:**](./workflows/observe-workflow-with-phoenix.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
+- [**Observability:**](./workflows/observe/observe-workflow-with-phoenix.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
 - [**Evaluation System:**](./workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 - [**User Interface:**](./quick-start/launching-ui.md) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 - [**MCP Compatibility**](./workflows/mcp/mcp-client.md) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
@@ -84,7 +84,7 @@ To learn more about AIQ Toolkit, see the following links:
 * [Sharing Components](./extend/sharing-components.md)
 * [Evaluating Workflows](./workflows/evaluate.md)
 * [Profiling a Workflow](./workflows/profiler.md)
-* [Observing a Workflow with Phoenix](./workflows/observe-workflow-with-phoenix.md)
+* [Observing a Workflow with Phoenix](./workflows/observe/observe-workflow-with-phoenix.md)
 * [Command Line Interface](./reference/cli.md)
 -->
 
@@ -119,9 +119,7 @@ Functions <./workflows/functions/index.md>
 Evaluate Workflows <./workflows/evaluate.md>
 Profiling Workflows <./workflows/profiler.md>
 ./workflows/using-local-llms.md
-./workflows/configuring-telemetry.md
-./workflows/observe-workflow-with-phoenix.md
-./workflows/observe-workflow-with-weave.md
+./workflows/observe/index.md
 ```
 
 ```{toctree}

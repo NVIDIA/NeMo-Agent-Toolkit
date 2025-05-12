@@ -19,7 +19,7 @@ limitations under the License.
 
 This guide provides a step-by-step process to enable observability in an AIQ Toolkit workflow using Weights and Biases (W&B) Weave for tracing using just a few lines of code in your workflow configuration file.
 
-![Weave Tracing Dashboard](../_static/weave_tracing.png)
+![Weave Tracing Dashboard](../../_static/weave_tracing.png)
 
 ### Step 1: Install the Weave plugin
 

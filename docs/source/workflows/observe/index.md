@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Configuring Telemetry
+# Observe Workflows
 
 The AIQ Toolkit Observability Module provides support for configurable telemetry setup to do logging tracing and metrics for AIQ Toolkit workflows.
 - Enables users to configure telemetry options from a predefined list based on their preferences.
@@ -116,4 +116,12 @@ async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: 
                        exc_info=True)
     except Exception as ex:
         logger.error("Error in Phoenix telemetry Exporter\n %s", ex, exc_info=True)
+```
+
+```{toctree}
+:hidden:
+:caption: Observe Workflows
+
+Observing with Phoenix <./observe-workflow-with-phoenix.md>
+Observing with W&B Weave <./observe-workflow-with-weave.md>
 ```
