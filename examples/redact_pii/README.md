@@ -45,7 +45,7 @@ telemetry:
 2. Run the workflow:
 
 ```bash
-aiq run AIQToolkit/examples/redact_pii/weave_redact_pii_config.yaml --query "Test query"
+aiq run --config_file examples/redact_pii/src/redact_pii/configs/weave_redact_pii_config.yml --input "Test query"
 ```
 
 3. Go to your Weights & Biases dashboard (https://wandb.ai) and navigate to the "aiqtoolkit-pii" project.
