@@ -46,7 +46,7 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 # Set working directory
 WORKDIR /workspace
 
-# Install the AIQ Toolkit package and the example package
+# Install the AIQ toolkit package and the example package
 RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     . /workspace/.venv/bin/activate && \

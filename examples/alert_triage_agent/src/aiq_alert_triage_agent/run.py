@@ -19,7 +19,7 @@ This script implements a Flask-based HTTP server that automates alert triage wor
 It provides an endpoint that:
 1. Accepts POST requests containing monitoring alerts in JSON format
 2. Collects alert IDs to track all processed alerts
-3. Launches an AIQ Toolkit triage agent for each unique alert
+3. Launches an AIQ toolkit triage agent for each unique alert
 4. The triage agent performs automated investigation using diagnostic tools
    and generates structured reports with root cause analysis
 

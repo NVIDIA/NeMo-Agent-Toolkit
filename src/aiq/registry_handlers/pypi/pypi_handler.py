@@ -60,10 +60,10 @@ class PypiRegistryHandler(AbstractRegistryHandler):
 
     @asynccontextmanager
     async def publish(self, artifact: AIQArtifact) -> AsyncGenerator[PublishResponse]:
-        """Publishes an AIQ Toolkit artifact to a PyPI remote registry.
+        """Publishes an AIQ toolkit artifact to a PyPI remote registry.
 
         Args:
-            artifact (AIQArtifact): An artifact that contain AIQ Toolkit plugin wheel and it's corrosponding discovery
+            artifact (AIQArtifact): An artifact that contain AIQ toolkit plugin wheel and it's corrosponding discovery
             metadata.
 
         Yields:
@@ -101,10 +101,10 @@ class PypiRegistryHandler(AbstractRegistryHandler):
 
     @asynccontextmanager
     async def pull(self, packages: PullRequestPackages) -> AsyncGenerator[PullResponse]:
-        """Download and install AIQ Toolkit artifacts from a remote PyPI remote registry.
+        """Download and install AIQ toolkit artifacts from a remote PyPI remote registry.
 
         Args:
-            packages (PullRequestPackages): Parameters used to pull the AIQ Toolkit artifact.
+            packages (PullRequestPackages): Parameters used to pull the AIQ toolkit artifact.
 
         Yields:
             Iterator[AsyncGenerator[PullResponse, None]]: A response message that includes a the pulled packages and a
@@ -160,7 +160,7 @@ class PypiRegistryHandler(AbstractRegistryHandler):
 
     @asynccontextmanager
     async def search(self, query: SearchQuery) -> AsyncGenerator[SearchResponse]:
-        """Searches a remote PyPI registry for relevant AIQ Toolkit components.
+        """Searches a remote PyPI registry for relevant AIQ toolkit components.
 
         Args:
             query (SearchQuery): Parameters of the search to be performed.

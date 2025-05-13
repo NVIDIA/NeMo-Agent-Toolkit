@@ -83,7 +83,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         @asynccontextmanager
         async def lifespan(starting_app: FastAPI):
 
-            logger.debug("Starting AIQ Toolkit server from process %s", os.getpid())
+            logger.debug("Starting AIQ toolkit server from process %s", os.getpid())
 
             async with WorkflowBuilder.from_config(self.config) as builder:
 
@@ -97,7 +97,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
                     logger.info("Cancelling cleanup task")
                     cleanup_task.cancel()
 
-            logger.debug("Closing AIQ Toolkit server from process %s", os.getpid())
+            logger.debug("Closing AIQ toolkit server from process %s", os.getpid())
 
         aiq_app = FastAPI(lifespan=lifespan)
 
@@ -513,7 +513,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     methods=[endpoint.method],
                     description="Stream raw intermediate steps without any step adaptor translations.\n"
                     "Use filter_steps query parameter to filter steps by type (comma-separated list) or\
-                        set to 'none' to suppress all intermediate steps.",
+                        set to 'none' to suppress all intermediate steps."                                                                          ,
                 )
 
             elif (endpoint.method == "POST"):
@@ -550,7 +550,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     response_model=GenerateStreamResponseType,
                     description="Stream raw intermediate steps without any step adaptor translations.\n"
                     "Use filter_steps query parameter to filter steps by type (comma-separated list) or \
-                        set to 'none' to suppress all intermediate steps.",
+                        set to 'none' to suppress all intermediate steps."                                                                          ,
                     responses={500: response_500},
                 )
 

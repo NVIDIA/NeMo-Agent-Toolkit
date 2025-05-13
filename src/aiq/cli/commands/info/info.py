@@ -26,10 +26,10 @@ logger = logging.getLogger(__name__)
 
 @click.group(name=__name__,
              invoke_without_command=False,
-             help="Provide information about the local AIQ Toolkit environment.")
+             help="Provide information about the local AIQ toolkit environment.")
 def info_command(**kwargs):
     """
-    Provide information about the local AIQ Toolkit environment.
+    Provide information about the local AIQ toolkit environment.
     """
     pass
 

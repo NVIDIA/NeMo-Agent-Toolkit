@@ -52,7 +52,7 @@ body:
     attributes:
       label: Please provide a clear description of problem this feature solves
       description: Real usage examples are especially helpful, non-code.
-      placeholder: I want AIQ Toolkit to do _____, because I need to _____.
+      placeholder: I want AIQ toolkit to do _____, because I need to _____.
     validations:
       required: true
 

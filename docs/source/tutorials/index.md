@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA Agent Intelligence Toolkit Tutorials
+# NVIDIA Agent Intelligence toolkit Tutorials
 
 ```{toctree}
 :caption: Tutorials

@@ -43,7 +43,7 @@ class OpenStep:
 
 class IntermediateStepManager:
     """
-    Manages updates to the AIQ Toolkit Event Stream for intermediate steps
+    Manages updates to the AIQ toolkit Event Stream for intermediate steps
     """
 
     def __init__(self, context_state: "AIQContextState"):  # noqa: F821
@@ -53,7 +53,7 @@ class IntermediateStepManager:
 
     def push_intermediate_step(self, payload: IntermediateStepPayload) -> None:
         """
-        Pushes an intermediate step to the AIQ Toolkit Event Stream
+        Pushes an intermediate step to the AIQ toolkit Event Stream
         """
 
         if not isinstance(payload, IntermediateStepPayload):
@@ -121,7 +121,7 @@ class IntermediateStepManager:
                   on_error: OnError = None,
                   on_complete: OnComplete = None) -> Subscription:
         """
-        Subscribes to the AIQ Toolkit Event Stream for intermediate steps
+        Subscribes to the AIQ toolkit Event Stream for intermediate steps
         """
 
         return self._context_state.event_stream.get().subscribe(on_next, on_error, on_complete)

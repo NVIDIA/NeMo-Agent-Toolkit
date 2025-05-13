@@ -17,7 +17,7 @@ limitations under the License.
 
 # A Simple LangSmith-Documentation Agent
 
-A minimal example demonstrating a simple LangSmith-Documentation agent. This agent leverages the AIQ Toolkit plugin system and `Builder` to integrate pre-built and custom tools into the workflow to answer questions about LangSmith. Key elements are summarized below:
+A minimal example demonstrating a simple LangSmith-Documentation agent. This agent leverages the AIQ toolkit plugin system and `Builder` to integrate pre-built and custom tools into the workflow to answer questions about LangSmith. Key elements are summarized below:
 
 ## Table of Contents
 
@@ -29,7 +29,7 @@ A minimal example demonstrating a simple LangSmith-Documentation agent. This age
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AIQ Toolkit library tools.
+- **Pre-built Tools:** Leverages core AIQ toolkit library tools.
 - **Custom Plugin System:** Developers can bring in new tools using plugins.
 - **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
 - **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
@@ -39,11 +39,11 @@ A minimal example demonstrating a simple LangSmith-Documentation agent. This age
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AIQ Toolkit library, run the following commands:
+From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/simple
@@ -58,7 +58,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ### Run the Workflow
 
-Run the following command from the root of the AIQ Toolkit repo to execute this workflow with the specified input:
+Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
 aiq run --config_file examples/simple/configs/config.yml --input "What is LangSmith?"
@@ -69,7 +69,7 @@ aiq run --config_file examples/simple/configs/config.yml --input "What is LangSm
 ```console
 $ aiq run --config_file examples/simple/configs/config.yml --input "What is LangSmith?"
 2025-04-23 15:53:15,873 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (446.926117 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:53:16,192 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/simple/configs/config.yml'
+2025-04-23 15:53:16,192 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/simple/configs/config.yml'
 2025-04-23 15:53:16,197 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-04-23 15:53:16,243 - aiq.profiler.utils - WARNING - Discovered frameworks: {<LLMFrameworkEnum.LANGCHAIN: 'langchain'>} in function webquery_tool by inspecting source. It is recommended and more reliable to instead add the used LLMFrameworkEnum types in the framework_wrappers argument when calling @register_function.
 2025-04-23 15:53:16,251 - langchain_community.utils.user_agent - WARNING - USER_AGENT environment variable not set, consider setting it to identify your requests.
@@ -131,7 +131,7 @@ Workflow Result:
 
 ## Docker Quickstart
 
-Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AIQ Toolkit virtual environment.
+Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AIQ toolkit virtual environment.
 
 Set your NVIDIA API Key in the `NVIDIA_API_KEY` environment variable.
 
@@ -139,7 +139,7 @@ Set your NVIDIA API Key in the `NVIDIA_API_KEY` environment variable.
 export NVIDIA_API_KEY="your_nvidia_api_key"
 ```
 
-From the git repository root, run the following command to build AIQ Toolkit and the simple agent into a Docker image.
+From the git repository root, run the following command to build AIQ toolkit and the simple agent into a Docker image.
 
 ```bash
 docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -f examples/simple/Dockerfile -t simple-agent .

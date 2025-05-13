@@ -42,7 +42,7 @@ WORKDIR /workspace
 # Copy the project into the container
 COPY ./ /workspace
 
-# Install the AIQ Toolkit package and the example package
+# Install the AIQ toolkit package and the example package
 RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     export SETUPTOOLS_SCM_PRETEND_VERSION=${AIQ_VERSION} && \
     export SETUPTOOLS_SCM_PRETEND_VERSION_AIQTOOLKIT=${AIQ_VERSION} && \
