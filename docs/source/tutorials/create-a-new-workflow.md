@@ -265,7 +265,7 @@ aiq run --config_file examples/documentation_guides/workflows/text_file_ingest/c
    --input "What does DOCA GPUNetIO to remove the CPU from the critical path?"
 ```
 
-If successful, we should receive output similar to the following:
+If successful, you should receive output similar to the following:
 ```
 Workflow Result:
 ['DOCA GPUNetIO removes the CPU from the critical path by providing features such as GPUDirect Async Kernel-Initiated Network (GDAKIN) communications, which allows a CUDA kernel to invoke GPUNetIO device functions to receive or send data directly, without CPU intervention. Additionally, GPUDirect RDMA enables receiving packets directly into a contiguous GPU memory area. These features enable GPU-centric solutions that bypass the CPU in the critical path.']
