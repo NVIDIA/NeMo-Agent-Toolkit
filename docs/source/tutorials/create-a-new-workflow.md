@@ -251,7 +251,7 @@ aiq workflow delete text_file_ingest
 ## Running the Workflow
 
 :::{note}
-The following commands reference the pre-built workflow located in `examples/docs/workflows/text_file_ingest`. If you are following this document and building this tool from the beginning, you will want to replace `examples/docs/workflows/text_file_ingest` with `examples/text_file_ingest`.
+The following commands reference the pre-built workflow located in `examples/docs/workflows/text_file_ingest`. If you are following this document and building this tool from the beginning, replace `examples/docs/workflows/text_file_ingest` with `examples/text_file_ingest`.
 :::
 
 After completed, install the tool into the environment:
