@@ -78,7 +78,7 @@ examples/
 
 
 ## Customizing the Configuration Object
-Given that the purpose of this tool will be similar to that of the `webpage_query` tool, we can use it as a reference and starting point. Examining the `webpage_query` tool configuration object from `examples/simple/src/aiq_simple/register.py`:
+Given that the purpose of this tool will be similar to that of the `webpage_query` tool, you can use it as a reference and starting point. Examining the `webpage_query` tool configuration object from `examples/simple/src/aiq_simple/register.py`:
 ```python
 class WebQueryToolConfig(FunctionBaseConfig, name="webpage_query"):
     webpage_url: str
