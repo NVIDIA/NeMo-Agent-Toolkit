@@ -174,7 +174,7 @@ async def text_file_ingest_tool(config: TextFileIngestToolConfig, builder: Build
 
 ## Creating the Workflow Configuration
 
-Starting from the `custom_config.yml` file we created in the previous section, we will replace the two `webpage_query` tools with our new `text_file_ingest` tool. As a data source we will use a collection of text files located in the `examples/docs/workflows/text_file_ingest/data` directory that describes [DOCA GPUNetIO](https://docs.nvidia.com/doca/sdk/doca+gpunetio/index.html).
+Starting from the `custom_config.yml` file we created in the previous section, we will replace the two `webpage_query` tools with our new `text_file_ingest` tool. For the data source, we will use a collection of text files located in the `examples/docs/workflows/text_file_ingest/data` directory that describes [DOCA GPUNetIO](https://docs.nvidia.com/doca/sdk/doca+gpunetio/index.html).
 
 :::{note}
 If you are following this document and building this tool from scratch, you can either copy the contents of `examples/documentation_guides/workflows/text_file_ingest/data` into `examples/text_file_ingest/src/text_file_ingest/data` or populate it with your own text files.
