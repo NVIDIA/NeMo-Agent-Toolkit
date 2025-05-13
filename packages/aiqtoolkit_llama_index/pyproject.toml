@@ -22,11 +22,11 @@ dependencies = [
   "aiqtoolkit~=1.1",
   # We ran into pydantic validation errors with newer versions of llama-index, not sure which version introduced the
   # error
-  "llama-index-core==0.12.15",
+  "llama-index-core==0.12.21",
   "llama-index-embeddings-nvidia==0.3.1",
   "llama-index-llms-nvidia==0.3.1",
   "llama-index-readers-file==0.4.4",
-  "llama-index==0.12.15",
+  "llama-index==0.12.21",
 ]
 requires-python = ">=3.11,<3.13"
 description = "Subpackage for Llama-Index integration in AIQToolkit"
