@@ -90,9 +90,9 @@ Input Schema:
 
 The AIQ Toolkit MCP front-end implements the Model Context Protocol specification, making it compatible with any MCP client. This allows for seamless integration with various systems that support MCP, including:
 
-1. MCP-compatible LLM frameworks
-2. Other agent frameworks that support MCP
-3. Custom applications including AIQ Toolkit applications that implement the MCP client specification
+- MCP-compatible LLM frameworks
+- Other agent frameworks that support MCP
+- Custom applications including AIQ Toolkit applications that implement the MCP client specification
 
 ### Example
 In this example, we will use AIQ Toolkit as both a MCP client and a MCP server.
