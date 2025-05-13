@@ -185,7 +185,7 @@ class LayeredConfig:
 def load_and_override_config(config_file: Path, overrides: tuple[tuple[str, str], ...]) -> dict[str, Any]:
     """Load config file and apply any overrides"""
 
-    # First validate the original config file
+    # Load the base config
     base_config = yaml_load(config_file)
 
     # Create layered config
