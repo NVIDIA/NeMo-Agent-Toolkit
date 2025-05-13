@@ -97,9 +97,37 @@ The AIQ Toolkit MCP front-end implements the Model Context Protocol specificatio
 ### Example
 In this example, we will use AIQ Toolkit as both a MCP client and a MCP server.
 
-- Simple calculator's `math` tools can be published by following the instructions in the [MCP Server Usage](#mcp-server-usage) section. This will publish the `math` tools as MCP tools.
-- Simple calculator workflow can then be run with the `config-mcp-math.yml` config file. This will use the `math` tools published by the MCP server.
-
+1. Start the MCP server by following the instructions in the [MCP Server Usage](#mcp-server-usage) section. `aiqtoolkit` will act as a MCP server and publish the `math` tools as MCP tools.
+2. Run the simple calculator workflow with the `config-mcp-math.yml` config file. `aiqtoolkit` will act as a MCP client and connect to the MCP server started in the previous step to access the remote tools.
 ```bash
 aiq run --config_file examples/simple_calculator/configs/config-mcp-math.yml --input "Is 2 times 2 greater than the current hour?"
 ```
+
+The functions in `config-mcp-math.yml` are configured to use the `math` tools published by the MCP server running on `http://localhost:9901/sse`.
+`examples/simple_calculator/configs/config-mcp-math.yml`:
+```yaml
+functions:
+  calculator_multiply:
+    _type: mcp_tool_wrapper
+    url: "http://localhost:9901/sse"
+    mcp_tool_name: calculator_multiply
+    description: "Returns the product of two numbers"
+  calculator_inequality:
+    _type: mcp_tool_wrapper
+    url: "http://localhost:9901/sse"
+    mcp_tool_name: calculator_inequality
+    description: "Returns the inequality of two numbers"
+  calculator_divide:
+    _type: mcp_tool_wrapper
+    url: "http://localhost:9901/sse"
+    mcp_tool_name: calculator_divide
+    description: "Returns the quotient of two numbers"
+  current_datetime:
+    _type: current_datetime
+  calculator_subtract:
+    _type: mcp_tool_wrapper
+    url: "http://localhost:9901/sse"
+    mcp_tool_name: calculator_subtract
+    description: "Returns the difference of two numbers"
+```
+In this example, the `calculator_multiply`, `calculator_inequality`, `calculator_divide`, and `calculator_subtract` tools are remote MCP tools. The `current_datetime` tool is a local `aiqtoolkit` tool.
