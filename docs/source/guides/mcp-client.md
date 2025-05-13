@@ -84,7 +84,7 @@ functions:
 ```
 
 To run the simple calculator workflow using remote MCP tools,
-- Start the remote MCP server by following the instructions in the [deploy external MCP server](../examples/simple_calculator/deploy_external_mcp/README.md) guide. Use the `mcp-server-time` service for this example.
+- Start the remote MCP server by following the instructions in the `examples/simple_calculator/deploy_external_mcp/README.md` file. Use the `mcp-server-time` service for this example.
 - Run the workflow using the `aiq run` command.
 ```bash
 aiq run --config_file examples/simple_calculator/configs/config-mcp-date.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
