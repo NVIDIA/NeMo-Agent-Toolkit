@@ -208,7 +208,7 @@ workflow:
 
 Explanation:
 
-- We define a memory entry named `saas_memory` with `_type: mem0_memory`. Using the [Mem0](https://mem0.ai/) provider included in the [`aiqtoolkit-mem0ai`](https://pypi.org/project/aiqtoolkit-mem0ai/) plugin.
+- We define a memory entry named `saas_memory` with `_type: mem0_memory`, using the [Mem0](https://mem0.ai/) provider included in the [`aiqtoolkit-mem0ai`](https://pypi.org/project/aiqtoolkit-mem0ai/) plugin.
 - Then we define two tools (functions in AIQ Toolkit terminology) that reference `saas_memory`: `add_memory` and `get_memory`.
 - Finally, the `agent_memory` workflow references these two tool names.
 
