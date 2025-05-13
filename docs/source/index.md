@@ -50,8 +50,8 @@ Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 
 - [**User Interface:**](./quick-start/launching-ui.md) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 
-- [**MCP Compatibility**](./workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), allowing tools served by MCP Servers to be used as AIQ Toolkit functions, as well as serving AIQ Toolkit functions to be used by any MCP client.
--
+- [**Full MCP Support**](./workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use AIQ Toolkit as an MCP Client to connect to and use tools served by remote MCP servers. You can also use AIQ Toolkit as an MCP Server to publish tools via MCP.
+
 ## Feedback
 
 We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AIQToolkit/issues) if you have any feedback or feature requests.

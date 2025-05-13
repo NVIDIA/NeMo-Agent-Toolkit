@@ -51,7 +51,7 @@ export SERVER_PORT=8080
 
 ```bash
 mkdir -p ${SERVICE_DIR}
-cp examples/mcp_server/Dockerfile ${SERVICE_DIR}/
+cp examples/simple_calculator/deploy_external_mcp/Dockerfile ${SERVICE_DIR}/
 ```
 
 4. Create the run script:

@@ -14,6 +14,9 @@
 # limitations under the License.
 
 import logging
+import re
+
+from bs4 import BeautifulSoup
 
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
@@ -56,7 +59,7 @@ async def langchain_research(tool_config: LangChainResearchConfig, builder: Buil
 
     prompt_template = """
     You are an expert of extracting topic from user query in order to search on web search engine on a
-    topic extracted from user input
+    topic extracted from user input.
     ------
     {inputs}
     ------
@@ -82,6 +85,13 @@ async def langchain_research(tool_config: LangChainResearchConfig, builder: Buil
             topic = out.topic
             if topic is not None and topic not in ['', '\n']:
                 output_summary = (await web_search(topic))
+                # Clean HTML tags from the output
+                if isinstance(output_summary, str):
+                    # Remove HTML tags using BeautifulSoup
+                    soup = BeautifulSoup(output_summary, 'html.parser')
+                    output_summary = soup.get_text()
+                    # Clean up any extra whitespace
+                    output_summary = re.sub(r'\s+', ' ', output_summary).strip()
             else:
                 output_summary = f"this search on web search with topic:{topic} yield not results"
 

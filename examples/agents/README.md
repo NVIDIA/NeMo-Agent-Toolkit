@@ -15,11 +15,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-<!--
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-  SPDX-License-Identifier: Apache-2.0
--->
-
 # Agent Examples
 
 The agent examples demonstrate how AIQ Toolkit accelerates and enables AI Agent development.
@@ -29,10 +24,11 @@ The examples showcase 5 distinct AI Agent architectures solving a similar proble
 * [ReAct Agent Example](./react/README.md)
 * [Tool Calling Agent Example](./tool_calling/README.md)
 * [Mixture of Agents Example](./mixture_of_agents/README.md) - A ReAct Agent calling multiple Tool Calling Agents
-
+* [ReWOO Agent Example](./rewoo/README.md)
 ## Learn More
 
 For a deeper dive into the AI Agents utilized in the examples, refer to the component documentation:
-- [ReAct Agent](../../docs/source/workflows/react-agent.md)
-- [Reasoning Agent](../../docs/source/workflows/reasoning-agent.md)
-- [Tool Calling Agent](../../docs/source/workflows/tool-calling-agent.md)
+- [ReAct Agent](../../docs/source/workflows/about/react-agent.md)
+- [Reasoning Agent](../../docs/source/workflows/about/reasoning-agent.md)
+- [Tool Calling Agent](../../docs/source/workflows/about/tool-calling-agent.md)
+- [ReWOO Agent](../../docs/source/workflows/about/rewoo-agent.md)

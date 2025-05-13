@@ -29,6 +29,12 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the AIQ Too
     - [Set Up API Keys](#set-up-api-keys)
   - [Example Usage](#example-usage)
     - [Run the Workflow](#run-the-workflow)
+    - [Examine the Traces in Phoenix](#examine-the-traces-in-phoenix)
+    - [Using Weave for Tracing](#using-weave-for-tracing)
+    - [Accuracy Evaluation](#accuracy-evaluation)
+  - [MCP (Model Context Protocol)](#mcp-model-context-protocol)
+    - [AIQ Toolkit as an MCP Client](#aiq-toolkit-as-an-mcp-client)
+    - [AIQ Toolkit as an MCP Server](#aiq-toolkit-as-an-mcp-server)
   - [Deployment-Oriented Setup](#deployment-oriented-setup)
     - [Build the Docker Image](#build-the-docker-image)
     - [Run the Docker Container](#run-the-docker-container)
@@ -196,6 +202,14 @@ aiq eval --config_file examples/simple_calculator/configs/config-tunable-rag-eva
 
 The evaluation results will be saved in `examples/simple_calculator/.tmp/eval/simple_calculator/tuneable_eval_output.json`.
 
+
+## MCP (Model Context Protocol)
+### AIQ Toolkit as an MCP Client
+You can run the simple calculator workflow using Remote MCP tools. In this case, the workflow acts as a MCP client and connects to the MCP server running on the specified URL. Details are provided in the [MCP Client Guide](../../docs/source/guides/mcp-client.md).
+
+### AIQ Toolkit as an MCP Server
+You can publish the simple calculator tools via MCP using the `aiq mcp` command. Details are provided in the [MCP Server Guide](../../docs/source/guides/mcp-server.md).
+
 ## Deployment-Oriented Setup
 
 For a production deployment, use Docker:
@@ -239,54 +253,3 @@ curl -X 'POST' \
   "output": "No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 16)."
 }
 ```
-
-## Using MCP Services for running the workflow
-
-The `config-mcp-date.yml` file demonstrates how to use an MCP service as a tool in the AIQ Toolkit `simple_calculator` workflow.
-
-### MCP Server Setup
-
-Follow the instructions in the [MCP Server README](../mcp_server/README.md) to setup the MCP server. Use the `mcp-server-time` service for this example.
-
-### Running the workflow with MCP service
-
-The `config-mcp-date.yml` file demonstrates how to use an MCP service as a tool in the AIQ Toolkit `simple_calculator` workflow.
-
-```bash
-aiq run --config_file examples/simple_calculator/configs/config-mcp-date.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
-```
-
-**Expected Output**
-You should see the workflow using the MCP service as a tool to get the current hour of the day. The output has been truncated for brevity.
-```console
-The agent's thoughts are:
-Thought: Now that I have the product of 2 and 4, I need to get the current hour of the day to compare it with the product.
-
-Action: mcp_time_tool
-Action Input: {'timezone': 'UTC'}
-2025-04-14 14:46:58,875 - aiq.agent.react_agent.agent - INFO - Calling tool mcp_time_tool with input: {'timezone': 'UTC'}
-2025-04-14 14:46:58,875 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
-2025-04-14 14:46:58,879 - mcp.client.sse - INFO - Connecting to SSE endpoint: http://0.0.0.0:8080/sse
-2025-04-14 14:46:58,930 - httpx - INFO - HTTP Request: GET http://0.0.0.0:8080/sse "HTTP/1.1 200 OK"
-2025-04-14 14:46:58,930 - mcp.client.sse - INFO - Received endpoint URL: http://0.0.0.0:8080/messages/?session_id=18f6ee191b6e488eb897c3ee9cab08ea
-2025-04-14 14:46:58,930 - mcp.client.sse - INFO - Starting post writer with endpoint URL: http://0.0.0.0:8080/messages/?session_id=18f6ee191b6e488eb897c3ee9cab08ea
-2025-04-14 14:46:58,935 - httpx - INFO - HTTP Request: POST http://0.0.0.0:8080/messages/?session_id=18f6ee191b6e488eb897c3ee9cab08ea "HTTP/1.1 202 Accepted"
-2025-04-14 14:46:58,939 - httpx - INFO - HTTP Request: POST http://0.0.0.0:8080/messages/?session_id=18f6ee191b6e488eb897c3ee9cab08ea "HTTP/1.1 202 Accepted"
-2025-04-14 14:46:58,943 - httpx - INFO - HTTP Request: POST http://0.0.0.0:8080/messages/?session_id=18f6ee191b6e488eb897c3ee9cab08ea "HTTP/1.1 202 Accepted"
-2025-04-14 14:46:58,954 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
-2025-04-14 14:46:59,981 - aiq.agent.react_agent.agent - INFO -
-
->SNIP<
-
-Thought: I now know the final answer
-
-Final Answer: No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 21).
-2025-04-14 14:47:00,941 - aiq.observability.async_otel_listener - INFO - Intermediate step stream completed. No more events will arrive.
-2025-04-14 14:47:00,941 - aiq.front_ends.console.console_front_end_plugin - INFO - --------------------------------------------------
-Workflow Result:
-['No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 21).']
---------------------------------------------------
-```
-
-## Hosting simple calculator tools via MCP
-You can publish the simple calculator tools via MCP by following the instructions in the [MCP Server README](../mcp_server/README.md).
