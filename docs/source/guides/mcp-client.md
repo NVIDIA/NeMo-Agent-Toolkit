@@ -17,9 +17,9 @@ limitations under the License.
 # Model Context Protocol Integration
 Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
-You can use AIQ Toolkit as an MCP Client to connect to and use tools served by remote MCP servers using server sent events. You can also use AIQ Toolkit as an MCP Server to publish tools via MCP.
+You can use AIQ Toolkit as an MCP Client to connect to and use tools served by remote MCP servers. You can also use AIQ Toolkit as an MCP Server to publish tools via MCP.
 
-This guide will cover how to use AIQ Toolkit as an MCP Client to connect to and use tools served by remote MCP servers using server sent events. For more information on how to use AIQ Toolkit as an MCP Server, please refer to the [MCP Server Guide](../guides/mcp-server.md).
+This guide will cover how to use AIQ Toolkit as an MCP Client. For more information on how to use AIQ Toolkit as an MCP Server, please refer to the [MCP Server Guide](../guides/mcp-server.md).
 
 ## Usage
 Tools served by remote MCP servers can be leveraged as AIQ Toolkit functions through configuration of an `mcp_tool_wrapper`.
@@ -81,7 +81,7 @@ functions:
     description: "Returns the current date and time from the MCP server"
 ```
 
-To run the workflow using remote MCP tools,
+To run the simple calculator workflow using remote MCP tools,
 - Start the remote MCP server by following the instructions in the [deploy external MCP server](../examples/simple_calculator/deploy_external_mcp/README.md) guide. Use the `mcp-server-time` service for this example.
 - Run the workflow using the `aiq run` command.
 ```bash
@@ -106,6 +106,7 @@ To get more detailed information about a specific tool, you can use the `--tool`
 aiq info mcp --url http://localhost:8080/sse --tool get_current_time
 ```
 Sample output:
+```
 Tool: get_current_time
 Description: Get current time in a specific timezones
 Input Schema:
