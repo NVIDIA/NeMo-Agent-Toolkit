@@ -97,7 +97,7 @@ The AIQ Toolkit MCP front-end implements the Model Context Protocol specificatio
 3. Custom applications including AIQ Toolkit applications that implement the MCP client specification
 
 ### Example
-To use the `math` tools exposed by the [AIQToolkit MCP server](#mcp-server-usage) you can run the simple calculator example with the `config-mcp-math.yml` config file.
+To use the `math` tools exposed by the [AIQ Toolkit MCP server](#mcp-server-usage) you can run the simple calculator example with the `config-mcp-math.yml` config file.
 ```bash
 aiq run --config_file examples/simple_calculator/configs/config-mcp-math.yml --input "Is 2 times 2 greater than the current hour?"
 ```
