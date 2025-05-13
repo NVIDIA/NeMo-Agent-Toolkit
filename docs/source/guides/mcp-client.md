@@ -44,15 +44,15 @@ For example:
 functions:
   mcp_tool_a:
     _type: mcp_tool_wrapper
-    url: "http://0.0.0.0:8080/sse"
+    url: "http://localhost:8080/sse"
     mcp_tool_name: tool_a
   mcp_tool_b:
     _type: mcp_tool_wrapper
-    url: "http://0.0.0.0:8080/sse"
+    url: "http://localhost:8080/sse"
     mcp_tool_name: tool_b
   mcp_tool_c:
     _type: mcp_tool_wrapper
-    url: "http://0.0.0.0:8080/sse"
+    url: "http://localhost:8080/sse"
     mcp_tool_name: tool_c
 ```
 
@@ -64,45 +64,64 @@ Once configured, a Pydantic input schema will be generated based on the input sc
  * A python dictionary
  * Keyword arguments
 
-## Hosting tools via the AIQ Toolkit MCP Server
-In addition to the MCP Client Tool, the AIQ Toolkit provides an MCP frontend that can be used to serve tools as an MCP server.
-For instructions on how to host tools via the AIQ Toolkit MCP Server, please refer to the [MCP Server](../guides/mcp-server.md) guide.
+## Example
+The simple calculator workflow can be configured to use remote MCP tools. Sample configuration is provided in the `config-mcp-date.yml` file.
+
+`examples/simple_calculator/configs/config-mcp-date.yml`:
+```yaml
+functions:
+  mcp_time_tool:
+    _type: mcp_tool_wrapper
+    url: "http://localhost:8080/sse"
+    mcp_tool_name: get_current_time
+    description: "Returns the current date and time from the MCP server"
+```
+
+To run the workflow using remote MCP tools,
+- Start the remote MCP server by following the instructions in the [deploy external MCP server](../examples/simple_calculator/deploy_external_mcp/README.md) guide. Use the `mcp-server-time` service for this example.
+- Run the workflow using the `aiq run` command.
+```bash
+aiq run --config_file examples/simple_calculator/configs/config-mcp-date.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+```
+This will use the `mcp_time_tool` function to get the current hour of the day from the MCP server.
 
 ## CLI Commands
 The `aiq info mcp` command can be used to list the tools served by an MCP server.
 ```bash
-aiq info mcp --
+aiq info mcp --url http://localhost:8080/sse
 ```
+
 Sample output:
 ```
-calculator_multiply
-calculator_inequality
-calculator_divide
-calculator_subtract
+get_current_time
+convert_time
 ```
 
 To get more detailed information about a specific tool, you can use the `--tool` flag.
 ```bash
-aiq info mcp --tool calculator_multiply
+aiq info mcp --url http://localhost:8080/sse --tool get_current_time
 ```
 Sample output:
-```
-Tool: calculator_multiply
-Description: This is a mathematical tool used to multiply two numbers together. It takes 2 numbers as an input and computes their numeric product as the output.
+Tool: get_current_time
+Description: Get current time in a specific timezones
 Input Schema:
 {
   "properties": {
-    "text": {
-      "description": "",
-      "title": "Text",
+    "timezone": {
+      "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use 'UTC' as local timezone if no timezone provided by the user.",
+      "title": "Timezone",
       "type": "string"
     }
   },
   "required": [
-    "text"
+    "timezone"
   ],
-  "title": "CalculatorMultiplyInputSchema",
+  "title": "GetCurrentTimeInputSchema",
   "type": "object"
 }
 ------------------------------------------------------------
 ```
+
+## Hosting tools via the AIQ Toolkit MCP Server
+In addition to the MCP Client Tool, the AIQ Toolkit provides an MCP frontend that can be used to serve tools as an MCP server.
+For instructions on how to host tools via the AIQ Toolkit MCP Server, please refer to the [MCP Server](../guides/mcp-server.md) guide.

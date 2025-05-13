@@ -29,6 +29,11 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the AIQ Too
     - [Set Up API Keys](#set-up-api-keys)
   - [Example Usage](#example-usage)
     - [Run the Workflow](#run-the-workflow)
+    - [Examine the Traces in Phoenix](#examine-the-traces-in-phoenix)
+    - [Using Weave for Tracing](#using-weave-for-tracing)
+    - [Accuracy Evaluation](#accuracy-evaluation)
+    - [Using MCP Services for running the workflow](#using-mcp-services-for-running-the-workflow)
+    - [Hosting simple calculator tools via MCP](#hosting-simple-calculator-tools-via-mcp)
   - [Deployment-Oriented Setup](#deployment-oriented-setup)
     - [Build the Docker Image](#build-the-docker-image)
     - [Run the Docker Container](#run-the-docker-container)
@@ -196,55 +201,14 @@ aiq eval --config_file examples/simple_calculator/configs/config-tunable-rag-eva
 
 The evaluation results will be saved in `examples/simple_calculator/.tmp/eval/simple_calculator/tuneable_eval_output.json`.
 
-## Deployment-Oriented Setup
 
-For a production deployment, use Docker:
+## MCP (Model Context Protocol)
+You can run the simple calculator workflow using:
+- Remote MCP tools. Sample configuration is provided in the `config-mcp-date.yml` file. In this case, the workflow acts as a MCP client and connects to the MCP server running on the specified URL. Details are provided in the [Simple Calculator via remote MCP tools](#simple-calculator-via-remote-mcp-tools).
+- Publish the simple calculator tools via MCP. In this case, `aiqtoolkit` runs as an MCP server and publishes the simple calculator tools to the MCP server. Details are provided in the [Publish the simple calculator tools via MCP](#publish-the-simple-calculator-tools-via-mcp).
 
-### Build the Docker Image
 
-Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AIQ Toolkit virtual environment.
-
-From the root directory of the Simple Calculator repository, build the Docker image:
-
-```bash
-docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t simple_calculator -f examples/simple_calculator/Dockerfile .
-```
-
-### Run the Docker Container
-Deploy the container:
-
-```bash
-docker run -p 8000:8000 -p 6006:6006 -e NVIDIA_API_KEY simple_calculator
-```
-
-Note, a phoenix telemetry service will be exposed at port 6006.
-
-### Test the API
-Use the following curl command to test the deployed API:
-
-```bash
-curl -X 'POST' \
-  'http://localhost:8000/generate' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{"input_message": "Is the product of 2 * 4 greater than the current hour of the day?"}'
-  ```
-
-  ### Expected API Output
-  The API response should be similar to the following:
-
-```bash
-{
-  "input": "Is the product of 2 * 4 greater than the current hour of the day?",
-  "output": "No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 16)."
-}
-```
-
-## Using MCP Services for running the workflow
-
-The `config-mcp-date.yml` file demonstrates how to use an MCP service as a tool in the AIQ Toolkit `simple_calculator` workflow.
-
-### MCP Server Setup
+### Simple Calculator via remote MCP tools
 
 Follow the instructions in the [MCP Server README](../mcp_server/README.md) to setup the MCP server. Use the `mcp-server-time` service for this example.
 
@@ -288,5 +252,46 @@ Workflow Result:
 --------------------------------------------------
 ```
 
-## Hosting simple calculator tools via MCP
-You can publish the simple calculator tools via MCP by following the instructions in the [MCP Server README](../mcp_server/README.md).
+## Deployment-Oriented Setup
+
+For a production deployment, use Docker:
+
+### Build the Docker Image
+
+Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AIQ Toolkit virtual environment.
+
+From the root directory of the Simple Calculator repository, build the Docker image:
+
+```bash
+docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t simple_calculator -f examples/simple_calculator/Dockerfile .
+```
+
+### Run the Docker Container
+Deploy the container:
+
+```bash
+docker run -p 8000:8000 -p 6006:6006 -e NVIDIA_API_KEY simple_calculator
+```
+
+Note, a phoenix telemetry service will be exposed at port 6006.
+
+### Test the API
+Use the following curl command to test the deployed API:
+
+```bash
+curl -X 'POST' \
+  'http://localhost:8000/generate' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{"input_message": "Is the product of 2 * 4 greater than the current hour of the day?"}'
+  ```
+
+  ### Expected API Output
+  The API response should be similar to the following:
+
+```bash
+{
+  "input": "Is the product of 2 * 4 greater than the current hour of the day?",
+  "output": "No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 16)."
+}
+```
