@@ -78,7 +78,7 @@ examples/
 
 
 ## Customizing the Configuration Object
-Given that the purpose of this tool will be similar to that of the `webpage_query` tool, we can use it as a reference and starting point. Examining the `webpage_query` tool configuration object from `examples/simple/src/aiq_simple/register.py`:
+Given that the purpose of this tool will be similar to that of the `webpage_query` tool, you can use it as a reference and starting point. Examining the `webpage_query` tool configuration object from `examples/simple/src/aiq_simple/register.py`:
 ```python
 class WebQueryToolConfig(FunctionBaseConfig, name="webpage_query"):
     webpage_url: str
@@ -109,7 +109,7 @@ The `text_file_ingest_tool` function created is already correctly associated wit
 async def text_file_ingest_tool(config: TextFileIngestToolConfig, builder: Builder):
 ```
 
-Examining the `webquery_tool` function (`examples/simple/src/aiq_simple/register.py`), we see that at the heart of the tool is the [`langchain_community.document_loaders.WebBaseLoader`](https://python.langchain.com/docs/integrations/document_loaders/web_base) class.
+Examining the `webquery_tool` function (`examples/simple/src/aiq_simple/register.py`), you can observe that at the heart of the tool is the [`langchain_community.document_loaders.WebBaseLoader`](https://python.langchain.com/docs/integrations/document_loaders/web_base) class.
 
 ```python
     loader = WebBaseLoader(config.webpage_url)
@@ -174,7 +174,7 @@ async def text_file_ingest_tool(config: TextFileIngestToolConfig, builder: Build
 
 ## Creating the Workflow Configuration
 
-Starting from the `custom_config.yml` file we created in the previous section, we will replace the two `webpage_query` tools with our new `text_file_ingest` tool. For the data source, we will use a collection of text files located in the `examples/docs/workflows/text_file_ingest/data` directory that describes [DOCA GPUNetIO](https://docs.nvidia.com/doca/sdk/doca+gpunetio/index.html).
+Starting from the `custom_config.yml` file you created in the previous section, replace the two `webpage_query` tools with the new `text_file_ingest` tool. For the data source, you can use a collection of text files located in the `examples/docs/workflows/text_file_ingest/data` directory that describes [DOCA GPUNetIO](https://docs.nvidia.com/doca/sdk/doca+gpunetio/index.html).
 
 :::{note}
 If you are following this document and building this tool from scratch, you can either copy the contents of `examples/documentation_guides/workflows/text_file_ingest/data` into `examples/text_file_ingest/src/text_file_ingest/data` or populate it with your own text files.
@@ -249,7 +249,7 @@ aiq workflow delete text_file_ingest
 ## Running the Workflow
 
 :::{note}
-The following commands reference the pre-built workflow located in `examples/docs/workflows/text_file_ingest`. If you are following this document and building this tool from the beginning, you will want to replace `examples/docs/workflows/text_file_ingest` with `examples/text_file_ingest`.
+The following commands reference the pre-built workflow located in `examples/docs/workflows/text_file_ingest`. If you are following this document and building this tool from the beginning, replace `examples/docs/workflows/text_file_ingest` with `examples/text_file_ingest`.
 :::
 
 After completed, install the tool into the environment:
@@ -263,7 +263,7 @@ aiq run --config_file examples/documentation_guides/workflows/text_file_ingest/c
    --input "What does DOCA GPUNetIO to remove the CPU from the critical path?"
 ```
 
-If successful, we should receive output similar to the following:
+If successful, you should receive output similar to the following:
 ```
 Workflow Result:
 ['DOCA GPUNetIO removes the CPU from the critical path by providing features such as GPUDirect Async Kernel-Initiated Network (GDAKIN) communications, which allows a CUDA kernel to invoke GPUNetIO device functions to receive or send data directly, without CPU intervention. Additionally, GPUDirect RDMA enables receiving packets directly into a contiguous GPU memory area. These features enable GPU-centric solutions that bypass the CPU in the critical path.']

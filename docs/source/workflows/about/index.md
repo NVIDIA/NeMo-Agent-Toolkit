@@ -57,7 +57,7 @@ workflow:
 
 This workflow configuration is divided into four sections: `functions`, `llms`, `embedders`, and `workflow`. The `functions` section contains the tools used in the workflow, while `llms` and `embedders` define the models used in the workflow, and lastly the `workflow` section ties the other sections together and defines the workflow itself.
 
-In this workflow the `webpage_query` tool is used to query the LangSmith User Guide, and the `current_datetime` tool is used to get the current date and time. The `description` entry is what is used to instruct the LLM when and how to use the tool. In this case, we explicitly defined the `description` for the `webpage_query` tool.
+In this workflow the `webpage_query` tool is used to query the LangSmith User Guide, and the `current_datetime` tool is used to get the current date and time. The `description` entry is what is used to instruct the LLM when and how to use the tool. In this case, the `description` is explicitly defined for the `webpage_query` tool.
 
 The `webpage_query` tool makes use of the `nv-embedqa-e5-v5` embedder, which is defined in the `embedders` section.
 
