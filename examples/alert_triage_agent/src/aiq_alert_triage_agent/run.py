@@ -153,10 +153,10 @@ def receive_alert():
         return jsonify({"error": "Alerts not represented as dictionaries"}), 400
 
     for alert in alerts:
-        alert_id = alert.get('alert_id')
-        if not alert_id:
+        if 'alert_id' not in alert:
             return jsonify({"error": "`alert_id` is absent in the alert payload"}), 400
 
+        alert_id = alert['alert_id']
         processed_alerts.append(alert_id)
         start_process(alert, ENV_FILE)
 
