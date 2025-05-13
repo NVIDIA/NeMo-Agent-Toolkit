@@ -149,7 +149,7 @@ async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConf
             # Return the content as a string
             return planner_content
         except Exception as e:
-            logger.error(f"Error in agno_personal_finance function: {str(e)}")
-            return f"Sorry, I encountered an error while generating your financial plan: {str(e)}"
+            logger.error("Error in agno_personal_finance function: %s", e)
+            return f"Sorry, I encountered an error while generating your financial plan: {e}"
 
     yield FunctionInfo.from_fn(_arun, description="extract relevant personal finance data per user input query")

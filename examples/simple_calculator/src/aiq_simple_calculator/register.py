@@ -28,7 +28,7 @@ class InequalityToolConfig(FunctionBaseConfig, name="calculator_inequality"):
 
 
 @register_function(config_type=InequalityToolConfig)
-async def calculator_inequality(tool_config: InequalityToolConfig, builder: Builder):
+async def calculator_inequality(tool_config: InequalityToolConfig, builder: Builder):  # pylint: disable=unused-argument
 
     import re
 
@@ -56,7 +56,7 @@ class MultiplyToolConfig(FunctionBaseConfig, name="calculator_multiply"):
 
 
 @register_function(config_type=MultiplyToolConfig)
-async def calculator_multiply(config: MultiplyToolConfig, builder: Builder):
+async def calculator_multiply(config: MultiplyToolConfig, builder: Builder):  # pylint: disable=unused-argument
 
     import re
 
@@ -79,7 +79,7 @@ class DivisionToolConfig(FunctionBaseConfig, name="calculator_divide"):
 
 
 @register_function(config_type=DivisionToolConfig)
-async def calculator_divide(config: DivisionToolConfig, builder: Builder):
+async def calculator_divide(config: DivisionToolConfig, builder: Builder):  # pylint: disable=unused-argument
 
     import re
 
@@ -102,7 +102,7 @@ class SubtractToolConfig(FunctionBaseConfig, name="calculator_subtract"):
 
 
 @register_function(config_type=SubtractToolConfig)
-async def calculator_subtract(config: SubtractToolConfig, builder: Builder):
+async def calculator_subtract(config: SubtractToolConfig, builder: Builder):  # pylint: disable=unused-argument
 
     import re
 
