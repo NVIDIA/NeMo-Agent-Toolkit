@@ -23,6 +23,7 @@ limitations under the License.
 ReAct Agent <./react-agent.md>
 Reasoning Agent <./reasoning-agent.md>
 Tool Calling Agent <./tool-calling-agent.md>
+Rewoo Agent <./rewoo-agent.md>
 Retriever <./retriever.md>
 Model Context Protocol (MCP) <./mcp.md>
 Code Execution Tool <./code-execution.md>

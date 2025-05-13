@@ -52,6 +52,10 @@ The `code_generation` and `wiki_search` tools are part of the `aiqtoolkit[langch
 uv pip install -e '.[langchain]'
 ```
 
+In addition to this the example utilizes some tools from the `examples/simple_calculator` example.  To install the package run the following command:
+```bash
+uv pip install -e examples/simple_calculator
+```
 
 ### Set Up API Keys
 If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/intro/get-started.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:

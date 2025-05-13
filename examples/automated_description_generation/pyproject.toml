@@ -9,7 +9,8 @@ root = "../.."
 name = "aiq_automated_description_generation"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain]~=1.1"
+  "aiqtoolkit[langchain]~=1.1",
+  "lxml~=5.4"
 ]
 requires-python = ">=3.11,<3.13"
 description = "Automated Generation Description AI-Q example"
