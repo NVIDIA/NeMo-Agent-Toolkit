@@ -14,10 +14,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-# Model Context Protocol Integration
+
+# AIQ Toolkit as an MCP Client
+
 Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
-You can use AIQ Toolkit as an MCP Client to connect to and use tools served by remote MCP servers. You can also use AIQ Toolkit as an MCP Server to publish tools via MCP.
+You can use AIQ Toolkit as an MCP Client to connect to and use tools served by remote MCP servers.
 
 This guide will cover how to use AIQ Toolkit as an MCP Client. For more information on how to use AIQ Toolkit as an MCP Server, please refer to the [MCP Server Guide](../guides/mcp-server.md).
 
@@ -89,7 +91,7 @@ aiq run --config_file examples/simple_calculator/configs/config-mcp-date.yml --i
 ```
 This will use the `mcp_time_tool` function to get the current hour of the day from the MCP server.
 
-## CLI Commands
+## Displaying MCP Tools
 The `aiq info mcp` command can be used to list the tools served by an MCP server.
 ```bash
 aiq info mcp --url http://localhost:8080/sse

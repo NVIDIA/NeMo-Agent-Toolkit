@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# AIQ Toolkit MCP Front-End
+# AIQ Toolkit as an MCP Server
 
 Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
@@ -23,24 +23,19 @@ You can use AIQ Toolkit as an MCP Server to publish tools via MCP.
 
 This guide will cover how to use AIQ Toolkit as an MCP Server to publish tools via MCP. For more information on how to use AIQ Toolkit as an MCP Client, please refer to the [MCP Client Guide](../guides/mcp-client.md).
 
-## Using the MCP Front-End
+## MCP Server Usage
 
-The MCP front-end is invoked using the `aiq mcp` command. This command starts an MCP server that exposes the functions from your workflow as MCP tools.
+The `aiq mcp` command can be used to start an MCP server that exposes the functions from your workflow as MCP tools.
 
-### Sample Usage
-
-To start an MCP server exposing all tools from your workflow:
+To start an MCP server exposing all tools from your workflow, run the following command:
 
 ```bash
 aiq mcp --config_file examples/simple_calculator/configs/config.yml
 ```
 
-This will:
-1. Load the workflow configuration from the specified file
-2. Start an MCP server on the default host (localhost) and port (9901)
-3. Expose all tools from the workflow as MCP tools
+This will load the workflow configuration from the specified file, start an MCP server on the default host (localhost) and port (9901), and expose all tools from the workflow as MCP tools.
 
-You can also specify a list of tool names to expose:
+You can also specify a list of tool names to expose.
 
 ```bash
 aiq mcp --config_file examples/simple_calculator/configs/config.yml \
@@ -50,9 +45,9 @@ aiq mcp --config_file examples/simple_calculator/configs/config.yml \
   --tool_names calculator_inequality
 ```
 
-### Listing MCP Tools
+## Displaying MCP Tools published by an MCP server
 
-To list the tools exposed by the MCP server you can use the `aiq info mcp` command. This command acts as a MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/sse`).
+To list the tools published by the MCP server you can use the `aiq info mcp` command. This command acts as a MCP client and connects to the MCP server running on the specified URL (defaults to `http://localhost:9901/sse`).
 
 ```bash
 aiq info mcp
@@ -93,11 +88,6 @@ Input Schema:
 }
 ------------------------------------------------------------
 ```
-
-### Accessing the MCP Tools
-
-Once the MCP server is running, any MCP-compatible client can connect to it and use the exposed tools. For example, an MCP client could connect to `http://localhost:9901/sse` and use the `calculator_multiply` tool.
-
 ## Integration with MCP Clients
 
 The AIQ Toolkit MCP front-end implements the Model Context Protocol specification, making it compatible with any MCP client. This allows for seamless integration with various systems that support MCP, including:
@@ -106,8 +96,8 @@ The AIQ Toolkit MCP front-end implements the Model Context Protocol specificatio
 2. Other agent frameworks that support MCP
 3. Custom applications including AIQ Toolkit applications that implement the MCP client specification
 
-### Sample Usage
-To use the `math` tools exposed by the MCP server you can run the simple calculator example with the `config-mcp-math.yml` config file.
+### Example
+To use the `math` tools exposed by the [AIQToolkit MCP server](#mcp-server-usage) you can run the simple calculator example with the `config-mcp-math.yml` config file.
 ```bash
 aiq run --config_file examples/simple_calculator/configs/config-mcp-math.yml --input "Is 2 times 2 greater than the current hour?"
 ```
