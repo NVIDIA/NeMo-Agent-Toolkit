@@ -54,7 +54,7 @@ Agent Intelligence toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 
 ## Feedback
 
-We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AIQToolkit/issues) if you have any feedback or feature requests.
+We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AIQtoolkit/issues) if you have any feedback or feature requests.
 
 ```{toctree}
 :hidden:

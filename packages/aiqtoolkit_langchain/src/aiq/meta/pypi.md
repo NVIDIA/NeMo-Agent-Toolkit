@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA Agent Intelligence toolkit](https://media.githubusercontent.com/media/NVIDIA/AIQToolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
+![NVIDIA Agent Intelligence toolkit](https://media.githubusercontent.com/media/NVIDIA/AIQtoolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
 
 # NVIDIA Agent Intelligence toolkit Subpackage
 This is a subpackage for Langchain/Langgraph integration in AIQ toolkit.

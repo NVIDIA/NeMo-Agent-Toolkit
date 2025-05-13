@@ -74,7 +74,7 @@ Before you begin using AIQ toolkit, ensure that you meet the following software 
 
 1. Clone the AIQ toolkit repository to your local machine.
     ```bash
-    git clone git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit
+    git clone git@github.com:NVIDIA/AIQtoolkit.git aiqtoolkit
     cd aiqtoolkit
     ```
 
@@ -190,7 +190,7 @@ Before you begin using AIQ toolkit, ensure that you meet the following software 
 
 ## Feedback
 
-We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AIQToolkit/issues) if you have any feedback or feature requests.
+We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AIQtoolkit/issues) if you have any feedback or feature requests.
 
 ## Acknowledgements
 

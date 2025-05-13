@@ -26,7 +26,7 @@ dependencies = [
 ]
 requires-python = ">=3.11,<3.13"
 readme = "src/aiq/meta/pypi.md"
-description = "Subpackage for Agno integration in AIQToolkit"
+description = "Subpackage for Agno integration in AIQtoolkit"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 

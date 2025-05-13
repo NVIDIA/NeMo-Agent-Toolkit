@@ -174,7 +174,7 @@ class AIQUsage(BaseModel):
 class AIQResponseSerializable(abc.ABC):
     """
     AIQChatResponseSerializable is an abstract class that defines the interface for serializing output for the AIQ
-    Toolkit chat streaming API.
+    toolkit chat streaming API.
     """
 
     @abstractmethod
