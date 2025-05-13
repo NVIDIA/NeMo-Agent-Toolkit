@@ -15,7 +15,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 # Model Context Protocol Integration
-Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction). AIQ Toolkit implements an MCP Client Tool which allows AIQ Toolkit workflows and functions to connect to and use tools served by remote MCP servers using server sent events.
+Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
+
+You can use AIQ Toolkit as an MCP Client to connect to and use tools served by remote MCP servers using server sent events. You can also use AIQ Toolkit as an MCP Server to publish tools via MCP.
+
+This guide will cover how to use AIQ Toolkit as an MCP Client to connect to and use tools served by remote MCP servers using server sent events. For more information on how to use AIQ Toolkit as an MCP Server, please refer to the [MCP Server Guide](../guides/mcp-server.md).
 
 ## Usage
 Tools served by remote MCP servers can be leveraged as AIQ Toolkit functions through configuration of an `mcp_tool_wrapper`.
@@ -121,7 +125,3 @@ Input Schema:
 }
 ------------------------------------------------------------
 ```
-
-## Hosting tools via the AIQ Toolkit MCP Server
-In addition to the MCP Client Tool, the AIQ Toolkit provides an MCP frontend that can be used to serve tools as an MCP server.
-For instructions on how to host tools via the AIQ Toolkit MCP Server, please refer to the [MCP Server](../guides/mcp-server.md) guide.
