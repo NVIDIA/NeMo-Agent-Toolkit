@@ -223,8 +223,6 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
 
   In this example, you have been using AIQ Toolkit with LangChain. This is why the dependency is declared on `aiqtoolkit[langchain]`, that is to say AIQ Toolkit with the LangChain integration plugin. If you want to use LlamaIndex, declare the dependency on `aiqtoolkit[llama-index]`. This is described in more detail in [Framework Integrations](../quick-start/installing.md#framework-integrations).
 
-  we wished to use an alternate framework or other optional dependencies
-
 - **Entry Points**: This tells AIQ Toolkit where to find your workflow registration.
 
   ```toml
