@@ -28,7 +28,8 @@ Evaluation Endpoints <./evaluate-api.md>
 ./fine-grained-tracing-with-weave.md
 ./observe-workflow-with-phoenix.md
 Use User Interface and API Server <./using-aiqtoolkit-ui-and-server.md>
-MCP Server Front-End <./mcp-server.md>
+MCP Client <./mcp-client.md>
+MCP Server <./mcp-server.md>
 Profile a Workflow <./profiler.md>
 Locally and Self-Hosted LLMs <./locally-hosted-llms.md>
 Adding an LLM Provider <./adding-an-llm-provider.md>
