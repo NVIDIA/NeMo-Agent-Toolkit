@@ -204,7 +204,7 @@ The resulting YAML file is located at `examples/documentation_guides/workflows/t
 
 ## Understanding `pyproject.toml`
 
-The `pyproject.toml` file defines your package metadata and dependencies. In this case, the `pyproject.toml` file that was created for us is sufficient; however, that might not always be the case. The most common need to update the `pyproject.toml` file is to add additional dependencies not included with AIQ Toolkit.
+The `pyproject.toml` file defines your package metadata and dependencies. In this case, the `pyproject.toml` file that was created is sufficient; however, that might not always be the case. The most common need to update the `pyproject.toml` file is to add additional dependencies that are not included with AIQ Toolkit.
 
 - **Dependencies**: Ensure all required libraries are listed under `[project]`.
   In the example, the tool was created inside the AIQ Toolkit repo and simply needed to declare a dependency on `aiqtoolkit[langchain]`. If, however, your tool is intended to be distributed independently then your tool will need to declare a dependency on the specific version of AIQ Toolkit that it was built against. To determine the version of AIQ Toolkit run:
