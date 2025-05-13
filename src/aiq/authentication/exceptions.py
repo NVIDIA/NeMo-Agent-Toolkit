@@ -14,8 +14,13 @@
 # limitations under the License.
 
 
-class OAuthError(Exception):
-    """Raised when OAuth flow fails unexpectedly."""
+class OAuthCodeFlowError(Exception):
+    """Raised when OAuth2.0 Code flow fails unexpectedly."""
+    pass
+
+
+class OAuthRefreshTokenError(Exception):
+    """Raised when OAuth2.0 requesting access token using refresh flow fails unexpectedly. """
     pass
 
 

@@ -15,6 +15,7 @@
 
 import secrets
 import typing
+from datetime import datetime
 from enum import Enum
 
 from pydantic import BaseModel
@@ -70,16 +71,28 @@ class OAuth2AuthQueryParams(BaseModel):
     prompt: str = Field(description="Specifies what type of user consent prompt")
 
 
-class OAuth2TokenRequestBody(BaseModel):
+class AccessCodeTokenRequest(BaseModel):
     """
-    OAuth 2.0 token request body model.
+    OAuth 2.0 request body for exchanging access codes for access tokens.
     """
     model_config = ConfigDict(extra="forbid")
-    grant_type: str = Field(default="authorization_code", description="Authorization flow identifier.")
+    grant_type: str = Field(default="authorization_code", description="Authorization flow identifier.", frozen=True)
     client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
     client_secret: str = Field(description="The client secret for OAuth 2.0 authentication.")
     code: str = Field(description="Authorization code to be exchanged for an access token.")
     redirect_uri: str = Field(description="Registered redirect uri.")
+
+
+class RefreshTokenRequest(BaseModel):
+    """
+    OAuth 2.0 request body for exchanging refresh tokens for access tokens.
+    """
+    model_config = ConfigDict(extra="forbid")
+    grant_type: str = Field(default="refresh_token", description="Authorization flow identifier.", frozen=True)
+    client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
+    client_secret: str = Field(description="The client secret for OAuth 2.0 authentication.")
+    refresh_token: str = Field(
+        description="The refresh token for OAuth 2.0 authentication used to obtain a new access token.")
 
 
 class OAuth2Config(AuthenticationBaseConfig):
@@ -107,6 +120,10 @@ class OAuth2Config(AuthenticationBaseConfig):
                        description="A URL-safe base64 format 16 byte random string",
                        frozen=True)
     access_token: str | None = Field(default=None, description="The access token for OAuth 2.0 authentication.")
+    access_token_expires_in: datetime | None = Field(default=None,
+                                                     description="Expiry time of the access token in seconds.")
+    refresh_token: str | None = Field(
+        default=None, description="The refresh token for OAuth 2.0 authentication used to obtain a new access token.")
 
 
 class APIKeyConfig(AuthenticationBaseConfig):

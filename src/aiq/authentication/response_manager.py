@@ -18,7 +18,7 @@ import webbrowser
 
 import httpx
 
-from aiq.authentication.exceptions import OAuthError
+from aiq.authentication.exceptions import OAuthCodeFlowError
 from aiq.data_models.authentication import ConsentPromptMode
 from aiq.data_models.authentication import OAuth2Config
 
@@ -31,32 +31,34 @@ class ResponseManager:
     def __init__(self) -> None:
         pass
 
-    async def _handle_oauth_authorization_response(self,
-                                                   response: httpx.Response | None,
-                                                   authentication_provider: OAuth2Config) -> None:
+    async def _handle_oauth_authorization_response_codes(self,
+                                                         response: httpx.Response,
+                                                         authentication_provider: OAuth2Config) -> None:
         """
-        Handles an OAuth authorization response to extract and handle the redirect URL.
+        Handles various OAuth2.0 authorization responses.
 
         Args:
-            response (httpx.Response): The HTTP response from the authorization request.
+            response (httpx.Response): The HTTP response from the authentication server.
         """
         try:
-            if response is None:
-                raise OAuthError("Invalid response from authorization request.")
 
             if response.status_code == 302:
                 redirect_location_header: str | None = response.headers.get("Location")
 
                 if not redirect_location_header:
-                    raise OAuthError("Missing 'Location' header in 302 response to redirect user to consent browser.")
+                    raise OAuthCodeFlowError(
+                        "Missing 'Location' header in 302 response to redirect user to consent browser.")
 
                 await self._handle_oauth_consent_browser(redirect_location_header, authentication_provider)
+
+            if response.status_code in (400, 401, 403):
+                await self._oauth_400_status_code_handler(response)
 
         except Exception as e:
             logger.error("Unexpected error occured while handling authorization request response: %s",
                          str(e),
                          exc_info=True)
-            raise OAuthError("Unexpected error occured while handling authorization request response") from e
+            raise OAuthCodeFlowError("Unexpected error occured while handling authorization request response") from e
 
     async def _handle_oauth_consent_browser(self, location_header: str, authentication_provider: OAuth2Config) -> None:
         """
@@ -77,8 +79,30 @@ class ResponseManager:
 
         except webbrowser.Error as e:
             logger.error("Unable to open defualt browser: %s", str(e), exc_info=True)
-            raise OAuthError("Unable to complete OAuth2.0 process.") from e
+            raise OAuthCodeFlowError("Unable to complete OAuth2.0 process.") from e
 
         except Exception as e:
             logger.error("Exception occured: %s", str(e), exc_info=True)
-            raise OAuthError("Unable to complete OAuth2.0 process.") from e
+            raise OAuthCodeFlowError("Unable to complete OAuth2.0 process.") from e
+
+    async def _oauth_400_status_code_handler(self, response: httpx.Response):
+        """
+        Handles the response to a protected resource request with an authentication attempt using
+        an expired or invalid access token. According to RFC 6750 When a request fails, the resource server
+        responds using the appropriate HTTP status code (typically, 400, 401, 403, or 405) and
+        includes one of the following error codes in the response: invalid_request, invalid_token,
+        insufficient_scope.
+
+        Args:
+            response (httpx.Response): The response form the OAuth2.0 authentication server.
+        """
+        # 400 Bad Request: Invalid refresh token provided or malformed request.
+        if response.status_code == 400:
+            pass
+
+        # 401 Unauthorized: Token is missing, revoked, invlaid or expired.
+        if response.status_code == 401:
+            pass
+
+        if response.status_code == 403:  # TODO EE: Update.
+            pass

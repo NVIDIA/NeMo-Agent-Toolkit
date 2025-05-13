@@ -35,7 +35,7 @@ class _CredentialsManager(metaclass=Singleton):
         """
         super().__init__()
         self.__authentication_providers: dict[str, AuthenticationProvider] = {}
-        self.__swap_flag: bool = True
+        self.__swap_flag: bool = True  # TODO EE: Remove double underscore.
         self.__full_config: "AIQConfig" = None
         self.__command_name: str = None
         self.__oauth_credentials_flag: asyncio.Event = asyncio.Event()

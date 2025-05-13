@@ -28,12 +28,14 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from aiq.authentication.request_manager import RequestManager
+    from aiq.authentication.response_manager import ResponseManager
 
 
 class AuthenticationManager:  # TODO EE: Add Tests
 
-    def __init__(self, request_manager: "RequestManager") -> None:
-        self._oauth2_authenticator: OAuth2Authenticator = OAuth2Authenticator(request_manager)
+    def __init__(self, request_manager: "RequestManager", response_manager: "ResponseManager") -> None:
+        self._oauth2_authenticator: OAuth2Authenticator = OAuth2Authenticator(request_manager=request_manager,
+                                                                              response_manager=response_manager)
 
     async def _validate_auth_provider_credentials(self, authentication_provider: str) -> bool:
         """
@@ -80,7 +82,6 @@ class AuthenticationManager:  # TODO EE: Add Tests
 
     async def _set_auth_provider_credentials(self, authentication_provider: str) -> bool:
         """
-        # TODO EE: Need to set the credentials then return boolean if successful
         Gets the authentication provider credentials for the registered provider.
 
         Args:

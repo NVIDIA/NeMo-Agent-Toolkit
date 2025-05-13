@@ -36,6 +36,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from aiq.authentication.request_manager import RequestManager
+from aiq.authentication.response_manager import ResponseManager
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
@@ -170,6 +171,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     def __init__(self, config: AIQConfig):
         self._request_manager: RequestManager = RequestManager()
+        self._response_manager: ResponseManager = ResponseManager()
         super().__init__(config)
 
     @staticmethod
@@ -786,16 +788,21 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 raise ValueError(f"Unsupported method {endpoint.method}")
 
     async def add_authorization_route(self, app: FastAPI, session_manager: AIQSessionManager):
+
+        from datetime import datetime
+        from datetime import timedelta
+        from datetime import timezone
+
         import httpx
         from fastapi import Request
         from fastapi.responses import JSONResponse
 
         from aiq.authentication.credentials_manager import _CredentialsManager
-        from aiq.authentication.exceptions import OAuthError
+        from aiq.authentication.exceptions import OAuthCodeFlowError
+        from aiq.data_models.authentication import AccessCodeTokenRequest
         from aiq.data_models.authentication import AuthenticationEndpoint
         from aiq.data_models.authentication import HTTPMethod
         from aiq.data_models.authentication import OAuth2Config
-        from aiq.data_models.authentication import OAuth2TokenRequestBody
 
         async def redirect_uri(request: Request):
 
@@ -803,20 +810,21 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             state: str | None = request.query_params.get("state")
 
             if not (authorization_code and state):
-                raise OAuthError("Authorization code and state not provided by authorization provider.")
+                raise OAuthCodeFlowError("Authorization code and state not provided by authorization provider.")
 
             authentication_provider: OAuth2Config | None = _CredentialsManager()._get_authentication_provider_by_state(
                 state)
 
             if authentication_provider is None:
-                raise OAuthError("Authorization provider not found by state provided by authorization provider.")
+                raise OAuthCodeFlowError(
+                    "Authorization provider not found by state provided by authorization provider.")
 
             # Build Token HTTP Request
             redirect_uri: str = (f"{authentication_provider.client_server_url}"
                                  f"{FastApiFrontEndConfig().authorization.path}"
                                  f"{AuthenticationEndpoint.REDIRECT_URI.value}")
 
-            data = OAuth2TokenRequestBody(client_id=authentication_provider.client_id,
+            data = AccessCodeTokenRequest(client_id=authentication_provider.client_id,
                                           client_secret=authentication_provider.client_secret,
                                           code=authorization_code,
                                           redirect_uri=redirect_uri)
@@ -825,21 +833,32 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             headers: httpx.Headers = httpx.Headers({"Content-Type": "application/json"})
 
             # Send Token HTTP Request
-            response: httpx.Response | None = await self.request_manager.send_request(url=token_url,
-                                                                                      http_method=HTTPMethod.POST.value,
-                                                                                      headers=headers,
-                                                                                      data=data.model_dump())
-
+            response: httpx.Response | None = await self._request_manager.send_request(
+                url=token_url, http_method=HTTPMethod.POST.value, headers=headers, data=data.model_dump())
             if response is None:
-                raise OAuthError("Invalid response received while exchanging authorization code for access token.")
+                raise OAuthCodeFlowError(
+                    "Invalid response received while exchanging authorization code for access token.")
+
+            if not response.status_code == 200:
+                await self._response_manager._handle_oauth_authorization_response_codes(
+                    response, authentication_provider)
 
             if response.json().get("access_token") is None:
-                raise OAuthError("No access token provided.")
+                raise OAuthCodeFlowError("No access token provided.")
 
-            # Claim the access token
+            if response.json().get("expires_in") is None:
+                raise OAuthCodeFlowError("No access token provided.")
+
+            # Claim the access token and the expiration time.
             authentication_provider.access_token = response.json().get("access_token")
-            await _CredentialsManager()._set_oauth_credentials()
+            authentication_provider.access_token_expires_in = (datetime.now(timezone.utc) +
+                                                               timedelta(seconds=response.json().get("expires_in")))
 
+            # Claim the refresh token if the refresh token is available.
+            if response.json().get("refresh_token"):
+                authentication_provider.refresh_token = response.json().get("refresh_token")
+
+            await _CredentialsManager()._set_oauth_credentials()
             return JSONResponse({"message": "Access token successfully retrieved."})
 
         async def location_url(request: Request):  # TODO EE: Update polling logic.

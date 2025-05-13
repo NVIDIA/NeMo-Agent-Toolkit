@@ -14,31 +14,36 @@
 # limitations under the License.
 
 import logging
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 from typing import TYPE_CHECKING
 
-from aiq.authentication.exceptions import OAuthError
+import httpx
+
+from aiq.authentication.exceptions import OAuthCodeFlowError
+from aiq.authentication.exceptions import OAuthRefreshTokenError
 from aiq.authentication.interfaces import AuthenticationBase
 from aiq.data_models.authentication import OAuth2Config
+from aiq.data_models.authentication import RefreshTokenRequest
 from aiq.data_models.authentication import RunMode
 from aiq.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEndController
 
 if TYPE_CHECKING:
     from aiq.authentication.request_manager import RequestManager
+    from aiq.authentication.response_manager import ResponseManager
 
 logger = logging.getLogger(__name__)
 
 
 class OAuth2Authenticator(AuthenticationBase):
 
-    def __init__(self, request_manager: "RequestManager") -> None:
+    def __init__(self, request_manager: "RequestManager", response_manager: "ResponseManager") -> None:
         self._request_manager: "RequestManager" = request_manager
+        self._response_manager: "ResponseManager" = response_manager
         self._authentication_provider: OAuth2Config = None
         self._oauth2_client_server: _FastApiFrontEndController = None
         super().__init__()
-
-    @property
-    def request_manager(self) -> "RequestManager":
-        return self._request_manager
 
     @property
     def authentication_provider(self) -> OAuth2Config:
@@ -65,20 +70,30 @@ class OAuth2Authenticator(AuthenticationBase):
 
     async def _get_credentials(self) -> bool:
         """
-        Get the credentials for OAuth2.0 authentication.
-        Returns True if the credentials are valid and False if they are not.
+        Acquires an access token if the token is absent, expired, or revoked,
+        by the options listed below.
+
+        1. Initiate the authorization flow to obtain a new access token and optional request token.
+        2. Use a refresh token to get another access token and refresh token pair if refresh token is available.
 
         Returns:
-            bool: True if the credentials are valid and false if they are not.
+            bool: True if the credentials are valid and false if they are not after acquiring credentials.
         """
-        # TODO EE: Need to handle refresh token etc....
-        # TODO EE: Need to robustly check all credentials are up to date and functional.
-        if self._authentication_provider.access_token is None:
-            await self._initiate_code_flow()
+        try:
+            # Initiate code flow is there is no access token.
+            if (self._authentication_provider.access_token is None):
+                await self._initiate_code_flow()
 
-        if self._authentication_provider.access_token:
-            return True
-        else:
+            # Initiate refresh token request if the access token is expired or revoked.
+            if (self._authentication_provider.refresh_token
+                    and (self._authentication_provider.access_token_expires_in is not None)
+                    and (datetime.now(timezone.utc) >= self._authentication_provider.access_token_expires_in)):
+                await self._get_access_token_with_refresh_token()
+
+            return await self._validate_credentials()
+
+        except ValueError as e:
+            logger.error("Failed to get OAuth2.0 credentials: %s", str(e), exc_info=True)
             return False
 
     async def _initiate_code_flow(self) -> None:
@@ -89,26 +104,97 @@ class OAuth2Authenticator(AuthenticationBase):
 
         try:
             if _CredentialsManager().command_name == RunMode.CONSOLE.value:
-                # Spawn a authentication client server to handle oauth code flow.
+                # Spawn an authentication client server to handle oauth code flow.
                 await self._spawn_oauth_client_server()
 
-                # Initiate oauth code flow by sending authorization request.
-                await self.request_manager.send_oauth_authorization_request(self.authentication_provider)
+            # Initiate oauth code flow by sending authorization request.
+            await self._send_oauth_authorization_request()
 
-                await _CredentialsManager()._wait_for_oauth_credentials()
+            await _CredentialsManager()._wait_for_oauth_credentials()
 
+            if _CredentialsManager().command_name == RunMode.CONSOLE.value:
+                # Shutdown authentication client server.
                 await self._oauth2_client_server.stop_server()
 
-            if _CredentialsManager().command_name == RunMode.SERVER.value:
-
-                # Initiate oauth code flow.
-                await self.request_manager.send_oauth_authorization_request(self.authentication_provider)
-
-                await _CredentialsManager()._wait_for_oauth_credentials()
-
-        except OAuthError as e:
+        except OAuthCodeFlowError as e:
             logger.error("Failed to complete OAuth2.0 authentication for provider Error: %s", str(e), exc_info=True)
             await self._shut_down_code_flow()
+
+    async def _send_oauth_authorization_request(self):
+        """
+        Constructs OAuth2.0 Code Flow Authoriation URL and sends request to authentication server.
+
+        Args:
+            authentication_provider (OAuth2Config): The registered OAuth2.0 provider
+        """
+        try:
+            authorization_url: httpx.URL = await self._request_manager._build_oauth_authorization_url(
+                self._authentication_provider)
+
+            response: httpx.Response | None = await self._request_manager.send_request(url=str(authorization_url),
+                                                                                       http_method="GET")
+            if response is None:
+                raise OAuthCodeFlowError("Unexpected error occured while sending authorization request.")
+
+            if not response.status_code == 200:
+                await self._response_manager._handle_oauth_authorization_response_codes(
+                    response, self._authentication_provider)
+
+        except Exception as e:
+            logger.error("Unexpected error occured during authorization request process: %s", str(e), exc_info=True)
+            raise OAuthCodeFlowError("Unexpected error occured during authorization request process:") from e
+
+    async def _get_access_token_with_refresh_token(self) -> None:
+        """ #TODO EE: Update doc string and TEST!!!
+        """
+        try:
+            if not self.authentication_provider.refresh_token:
+                raise ValueError("Refresh token is missing during the refresh token request.")
+
+            if not self.authentication_provider.client_id:
+                raise ValueError("Client ID is missing during the refresh token request.")
+
+            if not self.authentication_provider.client_secret:
+                raise ValueError("Client secret is missing during the refresh token request.")
+
+            body_data: RefreshTokenRequest = RefreshTokenRequest(
+                client_id=self._authentication_provider.client_id,
+                client_secret=self._authentication_provider.client_secret,
+                refresh_token=self._authentication_provider.refresh_token)
+
+            # Send Refresh Token Request
+            response: httpx.Response | None = await self._request_manager.send_request(
+                url=self._authentication_provider.authorization_token_url,
+                http_method="POST",
+                authentication_provider=None,
+                headers={"Content-Type": "application/json"},
+                data=body_data.model_dump())
+
+            if response is None:
+                raise ValueError("Invalid response received while making refresh token request.")
+
+            if not response.status_code == 200:
+                await self._response_manager._handle_oauth_authorization_response_codes(
+                    response, self._authentication_provider)
+
+            if response.json.get("access_token") is None:
+                raise ValueError("Access token not in successful token request response payload.")
+
+            if response.json.get("expires_in") is None:
+                raise ValueError("Access token expiration time not in successful token request response payload.")
+
+            if response.json.get("refresh_token") is None:
+                raise ValueError("Refresh token not in successful token request response payload.")
+
+            self.authentication_provider.access_token = response.json.get("access_token")
+
+            self.authentication_provider.access_token_expires_in = (
+                datetime.now(timezone.utc) + timedelta(seconds=response.json().get("expires_in")))
+
+            self.authentication_provider.refresh_token = response.json.get("refresh_token")
+
+        except OAuthRefreshTokenError as e:
+            logger.error("Failed to complete OAuth2.0 authentication for provider Error: %s", str(e), exc_info=True)
 
     async def _spawn_oauth_client_server(self) -> None:
         """
@@ -125,9 +211,6 @@ class OAuth2Authenticator(AuthenticationBase):
         # Instantiate OAuth2.0 server
         oauth2_client: FastApiFrontEndPluginWorkerBase = FastApiFrontEndPluginWorker(
             config=_CredentialsManager().full_config)
-
-        # Pass request manager to OAuth2.0 server to manage request and responses.
-        # oauth2_client.request_manager = self._request_manager # TODO EE: TBD.
 
         # Delegate setup and tear down of server to the controller.
         self._oauth2_client_server = _FastApiFrontEndController(oauth2_client.build_app())

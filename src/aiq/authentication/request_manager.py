@@ -25,7 +25,7 @@ from aiq.authentication.authentication_manager import AuthenticationManager
 from aiq.authentication.exceptions import BaseUrlValidationError
 from aiq.authentication.exceptions import BodyValidationError
 from aiq.authentication.exceptions import HeaderValidationError
-from aiq.authentication.exceptions import OAuthError
+from aiq.authentication.exceptions import OAuthCodeFlowError
 from aiq.authentication.exceptions import QueryParameterValidationError
 from aiq.authentication.interfaces import RequestManagerBase
 from aiq.authentication.response_manager import ResponseManager
@@ -41,8 +41,8 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 class RequestManager(RequestManagerBase):
 
     def __init__(self) -> None:
-        self._authentication_manager: AuthenticationManager = AuthenticationManager(self)
         self._response_manager: ResponseManager = ResponseManager()
+        self._authentication_manager: AuthenticationManager = AuthenticationManager(self, self._response_manager)
 
     @property
     def authentication_manager(self) -> AuthenticationManager:
@@ -188,27 +188,9 @@ class RequestManager(RequestManagerBase):
 
         except (BaseUrlValidationError, QueryParameterValidationError, ValueError, ValidationError, Exception) as e:
             logger.error("An error occured while building authorization url: %s", str(e), exc_info=True)
-            raise OAuthError("An error occured while building authorization url.") from e
+            raise OAuthCodeFlowError("An error occured while building authorization url.") from e
 
         return full_authorization_url
-
-    async def send_oauth_authorization_request(self, authentication_provider: OAuth2Config):
-        """
-        Constructs OAuth2.0 Code Flow Authoriation URL and sends request to authentication server.
-
-        Args:
-            authentication_provider (OAuth2Config): The registered OAuth2.0 provider
-        """
-        try:
-            authorization_url: httpx.URL = await self._build_oauth_authorization_url(authentication_provider)
-
-            response: httpx.Response | None = await self.send_request(url=authorization_url, http_method="GET")
-
-            await self._response_manager._handle_oauth_authorization_response(response, authentication_provider)
-
-        except Exception as e:
-            logger.error("Unexpected error occured during authorization request process: %s", str(e), exc_info=True)
-            raise OAuthError("Unexpected error occured during authorization request process:") from e
 
     async def send_request(self,
                            url: str,
@@ -229,7 +211,7 @@ class RequestManager(RequestManagerBase):
         """
         try:
             authentication_header: httpx.Headers | None = await self._get_authenticated_header(authentication_provider)
-            headers: httpx.Headers = httpx.Headers({**(headers or {}), **(authentication_header or {})})
+            merged_headers: httpx.Headers = httpx.Headers({**(headers or {}), **(authentication_header or {})})
 
             # Validate the incoming base url.
             self._validate_base_url(url)
@@ -238,7 +220,7 @@ class RequestManager(RequestManagerBase):
             self._validate_http_method(http_method)
 
             # Validate incoming header parameters.
-            self._validate_headers(headers)
+            self._validate_headers(merged_headers)
 
             # Validate incoming query parameters.
             self._validate_query_parameters(query_params)
@@ -250,13 +232,21 @@ class RequestManager(RequestManagerBase):
 
             async with httpx.AsyncClient() as client:
                 if http_method.upper() == HTTPMethod.GET.value:
-                    response = await client.get(url, params=query_params, headers=headers, timeout=10.0)
+                    response = await client.get(url, params=query_params, headers=merged_headers, timeout=10.0)
                 if http_method.upper() == HTTPMethod.POST.value:
-                    response = await client.post(url, params=query_params, headers=headers, json=data, timeout=10.0)
+                    response = await client.post(url,
+                                                 params=query_params,
+                                                 headers=merged_headers,
+                                                 json=data,
+                                                 timeout=10.0)
                 if http_method.upper() == HTTPMethod.PUT.value:
-                    response = await client.put(url, params=query_params, headers=headers, json=data, timeout=10.0)
+                    response = await client.put(url,
+                                                params=query_params,
+                                                headers=merged_headers,
+                                                json=data,
+                                                timeout=10.0)
                 if http_method.upper() == HTTPMethod.DELETE.value:
-                    response = await client.delete(url, params=query_params, headers=headers, timeout=10.0)
+                    response = await client.delete(url, params=query_params, headers=merged_headers, timeout=10.0)
 
         except (BaseUrlValidationError,
                 ValidationError,
@@ -267,7 +257,6 @@ class RequestManager(RequestManagerBase):
             return None
 
         except (httpx.RequestError, httpx.TimeoutException, httpx.HTTPStatusError, httpx.NetworkError) as e:
-
             logger.error("An error occured while sending request: %s", str(e), exc_info=True)
             return None
 
