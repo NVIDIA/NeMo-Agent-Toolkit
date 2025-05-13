@@ -212,7 +212,7 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
   aiq --version
   ```
 
- Use the first two digits of the version number. For example if the version is `1.1.0` then the dependency would be `aiqtoolkit[langchain]~=1.1`.
+ Use the first two digits of the version number. For example, if the version is `1.1.0`, then the dependency would be `aiqtoolkit[langchain]~=1.1`.
 
   ```toml
   dependencies = [
