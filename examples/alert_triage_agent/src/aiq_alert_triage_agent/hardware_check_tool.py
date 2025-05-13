@@ -35,7 +35,7 @@ class HardwareCheckToolConfig(FunctionBaseConfig, name="hardware_check"):
     llm_name: LLMRef
     test_mode: bool = Field(default=True, description="Whether to run in test mode")
 
-    
+
 def _get_ipmi_monitor_data(ip_address, username, password):
     """
     Capture IPMI monitoring data using the ipmimonitoring command.

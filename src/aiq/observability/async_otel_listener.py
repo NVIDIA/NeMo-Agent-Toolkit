@@ -191,11 +191,6 @@ class AsyncOtelSpanListener:
 
         self._outstanding_spans.clear()
 
-        if len(self._span_stack) > 0:
-            logger.error(
-                "Not all spans were closed. Ensure all start events have a corresponding end event. Remaining: %s",
-                self._span_stack)
-
         self._span_stack.clear()
 
         # Clean up any lingering Weave calls if Weave is available and initialized
@@ -294,8 +289,6 @@ class AsyncOtelSpanListener:
         if sub_span is None:
             logger.warning("No subspan found for step %s", step.UUID)
             return
-
-        self._span_stack.pop(step.UUID, None)
 
         # Optionally add more attributes from usage_info or data
         usage_info = step.payload.usage_info

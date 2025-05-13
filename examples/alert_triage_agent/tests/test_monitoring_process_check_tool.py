@@ -31,30 +31,29 @@ async def test_run_ansible_playbook_for_monitor_process_check():
 
     # Mock playbook output
     mock_playbook_output = {
-        "task_results": [
-            {
-                "task": "Check process status",
-                "host": ansible_host,
-                "result": {
-                    "cmd": "ps aux | grep monitoring",
-                    "stdout_lines": [
-                        "user1  1234  0.0  0.2  12345 5678 ?  Ss  10:00  0:00 /usr/bin/monitoring-agent",
-                        "user1  5678  2.0  1.0  23456 7890 ?  Sl  10:01  0:05 /usr/bin/monitoring-collector"
-                    ]
-                }
-            },
-            {
-                "task": "Check service status",
-                "host": ansible_host,
-                "result": {
-                    "cmd": "systemctl status monitoring-service",
-                    "stdout_lines": [
-                        "● monitoring-service.service - Monitoring Service",
-                        "   Active: active (running)"
-                    ]
-                }
+        "task_results": [{
+            "task": "Check process status",
+            "host": ansible_host,
+            "result": {
+                "cmd":
+                    "ps aux | grep monitoring",
+                "stdout_lines": [
+                    "user1  1234  0.0  0.2  12345 5678 ?  Ss  10:00  0:00 /usr/bin/monitoring-agent",
+                    "user1  5678  2.0  1.0  23456 7890 ?  Sl  10:01  0:05 /usr/bin/monitoring-collector"
+                ]
             }
-        ]
+        },
+                         {
+                             "task": "Check service status",
+                             "host": ansible_host,
+                             "result": {
+                                 "cmd":
+                                     "systemctl status monitoring-service",
+                                 "stdout_lines": [
+                                     "● monitoring-service.service - Monitoring Service", "   Active: active (running)"
+                                 ]
+                             }
+                         }]
     }
 
     # Mock the run_ansible_playbook function
@@ -66,17 +65,14 @@ async def test_run_ansible_playbook_for_monitor_process_check():
             ansible_host=ansible_host,
             ansible_user=ansible_user,
             ansible_port=ansible_port,
-            ansible_private_key_path=ansible_private_key_path
-        )
+            ansible_private_key_path=ansible_private_key_path)
 
         # Verify run_ansible_playbook was called with correct arguments
-        mock_run.assert_called_once_with(
-            playbook=MONITOR_PROCESS_CHECK_PLAYBOOK,
-            ansible_host=ansible_host,
-            ansible_user=ansible_user,
-            ansible_port=ansible_port,
-            ansible_private_key_path=ansible_private_key_path
-        )
+        mock_run.assert_called_once_with(playbook=MONITOR_PROCESS_CHECK_PLAYBOOK,
+                                         ansible_host=ansible_host,
+                                         ansible_user=ansible_user,
+                                         ansible_port=ansible_port,
+                                         ansible_private_key_path=ansible_private_key_path)
 
         # Verify the result structure
         assert isinstance(result, list)

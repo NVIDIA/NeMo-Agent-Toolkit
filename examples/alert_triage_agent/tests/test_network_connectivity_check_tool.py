@@ -49,9 +49,9 @@ def test_successful_banner_read(mock_create_conn, mock_sock):
 @pytest.mark.parametrize(
     "side_effect, port, conn_to, read_to",
     [
-        (socket.timeout(),    80,   10, 10),
-        (ConnectionRefusedError(), 80,   10, 10),
-        (OSError(),           1234, 5,  2),
+        (socket.timeout(), 80, 10, 10),
+        (ConnectionRefusedError(), 80, 10, 10),
+        (OSError(), 1234, 5, 2),
     ],
 )
 @patch('socket.create_connection')
@@ -63,12 +63,7 @@ def test_error_conditions(mock_create_conn, side_effect, port, conn_to, read_to)
     """
     mock_create_conn.side_effect = side_effect
 
-    result = _check_service_banner(
-        "any.host",
-        port=port,
-        connect_timeout=conn_to,
-        read_timeout=read_to
-    )
+    result = _check_service_banner("any.host", port=port, connect_timeout=conn_to, read_timeout=read_to)
     assert result == ""
     mock_create_conn.assert_called_once_with(("any.host", port), timeout=conn_to)
 

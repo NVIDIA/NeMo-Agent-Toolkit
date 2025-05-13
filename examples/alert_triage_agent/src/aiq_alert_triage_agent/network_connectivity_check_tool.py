@@ -35,7 +35,7 @@ class NetworkConnectivityCheckToolConfig(FunctionBaseConfig, name="network_conne
         description="Description of the tool for the agent.")
     llm_name: LLMRef
     test_mode: bool = Field(default=True, description="Whether to run in test mode")
-    
+
 
 def _check_service_banner(host: str, port: int = 80, connect_timeout: float = 10, read_timeout: float = 10) -> str:
     """
