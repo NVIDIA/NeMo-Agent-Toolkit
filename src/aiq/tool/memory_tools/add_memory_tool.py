@@ -63,8 +63,6 @@ async def add_memory_tool(config: AddToolConfig, builder: Builder):
         Note: If conversation is not provided, it will be created from the memory field
         if available, otherwise an error will be raised.
         """
-        # TODO: Remove this once we have a better way to debug
-        logger.debug("Adding memory: %s", item)
         try:
             # If conversation is not provided but memory is, create a conversation
             if not item.conversation and item.memory:
