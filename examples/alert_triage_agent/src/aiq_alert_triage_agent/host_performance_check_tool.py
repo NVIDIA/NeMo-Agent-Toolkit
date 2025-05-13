@@ -32,6 +32,7 @@ class HostPerformanceCheckToolConfig(FunctionBaseConfig, name="host_performance_
                  "and hardware I/O usage details for a given host. Args: host_id: str"),
         description="Description of the tool for the agent.")
     llm_name: LLMRef
+    test_mode: bool = Field(default=True, description="Whether to run in test mode")
 
 
 async def _run_ansible_playbook_for_host_performance_check(config: HostPerformanceCheckToolConfig,
@@ -110,11 +111,10 @@ async def _parse_stdout_lines(config, builder, stdout_lines):
 async def host_performance_check_tool(config: HostPerformanceCheckToolConfig, builder: Builder):
 
     async def _arun(host_id: str) -> str:
-        is_test_mode = utils.is_test_mode()
         utils.log_header("Host Performance Analyzer")
 
         try:
-            if not is_test_mode:
+            if not config.test_mode:
                 # In production mode, use actual Ansible connection details
                 # Replace placeholder values with connection info from configuration
                 ansible_host = "your.host.example.name"  # Input your target host
@@ -132,7 +132,7 @@ async def host_performance_check_tool(config: HostPerformanceCheckToolConfig, bu
                     ansible_private_key_path=ansible_private_key_path)
             else:
                 # In test mode, load performance data from test dataset
-                df = utils.load_test_data()
+                df = utils.get_test_data()
 
                 # Get CPU metrics from test data, falling back to static data if needed
                 data_top_cpu = utils.load_column_or_static(df=df,

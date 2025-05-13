@@ -117,6 +117,7 @@ triages
 [Uu]nittest(s?)
 [Uu]ploader
 uv
+VectorDB
 [Ww]alkthrough
 XGBoost
 zsh

@@ -34,9 +34,6 @@ functions:
     _type: haystack_chitchat_agent
     llm_name: meta/llama-3.1-405b-instruct
 
-
-
-
 llms:
   nim_llm:
     _type: nim

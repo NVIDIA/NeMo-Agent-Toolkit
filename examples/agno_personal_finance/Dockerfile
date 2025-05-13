@@ -21,7 +21,7 @@ ARG PYTHON_VERSION=3.12
 ARG AIQ_VERSION=0.0.1
 
 FROM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG}
-COPY --from=ghcr.io/astral-sh/uv:0.6.5 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.6.17 /uv /uvx /bin/
 ARG AIQ_VERSION
 ARG PYTHON_VERSION
 
@@ -35,13 +35,14 @@ COPY ./ /workspace
 
 # Install the AIQ Toolkit package and the example package
 RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
+    export SETUPTOOLS_SCM_PRETEND_VERSION=${AIQ_VERSION} && \
     export SETUPTOOLS_SCM_PRETEND_VERSION_AIQTOOLKIT=${AIQ_VERSION} && \
     export SETUPTOOLS_SCM_PRETEND_VERSION_AIQTOOLKIT_TEST=${AIQ_VERSION} && \
     export SETUPTOOLS_SCM_PRETEND_VERSION_AIQTOOLKIT_AGNO=${AIQ_VERSION} && \
     export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_AIQ_AGNO_PERSONAL_FINANCE=${AIQ_VERSION} && \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     uv sync --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
-    uv pip install -e '.[agno]' && \
+    uv pip install -e '.[agno, langchain]' && \
     uv pip install --link-mode=copy ./examples/agno_personal_finance
 
 # Set the config file environment variable
