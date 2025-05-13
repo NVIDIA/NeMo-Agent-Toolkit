@@ -26,16 +26,20 @@ class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
     """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
     project: str = Field(description="The W&B project name.")
     entity: Optional[str] = Field(default=None, description="The W&B username or team name.")
+    redact_pii: bool = Field(default=True, description="Whether to redact PII from the traces.")
 
 
 @register_telemetry_exporter(config_type=WeaveTelemetryExporter)
 async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Builder):
     import weave
 
-    if config.entity:
-        _ = weave.init(project_name=f"{config.entity}/{config.project}")
+    weave_settings = {"redact_pii": True} if config.redact_pii else {}
+    project_name = f"{config.entity}/{config.project}" if config.entity else config.project
+
+    if weave_settings:
+        _ = weave.init(project_name=project_name, settings=weave_settings)
     else:
-        _ = weave.init(project_name=config.project)
+        _ = weave.init(project_name=project_name)
 
     class NoOpSpanExporter:
 
