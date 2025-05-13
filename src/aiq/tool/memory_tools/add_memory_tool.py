@@ -70,7 +70,7 @@ async def add_memory_tool(config: AddToolConfig, builder: Builder):
             if not item.conversation and item.memory:
                 item.conversation = [{"role": "user", "content": item.memory}]
             elif not item.conversation:
-                raise ValueError("Either conversation or memory must be provided")
+                raise ToolException("Either conversation or memory must be provided")
 
             await memory_editor.add_items([item])
             return "Memory added successfully. You can continue. Please respond to the user."
