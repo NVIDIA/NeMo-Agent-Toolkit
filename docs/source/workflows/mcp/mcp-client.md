@@ -84,9 +84,18 @@ functions:
     description: "Returns the current date and time from the MCP server"
 ```
 
-To run the simple calculator workflow using remote MCP tools,
-- Start the remote MCP server by following the instructions in the `examples/simple_calculator/deploy_external_mcp/README.md` file. Use the `mcp-server-time` service for this example.
-- Run the workflow using the `aiq run` command.
+To run the simple calculator workflow using remote MCP tools, follow these steps:
+1. Start the remote MCP server, `mcp-server-time`, by following the instructions in the `examples/simple_calculator/deploy_external_mcp/README.md` file. Check that the server is running by running the following command:
+```bash
+docker ps --filter "name=mcp-proxy-aiq-time"
+```
+Sample output:
+```
+CONTAINER ID   IMAGE                      COMMAND                  CREATED      STATUS        PORTS                                       NAMES
+4279653533ec   time_service-time_server   "mcp-proxy --pass-en…"   9 days ago   Up 41 hours   0.0.0.0:8080->8080/tcp, :::8080->8080/tcp   mcp-proxy-aiq-time
+```
+
+2. Run the workflow using the `aiq run` command.
 ```bash
 aiq run --config_file examples/simple_calculator/configs/config-mcp-date.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
