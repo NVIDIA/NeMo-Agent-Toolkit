@@ -59,7 +59,7 @@ AIQ toolkit is a Python library that doesn’t require a GPU to run the workflow
 
     Then, set the upstream to the main repository and fetch the latest changes:
     ```bash
-    git remote add upstream git@github.com:NVIDIA/AIQtoolkit.git
+    git remote add upstream git@github.com:NVIDIA/AIQToolkit.git
     git fetch --all
     ```
 
