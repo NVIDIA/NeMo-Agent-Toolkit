@@ -21,6 +21,6 @@ limitations under the License.
 :hidden:
 :caption: Quick Start Guide
 
-Installing Agent Intelligence toolkit <./installing.md>
+Installing Agent Intelligence Toolkit <./installing.md>
 Launching the API Server and UI <./launching-ui.md>
 ```

@@ -74,7 +74,7 @@ We would love to hear from you! Please file an issue on [GitHub](https://github.
 
 ```{toctree}
 :hidden:
-:caption: About NVIDIA Agent Intelligence toolkit
+:caption: About NVIDIA Agent Intelligence Toolkit
 Overview <self>
 Release Notes <./release-notes.md>
 ```
@@ -115,7 +115,7 @@ Memory Module <./store-and-retrieve/memory.md>
 :caption: Extend
 
 Writing Custom Functions <./extend/functions.md>
-Extending the AIQ toolkit Using Plugins <./extend/plugins.md>
+Extending the AIQ Toolkit Using Plugins <./extend/plugins.md>
 Sharing Components <./extend/sharing-components.md>
 Adding a Custom Evaluator <./extend/custom-evaluator.md>
 ./extend/adding-a-retriever.md
