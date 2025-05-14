@@ -19,6 +19,7 @@ set -e
 GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 source ${GITHUB_SCRIPT_DIR}/common.sh
+install_npm
 
 create_env group:dev group:docs extra:examples
 
@@ -27,7 +28,6 @@ ${SCRIPT_DIR}/checks.sh
 
 rapids-logger "Checking copyright headers"
 python ${SCRIPT_DIR}/copyright.py --verify-apache-v2
-
 
 rapids-logger "Runing Documentation checks"
 ${SCRIPT_DIR}/documentation_checks.sh

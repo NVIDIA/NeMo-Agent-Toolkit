@@ -1,0 +1,20 @@
+dirs:
+  - .
+
+excludedFiles:
+  - src/aiq/meta/pypi.md
+
+excludedDirs:
+  - external
+
+ignorePatterns:
+  - pattern: "^https?://localhost:.*$"
+  - pattern: "^https?://$"
+  - pattern: "^https://(platform\\.)?openai\\.com"
+  - pattern: "^https://code\\.visualstudio\\.com$"
+
+replacementPatterns:
+  - pattern: "^https://media.githubusercontent.com/media/NVIDIA/AIQ[Tt]oolkit/refs/heads/main/(.*)$"
+    replacement: "https://media.githubusercontent.com/media/NVIDIA/AIQtoolkit/refs/heads/develop/$1"
+
+useGitIgnore: true

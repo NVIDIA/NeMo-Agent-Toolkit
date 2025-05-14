@@ -84,5 +84,11 @@ function get_lfs_files() {
     git lfs ls-files
 }
 
+function install_npm() {
+    rapids-logger "Installing npm from apt"
+    apt update
+    apt install --no-install-recommends -y npm
+}
+
 rapids-logger "Environment Variables"
 printenv | sort

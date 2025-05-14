@@ -14,11 +14,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -e
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+source ${SCRIPT_DIR}/common.sh
+
 set +e
 
 # Intentionally excluding CHANGELOG.md as it immutable
 DOC_FILES=$(git ls-files "*.md" "*.rst" | grep -v -E '^(CHANGELOG|LICENSE)\.md$' | grep -v -E '^nv_internal/')
 
+echo "Running spelling and grammer checks with Vale"
 vale ${DOC_FILES}
-RETVAL=$?
-exit $RETVAL
+VALE_RETVAL=$?
+
+echo -e "\nRunning link checks with linkspector"
+linkspector check -c ${PROJECT_ROOT}/ci/linkspector.yml
+LINK_RETVAL=$?
+
+if [[ ${PRE_COMMIT_VALE_RETVALRETVAL} -ne 0 || ${LINK_RETVAL} -ne 0 ]]; then
+   echo ">>>> FAILED: checks"
+   exit 1
+fi
