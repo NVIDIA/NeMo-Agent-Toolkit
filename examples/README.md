@@ -17,6 +17,6 @@ limitations under the License.
 
 # Agent Intelligence Toolkit Examples
 
-Each Agent Intelligence Toolkit (AIQ Toolkit) example demonstrates a particular feature or use case of the AIQ Toolkit library. Most of these contain a custom [workflow](../docs/source/tutorials/index.md) along with a set of custom tools ([functions](../docs/source/workflows/functions/index.md) in AIQ Toolkit). These examples can be used as a starting off point for creating your own custom workflows and tools. Each example contains a `README.md` file that explains the use case along with instructions on how to run the example.
+Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular feature or use case of the AIQ toolkit library. Most of these contain a custom [workflow](../docs/source/tutorials/index.md) along with a set of custom tools ([functions](../docs/source/workflows/functions/index.md) in AIQ toolkit). These examples can be used as a starting off point for creating your own custom workflows and tools. Each example contains a `README.md` file that explains the use case along with instructions on how to run the example.
 
 To run the examples, install the AIQ toolkit from source, if you haven't already done so, by following the instructions in  [Install From Source](../docs/source/quick-start/installing.md#install-from-source) .

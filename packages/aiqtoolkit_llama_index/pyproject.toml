@@ -29,7 +29,7 @@ dependencies = [
   "llama-index==0.12.21",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Subpackage for Llama-Index integration in AIQToolkit"
+description = "Subpackage for Llama-Index integration in AIQtoolkit"
 readme = "src/aiq/meta/pypi.md"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]

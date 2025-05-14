@@ -17,7 +17,7 @@ limitations under the License.
 
 # Sharing NVIDIA Agent Intelligence Toolkit Components
 
-Every AIQ Toolkit component is packaged inside of an AIQ Toolkit plugin and is designed to be sharable with the community of AIQ Toolkit  developers. Functions are by far the most common AIQ Toolkit component type. In fact, AIQ components include all pieces that leverage an AIQ Toolkit registration decorator (e.g. `register_function`, `register_llm_client`, `register_evaluator`, etc.). This guide will discuss the requirements for developing registered components that can be shared, discovered, and integrated leveraged with any AIQ Toolkit application.
+Every AIQ toolkit component is packaged inside of an AIQ toolkit plugin and is designed to be sharable with the community of AIQ toolkit  developers. Functions are by far the most common AIQ toolkit component type. In fact, AIQ components include all pieces that leverage an AIQ toolkit registration decorator (e.g. `register_function`, `register_llm_client`, `register_evaluator`, etc.). This guide will discuss the requirements for developing registered components that can be shared, discovered, and integrated leveraged with any AIQ toolkit application.
 
 ## Enabling Local and Remote Discovery
 To begin building a sharable component, do the following:
@@ -26,23 +26,23 @@ To begin building a sharable component, do the following:
 
 This section emphasizes the details of configuration objects that facilitate component discovery.
 
-After installing the AIQ Toolkit library, and potentially other AIQ Toolkit plugin packages, a developer may want to know what
+After installing the AIQ toolkit library, and potentially other AIQ toolkit plugin packages, a developer may want to know what
 components are available for workflow development or evaluation. A great tool for this is the `aiq info components` CLI
 utility described in [Components Information](../reference/cli.md#components-information). This command produces a
-table containing information dynamically accumulated from each AIQ Toolkit component. The `details` column is sourced from
+table containing information dynamically accumulated from each AIQ toolkit component. The `details` column is sourced from
 each configuration object's docstring and field descriptions. Behind the scenes, these data (and others) are aggregated
 into a component's `DiscoveryMetadata` to enable local and remote discovery. This object includes the following key
 fields:
 
-- `package`: The name of the package containing the AIQ Toolkit component.
-- `version`: The version number of the package containing the AIQ Toolkit component.
-- `component_type`: The type of AIQ Toolkit component this metadata represents (e.g. `function`, `llm`, `embedder`, etc.)
-- `component_name`: The registered name of the AIQ Toolkit component to be used in the `_type` field when configuring a
+- `package`: The name of the package containing the AIQ toolkit component.
+- `version`: The version number of the package containing the AIQ toolkit component.
+- `component_type`: The type of AIQ toolkit component this metadata represents (e.g. `function`, `llm`, `embedder`, etc.)
+- `component_name`: The registered name of the AIQ toolkit component to be used in the `_type` field when configuring a
 workflow configuration object.
-- `description`: Description of the AIQ Toolkit component pulled from its config objects docstrings and field metadata.
+- `description`: Description of the AIQ toolkit component pulled from its config objects docstrings and field metadata.
 - `developer_notes`: Other notes to a developers to aid in the use of the component.
 
-For this feature to provide useful information, there are a few hygiene requirements placed on AIQ Toolkit component configuration object implementations.
+For this feature to provide useful information, there are a few hygiene requirements placed on AIQ toolkit component configuration object implementations.
 
 * Specify a name: This will be pulled into the `component_name` column and will be used in the `_type` field of a
 workflow's configuration object.
@@ -70,7 +70,7 @@ By incorporating these elements, the `description` field in the `aiq info compon
 information:
 
 ```bash
-                                                                                        AIQ Toolkit Search Results
+                                                                                        AIQ toolkit Search Results
 ┏━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃ package                ┃ version                ┃ component_type ┃ component_name          ┃ description                                                                                        ┃
 ┡━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
@@ -87,14 +87,14 @@ when it should be used and its configuration options. This significantly reduces
 
 ## Package Distribution
 
-After completing AIQ Toolkit development of component plugin, the next step is to create a package that will allow the
-plugin to be installed and registered with the AIQ Toolkit environment. Because each AIQ Toolkit plugin package is a pip
+After completing AIQ toolkit development of component plugin, the next step is to create a package that will allow the
+plugin to be installed and registered with the AIQ toolkit environment. Because each AIQ toolkit plugin package is a pip
 installable package, this process it is straightforward, and follows standard Python `pyproject.toml` packaging steps.
 If you are unfamiliar with this process, consider reviewing the [Python Packaging User Guide](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/).
 
 When building the `pyproject.toml` file, there are two critical sections:
 
-* Dependencies: Ensure you include the necessary AIQ Toolkit dependencies. An example is provided below:
+* Dependencies: Ensure you include the necessary AIQ toolkit dependencies. An example is provided below:
 
     ```
     dependencies = [
@@ -119,16 +119,16 @@ While simple, this process does not take advantage of the `DiscoveryMetadata` to
 
 ### Publish to a Remote Registry
 
-Alternatively, AIQ Toolkit provides an extensible interface that allows developers to publish packages and their
+Alternatively, AIQ toolkit provides an extensible interface that allows developers to publish packages and their
 `DiscoveryMetadata`  arbitrary remote registries. The benefit of this approach comes from improved utilization of
 captured `DiscoveryMetadata` to improve discovery of useful components.
 
 By including this additional metadata, registry owners are empowered to extend their search interface and accelerate the
-process of discovering useful components and development of AIQ Toolkit based applications.
+process of discovering useful components and development of AIQ toolkit based applications.
 
 ### Share Source Code
 
-The last option for distribution is through source code. Since each AIQ Toolkit package is a pip installable Python package,
+The last option for distribution is through source code. Since each AIQ toolkit package is a pip installable Python package,
 each can be installed directly from source. Examples of this installation path are provided in the
 [Get Started](../quick-start/installing.md) guide.
 
@@ -136,5 +136,5 @@ each can be installed directly from source. Examples of this installation path a
 
 There are several methods for component distribution, each of which depends on constructing a pip installable Python
 packages that point to the hygienic implementations of component plugins. This lightweight, but extensible approach
-provides a straightforward path for distributing AIQ Toolkit agentic applications and their components to the developer
+provides a straightforward path for distributing AIQ toolkit agentic applications and their components to the developer
 community.

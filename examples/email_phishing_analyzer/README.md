@@ -35,7 +35,7 @@ limitations under the License.
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AIQ Toolkit library agent and tools.
+- **Pre-built Tools:** Leverages core AIQ toolkit library agent and tools.
 - **ReAct Agent:** Performs reasoning between tool call; utilizes tool names and descriptions to appropriately route to the correct tool
 - **Custom Plugin System:** Developers can bring in new tools using plugins.
 - **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
@@ -45,11 +45,11 @@ limitations under the License.
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AIQ Toolkit library, run the following commands:
+From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/email_phishing_analyzer
@@ -66,7 +66,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ### Run the Workflow
 
-Run the following command from the root of the AIQ Toolkit repo to execute this workflow with the specified input:
+Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
 aiq run --config_file examples/email_phishing_analyzer/configs/config.yml --input "Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of $[Amount] to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]"
@@ -76,7 +76,7 @@ aiq run --config_file examples/email_phishing_analyzer/configs/config.yml --inpu
 ```console
 $ aiq run --config_file examples/email_phishing_analyzer/configs/config.yml --input "Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of $[Amount] to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]"
 2025-04-23 15:24:54,183 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (502.501011 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:24:54,483 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/email_phishing_analyzer/configs/config.yml'
+2025-04-23 15:24:54,483 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/email_phishing_analyzer/configs/config.yml'
 2025-04-23 15:24:54,495 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 
 Configuration Summary:
@@ -99,7 +99,7 @@ Action: email_phishing_analyzer
 Action Input: {'text': 'Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of 0 to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]'}
 Observation
 ------------------------------
-/AIQ Toolkit/examples/email_phishing_analyzer/src/aiq_email_phishing_analyzer/register.py:56: LangChainDeprecationWarning: The method `BaseChatModel.apredict` was deprecated in langchain-core 0.1.7 and will be removed in 1.0. Use :meth:`~ainvoke` instead.
+/AIQToolkit/examples/email_phishing_analyzer/src/aiq_email_phishing_analyzer/register.py:56: LangChainDeprecationWarning: The method `BaseChatModel.apredict` was deprecated in langchain-core 0.1.7 and will be removed in 1.0. Use :meth:`~ainvoke` instead.
   response = await llm.apredict(config.prompt.format(body=text))
 2025-04-23 15:25:07,477 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
@@ -131,7 +131,7 @@ For a production deployment, use Docker:
 
 ### Build the Docker Image
 
-Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AIQ Toolkit virtual environment.
+Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AIQ toolkit virtual environment.
 
 From the root directory of the Simple Calculator repository, build the Docker image:
 

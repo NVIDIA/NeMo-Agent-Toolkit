@@ -22,11 +22,11 @@ limitations under the License.
 
 # Mixture of Agents Example
 
-An example of a Mixture of Agents (naive Mixture of Experts / naive Agent Hypervisor). This agent leverages the AIQ Toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflows, and workflows as tools. Key elements are summarized below:
+An example of a Mixture of Agents (naive Mixture of Experts / naive Agent Hypervisor). This agent leverages the AIQ toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflows, and workflows as tools. Key elements are summarized below:
 
 ## Key Features
 
-- **Pre-built Tools and Agents:** Leverages core AIQ Toolkit library agents and tools.
+- **Pre-built Tools and Agents:** Leverages core AIQ toolkit library agents and tools.
 - **ReAct Agent:** Performs reasoning between agent / tool call; utilizes agent / tool names and descriptions to appropriately route to the correct agent or tool.
 - **Tool Calling Agent** The "Expert Agents" are Tool Calling Agents.  They leverages tool / function input schema to appropriately route to the correct tool.
 - **Custom Plugin System:** Developers can bring in new agents and tools using plugins.
@@ -36,11 +36,11 @@ An example of a Mixture of Agents (naive Mixture of Experts / naive Agent Hyperv
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AIQ Toolkit repository, run the following commands:
+From the root directory of the AIQ toolkit repository, run the following commands:
 
 ```bash
 uv pip install -e .
@@ -65,7 +65,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ### Run the Workflow
 
-Run the following command from the root of the AIQ Toolkit repo to execute this workflow with the specified input:
+Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
 aiq run --config_file=examples/agents/mixture_of_agents/configs/config.yml --input "who was Djikstra?"
@@ -76,7 +76,7 @@ aiq run --config_file=examples/agents/mixture_of_agents/configs/config.yml --inp
 ```console
 $ aiq run --config_file=examples/agents/mixture_of_agents/configs/config.yml --input "who was Djikstra?"
 2025-04-23 14:57:12,020 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (503.239393 ms). Ensure all imports are inside your registered functions.
-2025-04-23 14:57:12,284 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/agents/mixture_of_agents/configs/config.yml'
+2025-04-23 14:57:12,284 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/agents/mixture_of_agents/configs/config.yml'
 2025-04-23 14:57:12,293 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-04-23 14:57:12,375 - aiq.profiler.utils - WARNING - Discovered frameworks: {<LLMFrameworkEnum.LANGCHAIN: 'langchain'>} in function code_generation_tool by inspecting source. It is recommended and more reliable to instead add the used LLMFrameworkEnum types in the framework_wrappers argument when calling @register_function.
 2025-04-23 14:57:12,375 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Initializing code generation tool
@@ -140,7 +140,7 @@ Workflow Result:
 
 ### Starting the AIQ Toolkit Server
 
-You can start the AIQ Toolkit server using the `aiq serve` command with the appropriate configuration file.
+You can start the AIQ toolkit server using the `aiq serve` command with the appropriate configuration file.
 
 **Starting the Mixture of Agents Example Workflow**
 

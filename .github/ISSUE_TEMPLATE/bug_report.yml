@@ -28,7 +28,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: What version of AIQ Toolkit are you running?
+      description: What version of AIQ toolkit are you running?
       placeholder: "example: 0.1.0"
     validations:
       required: true
@@ -82,7 +82,7 @@ body:
       label: Code of Conduct
       description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/NVIDIA/AIQToolkit/blob/develop/CODE-OF-CONDUCT.md)
       options:
-        - label: I agree to follow AIQ Toolkit' Code of Conduct
+        - label: I agree to follow the AIQ toolkit Code of Conduct
           required: true
         - label: I have searched the [open bugs](https://github.com/NVIDIA/AIQToolkit/issues?q=is%3Aopen+is%3Aissue+label%3Abug) and have found no duplicates for this bug report
           required: true
