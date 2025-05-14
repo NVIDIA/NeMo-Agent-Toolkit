@@ -14,12 +14,12 @@
 # limitations under the License.
 
 import json
+
 # pylint: disable=R0917
 import logging
 from json import JSONDecodeError
 
-from langchain_core.agents import AgentAction
-from langchain_core.agents import AgentFinish
+from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.callbacks.base import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages.ai import AIMessage
@@ -29,19 +29,22 @@ from langchain_core.messages.tool import ToolMessage
 from langchain_core.prompts.chat import ChatPromptTemplate
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
-from pydantic import BaseModel
-from pydantic import Field
+from pydantic import BaseModel, Field
 
-from aiq.agent.base import AGENT_LOG_PREFIX
-from aiq.agent.base import AGENT_RESPONSE_LOG_MESSAGE
-from aiq.agent.base import INPUT_SCHEMA_MESSAGE
-from aiq.agent.base import NO_INPUT_ERROR_MESSAGE
-from aiq.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
-from aiq.agent.base import TOOL_RESPONSE_LOG_MESSAGE
-from aiq.agent.base import AgentDecision
+from aiq.agent.base import (
+    AGENT_LOG_PREFIX,
+    AGENT_RESPONSE_LOG_MESSAGE,
+    INPUT_SCHEMA_MESSAGE,
+    NO_INPUT_ERROR_MESSAGE,
+    TOOL_NOT_FOUND_ERROR_MESSAGE,
+    TOOL_RESPONSE_LOG_MESSAGE,
+    AgentDecision,
+)
 from aiq.agent.dual_node import DualNodeAgent
-from aiq.agent.react_agent.output_parser import ReActOutputParser
-from aiq.agent.react_agent.output_parser import ReActOutputParserException
+from aiq.agent.react_agent.output_parser import (
+    ReActOutputParser,
+    ReActOutputParserException,
+)
 
 logger = logging.getLogger(__name__)
 

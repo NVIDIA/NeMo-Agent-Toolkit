@@ -16,6 +16,7 @@
 import contextvars
 import dataclasses
 import logging
+import typing
 
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
@@ -25,6 +26,9 @@ from aiq.utils.reactive.observable import OnComplete
 from aiq.utils.reactive.observable import OnError
 from aiq.utils.reactive.observable import OnNext
 from aiq.utils.reactive.subscription import Subscription
+
+if typing.TYPE_CHECKING:
+    from aiq.builder.context import AIQContextState
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +41,6 @@ class OpenStep:
     step_name: str
     step_type: str
     step_parent_id: str | None
-    context: contextvars.Context
     token: contextvars.Token[str | None]
 
 
@@ -61,7 +64,15 @@ class IntermediateStepManager:
 
         parent_step_id = _current_open_step_id.get()
 
+        active_span_id_stack = self._context_state.active_span_id_stack.get()
+
         if (payload.event_state == IntermediateStepState.START):
+
+            parent_step_id = active_span_id_stack[-1]
+
+            # Note, this must not mutate the active_span_id_stack in place
+            active_span_id_stack = active_span_id_stack + [payload.UUID]
+            self._context_state.active_span_id_stack.set(active_span_id_stack)
 
             token = _current_open_step_id.set(payload.UUID)
 
@@ -69,7 +80,6 @@ class IntermediateStepManager:
                                                                    step_name=payload.name,
                                                                    step_type=payload.event_type,
                                                                    step_parent_id=parent_step_id,
-                                                                   context=contextvars.copy_context(),
                                                                    token=token)
 
         elif (payload.event_state == IntermediateStepState.END):
@@ -81,6 +91,18 @@ class IntermediateStepManager:
                 logger.warning("Step id %s not found in outstanding start steps", payload.UUID)
                 return
 
+            # Remove the current step from the active span id stack. Look for the step id in the stack and remove it to correct errors
+            current_step_index = active_span_id_stack.index(payload.UUID)
+
+            if (current_step_index is not None):
+                if (current_step_index != len(active_span_id_stack) - 1):
+                    logger.warning(
+                        "Step id %s not the last step in the stack. Removing it from the stack but this is likely an error",
+                        payload.UUID)
+
+                active_span_id_stack = active_span_id_stack[:current_step_index]
+                self._context_state.active_span_id_stack.set(active_span_id_stack)
+
             # Restore the parent step ID directly instead of using a cross‑context token.
             if parent_step_id == payload.UUID:
                 _current_open_step_id.set(open_step.step_parent_id)
@@ -89,6 +111,8 @@ class IntermediateStepManager:
                 # trying to use a token that belongs to another Context.
                 _current_open_step_id.set(open_step.step_parent_id)
                 parent_step_id = open_step.step_parent_id
+
+            parent_step_id = open_step.step_parent_id
 
         elif (payload.event_state == IntermediateStepState.CHUNK):
 

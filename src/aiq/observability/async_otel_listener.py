@@ -290,6 +290,8 @@ class AsyncOtelSpanListener:
             logger.warning("No subspan found for step %s", step.UUID)
             return
 
+        self._span_stack.pop(step.UUID, None)
+
         # Optionally add more attributes from usage_info or data
         usage_info = step.payload.usage_info
         if usage_info:
