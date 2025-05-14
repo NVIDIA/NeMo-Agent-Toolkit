@@ -116,7 +116,8 @@ This example demonstrates how to use AIQ Toolkit with Model Context Protocol (MC
 If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ Toolkit.
 
 To run this example do the following:
- 1) Start up docker compose using the provided `docker-compose.yml` file.
+
+1. Start up docker compose using the provided `docker-compose.yml` file.
  ```bash
  docker compose -f examples/document_analysis_mcp/deployment/docker-compose.yml up -d
  ```
@@ -133,7 +134,7 @@ To run this example do the following:
  mcp-proxy-aiq  | INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
  ```
 
- 2) In a new terminal, from the root of the AIQ Toolkit repository run the workflow:
+ 2.  In a new terminal, from the root of the AIQ Toolkit repository run the workflow:
  ```bash
  source .venv/bin/activate
  aiq run --config_file=examples/document_analysis_mcp/configs/config.yml --input="What is langchain?"
@@ -153,7 +154,7 @@ Action Input: {"url": "https://langchain.dev/", "max_length": 5000, "start_index
 ```console
 Workflow Result:
 ["LangChain is a composable framework that supports developers in building, running, and managing applications powered by Large Language Models (LLMs). It offers a suite of products, including LangChain, LangGraph, and LangSmith, which provide tools for building context-aware and reasoning applications, deploying LLM applications at scale, and debugging, collaborating, testing, and monitoring LLM apps. LangChain's products are designed to help developers create reliable and efficient GenAI applications, and its platform is used by teams of all sizes across various industries."]
-
+```
 
 ## Usage Examples
 
@@ -163,7 +164,6 @@ Workflow Result:
      -H "Content-Type: application/json" \
      -d '{"url": "https://example.com"}'
    ```
-
 2. Analyze a document:
    ```bash
    curl -X POST http://localhost:9902/tools/analyze_document \
