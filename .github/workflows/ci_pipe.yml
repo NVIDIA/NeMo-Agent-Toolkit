@@ -82,6 +82,22 @@ jobs:
         shell: bash
         run: ./aiqtoolkit/ci/scripts/github/checks.sh
 
+  check-links:
+    name: runner / linkspector
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: 'aiqtoolkit'
+      - name: Run linkspector
+        uses: umbrelladocs/action-linkspector@v1
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-pr-review
+          fail_level: any
+          config_file: ./aiqtoolkit/ci/linkspector.yml
+
   test:
     name: Test
     needs: [check]
