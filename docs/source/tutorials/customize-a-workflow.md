@@ -26,7 +26,7 @@ limitations under the License.
     uv pip install -e examples/simple
     ```
 
-This tutorial assumes familiarity with [workflows](../workflows/about/index.md) and the [command line interface](../reference/cli/index.md) of AIQ toolkit.
+This tutorial assumes familiarity with [workflows](../workflows/about/index.md) and the [command line interface](../reference/cli.md) of AIQ toolkit.
 
 ## Customizing the `examples/simple` Workflow
 
