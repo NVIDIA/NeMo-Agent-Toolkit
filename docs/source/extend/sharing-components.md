@@ -101,7 +101,7 @@ When building the `pyproject.toml` file, there are two critical sections:
     "aiq[langchain]",
     ]
     ```
-* Entrypoints: Provide the path to your plugins so they are registered with AIQ Toolkit when installed.
+* Entrypoints: Provide the path to your plugins so they are registered with AIQ toolkit when installed.
 An example is provided below:
     ```
     [project.entry-points.'aiq.components']

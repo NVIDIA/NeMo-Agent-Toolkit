@@ -34,7 +34,7 @@ Some LLMs support Tool Calling / Function Calling, and can be used for Tool Call
 ## Requirements
 The Tool Calling Agent requires the `aiqtoolkit[langchain]` plugin to be installed.
 
-Users who have performed a source code checkout can install this with the following command:
+After you've performed a source code checkout, install this with the following command:
 
 ```bash
 uv pip install -e '.[langchain]'
