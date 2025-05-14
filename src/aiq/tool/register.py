@@ -18,6 +18,7 @@
 
 # Import any tools which need to be automatically registered here
 from . import datetime_tools
+from . import server_tools
 from . import document_search
 from . import github_tools
 from . import nvidia_rag
