@@ -106,7 +106,7 @@ workflow:
                 "content": "Hello Alex! I've noted you are looking for a trip to New York."
             }
         ],
-        "user_id": "user_12",
+        "user_id": "user_1",
         "metadata": {
             "key_value_pairs": {
                 "type": "travel",
