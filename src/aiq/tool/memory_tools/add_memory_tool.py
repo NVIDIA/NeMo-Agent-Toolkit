@@ -43,7 +43,6 @@ async def add_memory_tool(config: AddToolConfig, builder: Builder):
     """
     Function to add memory to a hosted memory platform.
     """
-
     from langchain_core.tools import ToolException
 
     # First, retrieve the memory client
@@ -52,16 +51,29 @@ async def add_memory_tool(config: AddToolConfig, builder: Builder):
     async def _arun(item: MemoryItem) -> str:
         """
         Asynchronous execution of addition of memories.
-        """
 
+        Args:
+            item (MemoryItem): The memory item to add. Must include:
+                - conversation: List of dicts with "role" and "content" keys
+                - user_id: String identifier for the user
+                - metadata: Dict of metadata (can be empty)
+                - tags: Optional list of tags
+                - memory: Optional memory string
+
+        Note: If conversation is not provided, it will be created from the memory field
+        if available, otherwise an error will be raised.
+        """
         try:
+            # If conversation is not provided but memory is, create a conversation
+            if not item.conversation and item.memory:
+                item.conversation = [{"role": "user", "content": item.memory}]
+            elif not item.conversation:
+                raise ToolException("Either conversation or memory must be provided")
 
             await memory_editor.add_items([item])
-
             return "Memory added successfully. You can continue. Please respond to the user."
 
         except Exception as e:
-
             raise ToolException(f"Error adding memory: {e}") from e
 
     yield FunctionInfo.from_fn(_arun, description=config.description)
