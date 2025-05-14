@@ -34,12 +34,12 @@ class _CredentialsManager(metaclass=Singleton):
         Credentials Manager to store AIQ Authorization configurations.
         """
         super().__init__()
-        self.__authentication_providers: dict[str, AuthenticationProvider] = {}
-        self.__swap_flag: bool = True  # TODO EE: Remove double underscore.
-        self.__full_config: "AIQConfig" = None
-        self.__command_name: str = None
-        self.__oauth_credentials_flag: asyncio.Event = asyncio.Event()
-        self.__consent_prompt_flag: asyncio.Event = asyncio.Event()
+        self._authentication_providers: dict[str, AuthenticationProvider] = {}
+        self._swap_flag: bool = True
+        self._full_config: "AIQConfig" = None
+        self._command_name: str = None
+        self._oauth_credentials_flag: asyncio.Event = asyncio.Event()
+        self._consent_prompt_flag: asyncio.Event = asyncio.Event()
 
     def _swap_authorization_providers(self, authentication_providers: dict[str, AuthenticationProvider]) -> None:
         """
@@ -52,24 +52,24 @@ class _CredentialsManager(metaclass=Singleton):
             providers.
 
         """
-        if self.__swap_flag:
-            self.__authentication_providers = authentication_providers.copy()
+        if self._swap_flag:
+            self._authentication_providers = authentication_providers.copy()
             authentication_providers.clear()
-            self.__swap_flag = False
+            self._swap_flag = False
 
     def _get_authentication_provider(self, authentication_provider: str) -> AuthenticationProvider | None:
         """Retrieve the stored authentication provider by registered name."""
 
-        if authentication_provider not in self.__authentication_providers:
+        if authentication_provider not in self._authentication_providers:
             logger.error("Authentication provider not found: %s", authentication_provider)
             return None
 
-        return self.__authentication_providers.get(authentication_provider)
+        return self._authentication_providers.get(authentication_provider)
 
     def _get_authentication_provider_by_state(self, state: str) -> OAuth2Config | None:
         """Retrieve the stored authentication provider by state."""
 
-        for _, authentication_provider in self.__authentication_providers.items():
+        for _, authentication_provider in self._authentication_providers.items():
             if isinstance(authentication_provider, OAuth2Config):
                 if authentication_provider.state == state:
                     return authentication_provider
@@ -81,42 +81,42 @@ class _CredentialsManager(metaclass=Singleton):
         """
         Block until the oauth credentials are set in the redirect uri.
         """
-        await self.__oauth_credentials_flag.wait()
+        await self._oauth_credentials_flag.wait()
 
     async def _set_oauth_credentials(self):
         """
         Unblock until the oauth credentials are set in the redirect uri.
         """
-        self.__oauth_credentials_flag.set()
+        self._oauth_credentials_flag.set()
 
     async def _wait_for_consent_prompt_url(self):
         """
         Block until the consent prompt location header has been retrieved.
         """
-        await self.__consent_prompt_flag.wait()
+        await self._consent_prompt_flag.wait()
 
     async def _set_consent_prompt(self):
         """
         Unblock until the consent prompt location header has been retrieved.
         """
-        self.__consent_prompt_flag.set()
+        self._consent_prompt_flag.set()
 
     @property
     def full_config(self) -> "AIQConfig":
         """Get the full configuration."""
-        return self.__full_config
+        return self._full_config
 
     @full_config.setter
     def full_config(self, full_config: "AIQConfig") -> None:
         """Set the full configuration."""
-        self.__full_config = full_config
+        self._full_config = full_config
 
     @property
     def command_name(self) -> str:
         """Get the front end command name."""
-        return self.__command_name
+        return self._command_name
 
     @command_name.setter
     def command_name(self, command_name: str) -> None:
         """Set the front end command name."""
-        self.__command_name = command_name
+        self._command_name = command_name

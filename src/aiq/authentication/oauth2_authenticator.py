@@ -55,15 +55,18 @@ class OAuth2Authenticator(AuthenticationBase):
 
     async def _validate_credentials(self) -> bool:
         """
-        Validates the credentials for OAuth2.0 authentication.
-        Returns True if the credentials are valid and False if they are not.
+        Validates the OAuth2.0 authentication credentials and returns True if the credentials are valid and False if
+        they are not. To reliably validate OAuth2.0 credentials, a request should be sent either to the authorization
+        server's introspection endpoint or to a protected API endpoint, monitoring for a 200 response. Since
+        introspection endpoints are not standardized the most consistent approach is to check whether the access is
+        valid token has not expired.
 
         Returns:
-            bool: True if the credentials are valid and false if they are not.
+            bool: True if the credentials are valid and False if they are not.
         """
-        # TODO EE: Need to handle refresh token etc....
-        # TODO EE: Need to make sure the credentials actually work. Update to see if the credentials actually work
-        if self._authentication_provider.access_token:
+        if (self._authentication_provider.access_token
+                and (self._authentication_provider.access_token_expires_in is not None)
+                and (datetime.now(timezone.utc) <= self._authentication_provider.access_token_expires_in)):
             return True
         else:
             return False
@@ -82,7 +85,7 @@ class OAuth2Authenticator(AuthenticationBase):
         try:
             # Initiate code flow is there is no access token.
             if (self._authentication_provider.access_token is None):
-                await self._initiate_code_flow()
+                await self._initiate_authorization_code_flow()
 
             # Initiate refresh token request if the access token is expired or revoked.
             if (self._authentication_provider.refresh_token
@@ -96,9 +99,9 @@ class OAuth2Authenticator(AuthenticationBase):
             logger.error("Failed to get OAuth2.0 credentials: %s", str(e), exc_info=True)
             return False
 
-    async def _initiate_code_flow(self) -> None:
+    async def _initiate_authorization_code_flow(self) -> None:
         """
-        Initiate OAuth2.0 code flow to get access token.
+        Initiate OAuth2.0 authorization code flow to receive access token, and optional refresh token.
         """
         from aiq.authentication.credentials_manager import _CredentialsManager
 
@@ -120,19 +123,16 @@ class OAuth2Authenticator(AuthenticationBase):
             logger.error("Failed to complete OAuth2.0 authentication for provider Error: %s", str(e), exc_info=True)
             await self._shut_down_code_flow()
 
-    async def _send_oauth_authorization_request(self):
+    async def _send_oauth_authorization_request(self) -> None:
         """
         Constructs OAuth2.0 Code Flow Authoriation URL and sends request to authentication server.
-
-        Args:
-            authentication_provider (OAuth2Config): The registered OAuth2.0 provider
         """
         try:
             authorization_url: httpx.URL = await self._request_manager._build_oauth_authorization_url(
                 self._authentication_provider)
 
-            response: httpx.Response | None = await self._request_manager.send_request(url=str(authorization_url),
-                                                                                       http_method="GET")
+            response: httpx.Response | None = await self._request_manager._send_request(url=str(authorization_url),
+                                                                                        http_method="GET")
             if response is None:
                 raise OAuthCodeFlowError("Unexpected error occured while sending authorization request.")
 
@@ -145,7 +145,9 @@ class OAuth2Authenticator(AuthenticationBase):
             raise OAuthCodeFlowError("Unexpected error occured during authorization request process:") from e
 
     async def _get_access_token_with_refresh_token(self) -> None:
-        """ #TODO EE: Update doc string and TEST!!!
+        """
+        Performs the OAuth2.0 token refresh flow by sending a POST request
+        to the token endpoint with the required client credentials and refresh token.
         """
         try:
             if not self.authentication_provider.refresh_token:
@@ -163,7 +165,7 @@ class OAuth2Authenticator(AuthenticationBase):
                 refresh_token=self._authentication_provider.refresh_token)
 
             # Send Refresh Token Request
-            response: httpx.Response | None = await self._request_manager.send_request(
+            response: httpx.Response | None = await self._request_manager._send_request(
                 url=self._authentication_provider.authorization_token_url,
                 http_method="POST",
                 authentication_provider=None,
@@ -177,21 +179,21 @@ class OAuth2Authenticator(AuthenticationBase):
                 await self._response_manager._handle_oauth_authorization_response_codes(
                     response, self._authentication_provider)
 
-            if response.json.get("access_token") is None:
+            if response.json().get("access_token") is None:
                 raise ValueError("Access token not in successful token request response payload.")
 
-            if response.json.get("expires_in") is None:
+            if response.json().get("expires_in") is None:
                 raise ValueError("Access token expiration time not in successful token request response payload.")
 
-            if response.json.get("refresh_token") is None:
+            if response.json().get("refresh_token") is None:
                 raise ValueError("Refresh token not in successful token request response payload.")
 
-            self.authentication_provider.access_token = response.json.get("access_token")
+            self.authentication_provider.access_token = response.json().get("access_token")
 
             self.authentication_provider.access_token_expires_in = (
                 datetime.now(timezone.utc) + timedelta(seconds=response.json().get("expires_in")))
 
-            self.authentication_provider.refresh_token = response.json.get("refresh_token")
+            self.authentication_provider.refresh_token = response.json().get("refresh_token")
 
         except OAuthRefreshTokenError as e:
             logger.error("Failed to complete OAuth2.0 authentication for provider Error: %s", str(e), exc_info=True)

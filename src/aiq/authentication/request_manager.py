@@ -192,13 +192,13 @@ class RequestManager(RequestManagerBase):
 
         return full_authorization_url
 
-    async def send_request(self,
-                           url: str,
-                           http_method: str | HTTPMethod,
-                           authentication_provider: str | None = None,
-                           headers: dict | None = None,
-                           query_params: dict | None = None,
-                           data: dict | None = None) -> httpx.Response | None:
+    async def _send_request(self,
+                            url: str,
+                            http_method: str | HTTPMethod,
+                            authentication_provider: str | None = None,
+                            headers: dict | None = None,
+                            query_params: dict | None = None,
+                            data: dict | None = None) -> httpx.Response | None:
         """
         Makes an arbitrary HTTP request.
 

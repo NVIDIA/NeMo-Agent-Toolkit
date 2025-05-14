@@ -833,7 +833,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             headers: httpx.Headers = httpx.Headers({"Content-Type": "application/json"})
 
             # Send Token HTTP Request
-            response: httpx.Response | None = await self._request_manager.send_request(
+            response: httpx.Response | None = await self._request_manager._send_request(
                 url=token_url, http_method=HTTPMethod.POST.value, headers=headers, data=data.model_dump())
             if response is None:
                 raise OAuthCodeFlowError(
@@ -859,6 +859,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 authentication_provider.refresh_token = response.json().get("refresh_token")
 
             await _CredentialsManager()._set_oauth_credentials()
+
             return JSONResponse({"message": "Access token successfully retrieved."})
 
         async def location_url(request: Request):  # TODO EE: Update polling logic.

@@ -31,9 +31,8 @@ class ResponseManager:
     def __init__(self) -> None:
         pass
 
-    async def _handle_oauth_authorization_response_codes(self,
-                                                         response: httpx.Response,
-                                                         authentication_provider: OAuth2Config) -> None:
+    async def _handle_oauth_authorization_response_codes(
+            self, response: httpx.Response, authentication_provider: OAuth2Config) -> None:  # TODO EE: Update.
         """
         Handles various OAuth2.0 authorization responses.
 
@@ -104,5 +103,5 @@ class ResponseManager:
         if response.status_code == 401:
             pass
 
-        if response.status_code == 403:  # TODO EE: Update.
+        if response.status_code == 403:  # TODO EE: Update and add tests.
             pass

@@ -99,11 +99,12 @@ class AIQUserInteractionManager:
         request = RequestManager()
         response: httpx.Response | None = None
 
-        response = await request.send_request(
+        response = await request._send_request(
             url=url,  # TODO EE: Need to use callback and remove the command to determine of its console / server etc...
             http_method=http_method,
             authentication_provider=authentication_provider,
             headers=headers,
             query_params=params,
             data=data)
+
         return response
