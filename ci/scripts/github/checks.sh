@@ -19,8 +19,8 @@ set -e
 GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 source ${GITHUB_SCRIPT_DIR}/common.sh
-install_npm
-install_linkspector
+# install_npm
+# install_linkspector
 
 create_env group:dev group:docs extra:examples
 

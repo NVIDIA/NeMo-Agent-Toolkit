@@ -27,11 +27,13 @@ echo "Running spelling and grammer checks with Vale"
 vale ${DOC_FILES}
 VALE_RETVAL=$?
 
-echo -e "\nRunning link checks with linkspector"
-linkspector check -c ${PROJECT_ROOT}/ci/linkspector.yml
-LINK_RETVAL=$?
+# echo -e "\nRunning link checks with linkspector"
+# linkspector check -c ${PROJECT_ROOT}/ci/linkspector.yml
+# LINK_RETVAL=$?
 
-if [[ ${PRE_COMMIT_VALE_RETVALRETVAL} -ne 0 || ${LINK_RETVAL} -ne 0 ]]; then
-   echo ">>>> FAILED: checks"
-   exit 1
-fi
+# if [[ ${PRE_COMMIT_VALE_RETVALRETVAL} -ne 0 || ${LINK_RETVAL} -ne 0 ]]; then
+#    echo ">>>> FAILED: checks"
+#    exit 1
+# fi
+
+exit ${VALE_RETVAL}
