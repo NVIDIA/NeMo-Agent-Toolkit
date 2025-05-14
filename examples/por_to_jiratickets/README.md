@@ -124,7 +124,7 @@ $ aiq run --config_file examples/por_to_jiratickets/configs/config.yml  --input 
 2025-04-23 15:46:34,105 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/por_to_jiratickets/configs/config.yml'
 2025-04-23 15:46:34,112 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-04-23 15:46:34,147 - aiq.profiler.utils - WARNING - Discovered frameworks: {<LLMFrameworkEnum.LANGCHAIN: 'langchain'>} in function extract_from_por_tool by inspecting source. It is recommended and more reliable to instead add the used LLMFrameworkEnum types in the framework_wrappers argument when calling @register_function.
-/nvme/1/yuchenz/projects/AIQ Toolkit/examples/por_to_jiratickets/src/aiq_por_to_jiratickets/extract_por_tool.py:141: LangChainDeprecationWarning: The class `LLMChain` was deprecated in LangChain 0.1.17 and will be removed in 1.0. Use :meth:`~RunnableSequence, e.g., `prompt | llm`` instead.
+/AIQ Toolkit/examples/por_to_jiratickets/src/aiq_por_to_jiratickets/extract_por_tool.py:141: LangChainDeprecationWarning: The class `LLMChain` was deprecated in LangChain 0.1.17 and will be removed in 1.0. Use :meth:`~RunnableSequence, e.g., `prompt | llm`` instead.
   chain = LLMChain(llm=llm, prompt=prompt)
 
 Configuration Summary:
@@ -147,7 +147,7 @@ Action: extract_por_tool
 Action Input: {'input_text': 'por_requirements.txt'}
 
 ------------------------------
-/nvme/1/yuchenz/projects/AIQ Toolkit/examples/por_to_jiratickets/src/aiq_por_to_jiratickets/extract_por_tool.py:152: LangChainDeprecationWarning: The method `Chain.arun` was deprecated in langchain 0.1.0 and will be removed in 1.0. Use :meth:`~ainvoke` instead.
+/AIQ Toolkit/examples/por_to_jiratickets/src/aiq_por_to_jiratickets/extract_por_tool.py:152: LangChainDeprecationWarning: The method `Chain.arun` was deprecated in langchain 0.1.0 and will be removed in 1.0. Use :meth:`~ainvoke` instead.
   response = await chain.arun(por_content=input_text)
 2025-04-23 15:51:28,095 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
