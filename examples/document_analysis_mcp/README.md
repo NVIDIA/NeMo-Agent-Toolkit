@@ -110,6 +110,51 @@ This example demonstrates how to use AIQ Toolkit with Model Context Protocol (MC
    - BeautifulSoup for HTML parsing
    - Docker for deployment
 
+
+## Installation and Setup
+
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ Toolkit.
+
+To run this example do the following:
+ 1) Start up docker compose using the provided `docker-compose.yml` file.
+ ```bash
+ docker compose -f examples/document_analysis_mcp/deployment/docker-compose.yml up -d
+ ```
+ The container will pull down the necessary code to run the server when it starts, so it may take a few minutes before the server is ready.
+ You can inspect the logs by running
+ ```bash
+ docker compose -f examples/document_analysis_mcp/deployment/docker-compose.yml logs
+ ```
+ The server is ready when you see the following:
+ ```bash
+ mcp-proxy-aiq  | INFO:     Started server process [1]
+ mcp-proxy-aiq  | INFO:     Waiting for application startup.
+ mcp-proxy-aiq  | INFO:     Application startup complete.
+ mcp-proxy-aiq  | INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
+ ```
+
+ 2) In a new terminal, from the root of the AIQ Toolkit repository run the workflow:
+ ```bash
+ source .venv/bin/activate
+ aiq run --config_file=examples/document_analysis_mcp/configs/config.yml --input="What is langchain?"
+ ```
+
+ The ReAct Agent will use the tool to answer the question
+ ```console
+ 2025-03-11 16:13:29,922 - aiq.agent.react_agent.agent - INFO - The agent's thoughts are:
+Thought: To answer this question, I need to find out what LangChain is. It's possible that it's a recent development or a concept that has been discussed online. I can use the internet to find the most up-to-date information about LangChain.
+
+Action: mcp_url_tool
+Action Input: {"url": "https://langchain.dev/", "max_length": 5000, "start_index": 0, "raw": false}
+
+
+2025-03-11 16:13:29,924 - aiq.agent.react_agent.agent - INFO - Calling tool mcp_url_tool with input: {"url": "https://langchain.dev/", "max_length": 5000, "start_index": 0, "raw": false}
+```
+```console
+Workflow Result:
+["LangChain is a composable framework that supports developers in building, running, and managing applications powered by Large Language Models (LLMs). It offers a suite of products, including LangChain, LangGraph, and LangSmith, which provide tools for building context-aware and reasoning applications, deploying LLM applications at scale, and debugging, collaborating, testing, and monitoring LLM apps. LangChain's products are designed to help developers create reliable and efficient GenAI applications, and its platform is used by teams of all sizes across various industries."]
+
+
 ## Usage Examples
 
 1. Fetch content from a URL:
