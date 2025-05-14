@@ -276,7 +276,7 @@ general:
   ```
 
   ### Access the request metadata
-Create an instance of the {class}`aiq.builder.context.AIQContext` object. This will give you access to the metadata
+Get the instance of the {class}`aiq.builder.context.AIQContext` object using the {method}`aiq.builder.context.AIQContext.get()` method. This will give you access to the metadata
 method which holds the request attributes defined by the user on request.
 ```python
 @register_function(config_type=RequestAttributesTool)
