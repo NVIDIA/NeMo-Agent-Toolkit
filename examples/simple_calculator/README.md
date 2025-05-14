@@ -248,7 +248,7 @@ curl -X 'POST' \
   -d '{"input_message": "Is the product of 2 * 4 greater than the current hour of the day?"}'
   ```
 
-  ### Expected API Output
+### Expected API Output
 The API response should be similar to the following:
 
 ```bash
