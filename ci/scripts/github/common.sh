@@ -96,7 +96,7 @@ function install_linkspector() {
 
     # Based on https://github.com/UmbrellaDocs/action-linkspector/blob/main/script.sh which in turn is based on
     # https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md
-    echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns
+    echo 0 | tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns
 }
 
 rapids-logger "Environment Variables"
