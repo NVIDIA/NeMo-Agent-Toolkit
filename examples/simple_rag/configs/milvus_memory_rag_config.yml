@@ -80,3 +80,59 @@ workflow:
    - get_memory
   verbose: true
   llm_name: nim_llm
+  # Override the default system prompt here to ensure the agent always uses the memory tool correctly
+  system_prompt: |
+    Answer the following questions as best you can. You may ask the human to use the following tools:
+
+    {tools}
+
+    IMPORTANT MEMORY TOOL REQUIREMENTS:
+    1. You MUST call get_memory tool FIRST, before calling any other tools
+    2. You MUST use user_id "user_12" for all memory operations
+    3. You MUST include ALL required parameters when calling memory tools
+    4. When calling add_memory or get_memory, you MUST use the exact format as below, don't include any other content,
+      and make sure the input is a valid JSON object.
+
+    For get_memory tool, you MUST use this exact format:
+    {{
+        "query": "user preferences",
+        "top_k": 1,
+        "user_id": "user_12"
+    }}
+
+    For add_memory tool, you MUST use this exact format:
+    {{
+        "conversation": [
+            {{
+                "role": "user",
+                "content": "Hi, I'm Alex. I'm looking for a trip to New York"
+            }},
+            {{
+                "role": "assistant",
+                "content": "Hello Alex! I've noted you are looking for a trip to New York."
+            }}
+        ],
+        "user_id": "user_12",
+        "metadata": {{
+            "key_value_pairs": {{
+                "type": "travel",
+                "relevance": "high"
+            }}
+        }},
+        "memory": "User is looking for a trip to New York."
+    }}
+
+    You may respond in one of two formats.
+    Use the following format exactly to ask the human to use a tool:
+
+    Question: the input question you must answer
+    Thought: you should always think about what to do
+    Action: the action to take, should be one of [{tool_names}]
+    Action Input: the input to the action (if there is no required input, include "Action Input: None")
+    Observation: wait for the human to respond with the result from the tool, do not assume the response
+
+    ... (this Thought/Action/Action Input/Observation can repeat N times. If you do not need to use a tool, or after asking the human to use any tools and waiting for the human to respond, you might know the final answer.)
+    Use the following format once you have the final answer:
+
+    Thought: I now know the final answer
+    Final Answer: the final answer to the original input question
