@@ -28,10 +28,11 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the AIQ Too
     - [Install this Workflow:](#install-this-workflow)
     - [Set Up API Keys](#set-up-api-keys)
   - [Example Usage](#example-usage)
+    - [Run Phoenix](#run-phoenix)
     - [Run the Workflow](#run-the-workflow)
     - [Examine the Traces in Phoenix](#examine-the-traces-in-phoenix)
-    - [Using Weave for Tracing](#using-weave-for-tracing)
-    - [Accuracy Evaluation](#accuracy-evaluation)
+  - [Using Weave for Tracing](#using-weave-for-tracing)
+  - [Accuracy Evaluation](#accuracy-evaluation)
   - [MCP (Model Context Protocol)](#mcp-model-context-protocol)
     - [AIQ Toolkit as an MCP Client](#aiq-toolkit-as-an-mcp-client)
     - [AIQ Toolkit as an MCP Server](#aiq-toolkit-as-an-mcp-server)
@@ -40,6 +41,9 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the AIQ Too
     - [Run the Docker Container](#run-the-docker-container)
     - [Test the API](#test-the-api)
     - [Expected API Output](#expected-api-output)
+  - [Accessing Request Metadata](#accessing-request-metadata)
+    - [Add custom route](#add-custom-route)
+    - [Access the request metadata](#access-the-request-metadata)
 
 ---
 
@@ -252,4 +256,49 @@ curl -X 'POST' \
   "input": "Is the product of 2 * 4 greater than the current hour of the day?",
   "output": "No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 16)."
 }
+```
+## Accessing Request Metadata
+Users can define custom routes that are dynamically added to the API server, and capture HTTP request metadata such
+as the method, URL path, URL scheme, headers, query parameters, path parameters, host, port, and cookies.
+
+### Add custom route
+Associate your endpoint with a function by updating the `front_end` section  in the configuration file.
+```yaml
+general:
+  use_uvloop: true
+  front_end:
+    _type: fastapi
+    endpoints:
+      - path: /get_request_metadata
+        method: POST
+        description: Gets the request attributes from the request.
+        function_name: current_request_attributes
+  ```
+
+### Access the request metadata
+Get the instance of the {class}`aiq.builder.context.AIQContext` object using the {method}`aiq.builder.context.AIQContext.get()` method. This will give you access to the metadata
+method which holds the request attributes defined by the user on request.
+```python
+@register_function(config_type=RequestAttributesTool)
+async def current_request_attributes(config: RequestAttributesTool, builder: Builder):
+
+    from starlette.datastructures import Headers
+    from starlette.datastructures import QueryParams
+
+    async def _get_request_attributes(unused: str) -> str:
+
+        from aiq.builder.context import AIQContext
+        aiq_context = AIQContext.get()
+        method: str | None = aiq_context.metadata.method
+        url_path: str | None = aiq_context.metadata.url_path
+        url_scheme: str | None = aiq_context.metadata.url_scheme
+        headers: Headers | None = aiq_context.metadata.headers
+        query_params: QueryParams | None = aiq_context.metadata.query_params
+        path_params: dict[str, str] | None = aiq_context.metadata.path_params
+        client_host: str | None = aiq_context.metadata.client_host
+        client_port: int | None = aiq_context.metadata.client_port
+        cookies: dict[str, str] | None = aiq_context.metadata.cookies
+
+    yield FunctionInfo.from_fn(_get_request_attributes,
+                               description="Returns the acquired user defined request attriubutes.")
 ```
