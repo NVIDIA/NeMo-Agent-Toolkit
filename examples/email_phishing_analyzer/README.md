@@ -99,7 +99,7 @@ Action: email_phishing_analyzer
 Action Input: {'text': 'Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of 0 to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]'}
 Observation
 ------------------------------
-/nvme/1/yuchenz/projects/AIQ Toolkit/examples/email_phishing_analyzer/src/aiq_email_phishing_analyzer/register.py:56: LangChainDeprecationWarning: The method `BaseChatModel.apredict` was deprecated in langchain-core 0.1.7 and will be removed in 1.0. Use :meth:`~ainvoke` instead.
+/AIQ Toolkit/examples/email_phishing_analyzer/src/aiq_email_phishing_analyzer/register.py:56: LangChainDeprecationWarning: The method `BaseChatModel.apredict` was deprecated in langchain-core 0.1.7 and will be removed in 1.0. Use :meth:`~ainvoke` instead.
   response = await llm.apredict(config.prompt.format(body=text))
 2025-04-23 15:25:07,477 - aiq.agent.react_agent.agent - INFO -
 ------------------------------

@@ -40,6 +40,11 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
         Description for the tool that will override the description provided by the MCP server. Should only be used if
         the description provided by the server is poor or nonexistent
         """)
+    return_exception: bool = Field(default=True,
+                                   description="""
+        If true, the tool will return the exception message if the tool call fails.
+        If false, raise the exception.
+        """)
 
 
 @register_function(config_type=MCPToolConfig)
@@ -63,12 +68,23 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):
         return tool.input_schema.model_validate_json(input_str)
 
     async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
-        if tool_input:
-            args = tool_input.model_dump()
-            return await tool.acall(args)
+        # Run the tool, catching any errors and sending to agent for correction
+        try:
+            if tool_input:
+                args = tool_input.model_dump()
+                return await tool.acall(args)
 
-        _ = tool.input_schema.model_validate(kwargs)
-        return await tool.acall(kwargs)
+            _ = tool.input_schema.model_validate(kwargs)
+            return await tool.acall(kwargs)
+        except Exception as e:
+            if config.return_exception:
+                if tool_input:
+                    logger.warning("Error calling tool %s with serialized input: %s", tool.name, tool_input.model_dump(), exc_info=True)
+                else:
+                    logger.warning("Error calling tool %s with input: %s", tool.name, kwargs, exc_info=True)
+                return str(e)
+            # If the tool call fails, raise the exception.
+            raise
 
     yield FunctionInfo.create(single_fn=_response_fn,
                               description=tool.description,
