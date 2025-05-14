@@ -37,7 +37,7 @@ class _DummyStream(list):
         self.append(value)
 
     # simple subscribe: just call back synchronously
-    def subscribe(self, on_next, on_error=None, on_complete=None):
+    def subscribe(self, on_next, on_error=None, on_complete=None):  # pylint: disable=unused-argument
         for v in self:
             on_next(v)
         return lambda: None  # fake Subscription
@@ -70,8 +70,8 @@ class _DummyContextState:
 # --------------------------------------------------------------------------- #
 
 
-@pytest.fixture()
-def ctx_state():
+@pytest.fixture(name="ctx_state")
+def ctx_state_fixture():
     """Fresh manager + its stubbed context-state for each test."""
     s = AIQContextState()
 
@@ -81,13 +81,13 @@ def ctx_state():
     return s
 
 
-@pytest.fixture()
-def ctx(ctx_state: AIQContextState):
+@pytest.fixture(name="ctx")
+def ctx_fixture(ctx_state: AIQContextState):
     return AIQContext(ctx_state)
 
 
-@pytest.fixture()
-def mgr(ctx_state: AIQContextState):
+@pytest.fixture(name="mgr")
+def mgr_fixture(ctx_state: AIQContextState):
     """Fresh manager + its stubbed context-state for each test."""
     return IntermediateStepManager(context_state=ctx_state)
 
