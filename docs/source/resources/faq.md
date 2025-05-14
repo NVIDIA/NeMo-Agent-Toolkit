@@ -18,12 +18,6 @@ limitations under the License.
 # NVIDIA Agent Intelligence Toolkit FAQ
 NVIDIA Agent Intelligence (AIQ) toolkit frequently asked questions (FAQ).
 
-## What is AIQ Toolkit?
-A **lightweight, unifying library** that makes every agent, tool, and workflow you already have work together, just as simple function calls work together in complex software applications.
-
-## What is the AIQ Toolkit Profiler?
-An **end-to-end agentic profiler**, allowing you to track input/output tokens and timings at a granular level for every tool and agent, regardless of the amount of nesting.
-
 ## Do I Need to Rewrite All of my Existing Code to Use AIQ Toolkit?
 No, AIQ toolkit is **100% opt in.** While we encourage users to wrap (decorate) every tool and agent to get the most out of the profiler, you have the freedom to integrate to whatever level you want - tool level, agent level, or entire workflow level. You have the freedom to start small and where you believe you’ll see the most value and expand from there.
 
