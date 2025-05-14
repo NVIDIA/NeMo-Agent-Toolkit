@@ -214,12 +214,15 @@ All documentation is checked using [Vale](https://vale.sh/). In documentation th
 
 The spelling of a project name should use the casing of the project, for example [PyPI](https://pypi.org/) should always be spelled as `PyPI` and not `pypi` or `PYPI`. If needed new words can be added to the `ci/vale/styles/config/vocabularies/aiq/accept.txt` and `ci/vale/styles/config/vocabularies/aiq/reject.txt` files.
 
-### Agent Intelligence toolkit Name Guidelines
+### NVIDIA Agent Intelligence toolkit Name Guidelines
 
-* Full Name: `Agent Intelligence toolkit`
+* Full Name: `NVIDIA Agent Intelligence toolkit`
   - Use for document titles, webpage headers, any public descriptions
+  - When used for the first time in the body of a document (not a heading or title) it should include the AIQ abbreviation in parentheses, ex: `NVIDIA Agent Intelligence (AIQ) toolkit`
+  - Note that the 't' is lowercase in toolkit.
 * Short Name: `AIQ toolkit`
-  - Use after Agent Intelligence toolkit has been referenced in blogs, docs, and other public locations
+  - Use after `NVIDIA Agent Intelligence (AIQ) toolkit` has been referenced in blogs, docs, and other public locations
+  - Note that the 't' is lowercase in toolkit.
 * Uppercase No Space: `AIQtoolkit`
   - Use for situations where capitalization will be preserved like the GitHub URL, directories, etc.
   - Do not use dashes or underscores
