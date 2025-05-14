@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# yapf: disable
 import typing
 
 from pydantic import BaseModel
@@ -38,6 +37,7 @@ class MemoryItem(BaseModel):
     memory : str or None
         Optional memory string. Helpful when returning a memory.
     """
+    # yapf: disable
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [
@@ -73,10 +73,11 @@ class MemoryItem(BaseModel):
         # Enable aliasing if needed
         populate_by_name=True
     )
-
+    # yapf: enable
     conversation: list[dict[str, str]] | None = Field(
         description="List of conversation messages. Each message must have a \"role\" "
-        "key (user or assistant. It must also have a \"content\" key.", default=None)
+        "key (user or assistant. It must also have a \"content\" key.",
+        default=None)
     tags: list[str] = Field(default_factory=list, description="List of tags applied to the item.")
     metadata: dict[str, typing.Any] = Field(description="Metadata about the memory item.", default={})
     user_id: str = Field(description="The user's ID.")
