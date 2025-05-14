@@ -279,11 +279,11 @@ class ReActAgentGraph(DualNodeAgent):
                     tool_response = await requested_tool.ainvoke(tool_input_str,
                                                                  config=RunnableConfig(callbacks=self.callbacks))
                 except Exception as e:
-                    logger.exception("%s Failed to call tool %s with input: %s",
-                                     AGENT_LOG_PREFIX,
-                                     requested_tool.name,
-                                     agent_thoughts.tool_input,
-                                     exc_info=True)
+                    logger.warning("%s Failed to call tool %s with input: %s",
+                                   AGENT_LOG_PREFIX,
+                                   requested_tool.name,
+                                   agent_thoughts.tool_input,
+                                   exc_info=True)
                     tool_response = str(e)
 
             # some tools, such as Wikipedia, will return an empty response when no search results are found
