@@ -17,10 +17,10 @@ limitations under the License.
 
 # Evaluate API Endpoints
 :::{note}
-It is recommended that the [Evaluating AIQ Toolkit Workflows](./evaluate.md) guide be read before proceeding with this detailed documentation.
+It is recommended that the [Evaluating AIQ toolkit Workflows](./evaluate.md) guide be read before proceeding with this detailed documentation.
 :::
 
-The evaluation endpoint can be used to start evaluation jobs on a remote AIQ Toolkit server.
+The evaluation endpoint can be used to start evaluation jobs on a remote AIQ toolkit server.
 
 ## Evaluation Endpoint Overview
 ```{mermaid}
@@ -32,7 +32,7 @@ graph TD
 ```
 
 ## Start AIQ Toolkit API Server
-See AIQ Toolkit [UI and Server](./../quick-start/launching-ui.md) guide for instructions on starting the AIQ Toolkit server.
+See AIQ toolkit [UI and Server](./../quick-start/launching-ui.md) guide for instructions on starting the AIQ toolkit server.
 Sample Usage:
 ```bash
 aiq serve --config_file=examples/simple/configs/config.yml

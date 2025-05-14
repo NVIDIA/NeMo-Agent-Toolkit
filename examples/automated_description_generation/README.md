@@ -24,7 +24,7 @@ limitations under the License.
 
 The automated description generation workflow, is a workflow that can be used to build on top of the RAG service and enhances the accuracy of the  multi-query collection workflow. The goal of the workflow is to automatically generate descriptions of collections within VectorDB's, which can be leveraged by the multi-query collection tool to empower retrieval of context, typically documents, across multiple collections within a given vector database. This document will cover the tooling and the process leveraged to execute the description generation workflow.
 
-The documentation will also cover configuration considerations and how to set up an AIQ Toolkit pipeline that leverages the workflow. The current implementation is Milvus focused, with a plans to extend functionality to other vector databases.
+The documentation will also cover configuration considerations and how to set up an AIQ toolkit pipeline that leverages the workflow. The current implementation is Milvus focused, with a plans to extend functionality to other vector databases.
 
 ## Table of Contents
 
@@ -44,11 +44,11 @@ The automated description generation workflow is responsible for intelligently g
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AIQ Toolkit library, run the following commands:
+From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
 uv pip install -e ./examples/automated_description_generation
@@ -63,14 +63,14 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ### Setting Up Milvus
 
-This example uses a Milvus vector database to demonstrate how descriptions can be generated for collections. However, because this workflow uses the built-in AIQ Toolkit abstractions for retrievers, this example will work for any database that implements the required methods of the AIQ Toolkit `retriever` interface.
+This example uses a Milvus vector database to demonstrate how descriptions can be generated for collections. However, because this workflow uses the built-in AIQ toolkit abstractions for retrievers, this example will work for any database that implements the required methods of the AIQ toolkit `retriever` interface.
 
 The rest of this example assumes you have a running instance of Milvus at `localhost:19530`. If you would like a guide on setting up the database used in this example, please follow
-the instructions in the `simple_rag` example of AIQ Toolkit [here](../simple_rag/README.md).
+the instructions in the `simple_rag` example of AIQ toolkit [here](../simple_rag/README.md).
 
 If you have a different Milvus database you would like to use, please modify the `./configs/config.yml` with the appropriate URLs to your database instance.
 
-To use this example, you will also need to create a `wikipedia_docs` and a `cuda_docs` collection in your Milvus database. You can do this by following the instructions in the `simple_rag` example of AIQ Toolkit [here](../simple_rag/README.md) and running the following command:
+To use this example, you will also need to create a `wikipedia_docs` and a `cuda_docs` collection in your Milvus database. You can do this by following the instructions in the `simple_rag` example of AIQ toolkit [here](../simple_rag/README.md) and running the following command:
 
 ```bash
 python examples/simple_rag/ingestion/langchain_web_ingest.py
@@ -220,7 +220,7 @@ The expected output is as follows:
 $ aiq run --config_file examples/automated_description_generation/configs/config_no_auto.yml --input "List 5 subspecies of Aardvark?"
 2025-04-23 15:20:59,964 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (485.568047 ms). Ensure all imports are inside your registered functions.
 2025-04-23 15:21:00,193 - aiq.runtime.loader - WARNING - Loading module 'aiq.eval.register' from entry point 'aiq_evaluators' took a long time (119.121313 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:21:00,300 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/automated_description_generation/configs/config_no_auto.yml'
+2025-04-23 15:21:00,300 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/automated_description_generation/configs/config_no_auto.yml'
 2025-04-23 15:21:00,307 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-04-23 15:21:00,445 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
 

@@ -16,7 +16,7 @@ dependencies = [
   "openinference-instrumentation-langchain==0.1.29",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Simple Phishing Email Analyzer AIQ Toolkit example"
+description = "Simple Phishing Email Analyzer AIQ toolkit example"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 

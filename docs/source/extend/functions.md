@@ -68,7 +68,7 @@ Both of these methods will result in a function that can be used in the same way
 
 ### Function Configuration Object
 
-To use a function from an AIQ Toolkit configuration file, it must be registered with AIQ Toolkit. Registering a function is done with the {py:deco}`aiq.cli.register_workflow.register_function` decorator. More information about registering components can be found in the [Plugin System](../extend/plugins.md) documentation.
+To use a function from an AIQ toolkit configuration file, it must be registered with AIQ toolkit. Registering a function is done with the {py:deco}`aiq.cli.register_workflow.register_function` decorator. More information about registering components can be found in the [Plugin System](../extend/plugins.md) documentation.
 
 When registering a function, we first need to define the function configuration object. This object is used to configure the function and is passed to the function when it is invoked. Any options that are available to the function must be specified in the configuration object.
 
@@ -412,7 +412,7 @@ Output schemas can also be overridden in a similar manner but for different purp
 
 ## Instantiating Functions
 
-Once a function is registered, it can be instantiated using the {py:class}`~aiq.builder.workflow_builder.WorkflowBuilder` class. The `WorkflowBuilder` class is used to create and manage all components in an AIQ Toolkit workflow. When calling {py:meth}`~aiq.builder.workflow_builder.WorkflowBuilder.add_function`, which function to create is determined by the type of the configuration object. The builder will match the configuration object type to the type used in the {py:deco}`aiq.cli.register_workflow.register_function` decorator.
+Once a function is registered, it can be instantiated using the {py:class}`~aiq.builder.workflow_builder.WorkflowBuilder` class. The `WorkflowBuilder` class is used to create and manage all components in an AIQ toolkit workflow. When calling {py:meth}`~aiq.builder.workflow_builder.WorkflowBuilder.add_function`, which function to create is determined by the type of the configuration object. The builder will match the configuration object type to the type used in the {py:deco}`aiq.cli.register_workflow.register_function` decorator.
 
 ```python
 

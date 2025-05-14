@@ -15,17 +15,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA Agent Intelligence Toolkit](./docs/source/_static/aiqtoolkit_banner.png "AIQ Toolkit banner image")
+![NVIDIA Agent Intelligence Toolkit](./docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
 
 # NVIDIA Agent Intelligence Toolkit
 
-Agent Intelligence Toolkit (AIQ Toolkit) is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
+NVIDIA Agent Intelligence (AIQ) toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
 
-> Note: Agent Intelligence Toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `aiqtoolkit` instead of `agentiq`. I transitional package named `agentiq` is available for backwards compatibility, but will be removed in the future.
+> Note: Agent Intelligence toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `aiqtoolkit` instead of `agentiq`. The transitional package named `agentiq` is available for backwards compatibility, but will be removed in the future.
 
 ## Key Features
 
-- [**Framework Agnostic:**](./docs/source/quick-start/installing.md#framework-integrations) AIQ Toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), and [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. AIQ Toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
+- [**Framework Agnostic:**](./docs/source/quick-start/installing.md#framework-integrations) AIQ toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), and [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. AIQ toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
 
 - [**Reusability:**](./docs/source/extend/sharing-components.md) Every agent, tool, and agentic workflow in this library exists as a function call that works together in complex software applications. The composability between these agents, tools, and workflows allows you to build once and reuse in different scenarios.
 
@@ -37,25 +37,25 @@ Agent Intelligence Toolkit (AIQ Toolkit) is a flexible, lightweight, and unifyin
 
 - [**Evaluation System:**](./docs/source/workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 
-- [**User Interface:**](./docs/source/quick-start/launching-ui.md) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
+- [**User Interface:**](./docs/source/quick-start/launching-ui.md) Use the AIQ toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 
-- [**Full MCP Support:**](./docs/source/workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use AIQ Toolkit as an [MCP client](./docs/source/workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use AIQ Toolkit as an [MCP server](./docs/source/workflows/mcp/mcp-server.md) to publish tools via MCP.
+- [**Full MCP Support:**](./docs/source/workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use AIQ toolkit as an [MCP client](./docs/source/workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use AIQ toolkit as an [MCP server](./docs/source/workflows/mcp/mcp-server.md) to publish tools via MCP.
 
-With AIQ Toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
+With AIQ toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 
 ## Component Overview
 
-The following diagram illustrates the key components of AIQ Toolkit and how they interact. It provides a high-level view of the architecture, including agents, plugins, workflows, and user interfaces. Use this as a reference to understand how to integrate and extend AIQ Toolkit in your projects.
+The following diagram illustrates the key components of AIQ toolkit and how they interact. It provides a high-level view of the architecture, including agents, plugins, workflows, and user interfaces. Use this as a reference to understand how to integrate and extend AIQ toolkit in your projects.
 
-![AIQ Toolkit Components Diagram](docs/source/_static/aiqtoolkit_gitdiagram.png)
+![AIQ toolkit Components Diagram](docs/source/_static/aiqtoolkit_gitdiagram.png)
 
 ## Links
 
- * [Documentation](https://docs.nvidia.com/aiqtoolkit): Explore the full documentation for AIQ Toolkit.
- * [Get Started Guide](./docs/source/quick-start/installing.md): Set up your environment and start building with AIQ Toolkit.
- * [Examples](./examples/README.md): Explore examples of AIQ Toolkit workflows located in the [`examples`](./examples) directory of the source repository.
- * [Create and Customize AIQ Toolkit Workflows](docs/source/tutorials/customize-a-workflow.md): Learn how to create and customize AIQ Toolkit workflows.
- * [Evaluate with AIQ Toolkit](./docs/source/workflows/evaluate.md): Learn how to evaluate your AIQ Toolkit workflows.
+ * [Documentation](https://docs.nvidia.com/aiqtoolkit): Explore the full documentation for AIQ toolkit.
+ * [Get Started Guide](./docs/source/quick-start/installing.md): Set up your environment and start building with AIQ toolkit.
+ * [Examples](./examples/README.md): Explore examples of AIQ toolkit workflows located in the [`examples`](./examples) directory of the source repository.
+ * [Create and Customize AIQ toolkit Workflows](docs/source/tutorials/customize-a-workflow.md): Learn how to create and customize AIQ toolkit workflows.
+ * [Evaluate with AIQ toolkit](./docs/source/workflows/evaluate.md): Learn how to evaluate your AIQ toolkit workflows.
  * [Troubleshooting](./docs/source/troubleshooting.md): Get help with common issues.
 
 
@@ -63,7 +63,7 @@ The following diagram illustrates the key components of AIQ Toolkit and how they
 
 ### Prerequisites
 
-Before you begin using AIQ Toolkit, ensure that you meet the following software prerequisites.
+Before you begin using AIQ toolkit, ensure that you meet the following software prerequisites.
 
 - Install [Git](https://git-scm.com/)
 - Install [Git Large File Storage](https://git-lfs.github.com/) (LFS)
@@ -72,7 +72,7 @@ Before you begin using AIQ Toolkit, ensure that you meet the following software 
 
 ### Install From Source
 
-1. Clone the AIQ Toolkit repository to your local machine.
+1. Clone the AIQ toolkit repository to your local machine.
     ```bash
     git clone git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit
     cd aiqtoolkit
@@ -102,13 +102,13 @@ Before you begin using AIQ Toolkit, ensure that you meet the following software 
     ```
     You can replace `--python 3.11` with any other Python version (`3.11` or `3.12`) that you have installed.
 
-5. Install the AIQ Toolkit library.
-    To install the AIQ Toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
+5. Install the AIQ toolkit library.
+    To install the AIQ toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
     ```bash
     uv sync --all-groups --all-extras
     ```
 
-    Alternatively to install just the core AIQ Toolkit without any plugins, run the following:
+    Alternatively to install just the core AIQ toolkit without any plugins, run the following:
     ```bash
     uv sync
     ```
@@ -128,13 +128,13 @@ Before you begin using AIQ Toolkit, ensure that you meet the following software 
     uv pip install -e '.[profiling]'
     ```
 
-6. Verify the installation using the AIQ Toolkit CLI
+6. Verify the installation using the AIQ toolkit CLI
 
    ```bash
    aiq --version
    ```
 
-   This should output the AIQ Toolkit version which is currently installed.
+   This should output the AIQ toolkit version which is currently installed.
 
 ## Hello World Example
 
@@ -144,7 +144,7 @@ Before you begin using AIQ Toolkit, ensure that you meet the following software 
    export NVIDIA_API_KEY=<your_api_key>
    ```
 
-2. Create the AIQ Toolkit workflow configuration file. This file will define the agents, tools, and workflows that will be used in the example. Save the following as `workflow.yaml`:
+2. Create the AIQ toolkit workflow configuration file. This file will define the agents, tools, and workflows that will be used in the example. Save the following as `workflow.yaml`:
 
    ```yaml
    functions:
@@ -154,7 +154,7 @@ Before you begin using AIQ Toolkit, ensure that you meet the following software 
          max_results: 2
 
    llms:
-      # Tell AIQ Toolkit which LLM to use for the agent
+      # Tell AIQ toolkit which LLM to use for the agent
       nim_llm:
          _type: nim
          model_name: meta/llama-3.1-70b-instruct
@@ -194,7 +194,7 @@ We would love to hear from you! Please file an issue on [GitHub](https://github.
 
 ## Acknowledgements
 
-We would like to thank the following open source projects that made AIQ Toolkit possible:
+We would like to thank the following open source projects that made AIQ toolkit possible:
 
 - [CrewAI](https://github.com/crewAIInc/crewAI)
 - [FastAPI](https://github.com/tiangolo/fastapi)

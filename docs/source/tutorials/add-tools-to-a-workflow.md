@@ -19,7 +19,7 @@ limitations under the License.
 
 The [Customizing a Workflow](./customize-a-workflow.md) tutorial demonstrates how to customize a workflow by overriding parameters. This tutorial will demonstrate how to add new tools to a workflow. Adding a new tool to a workflow requires copying and modifying the workflow configuration file, which, in effect, creates a new customized workflow.
 
-AIQ Toolkit includes several built-in tools (functions) that can be used in any workflow. To query for a list of installed tools, run the following command:
+AIQ toolkit includes several built-in tools (functions) that can be used in any workflow. To query for a list of installed tools, run the following command:
 ```bash
 aiq info components -t function
 ```
@@ -93,7 +93,7 @@ workflow:
 ```
 
 :::{note}
-The resulting YAML is located at `examples/documentation_guides/workflows/custom_workflow/custom_config.yml` in the AIQ Toolkit repository.
+The resulting YAML is located at `examples/documentation_guides/workflows/custom_workflow/custom_config.yml` in the AIQ toolkit repository.
 :::
 
 When you rerun the workflow with the updated configuration file:
@@ -109,7 +109,7 @@ Workflow Result:
 ```
 
 ## Alternate Method Using a Web Search Tool
-Adding individual web pages to a workflow can be cumbersome, especially when dealing with multiple web pages. An alternative method is to use a web search tool. One of the tools available in AIQ Toolkit is the `tavily_internet_search` tool, which utilizes the [Tavily Search API](https://tavily.com/).
+Adding individual web pages to a workflow can be cumbersome, especially when dealing with multiple web pages. An alternative method is to use a web search tool. One of the tools available in AIQ toolkit is the `tavily_internet_search` tool, which utilizes the [Tavily Search API](https://tavily.com/).
 
 The `tavily_internet_search` tool is part of the `aiqtoolkit[langchain]` package, to install the package run:
 ```bash
@@ -138,7 +138,7 @@ workflow:
   tool_names: [internet_search, current_datetime]
 ```
 
-The resulting configuration file is located at `examples/documentation_guides/workflows/custom_workflow/search_config.yml` in the AIQ Toolkit repository.
+The resulting configuration file is located at `examples/documentation_guides/workflows/custom_workflow/search_config.yml` in the AIQ toolkit repository.
 
 When you re-run the workflow with the updated configuration file:
 ```bash
