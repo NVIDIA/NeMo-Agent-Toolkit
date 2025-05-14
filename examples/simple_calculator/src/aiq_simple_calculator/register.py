@@ -34,9 +34,12 @@ async def calculator_inequality(tool_config: InequalityToolConfig, builder: Buil
 
     async def _calculator_inequality(text: str) -> str:
         numbers = re.findall(r"\d+", text)
+        if len(numbers) < 2:
+            return "Please provide at least two numbers to compare."
+        if len(numbers) > 2:
+            return "This tool only supports comparing two numbers."
         a = int(numbers[0])
         b = int(numbers[1])
-
         if a > b:
             return f"First number {a} is greater than the second number {b}"
         if a < b:
@@ -62,6 +65,10 @@ async def calculator_multiply(config: MultiplyToolConfig, builder: Builder):
 
     async def _calculator_multiply(text: str) -> str:
         numbers = re.findall(r"\d+", text)
+        if len(numbers) < 2:
+            return "Please provide at least two numbers to divide."
+        if len(numbers) > 2:
+            return "This tool only supports dividing two numbers."
         a = int(numbers[0])
         b = int(numbers[1])
 
@@ -85,6 +92,10 @@ async def calculator_divide(config: DivisionToolConfig, builder: Builder):
 
     async def _calculator_divide(text: str) -> str:
         numbers = re.findall(r"\d+", text)
+        if len(numbers) < 2:
+            return "Please provide at least two numbers to divide."
+        if len(numbers) > 2:
+            return "This tool only supports dividing two numbers."
         a = int(numbers[0])
         b = int(numbers[1])
 
@@ -108,6 +119,10 @@ async def calculator_subtract(config: SubtractToolConfig, builder: Builder):
 
     async def _calculator_subtract(text: str) -> str:
         numbers = re.findall(r"\d+", text)
+        if len(numbers) < 2:
+            return "Please provide at least two numbers to subtract."
+        if len(numbers) > 2:
+            return "This tool only supports subtracting two numbers."
         a = int(numbers[0])
         b = int(numbers[1])
 
