@@ -91,13 +91,15 @@ class IntermediateStepManager:
                 logger.warning("Step id %s not found in outstanding start steps", payload.UUID)
                 return
 
-            # Remove the current step from the active span id stack. Look for the step id in the stack and remove it to correct errors
+            # Remove the current step from the active span id stack. Look for the step id in the stack and remove it to
+            # correct errors
             current_step_index = active_span_id_stack.index(payload.UUID)
 
             if (current_step_index is not None):
                 if (current_step_index != len(active_span_id_stack) - 1):
                     logger.warning(
-                        "Step id %s not the last step in the stack. Removing it from the stack but this is likely an error",
+                        "Step id %s not the last step in the stack. "
+                        "Removing it from the stack but this is likely an error",
                         payload.UUID)
 
                 active_span_id_stack = active_span_id_stack[:current_step_index]

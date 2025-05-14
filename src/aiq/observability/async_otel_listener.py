@@ -57,7 +57,8 @@ except TelemetryOptionalImportError:
     from aiq.utils.optional_imports import DummyTrace  # pylint: disable=ungrouped-imports
     from aiq.utils.optional_imports import DummyTracerProvider  # pylint: disable=ungrouped-imports
     from aiq.utils.optional_imports import dummy_set_span_in_context  # pylint: disable=ungrouped-imports
-    trace = DummyTrace
+
+    trace = DummyTrace  # pylint: disable=invalid-name
     TracerProvider = DummyTracerProvider
     Span = DummySpan
     set_span_in_context = dummy_set_span_in_context
@@ -318,7 +319,7 @@ class AsyncOtelSpanListener:
 
         # Finish corresponding Weave call if Weave is available and initialized
         if self.gc is not None:
-            self._finish_weave_call(step, sub_span)
+            self._finish_weave_call(step)
 
     @contextmanager
     def parent_call(self, trace_id: str, parent_call_id: str):
@@ -344,13 +345,13 @@ class AsyncOtelSpanListener:
         # use it as the parent
         if existing_call is not None:
             parent_call = existing_call
-            logger.debug(f"Found existing Weave call: {existing_call.id} from trace: {existing_call.trace_id}")
+            logger.debug("Found existing Weave call: %s from trace: %s", existing_call.id, existing_call.trace_id)
         # Otherwise, check our internal stack for parent relationships
         elif len(self._weave_calls) > 0 and len(self._span_stack) > 1:
             # Get the parent span using stack position (one level up)
             parent_span_id = self._span_stack[-2].get_span_context().span_id
             # Find the corresponding weave call for this parent span
-            for uuid, call in self._weave_calls.items():
+            for call in self._weave_calls.values():
                 if getattr(call, "span_id", None) == parent_span_id:
                     parent_call = call
                     break
@@ -389,7 +390,7 @@ class AsyncOtelSpanListener:
 
         return call
 
-    def _finish_weave_call(self, step: IntermediateStep, span: Span) -> None:
+    def _finish_weave_call(self, step: IntermediateStep) -> None:
         """
         Finish a previously created Weave call
         """

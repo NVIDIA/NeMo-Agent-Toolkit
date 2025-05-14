@@ -66,7 +66,7 @@ async def profiler_agent(config: ProfilerAgentConfig, builder: Builder):
     from aiq_profiler_agent.agent import ProfilerAgent
     from aiq_profiler_agent.agent import ProfilerAgentState
     from aiq_profiler_agent.data_models import ExecPlan
-    from aiq_profiler_agent.tool import flow_chart  # noqa: F401
+    from aiq_profiler_agent.tool import flow_chart  # noqa: F401 # pylint: disable=unused-import
     from langchain_core.messages import SystemMessage
     from langchain_core.output_parsers import PydanticOutputParser
     from langchain_core.prompts import PromptTemplate

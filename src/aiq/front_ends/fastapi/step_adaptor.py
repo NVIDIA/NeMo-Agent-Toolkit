@@ -305,13 +305,13 @@ class StepAdaptor:
             if step.event_category == IntermediateStepCategory.LLM:
                 return self._handle_llm(payload, ancestry)
 
-            elif step.event_category == IntermediateStepCategory.TOOL:
+            if step.event_category == IntermediateStepCategory.TOOL:
                 return self._handle_tool(payload, ancestry)
 
-            elif step.event_category == IntermediateStepCategory.FUNCTION:
+            if step.event_category == IntermediateStepCategory.FUNCTION:
                 return self._handle_function(payload, ancestry)
 
-            elif step.event_category == IntermediateStepCategory.CUSTOM:
+            if step.event_category == IntermediateStepCategory.CUSTOM:
                 return self._handle_custom(payload, ancestry)
 
         except Exception as e:
