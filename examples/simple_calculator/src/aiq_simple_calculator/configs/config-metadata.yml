@@ -15,6 +15,13 @@
 
 general:
   use_uvloop: true
+  front_end:
+    _type: fastapi
+    endpoints:
+      - path: /get_request_metadata
+        method: POST
+        description: Gets the request attributes from the request.
+        function_name: current_request_attributes
 
 functions:
   calculator_multiply:
@@ -27,6 +34,8 @@ functions:
     _type: current_datetime
   calculator_subtract:
     _type: calculator_subtract
+  current_request_attributes:
+    _type: current_request_attributes
 
 llms:
   nim_llm:
@@ -47,6 +56,7 @@ workflow:
     - current_datetime
     - calculator_divide
     - calculator_subtract
+    - current_request_attributes
   llm_name: nim_llm
   verbose: true
   retry_parsing_errors: true
