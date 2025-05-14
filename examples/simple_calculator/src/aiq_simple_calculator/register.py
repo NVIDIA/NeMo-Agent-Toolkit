@@ -34,10 +34,9 @@ async def calculator_inequality(tool_config: InequalityToolConfig, builder: Buil
 
     async def _calculator_inequality(text: str) -> str:
         numbers = re.findall(r"\d+", text)
-        if len(numbers) < 2:
-            return "Provide at least two numbers to compare."
-        if len(numbers) > 2:
-            return "This tool only supports comparing two numbers."
+        validation_error = validate_number_count(numbers, expected_count=2, action="compare")
+        if validation_error:
+            return validation_error
         a = int(numbers[0])
         b = int(numbers[1])
         if a > b:
