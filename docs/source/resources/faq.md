@@ -28,4 +28,4 @@ No, AIQ toolkit is designed to work alongside, not replace, your existing agenti
 No, agent communication is best handled over existing protocols, such as MCP, HTTP, gRPC, and sockets.
 
 ## Is AIQ Toolkit an Observability Platform?
-No, While AIQ toolkit is able to collect and transmit fine-grained telemetry to help with optimization and evaluation, it does not replace your preferred observability platform and data collection application.
+No, while AIQ toolkit is able to collect and transmit fine-grained telemetry to help with optimization and evaluation, it does not replace your preferred observability platform and data collection application.
