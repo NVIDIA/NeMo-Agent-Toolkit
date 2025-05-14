@@ -16,7 +16,7 @@ dependencies = [
   "nvidia-haystack==0.1.2",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Custom AIQ Toolkit Workflow"
+description = "Custom AIQ toolkit Workflow"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]

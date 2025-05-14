@@ -18,10 +18,10 @@ limitations under the License.
 # Evaluating NVIDIA Agent Intelligence Toolkit Workflows Details
 
 :::{note}
-It is recommended that the [Evaluating AIQ Toolkit Workflows](../workflows/evaluate.md) guide be read before proceeding with this detailed documentation.
+It is recommended that the [Evaluating AIQ toolkit Workflows](../workflows/evaluate.md) guide be read before proceeding with this detailed documentation.
 :::
 
-AIQ Toolkit provides a set of evaluators to run and evaluate the AIQ Toolkit workflows. In addition to the built-in evaluators, AIQ Toolkit provides a plugin system to add custom evaluators.
+AIQ toolkit provides a set of evaluators to run and evaluate the AIQ toolkit workflows. In addition to the built-in evaluators, AIQ toolkit provides a plugin system to add custom evaluators.
 
 Example:
 ```bash
@@ -31,7 +31,7 @@ aiq eval --config_file=examples/simple/configs/eval_config.yml
 ## Using Datasets
 Run and evaluate the workflow on a specified dataset. The dataset files types are `json`, `jsonl`, `csv`, `xls`, or `parquet`.
 
-Download and use datasets provided by AIQ Toolkit examples by running the following.
+Download and use datasets provided by AIQ toolkit examples by running the following.
 
 ```bash
 git lfs fetch
@@ -132,15 +132,15 @@ eval:
 ```
 
 ## AIQ Toolkit Built-in Evaluators
-AIQ Toolkit provides the following built-in evaluator:
+AIQ toolkit provides the following built-in evaluator:
 - `ragas` - An evaluator to run and evaluate RAG-like workflows using the public RAGAS API.
 - `trajectory` - An evaluator to run and evaluate the LangChain agent trajectory.
 - `swe_bench` - An evaluator to run and evaluate the workflow on the SWE-Bench dataset.
 
 ### RAGAS Evaluator
 [RAGAS](https://docs.ragas.io/) is an OSS evaluation framework that enables end-to-end
-evaluation of RAG workflows. AIQ Toolkit provides an interface to RAGAS to evaluate the performance
-of RAG-like AIQ Toolkit workflows.
+evaluation of RAG workflows. AIQ toolkit provides an interface to RAGAS to evaluate the performance
+of RAG-like AIQ toolkit workflows.
 
 RAGAS provides a set of evaluation metrics to configure in the `config.yml` file
 by adding an evaluator section with type`ragas`.
@@ -265,7 +265,7 @@ aiq eval --config_file=examples/simple_calculator/configs/config-tunable-rag-eva
 ```
 
 ## Adding Custom Evaluators
-You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the AIQ Toolkit evaluator system. See the [Custom Evaluator](../extend/custom-evaluator.md) documentation for more information.
+You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the AIQ toolkit evaluator system. See the [Custom Evaluator](../extend/custom-evaluator.md) documentation for more information.
 
 
 ## Running multiple repetitions
@@ -449,4 +449,4 @@ eval:
 Output directory cleanup is disabled by default for easy troubleshooting.
 
 ## Profiling and Performance Monitoring of AIQ Toolkit Workflows
-You can profile workflows using the AIQ Toolkit evaluation system. For more information, see the [Profiler](../workflows/profiler.md) documentation.
+You can profile workflows using the AIQ toolkit evaluation system. For more information, see the [Profiler](../workflows/profiler.md) documentation.

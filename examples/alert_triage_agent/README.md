@@ -15,10 +15,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 # Alert Triage using Agent Intelligence Toolkit
-This example demonstrates how to build an intelligent alert triage system using AIQ Toolkit and LangGraph. The system analyzes system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization. It showcases how to combine LLMs with domain-specific diagnostic tools to create an automated troubleshooting workflow.
+This example demonstrates how to build an intelligent alert triage system using AIQ toolkit and LangGraph. The system analyzes system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization. It showcases how to combine LLMs with domain-specific diagnostic tools to create an automated troubleshooting workflow.
 
 ## Table of contents
-- [Alert Triage using Agent Intelligence Toolkit](#alert-triage-using-agent-intelligence-toolkit)
+- [Alert Triage using Agent Intelligence toolkit](#alert-triage-using-agent-intelligence-toolkit)
   - [Table of contents](#table-of-contents)
   - [Use case description](#use-case-description)
     - [Why use an agentic design?](#why-use-an-agentic-design)
@@ -221,18 +221,18 @@ Each tool or agent can use a dedicated LLM tailored for its task.
 
 ## Installation and setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md) to create the development environment and install AIQ Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md) to create the development environment and install AIQ toolkit.
 
 ### Install this workflow
 
-From the root directory of the AIQ Toolkit library, run the following commands:
+From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
 uv pip install -e ./examples/alert_triage_agent
 ```
 
 ### Set up environment variables
-As mentioned in the Install Guide, an `NVIDIA_API_KEY` environment variable is required to run AIQ Toolkit.
+As mentioned in the Install Guide, an `NVIDIA_API_KEY` environment variable is required to run AIQ toolkit.
 
 If you have your key in a `.env` file, use the following command to load it:
 ```bash
@@ -287,7 +287,7 @@ The example includes a Flask-based HTTP server ([`run.py`](./src/aiq_alert_triag
 To use this mode, first ensure you have configured your live environment as described in the previous section. Then:
 1. **Start the Alert Triage Server**
 
-   From the root directory of the AIQ Toolkit library, run:
+   From the root directory of the AIQ toolkit library, run:
    ```bash
    python examples/alert_triage_agent/src/aiq_alert_triage_agent/run.py \
      --host 0.0.0.0 \
