@@ -15,4 +15,4 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-Refer to the [Contributing to AIQ Toolkit](./docs/source/advanced/contributing.md) guide.
+Refer to the [Contributing to AIQ Toolkit](./docs/source/resources/contributing.md) guide.
