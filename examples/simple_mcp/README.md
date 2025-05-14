@@ -37,7 +37,7 @@ This example workflow uses a locally hosted MCP SSE server running a [`fetch` to
 By default, the workflow being run is the `react_agent`, which will use the `fetch` tool to pull data from the necessary URLs to answer the provided query.
 
 ### Installation and Setup
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AIQ Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ Toolkit.
 
 To run this example do the following:
  1) Start up docker compose using the provided `docker-compose.yml` file.

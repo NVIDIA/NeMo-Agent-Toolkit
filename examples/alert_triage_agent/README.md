@@ -221,7 +221,7 @@ Each tool or agent can use a dedicated LLM tailored for its task.
 
 ## Installation and setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AIQ Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md) to create the development environment and install AIQ Toolkit.
 
 ### Install this workflow
 
