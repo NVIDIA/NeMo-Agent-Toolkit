@@ -81,7 +81,7 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):
                 logger.warning("Error calling tool %s with input: %s", tool.name, kwargs, exc_info=True)
                 return str(e)
             # If the tool call fails, raise the exception.
-            raise e
+            raise
 
     yield FunctionInfo.create(single_fn=_response_fn,
                               description=tool.description,
