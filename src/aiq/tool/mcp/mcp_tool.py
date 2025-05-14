@@ -77,7 +77,6 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):
             _ = tool.input_schema.model_validate(kwargs)
             return await tool.acall(kwargs)
         except Exception as e:
-            # If the tool call fails, return the exception message if the tool call fails.
             if config.return_exception:
                 logger.warning("Error calling tool %s with input: %s", tool.name, kwargs, exc_info=True)
                 return str(e)
