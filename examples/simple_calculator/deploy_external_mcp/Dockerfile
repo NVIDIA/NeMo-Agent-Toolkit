@@ -20,7 +20,10 @@ RUN apt-get update && apt-get upgrade -y && apt install -y python3 python3-pip
 
 # Install MCP proxy and tools
 RUN pip3 install uv uvx
-RUN pip3 install "mcp-proxy>=0.5,<0.6"
+
+RUN pip3 install "mcp==1.5.0"
+RUN pip3 install "mcp-proxy==0.5.1"
+
 # Create directory for scripts
 RUN mkdir /scripts
 
