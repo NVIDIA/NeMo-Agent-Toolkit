@@ -19,7 +19,7 @@ limitations under the License.
 
 # NVIDIA Agent Intelligence toolkit
 
-Agent Intelligence (AIQ) toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
+NVIDIA Agent Intelligence (AIQ) toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
 
 > Note: Agent Intelligence toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `aiqtoolkit` instead of `agentiq`. I transitional package named `agentiq` is available for backwards compatibility, but will be removed in the future.
 
@@ -31,7 +31,7 @@ Agent Intelligence (AIQ) toolkit is a flexible, lightweight, and unifying librar
 
 - [**Rapid Development:**](docs/source/tutorials/customize-a-workflow.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs. This allows you and your development teams to move quickly if you're already developing with agents.
 
-- [**Profiling:**](./docs/source/workflows/profiler.md) Use the profiler to profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks. While we encourage you to wrap (decorate) every tool and agent to get the most out of the profiler, you have the freedom to integrate your tools, agents, and workflows to whatever level you want. You have the freedom to start small and go to where you believe you'll see the most value and expand from there.
+- [**Profiling:**](./docs/source/workflows/profiler.md) Use the profiler to profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks. While we encourage you to wrap (decorate) every tool and agent to get the most out of the profiler, you have the freedom to integrate your tools, agents, and workflows to whatever level you want. You start small and go to where you believe you'll see the most value and expand from there.
 
 - [**Observability:**](./docs/source/workflows/observe/index.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool, with examples using [Phoenix](./docs/source/workflows/observe/observe-workflow-with-phoenix.md) and [W&B Weave](./docs/source/workflows/observe/observe-workflow-with-weave.md).
 
@@ -39,7 +39,7 @@ Agent Intelligence (AIQ) toolkit is a flexible, lightweight, and unifying librar
 
 - [**User Interface:**](./docs/source/quick-start/launching-ui.md) Use the AIQ toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 
-- [**Full MCP Support**](./docs/source/workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use AIQ toolkit as an [MCP client](./docs/source/workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use AIQ toolkit as an [MCP server](./docs/source/workflows/mcp/mcp-server.md) to publish tools via MCP.
+- [**Full MCP Support:**](./docs/source/workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use AIQ toolkit as an [MCP client](./docs/source/workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use AIQ toolkit as an [MCP server](./docs/source/workflows/mcp/mcp-server.md) to publish tools via MCP.
 
 With AIQ toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 

@@ -26,9 +26,11 @@ limitations under the License.
     uv pip install -e examples/simple
     ```
 
+This tutorial assumes familiarity with [workflows](../workflows/about/index.md) and the [command line interface](../reference/cli.md) of AIQ toolkit.
+
 ## Customizing the `examples/simple` Workflow
 
-The `examples/simple` workflow is defined by the `examples/simple/configs/config.yml` configuration file, to illustrate we will examine the configuration file contents.
+The `examples/simple` workflow is defined by the `examples/simple/configs/config.yml` configuration file, which you can examine in the configuration file contents.
 
 `examples/simple/configs/config.yml`:
 ```yaml
@@ -62,7 +64,7 @@ workflow:
   max_retries: 3
 ```
 
-The  workflow file contains two tools: one that queries the LangSmith User Guide, and another that returns the current date and time. It also contains two models: an embedding model and an LLM model. After running the workflow, we can then ask it questions about LangSmith. In this tutorial, we will discuss how to customize this workflow.
+The  workflow file contains two tools: one that queries the LangSmith User Guide, and another that returns the current date and time. It also contains two models: an embedding model and an LLM model. After running the workflow, you can ask it questions about LangSmith. This tutorial demonstrates how to customize this workflow.
 
 Each workflow contains several configuration parameters that can be modified to customize the workflow. While copying and modifying the file is possible, it is not always necessary as some parameters can be overridden using the `--override` flag.
 

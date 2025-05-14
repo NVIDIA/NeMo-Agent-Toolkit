@@ -19,7 +19,7 @@ limitations under the License.
 
 Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
-This guide will cover how to use AIQ toolkit as an MCP Server to publish tools via MCP. For more information on how to use AIQ toolkit as an MCP Client, please refer to the [MCP Client](./mcp-client.md) documentation.
+This guide will cover how to use AIQ toolkit as an MCP Server to publish tools using MCP. For more information on how to use AIQ toolkit as an MCP Client, refer to the [MCP Client](./mcp-client.md) documentation.
 
 ## MCP Server Usage
 

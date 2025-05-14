@@ -27,7 +27,7 @@ AIQ toolkit provides a user interface for interacting with your running workflow
 - Override intermediate steps with the same ID
 
 ## Walk-through
-In this walk-through, we will guide you through the steps to set up and configure the AIQ toolkit user interface. Refer to `examples/simple_calculator/README.md` to set up the simple calculator workflow demonstrated in the following walk-through properly.
+This walk-through guides you through the steps to set up and configure the AIQ toolkit user interface. Refer to `examples/simple_calculator/README.md` to set up the simple calculator workflow demonstrated in the following walk-through properly.
 
 
 The AIQ toolkit UI is located in a git submodule at `external/aiqtoolkit-opensource-ui`. Ensure you have checked out all of the

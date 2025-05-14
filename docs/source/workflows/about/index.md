@@ -21,7 +21,7 @@ Workflows are the heart of AIQ toolkit because they define which agentic tools a
 
 ## Understanding the Workflow Configuration File
 
-The workflow configuration file is a YAML file that specifies the tools and models to use in a workflow, along with general configuration settings. To illustrate how these are organized, we will examine the configuration of the `examples/simple` workflow.
+The workflow configuration file is a YAML file that specifies the tools and models to use in a workflow, along with general configuration settings. This section examines the configuration of the `examples/simple` workflow to show how they're organized.
 
 `examples/simple/configs/config.yml`:
 ```yaml

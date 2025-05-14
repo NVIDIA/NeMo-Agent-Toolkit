@@ -113,7 +113,7 @@ Before you begin using AIQ toolkit, ensure that you meet the following software 
 
 
 ## Obtaining API Keys
-Depending which workflows you are running, you may need to obtain API keys from the respective services. Most AIQ toolkit workflows require an NVIDIA API key defined with the `NVIDIA_API_KEY` environment variable. An API key can be obtained by visiting [`build.nvidia.com`](https://build.nvidia.com/) and creating an account.
+Depending on which workflows you are running, you may need to obtain API keys from the respective services. Most AIQ toolkit workflows require an NVIDIA API key defined with the `NVIDIA_API_KEY` environment variable. An API key can be obtained by visiting [`build.nvidia.com`](https://build.nvidia.com/) and creating an account.
 
 ## Running Example Workflows
 
