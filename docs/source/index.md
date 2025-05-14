@@ -31,7 +31,7 @@ NVIDIA Agent Intelligence (AIQ) toolkit is a flexible, lightweight, and unifying
 
 
 :::{note}
-Agent Intelligence toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `aiqtoolkit` instead of `agentiq`. I transitional package named `agentiq` is available for backwards compatibility, but will be removed in the future.
+Agent Intelligence toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `aiqtoolkit` instead of `agentiq`. The transitional package named `agentiq` is available for backwards compatibility, but will be removed in the future.
 :::
 
 ## Key Features
