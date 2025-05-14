@@ -31,7 +31,7 @@ fi
 
 export CUR_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-# The root to the AIQ Toolkit repo
+# The root to the AIQ toolkit repo
 export PROJECT_ROOT=${PROJECT_ROOT:-"$(realpath ${CUR_DIR}/../..)"}
 
 NEXT_MAJOR=$(echo ${NEXT_VERSION} | awk '{split($0, a, "."); print a[1]}')

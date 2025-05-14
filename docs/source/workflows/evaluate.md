@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Evaluating NVIDIA Agent Intelligence Toolkit Workflows
-AIQ Toolkit provides a set of evaluators to run and evaluate the AIQ Toolkit workflows. In addition to the built-in evaluators, AIQ Toolkit provides a plugin system to add custom evaluators.
+AIQ toolkit provides a set of evaluators to run and evaluate the AIQ toolkit workflows. In addition to the built-in evaluators, AIQ toolkit provides a plugin system to add custom evaluators.
 
 ## Evaluating a Workflow
 To evaluate a workflow, you can use the `aiq eval` command. The `aiq eval` command takes a workflow configuration file as input. It runs the workflow using the dataset specified in the configuration file. The workflow output is then evaluated using the evaluators specified in the configuration file.
@@ -76,8 +76,8 @@ aiq info components -t evaluator
 
 ### Ragas Evaluator
 [RAGAS](https://docs.ragas.io/) is an OSS evaluation framework that enables end-to-end
-evaluation of RAG workflows. AIQ Toolkit provides an interface to RAGAS to evaluate the performance
-of RAG-like AIQ Toolkit workflows.
+evaluation of RAG workflows. AIQ toolkit provides an interface to RAGAS to evaluate the performance
+of RAG-like AIQ toolkit workflows.
 
 `examples/simple/configs/eval_config.yml`:
 ```yaml
@@ -223,7 +223,7 @@ The contents of the file have been `snipped` for brevity.
 ## Evaluating Remote Workflows
 You can evaluate remote workflows by using the `aiq eval` command with the `--endpoint` flag. In this mode the workflow is run on the remote server specified in the `--endpoint` configuration and evaluation is done on the local server.
 
-Launch AIQ Toolkit on the remote server with the configuration file:
+Launch AIQ toolkit on the remote server with the configuration file:
 ```bash
 aiq serve --config_file=examples/simple/configs/config.yml
 ```
@@ -234,11 +234,11 @@ aiq eval --config_file=examples/simple/configs/eval_config.yml --endpoint http:/
 ```
 
 ## Evaluation Endpoint
-You can also evaluate workflows using the AIQ Toolkit evaluation endpoint. The evaluation endpoint is a REST API that allows you to evaluate workflows using the same configuration file as the `aiq eval` command. The evaluation endpoint is available at `/evaluate` on the AIQ Toolkit server. For more information, refer to the [AIQ Toolkit Evaluation Endpoint](../reference/evaluate-api.md) documentation.
+You can also evaluate workflows using the AIQ toolkit evaluation endpoint. The evaluation endpoint is a REST API that allows you to evaluate workflows using the same configuration file as the `aiq eval` command. The evaluation endpoint is available at `/evaluate` on the AIQ toolkit server. For more information, refer to the [AIQ toolkit Evaluation Endpoint](../reference/evaluate-api.md) documentation.
 
 
 ## Adding Custom Evaluators
-You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the AIQ Toolkit evaluator system. See the [Custom Evaluator](../extend/custom-evaluator.md) documentation for more information.
+You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the AIQ toolkit evaluator system. See the [Custom Evaluator](../extend/custom-evaluator.md) documentation for more information.
 
 ## Overriding Evaluation Configuration
 You can override the configuration in the `eval_config.yml` file using the `--override` command line flag. The following is an example of overriding the configuration:
@@ -249,7 +249,7 @@ aiq eval --config_file examples/simple/configs/eval_config.yml \
 ```
 
 ## Additional Evaluation Options
-For details on other evaluators and evaluation options, refer to [AIQ Toolkit Evaluation Concepts](../reference/evaluate.md) for more information.
+For details on other evaluators and evaluation options, refer to [AIQ toolkit Evaluation Concepts](../reference/evaluate.md) for more information.
 
 ##  Profiling and Performance Monitoring of AIQ Toolkit Workflows
-You can profile workflows via the AIQ Toolkit evaluation system. For more information, refer to the [Profiler](profiler.md) documentation.
+You can profile workflows via the AIQ toolkit evaluation system. For more information, refer to the [Profiler](profiler.md) documentation.

@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Interactive Models Guide
-AIQ Toolkit provides interactive prompt and response Pydantic data models as a way to validate, serialize, and document
+AIQ toolkit provides interactive prompt and response Pydantic data models as a way to validate, serialize, and document
 data structures to support human input during the execution of an agent workflow.
 **Note**: All human in the loop interaction data models are supported by the `aiq serve` command, while the `aiq run`
 command **only** supports the {py:mod}`aiq.data_models.interactive.HumanPromptText` data model. Ensure WebSocket mode

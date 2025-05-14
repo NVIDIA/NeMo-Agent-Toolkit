@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observing a Workflow with Phoenix
 
-This guide provides a step-by-step process to enable observability in an AIQ Toolkit workflow using Phoenix for tracing and logging. By the end of this guide, you will have:
+This guide provides a step-by-step process to enable observability in an AIQ toolkit workflow using Phoenix for tracing and logging. By the end of this guide, you will have:
 - Configured telemetry in your workflow.
 - Run the Phoenix server.
 - Able to view traces in the Phoenix UI.
@@ -53,7 +53,7 @@ phoenix serve
 Phoenix should now be accessible at `http://0.0.0.0:6006`.
 
 ### Step 3: Run Your Workflow
-From the root directory of the AIQ Toolkit library, install dependencies and execute your workflow.
+From the root directory of the AIQ toolkit library, install dependencies and execute your workflow.
 
 **Example:**
 ```bash

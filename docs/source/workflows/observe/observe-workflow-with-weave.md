@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observing a Workflow with W&B Weave
 
-This guide provides a step-by-step process to enable observability in an AIQ Toolkit workflow using Weights and Biases (W&B) Weave for tracing using just a few lines of code in your workflow configuration file.
+This guide provides a step-by-step process to enable observability in an AIQ toolkit workflow using Weights and Biases (W&B) Weave for tracing using just a few lines of code in your workflow configuration file.
 
 ![Weave Tracing Dashboard](../../_static/weave_tracing.png)
 
