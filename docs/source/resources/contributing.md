@@ -218,14 +218,16 @@ The spelling of a project name should use the casing of the project, for example
 
 * Full Name: `NVIDIA Agent Intelligence toolkit`
   - Use for document titles, webpage headers, any public descriptions
+  - In situations where all words are capitalized (ex: document titles and headings), 'Toolkit' should be capitalized, in all other situations 'toolkit' should not be.
   - When used for the first time in the body of a document (not a heading or title) it should include the AIQ abbreviation in parentheses, ex: `NVIDIA Agent Intelligence (AIQ) toolkit`
-  - Note that the 't' is lowercase in toolkit.
+
 * Short Name: `AIQ toolkit`
   - Use after `NVIDIA Agent Intelligence (AIQ) toolkit` has been referenced in blogs, docs, and other public locations
-  - Note that the 't' is lowercase in toolkit.
+  - Note that the 't' is lowercase in toolkit unless used in a title or heading
 * Uppercase No Space: `AIQtoolkit`
   - Use for situations where capitalization will be preserved like the GitHub URL, directories, etc.
   - Do not use dashes or underscores
+  - Note that the 't' is lowercase in toolkit unless used in a title or heading
 * Lowercase No Space: `aiqtoolkit`
   - Use for URLs, PyPI package, any place where spaces are not allowed and casing is not preserved.
   - Do not use dashes or underscores
