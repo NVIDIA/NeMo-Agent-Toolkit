@@ -17,11 +17,11 @@ limitations under the License.
 
 # A Simple Jira Agent that Extracts POR and creates tickets
 
-A minimal example demonstrating an end-to-end Jira ticket creating agentic workflow. This workflow leverages the AIQ Toolkit plugin system to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
+A minimal example demonstrating an end-to-end Jira ticket creating agentic workflow. This workflow leverages the AIQ toolkit plugin system to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AIQ Toolkit library tools.
+- **Pre-built Tools:** Leverages core AIQ toolkit library tools.
 - **Custom Plugin System:** Developers can bring in new tools using plugins.
 - **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
 - **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
@@ -34,11 +34,11 @@ A minimal example demonstrating an end-to-end Jira ticket creating agentic workf
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AIQ Toolkit library, run the following commands:
+From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/por_to_jiratickets
@@ -63,7 +63,7 @@ Steps to create a Jira token: Go to `User Profile` -> `API token authentication`
 
 ### Human in the Loop (HITL) Configuration
 It is often helpful, or even required, to have human input during the execution of an agent workflow. For example, to ask about preferences, confirmations, or to provide additional information.
-The AIQ Toolkit library provides a way to add HITL interaction to any tool or function, allowing for the dynamic collection of information during the workflow execution, without the need for coding it
+The AIQ toolkit library provides a way to add HITL interaction to any tool or function, allowing for the dynamic collection of information during the workflow execution, without the need for coding it
 into the agent itself. For instance, this example asks for user permission to create Jira issues and tickets before creating them. We can view the implementation in the
 `aiq_por_to_jiratickets.jira_tickets_tool.py` file. The implementation is below:
 
@@ -103,14 +103,14 @@ async def create_jira_tickets_tool(config: CreateJiraToolConfig, builder: Builde
         logger.debug("Creating %s in Jira", input_text)
         # Rest of the function
 ```
-As we see above, requesting user input using AIQ Toolkit is straightforward. We can use the `user_input_manager` to prompt the user for input. The user's response is then processed to determine the next steps in the workflow.
+As we see above, requesting user input using AIQ toolkit is straightforward. We can use the `user_input_manager` to prompt the user for input. The user's response is then processed to determine the next steps in the workflow.
 This can occur in any tool or function in the workflow, allowing for dynamic interaction with the user as needed.
 
 ## Example Usage
 
 ### Run the Workflow
 
-Run the following command from the root of the AIQ Toolkit repo to execute this workflow with the specified input:
+Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
 aiq run --config_file examples/por_to_jiratickets/configs/config.yml  --input "Can you extract por file por_requirements.txt, assign story points and create jira tickets for epics first and then followed by tasks?"
@@ -121,10 +121,10 @@ aiq run --config_file examples/por_to_jiratickets/configs/config.yml  --input "C
 ```console
 $ aiq run --config_file examples/por_to_jiratickets/configs/config.yml  --input "Can you extract por file por_requirements.txt, assign story points and create jira tickets for epics first and then followed by tasks?"
 2025-04-23 15:46:33,770 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (501.032114 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:46:34,105 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/por_to_jiratickets/configs/config.yml'
+2025-04-23 15:46:34,105 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/por_to_jiratickets/configs/config.yml'
 2025-04-23 15:46:34,112 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-04-23 15:46:34,147 - aiq.profiler.utils - WARNING - Discovered frameworks: {<LLMFrameworkEnum.LANGCHAIN: 'langchain'>} in function extract_from_por_tool by inspecting source. It is recommended and more reliable to instead add the used LLMFrameworkEnum types in the framework_wrappers argument when calling @register_function.
-/AIQ Toolkit/examples/por_to_jiratickets/src/aiq_por_to_jiratickets/extract_por_tool.py:141: LangChainDeprecationWarning: The class `LLMChain` was deprecated in LangChain 0.1.17 and will be removed in 1.0. Use :meth:`~RunnableSequence, e.g., `prompt | llm`` instead.
+/AIQToolkit/examples/por_to_jiratickets/src/aiq_por_to_jiratickets/extract_por_tool.py:141: LangChainDeprecationWarning: The class `LLMChain` was deprecated in LangChain 0.1.17 and will be removed in 1.0. Use :meth:`~RunnableSequence, e.g., `prompt | llm`` instead.
   chain = LLMChain(llm=llm, prompt=prompt)
 
 Configuration Summary:
@@ -147,7 +147,7 @@ Action: extract_por_tool
 Action Input: {'input_text': 'por_requirements.txt'}
 
 ------------------------------
-/AIQ Toolkit/examples/por_to_jiratickets/src/aiq_por_to_jiratickets/extract_por_tool.py:152: LangChainDeprecationWarning: The method `Chain.arun` was deprecated in langchain 0.1.0 and will be removed in 1.0. Use :meth:`~ainvoke` instead.
+/AIQToolkit/examples/por_to_jiratickets/src/aiq_por_to_jiratickets/extract_por_tool.py:152: LangChainDeprecationWarning: The method `Chain.arun` was deprecated in langchain 0.1.0 and will be removed in 1.0. Use :meth:`~ainvoke` instead.
   response = await chain.arun(por_content=input_text)
 2025-04-23 15:51:28,095 - aiq.agent.react_agent.agent - INFO -
 ------------------------------

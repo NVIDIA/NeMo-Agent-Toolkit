@@ -23,7 +23,7 @@ dependencies = [
   "semantic-kernel~=1.24.0",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Subpackage for Semantic-Kernel integration in AIQToolkit"
+description = "Subpackage for Semantic-Kernel integration in AIQtoolkit"
 readme = "src/aiq/meta/pypi.md"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]

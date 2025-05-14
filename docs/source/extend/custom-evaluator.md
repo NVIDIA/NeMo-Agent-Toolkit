@@ -17,10 +17,10 @@ limitations under the License.
 
 # Adding a Custom Evaluator
 :::{note}
-We recommend reading the [Evaluating AIQ Toolkit Workflows](../workflows/evaluate.md) guide before proceeding with this detailed documentation.
+We recommend reading the [Evaluating AIQ toolkit Workflows](../workflows/evaluate.md) guide before proceeding with this detailed documentation.
 :::
 
-AIQ Toolkit provides a set of evaluators to run and evaluate AIQ Toolkit workflows. In addition to the built-in evaluators, AIQ Toolkit provides a plugin system to add custom evaluators.
+AIQ toolkit provides a set of evaluators to run and evaluate AIQ toolkit workflows. In addition to the built-in evaluators, AIQ toolkit provides a plugin system to add custom evaluators.
 
 
 ## Existing Evaluators
@@ -31,9 +31,9 @@ aiq info components -t evaluator
 `ragas` is an example of an existing evaluator. The `ragas` evaluator is used to evaluate the accuracy of a workflow output.
 
 ## Extending AIQ Toolkit with Custom Evaluators
-To extend AIQ Toolkit with custom evaluators, you need to create an evaluator function and register it with AIQ Toolkit.
+To extend AIQ toolkit with custom evaluators, you need to create an evaluator function and register it with AIQ toolkit.
 
-This section provides a step-by-step guide to create and register a custom evaluator with AIQ Toolkit. A similarity evaluator is used as an example to demonstrate the process.
+This section provides a step-by-step guide to create and register a custom evaluator with AIQ toolkit. A similarity evaluator is used as an example to demonstrate the process.
 
 ### Evaluator Configuration
 The evaluator configuration is used to specify the evaluator `name` and other evaluator-specific configuration parameters.
@@ -68,7 +68,7 @@ async def register_similarity_evaluator(config: SimilarityEvaluatorConfig, build
 
 `SimilarityEvaluatorConfig` specifies the evaluator name. The `similarity_type` configuration parameter is used to specify the type of similarity to be computed.
 
-The `register_similarity_evaluator` function is used to register the evaluator with AIQ Toolkit via the `register_evaluator` decorator. This function provides an asynchronous evaluation method.
+The `register_similarity_evaluator` function is used to register the evaluator with AIQ toolkit via the `register_evaluator` decorator. This function provides an asynchronous evaluation method.
 
 `SimilarityEvaluator` class and the evaluation method, `evaluator.evaluate`,  are explained in the section [Similarity Evaluator](#similarity-evaluator).
 
@@ -99,7 +99,7 @@ The asynchronous evaluate method provide by the custom evaluator takes an `EvalI
 The evaluate method computes the score for each item in the evaluation input and returns an `EvalOutput` object.
 
 ### Similarity Evaluator
-Similarity evaluator is used as an example to demonstrate the process of creating and registering a custom evaluator with AIQ Toolkit. We add this code to a new `similarity_evaluator.py` file in the simple example directory for testing purposes.
+Similarity evaluator is used as an example to demonstrate the process of creating and registering a custom evaluator with AIQ toolkit. We add this code to a new `similarity_evaluator.py` file in the simple example directory for testing purposes.
 
 `examples/simple/src/aiq_simple/similarity_evaluator.py`:
 ```python
@@ -259,4 +259,4 @@ The results of each evaluator is stored in a separate file with name `<keyword>_
 The contents of the file have been `snipped` for brevity.
 
 # Summary
-This guide provides a step-by-step process to create and register a custom evaluator with AIQ Toolkit. The similarity evaluator is used as an example to demonstrate the process. The evaluator configuration, evaluator function, and evaluation results are explained in detail.
+This guide provides a step-by-step process to create and register a custom evaluator with AIQ toolkit. The similarity evaluator is used as an example to demonstrate the process. The evaluator configuration, evaluator function, and evaluation results are explained in detail.

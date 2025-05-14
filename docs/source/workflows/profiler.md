@@ -18,7 +18,7 @@ limitations under the License.
 
 # Profiling and Performance Monitoring of NVIDIA Agent Intelligence Toolkit Workflows
 
-The AIQ Toolkit Profiler Module provides profiling and forecasting capabilities for AIQ Toolkit workflows. The profiler instruments the workflow execution by:
+The AIQ toolkit Profiler Module provides profiling and forecasting capabilities for AIQ toolkit workflows. The profiler instruments the workflow execution by:
 - Collecting usage statistics in real time (via callbacks).
 - Recording the usage statistics on a per-invocation basis (e.g., tokens used, time between calls, LLM calls).
 - Storing the data for offline analysis.
@@ -26,13 +26,13 @@ The AIQ Toolkit Profiler Module provides profiling and forecasting capabilities 
 - Computing workflow specific metrics for performance analysis (e.g., latency, throughput, etc.).
 - Analyzing workflow performance measures such as bottlenecks, latency, and concurrency spikes.
 
-These functionalities will allow AIQ Toolkit developers to dynamically stress test their workflows in pre-production phases to receive workflow-specific sizing guidance based on observed latency and throughput of their specific workflows
-At any or every stage in a workflow execution, the AIQ Toolkit profiler generates predictions/forecasts about future token and tool usage.  Client side forecasting allows for workflow-specific predictions which can be difficult, if not impossible, to achieve server side in order to facilitate inference planning.
-Will allow for features such as offline-replay or simulation of workflow runs without the need for deployed infrastructure such as tooling/vector DBs, etc. Will also allow for AIQ Toolkit native observability and workflow fingerprinting.
+These functionalities will allow AIQ toolkit developers to dynamically stress test their workflows in pre-production phases to receive workflow-specific sizing guidance based on observed latency and throughput of their specific workflows
+At any or every stage in a workflow execution, the AIQ toolkit profiler generates predictions/forecasts about future token and tool usage.  Client side forecasting allows for workflow-specific predictions which can be difficult, if not impossible, to achieve server side in order to facilitate inference planning.
+Will allow for features such as offline-replay or simulation of workflow runs without the need for deployed infrastructure such as tooling/vector DBs, etc. Will also allow for AIQ toolkit native observability and workflow fingerprinting.
 
 ## Prerequisites
 
-The AIQ Toolkit profiler requires additional dependencies not installed by default.
+The AIQ toolkit profiler requires additional dependencies not installed by default.
 
 Install these dependencies by running the following command:
 ```bash
@@ -40,16 +40,16 @@ uv pip install -e .[profiling]
 ```
 
 ## Current Profiler Architecture
-The AIQ Toolkit Profiler can be broken into the following components:
+The AIQ toolkit Profiler can be broken into the following components:
 
 ### Profiler Decorators and Callbacks
 - **profiler/decorators.py** defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
-- **profiler/callbacks** directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the AIQ Toolkit usage stats queue. We currently support callback handlers for LangChain,
+- **profiler/callbacks** directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the AIQ toolkit usage stats queue. We currently support callback handlers for LangChain,
 LLama Index, CrewAI, and Semantic Kernel.
 
 ### Profiler Runner
 
-- **profiler/profile_runner.py** is the main orchestration class. It collects workflow run statistics from the AIQ Toolkit Eval module, computed workflow-specific metrics, and optionally forecasts usage metrics using the AIQ Toolkit Profiler module.
+- **profiler/profile_runner.py** is the main orchestration class. It collects workflow run statistics from the AIQ toolkit Eval module, computed workflow-specific metrics, and optionally forecasts usage metrics using the AIQ toolkit Profiler module.
 
 - **Under profiler/forecasting**, the code trains scikit-learn style models on the usage data.
 model_trainer.py can train a LinearModel or a RandomForestModel on the aggregated usage data (the raw statistics collected).
@@ -64,9 +64,9 @@ Native integrations with `aiq eval` to allow for running of the profiler through
 ## Using the Profiler
 
 ### Step 1: Enabling Instrumentation on a Workflow [Optional]
-**NOTE:** If you don't set it, AIQ Toolkit will inspect your code to infer frameworks used. We recommend you set it explicitly.
+**NOTE:** If you don't set it, AIQ toolkit will inspect your code to infer frameworks used. We recommend you set it explicitly.
 To enable profiling on a workflow, you need to wrap the workflow with the profiler decorators. The decorators can be applied to any workflow using the `framework_wrappers` argument of the `register_function` decorator.
-Simply specify which AIQ Toolkit supported frameworks you will be using anywhere in your workflow (including tools) upon registration and AIQ Toolkit will automatically apply the appropriate profiling decorators at build time.
+Simply specify which AIQ toolkit supported frameworks you will be using anywhere in your workflow (including tools) upon registration and AIQ toolkit will automatically apply the appropriate profiling decorators at build time.
 For example:
 
 ```python
@@ -75,9 +75,9 @@ async def webquery_tool(config: WebQueryToolConfig, builder: Builder):
 ```
 
 Once workflows are instrumented, the profiler will collect usage statistics in real time and store them for offline analysis for any LLM invocations or tool calls your workflow makes during execution. Runtime telemetry
-is stored in a `intermediate_steps_stream` context variable during runtime. AIQ Toolkit has a subscriber that will read intermediate steps through eval.
+is stored in a `intermediate_steps_stream` context variable during runtime. AIQ toolkit has a subscriber that will read intermediate steps through eval.
 
-Even if a function isn’t one of the built-in AIQ Toolkit “Functions”, you can still profile it with our simple decorator. The `@track_function` decorator helps you capture details such as when a function starts and ends, its input arguments, and its output—even if the function is asynchronous, a generator, or a class method.
+Even if a function isn’t one of the built-in AIQ toolkit “Functions”, you can still profile it with our simple decorator. The `@track_function` decorator helps you capture details such as when a function starts and ends, its input arguments, and its output—even if the function is asynchronous, a generator, or a class method.
 
 #### How It Works
 
@@ -103,7 +103,7 @@ It supports all kinds of functions:
   The decorator converts input arguments and outputs into a `JSON`-friendly format (with special handling for Pydantic models), making the data easier to analyze.
 
 - **Reactive Event Streaming:**
-  All profiling events are pushed to the `AIQ Toolkit` intermediate step stream, so you can subscribe and monitor events in real time.
+  All profiling events are pushed to the `AIQ toolkit` intermediate step stream, so you can subscribe and monitor events in real time.
 
 #### How to Use
 
@@ -193,12 +193,12 @@ This will, based on the above configuration, produce the following files in the 
 
 
 ## Walkthrough of Profiling a Workflow
-In this guide, we will walk you through an end-to-end example of how to profile an AIQ Toolkit workflow using the AIQ Toolkit profiler, which is part of the library's evaluation harness.
+In this guide, we will walk you through an end-to-end example of how to profile an AIQ toolkit workflow using the AIQ toolkit profiler, which is part of the library's evaluation harness.
 We will begin by creating a workflow to profile, explore some of the configuration options of the profiler, and then perform an in-depth analysis of the profiling results.
 
 ### Defining a Workflow
 For this guide, we will use a simple, but useful, workflow that analyzes the body of a given email to determine if it is a Phishing email. We will define a single tool that takes an email body as input and returns a response on
-whether the email is a Phishing email or not. We will then add that tool as the only tool available to the `tool_calling` agent pre-built in the AIQ Toolkit library. Below is the implementation of the phishing tool. The source code for this example can be found at `examples/email_phishing_analyzer/`.
+whether the email is a Phishing email or not. We will then add that tool as the only tool available to the `tool_calling` agent pre-built in the AIQ toolkit library. Below is the implementation of the phishing tool. The source code for this example can be found at `examples/email_phishing_analyzer/`.
 
 ### Configuring the Workflow
 The configuration file for the workflow is as follows. Here, pay close attention to how the `profiler` and `eval` sections are configured.
@@ -447,12 +447,12 @@ Clearly, the `phi-3-*` models are not good fits given their `groundedness` and `
 The `mixtral-8x22b-instruct` model has a much higher runtime than the `llama-3.1-8b-instruct` model, so we will not use it either. The `llama-3.1-8b-instruct` model has the highest `groundedness` and `relevance`, so we will use it for our workflow.
 
 ### Conclusion
-In this guide, we walked through an end-to-end example of how to profile an AIQ Toolkit workflow using the AIQ Toolkit profiler. We defined a simple workflow, configured the profiler, ran the profiler, and analyzed the profiling results to compare the performance of various LLMs and evaluate the workflow's efficiency. We used the collected telemetry data to identify which LLM we think is the best fit for our workflow. We hope this guide has given you a good understanding of how to profile an AIQ Toolkit workflow and analyze the results to make informed decisions about your workflow configuration.
+In this guide, we walked through an end-to-end example of how to profile an AIQ toolkit workflow using the AIQ toolkit profiler. We defined a simple workflow, configured the profiler, ran the profiler, and analyzed the profiling results to compare the performance of various LLMs and evaluate the workflow's efficiency. We used the collected telemetry data to identify which LLM we think is the best fit for our workflow. We hope this guide has given you a good understanding of how to profile an AIQ toolkit workflow and analyze the results to make informed decisions about your workflow configuration.
 
 If you'd like to optimize further, we recommend exploring the `workflow_profiling_report.txt` file that was also created by the profiler. That has detailed information about workflow bottlenecks, and latency at various `concurrencies`, which can be helpful metrics when identifying performance issues in your workflow.
 
 ## Providing Feedback
 
-We welcome feedback on the AIQ Toolkit Profiler module. Please provide feedback by creating an issue on the AIQ Toolkit Git repository.
+We welcome feedback on the AIQ toolkit Profiler module. Please provide feedback by creating an issue on the AIQ toolkit Git repository.
 
 If you're filing a bug report, please also include a reproducer workflow and the profiler output files.

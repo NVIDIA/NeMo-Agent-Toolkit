@@ -12,7 +12,7 @@ dependencies = [
   "aiqtoolkit[langchain]~=1.1",
 ]
 requires-python = ">=3.10"
-description = "Custom AIQ Toolkit Workflow"
+description = "Custom AIQ toolkit Workflow"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]

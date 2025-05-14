@@ -17,21 +17,21 @@ limitations under the License.
 
 # Multi-Frameworks Example
 
-This example demonstrates how to integrate multiple AI frameworks seamlessly using a set of LangChain / LangGraph agents, in AIQ Toolkit.
-AIQ Toolkit is framework-agnostic, allowing usage of custom and pre-built preferred AI tools without restriction due to AI framework.
+This example demonstrates how to integrate multiple AI frameworks seamlessly using a set of LangChain / LangGraph agents, in AIQ toolkit.
+AIQ toolkit is framework-agnostic, allowing usage of custom and pre-built preferred AI tools without restriction due to AI framework.
 
 ## Overview
 
 LangChain is incredibly flexible, LlamaIndex is incredibly powerful for building RAG pipelines;
 different AI frameworks excel at different tasks.
-Instead of committing to just one, this example shows how they can work together via AIQ Toolkit.
+Instead of committing to just one, this example shows how they can work together via AIQ toolkit.
 
 In this example, we combine:
 - **Haystack Agent** – with a configurable LLM.
 - **LangChain Research Tool** – web search.
 - **LlamaIndex RAG Tool** – document Q&A (pre-configured to use this README)
 
-This example workflow leverages the AIQ Toolkit plugin system and `Builder` object to demonstrate how the `Builder` object can dynamically wrap any Python function—regardless of its underlying AI framework or implementation—and convert it into another AI framework of our choice.
+This example workflow leverages the AIQ toolkit plugin system and `Builder` object to demonstrate how the `Builder` object can dynamically wrap any Python function—regardless of its underlying AI framework or implementation—and convert it into another AI framework of our choice.
 
 In this example, we wrap all three of the above tools as LangChain Tools.
 Then, using LangChain and LangGraph, we unify these frameworks into a single workflow, demonstrating interoperability and flexibility. The goal is not to favor one tool over another but to showcase how different AI stacks can complement each other.
@@ -65,7 +65,7 @@ the multi-agents architecture looks like the below
 
 ## Local Installation and Usage
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
 
 ### Step 1: Set Your NVIDIA API Key and Tavily API Key Environment Variable
 If you have not already done so, follow the [Obtaining API Keys](../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services.
