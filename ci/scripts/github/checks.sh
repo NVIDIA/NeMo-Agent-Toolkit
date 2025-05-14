@@ -20,6 +20,7 @@ GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 
 source ${GITHUB_SCRIPT_DIR}/common.sh
 install_npm
+npm install -g @umbrelladocs/linkspector
 
 create_env group:dev group:docs extra:examples
 
