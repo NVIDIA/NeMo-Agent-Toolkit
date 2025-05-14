@@ -76,19 +76,26 @@ async def semantic_kernel_travel_planning_workflow(config: SKTravelPlanningWorkf
     for tool_name, tool in zip(config.tool_names, tools):
         kernel.add_plugin(plugin=tool, plugin_name=tool_name)
 
+    itinerary_expert_name = config.itinerary_expert_name
+    itinerary_expert_instructions = config.itinerary_expert_instructions
+    budget_advisor_name = config.budget_advisor_name
+    budget_advisor_instructions = config.budget_advisor_instructions
+    summarize_agent_name = config.summarize_agent_name
+    summarize_agent_instructions = config.summarize_agent_instructions
+
     agent_itinerary = ChatCompletionAgent(kernel=kernel,
-                                          name=config.itinerary_expert_name,
-                                          instructions=config.itinerary_expert_instructions,
+                                          name=itinerary_expert_name,
+                                          instructions=itinerary_expert_instructions,
                                           function_choice_behavior=FunctionChoiceBehavior.Required())
 
     agent_budget = ChatCompletionAgent(kernel=kernel,
-                                       name=config.budget_advisor_name,
-                                       instructions=config.budget_advisor_instructions,
+                                       name=budget_advisor_name,
+                                       instructions=budget_advisor_instructions,
                                        function_choice_behavior=FunctionChoiceBehavior.Required())
 
     agent_summary = ChatCompletionAgent(kernel=kernel,
-                                        name=config.summarize_agent_name,
-                                        instructions=config.summarize_agent_instructions,
+                                        name=summarize_agent_name,
+                                        instructions=summarize_agent_instructions,
                                         function_choice_behavior=FunctionChoiceBehavior.Auto())
 
     chat = AgentGroupChat(
@@ -101,7 +108,7 @@ async def semantic_kernel_travel_planning_workflow(config: SKTravelPlanningWorkf
         responses = []
         async for content in chat.invoke():
             # Store only the Summarizer Agent's response
-            if content.name == config.summarize_agent_name:
+            if content.name == summarize_agent_name:
                 responses.append(content.content)
 
         if not responses:
