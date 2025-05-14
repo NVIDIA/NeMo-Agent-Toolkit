@@ -35,18 +35,18 @@ functions:
     chunk_size: 512
 ```
 
-However, the workflow is unaware of some related technologies, such as LangGraph, if we were to run:
+However, the workflow is unaware of some related technologies, such as LangGraph, if you run:
 ```bash
 aiq run --config_file examples/simple/configs/config.yml --input "How does LangSmith interact with tools like LangGraph?"
 ```
 
-We would receive output similar to the following:
+The output will be similar to the following:
 ```
 Workflow Result:
 ["Unfortunately, I couldn't find any information about LangSmith's interaction with LangGraph. The user guide does not mention LangGraph, and I couldn't find any relevant information through the webpage queries."]
 ```
 
-We can easily solve this by updating the workflow to also query the [LangGraph Quickstart](https://langchain-ai.github.io/langgraph/tutorials/introduction) guide.
+You can solve this by updating the workflow to also query the [LangGraph Quickstart](https://langchain-ai.github.io/langgraph/tutorials/introduction) guide.
 
 To do this, create a copy of the original workflow configuration file. To add the LangGraph query tool to the workflow, update the YAML file updating the `functions` section from:
 ```yaml
@@ -76,9 +76,9 @@ functions:
     chunk_size: 512
 ```
 
-Since we now have two instances of the `webpage_query` tool, we needed to update the name of the first tool to `langsmith_query`.
+Since you now have two instances of the `webpage_query` tool, you need to update the name of the first tool to `langsmith_query`.
 
-Finally, we need to update the `workflow.tool_names` section to include the new tool from:
+Finally, update the `workflow.tool_names` section to include the new tool from:
 ```yaml
 workflow:
   _type: react_agent
@@ -96,7 +96,7 @@ workflow:
 The resulting YAML is located at `examples/documentation_guides/workflows/custom_workflow/custom_config.yml` in the AIQ Toolkit repository.
 :::
 
-When we rerun the workflow with the updated configuration file:
+When you rerun the workflow with the updated configuration file:
 ```bash
 aiq run --config_file examples/documentation_guides/workflows/custom_workflow/custom_config.yml \
   --input "How does LangSmith interact with tools like LangGraph?"
@@ -131,7 +131,7 @@ functions:
     _type: current_datetime
 ```
 
-Next, we update the `workflow.tool_names` section to include the new tool:
+Next, update the `workflow.tool_names` section to include the new tool:
 ```yaml
 workflow:
   _type: react_agent
@@ -140,7 +140,7 @@ workflow:
 
 The resulting configuration file is located at `examples/documentation_guides/workflows/custom_workflow/search_config.yml` in the AIQ Toolkit repository.
 
-When we re-run the workflow with the updated configuration file:
+When you re-run the workflow with the updated configuration file:
 ```bash
 aiq run --config_file examples/documentation_guides/workflows/custom_workflow/search_config.yml \
   --input "How does LangSmith interact with tools like LangGraph?"
