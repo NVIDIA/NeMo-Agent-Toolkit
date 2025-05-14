@@ -248,8 +248,8 @@ curl -X 'POST' \
   -d '{"input_message": "Is the product of 2 * 4 greater than the current hour of the day?"}'
   ```
 
-  ### Expected API Output
-  The API response should be similar to the following:
+### Expected API Output
+The API response should be similar to the following:
 
 ```bash
 {
@@ -263,6 +263,7 @@ as the method, URL path, URL scheme, headers, query parameters, path parameters,
 
 ### Add custom route
 Associate your endpoint with a function by updating the `front_end` section  in the configuration file.
+A full configuration file example is available at `examples/simple_calculator/configs/config-metadata.yml.`
 ```yaml
 general:
   use_uvloop: true
@@ -276,8 +277,7 @@ general:
   ```
 
 ### Access the request metadata
-Get the instance of the {class}`aiq.builder.context.AIQContext` object using the {method}`aiq.builder.context.AIQContext.get()` method. This will give you access to the metadata
-method which holds the request attributes defined by the user on request.
+Get the instance of the `aiq.builder.context.AIQContext` object using the `aiq.builder.context.AIQContext.get()` method. This will give you access to the metadata method which holds the request attributes defined by the user on request. A complete example of the function can be found in `src/aiq/tool/server_tools.py.`
 ```python
 @register_function(config_type=RequestAttributesTool)
 async def current_request_attributes(config: RequestAttributesTool, builder: Builder):
