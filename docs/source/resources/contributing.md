@@ -15,18 +15,18 @@
     limitations under the License.
 -->
 
-# Contributing to NVIDIA Agent Intelligence Toolkit
+# Contributing to NVIDIA Agent Intelligence toolkit
 
-Contributions to AIQ Toolkit fall into the following three categories.
+Contributions to AIQ toolkit fall into the following three categories.
 
 * To report a bug, request a new feature, or report a problem with
-   documentation, file a [bug](https://github.com/NVIDIA/AIQToolkit/issues/new/choose)
-    describing in detail the problem or new feature. The AIQ Toolkit team evaluates
+   documentation, file a [bug](https://github.com/NVIDIA/AIQtoolkit/issues/new/choose)
+    describing in detail the problem or new feature. The AIQ toolkit team evaluates
     and triages bugs and schedules them for a release. If you believe the
     bug needs priority attention, comment on the bug to notify the
     team.
 * To propose and implement a new Feature, file a new feature request
-    [issue](https://github.com/NVIDIA/AIQToolkit/issues/new/choose). Describe the
+    [issue](https://github.com/NVIDIA/AIQtoolkit/issues/new/choose). Describe the
     intended feature and discuss the design and implementation with the team and
     community. Once the team agrees that the plan is good, go ahead and
     implement it, using the [code contributions](#code-contributions) guide below.
@@ -34,7 +34,7 @@ Contributions to AIQ Toolkit fall into the following three categories.
     follow the [code contributions](#code-contributions) guide below. If you
     need more context on a particular issue, ask in a comment.
 
-As contributors and maintainers of AIQ Toolkit, you are expected to abide by the AIQ Toolkit code of conduct. More information can be found at: [Contributor Code of Conduct](./code-of-conduct.md).
+As contributors and maintainers of AIQ toolkit, you are expected to abide by the AIQ toolkit code of conduct. More information can be found at: [Contributor Code of Conduct](./code-of-conduct.md).
 
 ## Set Up Your Development Environment
 ### Prerequisites
@@ -44,14 +44,14 @@ As contributors and maintainers of AIQ Toolkit, you are expected to abide by the
 - Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - Install [Visual Studio Code](https://code.visualstudio.com/) (recommended)
 
-AIQ Toolkit is a Python library that doesn’t require a GPU to run the workflow by default. You can deploy the core workflows using one of the following:
+AIQ toolkit is a Python library that doesn’t require a GPU to run the workflow by default. You can deploy the core workflows using one of the following:
 - Ubuntu or other Linux distributions, including WSL, in a Python virtual environment.
 
 ### Creating the Environment
 
-1. Fork the AIQ Toolkit repository choosing **Fork** on the [AIQ Toolkit repository page](https://github.com/NVIDIA/AIQToolkit).
+1. Fork the AIQ toolkit repository choosing **Fork** on the [AIQ toolkit repository page](https://github.com/NVIDIA/AIQtoolkit).
 
-1. Clone your personal fork of the AIQ Toolkit repository to your local machine.
+1. Clone your personal fork of the AIQ toolkit repository to your local machine.
     ```bash
     git clone <your fork url> aiqtoolkit
     cd aiqtoolkit
@@ -59,7 +59,7 @@ AIQ Toolkit is a Python library that doesn’t require a GPU to run the workflow
 
     Then, set the upstream to the main repository and fetch the latest changes:
     ```bash
-    git remote add upstream git@github.com:NVIDIA/AIQToolkit.git
+    git remote add upstream git@github.com:NVIDIA/AIQtoolkit.git
     git fetch --all
     ```
 
@@ -90,15 +90,15 @@ AIQ Toolkit is a Python library that doesn’t require a GPU to run the workflow
     ```
     **NOTE**: Running pre-commit for the first time will take longer than normal.
 
-7. Open the AIQ Toolkit Workspace in Visual Studio Code.
+7. Open the AIQ toolkit Workspace in Visual Studio Code.
     ```bash
     code ./aiq.code-workspace
     ```
 
-### Install the AIQ Toolkit Library
+### Install the AIQ toolkit Library
 
-1. Install the AIQ Toolkit Examples by doing the following.
-   - Install AIQ Toolkit examples.
+1. Install the AIQ toolkit Examples by doing the following.
+   - Install AIQ toolkit examples.
 
      ```bash
      uv sync --extra examples
@@ -110,7 +110,7 @@ AIQ Toolkit is a Python library that doesn’t require a GPU to run the workflow
      uv pip install -e ./examples/simple_calculator
      ```
 
-2. Verify that you've installed the AIQ Toolkit library.
+2. Verify that you've installed the AIQ toolkit library.
 
      ```bash
      aiq --help
@@ -124,18 +124,18 @@ AIQ Toolkit is a Python library that doesn’t require a GPU to run the workflow
 
 ### Your first issue
 
-1. Find an issue to work on. The best way is to search for issues with the [good first issue](https://github.com/NVIDIA/AIQToolkit/issues) label.
+1. Find an issue to work on. The best way is to search for issues with the [good first issue](https://github.com/NVIDIA/AIQtoolkit/issues) label.
 1. Make sure that you can contribute your work to open source (no license and/or patent conflict is introduced by your code). You will need to [`sign`](#signing-your-work) your commit.
 1. Comment on the issue stating that you are going to work on it.
-1. [Fork the AIQ Toolkit repository](https://github.com/NVIDIA/AIQToolkit/fork)
+1. [Fork the AIQ toolkit repository](https://github.com/NVIDIA/AIQtoolkit/fork)
 1. Code!
     - Make sure to update unit tests!
     - Ensure the [license headers are set properly](./licensing.md).
 1. Verify your changes by [running CI locally](./running-ci-locally.md) with the `./ci/scripts/run_ci_local.sh all` command.
-1. When done, [create your pull request](https://github.com/NVIDIA/AIQToolkit/compare). Select `develop` as the `Target branch` of your pull request.
+1. When done, [create your pull request](https://github.com/NVIDIA/AIQtoolkit/compare). Select `develop` as the `Target branch` of your pull request.
     - Ensure the body of the pull request references the issue you are working on in the form of `Closes #<issue number>`.
 1. Wait for other developers to review your code and update code as needed.
-1. Once reviewed and approved, an AIQ Toolkit developer will merge your pull request.
+1. Once reviewed and approved, an AIQ toolkit developer will merge your pull request.
 
 Remember, if you are unsure about anything, don't hesitate to comment on issues and ask for clarifications!
 
@@ -195,32 +195,32 @@ Remember, if you are unsure about anything, don't hesitate to comment on issues 
 
 ### Seasoned developers
 
-Once you have gotten your feet wet and are more comfortable with the code, you can review the prioritized issues for our next release in our [project boards](https://github.com/NVIDIA/AIQToolkit/projects).
+Once you have gotten your feet wet and are more comfortable with the code, you can review the prioritized issues for our next release in our [project boards](https://github.com/NVIDIA/AIQtoolkit/projects).
 
-> **Pro Tip:** Always review the release board with the highest number for issues to work on. This is where AIQ Toolkit developers also focus their efforts.
+> **Pro Tip:** Always review the release board with the highest number for issues to work on. This is where AIQ toolkit developers also focus their efforts.
 
 Review the unassigned issues and choose an issue that you are comfortable contributing. Ensure you comment on the issue before you begin to inform others that you are working on it. If you have questions about implementing the issue, comment your questions in the issue instead of the PR.
 
-## Developing with AIQ Toolkit
+## Developing with AIQ toolkit
 
 Refer to the [Get Started](../quick-start/installing.md) guide to quickly begin development.
 
 ## Documentation
 
-All Agent Intelligence Toolkit should be written in Markdown format. The documentation located under the `docs/source` directory is included in the documentation builds, refer to `docs/README.md` for information on how to build the documentation. In addition to this, each example should contain a `README.md` file that describes the example.
+All Agent Intelligence toolkit should be written in Markdown format. The documentation located under the `docs/source` directory is included in the documentation builds, refer to `docs/README.md` for information on how to build the documentation. In addition to this, each example should contain a `README.md` file that describes the example.
 
 ### Checks
 All documentation is checked using [Vale](https://vale.sh/). In documentation the name of a command, variable, class, or function should be surrounded by backticks. For example referring `aiq` should always be surrounded by backticks. Vale will not perform a check against anything surrounded by backticks or by a code block.
 
 The spelling of a project name should use the casing of the project, for example [PyPI](https://pypi.org/) should always be spelled as `PyPI` and not `pypi` or `PYPI`. If needed new words can be added to the `ci/vale/styles/config/vocabularies/aiq/accept.txt` and `ci/vale/styles/config/vocabularies/aiq/reject.txt` files.
 
-### Agent Intelligence Toolkit Name Guidelines
+### Agent Intelligence toolkit Name Guidelines
 
-* Full Name: `Agent Intelligence Toolkit`
+* Full Name: `Agent Intelligence toolkit`
   - Use for document titles, webpage headers, any public descriptions
-* Short Name: `AIQ Toolkit`
-  - Use after Agent Intelligence Toolkit has been referenced in blogs, docs, and other public locations
-* Uppercase No Space: `AIQToolkit`
+* Short Name: `AIQ toolkit`
+  - Use after Agent Intelligence toolkit has been referenced in blogs, docs, and other public locations
+* Uppercase No Space: `AIQtoolkit`
   - Use for situations where capitalization will be preserved like the GitHub URL, directories, etc.
   - Do not use dashes or underscores
 * Lowercase No Space: `aiqtoolkit`
