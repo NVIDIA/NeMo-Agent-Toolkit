@@ -234,7 +234,7 @@ aiq eval --config_file=examples/simple/configs/eval_config.yml --endpoint http:/
 ```
 
 ## Evaluation Endpoint
-You can also evaluate workflows via the AIQ Toolkit evaluation endpoint. The evaluation endpoint is a REST API that allows you to evaluate workflows using the same configuration file as the `aiq eval` command. The evaluation endpoint is available at `/evaluate` on the AIQ Toolkit server. For more information, refer to the [AIQ Toolkit Evaluation Endpoint](../reference/evaluate-api.md) documentation.
+You can also evaluate workflows using the AIQ Toolkit evaluation endpoint. The evaluation endpoint is a REST API that allows you to evaluate workflows using the same configuration file as the `aiq eval` command. The evaluation endpoint is available at `/evaluate` on the AIQ Toolkit server. For more information, refer to the [AIQ Toolkit Evaluation Endpoint](../reference/evaluate-api.md) documentation.
 
 
 ## Adding Custom Evaluators
