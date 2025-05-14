@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA Agent Intelligence toolkit Release Notes
+# NVIDIA Agent Intelligence Toolkit Release Notes
 
 ## Release 1.0.0
 ### Summary

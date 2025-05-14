@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA Agent Intelligence toolkit API Server Endpoints
+# NVIDIA Agent Intelligence Toolkit API Server Endpoints
 
 There are currently four workflow transactions that can be initiated using HTTP or WebSocket when the AIQ toolkit server is running: `generate non-streaming`,`generate streaming`, `chat non-streaming`, and `chat streaming`. The following are types of interfaces you can use to interact with your running workflows.
   - **Generate Interface:** Uses the transaction schema defined by your workflow. The interface documentation is accessible
@@ -272,6 +272,6 @@ You can also evaluate workflows via the AIQ toolkit `evaluate` endpoint. For mor
 ## Choosing between Streaming and Non-Streaming
 Use streaming if you need real-time updates or live communication where users expect immediate feedback. Use non-streaming if your workflow responds with simple updates and less feedback is needed.
 
-## AIQ toolkit API Server Interaction Guide
+## AIQ Toolkit API Server Interaction Guide
 A custom user interface can communicate with the API server using both HTTP requests and WebSocket connections.
 For details on proper WebSocket messaging integration, refer to the [WebSocket Messaging Interface](../reference/websockets.md) documentation.

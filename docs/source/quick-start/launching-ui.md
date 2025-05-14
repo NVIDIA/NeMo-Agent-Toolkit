@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Launching the NVIDIA Agent Intelligence toolkit API Server and User Interface
+# Launching the NVIDIA Agent Intelligence Toolkit API Server and User Interface
 NVIDIA Agent Intelligence (AIQ) toolkit provides a user interface for interacting with your running workflow.
 
 ## User Interface Features
@@ -36,7 +36,7 @@ git submodules by running the following:
 git submodule update --init --recursive
 ```
 
-### Start the AIQ toolkit Server
+### Start the AIQ Toolkit Server
 You can start the AIQ toolkit server using the `aiq serve` command with the appropriate configuration file.
 
 ```bash
@@ -65,7 +65,7 @@ INFO:     Application startup complete.
 INFO:     Uvicorn running on http://localhost:8000 (Press CTRL+C to quit)
 ```
 
-### Verify the AIQ toolkit Server is Running
+### Verify the AIQ Toolkit Server is Running
 After the server is running, you can make HTTP requests to interact with the workflow.
 
 ```bash
@@ -86,7 +86,7 @@ Running this command will produce the following expected output:
 }
 ```
 
-### Launch the AIQ toolkit User Interface
+### Launch the AIQ Toolkit User Interface
 After the AIQ toolkit server starts, launch the web user interface. Launching the UI requires that Node.js v18+ is installed. Instructions for downloading and installing Node.js can be found in the official [Node.js documentation](https://nodejs.org/en/download).
 
 ```bash
@@ -99,7 +99,7 @@ Port `3001` is an alternative port if port `3000` (default) is in use.
 
 ![AIQ toolkit Web User Interface](../_static/ui_home_page.png)
 
-### Connect the User Interface to the AIQ toolkit Server Using HTTP API
+### Connect the User Interface to the AIQ Toolkit Server Using HTTP API
 Configure the settings by selecting the `Settings` icon located on the bottom left corner of the home page.
 
 ![AIQ toolkit Web UI Settings](../_static/ui_generate_example_settings.png)

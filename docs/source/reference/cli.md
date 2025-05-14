@@ -551,7 +551,7 @@ Commands:
   search   Search for AIQ toolkit artifacts from remote registry.
   ```
 
-#### Publishing AIQ toolkit Components
+#### Publishing AIQ Toolkit Components
 
 AIQ toolkit developers may want to distribute their components with the broader ecosystem. The AIQ toolkit publish CLI utility
 provides a mechanism to publish an AIQ toolkit plugin package to a remote registry channel so that other developers can
@@ -576,7 +576,7 @@ Options:
 
 ```
 
-#### Discovering AIQ toolkit Components
+#### Discovering AIQ Toolkit Components
 
 When developing and deploying AIQ toolkit workflows, it is most efficient to leverage pre-built components. When using
 pre-built components will, only configuration settings are required to integration with the rest of a workflow. These
@@ -609,7 +609,7 @@ Options:
   --help                          Show this message and exit.
 ```
 
-#### Pulling in AIQ toolkit Components
+#### Pulling in AIQ Toolkit Components
 Once a useful AIQ toolkit component has been discovered using the `aiq registry search` command, the containing package can be
 pulled in and installed from a configured remote registry, so that it can be used withing the local AIQ toolkit environment.
 Once installed, all components in the package can be referenced by name in an AIQ toolkit workflow YAML configuration file.
@@ -633,7 +633,7 @@ Options:
 Note, the supplied package takes the following format: `package_name==version`, where the package version is optional.
 
 
-#### Removing AIQ toolkit Components
+#### Removing AIQ Toolkit Components
 In rare cases, it might make sense to remove a package from a remote registry over a configured remote registry channel.
 This the `aiq registry remove` command provides support for this feature, assuming the remote registry provides and
 allows this interaction.

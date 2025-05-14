@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# About NVIDIA Agent Intelligence toolkit Workflows
+# About NVIDIA Agent Intelligence Toolkit Workflows
 
 Workflows are the heart of AIQ toolkit because they define which agentic tools and models are used to perform a given task or series of tasks.
 

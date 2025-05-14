@@ -17,7 +17,7 @@ limitations under the License.
 
 ![NVIDIA Agent Intelligence toolkit](https://media.githubusercontent.com/media/NVIDIA/AIQtoolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
 
-# NVIDIA Agent Intelligence toolkit Subpackage
+# NVIDIA Agent Intelligence Toolkit Subpackage
 
 <!-- Note: "Agno" is the official product name despite Vale spelling checker warnings -->
 This is a subpackage for `Agno` integration in AIQ toolkit.

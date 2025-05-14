@@ -138,7 +138,7 @@ Workflow Result:
 ```
 ---
 
-### Starting the AIQ toolkit Server
+### Starting the AIQ Toolkit Server
 
 You can start the AIQ toolkit server using the `aiq serve` command with the appropriate configuration file.
 
@@ -148,7 +148,7 @@ You can start the AIQ toolkit server using the `aiq serve` command with the appr
 aiq serve --config_file=examples/agents/mixture_of_agents/configs/config.yml
 ```
 
-### Making Requests to the AIQ toolkit Server
+### Making Requests to the AIQ Toolkit Server
 
 Once the server is running, you can make HTTP requests to interact with the workflow.
 

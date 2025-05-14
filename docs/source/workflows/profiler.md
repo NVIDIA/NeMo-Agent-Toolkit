@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 
-# Profiling and Performance Monitoring of NVIDIA Agent Intelligence toolkit Workflows
+# Profiling and Performance Monitoring of NVIDIA Agent Intelligence Toolkit Workflows
 
 The AIQ toolkit Profiler Module provides profiling and forecasting capabilities for AIQ toolkit workflows. The profiler instruments the workflow execution by:
 - Collecting usage statistics in real time (via callbacks).

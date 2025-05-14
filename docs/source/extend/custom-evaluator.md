@@ -30,7 +30,7 @@ aiq info components -t evaluator
 ```
 `ragas` is an example of an existing evaluator. The `ragas` evaluator is used to evaluate the accuracy of a workflow output.
 
-## Extending AIQ toolkit with Custom Evaluators
+## Extending AIQ Toolkit with Custom Evaluators
 To extend AIQ toolkit with custom evaluators, you need to create an evaluator function and register it with AIQ toolkit.
 
 This section provides a step-by-step guide to create and register a custom evaluator with AIQ toolkit. A similarity evaluator is used as an example to demonstrate the process.

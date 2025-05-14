@@ -95,7 +95,7 @@ AIQ toolkit is a Python library that doesn’t require a GPU to run the workflow
     code ./aiq.code-workspace
     ```
 
-### Install the AIQ toolkit Library
+### Install the AIQ Toolkit Library
 
 1. Install the AIQ toolkit Examples by doing the following.
    - Install AIQ toolkit examples.
@@ -214,7 +214,7 @@ All documentation is checked using [Vale](https://vale.sh/). In documentation th
 
 The spelling of a project name should use the casing of the project, for example [PyPI](https://pypi.org/) should always be spelled as `PyPI` and not `pypi` or `PYPI`. If needed new words can be added to the `ci/vale/styles/config/vocabularies/aiq/accept.txt` and `ci/vale/styles/config/vocabularies/aiq/reject.txt` files.
 
-### NVIDIA Agent Intelligence toolkit Name Guidelines
+### NVIDIA Agent Intelligence Toolkit Name Guidelines
 
 * Full Name: `NVIDIA Agent Intelligence toolkit`
   - Use for document titles, webpage headers, any public descriptions

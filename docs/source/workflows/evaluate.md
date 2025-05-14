@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Evaluating NVIDIA Agent Intelligence toolkit Workflows
+# Evaluating NVIDIA Agent Intelligence Toolkit Workflows
 AIQ toolkit provides a set of evaluators to run and evaluate the AIQ toolkit workflows. In addition to the built-in evaluators, AIQ toolkit provides a plugin system to add custom evaluators.
 
 ## Evaluating a Workflow
@@ -251,5 +251,5 @@ aiq eval --config_file examples/simple/configs/eval_config.yml \
 ## Additional Evaluation Options
 For details on other evaluators and evaluation options, refer to [AIQ toolkit Evaluation Concepts](../reference/evaluate.md) for more information.
 
-##  Profiling and Performance Monitoring of AIQ toolkit Workflows
+##  Profiling and Performance Monitoring of AIQ Toolkit Workflows
 You can profile workflows via the AIQ toolkit evaluation system. For more information, refer to the [Profiler](profiler.md) documentation.

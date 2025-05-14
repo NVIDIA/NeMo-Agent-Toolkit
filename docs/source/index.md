@@ -25,7 +25,7 @@ limitations under the License.
 
 ![NVIDIA Agent Intelligence toolkit](./_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
 
-# NVIDIA Agent Intelligence toolkit Overview
+# NVIDIA Agent Intelligence Toolkit Overview
 
 NVIDIA Agent Intelligence (AIQ) toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
 
@@ -52,7 +52,7 @@ Agent Intelligence toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 
 - [**Full MCP Support:**](./workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use AIQ toolkit as an [MCP client](./workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use AIQ toolkit as an [MCP server](./workflows/mcp/mcp-server.md) to publish tools via MCP.
 
-## What AIQ toolkit Is
+## What AIQ Toolkit Is
 
 - A **lightweight, unifying library** that makes every agent, tool, and workflow you already have work together, just as simple function calls work together in complex software applications.
 - An **end-to-end agentic profiler**, allowing you to track input/output tokens and timings at a granular level for every tool and agent, regardless of the amount of nesting.
@@ -61,7 +61,7 @@ Agent Intelligence toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 - **100% opt in.** While we encourage users to wrap (decorate) every tool and agent to get the most out of the profiler, you have the freedom to integrate to whatever level you want - tool level, agent level, or entire workflow level. You have the freedom to start small and where you believe you’ll see the most value and expand from there.
 
 
-## What AIQ toolkit Is Not
+## What AIQ Toolkit Is Not
 
 - **An agentic framework.** AIQ toolkit is designed to work alongside, not replace, your existing agentic frameworks — whether they are enterprise-grade systems or simple Python-based agents.
 - **An attempt to solve agent-to-agent communication.** Agent communication is best handled over existing protocols, such as HTTP, gRPC, and sockets.

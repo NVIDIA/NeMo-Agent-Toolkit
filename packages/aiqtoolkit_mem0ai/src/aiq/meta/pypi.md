@@ -17,7 +17,7 @@ limitations under the License.
 
 ![NVIDIA Agent Intelligence toolkit](https://media.githubusercontent.com/media/NVIDIA/AIQtoolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
 
-# NVIDIA Agent Intelligence toolkit Subpackage
+# NVIDIA Agent Intelligence Toolkit Subpackage
 This is a subpackage for Mem0 memory integration in AIQ toolkit.
 
 For more information about AIQ toolkit, please visit the [AIQ toolkit package](https://pypi.org/project/aiqtoolkit/).

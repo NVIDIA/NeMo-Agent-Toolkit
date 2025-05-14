@@ -208,10 +208,10 @@ The evaluation results will be saved in `examples/simple_calculator/.tmp/eval/si
 
 
 ## MCP (Model Context Protocol)
-### AIQ toolkit as an MCP Client
+### AIQ Toolkit as an MCP Client
 You can run the simple calculator workflow using Remote MCP tools. In this case, the workflow acts as a MCP client and connects to the MCP server running on the specified URL. Details are provided in the [MCP Client Guide](../../docs/source/workflows/mcp/mcp-client.md).
 
-### AIQ toolkit as an MCP Server
+### AIQ Toolkit as an MCP Server
 You can publish the simple calculator tools via MCP using the `aiq mcp` command. Details are provided in the [MCP Server Guide](../../docs/source/workflows/mcp/mcp-server.md).
 
 ## Deployment-Oriented Setup

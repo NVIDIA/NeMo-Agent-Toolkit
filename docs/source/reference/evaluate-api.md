@@ -31,7 +31,7 @@ graph TD
   B --> E["GET /evaluate/jobs"]
 ```
 
-## Start AIQ toolkit API Server
+## Start AIQ Toolkit API Server
 See AIQ toolkit [UI and Server](./../quick-start/launching-ui.md) guide for instructions on starting the AIQ toolkit server.
 Sample Usage:
 ```bash

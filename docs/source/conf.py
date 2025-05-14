@@ -56,7 +56,7 @@ with open(os.path.join(API_TREE, "aiq", "__init__.py"), "w") as f:
 
 # -- Project information -----------------------------------------------------
 
-project = 'NVIDIA Agent Intelligence toolkit'
+project = 'NVIDIA Agent Intelligence Toolkit'
 copyright = '2025, NVIDIA'
 author = 'NVIDIA Corporation'
 
@@ -234,14 +234,14 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (root_doc, 'aiq.tex', 'Agent Intelligence toolkit Documentation', 'NVIDIA', 'manual'),
+    (root_doc, 'aiq.tex', 'Agent Intelligence Toolkit Documentation', 'NVIDIA', 'manual'),
 ]
 
 # -- Options for manual page output ------------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(root_doc, 'aiq', 'Agent Intelligence toolkit Documentation', [author], 1)]
+man_pages = [(root_doc, 'aiq', 'Agent Intelligence Toolkit Documentation', [author], 1)]
 
 # -- Options for Texinfo output ----------------------------------------------
 
@@ -251,7 +251,7 @@ man_pages = [(root_doc, 'aiq', 'Agent Intelligence toolkit Documentation', [auth
 texinfo_documents = [
     (root_doc,
      'aiq',
-     'Agent Intelligence toolkit Documentation',
+     'Agent Intelligence Toolkit Documentation',
      author,
      'aiq',
      'One line description of project.',

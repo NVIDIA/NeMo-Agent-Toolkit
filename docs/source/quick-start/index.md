@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA Agent Intelligence toolkit Quick Start Guide
+# NVIDIA Agent Intelligence Toolkit Quick Start Guide
 
 ```{toctree}
 :hidden:

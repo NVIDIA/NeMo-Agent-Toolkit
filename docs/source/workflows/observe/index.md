@@ -82,7 +82,7 @@ general:
 ```
 
 
-### AIQ toolkit Observability Components
+### AIQ Toolkit Observability Components
 
 The Observability components `AsyncOtelSpanListener`, leverage the Subject-Observer pattern to subscribe to the `IntermediateStep` event stream pushed by `IntermediateStepManager`. Acting as an asynchronous event listener, `AsyncOtelSpanListener` listens for AIQ toolkit intermediate step events, collects and efficiently translates them into OpenTelemetry spans, enabling seamless tracing and monitoring.
 

@@ -79,7 +79,7 @@ docker run -it --rm \
     nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest
 ```
 
-### AIQ toolkit Configuration
+### AIQ Toolkit Configuration
 To define the pipeline configuration, we will start with the `examples/simple/configs/config.yml` file and modify it to use the locally hosted LLMs, the only changes needed are to define the `base_url` for the LLM and embedding models, along with the names of the models to use.
 
 `examples/documentation_guides/locally_hosted_llms/nim_config.yml`:
@@ -115,7 +115,7 @@ workflow:
   max_retries: 3
 ```
 
-### Running the AIQ toolkit Workflow
+### Running the AIQ Toolkit Workflow
 To run the AIQ toolkit workflow using the locally hosted LLMs, run the following command:
 ```bash
 aiq run --config_file examples/documentation_guides/locally_hosted_llms/nim_config.yml --input "What is LangSmith?"
@@ -142,7 +142,7 @@ vllm serve --task embed --override-pooler-config '{"pooling_type": "MEAN"}' --po
 > Note: The `--override-pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/latest/models/supported_models.html#text-embedding) documentation.
 
 
-### AIQ toolkit Configuration
+### AIQ Toolkit Configuration
 The pipeline configuration will be similar to the NIM example, with the key differences being the selection of `openai` as the `_type` for the LLM and embedding models. The OpenAI clients we are using to communicate with the vLLM server expect an API key, we simply need to provide a value key, as the vLLM server does not require authentication.
 `examples/documentation_guides/locally_hosted_llms/vllm_config.yml`:
 ```yaml
@@ -180,7 +180,7 @@ workflow:
   max_retries: 3
 ```
 
-### Running the AIQ toolkit Workflow
+### Running the AIQ Toolkit Workflow
 To run the AIQ toolkit workflow using the locally hosted LLMs, run the following command:
 ```bash
 aiq run --config_file examples/documentation_guides/locally_hosted_llms/vllm_config.yml --input "What is LangSmith?"

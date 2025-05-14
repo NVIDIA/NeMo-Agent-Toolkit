@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Evaluating NVIDIA Agent Intelligence toolkit Workflows Details
+# Evaluating NVIDIA Agent Intelligence Toolkit Workflows Details
 
 :::{note}
 It is recommended that the [Evaluating AIQ toolkit Workflows](../workflows/evaluate.md) guide be read before proceeding with this detailed documentation.
@@ -131,7 +131,7 @@ eval:
               - sympy__sympy-21055
 ```
 
-## AIQ toolkit Built-in Evaluators
+## AIQ Toolkit Built-in Evaluators
 AIQ toolkit provides the following built-in evaluator:
 - `ragas` - An evaluator to run and evaluate RAG-like workflows using the public RAGAS API.
 - `trajectory` - An evaluator to run and evaluate the LangChain agent trajectory.
@@ -448,5 +448,5 @@ eval:
 ```
 Output directory cleanup is disabled by default for easy troubleshooting.
 
-## Profiling and Performance Monitoring of AIQ toolkit Workflows
+## Profiling and Performance Monitoring of AIQ Toolkit Workflows
 You can profile workflows using the AIQ toolkit evaluation system. For more information, see the [Profiler](../workflows/profiler.md) documentation.
