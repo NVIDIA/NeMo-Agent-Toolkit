@@ -22,7 +22,7 @@ This example provides a skeleton workflow which can be used to implement predict
 SWE bench evaluations run inside a Docker container. Ensure that Docker is installed and the Docker service is running before proceeding.
 
 ## Installation & Running Docker
-- Install AIQ Toolkit: If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md)
+- Install AIQ Toolkit: If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source)
 - Install Docker: Follow the official installation guide for your platform: [Docker Installation Guide](https://docs.docker.com/engine/install/)
 - Start Docker Service:
   - Linux: Run`sudo systemctl start docker` (ensure your user has permission to run Docker).

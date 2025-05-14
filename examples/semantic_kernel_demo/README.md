@@ -21,7 +21,7 @@ A minimal example using Semantic Kernel showcasing a multi-agent travel planning
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AIQ Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ Toolkit.
 
 ### Install this Workflow:
 

@@ -18,7 +18,7 @@
 # Building Documentation
 
 ## Prerequisites
-If you don't already have a uv environment setup, refer to the [Get Started](./source/intro/get-started.md) guide.
+If you don't already have a uv environment setup, refer to the [Get Started](./source/quick-start/installing.md) guide.
 
 ## Install Documentation Dependencies
 ```bash
@@ -36,6 +36,6 @@ firefox build/html/index.html
 Outputs to `build/docs/html`
 
 ## Contributing
-Refer to the [Contributing to AIQ Toolkit](./source/advanced/contributing.md) guide.
+Refer to the [Contributing to AIQ Toolkit](./source/resources/contributing.md) guide.
 
 When you create your pull request, CI will perform a documentation build as part of the pipeline. If successful, the documentation will be available for download as an artifact.

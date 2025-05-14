@@ -75,7 +75,7 @@ workflow:
 
 eval:
   general:
-    output_dir: examples/simple_calculator/.tmp/eval/simple_calculator
+    output_dir: .tmp/aiq/examples/simple_calculator
     dataset:
       _type: json
       file_path: examples/simple_calculator/data/simple_calculator.json
