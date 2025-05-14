@@ -17,7 +17,7 @@ limitations under the License.
 
 # Installing NVIDIA Agent Intelligence toolkit
 
-This guide will help you set up your development environment, run existing workflows, and create your own custom workflows using the `aiq` command-line interface.
+This guide will help you set up your NVIDIA Agent Intelligence (AIQ) toolkit development environment, run existing workflows, and create your own custom workflows using the `aiq` command-line interface.
 
 ## Supported LLM APIs:
 - NIM (such as Llama-3.1-70b-instruct and Llama-3.3-70b-instruct)

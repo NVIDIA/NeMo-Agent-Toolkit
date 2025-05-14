@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Launching the NVIDIA Agent Intelligence toolkit API Server and User Interface
-AIQ toolkit provides a user interface for interacting with your running workflow.
+NVIDIA Agent Intelligence (AIQ) toolkit provides a user interface for interacting with your running workflow.
 
 ## User Interface Features
 - Chat history
