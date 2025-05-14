@@ -30,6 +30,6 @@ This is the first general release of AIQ toolkit.
 - LlamaIndex
 
 ## Known Issues
-- Faiss is currently broken on Arm64. This is a known issue [#72](https://github.com/NVIDIA/AIQtoolkit/issues/72) caused by an upstream bug in the Faiss library [https://github.com/facebookresearch/faiss/issues/3936](https://github.com/facebookresearch/faiss/issues/3936).
+- Faiss is currently broken on Arm64. This is a known issue [#72](https://github.com/NVIDIA/AIQToolkit/issues/72) caused by an upstream bug in the Faiss library [https://github.com/facebookresearch/faiss/issues/3936](https://github.com/facebookresearch/faiss/issues/3936).
 - AIQ toolkit applications must use the same name for both the distribution and root package. This is a current implementation limitation and will be addressed in a future release.
-- Refer to [https://github.com/NVIDIA/AIQtoolkit/issues](https://github.com/NVIDIA/AIQtoolkit/issues) for an up to date list of current issues.
+- Refer to [https://github.com/NVIDIA/AIQToolkit/issues](https://github.com/NVIDIA/AIQToolkit/issues) for an up to date list of current issues.
