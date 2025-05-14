@@ -31,13 +31,30 @@ fi
 
 export CUR_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-# The root to the AIQ Toolkit repo
+# The root to the AIQ toolkit repo
 export PROJECT_ROOT=${PROJECT_ROOT:-"$(realpath ${CUR_DIR}/../..)"}
 
 NEXT_MAJOR=$(echo ${NEXT_VERSION} | awk '{split($0, a, "."); print a[1]}')
 NEXT_MINOR=$(echo ${NEXT_VERSION} | awk '{split($0, a, "."); print a[2]}')
 NEXT_PATCH=$(echo ${NEXT_VERSION} | awk '{split($0, a, "."); print a[3]}')
 NEXT_SHORT_TAG=${NEXT_MAJOR}.${NEXT_MINOR}
+
+# Inplace sed replace; workaround for Linux and Mac. Accepts multiple files
+function sed_runner() {
+
+   pattern=$1
+   shift
+
+   for f in $@ ; do
+      sed -i.bak ''"$pattern"'' "$f" && rm -f "$f.bak"
+   done
+}
+
+# Update the pypi description file
+# Currently only the pypi.md file for the aiqtoolkit package contains links to documentation
+# Replace this with a `find ./ -name "pypi.md"` if this is needed for the other pypi.md files
+sed_runner "s|https:\/\/docs.nvidia.com\/aiqtoolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/aiqtoolkit\/${NEXT_VERSION}|g" src/aiq/meta/pypi.md
+
 
 if [[ "${USE_FULL_VERSION}" == "1" ]]; then
    AIQ_VERSION=${NEXT_VERSION}

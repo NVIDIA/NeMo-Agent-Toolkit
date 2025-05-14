@@ -18,4 +18,4 @@ limitations under the License.
 # Transitional Package for `aiqtoolkit-crewai`
 This is a transitional package for `aiqtoolkit-crewai` to help ease the migration to `aiqtoolkit-crewai`, and will be removed in a future release. It is recommended to use `aiqtoolkit-crewai` directly for new projects.
 
-For more information about AIQ Toolkit, please visit the [AIQ Toolkit package](https://pypi.org/project/aiqtoolkit-crewai/).
+For more information about AIQ toolkit, please visit the [AIQ toolkit package](https://pypi.org/project/aiqtoolkit-crewai/).
