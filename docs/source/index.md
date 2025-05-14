@@ -23,7 +23,7 @@ limitations under the License.
    :class: highlight
 ```
 
-![NVIDIA Agent Intelligence toolkit](./_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
+![NVIDIA Agent Intelligence Toolkit](./_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
 
 # NVIDIA Agent Intelligence Toolkit Overview
 

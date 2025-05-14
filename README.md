@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA Agent Intelligence toolkit](./docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
+![NVIDIA Agent Intelligence Toolkit](./docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
 
 # NVIDIA Agent Intelligence Toolkit
 
