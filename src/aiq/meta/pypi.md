@@ -23,23 +23,22 @@ AIQ Toolkit is a flexible library designed to seamlessly integrate your enterpri
 
 ## Key Features
 
-- [**Framework Agnostic:**](https://docs.nvidia.com/aiqtoolkit/latest/concepts/plugins.html) Works with any agentic framework, so you can use your current technology stack without replatforming.
-- [**Reusability:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/sharing-workflows-and-tools.html) Every agent, tool, or workflow can be combined and repurposed, allowing developers to leverage existing work in new scenarios.
-- [**Rapid Development:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/create-customize-workflows.html) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
-- [**Profiling:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/profiler.html) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
-- [**Observability:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/observe-workflow-with-phoenix.html) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool. (OpenTelemetry and Phoenix integration are optional and can be installed separately if needed.)
-- [**Evaluation System:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/evaluate.html) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
-- [**User Interface:**](https://docs.nvidia.com/aiqtoolkit/latest/guides/using-aiqtoolkit-ui-and-server.html) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
-- [**MCP Compatibility**](https://docs.nvidia.com/aiqtoolkit/latest/components/mcp.html) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
+- [**Framework Agnostic:**](https://docs.nvidia.com/aiqtoolkit/1.1.0/extend/plugins.html) Works with any agentic framework, so you can use your current technology stack without replatforming.
+- [**Reusability:**](https://docs.nvidia.com/aiqtoolkit/1.1.0/extend/sharing-components.html) Every agent, tool, or workflow can be combined and repurposed, allowing developers to leverage existing work in new scenarios.
+- [**Rapid Development:**](https://docs.nvidia.com/aiqtoolkit/1.1.0/tutorials/index.html) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
+- [**Profiling:**](https://docs.nvidia.com/aiqtoolkit/1.1.0/workflows/profiler.html) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
+- [**Observability:**](https://docs.nvidia.com/aiqtoolkit/1.1.0/workflows/observe/observe-workflow-with-phoenix.html) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool, with examples using [Phoenix](https://docs.nvidia.com/aiqtoolkit/1.1.0/workflows/observe/observe-workflow-with-phoenix.html) and [W&B Weave](https://docs.nvidia.com/aiqtoolkit/1.1.0/workflows/observe/observe-workflow-with-weave.html).
+- [**Evaluation System:**](https://docs.nvidia.com/aiqtoolkit/1.1.0/workflows/evaluate.html) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
+- [**User Interface:**](https://docs.nvidia.com/aiqtoolkit/1.1.0/quick-start/launching-ui.html) Use the AIQ Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
+- [**MCP Compatibility**](https://docs.nvidia.com/aiqtoolkit/1.1.0/workflows/mcp/mcp-client.html) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AIQ Toolkit functions.
 
 With AIQ Toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 
 ## Links
- * [Documentation](https://docs.nvidia.com/aiqtoolkit/latest/index.html): Explore the full documentation for AIQ Toolkit.
- * [About AIQ Toolkit](https://docs.nvidia.com/aiqtoolkit/latest/intro/why-aiqtoolkit.html): Learn more about the benefits of using AIQ Toolkit.
+ * [Documentation](https://docs.nvidia.com/aiqtoolkit/1.1.0/index.html): Explore the full documentation for AIQ Toolkit.
 
 ## First time user?
- If this is your first time using AIQ Toolkit, it is recommended to install the latest version from the [source repository](https://github.com/NVIDIA/AIQToolkit?tab=readme-ov-file#get-started) on GitHub. This package is intended for users who are familiar with AIQ Toolkit applications and need to add AIQ Toolkit as a dependency to their project.
+ If this is your first time using AIQ Toolkit, it is recommended to install the latest version from the [source repository](https://github.com/NVIDIA/AIQToolkit?tab=readme-ov-file#quick-start) on GitHub. This package is intended for users who are familiar with AIQ Toolkit applications and need to add AIQ Toolkit as a dependency to their project.
 
 ## Feedback
 
