@@ -38,7 +38,7 @@ paper.
 ## Requirements
 The ReAct Agent requires the `aiqtoolkit[langchain]` plugin to be installed.
 
-Users who have performed a source code checkout can install this with the following command:
+If you have performed a source code checkout, you can install this with the following command:
 
 ```bash
 uv pip install -e '.[langchain]'
@@ -78,9 +78,9 @@ functions:
 ```
 
 ### Configurable Options:
-* `tool_names`: A list of tools that the agent can call. The tools must be functions configured in the YAML file
+* `tool_names`: A list of tools that the agent can call. The tools must be functions configured in the YAML file.
 
-* `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
+* `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file.
 
 * `verbose`: Defaults to `False` (useful to prevent logging of sensitive data).  If set to `True`, the Agent will log input, output, and intermediate steps.
 
@@ -93,7 +93,7 @@ functions:
 * `description`:  Defaults to `"React Agent Workflow"`.  When the ReAct Agent is configured as a function, this config option allows us to control the tool description (for example, when used as a tool within another agent).
 
 * `system_prompt`:  Optional.  Allows us to override the system prompt for the ReAct Agent.
-If modifying the prompt, please see the limitations section below. The prompt must have variables for tools, and must instruct the LLM to output in the ReAct output format.
+If modifying the prompt, see the limitations section below. The prompt must have variables for tools, and must instruct the LLM to output in the ReAct output format.
 
 * `max_history`:  Defaults to `15`. Maximum number of messages to keep in the conversation history.
 
@@ -167,7 +167,7 @@ Use the following format exactly to ask the human to use a tool:
 Question: the input question you must answer
 Thought: you should always think about what to do
 Action: the action to take, should be one of [{tool_names}]
-Action Input: the input to the action (if there is no required input, include "Action Input: None")
+Action Input: The input to the action (if there is no required input, include "Action Input: None")
 Observation: wait for the human to respond with the result from the tool, do not assume the response
 
 ... (this Thought/Action/Action Input/Observation can repeat N times. If you do not need to use a tool, or after asking the human to use any tools and waiting for the human to respond, you might know the final answer.)
