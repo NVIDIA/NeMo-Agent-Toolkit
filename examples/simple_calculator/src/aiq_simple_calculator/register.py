@@ -36,7 +36,7 @@ class InequalityToolConfig(FunctionBaseConfig, name="calculator_inequality"):
 
 
 @register_function(config_type=InequalityToolConfig)
-async def calculator_inequality(tool_config: InequalityToolConfig, builder: Builder):  # pylint: disable=unused-argument
+async def calculator_inequality(tool_config: InequalityToolConfig, builder: Builder):
 
     import re
 
@@ -54,7 +54,7 @@ async def calculator_inequality(tool_config: InequalityToolConfig, builder: Buil
 
         return f"First number {a} is equal to the second number {b}"
 
-    # Create a Generic AIQ toolkit tool that can be used with any supported LLM framework
+    # Create a Generic AIQ Toolkit tool that can be used with any supported LLM framework
     yield FunctionInfo.from_fn(
         _calculator_inequality,
         description=("This is a mathematical tool used to perform an inequality comparison between two numbers. "
@@ -66,7 +66,7 @@ class MultiplyToolConfig(FunctionBaseConfig, name="calculator_multiply"):
 
 
 @register_function(config_type=MultiplyToolConfig)
-async def calculator_multiply(config: MultiplyToolConfig, builder: Builder):  # pylint: disable=unused-argument
+async def calculator_multiply(config: MultiplyToolConfig, builder: Builder):
 
     import re
 
@@ -80,7 +80,7 @@ async def calculator_multiply(config: MultiplyToolConfig, builder: Builder):  # 
 
         return f"The product of {a} * {b} is {a * b}"
 
-    # Create a Generic AIQ toolkit tool that can be used with any supported LLM framework
+    # Create a Generic AIQ Toolkit tool that can be used with any supported LLM framework
     yield FunctionInfo.from_fn(
         _calculator_multiply,
         description=("This is a mathematical tool used to multiply two numbers together. "
@@ -92,7 +92,7 @@ class DivisionToolConfig(FunctionBaseConfig, name="calculator_divide"):
 
 
 @register_function(config_type=DivisionToolConfig)
-async def calculator_divide(config: DivisionToolConfig, builder: Builder):  # pylint: disable=unused-argument
+async def calculator_divide(config: DivisionToolConfig, builder: Builder):
 
     import re
 
@@ -106,7 +106,7 @@ async def calculator_divide(config: DivisionToolConfig, builder: Builder):  # py
 
         return f"The result of {a} / {b} is {a / b}"
 
-    # Create a Generic AIQ toolkit tool that can be used with any supported LLM framework
+    # Create a Generic AIQ Toolkit tool that can be used with any supported LLM framework
     yield FunctionInfo.from_fn(
         _calculator_divide,
         description=("This is a mathematical tool used to divide one number by another. "
@@ -118,7 +118,7 @@ class SubtractToolConfig(FunctionBaseConfig, name="calculator_subtract"):
 
 
 @register_function(config_type=SubtractToolConfig)
-async def calculator_subtract(config: SubtractToolConfig, builder: Builder):  # pylint: disable=unused-argument
+async def calculator_subtract(config: SubtractToolConfig, builder: Builder):
 
     import re
 
@@ -132,7 +132,7 @@ async def calculator_subtract(config: SubtractToolConfig, builder: Builder):  # 
 
         return f"The result of {a} - {b} is {a - b}"
 
-    # Create a Generic AIQ toolkit tool that can be used with any supported LLM framework
+    # Create a Generic AIQ Toolkit tool that can be used with any supported LLM framework
     yield FunctionInfo.from_fn(
         _calculator_subtract,
         description=("This is a mathematical tool used to subtract one number from another. "

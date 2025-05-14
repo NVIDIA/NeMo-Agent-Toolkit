@@ -27,7 +27,7 @@ class PulledPackage(BaseModel):
     """Represents a data model of a pulled package containing the package wheel and its name.
 
     Args:
-        whl (str): Base64 encoded string of the AIQ toolkit python package wheel (.whl).
+        whl (str): Base64 encoded string of the AIQ Toolkit python package wheel (.whl).
         whl_name (str): A string representing the wheel filename.
     """
 
@@ -37,7 +37,7 @@ class PulledPackage(BaseModel):
 
 class PullResponse(BaseModel):
     """
-    Represents a data model of the expected respones from a AIQ toolkit pull request, including detailed status
+    Represents a data model of the expected respones from a AIQ Toolkit pull request, including detailed status
     information.
 
     Args:
@@ -72,11 +72,11 @@ class PullRequestPackage(BaseModel):
 
 
 class PullRequestPackages(BaseModel):
-    """Represents a list of all packages th download and install in the local AIQ toolkit environment.
+    """Represents a list of all packages th download and install in the local AIQ Toolkit environment.
 
     Args:
         packages (list[typing.Union[PackageNameVersion, PullPackageWhl]]): A list of packages that can be
-            downloaded and installed in the local AIQ toolkit environment.
+            downloaded and installed in the local AIQ Toolkit environment.
     """
 
     packages: list[PackageNameVersion | PullPackageWhl]

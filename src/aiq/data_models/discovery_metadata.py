@@ -55,11 +55,11 @@ class DiscoveryMetadata(BaseModel):
     """A data model representing metadata about each registered component to faciliate its discovery.
 
     Args:
-        package (str): The name of the package containing the AIQ toolkit component.
-        version (str): The version number of the package containing the AIQ toolkit component.
-        component_type (AIQComponentEnum): The type of AIQ toolkit component this metadata represents.
-        component_name (str): The registered name of the AIQ toolkit component.
-        description (str): Description of the AIQ toolkit component pulled from its config objects docstrings.
+        package (str): The name of the package containing the AIQ Toolkit component.
+        version (str): The version number of the package containing the AIQ Toolkit component.
+        component_type (AIQComponentEnum): The type of AIQ Toolkit component this metadata represents.
+        component_name (str): The registered name of the AIQ Toolkit component.
+        description (str): Description of the AIQ Toolkit component pulled from its config objects docstrings.
         developer_notes (str): Other notes to a developers to aid in the use of the component.
         status (DiscoveryStatusEnum): Provides the status of the metadata discovery process.
     """
@@ -129,7 +129,7 @@ class DiscoveryMetadata(BaseModel):
     @staticmethod
     def from_config_type(config_type: type["TypedBaseModelT"],
                          component_type: AIQComponentEnum = AIQComponentEnum.UNDEFINED) -> "DiscoveryMetadata":
-        """Generates discovery metadata from an AIQ toolkit config object.
+        """Generates discovery metadata from an AIQ Toolkit config object.
 
         Args:
             config_type (type[TypedBaseModelT]): A registered component's configuration object.
@@ -212,7 +212,7 @@ class DiscoveryMetadata(BaseModel):
         """Generates discovery metadata from an installed package name.
 
         Args:
-            package_name (str): The name of the AIQ toolkit plugin package containing registered components.
+            package_name (str): The name of the AIQ Toolkit plugin package containing registered components.
             package_version (str, optional): The version of the package, Defaults to None.
 
         Returns:

@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-AIQ toolkit Memory Module
+AIQ Toolkit Memory Module
 
 This package provides foundational classes and interfaces
-for managing text-based memory in AIQ toolkit's LLM-based agents.
+for managing text-based memory in AIQ Toolkit's LLM-based agents.
 """

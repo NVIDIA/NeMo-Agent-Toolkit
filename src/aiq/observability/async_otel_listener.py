@@ -65,7 +65,7 @@ except TelemetryOptionalImportError:
 
 def _ns_timestamp(seconds_float: float) -> int:
     """
-    Convert AIQ toolkit's float `event_timestamp` (in seconds) into an integer number
+    Convert AIQ Toolkit's float `event_timestamp` (in seconds) into an integer number
     of nanoseconds, as OpenTelemetry expects.
     """
     return int(seconds_float * 1e9)
@@ -73,14 +73,14 @@ def _ns_timestamp(seconds_float: float) -> int:
 
 class AsyncOtelSpanListener:
     """
-    A separate, async class that listens to the AIQ toolkit intermediate step
+    A separate, async class that listens to the AIQ Toolkit intermediate step
     event stream and creates proper Otel spans:
 
     - On FUNCTION_START => open a new top-level span
     - On any other intermediate step => open a child subspan (immediate open/close)
     - On FUNCTION_END => close the function's top-level span
 
-    This runs fully independently from the normal AIQ toolkit workflow, so that
+    This runs fully independently from the normal AIQ Toolkit workflow, so that
     the workflow is not blocking or entangled by OTel calls.
     """
 
@@ -148,11 +148,11 @@ class AsyncOtelSpanListener:
 
             otel_listener = AsyncOtelSpanListener()
             async with otel_listener.start():
-                # run your AIQ toolkit workflow
+                # run your AIQ Toolkit workflow
                 ...
             # cleans up
 
-        This sets up the subscription to the AIQ toolkit event stream and starts the background loop.
+        This sets up the subscription to the AIQ Toolkit event stream and starts the background loop.
         """
         try:
             # Subscribe to the event stream

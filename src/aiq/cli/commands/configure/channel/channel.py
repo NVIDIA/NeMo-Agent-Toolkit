@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(name=__name__,
              invoke_without_command=False,
-             help="Utility to configure AIQ toolkit remote registry channels.")
+             help="Utility to configure AIQ Toolkit remote registry channels.")
 def channel(**kwargs):
     pass
 
