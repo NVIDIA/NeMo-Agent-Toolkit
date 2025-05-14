@@ -205,8 +205,8 @@ class AIQContext:
         """
         Retrieves the active span ID from the context state.
 
-        This property provides access to the active span ID stored in the
-        context state. The active span ID is the span ID that is currently active in the context.
+        This property provides access to the active span ID stored in the context state. The active span ID represents
+        the currently running function/tool/llm/agent/etc and can be used to group telemetry data together.
 
         Returns:
             str: The active span ID.
