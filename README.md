@@ -17,7 +17,7 @@ limitations under the License.
 
 ![NVIDIA Agent Intelligence toolkit](./docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
 
-# NVIDIA Agent Intelligence toolkit
+# NVIDIA Agent Intelligence Toolkit
 
 NVIDIA Agent Intelligence (AIQ) toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
 

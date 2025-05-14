@@ -43,7 +43,7 @@ This personal financial planner was revised based on the [Awesome-LLM-App](https
 
 ## Key Features
 
-### AIQ toolkit
+### AIQ Toolkit
 
 - **Pre-built Tools:** Leverages core AIQ toolkit library agent and tools.
 - **ReAct Agent:** Performs reasoning between tool call; utilizes tool names and descriptions to appropriately route to the correct tool

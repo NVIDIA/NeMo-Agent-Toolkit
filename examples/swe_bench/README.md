@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Solving problems in a SWE bench dataset using AIQ toolkit
+# Solving problems in a SWE bench dataset using AIQ Toolkit
 This example provides a skeleton workflow which can be used to implement predictors to solve problems in a SWE bench dataset.
 
 # Pre-requisites

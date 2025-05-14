@@ -15,7 +15,7 @@
     limitations under the License.
 -->
 
-# Contributing to NVIDIA Agent Intelligence toolkit
+# Contributing to NVIDIA Agent Intelligence Toolkit
 
 Contributions to AIQ toolkit fall into the following three categories.
 
@@ -201,7 +201,7 @@ Once you have gotten your feet wet and are more comfortable with the code, you c
 
 Review the unassigned issues and choose an issue that you are comfortable contributing. Ensure you comment on the issue before you begin to inform others that you are working on it. If you have questions about implementing the issue, comment your questions in the issue instead of the PR.
 
-## Developing with AIQ toolkit
+## Developing with AIQ Toolkit
 
 Refer to the [Get Started](../quick-start/installing.md) guide to quickly begin development.
 

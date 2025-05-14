@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Adding an LLM Provider to NVIDIA Agent Intelligence toolkit
+# Adding an LLM Provider to NVIDIA Agent Intelligence Toolkit
 
 In AIQ toolkit the set of configuration parameters needed to interact with an LLM API (provider) is defined separately from the client which is tied to a given framework. To determine which LLM providers are included in the AIQ toolkit installation, run the following command:
 ```bash

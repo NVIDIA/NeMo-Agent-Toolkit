@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Installing NVIDIA Agent Intelligence toolkit
+# Installing NVIDIA Agent Intelligence Toolkit
 
 This guide will help you set up your NVIDIA Agent Intelligence (AIQ) toolkit development environment, run existing workflows, and create your own custom workflows using the `aiq` command-line interface.
 
