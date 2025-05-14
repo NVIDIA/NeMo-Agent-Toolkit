@@ -74,7 +74,7 @@ We would love to hear from you! Please file an issue on [GitHub](https://github.
 
 ```{toctree}
 :hidden:
-:caption: About Agent Intelligence toolkit
+:caption: About NVIDIA Agent Intelligence toolkit
 Overview <self>
 Release Notes <./release-notes.md>
 ```
