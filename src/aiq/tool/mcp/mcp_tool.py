@@ -78,7 +78,10 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):
             return await tool.acall(kwargs)
         except Exception as e:
             if config.return_exception:
-                logger.warning("Error calling tool %s with input: %s", tool.name, kwargs, exc_info=True)
+                if tool_input:
+                    logger.warning("Error calling tool %s with serialized input: %s", tool.name, tool_input.model_dump(), exc_info=True)
+                else:
+                    logger.warning("Error calling tool %s with input: %s", tool.name, kwargs, exc_info=True)
                 return str(e)
             # If the tool call fails, raise the exception.
             raise
