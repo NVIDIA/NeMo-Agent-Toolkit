@@ -275,7 +275,7 @@ general:
         function_name: current_request_attributes
   ```
 
-  ### Access the request metadata
+### Access the request metadata
 Get the instance of the {class}`aiq.builder.context.AIQContext` object using the {method}`aiq.builder.context.AIQContext.get()` method. This will give you access to the metadata
 method which holds the request attributes defined by the user on request.
 ```python
