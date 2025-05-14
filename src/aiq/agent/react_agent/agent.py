@@ -273,7 +273,6 @@ class ReActAgentGraph(DualNodeAgent):
                     ex,
                     exc_info=True)
                 tool_input_str = agent_thoughts.tool_input
-
                 tool_response = await requested_tool.ainvoke(tool_input_str,
                                                              config=RunnableConfig(callbacks=self.callbacks))
 
