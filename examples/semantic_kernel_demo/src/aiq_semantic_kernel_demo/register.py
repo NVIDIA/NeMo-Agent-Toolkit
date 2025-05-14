@@ -42,6 +42,8 @@ class SKTravelPlanningWorkflowConfig(FunctionBaseConfig, name="semantic_kernel")
     budget_advisor_instructions: str = Field(description="The instructions for the budget advisor.")
     summarize_agent_name: str = Field(description="The name of the summarizer agent.")
     summarize_agent_instructions: str = Field(description="The instructions for the summarizer agent.")
+    long_term_memory_instructions: str = Field(default="",
+                                               description="The instructions for using the long term memory.")
 
 
 @register_function(config_type=SKTravelPlanningWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.SEMANTIC_KERNEL])
@@ -77,11 +79,11 @@ async def semantic_kernel_travel_planning_workflow(config: SKTravelPlanningWorkf
         kernel.add_plugin(plugin=tool, plugin_name=tool_name)
 
     itinerary_expert_name = config.itinerary_expert_name
-    itinerary_expert_instructions = config.itinerary_expert_instructions
+    itinerary_expert_instructions = config.itinerary_expert_instructions + config.long_term_memory_instructions
     budget_advisor_name = config.budget_advisor_name
-    budget_advisor_instructions = config.budget_advisor_instructions
+    budget_advisor_instructions = config.budget_advisor_instructions + config.long_term_memory_instructions
     summarize_agent_name = config.summarize_agent_name
-    summarize_agent_instructions = config.summarize_agent_instructions
+    summarize_agent_instructions = config.summarize_agent_instructions + config.long_term_memory_instructions
 
     agent_itinerary = ChatCompletionAgent(kernel=kernel,
                                           name=itinerary_expert_name,
