@@ -23,6 +23,14 @@ from aiq.data_models.function import FunctionBaseConfig
 logger = logging.getLogger(__name__)
 
 
+def validate_number_count(numbers: list[str], expected_count: int, action: str) -> str | None:
+    if len(numbers) < expected_count:
+        return f"Provide at least {expected_count} numbers to {action}."
+    if len(numbers) > expected_count:
+        return f"This tool only supports {action} between {expected_count} numbers."
+    return None
+
+
 class InequalityToolConfig(FunctionBaseConfig, name="calculator_inequality"):
     pass
 
@@ -34,9 +42,11 @@ async def calculator_inequality(tool_config: InequalityToolConfig, builder: Buil
 
     async def _calculator_inequality(text: str) -> str:
         numbers = re.findall(r"\d+", text)
+        validation_error = validate_number_count(numbers, expected_count=2, action="compare")
+        if validation_error:
+            return validation_error
         a = int(numbers[0])
         b = int(numbers[1])
-
         if a > b:
             return f"First number {a} is greater than the second number {b}"
         if a < b:
@@ -62,6 +72,9 @@ async def calculator_multiply(config: MultiplyToolConfig, builder: Builder):
 
     async def _calculator_multiply(text: str) -> str:
         numbers = re.findall(r"\d+", text)
+        validation_error = validate_number_count(numbers, expected_count=2, action="multiply")
+        if validation_error:
+            return validation_error
         a = int(numbers[0])
         b = int(numbers[1])
 
@@ -85,6 +98,9 @@ async def calculator_divide(config: DivisionToolConfig, builder: Builder):
 
     async def _calculator_divide(text: str) -> str:
         numbers = re.findall(r"\d+", text)
+        validation_error = validate_number_count(numbers, expected_count=2, action="divide")
+        if validation_error:
+            return validation_error
         a = int(numbers[0])
         b = int(numbers[1])
 
@@ -108,6 +124,9 @@ async def calculator_subtract(config: SubtractToolConfig, builder: Builder):
 
     async def _calculator_subtract(text: str) -> str:
         numbers = re.findall(r"\d+", text)
+        validation_error = validate_number_count(numbers, expected_count=2, action="subtract")
+        if validation_error:
+            return validation_error
         a = int(numbers[0])
         b = int(numbers[1])
 
