@@ -48,7 +48,7 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
 
 
 @register_function(config_type=MCPToolConfig)
-async def mcp_tool(config: MCPToolConfig, builder: Builder):
+async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=unused-argument
     """
     Generate an AIQ Toolkit Function that wraps a tool provided by the MCP server.
     """
@@ -79,7 +79,10 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):
         except Exception as e:
             if config.return_exception:
                 if tool_input:
-                    logger.warning("Error calling tool %s with serialized input: %s", tool.name, tool_input.model_dump(), exc_info=True)
+                    logger.warning("Error calling tool %s with serialized input: %s",
+                                   tool.name,
+                                   tool_input.model_dump(),
+                                   exc_info=True)
                 else:
                     logger.warning("Error calling tool %s with input: %s", tool.name, kwargs, exc_info=True)
                 return str(e)
