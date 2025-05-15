@@ -103,17 +103,9 @@ jobs:
         arch: ["amd64", "arm64"]
         python-version: ["3.11", "3.12"]
         include:
-          - arch: "amd64"
-            python-version: "3.11"
+          - python-version: "3.11"
             container: ${{ inputs.py_11_container }}
-          - arch: "amd64"
-            python-version: "3.12"
-            container: ${{ inputs.py_12_container }}
-          - arch: "arm64"
-            python-version: "3.11"
-            container: ${{ inputs.py_11_container }}
-          - arch: "arm64"
-            python-version: "3.12"
+          - python-version: "3.12"
             container: ${{ inputs.py_12_container }}
 
     steps:
