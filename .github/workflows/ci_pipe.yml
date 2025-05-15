@@ -91,9 +91,9 @@ jobs:
         run: ./aiqtoolkit/ci/scripts/github/checks.sh
 
   test:
-    name: Test
+    name: Test:${{ matrix.arch }}:py${{ matrix.python-version }}
     needs: [check]
-    runs-on:  linux-${{ matrix.arch }}-${{ matrix.python-version }}-cpu4
+    runs-on:  linux-${{ matrix.arch }}-cpu4
     timeout-minutes: 30
     container:
       image: ${{ matrix.container }}
