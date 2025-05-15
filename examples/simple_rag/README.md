@@ -538,7 +538,7 @@ We can now run one of these workflows with a slightly more complex input.
 aiq run --config_file examples/simple_rag/configs/milvus_rag_tools_config.yml --input "How do I install CUDA and get started developing with it? Provide example python code"
 ```
 The expected output of the above run is:
-```console
+````console
 $ aiq run --config_file examples/simple_rag/configs/milvus_rag_tools_config.yml --input "How do I install CUDA and get started developing with it? Provide example python code"
 2025-04-23 20:31:34,456 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (491.573811 ms). Ensure all imports are inside your registered functions.
 2025-04-23 20:31:34,779 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/simple_rag/configs/milvus_rag_tools_config.yml'
@@ -651,4 +651,4 @@ This code creates a sample array, transfers it to the GPU, performs some operati
 Workflow Result:
 ["To install CUDA and get started with developing applications using it, you can follow the steps outlined in the CUDA documentation. This includes verifying that you have a CUDA-capable GPU, downloading the NVIDIA CUDA Toolkit, and installing the CUDA software. After installation, you can verify that the CUDA toolkit can find and communicate correctly with the CUDA-capable hardware by compiling and running sample programs.\n\nHere's an example Python code that demonstrates how to use CUDA:\n```python\nimport numpy as np\nimport cupy as cp\n\n# Create a sample array\narr = np.array([1, 2, 3, 4, 5])\n\n# Transfer the array to the GPU\narr_gpu = cp.asarray(arr)\n\n# Perform some operations on the GPU\nresult_gpu = cp.square(arr_gpu)\n\n# Transfer the result back to the CPU\nresult_cpu = cp.asnumpy(result_gpu)\n\nprint(result_cpu)\n```\nThis code creates a sample array, transfers it to the GPU, performs some operations on the GPU, and then transfers the result back to the CPU. The output of this code will be the squared values of the original array."]
 --------------------------------------------------
-```
+````
