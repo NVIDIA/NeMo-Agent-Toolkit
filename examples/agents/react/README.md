@@ -22,11 +22,11 @@ limitations under the License.
 
 # ReAct Agent
 
-A configurable ReAct Agent. This agent leverages the AIQ Toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
+A configurable ReAct Agent. This agent leverages the AIQ toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AIQ Toolkit library agent and tools.
+- **Pre-built Tools:** Leverages core AIQ toolkit library agent and tools.
 - **ReAct Agent:** Performs reasoning between tool call; utilizes tool names and descriptions to appropriately route to the correct tool
 - **Custom Plugin System:** Developers can bring in new tools using plugins.
 - **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
@@ -35,11 +35,11 @@ A configurable ReAct Agent. This agent leverages the AIQ Toolkit plugin system a
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AIQ Toolkit library, run the following commands:
+From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
 uv pip install -e .
@@ -67,7 +67,7 @@ To see the ReAct Agent used as a function within a workflow, alongside the Reaso
 This README primarily covers the former case, where the ReAct Agent functions as the main workflow, in config.yml.
 For more details, refer to the [ReAct Agent documentation](../../../docs/source/workflows/about/react-agent.md) and the [Reasoning Agent documentation](../../../docs/source/workflows/about/react-agent.md)
 
-Run the following command from the root of the AIQ Toolkit repo to execute this workflow with the specified input:
+Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
 aiq run  --config_file=examples/agents/react/configs/config.yml --input "who was Djikstra?"
@@ -78,7 +78,7 @@ aiq run  --config_file=examples/agents/react/configs/config.yml --input "who was
 ```console
 $ aiq run  --config_file=examples/agents/react/configs/config.yml --input "who was Djikstra?"
 2025-04-23 14:59:18,848 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (508.361340 ms). Ensure all imports are inside your registered functions.
-2025-04-23 14:59:19,123 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/agents/react/configs/config.yml'
+2025-04-23 14:59:19,123 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/agents/react/configs/config.yml'
 2025-04-23 14:59:19,130 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-04-23 14:59:19,163 - aiq.profiler.utils - WARNING - Discovered frameworks: {<LLMFrameworkEnum.LANGCHAIN: 'langchain'>} in function code_generation_tool by inspecting source. It is recommended and more reliable to instead add the used LLMFrameworkEnum types in the framework_wrappers argument when calling @register_function.
 2025-04-23 14:59:19,164 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Initializing code generation tool
@@ -136,7 +136,7 @@ Workflow Result:
 
 ### Starting the AIQ Toolkit Server
 
-You can start the AIQ Toolkit server using the `aiq serve` command with the appropriate configuration file.
+You can start the AIQ toolkit server using the `aiq serve` command with the appropriate configuration file.
 
 **Starting the ReAct Agent Example Workflow**
 

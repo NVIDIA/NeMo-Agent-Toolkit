@@ -43,7 +43,7 @@ dependencies = [
   "wikipedia~=1.4",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Agent Intelligence Toolkit (AIQ Toolkit)"
+description = "NVIDIA Agent Intelligence toolkit"
 readme = "src/aiq/meta/pypi.md"
 license = { file = "LICENSE.md" }
 keywords = ["ai", "rag", "agents"]
@@ -53,7 +53,7 @@ maintainers = [{ name = "NVIDIA Corporation" }]
 
 
 [project.optional-dependencies]
-# Optional dependencies are things that users would want to install with AIQToolkit. i.e. `uv pip install aiq[langchain]`
+# Optional dependencies are things that users would want to install with AIQtoolkit. i.e. `uv pip install aiq[langchain]`
 # Keep sorted!!!
 agno = ["aiqtoolkit-agno"]
 crewai = ["aiqtoolkit-crewai"]

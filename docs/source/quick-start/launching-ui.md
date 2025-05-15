@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Launching the NVIDIA Agent Intelligence Toolkit API Server and User Interface
-AIQ Toolkit provides a user interface for interacting with your running workflow.
+NVIDIA Agent Intelligence (AIQ) toolkit provides a user interface for interacting with your running workflow.
 
 ## User Interface Features
 - Chat history
@@ -30,21 +30,21 @@ AIQ Toolkit provides a user interface for interacting with your running workflow
 This walk-through guides you through the steps to set up and configure the AIQ toolkit user interface. Refer to `examples/simple_calculator/README.md` to set up the simple calculator workflow demonstrated in the following walk-through properly.
 
 
-The AIQ Toolkit UI is located in a git submodule at `external/aiqtoolkit-opensource-ui`. Ensure you have checked out all of the
+The AIQ toolkit UI is located in a git submodule at `external/aiqtoolkit-opensource-ui`. Ensure you have checked out all of the
 git submodules by running the following:
 ```bash
 git submodule update --init --recursive
 ```
 
 ### Start the AIQ Toolkit Server
-You can start the AIQ Toolkit server using the `aiq serve` command with the appropriate configuration file.
+You can start the AIQ toolkit server using the `aiq serve` command with the appropriate configuration file.
 
 ```bash
 aiq serve --config_file=examples/simple_calculator/configs/config.yml
 ```
 Running this command will produce the expected output as shown below:
 ```bash
-2025-03-07 12:54:20,394 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/simple_calculator/configs/config.yml'
+2025-03-07 12:54:20,394 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/simple_calculator/configs/config.yml'
 WARNING:  Current configuration will not reload as not all conditions are met, please refer to documentation.
 INFO:     Started server process [47250]
 INFO:     Waiting for application startup.
@@ -87,7 +87,7 @@ Running this command will produce the following expected output:
 ```
 
 ### Launch the AIQ Toolkit User Interface
-After the AIQ Toolkit server starts, launch the web user interface. Launching the UI requires that Node.js v18+ is installed. Instructions for downloading and installing Node.js can be found in the official [Node.js documentation](https://nodejs.org/en/download).
+After the AIQ toolkit server starts, launch the web user interface. Launching the UI requires that Node.js v18+ is installed. Instructions for downloading and installing Node.js can be found in the official [Node.js documentation](https://nodejs.org/en/download).
 
 ```bash
 cd external/aiqtoolkit-opensource-ui
@@ -97,12 +97,12 @@ npm run dev
 After the web development server starts, open a web browser and navigate to [`http://localhost:3000/`](http://localhost:3000/).
 Port `3001` is an alternative port if port `3000` (default) is in use.
 
-![AIQ Toolkit Web User Interface](../_static/ui_home_page.png)
+![AIQ toolkit Web User Interface](../_static/ui_home_page.png)
 
 ### Connect the User Interface to the AIQ Toolkit Server Using HTTP API
 Configure the settings by selecting the `Settings` icon located on the bottom left corner of the home page.
 
-![AIQ Toolkit Web UI Settings](../_static/ui_generate_example_settings.png)
+![AIQ toolkit Web UI Settings](../_static/ui_generate_example_settings.png)
 
 #### Settings Options
 **Note:** It is recommended to select /chat/stream for intermediate results streaming.
@@ -112,11 +112,11 @@ Configure the settings by selecting the `Settings` icon located on the bottom le
   - /generate/stream
   - /chat
   - /chat/stream
-- `WebSocket URL for Completion`: WebSocket URL to connect to running AIQ Toolkit server.
+- `WebSocket URL for Completion`: WebSocket URL to connect to running AIQ toolkit server.
 - `WebSocket Schema` - Workflow schema type over WebSocket connection.
 
 ### Simple Calculator Example Conversation
 Interact with the chat interface by prompting the Agent with the
 message: `Is 4 + 4 greater than the current hour of the day?`
 
-![AIQ Toolkit Web UI Workflow Result](../_static/ui_generate_example.png)
+![AIQ toolkit Web UI Workflow Result](../_static/ui_generate_example.png)

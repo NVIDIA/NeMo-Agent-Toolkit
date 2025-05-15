@@ -19,7 +19,7 @@ limitations under the License.
 
 Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
-This guide will cover how to use AIQ Toolkit as an MCP Server to publish tools using MCP. For more information on how to use AIQ Toolkit as an MCP Client, refer to the [MCP Client](./mcp-client.md) documentation.
+This guide will cover how to use AIQ toolkit as an MCP Server to publish tools using MCP. For more information on how to use AIQ toolkit as an MCP Client, refer to the [MCP Client](./mcp-client.md) documentation.
 
 ## MCP Server Usage
 
@@ -88,14 +88,14 @@ Input Schema:
 ```
 ## Integration with MCP Clients
 
-The AIQ Toolkit MCP front-end implements the Model Context Protocol specification, making it compatible with any MCP client. This allows for seamless integration with various systems that support MCP, including:
+The AIQ toolkit MCP front-end implements the Model Context Protocol specification, making it compatible with any MCP client. This allows for seamless integration with various systems that support MCP, including:
 
 - MCP-compatible LLM frameworks
 - Other agent frameworks that support MCP
-- Custom applications including AIQ Toolkit applications that implement the MCP client specification
+- Custom applications including AIQ toolkit applications that implement the MCP client specification
 
 ### Example
-In this example, we will use AIQ Toolkit as both a MCP client and a MCP server.
+In this example, we will use AIQ toolkit as both a MCP client and a MCP server.
 
 1. Start the MCP server by following the instructions in the [MCP Server Usage](#mcp-server-usage) section. `aiqtoolkit` will act as a MCP server and publish the `math` tools as MCP tools.
 2. Run the simple calculator workflow with the `config-mcp-math.yml` config file. `aiqtoolkit` will act as a MCP client and connect to the MCP server started in the previous step to access the remote tools.

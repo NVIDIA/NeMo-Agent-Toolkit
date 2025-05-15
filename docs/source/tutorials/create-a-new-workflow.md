@@ -54,7 +54,7 @@ examples/
 ```
 
 :::{note}
-The completed code for this example can be found in the `examples/documentation_guides/workflows/text_file_ingest` directory of the AIQ Toolkit repository.
+The completed code for this example can be found in the `examples/documentation_guides/workflows/text_file_ingest` directory of the AIQ toolkit repository.
 :::
 
 By convention, tool implementations are defined within or imported into the `register.py` file. In this example, the tool implementation exists within the `text_file_ingest_function.py` file and is imported into the `register.py` file. The `pyproject.toml` file contains the package metadata and dependencies for the tool. The `text_file_ingest_function.py` that was created for us will contain a configuration object (`TextFileIngestFunctionConfig`) along with the tool function (`text_file_ingest_function`). The next two sections will walk through customizing these.
@@ -98,7 +98,7 @@ class TextFileIngestToolConfig(FunctionBaseConfig, name="text_file_ingest"):
 
 :::{note}
 The `name` parameter; the value of this will need to match the `_type` value in the workflow configuration file.
-For more details on AIQ Toolkit configuration objects, refer to the [Configuration Object Details](../workflows/workflow-configuration.md#configuration-object) section of the [Workflow Configuration](../workflows/workflow-configuration.md) document.
+For more details on AIQ toolkit configuration objects, refer to the [Configuration Object Details](../workflows/workflow-configuration.md#configuration-object) section of the [Workflow Configuration](../workflows/workflow-configuration.md) document.
 :::
 
 ## Customizing the Tool Function
@@ -134,7 +134,7 @@ Next, update the retrieval tool definition changing the `name` parameter to `tex
     )
 ```
 
-The rest of the code largely remains the same resulting in the following code, the full code of this example is located at `examples/documentation_guides/workflows/text_file_ingest/src/text_file_ingest/register.py` in the AIQ Toolkit repository:
+The rest of the code largely remains the same resulting in the following code, the full code of this example is located at `examples/documentation_guides/workflows/text_file_ingest/src/text_file_ingest/register.py` in the AIQ toolkit repository:
 ```python
 @register_function(config_type=TextFileIngestToolConfig)
 async def text_file_ingest_tool(config: TextFileIngestToolConfig, builder: Builder):
@@ -200,14 +200,14 @@ workflow:
   tool_names: [doca_documents, current_datetime]
 ```
 
-The resulting YAML file is located at `examples/documentation_guides/workflows/text_file_ingest/configs/config.yml` in the AIQ Toolkit repository.
+The resulting YAML file is located at `examples/documentation_guides/workflows/text_file_ingest/configs/config.yml` in the AIQ toolkit repository.
 
 ## Understanding `pyproject.toml`
 
-The `pyproject.toml` file defines your package metadata and dependencies. In this case, the `pyproject.toml` file that was created is sufficient; however, that might not always be the case. The most common need to update the `pyproject.toml` file is to add additional dependencies that are not included with AIQ Toolkit.
+The `pyproject.toml` file defines your package metadata and dependencies. In this case, the `pyproject.toml` file that was created is sufficient; however, that might not always be the case. The most common need to update the `pyproject.toml` file is to add additional dependencies that are not included with AIQ toolkit.
 
 - **Dependencies**: Ensure all required libraries are listed under `[project]`.
-  In the example, the tool was created inside the AIQ Toolkit repo and simply needed to declare a dependency on `aiqtoolkit[langchain]`. If, however, your tool is intended to be distributed independently then your tool will need to declare a dependency on the specific version of AIQ Toolkit that it was built against. To determine the version of AIQ Toolkit run:
+  In the example, the tool was created inside the AIQ toolkit repo and simply needed to declare a dependency on `aiqtoolkit[langchain]`. If, however, your tool is intended to be distributed independently then your tool will need to declare a dependency on the specific version of AIQ toolkit that it was built against. To determine the version of AIQ toolkit run:
   ```bash
   aiq --version
   ```
@@ -221,9 +221,9 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
   ]
   ```
 
-  In this example, you have been using AIQ Toolkit with LangChain. This is why the dependency is declared on `aiqtoolkit[langchain]`, that is to say AIQ Toolkit with the LangChain integration plugin. If you want to use LlamaIndex, declare the dependency on `aiqtoolkit[llama-index]`. This is described in more detail in [Framework Integrations](../quick-start/installing.md#framework-integrations).
+  In this example, you have been using AIQ toolkit with LangChain. This is why the dependency is declared on `aiqtoolkit[langchain]`, that is to say AIQ toolkit with the LangChain integration plugin. If you want to use LlamaIndex, declare the dependency on `aiqtoolkit[llama-index]`. This is described in more detail in [Framework Integrations](../quick-start/installing.md#framework-integrations).
 
-- **Entry Points**: This tells AIQ Toolkit where to find your workflow registration.
+- **Entry Points**: This tells AIQ toolkit where to find your workflow registration.
 
   ```toml
   [project.entry-points.'aiq.components']
