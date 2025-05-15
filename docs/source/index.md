@@ -52,21 +52,8 @@ Agent Intelligence toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 
 - [**Full MCP Support:**](./workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use AIQ toolkit as an [MCP client](./workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use AIQ toolkit as an [MCP server](./workflows/mcp/mcp-server.md) to publish tools via MCP.
 
-## What AIQ Toolkit Is
-
-- A **lightweight, unifying library** that makes every agent, tool, and workflow you already have work together, just as simple function calls work together in complex software applications.
-- An **end-to-end agentic profiler**, allowing you to track input/output tokens and timings at a granular level for every tool and agent, regardless of the amount of nesting.
-- A way to accomplish **end-to-end evaluation and observability**. With the potential to wrap and hook into every function call, AIQ toolkit can output observability data to your platform of choice. It also includes an end-to-end evaluation system, allowing you to consistently evaluate your complex, multi-framework workflows in the exact same way as you develop and deploy them.
-- A **compliment to existing agentic frameworks** and memory tools, not a replacement.
-- **100% opt in.** While we encourage users to wrap (decorate) every tool and agent to get the most out of the profiler, you have the freedom to integrate to whatever level you want - tool level, agent level, or entire workflow level. You have the freedom to start small and where you believe you’ll see the most value and expand from there.
-
-
-## What AIQ Toolkit Is Not
-
-- **An agentic framework.** AIQ toolkit is designed to work alongside, not replace, your existing agentic frameworks — whether they are enterprise-grade systems or simple Python-based agents.
-- **An attempt to solve agent-to-agent communication.** Agent communication is best handled over existing protocols, such as HTTP, gRPC, and sockets.
-- **An observability platform.** While AIQ toolkit is able to collect and transmit fine-grained telemetry to help with optimization and evaluation, it does not replace your preferred observability platform and data collection application.
-
+## FAQ
+For frequently asked questions, refer to [FAQ](./resources/faq.md).
 
 ## Feedback
 
@@ -141,6 +128,7 @@ Troubleshooting <./troubleshooting.md>
 :hidden:
 :caption: Resources
 
+FAQ <./resources/faq.md>
 Code of Conduct <./resources/code-of-conduct.md>
 Contributing <./resources/contributing.md>
 ./resources/running-ci-locally.md

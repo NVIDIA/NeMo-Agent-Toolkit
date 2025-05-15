@@ -19,10 +19,11 @@ import uuid
 
 import pytest
 
+from aiq.builder.context import AIQContext
+from aiq.builder.context import AIQContextState
 from aiq.builder.intermediate_step_manager import IntermediateStepManager
 from aiq.builder.intermediate_step_manager import IntermediateStepPayload
 from aiq.builder.intermediate_step_manager import IntermediateStepState
-from aiq.builder.intermediate_step_manager import _current_open_step_id
 
 # --------------------------------------------------------------------------- #
 # Minimal stubs so the tests do not need the whole aiq code-base
@@ -36,7 +37,7 @@ class _DummyStream(list):
         self.append(value)
 
     # simple subscribe: just call back synchronously
-    def subscribe(self, on_next, on_error=None, on_complete=None):
+    def subscribe(self, on_next, on_error=None, on_complete=None):  # pylint: disable=unused-argument
         for v in self:
             on_next(v)
         return lambda: None  # fake Subscription
@@ -60,16 +61,35 @@ class _DummyContextState:
         self.event_stream = contextvars.ContextVar("event_stream")
         self.event_stream.set(_DummyStream())
 
+        self.active_span_id_stack = contextvars.ContextVar("active_span_id_stack")
+        self.active_span_id_stack.set(["root"])
+
 
 # --------------------------------------------------------------------------- #
 # Fixtures
 # --------------------------------------------------------------------------- #
 
 
-@pytest.fixture()
-def mgr():
+@pytest.fixture(name="ctx_state")
+def ctx_state_fixture():
     """Fresh manager + its stubbed context-state for each test."""
-    return IntermediateStepManager(context_state=_DummyContextState())
+    s = AIQContextState()
+
+    s.active_function.set(_DummyFunction())
+    s.event_stream.set(_DummyStream())
+
+    return s
+
+
+@pytest.fixture(name="ctx")
+def ctx_fixture(ctx_state: AIQContextState):
+    return AIQContext(ctx_state)
+
+
+@pytest.fixture(name="mgr")
+def mgr_fixture(ctx_state: AIQContextState):
+    """Fresh manager + its stubbed context-state for each test."""
+    return IntermediateStepManager(context_state=ctx_state)
 
 
 def _payload(step_id=None, state=IntermediateStepState.START, name="step", etype="LLM_START"):
@@ -87,36 +107,53 @@ def _payload(step_id=None, state=IntermediateStepState.START, name="step", etype
 # --------------------------------------------------------------------------- #
 
 
-def test_start_pushes_event_and_tracks_open_step(mgr):
+def test_start_pushes_event_and_tracks_open_step(ctx_state: AIQContextState, mgr: IntermediateStepManager):
     pay = _payload()
     mgr.push_intermediate_step(pay)
 
     # one event captured
-    stream = mgr._context_state.event_stream.get()
+    stream = ctx_state.event_stream.get()
     assert len(stream) == 1
     # step now in outstanding dict
     assert pay.UUID in mgr._outstanding_start_steps
 
 
-def test_chunk_preserves_parent_id(mgr):
-    pay = _payload()
-    mgr.push_intermediate_step(pay)  # START
-    parent_id = _current_open_step_id.get()
+def test_chunk_preserves_parent_id(ctx: AIQContext, mgr: IntermediateStepManager):
 
-    chunk = _payload(step_id=pay.UUID, state=IntermediateStepState.CHUNK)
+    start = _payload()
+    mgr.push_intermediate_step(start)  # START
+
+    assert ctx.active_span_id == start.UUID
+
+    chunk = _payload(step_id=start.UUID, state=IntermediateStepState.CHUNK)
     mgr.push_intermediate_step(chunk)
 
     # parent should still be the START id
-    assert _current_open_step_id.get() == parent_id
+    assert ctx.active_span_id == start.UUID
 
 
-def test_end_same_context_restores_parent(mgr):
-    pay = _payload()
-    mgr.push_intermediate_step(pay)
-    mgr.push_intermediate_step(_payload(step_id=pay.UUID, state=IntermediateStepState.END, etype="LLM_END"))
+def test_end_same_context_restores_parent(ctx: AIQContext, mgr: IntermediateStepManager):
+    start1 = _payload()
+    mgr.push_intermediate_step(start1)
+
+    assert ctx.active_span_id == start1.UUID
+
+    start2 = _payload()
+    mgr.push_intermediate_step(start2)
+
+    assert ctx.active_span_id == start2.UUID
+
+    # End the second start
+    mgr.push_intermediate_step(_payload(step_id=start2.UUID, state=IntermediateStepState.END, etype="LLM_END"))
+
+    # Verify that the parent is the first start
+    assert ctx.active_span_id == start1.UUID
+
+    # End the first start
+    mgr.push_intermediate_step(_payload(step_id=start1.UUID, state=IntermediateStepState.END, etype="LLM_END"))
 
     # open-step removed, ContextVar back to parent (None)
-    assert pay.UUID not in mgr._outstanding_start_steps
+    assert start1.UUID not in mgr._outstanding_start_steps
 
 
 def _end_in_thread(manager, payload):
@@ -124,7 +161,7 @@ def _end_in_thread(manager, payload):
     manager.push_intermediate_step(payload)
 
 
-def test_end_other_thread_no_token_error(mgr):
+def test_end_other_thread_no_token_error(mgr: IntermediateStepManager):
     pay = _payload()
     mgr.push_intermediate_step(pay)
 
@@ -137,7 +174,7 @@ def test_end_other_thread_no_token_error(mgr):
     assert pay.UUID not in mgr._outstanding_start_steps
 
 
-def test_mismatched_chunk_logs_warning(mgr, caplog):
+def test_mismatched_chunk_logs_warning(mgr: IntermediateStepManager, caplog: pytest.LogCaptureFixture):
     # CHUNK without START
     chunk = _payload(state=IntermediateStepState.CHUNK, etype="LLM_NEW_TOKEN")
     mgr.push_intermediate_step(chunk)

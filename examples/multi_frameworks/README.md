@@ -148,69 +148,42 @@ Cleaning up multi_frameworks workflow.
 note: the below is an example command to use and query this and trigger `research_agent`
 
 ```bash
-aiq run --config_file=examples/multi_frameworks/configs/config.yml --input "what is Compound AI?"
+aiq run --config_file=examples/multi_frameworks/configs/config.yml --input "what is RAG?"
 ```
 **expected output:**
 ```
-(.venv) (base) coder ➜ ~/dev/ai-query-engine $ aiq run --config_file=examples/multi_frameworks/configs/config.yml --input "what is Compound AI?"
-/home/coder/dev/ai-query-engine/.venv/lib/python3.12/site-packages/pydantic/_internal/_config.py:341: UserWarning: Valid config keys have changed in V2:
-* 'allow_population_by_field_name' has been renamed to 'populate_by_name'
-  warnings.warn(message, UserWarning)
-2025-01-17 11:05:52,074 - aiq.cli.run - INFO - Loading configuration from: examples/multi_frameworks/configs/config.yml
+(.venv) AgentIQ % aiq run --config_file=examples/multi_frameworks/configs/config.yml --input "what is RAG?"
+2025-05-14 15:19:32,924 - aiq.runtime.loader - WARNING - Loading module 'aiq_profiler_agent.register' from entry point 'aiq_profiler_agent' took a long time (1747.276783 ms). Ensure all imports are inside your registered functions.
+2025-05-14 15:19:33,092 - aiq.runtime.loader - WARNING - Loading module 'aiq.plugins.agno.register' from entry point 'aiq_agno' took a long time (141.694069 ms). Ensure all imports are inside your registered functions.
+2025-05-14 15:19:33,305 - aiq.runtime.loader - WARNING - Loading module 'aiq_multi_frameworks.register' from entry point 'aiq_multi_frameworks' took a long time (212.839842 ms). Ensure all imports are inside your registered functions.
+2025-05-14 15:19:33,848 - aiq.runtime.loader - WARNING - Loading module 'aiq_alert_triage_agent.register' from entry point 'aiq_alert_triage_agent' took a long time (303.922176 ms). Ensure all imports are inside your registered functions.
+2025-05-14 15:19:34,080 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/multi_frameworks/configs/config.yml'
+2025-05-14 15:19:34,082 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
+2025-05-14 15:19:41,048 - aiq_multi_frameworks.llama_index_rag_tool - INFO - ##### processing data from ingesting files in this folder : ./examples/multi_frameworks/README.md
 None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
-##### processing data from ingesting files in this folder : /home/coder/dev/ai-query-engine/examples/multi_frameworks/data/README.md
-2025-01-17 11:05:55,787 - httpx - INFO - HTTP Request: POST https://integrate.api.nvidia.com/v1/embeddings "HTTP/1.1 200 OK"
-/opt/conda/lib/python3.12/contextlib.py:210: LangChainDeprecationWarning: As of langchain-core 0.3.0, LangChain uses pydantic v2 internally. The langchain_core.pydantic_v1 module was a compatibility shim for pydantic v1, and should no longer be used. Please update the code to import from Pydantic directly.
-
-For example, replace imports like: `from langchain_core.pydantic_v1 import BaseModel`
-with: `from pydantic import BaseModel`
-or the v1 compatibility namespace if you are working in a code base that has not been fully upgraded to pydantic 2 yet.         from pydantic.v1 import BaseModel
-
-  return await anext(self.gen)
-workflow config =  llm_name='meta/llama-3.1-405b-instruct' llm='nim_llm' embedding_name='nvidia/nv-embed-v1' tool_names=['llama_index_rag'] data_dir='/home/coder/dev/ai-query-engine/examples/multi_frameworks/data/README.md'
- <llama_index.core.tools.function_tool.FunctionTool object at 0x7f3cfa3c8d10> <class 'llama_index.core.tools.function_tool.FunctionTool'>
+2025-05-14 15:19:51,208 - aiq_multi_frameworks.register - INFO - workflow config = llm='nim_llm' data_dir='./examples/multi_frameworks/README.md' research_tool='langchain_researcher_tool' rag_tool='llama_index_rag' chitchat_agent='haystack_chitchat_agent'
 
 Configuration Summary:
 --------------------
 Workflow Type: multi_frameworks
-Number of Tools: 1
+Number of Functions: 4
 Number of LLMs: 1
-Number of Embedders: 0
+Number of Embedders: 1
 Number of Memory: 0
+Number of Retrievers: 0
 
-2025-01-17 11:05:57,360 - aiq.cli.run - INFO - Processing input: ('what is Compound AI?',)
-========== inside **supervisor node**  current status =
- {'input': 'what is Compound AI?', 'chat_history': []}
-========== inside **router node**  current status =
- ['input', 'chosen_worker_agent', 'chat_history']
- ############# router to --> workers
-========== inside **workers node**  current status =
- {'input': 'what is Compound AI?', 'chat_history': InMemoryChatMessageHistory(messages=[HumanMessage(content='what is Compound AI?', additional_kwargs={}, response_metadata={}), AIMessage(content='Research', additional_kwargs={}, response_metadata={})]), 'chosen_worker_agent': 'Research'}
-2025-01-17 11:06:00,021 - arxiv - INFO - Requesting page (first: True, try: 0): https://export.arxiv.org/api/query?search_query=Compound+AI&id_list=&sortBy=relevance&sortOrder=descending&start=0&max_results=1
-2025-01-17 11:06:01,437 - arxiv - INFO - Got first page: 1 of 51342 total results
-2025-01-17 11:06:01,437 - arxiv - INFO - Sleeping: 2.992289 seconds
-2025-01-17 11:06:04,430 - arxiv - INFO - Requesting page (first: False, try: 0): https://export.arxiv.org/api/query?search_query=Compound+AI&id_list=&sortBy=relevance&sortOrder=descending&start=1&max_results=1
-2025-01-17 11:06:04,885 - arxiv - INFO - Sleeping: 2.997868 seconds
-2025-01-17 11:06:07,883 - arxiv - INFO - Requesting page (first: False, try: 0): https://export.arxiv.org/api/query?search_query=Compound+AI&id_list=&sortBy=relevance&sortOrder=descending&start=2&max_results=1
- <class 'str'> In a compound AI system, components such as an LLM call, a retriever, a code
-interpreter, or tools are interconnected. The system's behavior is primarily
-driven by parameters such as instructions or tool definitions. Recent
-advancements enable end-to-end optimization of these parameters using an LLM.
-Notably, leveraging an LLM as an optimizer is particularly efficient because it
-avoids gradient computation and can generate complex code and instructions.
-This paper presents a survey of the principles and emerging trends in LLM-based
-optimization of compound AI systems. It covers archetypes of compound AI
-systems, approaches to LLM-based end-to-end optimization, and insights into
-future directions and broader impacts. Importantly, this survey uses concepts
-from program analysis to provide a unified view of how an LLM optimizer is
-prompted to optimize a compound AI system. The exhaustive list of paper is
-provided at
-https://github.com/linyuhongg/LLM-based-Optimization-of-Compound-AI-Systems.
-2025-01-17 11:06:08,363 - aiq.cli.run - INFO - --------------------------------------------------
-Workflow Result:
-["In a compound AI system, components such as an LLM call, a retriever, a code\ninterpreter, or tools are interconnected. The system's behavior is primarily\ndriven by parameters such as instructions or tool definitions. Recent\nadvancements enable end-to-end optimization of these parameters using an LLM.\nNotably, leveraging an LLM as an optimizer is particularly efficient because it\navoids gradient computation and can generate complex code and instructions.\nThis paper presents a survey of the principles and emerging trends in LLM-based\noptimization of compound AI systems. It covers archetypes of compound AI\nsystems, approaches to LLM-based end-to-end optimization, and insights into\nfuture directions and broader impacts. Importantly, this survey uses concepts\nfrom program analysis to provide a unified view of how an LLM optimizer is\nprompted to optimize a compound AI system. The exhaustive list of paper is\nprovided at\nhttps://github.com/linyuhongg/LLM-based-Optimization-of-Compound-AI-Systems."]
+2025-05-14 15:19:51,563 - aiq_multi_frameworks.register - INFO - ========== inside **supervisor node**  current status =
+ {'input': 'what is RAG?', 'chat_history': InMemoryChatMessageHistory(messages=[HumanMessage(content='what is RAG?', additional_kwargs={}, response_metadata={}), AIMessage(content='Research', additional_kwargs={}, response_metadata={})])}
+2025-05-14 15:19:51,564 - aiq_multi_frameworks.register - INFO - ========== inside **router node**  current status =
+ , ['input', 'chosen_worker_agent', 'chat_history']
+2025-05-14 15:19:51,564 - aiq_multi_frameworks.register - INFO -  ############# router to --> workers
+2025-05-14 15:19:51,564 - aiq_multi_frameworks.register - INFO - ========== inside **workers node**  current status =
+ , {'input': 'what is RAG?', 'chat_history': InMemoryChatMessageHistory(messages=[HumanMessage(content='what is RAG?', additional_kwargs={}, response_metadata={}), AIMessage(content='Research', additional_kwargs={}, response_metadata={})]), 'chosen_worker_agent': 'Research'}
+2025-05-14 15:19:54,119 - aiq_multi_frameworks.langchain_research_tool - INFO - output from langchain_research_tool: Retrieval-Augmented Generation (RAG) is the process of optimizing the output of a large language model, so it references an authoritative knowledge base outside of its training data sources before generating a response. Large Language Models (LLMs) are trained on vast volumes of data and use billions of parameters to generate original output for tasks like answering questions, translating languages, and completing sentences. RAG extends the already powerful capabilities of LLMs to specific
+2025-05-14 15:19:54,121 - aiq_multi_frameworks.register - INFO - final_output : Retrieval-Augmented Generation (RAG) is the process of optimizing the output of a large language model, so it references an authoritative knowledge base outside of its training data sources before generating a response. Large Language Models (LLMs) are trained on vast volumes of data and use billions of parameters to generate original output for tasks like answering questions, translating languages, and completing sentences. RAG extends the already powerful capabilities of LLMs to specific
+2025-05-14 15:19:54,121 - aiq.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
-Cleaning up multi_frameworks workflow.
-2025-01-17 11:06:08,364 - aiq.cli.entrypoint - INFO - Total time: 16.29 sec
-2025-01-17 11:06:08,364 - aiq.cli.entrypoint - INFO - Pipeline runtime: 11.00 sec
+Workflow Result:
+['Retrieval-Augmented Generation (RAG) is the process of optimizing the output of a large language model, so it references an authoritative knowledge base outside of its training data sources before generating a response. Large Language Models (LLMs) are trained on vast volumes of data and use billions of parameters to generate original output for tasks like answering questions, translating languages, and completing sentences. RAG extends the already powerful capabilities of LLMs to specific']
+--------------------------------------------------
 ```

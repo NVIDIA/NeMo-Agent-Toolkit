@@ -68,6 +68,8 @@ class AIQContextState(metaclass=Singleton):
         self.active_function: ContextVar[InvocationNode] = ContextVar("active_function",
                                                                       default=InvocationNode(function_id="root",
                                                                                              function_name="root"))
+        self.active_span_id_stack: ContextVar[list[str]] = ContextVar("active_span_id_stack", default=["root"])
+
         # Default is a lambda no-op which returns NoneType
         self.user_input_callback: ContextVar[Callable[[InteractionPrompt], Awaitable[HumanResponse | None]]
                                              | None] = ContextVar(
@@ -197,6 +199,19 @@ class AIQContext:
         state. The active function is the function that is currently being executed.
         """
         return self._context_state.active_function.get()
+
+    @property
+    def active_span_id(self) -> str:
+        """
+        Retrieves the active span ID from the context state.
+
+        This property provides access to the active span ID stored in the context state. The active span ID represents
+        the currently running function/tool/llm/agent/etc and can be used to group telemetry data together.
+
+        Returns:
+            str: The active span ID.
+        """
+        return self._context_state.active_span_id_stack.get()[-1]
 
     @staticmethod
     def get() -> "AIQContext":
