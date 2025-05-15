@@ -12,8 +12,7 @@ root = "../.."
 name = "aiq_simple_rag"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain, mem0ai]~=1.1",
-  "lxml~=5.4"
+  "aiqtoolkit[ingestion, langchain, mem0ai]~=1.1"
 ]
 requires-python = ">=3.11,<3.13"
 description = "Simple Rag AIQ example"

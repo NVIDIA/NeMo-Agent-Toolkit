@@ -47,12 +47,12 @@ If you have not already done so, follow the instructions in the [Install Guide](
 
     ```bash
     source .venv/bin/activate
-    examples/simple_rag/ingestion/bootstrap_milvus.sh
+    scripts/bootstrap_milvus.sh
     ```
 
     If Milvus is running the script should work out of the box. If you want to customize the script the arguments are shown below.
     ```bash
-    python examples/simple_rag/ingestion/langchain_web_ingest.py --help
+    python scripts/langchain_web_ingest.py --help
     ```
     ```console
     usage: langchain_web_ingest.py [-h] [--urls URLS] [--collection_name COLLECTION_NAME] [--milvus_uri MILVUS_URI] [--clean_cache]

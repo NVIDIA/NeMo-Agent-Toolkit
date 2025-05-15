@@ -73,8 +73,8 @@ If you have a different Milvus database you would like to use, please modify the
 To use this example, you will also need to create a `wikipedia_docs` and a `cuda_docs` collection in your Milvus database. You can do this by following the instructions in the `simple_rag` example of AIQ toolkit [here](../simple_rag/README.md) and running the following command:
 
 ```bash
-python examples/simple_rag/ingestion/langchain_web_ingest.py
-python examples/simple_rag/ingestion/langchain_web_ingest.py --urls https://en.wikipedia.org/wiki/Aardvark --collection_name=wikipedia_docs
+python scripts/langchain_web_ingest.py
+python scripts/langchain_web_ingest.py --urls https://en.wikipedia.org/wiki/Aardvark --collection_name=wikipedia_docs
 ```
 ## Example Usage
 
