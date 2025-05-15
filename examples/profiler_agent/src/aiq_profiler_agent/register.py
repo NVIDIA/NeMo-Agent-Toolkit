@@ -16,12 +16,8 @@
 import logging
 from datetime import datetime
 
-from aiq_profiler_agent.agent import ProfilerAgent
-from aiq_profiler_agent.agent import ProfilerAgentState
-from aiq_profiler_agent.data_models import ExecPlan
 from aiq_profiler_agent.prompts import RETRY_PROMPT
 from aiq_profiler_agent.prompts import SYSTEM_PROMPT
-from aiq_profiler_agent.tool import flow_chart  # noqa: F401
 from pydantic import Field
 
 from aiq.builder.builder import Builder
@@ -67,6 +63,10 @@ async def profiler_agent(config: ProfilerAgentConfig, builder: Builder):
     and analyzes the data to provide insights about LLM usage, performance,
     and issues.
     """
+    from aiq_profiler_agent.agent import ProfilerAgent
+    from aiq_profiler_agent.agent import ProfilerAgentState
+    from aiq_profiler_agent.data_models import ExecPlan
+    from aiq_profiler_agent.tool import flow_chart  # noqa: F401 # pylint: disable=unused-import
     from langchain_core.messages import SystemMessage
     from langchain_core.output_parsers import PydanticOutputParser
     from langchain_core.prompts import PromptTemplate

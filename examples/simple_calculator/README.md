@@ -17,7 +17,7 @@ limitations under the License.
 
 # A Simple LLM Calculator
 
-This example demonstrates an end-to-end (E2E) agentic workflow using the AIQ Toolkit library, fully configured through a YAML file. It showcases the AIQ Toolkit plugin system and `Builder` to seamlessly integrate pre-built and custom tools into workflows.
+This example demonstrates an end-to-end (E2E) agentic workflow using the AIQ toolkit library, fully configured through a YAML file. It showcases the AIQ toolkit plugin system and `Builder` to seamlessly integrate pre-built and custom tools into workflows.
 
 ## Table of Contents
 
@@ -28,24 +28,28 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the AIQ Too
     - [Install this Workflow:](#install-this-workflow)
     - [Set Up API Keys](#set-up-api-keys)
   - [Example Usage](#example-usage)
+    - [Run Phoenix](#run-phoenix)
     - [Run the Workflow](#run-the-workflow)
     - [Examine the Traces in Phoenix](#examine-the-traces-in-phoenix)
-    - [Using Weave for Tracing](#using-weave-for-tracing)
-    - [Accuracy Evaluation](#accuracy-evaluation)
+  - [Using Weave for Tracing](#using-weave-for-tracing)
+  - [Accuracy Evaluation](#accuracy-evaluation)
   - [MCP (Model Context Protocol)](#mcp-model-context-protocol)
-    - [AIQ Toolkit as an MCP Client](#aiq-toolkit-as-an-mcp-client)
-    - [AIQ Toolkit as an MCP Server](#aiq-toolkit-as-an-mcp-server)
+    - [AIQ toolkit as an MCP Client](#aiq-toolkit-as-an-mcp-client)
+    - [AIQ toolkit as an MCP Server](#aiq-toolkit-as-an-mcp-server)
   - [Deployment-Oriented Setup](#deployment-oriented-setup)
     - [Build the Docker Image](#build-the-docker-image)
     - [Run the Docker Container](#run-the-docker-container)
     - [Test the API](#test-the-api)
     - [Expected API Output](#expected-api-output)
+  - [Accessing Request Metadata](#accessing-request-metadata)
+    - [Add custom route](#add-custom-route)
+    - [Access the request metadata](#access-the-request-metadata)
 
 ---
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AIQ Toolkit library tools.
+- **Pre-built Tools:** Leverages core AIQ toolkit library tools.
 - **Custom Plugin System:** Developers can bring in new tools using plugins.
 - **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
 - **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
@@ -55,18 +59,18 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the AIQ Too
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AIQ Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AIQ Toolkit library, run the following commands:
+From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/simple_calculator
 ```
 
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../docs/source/intro/get-started.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
@@ -87,7 +91,7 @@ phoenix serve
 
 ### Run the Workflow
 
-Return to your original terminal, and run the following command from the root of the AIQ Toolkit repo to execute this workflow with the specified input:
+Return to your original terminal, and run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
 aiq run --config_file examples/simple_calculator/configs/config-tracing.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
@@ -98,7 +102,7 @@ The workflow output can be quite lengthy, the end of the workflow output should 
 ```console
 $ aiq run --config_file examples/simple_calculator/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 2025-04-23 15:58:34,877 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (440.151215 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:58:35,193 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/simple_calculator/configs/config.yml'
+2025-04-23 15:58:35,193 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/simple_calculator/configs/config.yml'
 2025-04-23 15:58:35,199 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 
 Configuration Summary:
@@ -185,14 +189,14 @@ Workflow Result:
 Open your browser and navigate to `http://localhost:6006` to view the traces.
 
 ## Using Weave for Tracing
-You can use Weave to trace the workflow by following the instructions in the [Fine-grained Tracing with Weave](../../docs/source/guides/fine-grained-tracing-with-weave.md) guide.
+You can use Weave to trace the workflow by following the instructions in the [Fine-grained Tracing with Weave](../../docs/source/workflows/observe/observe-workflow-with-weave.md) guide.
 Sample usage:
 ```bash
 aiq run --config_file examples/simple_calculator/configs/config-weave.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
 ## Accuracy Evaluation
-The answers generated by the workflow can be evaluated using the [Tunable RAG Evaluator](../../docs/source/concepts/evaluate.md#tunable-rag-evaluator). A sample dataset is provided in `examples/simple_calculator/data/simple_calculator.json`.
+The answers generated by the workflow can be evaluated using the [Tunable RAG Evaluator](../../docs/source/reference/evaluate.md#tunable-rag-evaluator). A sample dataset is provided in `examples/simple_calculator/data/simple_calculator.json`.
 
 To run the evaluation, use the `aiq eval` command:
 
@@ -205,10 +209,10 @@ The evaluation results will be saved in `examples/simple_calculator/.tmp/eval/si
 
 ## MCP (Model Context Protocol)
 ### AIQ Toolkit as an MCP Client
-You can run the simple calculator workflow using Remote MCP tools. In this case, the workflow acts as a MCP client and connects to the MCP server running on the specified URL. Details are provided in the [MCP Client Guide](../../docs/source/guides/mcp-client.md).
+You can run the simple calculator workflow using Remote MCP tools. In this case, the workflow acts as a MCP client and connects to the MCP server running on the specified URL. Details are provided in the [MCP Client Guide](../../docs/source/workflows/mcp/mcp-client.md).
 
 ### AIQ Toolkit as an MCP Server
-You can publish the simple calculator tools via MCP using the `aiq mcp` command. Details are provided in the [MCP Server Guide](../../docs/source/guides/mcp-server.md).
+You can publish the simple calculator tools via MCP using the `aiq mcp` command. Details are provided in the [MCP Server Guide](../../docs/source/workflows/mcp/mcp-server.md).
 
 ## Deployment-Oriented Setup
 
@@ -216,7 +220,7 @@ For a production deployment, use Docker:
 
 ### Build the Docker Image
 
-Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AIQ Toolkit virtual environment.
+Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AIQ toolkit virtual environment.
 
 From the root directory of the Simple Calculator repository, build the Docker image:
 
@@ -244,12 +248,57 @@ curl -X 'POST' \
   -d '{"input_message": "Is the product of 2 * 4 greater than the current hour of the day?"}'
   ```
 
-  ### Expected API Output
-  The API response should be similar to the following:
+### Expected API Output
+The API response should be similar to the following:
 
 ```bash
 {
   "input": "Is the product of 2 * 4 greater than the current hour of the day?",
   "output": "No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 16)."
 }
+```
+## Accessing Request Metadata
+Users can define custom routes that are dynamically added to the API server, and capture HTTP request metadata such
+as the method, URL path, URL scheme, headers, query parameters, path parameters, host, port, and cookies.
+
+### Add custom route
+Associate your endpoint with a function by updating the `front_end` section  in the configuration file.
+A full configuration file example is available at `examples/simple_calculator/configs/config-metadata.yml.`
+```yaml
+general:
+  use_uvloop: true
+  front_end:
+    _type: fastapi
+    endpoints:
+      - path: /get_request_metadata
+        method: POST
+        description: Gets the request attributes from the request.
+        function_name: current_request_attributes
+  ```
+
+### Access the request metadata
+Get the instance of the `aiq.builder.context.AIQContext` object using the `aiq.builder.context.AIQContext.get()` method. This will give you access to the metadata method which holds the request attributes defined by the user on request. A complete example of the function can be found in `src/aiq/tool/server_tools.py.`
+```python
+@register_function(config_type=RequestAttributesTool)
+async def current_request_attributes(config: RequestAttributesTool, builder: Builder):
+
+    from starlette.datastructures import Headers
+    from starlette.datastructures import QueryParams
+
+    async def _get_request_attributes(unused: str) -> str:
+
+        from aiq.builder.context import AIQContext
+        aiq_context = AIQContext.get()
+        method: str | None = aiq_context.metadata.method
+        url_path: str | None = aiq_context.metadata.url_path
+        url_scheme: str | None = aiq_context.metadata.url_scheme
+        headers: Headers | None = aiq_context.metadata.headers
+        query_params: QueryParams | None = aiq_context.metadata.query_params
+        path_params: dict[str, str] | None = aiq_context.metadata.path_params
+        client_host: str | None = aiq_context.metadata.client_host
+        client_port: int | None = aiq_context.metadata.client_port
+        cookies: dict[str, str] | None = aiq_context.metadata.cookies
+
+    yield FunctionInfo.from_fn(_get_request_attributes,
+                               description="Returns the acquired user defined request attriubutes.")
 ```

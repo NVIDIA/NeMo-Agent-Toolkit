@@ -15,7 +15,7 @@
 
 export SCRIPT_DIR=${SCRIPT_DIR:-"$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"}
 
-# The root to the AIQ Toolkit repo
+# The root to the AIQ toolkit repo
 export PROJECT_ROOT=${PROJECT_ROOT:-"$(realpath ${SCRIPT_DIR}/../..)"}
 
 export PY_ROOT="${PROJECT_ROOT}/src"
