@@ -48,7 +48,6 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 2. Ensure that there are traces in the Phoenix server. You can use the simple calculator example to generate traces.
    > Note: This requires installing both the optional `telemetry` dependencies along with the simple calculator. You can do this by running the following commands:
    > ```bash
-   > uv pip install -e '.[telemetry]'
    > uv pip install -e examples/simple_calculator
    > ```
 
