@@ -38,6 +38,10 @@ If you have not already done so, follow the instructions in the [Install Guide](
     ```bash
     docker compose -f examples/simple_rag/deploy/docker-compose.yaml up -d
     ```
+    > Note: It can take some time for Milvus to start up. You can check the logs with:
+    ```bash
+    docker compose -f examples/simple_rag/deploy/docker-compose.yaml logs --follow
+    ```
 1. In a new terminal, from the root of the AIQ toolkit repository, run the provided bash script to store the data in a Milvus collection. By default the script will scrape a few pages from the CUDA documentation and store the data in a Milvus collection called `cuda_docs`. It will also pull a few pages of information about the Model Context Protocol (MCP) and store it in a collection called `mcp_docs`.
 
     Export your NVIDIA API key:
