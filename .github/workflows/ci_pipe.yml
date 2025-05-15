@@ -91,7 +91,7 @@ jobs:
         run: ./aiqtoolkit/ci/scripts/github/checks.sh
 
   test:
-    name: Test:${{ matrix.arch }}:py${{ matrix.python-version }}
+    name: Test
     needs: [check]
     runs-on:  linux-${{ matrix.arch }}-cpu4
     timeout-minutes: 30
@@ -123,7 +123,7 @@ jobs:
           fetch-tags: true
           path: 'aiqtoolkit'
 
-      - name: Test:linux:${{ matrix.arch }}
+      - name: Test:linux:${{ matrix.arch }}:py${{ matrix.python-version }}
         shell: bash
         run: ./aiqtoolkit/ci/scripts/github/tests.sh
 
@@ -132,7 +132,7 @@ jobs:
         # Upload test results even if the tests fail
         if: ${{ always() }}
         with:
-          name: "test-results-${{ matrix.arch }}"
+          name: "test-results-${{ matrix.arch }}-py${{ matrix.python-version }}"
           path: "${{ github.workspace }}/tmp/*.xml"
           if-no-files-found: error
 
