@@ -216,7 +216,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             eval_output = await evaluator.evaluate_fn(self.eval_input)
             self.evaluation_results.append((evaluator_name, eval_output))
 
-            self.weave_eval.log_score(eval_output, evaluator_name)
+            await self.weave_eval.alog_score(eval_output, evaluator_name)
         except Exception as e:
             logger.exception("An error occurred while running evaluator %s: %s", evaluator_name, e, exc_info=True)
 
@@ -232,7 +232,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             await asyncio.gather(*tasks)
 
             # Finish prediction loggers in Weave
-            self.weave_eval.finish_loggers()
+            await self.weave_eval.afinish_loggers()
         except Exception as e:
             logger.exception("An error occurred while running evaluators: %s", e, exc_info=True)
             raise

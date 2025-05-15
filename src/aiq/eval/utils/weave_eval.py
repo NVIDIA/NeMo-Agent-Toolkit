@@ -1,5 +1,6 @@
 from typing import List, Any
 import logging
+import asyncio
 
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
@@ -73,30 +74,36 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         if not self.eval_logger:
             return
 
-        pred_logger = self.eval_logger.log_prediction(inputs=item.model_dump(exclude={"output_obj", "trajectory"}),
-                                                    output=output)
+        pred_logger = self.eval_logger.log_prediction(
+            inputs=item.model_dump(exclude={"output_obj", "trajectory"}),
+            output=output
+        )
         self.pred_loggers[item.id] = pred_logger
 
-    def log_score(self, eval_output: EvalOutput, evaluator_name: str):
+    async def alog_score(self, eval_output: EvalOutput, evaluator_name: str):
         """Log scores for evaluation outputs."""
         if not self.eval_logger:
             return
 
         for eval_output_item in eval_output.eval_output_items:
             if eval_output_item.id in self.pred_loggers:
-                self.pred_loggers[eval_output_item.id].log_score(
+                await self.pred_loggers[eval_output_item.id].alog_score(
                     scorer=evaluator_name,
                     score=eval_output_item.score,
                 )
 
-    def finish_loggers(self):
+    async def afinish_loggers(self):
         """Finish all prediction loggers."""
         if not self.eval_logger:
             return
 
-        for pred_logger in self.pred_loggers.values():
+        async def _finish_one(pred_logger):
             if hasattr(pred_logger, '_has_finished') and not pred_logger._has_finished:
-                pred_logger.finish()
+                return
+            # run the *blocking* finish() in a thread so we don’t nest loops
+            await asyncio.to_thread(pred_logger.finish)
+
+        await asyncio.gather(*[_finish_one(pl) for pl in self.pred_loggers.values()])
 
     def log_summary(self, evaluation_results: List[tuple[str, EvalOutput]]):
         """Log summary statistics to Weave."""
