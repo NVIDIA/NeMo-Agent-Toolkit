@@ -28,7 +28,7 @@ on:
         required: true
         type: string
       py_12_container:
-        description: 'The Python 3.11 container to use for the test stage'
+        description: 'The Python 3.12 container to use for the test stage'
         required: true
         type: string
       pr_info:
