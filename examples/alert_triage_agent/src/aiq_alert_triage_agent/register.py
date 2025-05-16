@@ -34,6 +34,7 @@ from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_function
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
+from aiq.profiler.decorators.function_tracking import track_function
 
 # Import any tools which need to be automatically registered here
 from . import categorizer
@@ -115,6 +116,7 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
     # Compile graph into executable agent
     agent_executor = builder_graph.compile()
 
+    @track_function()
     async def _process_alert(input_message: str) -> str:
         """Process an alert through maintenance check, agent analysis, and root cause categorization.
 

@@ -38,7 +38,8 @@ class OpenStep:
     step_name: str
     step_type: str
     step_parent_id: str | None
-    token: contextvars.Token[list[str]]
+    prev_stack: list[str]
+    active_stack: list[str]
 
 
 class IntermediateStepManager:
@@ -65,17 +66,20 @@ class IntermediateStepManager:
 
         if (payload.event_state == IntermediateStepState.START):
 
+            prev_stack = active_span_id_stack
+
             parent_step_id = active_span_id_stack[-1]
 
             # Note, this must not mutate the active_span_id_stack in place
             active_span_id_stack = active_span_id_stack + [payload.UUID]
-            token = self._context_state.active_span_id_stack.set(active_span_id_stack)
+            self._context_state.active_span_id_stack.set(active_span_id_stack)
 
             self._outstanding_start_steps[payload.UUID] = OpenStep(step_id=payload.UUID,
                                                                    step_name=payload.name or payload.UUID,
                                                                    step_type=payload.event_type,
                                                                    step_parent_id=parent_step_id,
-                                                                   token=token)
+                                                                   prev_stack=prev_stack,
+                                                                   active_stack=active_span_id_stack)
 
             logger.debug("Pushed start step %s, name %s, type %s, parent %s, stack id %s",
                          payload.UUID,
@@ -95,12 +99,9 @@ class IntermediateStepManager:
 
             parent_step_id = open_step.step_parent_id
 
-            # Get the token from the open step
-            token = open_step.token
-
             # Get the current and previous active span id stack.
-            curr_stack = token.var.get()
-            prev_stack = token.old_value
+            curr_stack = open_step.active_stack
+            prev_stack = open_step.prev_stack
 
             # To restore the stack, we need to handle two scenarios:
             # 1. This function is called from a coroutine. In this case, the context variable will be the same as the
@@ -112,7 +113,7 @@ class IntermediateStepManager:
 
             # Scenario 1: Restore the previous active span id stack in case we are in a coroutine. Dont use reset here
             # since we can be in different contexts
-            token.var.set(active_span_id_stack)
+            self._context_state.active_span_id_stack.set(prev_stack)
 
             pop_count = 0
 
