@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import contextvars
+import functools
 import threading
 import uuid
 
@@ -23,24 +25,12 @@ from aiq.builder.context import AIQContext
 from aiq.builder.context import AIQContextState
 from aiq.builder.intermediate_step_manager import IntermediateStepManager
 from aiq.builder.intermediate_step_manager import IntermediateStepPayload
-from aiq.builder.intermediate_step_manager import IntermediateStepState
+from aiq.data_models.intermediate_step import IntermediateStep
+from aiq.data_models.intermediate_step import IntermediateStepType
 
 # --------------------------------------------------------------------------- #
 # Minimal stubs so the tests do not need the whole aiq code-base
 # --------------------------------------------------------------------------- #
-
-
-class _DummyStream(list):
-    """Bare-bones Observable / Subject replacement."""
-
-    def on_next(self, value):  # reactive push
-        self.append(value)
-
-    # simple subscribe: just call back synchronously
-    def subscribe(self, on_next, on_error=None, on_complete=None):  # pylint: disable=unused-argument
-        for v in self:
-            on_next(v)
-        return lambda: None  # fake Subscription
 
 
 class _DummyFunction:  # what active_function.get() returns
@@ -49,20 +39,6 @@ class _DummyFunction:  # what active_function.get() returns
         self.function_name = name
         self.function_id = fid or str(uuid.uuid4())
         self.parent_name = parent_name
-
-
-class _DummyContextState:
-    """Only what IntermediateStepManager touches."""
-
-    def __init__(self):
-        self.active_function = contextvars.ContextVar("active_function")
-        self.active_function.set(_DummyFunction())
-
-        self.event_stream = contextvars.ContextVar("event_stream")
-        self.event_stream.set(_DummyStream())
-
-        self.active_span_id_stack = contextvars.ContextVar("active_span_id_stack")
-        self.active_span_id_stack.set(["root"])
 
 
 # --------------------------------------------------------------------------- #
@@ -76,9 +52,15 @@ def ctx_state_fixture():
     s = AIQContextState()
 
     s.active_function.set(_DummyFunction())
-    s.event_stream.set(_DummyStream())
 
-    return s
+    yield s
+
+    assert len(s.active_span_id_stack.get()) == 1, "Active span id stack should be reset after a test"
+
+
+@pytest.fixture(name="output_steps")
+def output_steps_fixture():
+    return []
 
 
 @pytest.fixture(name="ctx")
@@ -87,18 +69,23 @@ def ctx_fixture(ctx_state: AIQContextState):
 
 
 @pytest.fixture(name="mgr")
-def mgr_fixture(ctx_state: AIQContextState):
+def mgr_fixture(ctx_state: AIQContextState, output_steps: list[IntermediateStepPayload]):
     """Fresh manager + its stubbed context-state for each test."""
-    return IntermediateStepManager(context_state=ctx_state)
+    mgr = IntermediateStepManager(context_state=ctx_state)
+
+    def on_next(payload: IntermediateStepPayload):
+        output_steps.append(payload)
+
+    mgr.subscribe(on_next)
+    return mgr
 
 
-def _payload(step_id=None, state=IntermediateStepState.START, name="step", etype="LLM_START"):
+def _payload(step_id=None, name="step", etype: IntermediateStepType = IntermediateStepType.LLM_START):
     """Helper to create a payload with only the fields the manager uses."""
     return IntermediateStepPayload(
         UUID=step_id or str(uuid.uuid4()),
         name=name,
-        event_state=state,
-        event_type=etype,
+        event_type=IntermediateStepType(etype),
     )
 
 
@@ -107,15 +94,19 @@ def _payload(step_id=None, state=IntermediateStepState.START, name="step", etype
 # --------------------------------------------------------------------------- #
 
 
-def test_start_pushes_event_and_tracks_open_step(ctx_state: AIQContextState, mgr: IntermediateStepManager):
+def test_start_pushes_event_and_tracks_open_step(mgr: IntermediateStepManager,
+                                                 output_steps: list[IntermediateStepPayload]):
     pay = _payload()
     mgr.push_intermediate_step(pay)
 
     # one event captured
-    stream = ctx_state.event_stream.get()
-    assert len(stream) == 1
+    assert len(output_steps) == 1
     # step now in outstanding dict
     assert pay.UUID in mgr._outstanding_start_steps
+
+    mgr.push_intermediate_step(_payload(step_id=pay.UUID, etype=IntermediateStepType.LLM_END))
+
+    assert pay.UUID not in mgr._outstanding_start_steps
 
 
 def test_chunk_preserves_parent_id(ctx: AIQContext, mgr: IntermediateStepManager):
@@ -125,11 +116,13 @@ def test_chunk_preserves_parent_id(ctx: AIQContext, mgr: IntermediateStepManager
 
     assert ctx.active_span_id == start.UUID
 
-    chunk = _payload(step_id=start.UUID, state=IntermediateStepState.CHUNK)
+    chunk = _payload(step_id=start.UUID, etype=IntermediateStepType.LLM_NEW_TOKEN)
     mgr.push_intermediate_step(chunk)
 
     # parent should still be the START id
     assert ctx.active_span_id == start.UUID
+
+    mgr.push_intermediate_step(_payload(step_id=start.UUID, etype=IntermediateStepType.LLM_END))
 
 
 def test_end_same_context_restores_parent(ctx: AIQContext, mgr: IntermediateStepManager):
@@ -144,13 +137,13 @@ def test_end_same_context_restores_parent(ctx: AIQContext, mgr: IntermediateStep
     assert ctx.active_span_id == start2.UUID
 
     # End the second start
-    mgr.push_intermediate_step(_payload(step_id=start2.UUID, state=IntermediateStepState.END, etype="LLM_END"))
+    mgr.push_intermediate_step(_payload(step_id=start2.UUID, etype=IntermediateStepType.LLM_END))
 
     # Verify that the parent is the first start
     assert ctx.active_span_id == start1.UUID
 
     # End the first start
-    mgr.push_intermediate_step(_payload(step_id=start1.UUID, state=IntermediateStepState.END, etype="LLM_END"))
+    mgr.push_intermediate_step(_payload(step_id=start1.UUID, etype=IntermediateStepType.LLM_END))
 
     # open-step removed, ContextVar back to parent (None)
     assert start1.UUID not in mgr._outstanding_start_steps
@@ -165,7 +158,7 @@ def test_end_other_thread_no_token_error(mgr: IntermediateStepManager):
     pay = _payload()
     mgr.push_intermediate_step(pay)
 
-    end_pay = _payload(step_id=pay.UUID, state=IntermediateStepState.END, etype="LLM_END")
+    end_pay = _payload(step_id=pay.UUID, etype=IntermediateStepType.LLM_END)
     t = threading.Thread(target=_end_in_thread, args=(mgr, end_pay))
     t.start()
     t.join()
@@ -176,7 +169,127 @@ def test_end_other_thread_no_token_error(mgr: IntermediateStepManager):
 
 def test_mismatched_chunk_logs_warning(mgr: IntermediateStepManager, caplog: pytest.LogCaptureFixture):
     # CHUNK without START
-    chunk = _payload(state=IntermediateStepState.CHUNK, etype="LLM_NEW_TOKEN")
+    chunk = _payload(etype=IntermediateStepType.LLM_NEW_TOKEN)
     mgr.push_intermediate_step(chunk)
 
     assert "no matching start step" in caplog.text.lower()
+
+
+async def _nested_fn(mgr: IntermediateStepManager, to_call: list[str]):
+    pay = _payload(step_id=to_call[0], name=to_call[0])
+    mgr.push_intermediate_step(pay)
+
+    await asyncio.sleep(0)
+
+    if len(to_call) > 1:
+        await _nested_fn(mgr, to_call[1:])
+
+    mgr.push_intermediate_step(_payload(step_id=pay.UUID, name=to_call[0], etype=IntermediateStepType.LLM_END))
+
+
+def _nested_fn_sync(mgr: IntermediateStepManager, to_call: list[str]):
+    pay = _payload(step_id=to_call[0], name=to_call[0])
+    mgr.push_intermediate_step(pay)
+
+    if len(to_call) > 1:
+        _nested_fn_sync(mgr, to_call[1:])
+
+    mgr.push_intermediate_step(_payload(step_id=pay.UUID, name=to_call[0], etype=IntermediateStepType.LLM_END))
+
+
+async def test_async_nested(mgr: IntermediateStepManager, output_steps: list[IntermediateStepPayload]):
+
+    await _nested_fn(mgr, ["fn1", "fn2", "fn3"])
+
+    expected_output = [
+        ("fn1", IntermediateStepType.LLM_START),
+        ("fn2", IntermediateStepType.LLM_START),
+        ("fn3", IntermediateStepType.LLM_START),
+        ("fn3", IntermediateStepType.LLM_END),
+        ("fn2", IntermediateStepType.LLM_END),
+        ("fn1", IntermediateStepType.LLM_END),
+    ]
+
+    for expected, actual in zip(expected_output, output_steps):
+        assert expected[0] == actual.name
+        assert expected[1] == actual.event_type
+
+
+async def test_async_nested_with_coroutine(mgr: IntermediateStepManager, output_steps: list[IntermediateStep]):
+
+    pay = _payload(step_id="base", name="base")
+    mgr.push_intermediate_step(pay)
+
+    async with asyncio.TaskGroup() as tg:
+        tg.create_task(_nested_fn(mgr, ["a1", "a2", "a3"]))
+        tg.create_task(_nested_fn(mgr, ["b1"]))
+        tg.create_task(_nested_fn(mgr, ["c1", "c2"]))
+
+    mgr.push_intermediate_step(_payload(step_id=pay.UUID, name="base", etype=IntermediateStepType.LLM_END))
+
+    expected_ancestry = [
+        ("a1", "base"),
+        ("a2", "a1"),
+        ("a3", "a2"),
+        ("b1", "base"),
+        ("c1", "base"),
+        ("c2", "c1"),
+    ]
+
+    for expected in expected_ancestry:
+        for actual in output_steps:
+            if actual.name == expected[0]:
+                assert expected[1] == actual.function_ancestry.parent_id
+
+
+async def test_async_with_task_end(mgr: IntermediateStepManager, output_steps: list[IntermediateStep]):
+
+    async def _main():
+
+        pay = _payload(step_id="main", name="main")
+        mgr.push_intermediate_step(pay)
+
+        await asyncio.get_running_loop().run_in_executor(
+            None,
+            functools.partial(
+                contextvars.copy_context().run,
+                _nested_fn_sync,
+                mgr,
+                ["fn1_sync"],
+            ),
+        )
+        await _nested_fn(mgr, ["fn1", "fn2"])
+
+        async def _end_event():
+            mgr.push_intermediate_step(_payload(step_id=pay.UUID, name="main", etype=IntermediateStepType.LLM_END))
+
+        await asyncio.shield(asyncio.create_task(_end_event()))
+
+        await _nested_fn(mgr, ["fn3"])
+
+    pay = _payload(step_id="base", name="base")
+    mgr.push_intermediate_step(pay)
+
+    await _main()
+
+    mgr.push_intermediate_step(_payload(step_id=pay.UUID, name="base", etype=IntermediateStepType.LLM_END))
+
+    expected_output = [
+        ("base", None, IntermediateStepType.LLM_START),
+        ("main", "base", IntermediateStepType.LLM_START),
+        ("fn1_sync", "main", IntermediateStepType.LLM_START),
+        ("fn1_sync", "main", IntermediateStepType.LLM_END),
+        ("fn1", "main", IntermediateStepType.LLM_START),
+        ("fn2", "fn1", IntermediateStepType.LLM_START),
+        ("fn2", "fn1", IntermediateStepType.LLM_END),
+        ("fn1", "main", IntermediateStepType.LLM_END),
+        ("main", "base", IntermediateStepType.LLM_END),
+        ("fn3", "base", IntermediateStepType.LLM_START),
+        ("fn3", "base", IntermediateStepType.LLM_END),
+        ("base", "root", IntermediateStepType.LLM_END),
+    ]
+
+    for expected, actual in zip(expected_output, output_steps):
+        assert expected[0] == actual.name
+        assert expected[1] is None or expected[1] == actual.function_ancestry.parent_id
+        assert expected[2] == actual.event_type
