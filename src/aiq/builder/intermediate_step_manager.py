@@ -38,6 +38,8 @@ class OpenStep:
     step_name: str
     step_type: str
     step_parent_id: str | None
+    prev_stack: list[str]
+    active_stack: list[str]
 
 
 class IntermediateStepManager:
@@ -62,6 +64,8 @@ class IntermediateStepManager:
 
         if (payload.event_state == IntermediateStepState.START):
 
+            prev_stack = active_span_id_stack
+
             parent_step_id = active_span_id_stack[-1]
 
             # Note, this must not mutate the active_span_id_stack in place
@@ -71,7 +75,16 @@ class IntermediateStepManager:
             self._outstanding_start_steps[payload.UUID] = OpenStep(step_id=payload.UUID,
                                                                    step_name=payload.name or payload.UUID,
                                                                    step_type=payload.event_type,
-                                                                   step_parent_id=parent_step_id)
+                                                                   step_parent_id=parent_step_id,
+                                                                   prev_stack=prev_stack,
+                                                                   active_stack=active_span_id_stack)
+
+            logger.debug("Pushed start step %s, name %s, type %s, parent %s, stack id %s",
+                         payload.UUID,
+                         payload.name,
+                         payload.event_type,
+                         parent_step_id,
+                         id(active_span_id_stack))
 
         elif (payload.event_state == IntermediateStepState.END):
 
@@ -82,21 +95,49 @@ class IntermediateStepManager:
                 logger.warning("Step id %s not found in outstanding start steps", payload.UUID)
                 return
 
-            # Remove the current step from the active span id stack. Look for the step id in the stack and remove it to
-            # correct errors
-            current_step_index = active_span_id_stack.index(payload.UUID)
-
-            if (current_step_index is not None):
-                if (current_step_index != len(active_span_id_stack) - 1):
-                    logger.warning(
-                        "Step id %s not the last step in the stack. "
-                        "Removing it from the stack but this is likely an error",
-                        payload.UUID)
-
-                active_span_id_stack = active_span_id_stack[:current_step_index]
-                self._context_state.active_span_id_stack.set(active_span_id_stack)
-
             parent_step_id = open_step.step_parent_id
+
+            # Get the current and previous active span id stack.
+            curr_stack = open_step.active_stack
+            prev_stack = open_step.prev_stack
+
+            # To restore the stack, we need to handle two scenarios:
+            # 1. This function is called from a coroutine. In this case, the context variable will be the same as the
+            #    one used in START. So we can just set the context variable to the previous stack.
+            # 2. This function is called from a task. In this case, the context variable will be separate from the one
+            #    used in START so calling set() will have no effect. However, we still have a reference to the list used
+            #    in START. So we update the reference to be equal to the old one.. So we need to update the current
+            #    reference stack to be equal to the previous stack.
+
+            # Scenario 1: Restore the previous active span id stack in case we are in a coroutine. Dont use reset here
+            # since we can be in different contexts
+            self._context_state.active_span_id_stack.set(prev_stack)
+
+            pop_count = 0
+
+            # Scenario 2: Remove all steps from the current stack until we reach the parent step id to make it equal to
+            # the previous stack. In the coroutine case, this will not have any effect.
+            while (curr_stack[-1] != parent_step_id):
+                curr_stack.pop()
+                pop_count += 1
+
+            if (pop_count != 1):
+                logger.warning(
+                    "Step id %s not the last step in the stack. "
+                    "Removing it from the stack but this is likely an error",
+                    payload.UUID)
+
+            # Verify that the stack is now equal to the previous stack
+            if (curr_stack != prev_stack):
+                logger.warning("Current span ID stack is not equal to the previous stack. "
+                               "This is likely an error. Report this to the AIQ team.")
+
+            logger.debug("Popped end step %s, name %s, type %s, parent %s, stack id %s",
+                         payload.UUID,
+                         payload.name,
+                         payload.event_type,
+                         parent_step_id,
+                         id(curr_stack))
 
         elif (payload.event_state == IntermediateStepState.CHUNK):
 
