@@ -3,8 +3,8 @@
 # Regular expressions are parsed according to the Go syntax: https://golang.org/pkg/regexp/syntax/
 
 [Aa]gentic
-AgentIQ
-aiq
+[Aa]gno
+AIQ
 API(s?)
 Arize
 arXiv
@@ -17,6 +17,7 @@ arXiv
 [Cc]allable(s?)
 # Documentation for ccache only capitalizes the name at the start of a sentence https://ccache.dev/
 [Cc]cache
+[Cc]ategorizer
 [Cc]hatbot(s?)
 # clangd is never capitalized even at the start of a sentence https://clangd.llvm.org/
 clangd
@@ -71,6 +72,7 @@ Milvus
 MLflow
 MLOps
 Morpheus
+[Mm]ultimodal
 [Nn]amespace(s?)
 NeMo
 nginx
@@ -115,6 +117,7 @@ triages
 [Uu]nittest(s?)
 [Uu]ploader
 uv
+VectorDB
 [Ww]alkthrough
 XGBoost
 zsh

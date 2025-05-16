@@ -23,6 +23,7 @@ import click
 import yaml
 
 from aiq.utils.data_models.schema_validator import validate_yaml
+from aiq.utils.io.yaml_tools import yaml_load
 
 logger = logging.getLogger(__name__)
 
@@ -183,12 +184,9 @@ class LayeredConfig:
 
 def load_and_override_config(config_file: Path, overrides: tuple[tuple[str, str], ...]) -> dict[str, Any]:
     """Load config file and apply any overrides"""
-    # First validate the original config file
-    validate_yaml(None, None, config_file)
 
     # Load the base config
-    with open(config_file, 'r', encoding='utf-8') as f:
-        base_config = yaml.safe_load(f)
+    base_config = yaml_load(config_file)
 
     # Create layered config
     config = LayeredConfig(base_config)

@@ -19,7 +19,8 @@ set -e
 GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 source ${GITHUB_SCRIPT_DIR}/common.sh
-WHEELS_DIR=${WORKSPACE_TMP}/wheels
+WHEELS_BASE_DIR="${WORKSPACE_TMP}/wheels"
+WHEELS_DIR="${WHEELS_BASE_DIR}/aiqtoolkit"
 
 create_env extra:all
 
@@ -32,12 +33,7 @@ function get_git_tag() {
 GIT_TAG=$(get_git_tag)
 rapids-logger "Git Version: ${GIT_TAG}"
 
-function build_wheel() {
-    rapids-logger "Building Wheel for $1"
-    uv build --wheel --no-progress --out-dir "${WHEELS_DIR}/$2" --directory $1
-}
-
-build_wheel . "agentiq/${GIT_TAG}"
+build_wheel . "aiqtoolkit/${GIT_TAG}"
 
 
 # Build all examples with a pyproject.toml in the first directory below examples
@@ -46,12 +42,15 @@ for AIQ_EXAMPLE in ${AIQ_EXAMPLES[@]}; do
     build_wheel ${AIQ_EXAMPLE} "examples"
 done
 
+
 # Build all packages with a pyproject.toml in the first directory below packages
 for AIQ_PACKAGE in "${AIQ_PACKAGES[@]}"; do
-    # drop each package into a separate directory
-    PACKAGE_DIR_NAME="${AIQ_PACKAGE#packages/}"
-    PACKAGE_DIR_NAME="${AIQ_PACKAGE#./packages/}"
-    # Replace "aiq_" with "agentiq_"
-    PACKAGE_DIR_NAME="${PACKAGE_DIR_NAME//aiq_/agentiq_}"
-    build_wheel "${AIQ_PACKAGE}" "${PACKAGE_DIR_NAME}/${GIT_TAG}"
+    build_package_wheel ${AIQ_PACKAGE}
 done
+
+if [[ "${BUILD_AIQ_COMPAT}" == "true" ]]; then
+    WHEELS_DIR="${WHEELS_BASE_DIR}/agentiq"
+    for AIQ_COMPAT_PACKAGE in "${AIQ_COMPAT_PACKAGES[@]}"; do
+        build_package_wheel ${AIQ_COMPAT_PACKAGE}
+    done
+fi

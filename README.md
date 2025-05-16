@@ -6,7 +6,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-http:/www.apache.org/licenses/LICENSE-2.0
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,52 +15,67 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA AgentIQ](./docs/source/_static/agentiq_banner.png "AgentIQ banner image")
+![NVIDIA Agent Intelligence Toolkit](./docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
 
-# NVIDIA AgentIQ
+# NVIDIA Agent Intelligence Toolkit
 
-AgentIQ is a flexible library designed to seamlessly integrate your enterprise agents—regardless of framework—with various data sources and tools. By treating agents, tools, and agentic workflows as simple function calls, AgentIQ enables true composability: build once and reuse anywhere.
+NVIDIA Agent Intelligence (AIQ) toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
+
+> Note: Agent Intelligence toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `aiqtoolkit` instead of `agentiq`. The transitional package named `agentiq` is available for backwards compatibility, but will be removed in the future.
 
 ## Key Features
 
-- [**Framework Agnostic:**](https://docs.nvidia.com/agentiq/latest/concepts/plugins.html) Works with any agentic framework, so you can use your current technology stack without replatforming.
-- [**Reusability:**](https://docs.nvidia.com/agentiq/latest/guides/sharing-workflows-and-tools.html) Every agent, tool, or workflow can be combined and repurposed, allowing developers to leverage existing work in new scenarios.
-- [**Rapid Development:**](https://docs.nvidia.com/agentiq/latest/guides/create-customize-workflows.html) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
-- [**Profiling:**](https://docs.nvidia.com/agentiq/latest/guides/profiler.html) Profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
-- [**Observability:**](https://docs.nvidia.com/agentiq/latest/guides/observe-workflow-with-phoenix.html) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool.
-- [**Evaluation System:**](https://docs.nvidia.com/agentiq/latest/guides/evaluate.html) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
-- [**User Interface:**](https://docs.nvidia.com/agentiq/latest/guides/using-agentiq-ui-and-server.html) Use the AgentIQ UI chat interface to interact with your agents, visualize output, and debug workflows.
-- [**MCP Compatibility**](https://docs.nvidia.com/agentiq/latest/components/mcp.html) Compatible with Model Context Protocol (MCP), allowing tools served by MCP Servers to be used as AgentIQ functions.
+- [**Framework Agnostic:**](./docs/source/quick-start/installing.md#framework-integrations) AIQ toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), and [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. AIQ toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
 
-With AgentIQ, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
+- [**Reusability:**](./docs/source/extend/sharing-components.md) Every agent, tool, and agentic workflow in this library exists as a function call that works together in complex software applications. The composability between these agents, tools, and workflows allows you to build once and reuse in different scenarios.
+
+- [**Rapid Development:**](docs/source/tutorials/customize-a-workflow.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs. This allows you and your development teams to move quickly if you're already developing with agents.
+
+- [**Profiling:**](./docs/source/workflows/profiler.md) Use the profiler to profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks. While we encourage you to wrap (decorate) every tool and agent to get the most out of the profiler, you have the freedom to integrate your tools, agents, and workflows to whatever level you want. You start small and go to where you believe you'll see the most value and expand from there.
+
+- [**Observability:**](./docs/source/workflows/observe/index.md) Monitor and debug your workflows with any OpenTelemetry-compatible observability tool, with examples using [Phoenix](./docs/source/workflows/observe/observe-workflow-with-phoenix.md) and [W&B Weave](./docs/source/workflows/observe/observe-workflow-with-weave.md).
+
+- [**Evaluation System:**](./docs/source/workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
+
+- [**User Interface:**](./docs/source/quick-start/launching-ui.md) Use the AIQ toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
+
+- [**Full MCP Support:**](./docs/source/workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use AIQ toolkit as an [MCP client](./docs/source/workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use AIQ toolkit as an [MCP server](./docs/source/workflows/mcp/mcp-server.md) to publish tools via MCP.
+
+With AIQ toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
+
+## Component Overview
+
+The following diagram illustrates the key components of AIQ toolkit and how they interact. It provides a high-level view of the architecture, including agents, plugins, workflows, and user interfaces. Use this as a reference to understand how to integrate and extend AIQ toolkit in your projects.
+
+![AIQ toolkit Components Diagram](docs/source/_static/aiqtoolkit_gitdiagram.png)
 
 ## Links
 
- * [Documentation](https://docs.nvidia.com/agentiq/latest/index.html): Explore the full documentation for AgentIQ.
- * [About AgentIQ](https://docs.nvidia.com/agentiq/latest/intro/why-agentiq.html): Learn more about the benefits of using AgentIQ.
- * [Get Started Guide](https://docs.nvidia.com/agentiq/latest/intro/get-started.html): Set up your environment and start building with AgentIQ.
- * [Examples](https://github.com/NVIDIA/AgentIQ/tree/main/examples#readme): Explore examples of AgentIQ workflows.
- * [Create and Customize AgentIQ Workflows](https://docs.nvidia.com/agentiq/latest/guides/create-customize-workflows.html): Learn how to create and customize AgentIQ workflows.
- * [Evaluate with AgentIQ](https://docs.nvidia.com/agentiq/latest/guides/evaluate.html): Learn how to evaluate your AgentIQ workflows.
- * [Troubleshooting](https://docs.nvidia.com/agentiq/latest/troubleshooting.html): Get help with common issues.
+ * [Documentation](https://docs.nvidia.com/aiqtoolkit): Explore the full documentation for AIQ toolkit.
+ * [Get Started Guide](./docs/source/quick-start/installing.md): Set up your environment and start building with AIQ toolkit.
+ * [Examples](./examples/README.md): Explore examples of AIQ toolkit workflows located in the [`examples`](./examples) directory of the source repository.
+ * [Create and Customize AIQ toolkit Workflows](docs/source/tutorials/customize-a-workflow.md): Learn how to create and customize AIQ toolkit workflows.
+ * [Evaluate with AIQ toolkit](./docs/source/workflows/evaluate.md): Learn how to evaluate your AIQ toolkit workflows.
+ * [Troubleshooting](./docs/source/troubleshooting.md): Get help with common issues.
 
 
 ## Get Started
 
 ### Prerequisites
 
-Before you begin using AgentIQ, ensure that you meet the following software prerequisites.
+Before you begin using AIQ toolkit, ensure that you meet the following software prerequisites.
 
 - Install [Git](https://git-scm.com/)
 - Install [Git Large File Storage](https://git-lfs.github.com/) (LFS)
 - Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- Install [Python (3.11 or 3.12)](https://www.python.org/downloads/)
 
 ### Install From Source
 
-1. Clone the AgentIQ repository to your local machine.
+1. Clone the AIQ toolkit repository to your local machine.
     ```bash
-    git clone git@github.com:NVIDIA/AgentIQ.git agentiq
-    cd agentiq
+    git clone git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit
+    cd aiqtoolkit
     ```
 
 2. Initialize, fetch, and update submodules in the Git repository.
@@ -80,14 +95,20 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
     uv venv --seed .venv
     source .venv/bin/activate
     ```
+    Make sure the environment is built with Python version `3.11` or `3.12`. If you have multiple Python versions installed,
+    you can specify the desired version using the `--python` flag. For example, to use Python 3.11:
+    ```bash
+    uv venv --seed .venv --python 3.11
+    ```
+    You can replace `--python 3.11` with any other Python version (`3.11` or `3.12`) that you have installed.
 
-5. Install the AgentIQ library.
-    To install the AgentIQ library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
+5. Install the AIQ toolkit library.
+    To install the AIQ toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
     ```bash
     uv sync --all-groups --all-extras
     ```
 
-    Alternatively to install just the core AgentIQ without any plugins, run the following:
+    Alternatively to install just the core AIQ toolkit without any plugins, run the following:
     ```bash
     uv sync
     ```
@@ -99,7 +120,7 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
     ```
 
     > [!NOTE]
-    > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/simple/README.md` guide will install the `agentiq-langchain` plugin if you haven't already done so.
+    > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/simple/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
 
 
     In addition to plugins, there are optional dependencies needed for profiling. To install these dependencies, run the following:
@@ -107,13 +128,13 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
     uv pip install -e '.[profiling]'
     ```
 
-6. Verify the installation using the AgentIQ CLI
+6. Verify the installation using the AIQ toolkit CLI
 
    ```bash
    aiq --version
    ```
 
-   This should output the AgentIQ version which is currently installed.
+   This should output the AIQ toolkit version which is currently installed.
 
 ## Hello World Example
 
@@ -123,7 +144,7 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
    export NVIDIA_API_KEY=<your_api_key>
    ```
 
-2. Create the AgentIQ workflow configuration file. This file will define the agents, tools, and workflows that will be used in the example. Save the following as `workflow.yaml`:
+2. Create the AIQ toolkit workflow configuration file. This file will define the agents, tools, and workflows that will be used in the example. Save the following as `workflow.yaml`:
 
    ```yaml
    functions:
@@ -133,7 +154,7 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
          max_results: 2
 
    llms:
-      # Tell AgentIQ which LLM to use for the agent
+      # Tell AIQ toolkit which LLM to use for the agent
       nim_llm:
          _type: nim
          model_name: meta/llama-3.1-70b-instruct
@@ -169,11 +190,11 @@ Before you begin using AgentIQ, ensure that you meet the following software prer
 
 ## Feedback
 
-We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AgentIQ/issues) if you have any feedback or feature requests.
+We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AIQToolkit/issues) if you have any feedback or feature requests.
 
 ## Acknowledgements
 
-We would like to thank the following open source projects that made AgentIQ possible:
+We would like to thank the following open source projects that made AIQ toolkit possible:
 
 - [CrewAI](https://github.com/crewAIInc/crewAI)
 - [FastAPI](https://github.com/tiangolo/fastapi)

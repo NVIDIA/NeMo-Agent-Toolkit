@@ -26,7 +26,7 @@ def validate_config(config_file: Path) -> AIQConfig:
     try:
         from aiq.runtime.loader import load_config
 
-        # Load using the AgentIQ loader functions. This performs validation
+        # Load using the AIQ Toolkit loader functions. This performs validation
         config = load_config(config_file)
 
         return config

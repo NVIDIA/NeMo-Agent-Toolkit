@@ -23,6 +23,7 @@ from enum import Enum
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Discriminator
+from pydantic import Field
 from pydantic import HttpUrl
 from pydantic import conlist
 from pydantic import field_validator
@@ -32,203 +33,25 @@ from aiq.data_models.interactive import HumanPrompt
 from aiq.utils.type_converter import GlobalTypeConverter
 
 
-class Message(BaseModel):
-    content: str
-    role: str
-
-
-class AIQChatRequest(BaseModel):
+class Request(BaseModel):
     """
-    AIQChatRequest is a data model that represents a request to the AgentIQ chat API.
+    Request is a data model that represents HTTP request attributes.
     """
+    model_config = ConfigDict(extra="forbid")
 
-    # Allow extra fields in the model_config to support derived models
-    model_config = ConfigDict(extra="allow")
-
-    messages: typing.Annotated[list[Message], conlist(Message, min_length=1)]
-    model: str | None = None
-    temperature: float | None = None
-    max_tokens: int | None = None
-    top_p: float | None = None
-
-    @staticmethod
-    def from_string(data: str,
-                    *,
-                    model: str | None = None,
-                    temperature: float | None = None,
-                    max_tokens: int | None = None,
-                    top_p: float | None = None) -> "AIQChatRequest":
-
-        return AIQChatRequest(messages=[Message(content=data, role="user")],
-                              model=model,
-                              temperature=temperature,
-                              max_tokens=max_tokens,
-                              top_p=top_p)
-
-
-class AIQChoiceMessage(BaseModel):
-    content: str | None = None
-    role: str | None = None
-
-
-class AIQChoice(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    message: AIQChoiceMessage
-    finish_reason: typing.Literal['stop', 'length', 'tool_calls', 'content_filter', 'function_call'] | None = None
-    index: int
-    # logprobs: AIQChoiceLogprobs | None = None
-
-
-class AIQUsage(BaseModel):
-    prompt_tokens: int
-    completion_tokens: int
-    total_tokens: int
-
-
-class AIQResponseSerializable(abc.ABC):
-    """
-    AIQChatResponseSerializable is an abstract class that defines the interface for serializing output for the AgentIQ
-    chat streaming API.
-    """
-
-    @abstractmethod
-    def get_stream_data(self) -> str:
-        pass
-
-
-class AIQResponseBaseModelOutput(BaseModel, AIQResponseSerializable):
-
-    def get_stream_data(self) -> str:
-        return f"data: {self.model_dump_json()}\n\n"
-
-
-class AIQResponseBaseModelIntermediate(BaseModel, AIQResponseSerializable):
-
-    def get_stream_data(self) -> str:
-        return f"intermediate_data: {self.model_dump_json()}\n\n"
-
-
-class AIQChatResponse(AIQResponseBaseModelOutput):
-    """
-    AIQChatResponse is a data model that represents a response from the AgentIQ chat API.
-    """
-
-    # Allow extra fields in the model_config to support derived models
-    model_config = ConfigDict(extra="allow")
-    id: str
-    object: str
-    model: str = ""
-    created: datetime.datetime
-    choices: list[AIQChoice]
-    usage: AIQUsage | None = None
-
-    @staticmethod
-    def from_string(data: str,
-                    *,
-                    id_: str | None = None,
-                    object_: str | None = None,
-                    model: str | None = None,
-                    created: datetime.datetime | None = None,
-                    usage: AIQUsage | None = None) -> "AIQChatResponse":
-
-        if id_ is None:
-            id_ = str(uuid.uuid4())
-        if object_ is None:
-            object_ = "chat.completion"
-        if model is None:
-            model = ""
-        if created is None:
-            created = datetime.datetime.now(datetime.timezone.utc)
-
-        return AIQChatResponse(
-            id=id_,
-            object=object_,
-            model=model,
-            created=created,
-            choices=[AIQChoice(index=0, message=AIQChoiceMessage(content=data), finish_reason="stop")],
-            usage=usage)
-
-
-class AIQChatResponseChunk(AIQResponseBaseModelOutput):
-    """
-    AIQChatResponseChunk is a data model that represents a response chunk from the AgentIQ chat streaming API.
-    """
-
-    # Allow extra fields in the model_config to support derived models
-    model_config = ConfigDict(extra="allow")
-
-    id: str
-    choices: list[AIQChoice]
-    created: datetime.datetime
-    model: str = ""
-    object: str = "chat.completion.chunk"
-
-    @staticmethod
-    def from_string(data: str,
-                    *,
-                    id_: str | None = None,
-                    created: datetime.datetime | None = None,
-                    model: str | None = None,
-                    object_: str | None = None) -> "AIQChatResponseChunk":
-
-        if id_ is None:
-            id_ = str(uuid.uuid4())
-        if created is None:
-            created = datetime.datetime.now(datetime.timezone.utc)
-        if model is None:
-            model = ""
-        if object_ is None:
-            object_ = "chat.completion.chunk"
-
-        return AIQChatResponseChunk(
-            id=id_,
-            choices=[AIQChoice(index=0, message=AIQChoiceMessage(content=data), finish_reason="stop")],
-            created=created,
-            model=model,
-            object=object_)
-
-
-class AIQResponseIntermediateStep(AIQResponseBaseModelIntermediate):
-    """
-    AIQResponseSerializedStep is a data model that represents a serialized step in the AgentIQ chat streaming API.
-    """
-
-    # Allow extra fields in the model_config to support derived models
-    model_config = ConfigDict(extra="allow")
-
-    id: str
-    parent_id: str | None = None
-    type: str = "markdown"
-    name: str
-    payload: str
-
-
-class AIQResponsePayloadOutput(BaseModel, AIQResponseSerializable):
-
-    payload: typing.Any
-
-    def get_stream_data(self) -> str:
-
-        if (isinstance(self.payload, BaseModel)):
-            return f"data: {self.payload.model_dump_json()}\n\n"
-
-        return f"data: {self.payload}\n\n"
-
-
-class AIQGenerateResponse(BaseModel):
-    # Allow extra fields in the model_config to support derived models
-    model_config = ConfigDict(extra="allow")
-
-    # (fixme) define the intermediate step model
-    intermediate_steps: list[tuple] | None = None
-    output: str
-    value: str | None = "default"
-
-
-class UserMessageContentRoleType(str, Enum):
-    USER = "user"
-    ASSISTANT = "assistant"
+    method: str | None = Field(default=None,
+                               description="HTTP method used for the request (e.g., GET, POST, PUT, DELETE).")
+    url_path: str | None = Field(default=None, description="URL request path.")
+    url_port: int | None = Field(default=None, description="URL request port number.")
+    url_scheme: str | None = Field(default=None, description="URL scheme indicating the protocol (e.g., http, https).")
+    headers: typing.Any | None = Field(default=None, description="HTTP headers associated with the request.")
+    query_params: typing.Any | None = Field(default=None, description="Query parameters included in the request URL.")
+    path_params: dict[str, str] | None = Field(default=None,
+                                               description="Path parameters extracted from the request URL.")
+    client_host: str | None = Field(default=None, description="Client host address from which the request originated.")
+    client_port: int | None = Field(default=None, description="Client port number from which the request originated.")
+    cookies: dict[str, str] | None = Field(
+        default=None, description="Cookies sent with the request, stored in a dictionary-like object.")
 
 
 class ChatContentType(str, Enum):
@@ -238,36 +61,6 @@ class ChatContentType(str, Enum):
     TEXT = "text"
     IMAGE_URL = "image_url"
     INPUT_AUDIO = "input_audio"
-
-
-class WebSocketMessageType(str, Enum):
-    """
-    WebSocketMessageType is an Enum that represents WebSocket Message types.
-    """
-    USER_MESSAGE = "user_message"
-    RESPONSE_MESSAGE = "system_response_message"
-    INTERMEDIATE_STEP_MESSAGE = "system_intermediate_message"
-    SYSTEM_INTERACTION_MESSAGE = "system_interaction_message"
-    USER_INTERACTION_MESSAGE = "user_interaction_message"
-    ERROR_MESSAGE = "error_message"
-
-
-class WorkflowSchemaType(str, Enum):
-    """
-    WorkflowSchemaType is an Enum that represents Workkflow response types.
-    """
-    GENERATE_STREAM = "generate_stream"
-    CHAT_STREAM = "chat_stream"
-    GENERATE = "generate"
-    CHAT = "chat"
-
-
-class WebSocketMessageStatus(str, Enum):
-    """
-    WebSocketMessageStatus is an Enum that represents the status of a WebSocket message.
-    """
-    IN_PROGRESS = "in_progress"
-    COMPLETE = "complete"
 
 
 class InputAudio(BaseModel):
@@ -308,6 +101,249 @@ class Security(BaseModel):
 
 
 UserContent = typing.Annotated[TextContent | ImageContent | AudioContent, Discriminator("type")]
+
+
+class Message(BaseModel):
+    content: str | list[UserContent]
+    role: str
+
+
+class AIQChatRequest(BaseModel):
+    """
+    AIQChatRequest is a data model that represents a request to the AIQ Toolkit chat API.
+    """
+
+    # Allow extra fields in the model_config to support derived models
+    model_config = ConfigDict(extra="allow")
+
+    messages: typing.Annotated[list[Message], conlist(Message, min_length=1)]
+    model: str | None = None
+    temperature: float | None = None
+    max_tokens: int | None = None
+    top_p: float | None = None
+
+    @staticmethod
+    def from_string(data: str,
+                    *,
+                    model: str | None = None,
+                    temperature: float | None = None,
+                    max_tokens: int | None = None,
+                    top_p: float | None = None) -> "AIQChatRequest":
+
+        return AIQChatRequest(messages=[Message(content=data, role="user")],
+                              model=model,
+                              temperature=temperature,
+                              max_tokens=max_tokens,
+                              top_p=top_p)
+
+    @staticmethod
+    def from_content(content: list[UserContent],
+                     *,
+                     model: str | None = None,
+                     temperature: float | None = None,
+                     max_tokens: int | None = None,
+                     top_p: float | None = None) -> "AIQChatRequest":
+
+        return AIQChatRequest(messages=[Message(content=content, role="user")],
+                              model=model,
+                              temperature=temperature,
+                              max_tokens=max_tokens,
+                              top_p=top_p)
+
+
+class AIQChoiceMessage(BaseModel):
+    content: str | None = None
+    role: str | None = None
+
+
+class AIQChoice(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    message: AIQChoiceMessage
+    finish_reason: typing.Literal['stop', 'length', 'tool_calls', 'content_filter', 'function_call'] | None = None
+    index: int
+    # logprobs: AIQChoiceLogprobs | None = None
+
+
+class AIQUsage(BaseModel):
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+
+
+class AIQResponseSerializable(abc.ABC):
+    """
+    AIQChatResponseSerializable is an abstract class that defines the interface for serializing output for the AIQ
+    Toolkit chat streaming API.
+    """
+
+    @abstractmethod
+    def get_stream_data(self) -> str:
+        pass
+
+
+class AIQResponseBaseModelOutput(BaseModel, AIQResponseSerializable):
+
+    def get_stream_data(self) -> str:
+        return f"data: {self.model_dump_json()}\n\n"
+
+
+class AIQResponseBaseModelIntermediate(BaseModel, AIQResponseSerializable):
+
+    def get_stream_data(self) -> str:
+        return f"intermediate_data: {self.model_dump_json()}\n\n"
+
+
+class AIQChatResponse(AIQResponseBaseModelOutput):
+    """
+    AIQChatResponse is a data model that represents a response from the AIQ Toolkit chat API.
+    """
+
+    # Allow extra fields in the model_config to support derived models
+    model_config = ConfigDict(extra="allow")
+    id: str
+    object: str
+    model: str = ""
+    created: datetime.datetime
+    choices: list[AIQChoice]
+    usage: AIQUsage | None = None
+
+    @staticmethod
+    def from_string(data: str,
+                    *,
+                    id_: str | None = None,
+                    object_: str | None = None,
+                    model: str | None = None,
+                    created: datetime.datetime | None = None,
+                    usage: AIQUsage | None = None) -> "AIQChatResponse":
+
+        if id_ is None:
+            id_ = str(uuid.uuid4())
+        if object_ is None:
+            object_ = "chat.completion"
+        if model is None:
+            model = ""
+        if created is None:
+            created = datetime.datetime.now(datetime.timezone.utc)
+
+        return AIQChatResponse(
+            id=id_,
+            object=object_,
+            model=model,
+            created=created,
+            choices=[AIQChoice(index=0, message=AIQChoiceMessage(content=data), finish_reason="stop")],
+            usage=usage)
+
+
+class AIQChatResponseChunk(AIQResponseBaseModelOutput):
+    """
+    AIQChatResponseChunk is a data model that represents a response chunk from the AIQ Toolkit chat streaming API.
+    """
+
+    # Allow extra fields in the model_config to support derived models
+    model_config = ConfigDict(extra="allow")
+
+    id: str
+    choices: list[AIQChoice]
+    created: datetime.datetime
+    model: str = ""
+    object: str = "chat.completion.chunk"
+
+    @staticmethod
+    def from_string(data: str,
+                    *,
+                    id_: str | None = None,
+                    created: datetime.datetime | None = None,
+                    model: str | None = None,
+                    object_: str | None = None) -> "AIQChatResponseChunk":
+
+        if id_ is None:
+            id_ = str(uuid.uuid4())
+        if created is None:
+            created = datetime.datetime.now(datetime.timezone.utc)
+        if model is None:
+            model = ""
+        if object_ is None:
+            object_ = "chat.completion.chunk"
+
+        return AIQChatResponseChunk(
+            id=id_,
+            choices=[AIQChoice(index=0, message=AIQChoiceMessage(content=data), finish_reason="stop")],
+            created=created,
+            model=model,
+            object=object_)
+
+
+class AIQResponseIntermediateStep(AIQResponseBaseModelIntermediate):
+    """
+    AIQResponseSerializedStep is a data model that represents a serialized step in the AIQ Toolkit chat streaming API.
+    """
+
+    # Allow extra fields in the model_config to support derived models
+    model_config = ConfigDict(extra="allow")
+
+    id: str
+    parent_id: str | None = None
+    type: str = "markdown"
+    name: str
+    payload: str
+
+
+class AIQResponsePayloadOutput(BaseModel, AIQResponseSerializable):
+
+    payload: typing.Any
+
+    def get_stream_data(self) -> str:
+
+        if (isinstance(self.payload, BaseModel)):
+            return f"data: {self.payload.model_dump_json()}\n\n"
+
+        return f"data: {self.payload}\n\n"
+
+
+class AIQGenerateResponse(BaseModel):
+    # Allow extra fields in the model_config to support derived models
+    model_config = ConfigDict(extra="allow")
+
+    # (fixme) define the intermediate step model
+    intermediate_steps: list[tuple] | None = None
+    output: str
+    value: str | None = "default"
+
+
+class UserMessageContentRoleType(str, Enum):
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
+class WebSocketMessageType(str, Enum):
+    """
+    WebSocketMessageType is an Enum that represents WebSocket Message types.
+    """
+    USER_MESSAGE = "user_message"
+    RESPONSE_MESSAGE = "system_response_message"
+    INTERMEDIATE_STEP_MESSAGE = "system_intermediate_message"
+    SYSTEM_INTERACTION_MESSAGE = "system_interaction_message"
+    USER_INTERACTION_MESSAGE = "user_interaction_message"
+    ERROR_MESSAGE = "error_message"
+
+
+class WorkflowSchemaType(str, Enum):
+    """
+    WorkflowSchemaType is an Enum that represents Workkflow response types.
+    """
+    GENERATE_STREAM = "generate_stream"
+    CHAT_STREAM = "chat_stream"
+    GENERATE = "generate"
+    CHAT = "chat"
+
+
+class WebSocketMessageStatus(str, Enum):
+    """
+    WebSocketMessageStatus is an Enum that represents the status of a WebSocket message.
+    """
+    IN_PROGRESS = "in_progress"
+    COMPLETE = "complete"
 
 
 class UserMessages(BaseModel):
@@ -487,7 +523,9 @@ GlobalTypeConverter.register_converter(_generate_response_to_chat_response)
 
 # ======== AIQChatRequest Converters ========
 def _aiq_chat_request_to_string(data: AIQChatRequest) -> str:
-    return data.messages[-1].content
+    if isinstance(data.messages[-1].content, str):
+        return data.messages[-1].content
+    return str(data.messages[-1].content)
 
 
 GlobalTypeConverter.register_converter(_aiq_chat_request_to_string)

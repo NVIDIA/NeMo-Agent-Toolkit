@@ -61,8 +61,8 @@ def mount(nfs_server_ip):
     # Mount the NFS share
     run_command(f"sudo mount -v -t nfs -o nfsvers=3 {remote_path} {mount_point}")
 
-    # Print only the AgentIQ mount
-    print("\nAgentIQ mount details:")
+    # Print only the AIQ Toolkit mount
+    print("\nAIQ Toolkit mount details:")
     run_command(f"mount | grep {mount_point}")
     print("NFS mount completed successfully")
 

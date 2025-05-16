@@ -23,6 +23,14 @@ from aiq.data_models.function import FunctionBaseConfig
 logger = logging.getLogger(__name__)
 
 
+def validate_number_count(numbers: list[str], expected_count: int, action: str) -> str | None:
+    if len(numbers) < expected_count:
+        return f"Provide at least {expected_count} numbers to {action}."
+    if len(numbers) > expected_count:
+        return f"This tool only supports {action} between {expected_count} numbers."
+    return None
+
+
 class InequalityToolConfig(FunctionBaseConfig, name="calculator_inequality"):
     pass
 
@@ -34,9 +42,11 @@ async def calculator_inequality(tool_config: InequalityToolConfig, builder: Buil
 
     async def _calculator_inequality(text: str) -> str:
         numbers = re.findall(r"\d+", text)
+        validation_error = validate_number_count(numbers, expected_count=2, action="compare")
+        if validation_error:
+            return validation_error
         a = int(numbers[0])
         b = int(numbers[1])
-
         if a > b:
             return f"First number {a} is greater than the second number {b}"
         if a < b:
@@ -44,7 +54,7 @@ async def calculator_inequality(tool_config: InequalityToolConfig, builder: Buil
 
         return f"First number {a} is equal to the second number {b}"
 
-    # Create a Generic AgentIQ tool that can be used with any supported LLM framework
+    # Create a Generic AIQ Toolkit tool that can be used with any supported LLM framework
     yield FunctionInfo.from_fn(
         _calculator_inequality,
         description=("This is a mathematical tool used to perform an inequality comparison between two numbers. "
@@ -62,12 +72,15 @@ async def calculator_multiply(config: MultiplyToolConfig, builder: Builder):
 
     async def _calculator_multiply(text: str) -> str:
         numbers = re.findall(r"\d+", text)
+        validation_error = validate_number_count(numbers, expected_count=2, action="multiply")
+        if validation_error:
+            return validation_error
         a = int(numbers[0])
         b = int(numbers[1])
 
         return f"The product of {a} * {b} is {a * b}"
 
-    # Create a Generic AgentIQ tool that can be used with any supported LLM framework
+    # Create a Generic AIQ Toolkit tool that can be used with any supported LLM framework
     yield FunctionInfo.from_fn(
         _calculator_multiply,
         description=("This is a mathematical tool used to multiply two numbers together. "
@@ -85,12 +98,15 @@ async def calculator_divide(config: DivisionToolConfig, builder: Builder):
 
     async def _calculator_divide(text: str) -> str:
         numbers = re.findall(r"\d+", text)
+        validation_error = validate_number_count(numbers, expected_count=2, action="divide")
+        if validation_error:
+            return validation_error
         a = int(numbers[0])
         b = int(numbers[1])
 
         return f"The result of {a} / {b} is {a / b}"
 
-    # Create a Generic AgentIQ tool that can be used with any supported LLM framework
+    # Create a Generic AIQ Toolkit tool that can be used with any supported LLM framework
     yield FunctionInfo.from_fn(
         _calculator_divide,
         description=("This is a mathematical tool used to divide one number by another. "
@@ -108,12 +124,15 @@ async def calculator_subtract(config: SubtractToolConfig, builder: Builder):
 
     async def _calculator_subtract(text: str) -> str:
         numbers = re.findall(r"\d+", text)
+        validation_error = validate_number_count(numbers, expected_count=2, action="subtract")
+        if validation_error:
+            return validation_error
         a = int(numbers[0])
         b = int(numbers[1])
 
         return f"The result of {a} - {b} is {a - b}"
 
-    # Create a Generic AgentIQ tool that can be used with any supported LLM framework
+    # Create a Generic AIQ Toolkit tool that can be used with any supported LLM framework
     yield FunctionInfo.from_fn(
         _calculator_subtract,
         description=("This is a mathematical tool used to subtract one number from another. "

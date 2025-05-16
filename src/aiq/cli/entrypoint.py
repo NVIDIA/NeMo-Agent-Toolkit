@@ -64,7 +64,7 @@ def get_version():
     from importlib.metadata import version
     try:
         # Use the distro name to get the version
-        return version("agentiq")
+        return version("aiqtoolkit")
     except PackageNotFoundError:
         return "unknown"
 
@@ -77,7 +77,7 @@ def get_version():
               help='Set the logging level')
 @click.pass_context
 def cli(ctx: click.Context, log_level: str):
-    """Main entrypoint for the AgentIQ CLI"""
+    """Main entrypoint for the AIQ Toolkit CLI"""
 
     ctx_dict = ctx.ensure_object(dict)
 
@@ -109,6 +109,7 @@ cli.add_command(workflow_command, name="workflow")
 # Aliases
 cli.add_command(start_command.get_command(None, "console"), name="run")  # type: ignore
 cli.add_command(start_command.get_command(None, "fastapi"), name="serve")  # type: ignore
+cli.add_command(start_command.get_command(None, "mcp"), name="mcp")
 
 
 @cli.result_callback()

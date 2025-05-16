@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 @click.group(name="update",
              invoke_without_command=True,
-             help="Utility to update an AgentIQ remote registry channel's settings.")
+             help="Utility to update an AIQ Toolkit remote registry channel's settings.")
 @click.argument("channel", type=str)
 def update(channel):
     from aiq.utils.settings.global_settings import update_channel_interactive
