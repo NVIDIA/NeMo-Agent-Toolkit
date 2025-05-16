@@ -16,6 +16,7 @@
 import logging
 from datetime import datetime
 
+from aiq_profiler_agent import tool  # noqa: F401 # pylint: disable=unused-import
 from aiq_profiler_agent.prompts import RETRY_PROMPT
 from aiq_profiler_agent.prompts import SYSTEM_PROMPT
 from pydantic import Field
@@ -76,7 +77,7 @@ async def profiler_agent(config: ProfilerAgentConfig, builder: Builder):
     tools = builder.get_tools(tool_names=config.tools, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     output_parser = PydanticOutputParser(pydantic_object=ExecPlan)
-    tools_dict = {tool.name: tool for tool in tools}
+    tools_dict = {t.name: t for t in tools}
     graph: CompiledGraph = await ProfilerAgent(
         llm=llm,
         tools=tools_dict,
@@ -97,7 +98,7 @@ async def profiler_agent(config: ProfilerAgentConfig, builder: Builder):
             partial_variables={
                 "current_time": current_time,
                 "output_parser": output_parser.get_format_instructions(),
-                "tools": "\n".join([f"- {tool.name}: {tool.description}" for tool in tools]),
+                "tools": "\n".join([f"- {t.name}: {t.description}" for t in tools]),
             },
         )
 

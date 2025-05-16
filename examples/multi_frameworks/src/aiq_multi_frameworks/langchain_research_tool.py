@@ -55,7 +55,9 @@ async def langchain_research(tool_config: LangChainResearchConfig, builder: Buil
 
     async def web_search(topic: str) -> list[dict]:
         output = (await tavily_tool.ainvoke(topic))
-        return output
+        output = output.split("\n\n---\n\n")
+
+        return output[0]
 
     prompt_template = """
     You are an expert of extracting topic from user query in order to search on web search engine on a
