@@ -6,7 +6,10 @@ general:
       level: WARN
 
   front_end:
-    _type: console
+    _type: fastapi
+    ssl_certfile: ca-cert.pem
+    ssl_keyfile: ca-key.pem
+    ssl_keyfile_password: password
 
 llms:
   llama4_maverick:
