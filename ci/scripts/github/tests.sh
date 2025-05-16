@@ -24,7 +24,7 @@ get_lfs_files
 create_env group:dev extra:all
 rapids-logger "Git Version: $(git describe)"
 
-rapids-logger "Running tests"
+rapids-logger "Running tests with Python version $(python --version) and pytest version $(pytest --version) on $(arch)"
 set +e
 
 pytest --junit-xml=${WORKSPACE_TMP}/report_pytest.xml \

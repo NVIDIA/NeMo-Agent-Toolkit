@@ -20,7 +20,15 @@ on:
   workflow_call:
     inputs:
       container:
-        description: 'The container to use for all CI stages'
+        description: 'The default container to use for most CI stages'
+        required: true
+        type: string
+      py_11_container:
+        description: 'The Python 3.11 container to use for the test stage'
+        required: true
+        type: string
+      py_12_container:
+        description: 'The Python 3.12 container to use for the test stage'
         required: true
         type: string
       pr_info:
@@ -88,11 +96,17 @@ jobs:
     runs-on:  linux-${{ matrix.arch }}-cpu4
     timeout-minutes: 30
     container:
-      image: ${{ inputs.container }}
+      image: ${{ matrix.container }}
     strategy:
       fail-fast: true
       matrix:
         arch: ["amd64", "arm64"]
+        python-version: ["3.11", "3.12"]
+        include:
+          - python-version: "3.11"
+            container: ${{ inputs.py_11_container }}
+          - python-version: "3.12"
+            container: ${{ inputs.py_12_container }}
 
     steps:
       - name: Checkout
@@ -101,7 +115,7 @@ jobs:
           fetch-tags: true
           path: 'aiqtoolkit'
 
-      - name: Test:linux:${{ matrix.arch }}
+      - name: Test:linux:${{ matrix.arch }}:py${{ matrix.python-version }}
         shell: bash
         run: ./aiqtoolkit/ci/scripts/github/tests.sh
 
@@ -110,7 +124,7 @@ jobs:
         # Upload test results even if the tests fail
         if: ${{ always() }}
         with:
-          name: "test-results-${{ matrix.arch }}"
+          name: "test-results-${{ matrix.arch }}-py${{ matrix.python-version }}"
           path: "${{ github.workspace }}/tmp/*.xml"
           if-no-files-found: error
 
