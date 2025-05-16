@@ -62,8 +62,6 @@ class IntermediateStepManager:
 
         active_span_id_stack = self._context_state.active_span_id_stack.get()
 
-        logger.debug("Active span id stack (%s): %s", id(active_span_id_stack), active_span_id_stack)
-
         if (payload.event_state == IntermediateStepState.START):
 
             prev_stack = active_span_id_stack
