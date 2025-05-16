@@ -1,0 +1,36 @@
+general:
+  use_uvloop: true
+  logging:
+    console:
+      _type: console
+      level: WARN
+
+  front_end:
+    _type: console
+
+llms:
+  llama4_maverick:
+    _type: nim
+    model_name: nvdev/meta/llama-4-maverick-17b-128e-instruct
+    temperature: 0.2
+    max_tokens: 4096
+    top_p: 1
+
+  llama4_scout:
+    _type: nim
+    model_name: nvdev/meta/llama-4-scout-17b-16e-instruct
+    temperature: 0.2
+    max_tokens: 4096
+    top_p: 1
+
+functions:
+  current_datetime_tool:
+    _type: current_datetime
+
+workflow:
+  _type: react_agent
+  llm_name: llama4_scout
+  tool_names:
+    - current_datetime_tool
+  verbose: True
+
