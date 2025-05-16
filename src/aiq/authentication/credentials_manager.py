@@ -16,6 +16,7 @@
 import asyncio
 import logging
 import typing
+from copy import deepcopy
 
 from aiq.builder.context import Singleton
 from aiq.data_models.authentication import AuthenticationProvider
@@ -37,7 +38,6 @@ class _CredentialsManager(metaclass=Singleton):
         self._authentication_providers: dict[str, AuthenticationProvider] = {}
         self._swap_flag: bool = True
         self._full_config: "AIQConfig" = None
-        self._command_name: str = None
         self._oauth_credentials_flag: asyncio.Event = asyncio.Event()
         self._consent_prompt_flag: asyncio.Event = asyncio.Event()
 
@@ -53,7 +53,7 @@ class _CredentialsManager(metaclass=Singleton):
 
         """
         if self._swap_flag:
-            self._authentication_providers = authentication_providers.copy()
+            self._authentication_providers = deepcopy(authentication_providers)
             authentication_providers.clear()
             self._swap_flag = False
 
@@ -77,6 +77,14 @@ class _CredentialsManager(metaclass=Singleton):
         logger.error("Authentication provider not found by the provided state.")
         return None
 
+    def _get_authentication_provider_by_consent_prompt_key(self, consent_prompt_key: str) -> OAuth2Config | None:
+        """Retrieve the stored authentication provider by consent prompt key."""
+        for _, authentication_provider in self._authentication_providers.items():
+            if isinstance(authentication_provider, OAuth2Config):
+                if authentication_provider.consent_prompt_key == consent_prompt_key:
+                    return authentication_provider
+        return None
+
     async def _wait_for_oauth_credentials(self) -> None:
         """
         Block until the oauth credentials are set in the redirect uri.
@@ -95,7 +103,7 @@ class _CredentialsManager(metaclass=Singleton):
         """
         await self._consent_prompt_flag.wait()
 
-    async def _set_consent_prompt(self):
+    async def _set_consent_prompt_url(self):
         """
         Unblock until the consent prompt location header has been retrieved.
         """
@@ -103,20 +111,10 @@ class _CredentialsManager(metaclass=Singleton):
 
     @property
     def full_config(self) -> "AIQConfig":
-        """Get the full configuration."""
+        """Get the loaded AIQConfig."""
         return self._full_config
 
     @full_config.setter
     def full_config(self, full_config: "AIQConfig") -> None:
-        """Set the full configuration."""
+        """Set the loaded AIQConfig."""
         self._full_config = full_config
-
-    @property
-    def command_name(self) -> str:
-        """Get the front end command name."""
-        return self._command_name
-
-    @command_name.setter
-    def command_name(self, command_name: str) -> None:
-        """Set the front end command name."""
-        self._command_name = command_name

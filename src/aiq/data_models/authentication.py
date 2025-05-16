@@ -33,9 +33,9 @@ class AuthenticationBaseConfig(TypedBaseModel, BaseModelRegistryTag):
 AuthenticationBaseConfigT = typing.TypeVar("AuthenticationBaseConfigT", bound=AuthenticationBaseConfig)
 
 
-class RunMode(str, Enum):
+class ExecutionMode(str, Enum):
     CONSOLE = "console"
-    SERVER = "fastapi"
+    SERVER = "server"
 
 
 class HTTPMethod(str, Enum):
@@ -50,12 +50,17 @@ class HTTPMethod(str, Enum):
 
 class ConsentPromptMode(str, Enum):
     BROWSER = "browser"
-    POLLING = "polling"
+    FRONTEND = "frontend"
 
 
 class AuthenticationEndpoint(str, Enum):
     REDIRECT_URI = "/redirect"
-    LOCATION_URL = "/location-url"
+    PROMPT_REDIRECT_URI = "/prompt-uri"
+
+
+class PromptRedirectRequest(BaseModel):
+    consent_prompt_key: str = Field(description="The key used to retrieve the consent prompt 302 redirect, "
+                                    " triggering the browser to complete the OAuth process from the front end.")
 
 
 class OAuth2AuthQueryParams(BaseModel):
@@ -111,9 +116,13 @@ class OAuth2Config(AuthenticationBaseConfig):
         default=ConsentPromptMode.BROWSER,
         description="Specifies how the application handles the OAuth 2.0 consent prompt. "
         "Options are 'browser' to open the system's default browser for login, "
-        "or 'polling' to store the login url retrievable via GET /auth/location-url.")
-    client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
+        "or 'polling' to store the login url retrievable via GET /auth/location-url."
+    )  # TODO EE: CORS Needs to be validated if the mode is frontend.
+    consent_prompt_key: str = Field(description="The key used to retrieve the consent prompt 302 redirect, "
+                                    " triggering the browser to complete the OAuth process from the front end.",
+                                    frozen=True)  # TODO EE: Add required validation logic.
     client_secret: str = Field(description="The client secret for OAuth 2.0 authentication.")
+    client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
     audience: str = Field(description="The audience for OAuth 2.0 authentication.")
     scope: list[str] = Field(description="The scope for OAuth 2.0 authentication.")
     state: str = Field(default=secrets.token_urlsafe(nbytes=16),
@@ -124,6 +133,9 @@ class OAuth2Config(AuthenticationBaseConfig):
                                                      description="Expiry time of the access token in seconds.")
     refresh_token: str | None = Field(
         default=None, description="The refresh token for OAuth 2.0 authentication used to obtain a new access token.")
+    consent_prompt_location_url: str | None = Field(
+        default=None,
+        description="302 redirect Location header to which the client will be redirected to the consent prompt.")
 
 
 class APIKeyConfig(AuthenticationBaseConfig):

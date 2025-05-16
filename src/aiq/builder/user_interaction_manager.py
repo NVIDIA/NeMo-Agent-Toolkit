@@ -19,7 +19,7 @@ import uuid
 
 import httpx
 
-from aiq.authentication.request_manager import RequestManager
+from aiq.data_models.api_server import AuthenticatedRequest
 from aiq.data_models.interactive import HumanPrompt
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
@@ -81,30 +81,35 @@ class AIQUserInteractionManager:
                                http_method: str,
                                authentication_provider: str | None = None,
                                headers: dict | None = None,
-                               params: dict | None = None,
-                               data: dict | None = None) -> httpx.Response | None:
+                               query_params: dict | None = None,
+                               body_data: dict | None = None) -> httpx.Response | None:
         """
-        Args: # TODO EE: Update doc strings and error handling.
+        Args: # TODO EE: Update doc strings, error handling and validation logic.
             url (str | httpx.URL): The base URL to which the request will be sent.
             http_method (str | HTTPMethod): The HTTP method to use for the request (e.g., "GET", "POST").
             authentication_provider( str | None): The name of the registered authentication provider to make an
             authenticated request.
             headers (dict | None): Optional dictionary of HTTP headers.
             query_params (dict | None): Optional dictionary of query parameters.
-            data (dict | None): Optional dictionary representing the request body.
+            body_data (dict | None): Optional dictionary representing the request body.
         Returns:
             httpx.Response | None: _description_
         """
+        try:
 
-        request = RequestManager()
-        response: httpx.Response | None = None
+            authenticated_request: AuthenticatedRequest = AuthenticatedRequest(
+                url_path=url,
+                method=http_method,
+                authentication_provider=authentication_provider,
+                headers=headers,
+                query_params=query_params,
+                body_data=body_data)
 
-        response = await request._send_request(
-            url=url,  # TODO EE: Need to use callback and remove the command to determine of its console / server etc...
-            http_method=http_method,
-            authentication_provider=authentication_provider,
-            headers=headers,
-            query_params=params,
-            data=data)
+            response: httpx.Response | None = await self._context_state.user_request_callback.get()(
+                authenticated_request)
+
+        except NotImplementedError as e:
+            logger.error("Error while making API request: %s", str(e), exc_info=True)
+            return None
 
         return response

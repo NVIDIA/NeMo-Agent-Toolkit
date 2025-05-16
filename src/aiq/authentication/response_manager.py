@@ -63,18 +63,27 @@ class ResponseManager:
         """
         Handles the consent prompt redirect for different run environments.
 
-        Args:
+        Args: # TODO EE: Update
             location_header (str) : Location header from authorization server HTTP 302 consent prompt redirect.
             authentication_provider (OAuth2Config): The registered OAuth2.0 authentication provider.
         """
         from aiq.authentication.credentials_manager import _CredentialsManager
         try:
             if authentication_provider.consent_prompt_mode == ConsentPromptMode.BROWSER:
+
                 default_browser = webbrowser.get()
                 default_browser.open(location_header)
 
-            if authentication_provider.consent_prompt_mode == ConsentPromptMode.POLLING:
+            if authentication_provider.consent_prompt_mode == ConsentPromptMode.FRONTEND:
+
+                logger.info("A POST request is required to retrieve the 302 redirect. "
+                            "Please ensure your client sends a POST request to continue OAuth2.0 code flow. ")
+
+                authentication_provider.consent_prompt_location_url = location_header
+
                 await _CredentialsManager()._wait_for_consent_prompt_url()
+
+                authentication_provider.consent_prompt_location_url = None
 
         except webbrowser.Error as e:
             logger.error("Unable to open defualt browser: %s", str(e), exc_info=True)

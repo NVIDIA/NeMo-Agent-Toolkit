@@ -22,6 +22,7 @@ from pydantic import ValidationError
 from aiq.authentication.oauth2_authenticator import OAuth2Authenticator
 from aiq.data_models.authentication import APIKeyConfig
 from aiq.data_models.authentication import AuthenticationProvider
+from aiq.data_models.authentication import ExecutionMode
 from aiq.data_models.authentication import OAuth2Config
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,9 @@ class AuthenticationManager:  # TODO EE: Add Tests
     def __init__(self, request_manager: "RequestManager", response_manager: "ResponseManager") -> None:
         self._oauth2_authenticator: OAuth2Authenticator = OAuth2Authenticator(request_manager=request_manager,
                                                                               response_manager=response_manager)
+
+    def _set_execution_mode(self, execution_mode: ExecutionMode) -> None:
+        self._oauth2_authenticator.execution_mode = execution_mode
 
     async def _validate_auth_provider_credentials(self, authentication_provider: str) -> bool:
         """

@@ -20,6 +20,7 @@ from io import StringIO
 import click
 from colorama import Fore
 
+from aiq.authentication.utils import execute_api_request_console
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.interactive import HumanPromptModelType
 from aiq.data_models.interactive import HumanResponse
@@ -81,7 +82,8 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
 
             async def run_single_query(query):
 
-                async with session_manager.session(user_input_callback=prompt_for_input_cli) as session:
+                async with session_manager.session(user_input_callback=prompt_for_input_cli,
+                                                   user_request_callback=execute_api_request_console) as session:
                     async with session.run(query) as runner:
                         base_output = await runner.result(to_type=str)
 

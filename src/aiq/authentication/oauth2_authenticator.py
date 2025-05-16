@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import logging
+from collections.abc import Awaitable
+from collections.abc import Callable
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
@@ -24,9 +26,9 @@ import httpx
 from aiq.authentication.exceptions import OAuthCodeFlowError
 from aiq.authentication.exceptions import OAuthRefreshTokenError
 from aiq.authentication.interfaces import AuthenticationBase
+from aiq.data_models.authentication import ExecutionMode
 from aiq.data_models.authentication import OAuth2Config
 from aiq.data_models.authentication import RefreshTokenRequest
-from aiq.data_models.authentication import RunMode
 from aiq.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEndController
 
 if TYPE_CHECKING:
@@ -39,8 +41,18 @@ logger = logging.getLogger(__name__)
 class OAuth2Authenticator(AuthenticationBase):
 
     def __init__(self, request_manager: "RequestManager", response_manager: "ResponseManager") -> None:
+
         self._request_manager: "RequestManager" = request_manager
         self._response_manager: "ResponseManager" = response_manager
+        self._execution_mode: ExecutionMode = None
+        self._initiate_code_flow_dispatch: dict[ExecutionMode, Callable[..., Awaitable[None]]] = {
+            ExecutionMode.CONSOLE: self._initiate_authorization_code_flow_console,
+            ExecutionMode.SERVER: self._initiate_authorization_code_flow_server
+        }
+        self._shutdown_code_flow_dispatch: dict[ExecutionMode, Callable[..., Awaitable[None]]] = {
+            ExecutionMode.CONSOLE: self._shut_down_code_flow_console,
+            ExecutionMode.SERVER: self._shut_down_code_flow_server
+        }
         self._authentication_provider: OAuth2Config = None
         self._oauth2_client_server: _FastApiFrontEndController = None
         super().__init__()
@@ -52,6 +64,14 @@ class OAuth2Authenticator(AuthenticationBase):
     @authentication_provider.setter
     def authentication_provider(self, authentication_provider: OAuth2Config) -> None:
         self._authentication_provider = authentication_provider
+
+    @property
+    def execution_mode(self) -> ExecutionMode:
+        return self._execution_mode
+
+    @execution_mode.setter
+    def execution_mode(self, execution_mode: ExecutionMode) -> None:
+        self._execution_mode = execution_mode
 
     async def _validate_credentials(self) -> bool:
         """
@@ -85,7 +105,7 @@ class OAuth2Authenticator(AuthenticationBase):
         try:
             # Initiate code flow is there is no access token.
             if (self._authentication_provider.access_token is None):
-                await self._initiate_authorization_code_flow()
+                await self._initiate_code_flow_dispatch[self.execution_mode]()
 
             # Initiate refresh token request if the access token is expired or revoked.
             if (self._authentication_provider.refresh_token
@@ -99,29 +119,42 @@ class OAuth2Authenticator(AuthenticationBase):
             logger.error("Failed to get OAuth2.0 credentials: %s", str(e), exc_info=True)
             return False
 
-    async def _initiate_authorization_code_flow(self) -> None:
+    async def _initiate_authorization_code_flow_console(self) -> None:
         """
         Initiate OAuth2.0 authorization code flow to receive access token, and optional refresh token.
         """
         from aiq.authentication.credentials_manager import _CredentialsManager
 
         try:
-            if _CredentialsManager().command_name == RunMode.CONSOLE.value:
-                # Spawn an authentication client server to handle oauth code flow.
-                await self._spawn_oauth_client_server()
+            # Spawn an authentication client server to handle oauth code flow.
+            await self._spawn_oauth_client_server()
 
             # Initiate oauth code flow by sending authorization request.
             await self._send_oauth_authorization_request()
 
             await _CredentialsManager()._wait_for_oauth_credentials()
 
-            if _CredentialsManager().command_name == RunMode.CONSOLE.value:
-                # Shutdown authentication client server.
-                await self._oauth2_client_server.stop_server()
+            await self._oauth2_client_server.stop_server()
 
         except OAuthCodeFlowError as e:
             logger.error("Failed to complete OAuth2.0 authentication for provider Error: %s", str(e), exc_info=True)
-            await self._shut_down_code_flow()
+            await self._shutdown_code_flow_dispatch[self.execution_mode]()
+
+    async def _initiate_authorization_code_flow_server(self) -> None:
+        """
+        Initiate OAuth2.0 authorization code flow to receive access token, and optional refresh token.
+        """
+        from aiq.authentication.credentials_manager import _CredentialsManager
+
+        try:
+            # Initiate oauth code flow by sending authorization request.
+            await self._send_oauth_authorization_request()
+
+            await _CredentialsManager()._wait_for_oauth_credentials()
+
+        except OAuthCodeFlowError as e:
+            logger.error("Failed to complete OAuth2.0 authentication for provider Error: %s", str(e), exc_info=True)
+            await self._shutdown_code_flow_dispatch[self.execution_mode]()
 
     async def _send_oauth_authorization_request(self) -> None:
         """
@@ -170,7 +203,7 @@ class OAuth2Authenticator(AuthenticationBase):
                 http_method="POST",
                 authentication_provider=None,
                 headers={"Content-Type": "application/json"},
-                data=body_data.model_dump())
+                body_data=body_data.model_dump())
 
             if response is None:
                 raise ValueError("Invalid response received while making refresh token request.")
@@ -203,12 +236,8 @@ class OAuth2Authenticator(AuthenticationBase):
         Instantiate _FastApiFrontEndController instance to spin up OAuth2.0 client server
         """
         from aiq.authentication.credentials_manager import _CredentialsManager
-        from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
         from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
         from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
-
-        # Overwrite the front end config to default to spawn fastapi server.
-        _CredentialsManager().full_config.general.front_end = FastApiFrontEndConfig()
 
         # Instantiate OAuth2.0 server
         oauth2_client: FastApiFrontEndPluginWorkerBase = FastApiFrontEndPluginWorker(
@@ -219,12 +248,23 @@ class OAuth2Authenticator(AuthenticationBase):
 
         await self._oauth2_client_server.start_server()
 
-    async def _shut_down_code_flow(self) -> None:
+    async def _shut_down_code_flow_console(self) -> None:
         """
-        Shuts down the oauth server and cancels the Oauth2.0 if a any unrecoverable erros occur during authentication
+        Shuts down the Oauth2.0 code flow in CONSOLE execution mode if a any unrecoverable errors occur during the
+        authentication process.
         """
         from aiq.authentication.credentials_manager import _CredentialsManager
 
-        await _CredentialsManager()._set_consent_prompt()
+        await _CredentialsManager()._set_consent_prompt_url()
         await _CredentialsManager()._set_oauth_credentials()
         await self._oauth2_client_server.stop_server()
+
+    async def _shut_down_code_flow_server(self) -> None:
+        """
+        Shuts down the Oauth2.0 code flow in SERVER execution mode if a any unrecoverable errors occur during the
+        authentication process.
+        """
+        from aiq.authentication.credentials_manager import _CredentialsManager
+
+        await _CredentialsManager()._set_consent_prompt_url()
+        await _CredentialsManager()._set_oauth_credentials()

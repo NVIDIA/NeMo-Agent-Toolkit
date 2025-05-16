@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import httpx
 import asyncio
 import contextvars
 import typing
+
 from collections.abc import Awaitable
 from collections.abc import Callable
 from contextlib import asynccontextmanager
@@ -23,11 +25,10 @@ from contextlib import nullcontext
 
 from fastapi import Request
 
-from aiq.authentication.interfaces import RequestManagerBase
-from aiq.authentication.interfaces import ResponseManagerBase
 from aiq.builder.context import AIQContext
 from aiq.builder.context import AIQContextState
 from aiq.builder.workflow import Workflow
+from aiq.data_models.api_server import AuthenticatedRequest
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
@@ -90,7 +91,7 @@ class AIQSessionManager:
                       user_manager=None,
                       request: Request = None,
                       user_input_callback: Callable[[InteractionPrompt], Awaitable[HumanResponse]] = None,
-                      user_request_callback: Callable[[RequestManagerBase], Awaitable[ResponseManagerBase]] = None):
+                      user_request_callback: Callable[[AuthenticatedRequest], Awaitable[httpx.Response | None]] = None):
 
         token_user_input = None
         if user_input_callback is not None:

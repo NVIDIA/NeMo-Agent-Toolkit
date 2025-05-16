@@ -198,7 +198,7 @@ class RequestManager(RequestManagerBase):
                             authentication_provider: str | None = None,
                             headers: dict | None = None,
                             query_params: dict | None = None,
-                            data: dict | None = None) -> httpx.Response | None:
+                            body_data: dict | None = None) -> httpx.Response | None:
         """
         Makes an arbitrary HTTP request.
 
@@ -226,7 +226,7 @@ class RequestManager(RequestManagerBase):
             self._validate_query_parameters(query_params)
 
             # Validate incoming body
-            self._validate_body_data(data)
+            self._validate_body_data(body_data)
 
             response: httpx.Response | None = None
 
@@ -237,13 +237,13 @@ class RequestManager(RequestManagerBase):
                     response = await client.post(url,
                                                  params=query_params,
                                                  headers=merged_headers,
-                                                 json=data,
+                                                 json=body_data,
                                                  timeout=10.0)
                 if http_method.upper() == HTTPMethod.PUT.value:
                     response = await client.put(url,
                                                 params=query_params,
                                                 headers=merged_headers,
-                                                json=data,
+                                                json=body_data,
                                                 timeout=10.0)
                 if http_method.upper() == HTTPMethod.DELETE.value:
                     response = await client.delete(url, params=query_params, headers=merged_headers, timeout=10.0)

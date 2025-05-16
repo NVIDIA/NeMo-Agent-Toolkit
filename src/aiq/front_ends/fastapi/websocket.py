@@ -25,6 +25,7 @@ from fastapi import WebSocketException
 from starlette.endpoints import WebSocketEndpoint
 from starlette.websockets import WebSocketDisconnect
 
+from aiq.authentication.utils import execute_api_request_server
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.api_server import AIQChatResponseChunk
@@ -113,8 +114,8 @@ class AIQWebSocket(WebSocketEndpoint):
                                result_type: type | None = None,
                                output_type: type | None = None) -> None:
 
-        async with self._session_manager.session(
-                user_input_callback=self._message_handler.human_interaction) as session:
+        async with self._session_manager.session(user_input_callback=self._message_handler.human_interaction,
+                                                 user_request_callback=execute_api_request_server) as session:
 
             async for value in generate_streaming_response(payload,
                                                            session_manager=session,

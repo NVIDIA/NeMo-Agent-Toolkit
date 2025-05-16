@@ -37,6 +37,7 @@ from pydantic import Field
 
 from aiq.authentication.request_manager import RequestManager
 from aiq.authentication.response_manager import ResponseManager
+from aiq.authentication.utils import execute_api_request_server
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
@@ -225,7 +226,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         await self.add_default_route(app, AIQSessionManager(builder.build()))
         await self.add_evaluate_route(app, AIQSessionManager(builder.build()))
-        await self.add_authorization_route(app, AIQSessionManager(builder.build()))
+        await self.add_authorization_route(app)
 
         for ep in self.front_end_config.endpoints:
 
@@ -459,7 +460,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                async with session_manager.session(request=request):
+                async with session_manager.session(request=request, user_request_callback=execute_api_request_server):
 
                     return await generate_single_response(None, session_manager, result_type=result_type)
 
@@ -469,7 +470,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def get_stream(request: Request):
 
-                async with session_manager.session(request=request):
+                async with session_manager.session(request=request, user_request_callback=execute_api_request_server):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
@@ -503,7 +504,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                async with session_manager.session(request=request):
+                async with session_manager.session(request=request, user_request_callback=execute_api_request_server):
 
                     return await generate_single_response(payload, session_manager, result_type=result_type)
 
@@ -516,7 +517,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_stream(request: Request, payload: request_type):
 
-                async with session_manager.session(request=request):
+                async with session_manager.session(request=request, user_request_callback=execute_api_request_server):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
@@ -787,14 +788,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             else:
                 raise ValueError(f"Unsupported method {endpoint.method}")
 
-    async def add_authorization_route(self, app: FastAPI, session_manager: AIQSessionManager):
+    async def add_authorization_route(self, app: FastAPI):
 
         from datetime import datetime
         from datetime import timedelta
         from datetime import timezone
 
         import httpx
-        from fastapi import Request
         from fastapi.responses import JSONResponse
 
         from aiq.authentication.credentials_manager import _CredentialsManager
@@ -803,6 +803,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         from aiq.data_models.authentication import AuthenticationEndpoint
         from aiq.data_models.authentication import HTTPMethod
         from aiq.data_models.authentication import OAuth2Config
+        from aiq.data_models.authentication import PromptRedirectRequest
 
         async def redirect_uri(request: Request):
 
@@ -813,7 +814,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 raise OAuthCodeFlowError("Authorization code and state not provided by authorization provider.")
 
             authentication_provider: OAuth2Config | None = _CredentialsManager()._get_authentication_provider_by_state(
-                state)
+                state)  # TODO EE: Update this to return the name and provider.
 
             if authentication_provider is None:
                 raise OAuthCodeFlowError(
@@ -834,7 +835,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             # Send Token HTTP Request
             response: httpx.Response | None = await self._request_manager._send_request(
-                url=token_url, http_method=HTTPMethod.POST.value, headers=headers, data=data.model_dump())
+                url=token_url, http_method=HTTPMethod.POST.value, headers=headers, body_data=data.model_dump())
             if response is None:
                 raise OAuthCodeFlowError(
                     "Invalid response received while exchanging authorization code for access token.")
@@ -862,8 +863,19 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             return JSONResponse({"message": "Access token successfully retrieved."})
 
-        async def location_url(request: Request):  # TODO EE: Update polling logic.
-            await _CredentialsManager()._set_consent_prompt()
+        async def prompt_redirect_uri(request: Request, prompt_request_schema: PromptRedirectRequest):
+
+            authentication_provider: OAuth2Config | None = _CredentialsManager(
+            )._get_authentication_provider_by_consent_prompt_key(prompt_request_schema.consent_prompt_key)
+
+            if (authentication_provider is None):
+                raise HTTPException(status_code=403, detail="Invalid Consent Prompt Key.")
+
+            location_url: str = authentication_provider.consent_prompt_location_url
+
+            await _CredentialsManager()._set_consent_prompt_url()
+
+            return JSONResponse(content={"redirect_url": location_url})
 
         if self.front_end_config.authorization.path:
             app.add_api_route(
@@ -873,7 +885,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 description="Handles the authorization code and state returned from the OAuth2.0 provider.")
 
             app.add_api_route(
-                path=f"{self.front_end_config.authorization.path}{AuthenticationEndpoint.LOCATION_URL.value}",
-                endpoint=location_url,
-                methods=["GET"],
-                description="OAuth2.0 302 HTTP location header polling endpoint.")
+                path=f"{self.front_end_config.authorization.path}{AuthenticationEndpoint.PROMPT_REDIRECT_URI.value}",
+                endpoint=prompt_redirect_uri,
+                methods=["POST", "OPTIONS"],
+                description="Returns the consent prompt location URI to the frontend to continue the OAuth2.0 flow.")
