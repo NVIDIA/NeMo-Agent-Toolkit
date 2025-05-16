@@ -19,7 +19,14 @@ limitations under the License.
 All notable changes to this project will be documented in this file.
 
 ## [1.1.0] - 2025-05-16
-## What's Changed
+### Key Features
+- Full MCP (Model Context Protocol) support
+- Weave tracing
+- Agno integration
+- ReWOO Agent
+- Alert Triage Agent Example
+
+### What's Changed
 * Have the examples README point to the absolute path by @AnuradhaKaruppiah in https://github.com/NVIDIA/AIQToolkit/pull/4
 * Set initial version will be 1.0.0 by @dagardner-nv in https://github.com/NVIDIA/AIQToolkit/pull/7
 * Update `examples/simple_rag/README.md` to verify the installation of `lxml` by @yczhang-nv in https://github.com/NVIDIA/AIQToolkit/pull/9
@@ -171,7 +178,7 @@ All notable changes to this project will be documented in this file.
 * Run tests on all supported versions of Python by @dagardner-nv in https://github.com/NVIDIA/AIQToolkit/pull/283
 * Fix the intermediate steps span logic to work better with nested coroutines and tasks by @mdemoret-nv in https://github.com/NVIDIA/AIQToolkit/pull/285
 
-## New Contributors
+### New Contributors
 * @dagardner-nv made their first contribution in https://github.com/NVIDIA/AIQToolkit/pull/7
 * @yczhang-nv made their first contribution in https://github.com/NVIDIA/AIQToolkit/pull/9
 * @gzitzlsb-nv made their first contribution in https://github.com/NVIDIA/AIQToolkit/pull/25
