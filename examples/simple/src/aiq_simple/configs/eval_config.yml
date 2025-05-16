@@ -16,6 +16,11 @@
 
 general:
   use_uvloop: true
+  telemetry:
+    tracing:
+      weave:
+        _type: weave
+        project: "aiqtoolkit-eval"
 
 functions:
   webpage_query:
@@ -27,17 +32,17 @@ functions:
     _type: current_datetime
 
 llms:
-  nim_llm:
-    _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+  openai_llm:
+    _type: openai
+    model_name: gpt-4o-mini
     temperature: 0.0
-  nim_rag_eval_llm:
-    _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+  openai_rag_eval_llm:
+    _type: openai
+    model_name: gpt-4o-mini
     max_tokens: 8
-  nim_trajectory_eval_llm:
-    _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+  openai_trajectory_eval_llm:
+    _type: openai
+    model_name: gpt-4o-mini
     temperature: 0.0
     max_tokens: 1024
 
@@ -49,7 +54,7 @@ embedders:
 workflow:
   _type: react_agent
   tool_names: [webpage_query, current_datetime]
-  llm_name: nim_llm
+  llm_name: openai_llm
   verbose: true
   retry_parsing_errors: true
   max_retries: 3
@@ -86,15 +91,15 @@ eval:
     rag_accuracy:
       _type: ragas
       metric: AnswerAccuracy
-      llm_name: nim_rag_eval_llm
+      llm_name: openai_rag_eval_llm
     rag_groundedness:
       _type: ragas
       metric: ResponseGroundedness
-      llm_name: nim_rag_eval_llm
+      llm_name: openai_rag_eval_llm
     rag_relevance:
       _type: ragas
       metric: ContextRelevance
-      llm_name: nim_rag_eval_llm
+      llm_name: openai_rag_eval_llm
     trajectory_accuracy:
       _type: trajectory
-      llm_name: nim_trajectory_eval_llm
+      llm_name: openai_trajectory_eval_llm
