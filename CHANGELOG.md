@@ -17,6 +17,7 @@ limitations under the License.
 
 ## Changelog
 All notable changes to this project will be documented in this file.
+
 ## [1.1.0] - 2025-05-16
 ## What's Changed
 * Have the examples README point to the absolute path by @AnuradhaKaruppiah in https://github.com/NVIDIA/AIQToolkit/pull/4
@@ -189,9 +190,6 @@ All notable changes to this project will be documented in this file.
 * @ayulockin made their first contribution in https://github.com/NVIDIA/AIQToolkit/pull/170
 * @soumilinandi made their first contribution in https://github.com/NVIDIA/AIQToolkit/pull/191
 * @hsin-c made their first contribution in https://github.com/NVIDIA/AIQToolkit/pull/193
-
-### Added
-- Added support for Phoenix tracing
 
 ## [1.1.0a1] - 2025-04-05
 
