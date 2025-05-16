@@ -19,7 +19,7 @@ dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
   # Keep sorted!!!
-  "aiqtoolkit~=1.1",
+  "aiqtoolkit~=1.2",
   "crewai~=0.95.0",
 ]
 requires-python = ">=3.11,<3.13"

@@ -9,7 +9,7 @@ root = "../.."
 name = "aiq_email_phishing_analyzer"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain]~=1.1",
+  "aiqtoolkit[langchain]~=1.2",
   "arize-phoenix==6.1.*",
   "bs4==0.0.2",
   "networkx~=3.4",
