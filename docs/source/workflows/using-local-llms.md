@@ -17,10 +17,10 @@ limitations under the License.
 
 # Using Local LLMs
 
-AIQ Toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the AIQ Toolkit simple example (`examples/simple`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/).
+AIQ toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the AIQ toolkit simple example (`examples/simple`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/).
 
 ## Using NIM
-In the AIQ Toolkit simple example the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model was used. For the purposes of this guide we will be using a smaller model, the [`microsoft/phi-3-mini-4k-instruct`](https://build.nvidia.com/microsoft/phi-3-mini-4k) which is more likely to be runnable on a local workstation.
+In the AIQ toolkit simple example the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model was used. For the purposes of this guide we will be using a smaller model, the [`microsoft/phi-3-mini-4k-instruct`](https://build.nvidia.com/microsoft/phi-3-mini-4k) which is more likely to be runnable on a local workstation.
 
 Regardless of the model you choose, the process is the same for downloading the model's container from [`build.nvidia.com`](https://build.nvidia.com/). Navigate to the model you wish to run locally, if it is able to be downloaded it will be labeled with the `RUN ANYWHERE` tag, the exact commands will be specified on the `Deploy` tab for the model.
 
@@ -116,7 +116,7 @@ workflow:
 ```
 
 ### Running the AIQ Toolkit Workflow
-To run the AIQ Toolkit workflow using the locally hosted LLMs, run the following command:
+To run the AIQ toolkit workflow using the locally hosted LLMs, run the following command:
 ```bash
 aiq run --config_file examples/documentation_guides/locally_hosted_llms/nim_config.yml --input "What is LangSmith?"
 ```
@@ -181,7 +181,7 @@ workflow:
 ```
 
 ### Running the AIQ Toolkit Workflow
-To run the AIQ Toolkit workflow using the locally hosted LLMs, run the following command:
+To run the AIQ toolkit workflow using the locally hosted LLMs, run the following command:
 ```bash
 aiq run --config_file examples/documentation_guides/locally_hosted_llms/vllm_config.yml --input "What is LangSmith?"
 ```

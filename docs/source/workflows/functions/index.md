@@ -17,9 +17,9 @@ limitations under the License.
 
 # Functions
 
-Functions (tools) are the main building blocks of AIQ Toolkit and define the logic of your workflow.
+Functions (tools) are the main building blocks of AIQ toolkit and define the logic of your workflow.
 
-In AIQ Toolkit, functions are a core abstraction that offer type-safe, asynchronous operations with support for both single and streaming outputs. They wrap callable objects (like Python functions or coroutines) and enhance them with:
+In AIQ toolkit, functions are a core abstraction that offer type-safe, asynchronous operations with support for both single and streaming outputs. They wrap callable objects (like Python functions or coroutines) and enhance them with:
 
 * Type validation and conversion
 * Schema-based input/output validation via Pydantic models

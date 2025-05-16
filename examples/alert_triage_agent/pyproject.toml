@@ -17,7 +17,7 @@ dependencies = [
   "flask>=3.0.0"
 ]
 requires-python = ">=3.11,<3.13"
-description = "Alert Triage AIQ Toolkit example"
+description = "Alert Triage AIQ toolkit example"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]

@@ -56,7 +56,7 @@ with open(os.path.join(API_TREE, "aiq", "__init__.py"), "w") as f:
 
 # -- Project information -----------------------------------------------------
 
-project = 'Agent Intelligence Toolkit'
+project = 'NVIDIA Agent Intelligence Toolkit'
 copyright = '2025, NVIDIA'
 author = 'NVIDIA Corporation'
 

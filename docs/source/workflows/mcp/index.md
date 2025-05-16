@@ -17,7 +17,7 @@ limitations under the License.
 
 # Model Context Protocol (MCP)
 
-AIQ Toolkit [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) integration includes:
+AIQ toolkit [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) integration includes:
 * An [MCP client](./mcp-client.md) to connect to and use tools served by remote MCP servers.
 * An [MCP server](./mcp-server.md) to publish tools using MCP to be used by any MCP client.
 
