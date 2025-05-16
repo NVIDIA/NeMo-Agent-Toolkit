@@ -230,12 +230,12 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         try:
             await asyncio.gather(*tasks)
-
-            # Finish prediction loggers in Weave
-            await self.weave_eval.afinish_loggers()
         except Exception as e:
             logger.exception("An error occurred while running evaluators: %s", e, exc_info=True)
             raise
+        finally:
+            # Finish prediction loggers in Weave
+            await self.weave_eval.afinish_loggers()
 
     def apply_overrides(self):
         from aiq.cli.cli_utils.config_override import load_and_override_config
