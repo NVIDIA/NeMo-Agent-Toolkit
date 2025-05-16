@@ -40,7 +40,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
     export NVIDIA_API_KEY=<YOUR API KEY HERE>
     ```
 
-    Verify whether `lxml` is installed in your current environment. If it’s not installed, simply install it using `uv pip install lxml`. Next, execute the `bootstrap_milvus.sh` script as illustrated below.
+    Verify whether `lxml` is installed in your current environment. If it's not installed, simply install it using `uv pip install lxml`. Next, execute the `bootstrap_milvus.sh` script as illustrated below.
     ```bash
     source .venv/bin/activate
     examples/simple_rag/ingestion/bootstrap_milvus.sh
@@ -360,7 +360,7 @@ For Windows:
 - Silent Installation: Execute the package with the -s flag.
 
 For Linux:
-- Package Manager Installation: Install using RPM or Debian packages, which interface with your system’s package management system.
+- Package Manager Installation: Install using RPM or Debian packages, which interface with your system's package management system.
 - Runfile Installation: Install using the standalone installer, a .run file that is completely self-contained.
 
 After installation, perform the post-installation actions.
@@ -517,6 +517,8 @@ We see from the above output that the agent was able to successfully retrieve ou
 
 In this way, you can easily construct an agent that answers questions about your knowledge base and stores long term memories, all without any agent code required!
 
+Note: The long-term memory feature relies on LLM-based tool invocation, which can occasionally be non-deterministic. If you notice that the memory functionality isn't working as expected (e.g., the agent doesn't remember your preferences), simply re-run your first and second inputs. This will help ensure the memory tools are properly invoked and your preferences are correctly stored.
+
 ## Adding Additional Tools
 This workflow can be further enhanced by adding additional tools. Included with this example are two additional tools: `tavily_internet_search` and `code_generation`. Both of these tools require the installation of the `aiqtoolkit[langchain]` package. To install this package run:
 ```bash
@@ -648,4 +650,5 @@ This code creates a sample array, transfers it to the GPU, performs some operati
 --------------------------------------------------
 Workflow Result:
 ["To install CUDA and get started with developing applications using it, you can follow the steps outlined in the CUDA documentation. This includes verifying that you have a CUDA-capable GPU, downloading the NVIDIA CUDA Toolkit, and installing the CUDA software. After installation, you can verify that the CUDA toolkit can find and communicate correctly with the CUDA-capable hardware by compiling and running sample programs.\n\nHere's an example Python code that demonstrates how to use CUDA:\n```python\nimport numpy as np\nimport cupy as cp\n\n# Create a sample array\narr = np.array([1, 2, 3, 4, 5])\n\n# Transfer the array to the GPU\narr_gpu = cp.asarray(arr)\n\n# Perform some operations on the GPU\nresult_gpu = cp.square(arr_gpu)\n\n# Transfer the result back to the CPU\nresult_cpu = cp.asnumpy(result_gpu)\n\nprint(result_cpu)\n```\nThis code creates a sample array, transfers it to the GPU, performs some operations on the GPU, and then transfers the result back to the CPU. The output of this code will be the squared values of the original array."]
+--------------------------------------------------
 ````

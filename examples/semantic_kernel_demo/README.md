@@ -84,3 +84,9 @@ Workflow Result:
 ```
 
 The above output demonstrates that the agent was able to draw from memory to provide vegan-friendly recommendations.
+
+Note: The long-term memory feature relies on LLM-based tool invocation, which can occasionally be non-deterministic. If you notice that the memory functionality isn't working as expected (e.g., the agent doesn't remember your preferences), try these solutions:
+* Re-run your first and second inputs to ensure proper tool invocation
+* Fine-tune the `long_term_memory_instructions` section in `config.yml` to better guide the agent's memory usage
+
+These steps will help ensure your preferences are correctly stored and retrieved by the agent.
