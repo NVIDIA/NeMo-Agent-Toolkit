@@ -20,9 +20,40 @@ source ${SCRIPT_DIR}/common.sh
 
 export AIQ_AVOID_GH_CLI=1 # gh cli not working with gitlab, todo look into seeing if this can be fixed
 
-AIQ_EXAMPLES=($(find ./examples/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
-AIQ_PACKAGES=($(find ./packages/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
+function get_git_tag() {
+    FT=$(git fetch --all --tags)
 
+    # Get the latest Git tag, sorted by version, excluding lightweight tags
+    GIT_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "no-tag")
+
+    if [[ "${CI_CRON_NIGHTLY}" == "1" ]]; then
+        if [[ ${GIT_TAG} == "no-tag" ]]; then
+            rapids-logger "Error: No tag found. Exiting."
+            exit 1;
+        fi
+
+        # If the branch is a nightly build create a version which will be accepted by pypi
+        # Note: We are intentionally creating an actual tag, just setting the variable
+        GIT_TAG=$(echo $GIT_TAG | sed -e "s|-.*|a$(date +"%Y%m%d")|")
+    fi
+
+    echo ${GIT_TAG}
+}
+
+function is_current_commit_tagged() {
+    # Check if the current commit is tagged
+    set +e
+    git describe --tags --exact-match HEAD >/dev/null 2>&1
+    local status_code=$?
+    set -e
+
+    # Convert the unix status code to a boolean value
+    local is_tagged=0
+    if [[ ${status_code} -eq 0 ]]; then
+        is_tagged=1
+    fi
+    echo ${is_tagged}
+}
 
 function create_env() {
 

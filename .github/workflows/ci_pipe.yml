@@ -20,11 +20,23 @@ on:
   workflow_call:
     inputs:
       container:
-        description: 'The container to use for all CI stages'
+        description: 'The default container to use for most CI stages'
+        required: true
+        type: string
+      py_11_container:
+        description: 'The Python 3.11 container to use for the test stage'
+        required: true
+        type: string
+      py_12_container:
+        description: 'The Python 3.12 container to use for the test stage'
         required: true
         type: string
       pr_info:
         description: 'The JSON string containing the PR information'
+        required: true
+        type: string
+      base_sha:
+        description: 'The base SHA of the PR'
         required: true
         type: string
 
@@ -36,9 +48,10 @@ defaults:
 env:
   GH_TOKEN: "${{ github.token }}"
   GIT_COMMIT: "${{ github.sha }}"
-  BASE_SHA: "${{ fromJSON(inputs.pr_info).base.sha }}"
+  BASE_SHA: "${{ inputs.base_sha }}"
+  BUILD_AIQ_COMPAT: "true"
   RAPIDS_CONDA_RETRY_MAX: "5"
-  WORKSPACE: "${{ github.workspace }}/agentiq"
+  WORKSPACE: "${{ github.workspace }}/aiqtoolkit"
   WORKSPACE_TMP: "${{ github.workspace }}/tmp"
   UV_CACHE_DIR: .uv-cache
 
@@ -71,11 +84,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          path: 'agentiq'
+          path: 'aiqtoolkit'
 
       - name: Check
         shell: bash
-        run: ./agentiq/ci/scripts/github/checks.sh
+        run: ./aiqtoolkit/ci/scripts/github/checks.sh
 
   test:
     name: Test
@@ -83,29 +96,35 @@ jobs:
     runs-on:  linux-${{ matrix.arch }}-cpu4
     timeout-minutes: 30
     container:
-      image: ${{ inputs.container }}
+      image: ${{ matrix.container }}
     strategy:
       fail-fast: true
       matrix:
         arch: ["amd64", "arm64"]
+        python-version: ["3.11", "3.12"]
+        include:
+          - python-version: "3.11"
+            container: ${{ inputs.py_11_container }}
+          - python-version: "3.12"
+            container: ${{ inputs.py_12_container }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-tags: true
-          path: 'agentiq'
+          path: 'aiqtoolkit'
 
-      - name: Test:linux:${{ matrix.arch }}
+      - name: Test:linux:${{ matrix.arch }}:py${{ matrix.python-version }}
         shell: bash
-        run: ./agentiq/ci/scripts/github/tests.sh
+        run: ./aiqtoolkit/ci/scripts/github/tests.sh
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
         # Upload test results even if the tests fail
         if: ${{ always() }}
         with:
-          name: "test-results-${{ matrix.arch }}"
+          name: "test-results-${{ matrix.arch }}-py${{ matrix.python-version }}"
           path: "${{ github.workspace }}/tmp/*.xml"
           if-no-files-found: error
 
@@ -125,11 +144,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-tags: true
-          path: 'agentiq'
+          path: 'aiqtoolkit'
 
       - name: build_docs
         shell: bash
-        run: ./agentiq/ci/scripts/github/docs.sh
+        run: ./aiqtoolkit/ci/scripts/github/docs.sh
 
       - name: Upload Documentation
         uses: actions/upload-artifact@v4
@@ -156,11 +175,11 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
-          path: 'agentiq'
+          path: 'aiqtoolkit'
 
       - name: build_wheels
         shell: bash
-        run: ./agentiq/ci/scripts/github/build_wheel.sh
+        run: ./aiqtoolkit/ci/scripts/github/build_wheel.sh
 
       - name: Upload Wheels
         uses: actions/upload-artifact@v4

@@ -32,7 +32,7 @@ class AIQPackageError(Exception):
 
 
 def get_repo_root():
-    return find_package_root("agentiq")
+    return find_package_root("aiqtoolkit")
 
 
 def _get_module_name(workflow_name: str):
@@ -98,7 +98,7 @@ def find_package_root(package_name: str) -> Path | None:
 
 def get_workflow_path_from_name(workflow_name: str):
     """
-    Look up the location of an installed AgentIQ workflow and retrieve the root directory of the installed workflow.
+    Look up the location of an installed AIQ Toolkit workflow and retrieve the root directory of the installed workflow.
 
     Args:
         workflow_name: The name of the workflow.
@@ -123,17 +123,17 @@ def get_workflow_path_from_name(workflow_name: str):
 @click.option(
     "--workflow-dir",
     default=".",
-    help="Output directory for saving the created workflow. A new folder with the workflow name will be created within."
-    "Defaults to the present working directory.")
+    help="Output directory for saving the created workflow. A new folder with the workflow name will be created "
+    "within. Defaults to the present working directory.")
 @click.option(
     "--description",
-    default="AgentIQ function template. Please update the description.",
+    default="AIQ Toolkit function template. Please update the description.",
     help="""A description of the component being created. Will be used to populate the docstring and will describe the
          component when inspecting installed components using 'aiq info component'""")
 # pylint: disable=missing-param-doc
 def create_command(workflow_name: str, install: bool, workflow_dir: str, description: str):
     """
-    Create a new AgentIQ workflow using templates.
+    Create a new AIQ Toolkit workflow using templates.
 
     Args:
         workflow_name (str): The name of the new workflow.
@@ -170,6 +170,8 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         (new_workflow_dir / 'src' / package_name).mkdir(parents=True)
         # Create config directory
         (new_workflow_dir / 'src' / package_name / 'configs').mkdir(parents=True)
+        # Create package level configs directory
+        (new_workflow_dir / 'configs').mkdir(parents=True)
 
         # Initialize Jinja2 environment
         env = Environment(loader=FileSystemLoader(str(template_dir)))
@@ -196,7 +198,6 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
             'python_safe_workflow_name': workflow_name.replace("-", "_"),
             'package_name': package_name,
             'rel_path_to_repo_root': rel_path_to_repo_root,
-            # 'workflow_class_name': f"{workflow_name.capitalize().replace("-", "").replace("_", "")}WorkflowConfig",
             'workflow_class_name': f"{_generate_valid_classname(workflow_name)}FunctionConfig",
             'workflow_description': description
         }
@@ -206,6 +207,11 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
             content = template.render(context)
             with open(output_path, 'w', encoding="utf-8") as f:
                 f.write(content)
+
+        # Create symlink for config.yml
+        config_source = new_workflow_dir / 'src' / package_name / 'configs' / 'config.yml'
+        config_link = new_workflow_dir / 'configs' / 'config.yml'
+        os.symlink(config_source, config_link)
 
         if install:
             # Install the new package without changing directories
@@ -228,7 +234,7 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
 @click.argument('workflow_name')
 def reinstall_command(workflow_name):
     """
-    Reinstall an AgentIQ workflow to update dependencies and code changes.
+    Reinstall an AIQ Toolkit workflow to update dependencies and code changes.
 
     Args:
         workflow_name (str): The name of the workflow to reinstall.
@@ -264,12 +270,15 @@ def reinstall_command(workflow_name):
 @click.argument('workflow_name')
 def delete_command(workflow_name: str):
     """
-    Delete an AgentIQ workflow and uninstall its package.
+    Delete an AIQ Toolkit workflow and uninstall its package.
 
     Args:
         workflow_name (str): The name of the workflow to delete.
     """
     try:
+        if not click.confirm(f"Are you sure you want to delete the workflow '{workflow_name}'?"):
+            click.echo("Workflow deletion cancelled.")
+            return
         editable = get_repo_root() is not None
 
         workflow_dir = get_workflow_path_from_name(workflow_name)

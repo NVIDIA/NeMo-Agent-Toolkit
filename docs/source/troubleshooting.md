@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA AgentIQ Troubleshooting
+# NVIDIA Agent Intelligence Toolkit Troubleshooting
 
 If you encounter any issues:
 

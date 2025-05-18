@@ -55,11 +55,11 @@ class DiscoveryMetadata(BaseModel):
     """A data model representing metadata about each registered component to faciliate its discovery.
 
     Args:
-        package (str): The name of the package containing the AgentIQ component.
-        version (str): The version number of the package containing the AgentIQ component.
-        component_type (AIQComponentEnum): The type of AgentIQ component this metadata represents.
-        component_name (str): The registered name of the AgentIQ component.
-        description (str): Description of the AgentIQ component pulled from its config objects docstrings.
+        package (str): The name of the package containing the AIQ Toolkit component.
+        version (str): The version number of the package containing the AIQ Toolkit component.
+        component_type (AIQComponentEnum): The type of AIQ Toolkit component this metadata represents.
+        component_name (str): The registered name of the AIQ Toolkit component.
+        description (str): Description of the AIQ Toolkit component pulled from its config objects docstrings.
         developer_notes (str): Other notes to a developers to aid in the use of the component.
         status (DiscoveryStatusEnum): Provides the status of the metadata discovery process.
     """
@@ -94,7 +94,7 @@ class DiscoveryMetadata(BaseModel):
         mapping = importlib.metadata.packages_distributions()
         try:
             distro_names = mapping.get(root_package_name, [None])
-            distro_name = DiscoveryMetadata.get_preferred_item(distro_names, "agentiq")
+            distro_name = DiscoveryMetadata.get_preferred_item(distro_names, "aiqtoolkit")
         except KeyError:
             return root_package_name
 
@@ -119,7 +119,7 @@ class DiscoveryMetadata(BaseModel):
     @lru_cache
     def get_distribution_name(root_package: str) -> str:
         """
-        The aiq library packages use a distro name 'agentiq[]' and
+        The aiq library packages use a distro name 'aiqtoolkit[]' and
         root package name 'aiq'. They provide mapping in a metadata file
         for optimized installation.
         """
@@ -129,7 +129,7 @@ class DiscoveryMetadata(BaseModel):
     @staticmethod
     def from_config_type(config_type: type["TypedBaseModelT"],
                          component_type: AIQComponentEnum = AIQComponentEnum.UNDEFINED) -> "DiscoveryMetadata":
-        """Generates discovery metadata from an AgentIQ config object.
+        """Generates discovery metadata from an AIQ Toolkit config object.
 
         Args:
             config_type (type[TypedBaseModelT]): A registered component's configuration object.
@@ -150,7 +150,11 @@ class DiscoveryMetadata(BaseModel):
                 logger.error("Encountered issue getting distro_name for module %s", module.__name__)
                 return DiscoveryMetadata(status=DiscoveryStatusEnum.FAILURE)
 
-            version = importlib.metadata.version(distro_name) if distro_name != "" else ""
+            try:
+                version = importlib.metadata.version(distro_name) if distro_name != "" else ""
+            except importlib.metadata.PackageNotFoundError:
+                logger.warning("Package metadata not found for %s", distro_name)
+                version = ""
         except Exception as e:
             logger.exception("Encountered issue extracting module metadata for %s: %s", config_type, e, exc_info=True)
             return DiscoveryMetadata(status=DiscoveryStatusEnum.FAILURE)
@@ -185,7 +189,11 @@ class DiscoveryMetadata(BaseModel):
             module = inspect.getmodule(fn)
             root_package: str = module.__package__.split(".")[0]
             root_package = DiscoveryMetadata.get_distribution_name(root_package)
-            version = importlib.metadata.version(root_package) if root_package != "" else ""
+            try:
+                version = importlib.metadata.version(root_package) if root_package != "" else ""
+            except importlib.metadata.PackageNotFoundError:
+                logger.warning("Package metadata not found for %s", root_package)
+                version = ""
         except Exception as e:
             logger.exception("Encountered issue extracting module metadata for %s: %s", fn, e, exc_info=True)
             return DiscoveryMetadata(status=DiscoveryStatusEnum.FAILURE)
@@ -204,7 +212,7 @@ class DiscoveryMetadata(BaseModel):
         """Generates discovery metadata from an installed package name.
 
         Args:
-            package_name (str): The name of the AgentIQ plugin package containing registered components.
+            package_name (str): The name of the AIQ Toolkit plugin package containing registered components.
             package_version (str, optional): The version of the package, Defaults to None.
 
         Returns:
@@ -213,10 +221,15 @@ class DiscoveryMetadata(BaseModel):
 
         try:
             package_name = DiscoveryMetadata.get_distribution_name(package_name)
-            metadata = importlib.metadata.metadata(package_name)
-            description = metadata.get("Summary", "")
-            if (package_version is None):
-                package_version = importlib.metadata.version(package_name)
+            try:
+                metadata = importlib.metadata.metadata(package_name)
+                description = metadata.get("Summary", "")
+                if (package_version is None):
+                    package_version = importlib.metadata.version(package_name)
+            except importlib.metadata.PackageNotFoundError:
+                logger.warning("Package metadata not found for %s", package_name)
+                description = ""
+                package_version = package_version or ""
         except Exception as e:
             logger.exception("Encountered issue extracting module metadata for %s: %s", package_name, e, exc_info=True)
             return DiscoveryMetadata(status=DiscoveryStatusEnum.FAILURE)
@@ -252,7 +265,11 @@ class DiscoveryMetadata(BaseModel):
             module = inspect.getmodule(config_type)
             root_package: str = module.__package__.split(".")[0]
             root_package = DiscoveryMetadata.get_distribution_name(root_package)
-            version = importlib.metadata.version(root_package) if root_package != "" else ""
+            try:
+                version = importlib.metadata.version(root_package) if root_package != "" else ""
+            except importlib.metadata.PackageNotFoundError:
+                logger.warning("Package metadata not found for %s", root_package)
+                version = ""
         except Exception as e:
             logger.exception("Encountered issue extracting module metadata for %s: %s", config_type, e, exc_info=True)
             return DiscoveryMetadata(status=DiscoveryStatusEnum.FAILURE)

@@ -114,10 +114,24 @@ def test_process_llm_events_in_default(step_adaptor_default, make_intermediate_s
     assert step_adaptor_default._history[-1] is step, "Step must be appended to _history."
 
 
-def test_process_tool_end_in_default(step_adaptor_default, make_intermediate_step):
+def test_process_tool_in_default(step_adaptor_default, make_intermediate_step):
     """
     In DEFAULT mode, TOOL_END events should be processed.
     """
+    step = make_intermediate_step(
+        event_type=IntermediateStepType.TOOL_START,
+        data_input="Tool Input Data",
+        data_output="Tool Output Data",
+    )
+
+    result = step_adaptor_default.process(step)
+
+    assert result is not None, "Expected TOOL_START event to be processed in DEFAULT mode."
+    assert isinstance(result, AIQResponseIntermediateStep)
+    assert "Tool:" in result.name
+    assert "Input:" in result.payload
+    assert step_adaptor_default._history[-1] is step
+
     step = make_intermediate_step(
         event_type=IntermediateStepType.TOOL_END,
         data_input="Tool Input Data",
@@ -136,7 +150,6 @@ def test_process_tool_end_in_default(step_adaptor_default, make_intermediate_ste
 
 @pytest.mark.parametrize("event_type",
                          [
-                             (IntermediateStepType.TOOL_START),
                              (IntermediateStepType.WORKFLOW_START),
                              (IntermediateStepType.WORKFLOW_END),
                              (IntermediateStepType.CUSTOM_START),
@@ -274,12 +287,21 @@ def test_tool_end_markdown_structure(step_adaptor_default, make_intermediate_ste
     """
     Verify that the adapter constructs the correct markdown for tool output in DEFAULT mode.
     """
+
+    # Create a matching TOOL_START event with the same UUID
+    step_tool_start = make_intermediate_step(
+        event_type=IntermediateStepType.TOOL_START,
+        data_input="TOOL INPUT STUFF",
+        UUID="same-run-id",
+    )
     step_tool_end = make_intermediate_step(
         event_type=IntermediateStepType.TOOL_END,
         data_input="TOOL INPUT STUFF",
         data_output="TOOL OUTPUT STUFF",
+        UUID="same-run-id",
     )
 
+    step_adaptor_default.process(step_tool_start)
     result = step_adaptor_default.process(step_tool_end)
     assert result is not None
     assert "Input:" in result.payload

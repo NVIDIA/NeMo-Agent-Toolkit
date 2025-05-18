@@ -22,6 +22,7 @@ from pydantic_core import core_schema
 
 from aiq.data_models.common import HashableBaseModel
 from aiq.data_models.component import ComponentGroup
+from aiq.utils.type_utils import override
 
 
 def generate_instance_id(input_object: typing.Any) -> str:
@@ -42,7 +43,7 @@ class ComponentRefNode(HashableBaseModel):
 
     Args:
         ref_name (ComponentRef): The name of the component runtime instance.
-        component_group (ComponentGroup): The component group in an AgentIQ configuration object.
+        component_group (ComponentGroup): The component group in an AIQ Toolkit configuration object.
     """
 
     ref_name: "ComponentRef"
@@ -69,7 +70,7 @@ class ComponentRef(str, ABC):
         """Provides the component group this ComponentRef object represents.
 
         Returns:
-            ComponentGroup: A component group of the AgentIQ configuration object
+            ComponentGroup: A component group of the AIQ Toolkit configuration object
         """
 
         pass
@@ -81,54 +82,54 @@ class ComponentRef(str, ABC):
 
 class EmbedderRef(ComponentRef):
     """
-    A reference to an embedder in an AgentIQ configuration object.
+    A reference to an embedder in an AIQ Toolkit configuration object.
     """
 
     @property
-    @typing.override
+    @override
     def component_group(self):
         return ComponentGroup.EMBEDDERS
 
 
 class FunctionRef(ComponentRef):
     """
-    A reference to a function in an AgentIQ configuration object.
+    A reference to a function in an AIQ Toolkit configuration object.
     """
 
     @property
-    @typing.override
+    @override
     def component_group(self):
         return ComponentGroup.FUNCTIONS
 
 
 class LLMRef(ComponentRef):
     """
-    A reference to an LLM in an AgentIQ configuration object.
+    A reference to an LLM in an AIQ Toolkit configuration object.
     """
 
     @property
-    @typing.override
+    @override
     def component_group(self):
         return ComponentGroup.LLMS
 
 
 class MemoryRef(ComponentRef):
     """
-    A reference to a memory in an AgentIQ configuration object.
+    A reference to a memory in an AIQ Toolkit configuration object.
     """
 
     @property
-    @typing.override
+    @override
     def component_group(self):
         return ComponentGroup.MEMORY
 
 
 class RetrieverRef(ComponentRef):
     """
-    A reference to a retriever in an AgentIQ configuration object.
+    A reference to a retriever in an AIQ Toolkit configuration object.
     """
 
     @property
-    @typing.override
+    @override
     def component_group(self):
         return ComponentGroup.RETRIEVERS
