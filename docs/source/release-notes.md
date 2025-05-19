@@ -25,7 +25,7 @@ limitations under the License.
 * A new [ReWOO agent](https://github.com/NVIDIA/AIQToolkit/blob/v1.1.0/examples/agents/rewoo/README.md) which improves on ReAct by removing the tool output from the LLM context, reducing token counts.
 * A new [Alert Triage Agent example](https://github.com/NVIDIA/AIQToolkit/blob/v1.1.0/examples/alert_triage_agent/README.md) which demonstrates how to build a full application with AIQ toolkit to automatically analyze system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization.
 * Support for Python 3.11.
-* Various quality of life improvements.
+* Various other improvements.
 
 Refer to the [changelog](https://github.com/NVIDIA/AIQToolkit/blob/v1.1.0/CHANGELOG.md) for a complete list of changes.
 
