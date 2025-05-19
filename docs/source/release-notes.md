@@ -22,8 +22,8 @@ limitations under the License.
 * [Full Model Context Protocol (MCP) support](https://github.com/NVIDIA/AIQToolkit/blob/v1.1.0/docs/source/workflows/mcp/index.md). Workflows/tools can now be exposed as MCP servers.
 * Deep integration with [Weights and Biases’ Weave](https://github.com/NVIDIA/AIQToolkit/blob/v1.1.0/docs/source/workflows/observe/observe-workflow-with-weave.md) for logging and tracing support.
 * Addition of the [Agno](https://github.com/NVIDIA/AIQToolkit/blob/v1.1.0/examples/agno_personal_finance/README.md) LLM framework.
-* A new [ReWOO agent](https://github.com/NVIDIA/AIQToolkit/blob/v1.1.0/examples/agents/rewoo/README.md) which improves on ReAct by removing the tool output from the LLM context, reducing token counts.
-* A new [Alert Triage Agent example](https://github.com/NVIDIA/AIQToolkit/blob/v1.1.0/examples/alert_triage_agent/README.md) which demonstrates how to build a full application with AIQ toolkit to automatically analyze system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization.
+* A new [ReWOO agent](https://github.com/NVIDIA/AIQToolkit/blob/v1.1.0/examples/agents/rewoo/README.md) that improves on ReAct by removing the tool output from the LLM context, reducing token counts.
+* A new [Alert Triage Agent example](https://github.com/NVIDIA/AIQToolkit/blob/v1.1.0/examples/alert_triage_agent/README.md) that demonstrates how to build a full application with AIQ toolkit to automatically analyze system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization.
 * Support for Python 3.11.
 * Various other improvements.
 
