@@ -15,6 +15,8 @@
 
 import logging
 
+from pydantic import Field
+
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function_info import FunctionInfo
@@ -30,9 +32,18 @@ logger = logging.getLogger(__name__)
 
 
 class SKTravelPlanningWorkflowConfig(FunctionBaseConfig, name="semantic_kernel"):
-    tool_names: list[FunctionRef] = []
-    llm_name: LLMRef
-    verbose: bool = False
+    tool_names: list[FunctionRef] = Field(default_factory=list,
+                                          description="The list of tools to provide to the semantic kernel.")
+    llm_name: LLMRef = Field(description="The LLM model to use with the semantic kernel.")
+    verbose: bool = Field(default=False, description="Set the verbosity of the semantic kernel's logging.")
+    itinerary_expert_name: str = Field(description="The name of the itinerary expert.")
+    itinerary_expert_instructions: str = Field(description="The instructions for the itinerary expert.")
+    budget_advisor_name: str = Field(description="The name of the budget advisor.")
+    budget_advisor_instructions: str = Field(description="The instructions for the budget advisor.")
+    summarize_agent_name: str = Field(description="The name of the summarizer agent.")
+    summarize_agent_instructions: str = Field(description="The instructions for the summarizer agent.")
+    long_term_memory_instructions: str = Field(default="",
+                                               description="The instructions for using the long term memory.")
 
 
 @register_function(config_type=SKTravelPlanningWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.SEMANTIC_KERNEL])
@@ -55,102 +66,6 @@ async def semantic_kernel_travel_planning_workflow(config: SKTravelPlanningWorkf
             return any(keyword in history[-1].content.lower()
                        for keyword in ["final plan", "total cost", "more information"])
 
-    # pylint: disable=invalid-name
-    ITINERARY_EXPERT_NAME = "ItineraryExpert"
-    ITINERARY_EXPERT_INSTRUCTIONS = """
-    You are an itinerary expert specializing in creating detailed travel plans.
-    Focus on the attractions, best times to visit, and other important logistics.
-    Avoid discussing costs or budgets; leave that to the Budget Advisor.
-    You have access to long term memory. Always retrieve user preferences from memory before calling any other tools.
-    Remember to add, or make up, all arguments when adding to memory (tags, metadata, conversation, user_id, memory).
-    ALWAYS include all five parameters.  Example of inputs are.
-            {
-                "conversation": [
-                    {
-                        "role": "user",
-                        "content": "Can you find me things to do in New York?",
-                    },
-                    {
-                        "role": "assistant",
-                        "content": "I've noted you are looking for things to do in New York.",
-                    },
-                ],
-                "user_id": "user_abc",
-                "metadata": {
-                    "key_value_pairs": {
-                        "type": "travel", "relevance": "high"
-                    }
-                },
-                "memory" : "User is looking for things to do in New York."
-            }
-    """
-
-    BUDGET_ADVISOR_NAME = "BudgetAdvisor"
-    BUDGET_ADVISOR_INSTRUCTIONS = """
-    You are a budget advisor skilled at estimating costs for travel plans.
-    Your job is to provide detailed pricing estimates, optimize for cost-effectiveness,
-    and ensure all travel costs fit within a reasonable budget.
-    Avoid giving travel advice or suggesting activities.
-    You have access to long term memory. Always retrieve user preferences from memory before calling any other tools.
-    Remember to add all arguments when searching memory, including the
-    conversation, even if you have to fill in some bits yourself.
-    Remember to add, or make up, all arguments when adding to memory (tags, metadata, conversation, user_id, memory).
-    ALWAYS include all five parameters.  Example of inputs are.
-            {
-                "conversation": [
-                    {
-                        "role": "user",
-                        "content": "Hi, I'm Alex. Can you find me hotels under $50?",
-                    },
-                    {
-                        "role": "assistant",
-                        "content": "Hello Alex! I've noted you are looking for hotels under $50.",
-                    },
-                ],
-                "user_id": "user_abc",
-                "metadata": {
-                    "key_value_pairs": {
-                        "type": "travel", "relevance": "high"
-                    }
-                },
-                "memory" : "User is looking for hotels under $50."
-            }
-    """
-
-    SUMMARIZE_AGENT_NAME = "Summarizer"
-    SUMMARIZE_AGENT_INSTRUCTIONS = """
-    You will summarize and create the final plan and format the output.
-    If the total cost is not within a provided budget, provide options or ask for more information
-    Compile information into a clear, well-structured, user-friendly travel plan. Include sections for the itinerary,
-    cost breakdown, and any notes from the budget advisor. Avoid duplicating information.
-    You have access to long term memory. Always retrieve user preferences from memory before calling any other tools,
-    and write them when it is appropriate to add a user preference.
-    Remember to add all arguments when searching memory, including the conversation, even if you have to fill in some
-    bits yourself.
-    Remember to add, or make up, all arguments when adding to memory (tags, metadata, conversation, user_id, memory).
-    ALWAYS include all five parameters.  Example of inputs are.
-            {
-                "conversation": [
-                    {
-                        "role": "user",
-                        "content": "Hi, I'm Alex. I'm looking for a trip to New York",
-                    },
-                    {
-                        "role": "assistant",
-                        "content": "Hello Alex! I've noted you are looking for a trip to New York.",
-                    },
-                ],
-                "user_id": "user_abc",
-                "metadata": {
-                    "key_value_pairs": {
-                        "type": "travel", "relevance": "high"
-                    }
-                },
-                "memory" : "User is looking for a trip to New York."
-            }
-    """
-    # pylint: enable=invalid-name
-
     kernel = Kernel()
 
     chat_service = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
@@ -163,19 +78,26 @@ async def semantic_kernel_travel_planning_workflow(config: SKTravelPlanningWorkf
     for tool_name, tool in zip(config.tool_names, tools):
         kernel.add_plugin(plugin=tool, plugin_name=tool_name)
 
+    itinerary_expert_name = config.itinerary_expert_name
+    itinerary_expert_instructions = config.itinerary_expert_instructions + config.long_term_memory_instructions
+    budget_advisor_name = config.budget_advisor_name
+    budget_advisor_instructions = config.budget_advisor_instructions + config.long_term_memory_instructions
+    summarize_agent_name = config.summarize_agent_name
+    summarize_agent_instructions = config.summarize_agent_instructions + config.long_term_memory_instructions
+
     agent_itinerary = ChatCompletionAgent(kernel=kernel,
-                                          name=ITINERARY_EXPERT_NAME,
-                                          instructions=ITINERARY_EXPERT_INSTRUCTIONS,
+                                          name=itinerary_expert_name,
+                                          instructions=itinerary_expert_instructions,
                                           function_choice_behavior=FunctionChoiceBehavior.Required())
 
     agent_budget = ChatCompletionAgent(kernel=kernel,
-                                       name=BUDGET_ADVISOR_NAME,
-                                       instructions=BUDGET_ADVISOR_INSTRUCTIONS,
+                                       name=budget_advisor_name,
+                                       instructions=budget_advisor_instructions,
                                        function_choice_behavior=FunctionChoiceBehavior.Required())
 
     agent_summary = ChatCompletionAgent(kernel=kernel,
-                                        name=SUMMARIZE_AGENT_NAME,
-                                        instructions=SUMMARIZE_AGENT_INSTRUCTIONS,
+                                        name=summarize_agent_name,
+                                        instructions=summarize_agent_instructions,
                                         function_choice_behavior=FunctionChoiceBehavior.Auto())
 
     chat = AgentGroupChat(
@@ -188,7 +110,7 @@ async def semantic_kernel_travel_planning_workflow(config: SKTravelPlanningWorkf
         responses = []
         async for content in chat.invoke():
             # Store only the Summarizer Agent's response
-            if content.name == SUMMARIZE_AGENT_NAME:
+            if content.name == summarize_agent_name:
                 responses.append(content.content)
 
         if not responses:

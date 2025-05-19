@@ -14,7 +14,7 @@ dependencies = [
   "litellm~=1.63.14"
 ]
 requires-python = ">=3.11,<3.13"
-description = "Custom AIQ Toolkit Workflow using Agno for personal finance"
+description = "Custom AIQ toolkit Workflow using Agno for personal finance"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]

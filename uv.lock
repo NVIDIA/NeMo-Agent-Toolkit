@@ -304,6 +304,7 @@ source = { editable = "examples/multi_frameworks" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain", "llama-index"] },
     { name = "arxiv" },
+    { name = "bs4" },
     { name = "markdown-it-py" },
     { name = "nvidia-haystack" },
 ]
@@ -312,6 +313,7 @@ dependencies = [
 requires-dist = [
     { name = "aiqtoolkit", extras = ["langchain", "llama-index"], editable = "." },
     { name = "arxiv", specifier = "~=2.1.3" },
+    { name = "bs4", specifier = "==0.0.2" },
     { name = "markdown-it-py", specifier = "~=3.0" },
     { name = "nvidia-haystack", specifier = "==0.1.2" },
 ]
@@ -336,13 +338,13 @@ requires-dist = [
 name = "aiq-profiler-agent"
 source = { editable = "examples/profiler_agent" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain", "profiling"] },
+    { name = "aiqtoolkit", extra = ["langchain", "profiling", "telemetry"] },
     { name = "pydantic" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aiqtoolkit", extras = ["langchain", "profiling"], editable = "." },
+    { name = "aiqtoolkit", extras = ["langchain", "profiling", "telemetry"], editable = "." },
     { name = "pydantic", specifier = "~=2.10.0,<2.11.0" },
 ]
 
@@ -664,8 +666,8 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aiqtoolkit", editable = "." },
-    { name = "llama-index", specifier = "==0.12.15" },
-    { name = "llama-index-core", specifier = "==0.12.15" },
+    { name = "llama-index", specifier = "==0.12.21" },
+    { name = "llama-index-core", specifier = "==0.12.21" },
     { name = "llama-index-embeddings-nvidia", specifier = "==0.3.1" },
     { name = "llama-index-llms-nvidia", specifier = "==0.3.1" },
     { name = "llama-index-readers-file", specifier = "==0.4.4" },
@@ -3134,7 +3136,7 @@ wheels = [
 
 [[package]]
 name = "llama-index"
-version = "0.12.15"
+version = "0.12.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "llama-index-agent-openai" },
@@ -3150,9 +3152,9 @@ dependencies = [
     { name = "llama-index-readers-llama-parse" },
     { name = "nltk" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4f/6d/d5532bef94050f333f9d080e47b7e85ad0642a9017085391083f64998e82/llama_index-0.12.15.tar.gz", hash = "sha256:2d77c3264d624776e8dace51397c296ae438f3f0be5abf83f07100930a4d5329", size = 7787 }
+sdist = { url = "https://files.pythonhosted.org/packages/36/c7/de7dfa75b22825e9711011691c4c3689de831404783a51e8e1dd61408e82/llama_index-0.12.21.tar.gz", hash = "sha256:8ca52e6d9eb988b9761604297b5f78afacd27e66b8e6984968e052e4867fecab", size = 7885 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d1/7e/bde9060ca09d8511edfc22c8956bda56e8ac9e861bba4db98dd3fada0e58/llama_index-0.12.15-py3-none-any.whl", hash = "sha256:badb0da25dc0a8e2d7c34734378c3f5d88a96b6eb7ffb2c6935bbe7ca33f6f22", size = 6881 },
+    { url = "https://files.pythonhosted.org/packages/91/fa/beef517b61d1ed13a95b1b1f5c34f67a8dbb8828d104415139adc8b2f604/llama_index-0.12.21-py3-none-any.whl", hash = "sha256:860ebe29ceb55220fb3d15555d723fe3a2071b5b5fd6c687b5c8d407002c1098", size = 6985 },
 ]
 
 [[package]]
@@ -3185,7 +3187,7 @@ wheels = [
 
 [[package]]
 name = "llama-index-core"
-version = "0.12.15"
+version = "0.12.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -3211,9 +3213,9 @@ dependencies = [
     { name = "typing-inspect" },
     { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b7/10/dbf64106540e3eb3324243f547f049529b26c4050a6aa52516751cd4a907/llama_index_core-0.12.15.tar.gz", hash = "sha256:f9aaeef792db24d490b1e3484d2bbd1b3c43e7a24a40fd6dbd1b298efb1f9429", size = 1345748 }
+sdist = { url = "https://files.pythonhosted.org/packages/c7/af/f42e7490b26441321ab47902efb3fb67e3f478b5977af85e231269d795ff/llama_index_core-0.12.21.tar.gz", hash = "sha256:bd51521197231b767e90394f1df9e8869016cfeb9bbe6599fa56a3c32ddd8ccc", size = 1350306 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ef/5e/e98c2381a3181e01152d3f3d843a1c922c168e245b74c19941aa3eddbe97/llama_index_core-0.12.15-py3-none-any.whl", hash = "sha256:0c65ca72c4fb43a77a2463f2114d6eb570681d729139879ed659179798ecab7f", size = 1602211 },
+    { url = "https://files.pythonhosted.org/packages/eb/ca/529269fa3803feb0fff7f998ff7952e064973bb7f322533d8733d53fd884/llama_index_core-0.12.21-py3-none-any.whl", hash = "sha256:8583c781263a883f91c5575d533a5c3c1c27f923ee8913741e1598052370495a", size = 1606328 },
 ]
 
 [[package]]
@@ -4038,9 +4040,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/7a/08/c008711d1b92ff1272f4fea0fbee57723171f161d42e5c680625535280af/onnxruntime-1.22.0-cp311-cp311-macosx_13_0_universal2.whl", hash = "sha256:8d6725c5b9a681d8fe72f2960c191a96c256367887d076b08466f52b4e0991df", size = 34282151 },
     { url = "https://files.pythonhosted.org/packages/3e/8b/22989f6b59bc4ad1324f07a945c80b9ab825f0a581ad7a6064b93716d9b7/onnxruntime-1.22.0-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:fef17d665a917866d1f68f09edc98223b9a27e6cb167dec69da4c66484ad12fd", size = 14446302 },
     { url = "https://files.pythonhosted.org/packages/7a/d5/aa83d084d05bc8f6cf8b74b499c77431ffd6b7075c761ec48ec0c161a47f/onnxruntime-1.22.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b978aa63a9a22095479c38371a9b359d4c15173cbb164eaad5f2cd27d666aa65", size = 16393496 },
+    { url = "https://files.pythonhosted.org/packages/89/a5/1c6c10322201566015183b52ef011dfa932f5dd1b278de8d75c3b948411d/onnxruntime-1.22.0-cp311-cp311-win_amd64.whl", hash = "sha256:03d3ef7fb11adf154149d6e767e21057e0e577b947dd3f66190b212528e1db31", size = 12691517 },
     { url = "https://files.pythonhosted.org/packages/4d/de/9162872c6e502e9ac8c99a98a8738b2fab408123d11de55022ac4f92562a/onnxruntime-1.22.0-cp312-cp312-macosx_13_0_universal2.whl", hash = "sha256:f3c0380f53c1e72a41b3f4d6af2ccc01df2c17844072233442c3a7e74851ab97", size = 34298046 },
     { url = "https://files.pythonhosted.org/packages/03/79/36f910cd9fc96b444b0e728bba14607016079786adf032dae61f7c63b4aa/onnxruntime-1.22.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c8601128eaef79b636152aea76ae6981b7c9fc81a618f584c15d78d42b310f1c", size = 14443220 },
     { url = "https://files.pythonhosted.org/packages/8c/60/16d219b8868cc8e8e51a68519873bdb9f5f24af080b62e917a13fff9989b/onnxruntime-1.22.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:6964a975731afc19dc3418fad8d4e08c48920144ff590149429a5ebe0d15fb3c", size = 16406377 },
+    { url = "https://files.pythonhosted.org/packages/36/b4/3f1c71ce1d3d21078a6a74c5483bfa2b07e41a8d2b8fb1e9993e6a26d8d3/onnxruntime-1.22.0-cp312-cp312-win_amd64.whl", hash = "sha256:c0d534a43d1264d1273c2d4f00a5a588fa98d21117a3345b7104fa0bbcaadb9a", size = 12692233 },
 ]
 
 [[package]]
