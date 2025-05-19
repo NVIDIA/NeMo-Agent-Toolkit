@@ -424,8 +424,6 @@ def test_react_additional_instructions(mock_llm, mock_tool):
     prompt = create_react_agent_prompt(config_react_agent)
     agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=config_react_agent.verbose)
     assert isinstance(agent, ReActAgentGraph)
-    print(dir(agent.agent))
-    print(agent.agent.get_prompts())
     assert "Talk like a parrot" in agent.agent.get_prompts()[0].messages[0].prompt.template
 
 
