@@ -57,6 +57,7 @@ maintainers = [{ name = "NVIDIA Corporation" }]
 # Keep sorted!!!
 agno = ["aiqtoolkit-agno"]
 crewai = ["aiqtoolkit-crewai"]
+ingestion = ["lxml~=5.4"]
 langchain = ["aiqtoolkit-langchain"]
 llama-index = ["aiqtoolkit-llama-index"]
 mem0ai = ["aiqtoolkit-mem0ai"]
