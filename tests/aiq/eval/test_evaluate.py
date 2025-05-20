@@ -383,7 +383,7 @@ def test_write_output(evaluation_run, default_eval_config, eval_input, eval_outp
         eval_input_item.output_obj = generated_answer
 
     mock_dataset_handler = MagicMock()
-    workflow_output = json.dumps([item.dict() for item in eval_input.eval_input_items])
+    workflow_output = json.dumps([item.model_dump() for item in eval_input.eval_input_items])
     mock_dataset_handler.publish_eval_input.return_value = workflow_output
 
     # Mock evaluation results
