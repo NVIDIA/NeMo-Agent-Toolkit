@@ -19,6 +19,7 @@
 import logging
 import os
 
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import SystemMessage
 from langgraph.graph import START
@@ -33,6 +34,7 @@ from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_function
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
+from aiq.profiler.decorators.function_tracking import track_function
 
 # Import any tools which need to be automatically registered here
 from . import categorizer
@@ -73,7 +75,7 @@ class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agen
 @register_function(config_type=AlertTriageAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, builder: Builder):
 
-    llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    llm: BaseChatModel = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     # Get tools for alert triage
     tool_names = config.tool_names
@@ -87,11 +89,11 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
     maintenance_check_tool = builder.get_tool("maintenance_check", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     # Define assistant function that processes messages with the LLM
-    def ata_assistant(state: MessagesState):
+    async def ata_assistant(state: MessagesState):
         # Create system message with prompt
         sys_msg = SystemMessage(content=ALERT_TRIAGE_AGENT_PROMPT)
         # Invoke LLM with system message and conversation history
-        return {"messages": [llm_n_tools.invoke([sys_msg] + state["messages"])]}
+        return {"messages": [await llm_n_tools.ainvoke([sys_msg] + state["messages"])]}
 
     # Initialize state graph for managing conversation flow
     builder_graph = StateGraph(MessagesState)
@@ -114,6 +116,7 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
     # Compile graph into executable agent
     agent_executor = builder_graph.compile()
 
+    @track_function()
     async def _process_alert(input_message: str) -> str:
         """Process an alert through maintenance check, agent analysis, and root cause categorization.
 

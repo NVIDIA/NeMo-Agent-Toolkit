@@ -296,15 +296,17 @@ This pass results in workflow interrupted warning. You can then do another pass.
 
 Pass-2:
 ```bash
-aiq eval --config_file=examples/simple/configs/eval_config.yml --skip_completed_entries --dataset=.tmp/aiq/examples/simple/workflow_output.json
+cp .tmp/aiq/examples/simple/workflow_output.json .tmp/simple_workflow_output.json
+aiq eval --config_file=examples/simple/configs/eval_config.yml --skip_completed_entries --dataset=.tmp/simple_workflow_output.json
 ```
 
 ## Running evaluation offline
 You can evaluate a dataset with previously generated answers via the `--skip_workflow` option. In this case the dataset has both the expected `answer` and the `generated_answer`.
 ```bash
-aiq eval --config_file=examples/simple/configs/eval_config.yml --skip_workflow --dataset=.tmp/aiq/examples/simple/workflow_output.json
+cp .tmp/aiq/examples/simple/workflow_output.json .tmp/simple_workflow_output.json
+aiq eval --config_file=examples/simple/configs/eval_config.yml --skip_workflow --dataset=.tmp/simple_workflow_output.json
 ```
-This assumes that the workflow output is previously generated and stored in the `.tmp/aiq/examples/simple/workflow_output.json` file.
+This assumes that the workflow output was previously generated and stored in `.tmp/aiq/examples/simple/workflow_output.json`
 
 ## Running the workflow over a dataset without evaluation
 You can do this by running `aiq eval` with a workflow configuration file that includes an `eval` section with no `evaluators`.

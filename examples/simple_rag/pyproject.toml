@@ -2,22 +2,23 @@
 build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
+[tool.setuptools]
+packages = []
+
 [tool.setuptools_scm]
 root = "../.."
 
 [project]
-name = "aiq_automated_description_generation"
+name = "aiq_simple_rag"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[ingestion, langchain]~=1.1"
+  "aiqtoolkit[ingestion, langchain, mem0ai]~=1.1"
 ]
 requires-python = ">=3.11,<3.13"
-description = "Automated Generation Description AI-Q example"
+description = "Simple Rag AIQ example"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
 aiqtoolkit = { path = "../../", editable = true }
 
-[project.entry-points.'aiq.components']
-aiq_automated_description_generation = "aiq_automated_description_generation.register"

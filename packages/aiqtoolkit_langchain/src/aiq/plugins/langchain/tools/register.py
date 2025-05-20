@@ -19,5 +19,6 @@
 
 # Import any providers which need to be automatically registered here
 
-from . import tavily_internet_search
 from . import code_generation_tool
+from . import tavily_internet_search
+from . import wikipedia_search
