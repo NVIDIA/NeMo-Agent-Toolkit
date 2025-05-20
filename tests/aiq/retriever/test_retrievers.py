@@ -25,7 +25,7 @@ from aiq.retriever.nemo_retriever.retriever import CollectionUnavailableError
 from aiq.retriever.nemo_retriever.retriever import NemoRetriever
 
 
-class TestMilvusClient:
+class CustomMilvusClient:
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
@@ -167,7 +167,7 @@ class TestEmbeddings(Embeddings):
 
 @pytest.fixture(name="milvus_retriever", scope="module")
 def _get_milvus_retriever():
-    test_client = TestMilvusClient()
+    test_client = CustomMilvusClient()
 
     return MilvusRetriever(
         client=test_client,

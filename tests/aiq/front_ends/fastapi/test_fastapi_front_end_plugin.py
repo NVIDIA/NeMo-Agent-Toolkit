@@ -36,7 +36,7 @@ from aiq.test.functions import StreamingEchoFunctionConfig
 from aiq.utils.type_utils import override
 
 
-class TestCustomWorker(FastApiFrontEndPluginWorker):
+class CustomWorker(FastApiFrontEndPluginWorker):
 
     @override
     async def add_routes(self, app: FastAPI, builder: WorkflowBuilder):
@@ -169,7 +169,7 @@ async def test_custom_endpoint():
         workflow=EchoFunctionConfig(),
     )
 
-    async with _build_client(config, worker_class=TestCustomWorker) as client:
+    async with _build_client(config, worker_class=CustomWorker) as client:
         response = await client.get("/custom")
 
         assert response.status_code == 200
