@@ -246,6 +246,7 @@ async def test_run_workflow_local_skip_completed(evaluation_run, session_manager
     assert pending_item.output_obj == generated_answer, "Pending item output should have been processed"
 
 
+@pytest.mark.filterwarnings("ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited.*:RuntimeWarning")
 async def test_run_workflow_local_workflow_interrupted(evaluation_run, eval_input, session_manager):
     """Test that workflow_interrupted is set to True when an exception occurs during workflow execution."""
 
