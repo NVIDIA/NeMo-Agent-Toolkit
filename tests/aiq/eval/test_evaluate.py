@@ -199,6 +199,7 @@ async def test_run_workflow_local_success(evaluation_run, session_manager, gener
     assert not evaluation_run.workflow_interrupted
 
 
+@pytest.mark.filterwarnings("ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited.*:RuntimeWarning")
 async def test_run_workflow_local_errors(evaluation_run, session_manager):
     """Test workflow with no 'single output' fails gracefully."""
 
