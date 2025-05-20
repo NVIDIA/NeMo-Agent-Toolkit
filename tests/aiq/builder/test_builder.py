@@ -247,17 +247,22 @@ async def test_set_workflow():
         fn = await builder.set_workflow(FunctionReturningFunctionConfig())
         assert isinstance(fn, Function)
 
-        fn = await builder.set_workflow(FunctionReturningInfoConfig())
+        with pytest.warns(UserWarning, match=r"^Overwriting existing workflow$"):
+            fn = await builder.set_workflow(FunctionReturningInfoConfig())
+
         assert isinstance(fn, Function)
 
-        fn = await builder.set_workflow(FunctionReturningDerivedConfig())
+        with pytest.warns(UserWarning, match=r"^Overwriting existing workflow$"):
+            fn = await builder.set_workflow(FunctionReturningDerivedConfig())
+
         assert isinstance(fn, Function)
 
         with pytest.raises(ValueError):
-            await builder.set_workflow(FunctionReturningBadConfig())
+            with pytest.warns(UserWarning, match=r"^Overwriting existing workflow$"):
+                await builder.set_workflow(FunctionReturningBadConfig())
 
         # Try and add a function with the same name
-        with pytest.warns():
+        with pytest.warns(UserWarning, match=r"^Overwriting existing workflow$"):
             await builder.set_workflow(FunctionReturningFunctionConfig())
 
 
