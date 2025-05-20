@@ -33,8 +33,11 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
     function.
     """
     # Add your custom configuration parameters here
-    url: HttpUrl = Field(description="The URL of the MCP server")
+    url: HttpUrl = Field(description="The URL of the MCP server (for SSE mode)")
     mcp_tool_name: str = Field(description="The name of the tool served by the MCP Server that you want to use")
+    client_type: str = Field(default="sse", description="The type of client to use ('sse' or 'stdio')")
+    command: str | None = Field(default=None, description="The command to run for stdio mode (e.g. 'mcp-server')")
+    args: list[str] | None = Field(default=None, description="Additional arguments for the stdio command")
     description: str | None = Field(default=None,
                                     description="""
         Description for the tool that will override the description provided by the MCP server. Should only be used if
@@ -56,7 +59,12 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=
     from aiq.tool.mcp.mcp_client import MCPBuilder
     from aiq.tool.mcp.mcp_client import MCPToolClient
 
-    client = MCPBuilder(url=str(config.url))
+    if config.client_type == 'stdio':
+        if not config.command:
+            raise ValueError("command is required when using stdio client type")
+        client = MCPBuilder(url=config.command, client_type=config.client_type, args=config.args)
+    else:
+        client = MCPBuilder(url=str(config.url), client_type=config.client_type)
 
     tool: MCPToolClient = await client.get_tool(config.mcp_tool_name)
     if config.description:
