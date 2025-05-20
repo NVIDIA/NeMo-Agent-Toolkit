@@ -232,15 +232,15 @@ async def test_milvus_retriever_binding(milvus_retriever):
         _ = await milvus_retriever.search(query="Test query", collection_name="collection_not_exist", top_k=4)
 
     milvus_retriever.bind(top_k=2)
-    _ = milvus_retriever.search(query="Test query", collection_name="collection2")
+    _ = await milvus_retriever.search(query="Test query", collection_name="collection2")
 
     # Test not supplying enough parameters
     with pytest.raises(TypeError):
         _ = await milvus_retriever.search(query="Test query no collection name")
 
     # Test that binding those parameters makes the same call work
-    milvus_retriever.bind(top_k=2, collection_name="collecion1")
-    _ = milvus_retriever.search(query="Test query")
+    milvus_retriever.bind(top_k=2, collection_name="collection1")
+    _ = await milvus_retriever.search(query="Test query")
 
 
 async def test_milvus_validation(milvus_retriever):
