@@ -57,8 +57,9 @@ def print_tool(tool_dict, detail=False):
         click.echo("-" * 60)
 
 
-async def list_tools_and_schemas(url, tool_name=None):
-    builder = MCPBuilder(url=url)
+async def list_tools_and_schemas(url, tool_name=None, client_type='sse', args=[]):
+    builder = MCPBuilder(url=url, client_type=client_type, args=args)
+
     try:
         if tool_name:
             tool = await builder.get_tool(tool_name)
@@ -71,12 +72,27 @@ async def list_tools_and_schemas(url, tool_name=None):
         return []
 
 
-async def list_tools_direct(url, tool_name=None):
+async def list_tools_direct(url, tool_name=None, client_type='sse', args=[]):
     from mcp import ClientSession
     from mcp.client.sse import sse_client
+    from mcp.client.stdio import StdioServerParameters
+    from mcp.client.stdio import stdio_client
 
     try:
-        async with sse_client(url=url) as (read, write):
+        if client_type == 'stdio':
+
+            def get_stdio_client():
+                return stdio_client(server=StdioServerParameters(command=url, args=args))
+
+            client = get_stdio_client
+        else:
+
+            def get_sse_client():
+                return sse_client(url=url)
+
+            client = get_sse_client
+
+        async with client() as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 response = await session.list_tools()
@@ -98,20 +114,39 @@ async def list_tools_direct(url, tool_name=None):
 
 @click.group(invoke_without_command=True, help="List tool names (default), or show details with --detail or --tool.")
 @click.option('--direct', is_flag=True, help='Bypass MCPBuilder and use direct MCP protocol')
-@click.option('--url', default='http://localhost:9901/sse', show_default=True, help='MCP server URL')
+@click.option('--url',
+              default='http://localhost:9901/sse',
+              show_default=True,
+              help='For SSE: MCP server URL (e.g. http://localhost:8080/sse)')
+@click.option('--client-type',
+              type=click.Choice(['sse', 'stdio']),
+              default='sse',
+              show_default=True,
+              help='Type of client to use')
+@click.option('--command', help='For stdio: The command to run (e.g. mcp-server)')
+@click.option('--args', help='For stdio: Additional arguments for the command (space-separated)')
 @click.option('--tool', default=None, help='Get details for a specific tool by name')
 @click.option('--detail', is_flag=True, help='Show full details for all tools')
 @click.option('--json-output', is_flag=True, help='Output tool metadata in JSON format')
 @click.pass_context
-def list_mcp(ctx, direct, url, tool, detail, json_output):
+def list_mcp(ctx, direct, url, client_type, command, args, tool, detail, json_output):
     """
     List tool names (default). Use --detail for full output. If --tool is provided,
     always show full output for that tool.
     """
     if ctx.invoked_subcommand is not None:
         return
+
+    if client_type == 'stdio':
+        if not command:
+            click.echo("[ERROR] --command is required when using stdio client type", err=True)
+            return
+        url = command
+
+    stdio_args = args.split() if args else []
+
     fetcher = list_tools_direct if direct else list_tools_and_schemas
-    tools = anyio.run(fetcher, url, tool)
+    tools = anyio.run(fetcher, url, tool, client_type, stdio_args)
 
     if json_output:
         click.echo(json.dumps(tools, indent=2))

@@ -16,12 +16,16 @@
 from __future__ import annotations
 
 import logging
+from abc import ABC
+from abc import abstractmethod
 from contextlib import asynccontextmanager
 from enum import Enum
 from typing import Any
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
+from mcp.client.stdio import StdioServerParameters
+from mcp.client.stdio import stdio_client
 from mcp.types import TextContent
 from pydantic import BaseModel
 from pydantic import Field
@@ -83,7 +87,24 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
     return create_model(f"{_generate_valid_classname(name)}InputSchema", **schema_dict)
 
 
-class MCPSSEClient:
+class MCPBaseClient(ABC):
+    """
+    Base client for creating a session and connecting to an MCP server
+    """
+
+    def __init__(self, url: str):
+        self.url = url
+
+    @abstractmethod
+    @asynccontextmanager
+    async def connect_to_server(self):
+        """
+        Establish a session with an MCP server within an async context
+        """
+        pass
+
+
+class MCPSSEClient(MCPBaseClient):
     """
     Client for creating a session and connecting to an MCP server using SSE
 
@@ -91,13 +112,10 @@ class MCPSSEClient:
       url (str): The url of the MCP server
     """
 
-    def __init__(self, url: str):
-        self.url = url
-
     @asynccontextmanager
-    async def connect_to_sse_server(self):
+    async def connect_to_server(self):
         """
-        Establish a session with an MCP SSE server within an aync context
+        Establish a session with an MCP SSE server within an async context
         """
         async with sse_client(url=self.url) as (read, write):
             async with ClientSession(read, write) as session:
@@ -105,27 +123,78 @@ class MCPSSEClient:
                 yield session
 
 
-class MCPBuilder(MCPSSEClient):
+class MCPStdioClient(MCPBaseClient):
+    """
+    Client for creating a session and connecting to an MCP server using stdio
+
+    Args:
+      url (str): The command to run
+      args (list[str] | None): Additional arguments for the command
+    """
+
+    def __init__(self, url: str, args: list[str] | None = None):
+        super().__init__(url)
+        self._args = args
+
+    @asynccontextmanager
+    async def connect_to_server(self):
+        """
+        Establish a session with an MCP server via stdio within an async context
+        """
+        server_params = StdioServerParameters(command=self.url, args=self._args or [])
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                yield session
+
+
+class MCPBuilder(MCPBaseClient):
     """
     Builder class used to connect to an MCP Server and generate ToolClients
 
     Args:
-        url (str): The url of the MCP server
+        url (str): The url of the MCP server (for SSE) or command name (for stdio)
+        client_type (str): The type of client to use ('sse' or 'stdio')
+        args (list[str] | None): Additional arguments for the stdio command
     """
 
-    def __init__(self, url):
+    def __init__(self, url: str, client_type: str = 'sse', args: list[str] | None = None):
         super().__init__(url)
         self._tools = None
+        self._client_type = client_type.lower()
+        self._args = args
+        if self._client_type not in ['sse', 'stdio']:
+            raise ValueError("client_type must be either 'sse' or 'stdio'")
+
+    @asynccontextmanager
+    async def connect_to_server(self):
+        """
+        Establish a session with an MCP server within an async context
+        """
+        if self._client_type == 'sse':
+            client = MCPSSEClient(self.url)
+        else:
+            client = MCPStdioClient(self.url, self._args)
+
+        async with client.connect_to_server() as session:
+            yield session
 
     async def get_tools(self):
         """
         Retrieve a dictionary of all tools served by the MCP server.
         """
-        async with self.connect_to_sse_server() as session:
+        async with self.connect_to_server() as session:
             response = await session.list_tools()
 
+        # Reuse the same client type for each tool
+        client = MCPSSEClient(self.url) if self._client_type == "sse" \
+            else MCPStdioClient(self.url, self._args)
         return {
-            tool.name: MCPToolClient(self.url, tool.name, tool.description, tool_input_schema=tool.inputSchema)
+            tool.name:
+                MCPToolClient(client=client,
+                              tool_name=tool.name,
+                              tool_description=tool.description,
+                              tool_input_schema=tool.inputSchema)
             for tool in response.tools
         }
 
@@ -151,12 +220,12 @@ class MCPBuilder(MCPSSEClient):
         return tool
 
     async def call_tool(self, tool_name: str, tool_args: dict | None):
-        async with self.connect_to_sse_server() as session:
+        async with self.connect_to_server() as session:
             result = await session.call_tool(tool_name, tool_args)
             return result
 
 
-class MCPToolClient(MCPSSEClient):
+class MCPToolClient:
     """
     Client wrapper used to call an MCP tool.
 
@@ -167,8 +236,12 @@ class MCPToolClient(MCPSSEClient):
         tool_input_schema (dict): The input schema for the tool.
     """
 
-    def __init__(self, url: str, tool_name: str, tool_description: str | None, tool_input_schema: dict | None = None):
-        super().__init__(url)
+    def __init__(self,
+                 client: MCPBaseClient,
+                 tool_name: str,
+                 tool_description: str | None,
+                 tool_input_schema: dict | None = None):
+        self._client = client
         self._tool_name = tool_name
         self._tool_description = tool_description
         self._input_schema = model_from_mcp_schema(self._tool_name, tool_input_schema) if tool_input_schema else None
@@ -207,7 +280,7 @@ class MCPToolClient(MCPSSEClient):
         Args:
             tool_args (dict[str, Any]): A dictionary of key value pairs to serve as inputs for the MCP tool.
         """
-        async with self.connect_to_sse_server() as session:
+        async with self._client.connect_to_server() as session:
             result = await session.call_tool(self._tool_name, tool_args)
 
         output = []
