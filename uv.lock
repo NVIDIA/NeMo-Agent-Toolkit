@@ -268,15 +268,11 @@ requires-dist = [
 name = "aiq-automated-description-generation"
 source = { editable = "examples/automated_description_generation" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain"] },
-    { name = "lxml" },
+    { name = "aiqtoolkit", extra = ["ingestion", "langchain"] },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
-    { name = "lxml", specifier = "~=5.4" },
-]
+requires-dist = [{ name = "aiqtoolkit", extras = ["ingestion", "langchain"], editable = "." }]
 
 [[package]]
 name = "aiq-email-phishing-analyzer"
@@ -448,6 +444,9 @@ examples = [
     { name = "aiq-simple-calculator" },
     { name = "aiq-swe-bench" },
 ]
+ingestion = [
+    { name = "lxml" },
+]
 langchain = [
     { name = "aiqtoolkit-langchain" },
 ]
@@ -541,6 +540,7 @@ requires-dist = [
     { name = "httpx", specifier = "~=0.27" },
     { name = "jinja2", specifier = "~=3.1" },
     { name = "jsonpath-ng", specifier = "~=1.7" },
+    { name = "lxml", marker = "extra == 'ingestion'", specifier = "~=5.4" },
     { name = "matplotlib", marker = "extra == 'profiling'", specifier = "~=3.9" },
     { name = "mcp", specifier = ">=1.0.0" },
     { name = "networkx", specifier = "~=3.4" },
