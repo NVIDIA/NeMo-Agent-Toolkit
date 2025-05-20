@@ -210,6 +210,7 @@ async def test_run_workflow_local_errors(evaluation_run, session_manager):
         await evaluation_run.run_workflow_local(session_manager)
 
 
+@pytest.mark.filterwarnings("ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited.*:RuntimeWarning")
 async def test_run_workflow_local_skip_completed(evaluation_run, session_manager, generated_answer):
     """Test that 'skip_completed_entries=True' skips completed items and processes only unfinished ones."""
 
