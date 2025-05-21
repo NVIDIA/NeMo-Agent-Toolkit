@@ -30,25 +30,25 @@ from aiq.plugins.agno.tool_wrapper import execute_agno_tool
 from aiq.plugins.agno.tool_wrapper import process_result
 
 
-class RunLoopThread(threading.Thread):
-
-    def __init__(self, loop: asyncio.AbstractEventLoop, release_event: threading.Event):
-        super().__init__()
-        self._loop = loop
-        self._release_event = release_event
-
-    def run(self):
-        asyncio.set_event_loop(self._loop)
-        self._release_event.set()
-        self._loop.run_forever()
-
-
 @pytest.fixture(name="run_loop_thread")
 def fixture_run_loop_thread():
     """
     Fixture to create an asyncio event loop running in another thread.
     Useful for creating a loop that can be used with the asyncio.run_coroutine_threadsafe function.
     """
+
+    class RunLoopThread(threading.Thread):
+
+        def __init__(self, loop: asyncio.AbstractEventLoop, release_event: threading.Event):
+            super().__init__()
+            self._loop = loop
+            self._release_event = release_event
+
+        def run(self):
+            asyncio.set_event_loop(self._loop)
+            self._release_event.set()
+            self._loop.run_forever()
+
     loop = asyncio.new_event_loop()
     release_event = threading.Event()
     thread = RunLoopThread(loop=loop, release_event=release_event)
@@ -257,7 +257,7 @@ class TestToolWrapper:
         assert "test_tool" in _tool_call_counters
         assert "test_tool" in _tool_initialization_done
 
-        # Verify that run_coroutine_threadsafe was called with the coroutine function
+        # Verify that the coroutine function was called
         mock_coroutine_fn.assert_called_once_with()
 
         # Verify the result
@@ -265,107 +265,80 @@ class TestToolWrapper:
 
     @patch("aiq.plugins.agno.tool_wrapper._tool_call_counters", {"search_api_tool": 0})
     @patch("aiq.plugins.agno.tool_wrapper._tool_initialization_done", {"search_api_tool": True})
-    @patch("aiq.plugins.agno.tool_wrapper.asyncio.run_coroutine_threadsafe")
-    def test_execute_agno_tool_search_api_empty_query(self, mock_run_coroutine_threadsafe, mock_event_loop):
+    def test_execute_agno_tool_search_api_empty_query(self, run_loop_thread):
         """Test that execute_agno_tool correctly handles search API tools with empty queries."""
         # Create a mock coroutine function
         mock_coroutine_fn = AsyncMock()
 
         # Call the function under test for a search tool with an empty query
-        result = execute_agno_tool("search_api_tool", mock_coroutine_fn, ["query"], mock_event_loop, query="")
+        result = execute_agno_tool("search_api_tool", mock_coroutine_fn, ["query"], run_loop_thread, query="")
 
         # Verify that an error message is returned for empty query after initialization
         assert "ERROR" in result
         assert "requires a valid query" in result
 
-        # Verify that run_coroutine_threadsafe was not called since we blocked the empty query
-        mock_run_coroutine_threadsafe.assert_not_called()
+        # Verify that coroutine was not called since we called execute_agno_tool with an empty query
+        mock_coroutine_fn.assert_not_called()
 
     @patch("aiq.plugins.agno.tool_wrapper._tool_call_counters", {"test_tool": 0})
     @patch("aiq.plugins.agno.tool_wrapper._tool_initialization_done", {"test_tool": False})
-    @patch("aiq.plugins.agno.tool_wrapper.asyncio.run_coroutine_threadsafe")
-    def test_execute_agno_tool_filtered_kwargs(self, mock_run_coroutine_threadsafe, mock_event_loop):
+    def test_execute_agno_tool_filtered_kwargs(self, run_loop_thread: asyncio.AbstractEventLoop):
         """Test that execute_agno_tool correctly filters reserved keywords."""
-        # Set up the mock future
-        mock_future = MagicMock()
-        mock_future.result.return_value = "filtered_result"
-        mock_run_coroutine_threadsafe.return_value = mock_future
-
-        # Create a mock process_result future
-        process_future = MagicMock()
-        process_future.result.return_value = "processed_result"
-        mock_run_coroutine_threadsafe.side_effect = [mock_future, process_future]
 
         # Create a mock coroutine function
         mock_coroutine_fn = AsyncMock()
+        mock_coroutine_fn.return_value = "processed_result"
 
         # Call the function under test with kwargs containing reserved keywords
         result = execute_agno_tool("test_tool",
                                    mock_coroutine_fn, ["query"],
-                                   mock_event_loop,
+                                   run_loop_thread,
                                    query="test query",
                                    model_config="should be filtered",
                                    _type="should be filtered")
 
         # Verify that run_coroutine_threadsafe was called with filtered kwargs
-        args, kwargs = mock_coroutine_fn.call_args
-        assert "query" in kwargs
-        assert "model_config" not in kwargs
-        assert "_type" not in kwargs
+        mock_coroutine_fn.assert_called_once_with(query="test query")
 
         # Verify the result
         assert result == "processed_result"
 
     @patch("aiq.plugins.agno.tool_wrapper._tool_call_counters", {"test_tool": 0})
     @patch("aiq.plugins.agno.tool_wrapper._tool_initialization_done", {"test_tool": False})
-    @patch("aiq.plugins.agno.tool_wrapper.asyncio.run_coroutine_threadsafe")
-    def test_execute_agno_tool_wrapped_kwargs(self, mock_run_coroutine_threadsafe, mock_event_loop):
+    def test_execute_agno_tool_wrapped_kwargs(self, run_loop_thread: asyncio.AbstractEventLoop):
         """Test that execute_agno_tool correctly unwraps nested kwargs."""
-        # Set up the mock future
-        mock_future = MagicMock()
-        mock_future.result.return_value = "unwrapped_result"
-
-        # Create a mock process_result future
-        process_future = MagicMock()
-        process_future.result.return_value = "processed_result"
-        mock_run_coroutine_threadsafe.side_effect = [mock_future, process_future]
-
         # Create a mock coroutine function
         mock_coroutine_fn = AsyncMock()
+        mock_coroutine_fn.return_value = "processed_result"
 
         # Call the function under test with wrapped kwargs
         result = execute_agno_tool("test_tool",
                                    mock_coroutine_fn, ["query"],
-                                   mock_event_loop,
+                                   run_loop_thread,
                                    kwargs={
                                        "query": "test query", "other_param": "value"
                                    })
 
         # Verify that run_coroutine_threadsafe was called with unwrapped kwargs
-        args, kwargs = mock_coroutine_fn.call_args
-        assert "query" in kwargs
-        assert kwargs["query"] == "test query"
-        assert "other_param" in kwargs
-        assert kwargs["other_param"] == "value"
+        mock_coroutine_fn.assert_called_once_with(query="test query", other_param="value")
 
         # Verify the result
         assert result == "processed_result"
 
     @patch("aiq.plugins.agno.tool_wrapper._tool_call_counters", {"test_tool": 0})
     @patch("aiq.plugins.agno.tool_wrapper._MAX_EMPTY_CALLS", 2)
-    @patch("aiq.plugins.agno.tool_wrapper.asyncio.run_coroutine_threadsafe")
-    def test_execute_agno_tool_infinite_loop_detection(self, mock_run_coroutine_threadsafe, mock_event_loop):
+    def test_execute_agno_tool_infinite_loop_detection(self, run_loop_thread: asyncio.AbstractEventLoop):
         """Test that execute_agno_tool detects and prevents infinite loops."""
         # Create a mock coroutine function
         mock_coroutine_fn = AsyncMock()
 
         # First call with only metadata should increment counter but proceed
-        execute_agno_tool("test_tool", mock_coroutine_fn, ["query"], mock_event_loop, model_config="metadata only")
+        execute_agno_tool("test_tool", mock_coroutine_fn, ["query"], run_loop_thread, model_config="metadata only")
 
         # Second call with only metadata should detect potential infinite loop
         result2 = execute_agno_tool("test_tool",
                                     mock_coroutine_fn, ["query"],
-                                    mock_event_loop,
+                                    run_loop_thread,
                                     model_config="metadata only")
 
         # Verify that the second call returned an error about infinite loops
