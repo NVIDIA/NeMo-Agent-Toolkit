@@ -85,14 +85,14 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
             async with session_manager.run(item.input_obj) as runner:
                 try:
-                    # Start usage stats and intermediate steps collection in parallel
-                    intermediate_future = pull_intermediate()
 
-                    if session_manager.workflow.has_single_output:
-                        base_output = await runner.result()
-                    else:
+                    if not session_manager.workflow.has_single_output:
                         # raise an error if the workflow has multiple outputs
                         raise NotImplementedError("Multiple outputs are not supported")
+
+                    # Start usage stats and intermediate steps collection in parallel
+                    intermediate_future = pull_intermediate()
+                    base_output = await runner.result()
                     intermediate_steps = await intermediate_future
                 except NotImplementedError as e:
                     # raise original error
