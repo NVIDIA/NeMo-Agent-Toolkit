@@ -358,6 +358,7 @@ def mock_tool():
 
 @pytest.fixture(scope="function", autouse=True)
 def patched_async_memory_client(monkeypatch):
+
     from mem0.client.main import MemoryClient
 
     mock_method = mock.MagicMock(return_value=None)
