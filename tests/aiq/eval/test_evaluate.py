@@ -199,7 +199,6 @@ async def test_run_workflow_local_success(evaluation_run, session_manager, gener
     assert not evaluation_run.workflow_interrupted
 
 
-@pytest.mark.filterwarnings("ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited.*:RuntimeWarning")
 async def test_run_workflow_local_errors(evaluation_run, session_manager):
     """Test workflow with no 'single output' fails gracefully."""
 
@@ -210,7 +209,6 @@ async def test_run_workflow_local_errors(evaluation_run, session_manager):
         await evaluation_run.run_workflow_local(session_manager)
 
 
-@pytest.mark.filterwarnings("ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited.*:RuntimeWarning")
 async def test_run_workflow_local_skip_completed(evaluation_run, session_manager, generated_answer):
     """Test that 'skip_completed_entries=True' skips completed items and processes only unfinished ones."""
 
@@ -247,7 +245,6 @@ async def test_run_workflow_local_skip_completed(evaluation_run, session_manager
     assert pending_item.output_obj == generated_answer, "Pending item output should have been processed"
 
 
-@pytest.mark.filterwarnings("ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited.*:RuntimeWarning")
 async def test_run_workflow_local_workflow_interrupted(evaluation_run, eval_input, session_manager):
     """Test that workflow_interrupted is set to True when an exception occurs during workflow execution."""
 
