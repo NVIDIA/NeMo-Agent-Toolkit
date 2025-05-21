@@ -28,7 +28,6 @@ import os
 import sys
 import typing
 import uuid
-import warnings
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
 from unittest import mock
