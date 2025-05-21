@@ -84,11 +84,14 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                 return "", []
 
             async with session_manager.run(item.input_obj) as runner:
-                try:
+                if not session_manager.workflow.has_single_output:
+                    # raise an error if the workflow has multiple outputs
+                    raise NotImplementedError("Multiple outputs are not supported")
 
-                    if not session_manager.workflow.has_single_output:
-                        # raise an error if the workflow has multiple outputs
-                        raise NotImplementedError("Multiple outputs are not supported")
+                base_output = None
+                intermediate_future = None
+
+                try:
 
                     # Start usage stats and intermediate steps collection in parallel
                     intermediate_future = pull_intermediate()
@@ -101,6 +104,13 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                     logger.exception("Failed to run the workflow: %s", e, exc_info=True)
                     # stop processing if a workflow error occurs
                     self.workflow_interrupted = True
+
+                    # Cancel any coroutines that are still running, avoiding a warning about unawaited coroutines
+                    # (typically one of these two is what raised the exception and the other is still running)
+                    for coro in (base_output, intermediate_future):
+                        if coro is not None:
+                            asyncio.ensure_future(coro).cancel()
+
                     stop_event.set()
                     return
 
