@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+import threading
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -26,6 +28,40 @@ from aiq.builder.function import Function
 from aiq.plugins.agno.tool_wrapper import agno_tool_wrapper
 from aiq.plugins.agno.tool_wrapper import execute_agno_tool
 from aiq.plugins.agno.tool_wrapper import process_result
+
+
+class RunLoopThread(threading.Thread):
+
+    def __init__(self, loop: asyncio.AbstractEventLoop, release_event: threading.Event):
+        super().__init__()
+        self._loop = loop
+        self._release_event = release_event
+
+    def run(self):
+        asyncio.set_event_loop(self._loop)
+        self._release_event.set()
+        self._loop.run_forever()
+
+
+@pytest.fixture(name="run_loop_thread")
+def fixture_run_loop_thread():
+    """
+    Fixture to create an asyncio event loop running in another thread.
+    Useful for creating a loop that can be used with the asyncio.run_coroutine_threadsafe function.
+    """
+    loop = asyncio.new_event_loop()
+    release_event = threading.Event()
+    thread = RunLoopThread(loop=loop, release_event=release_event)
+    thread.start()
+
+    # Wait for the thread to set the event
+    release_event.wait()
+
+    yield loop
+
+    # Stop the loop and join the thread
+    loop.call_soon_threadsafe(loop.stop)
+    thread.join()
 
 
 class TestToolWrapper:
@@ -205,19 +241,15 @@ class TestToolWrapper:
 
     @patch("aiq.plugins.agno.tool_wrapper._tool_call_counters", {})
     @patch("aiq.plugins.agno.tool_wrapper._tool_initialization_done", {})
-    @patch("aiq.plugins.agno.tool_wrapper.asyncio.run_coroutine_threadsafe")
-    def test_execute_agno_tool_initialization(self, mock_run_coroutine_threadsafe, mock_event_loop):
+    def test_execute_agno_tool_initialization(self, run_loop_thread: asyncio.AbstractEventLoop):
         """Test that execute_agno_tool correctly handles tool initialization."""
-        # Set up the mock future
-        mock_future = MagicMock()
-        mock_future.result.return_value = "initialization_result"
-        mock_run_coroutine_threadsafe.return_value = mock_future
 
         # Create a mock coroutine function
         mock_coroutine_fn = AsyncMock()
+        mock_coroutine_fn.return_value = "initialization_result"
 
         # Call the function under test for a tool with an empty kwargs dict (initialization)
-        result = execute_agno_tool("test_tool", mock_coroutine_fn, ["query"], mock_event_loop)
+        result = execute_agno_tool("test_tool", mock_coroutine_fn, ["query"], run_loop_thread)
 
         # Verify that the counters and initialization flags were set correctly
         from aiq.plugins.agno.tool_wrapper import _tool_call_counters
@@ -226,7 +258,7 @@ class TestToolWrapper:
         assert "test_tool" in _tool_initialization_done
 
         # Verify that run_coroutine_threadsafe was called with the coroutine function
-        mock_run_coroutine_threadsafe.assert_called()
+        mock_coroutine_fn.assert_called_once_with()
 
         # Verify the result
         assert result == "initialization_result"
