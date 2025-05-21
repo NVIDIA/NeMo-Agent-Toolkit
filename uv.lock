@@ -269,15 +269,11 @@ requires-dist = [
 name = "aiq-automated-description-generation"
 source = { editable = "examples/automated_description_generation" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain"] },
-    { name = "lxml" },
+    { name = "aiqtoolkit", extra = ["ingestion", "langchain"] },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
-    { name = "lxml", specifier = "~=5.4" },
-]
+requires-dist = [{ name = "aiqtoolkit", extras = ["ingestion", "langchain"], editable = "." }]
 
 [[package]]
 name = "aiq-email-phishing-analyzer"
