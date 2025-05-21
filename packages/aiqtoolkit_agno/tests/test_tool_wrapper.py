@@ -297,7 +297,7 @@ class TestToolWrapper:
                                    model_config="should be filtered",
                                    _type="should be filtered")
 
-        # Verify that run_coroutine_threadsafe was called with filtered kwargs
+        # Verify that mock_coroutine_fn was called with filtered kwargs
         mock_coroutine_fn.assert_called_once_with(query="test query")
 
         # Verify the result
@@ -319,7 +319,7 @@ class TestToolWrapper:
                                        "query": "test query", "other_param": "value"
                                    })
 
-        # Verify that run_coroutine_threadsafe was called with unwrapped kwargs
+        # Verify that mock_coroutine_fn was called with unwrapped kwargs
         mock_coroutine_fn.assert_called_once_with(query="test query", other_param="value")
 
         # Verify the result
@@ -417,8 +417,11 @@ class TestToolWrapper:
         assert result == "OpenAI response content"
 
     @patch("aiq.plugins.agno.tool_wrapper.tool")
-    @patch("aiq.plugins.agno.tool_wrapper.asyncio.run_coroutine_threadsafe")
-    def test_different_calling_styles(self, mock_run_coroutine_threadsafe, mock_tool, mock_function, mock_builder):
+    def test_different_calling_styles(self,
+                                      mock_tool,
+                                      mock_function,
+                                      mock_builder,
+                                      run_loop_thread: asyncio.AbstractEventLoop):
         """Test that execute_agno_tool handles different function calling styles."""
         # Mock the tool decorator to return a function that returns its input
         mock_tool.return_value = lambda x: x
@@ -432,11 +435,6 @@ class TestToolWrapper:
 
         process_future = MagicMock()
         process_future.result.return_value = "processed_result"
-
-        mock_run_coroutine_threadsafe.side_effect = [future1, future2, process_future]
-
-        # Create a mock coroutine function
-        AsyncMock()
 
         # Call the function under test
         wrapper_func = agno_tool_wrapper("test_tool", mock_function, mock_builder)
