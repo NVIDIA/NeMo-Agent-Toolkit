@@ -15,14 +15,14 @@
 # limitations under the License.
 
 if [[ "${USE_HOST_GIT}" == "1" ]]; then
-    cd agentiq/
-    git config --global --add safe.directory /agentiq
+    cd aiqtoolkit/
+    git config --global --add safe.directory /aiqtoolkit
 
     # Avoids SSH host key verification prompt
     ssh-keyscan github.com >> /etc/ssh/ssh_known_hosts
 else
-    git clone ${GIT_URL} agentiq
-    cd agentiq/
+    git clone ${GIT_URL} aiqtoolkit
+    cd aiqtoolkit/
     git remote add upstream ${GIT_UPSTREAM_URL}
     git fetch upstream
     git checkout develop
@@ -40,6 +40,7 @@ export LOCAL_CI=1
 export WORKSPACE_TMP="${LOCAL_CI_TMP}/local_ci_workspace"
 export UV_CACHE_DIR="${LOCAL_CI_TMP}/cache/uv"
 export PRE_COMMIT_HOME="${LOCAL_CI_TMP}/cache/pre_commit"
+export BUILD_AIQ_COMPAT="true"
 mkdir -p ${UV_CACHE_DIR}
 
 GH_SCRIPT_DIR="${WORKSPACE}/ci/scripts/github"

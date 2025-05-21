@@ -36,7 +36,7 @@ def test_validate_config(config_file: str):
 
 
 @pytest.mark.parametrize("config_file_name, expected_error_re",
-                         [("invalid_yaml.yaml", r"^Invalid YAML format.*"),
+                         [("invalid_yaml.yaml", r"^Validation error: Error loading YAML.*"),
                           ("missing_section_config.yaml", r"^Validation error: .*"),
                           ("missing_type_config.yaml", r"^Validation error: .*")])
 def test_validate_config_error(test_data_dir: str, config_file_name: str, expected_error_re: str):

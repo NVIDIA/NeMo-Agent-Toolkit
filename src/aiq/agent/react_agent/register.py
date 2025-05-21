@@ -17,6 +17,7 @@ import logging
 
 from pydantic import Field
 
+from aiq.agent.base import AGENT_LOG_PREFIX
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function_info import FunctionInfo
@@ -33,8 +34,8 @@ logger = logging.getLogger(__name__)
 
 class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
     """
-    Defines an AgentIQ function that uses a ReAct Agent performs reasoning inbetween tool calls, and utilizes the tool
-    names and descriptions to select the optimal tool.
+    Defines an AIQ Toolkit function that uses a ReAct Agent performs reasoning inbetween tool calls, and utilizes the
+    tool names and descriptions to select the optimal tool.
     """
 
     tool_names: list[FunctionRef] = Field(default_factory=list,
@@ -79,7 +80,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             _prompt_str += f" {config.additional_instructions}"
         valid_prompt = ReActAgentGraph.validate_system_prompt(config.system_prompt)
         if not valid_prompt:
-            logger.exception("Invalid system_prompt")
+            logger.exception("%s Invalid system_prompt", AGENT_LOG_PREFIX)
             raise ValueError("Invalid system_prompt")
         prompt = ChatPromptTemplate([("system", config.system_prompt), ("user", USER_PROMPT),
                                      MessagesPlaceholder(variable_name='agent_scratchpad', optional=True)])
@@ -91,6 +92,8 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     # the agent can run any installed tool, simply install the tool and add it to the config file
     # the sample tool provided can easily be copied or changed
     tools = builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    if not tools:
+        raise ValueError(f"No tools specified for ReAct Agent '{config.llm_name}'")
     # configure callbacks, for sending intermediate steps
     # construct the ReAct Agent Graph from the configured llm, prompt, and tools
     graph: CompiledGraph = await ReActAgentGraph(llm=llm,
@@ -125,7 +128,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             return AIQChatResponse.from_string(output_message.content)
 
         except Exception as ex:
-            logger.exception("ReAct Agent failed with exception: %s", ex, exc_info=ex)
+            logger.exception("%s ReAct Agent failed with exception: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
             # here, we can implement custom error messages
             if config.verbose:
                 return AIQChatResponse.from_string(str(ex))

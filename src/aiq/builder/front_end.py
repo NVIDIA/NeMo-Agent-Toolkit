@@ -27,7 +27,7 @@ class FrontEndBase(typing.Generic[FrontEndConfigT], ABC):
 
     def __init__(self, full_config: "AIQConfig"):
         """
-        Initializes the FrontEndBase object with the specified AgentIQ configuration.
+        Initializes the FrontEndBase object with the specified AIQ Toolkit configuration.
 
         Parameters
         ----------
@@ -43,7 +43,7 @@ class FrontEndBase(typing.Generic[FrontEndConfigT], ABC):
     @property
     def front_end_config(self) -> FrontEndConfigT:
         """
-        Returns the front end configuration object extracted from the AgentIQ configuration.
+        Returns the front end configuration object extracted from the AIQ Toolkit configuration.
 
         Returns
         -------
@@ -55,12 +55,12 @@ class FrontEndBase(typing.Generic[FrontEndConfigT], ABC):
     @property
     def full_config(self) -> "AIQConfig":
         """
-        Returns the full AgentIQ configuration object.
+        Returns the full AIQ Toolkit configuration object.
 
         Returns
         -------
         AIQConfig
-            The full AgentIQ configuration object.
+            The full AIQ Toolkit configuration object.
         """
 
         return self._full_config

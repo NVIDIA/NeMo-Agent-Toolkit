@@ -9,18 +9,17 @@ root = "../.."
 name = "aiq_plot_charts"
 dynamic = ["version"]
 dependencies = [
-  "agentiq[langchain]",
-  "colorama==0.4.6",
+  "aiqtoolkit[langchain]~=1.1",
   "matplotlib==3.9.*",
   "seaborn==0.13.*",
 ]
-requires-python = ">=3.12"
-description = "Simple AgentIQ example"
+requires-python = ">=3.11,<3.13"
+description = "Simple Plot Chart Agent example"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-agentiq = { path = "../../", editable = true }
+aiqtoolkit = { path = "../../", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_plot_charts = "aiq_plot_charts.register"

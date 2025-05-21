@@ -19,19 +19,21 @@ import click
 
 from aiq.cli.commands.info.list_channels import list_channels
 from aiq.cli.commands.info.list_components import list_components
+from aiq.cli.commands.info.list_mcp import list_mcp
 
 logger = logging.getLogger(__name__)
 
 
 @click.group(name=__name__,
              invoke_without_command=False,
-             help="Provide information about the local AgentIQ environment.")
+             help="Provide information about the local AIQ Toolkit environment.")
 def info_command(**kwargs):
     """
-    Provide information about the local AgentIQ environment.
+    Provide information about the local AIQ Toolkit environment.
     """
     pass
 
 
 info_command.add_command(list_components, name="components")
 info_command.add_command(list_channels, "channels")
+info_command.add_command(list_mcp, "mcp")

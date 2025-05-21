@@ -33,7 +33,7 @@ from aiq.registry_handlers.schemas.search import VisualizeFields
 
 
 class AbstractRegistryHandler(ABC):
-    """Base class outlining the interfaces for remote AgentIQ registry interactions."""
+    """Base class outlining the interfaces for remote AIQ Toolkit registry interactions."""
 
     def __init__(self):
         self._discovery_metadata: dict[AIQComponentEnum, list[dict | DiscoveryMetadata]] = {}
@@ -45,10 +45,10 @@ class AbstractRegistryHandler(ABC):
     @abstractmethod
     @asynccontextmanager
     async def publish(self, artifact: AIQArtifact) -> AsyncGenerator[PublishResponse]:
-        """Publishes an AgentIQ artifact to a remote registry.
+        """Publishes an AIQ Toolkit artifact to a remote registry.
 
         Args:
-            artifact (AIQArtifact): An artifact that contain AgentIQ plugin wheel and it's corrosponding discovery
+            artifact (AIQArtifact): An artifact that contain AIQ Toolkit plugin wheel and it's corrosponding discovery
             metadata.
 
         Yields:
@@ -61,10 +61,10 @@ class AbstractRegistryHandler(ABC):
     @abstractmethod
     @asynccontextmanager
     async def pull(self, packages: PullRequestPackages) -> AsyncGenerator[PullResponse]:
-        """Download and install AgentIQ artifacts from a remote registry.
+        """Download and install AIQ Toolkit artifacts from a remote registry.
 
         Args:
-            packages (PullRequestPackages): Parameters used to pull the AgentIQ artifact.
+            packages (PullRequestPackages): Parameters used to pull the AIQ Toolkit artifact.
 
         Yields:
             Iterator[AsyncGenerator[PullResponse]]: A response message that includes a the pulled packages and a
@@ -76,7 +76,7 @@ class AbstractRegistryHandler(ABC):
     @abstractmethod
     @asynccontextmanager
     async def search(self, query: SearchQuery) -> AsyncGenerator[SearchResponse]:
-        """Searches the local aiq registry for relevant AgentIQ components.
+        """Searches the local aiq registry for relevant AIQ Toolkit components.
 
         Args:
             query (SearchQuery): Parameters of the search to be performed.
@@ -118,7 +118,7 @@ class AbstractRegistryHandler(ABC):
         from rich.table import Table
         from rich.text import Text
 
-        table = Table(title="AgentIQ Search Results", padding=(0, 1), show_lines=True)
+        table = Table(title="AIQ Toolkit Search Results", padding=(0, 1), show_lines=True)
         for column in VisualizeFields:
             table.add_column(column.value)
 

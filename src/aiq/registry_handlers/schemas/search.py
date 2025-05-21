@@ -42,12 +42,12 @@ class VisualizeFields(str, Enum):
 
 
 class SearchQuery(BaseModel):
-    """Represents the search criteria that will be used to discover useful AgentIQ components.
+    """Represents the search criteria that will be used to discover useful AIQ Toolkit components.
 
     Args:
-        query (str): A query string used to find useful AgentIQ components.
+        query (str): A query string used to find useful AIQ Toolkit components.
         fields (list[SearchFields]): The list of fields used when applying the query string.
-        component_types (list[AIQComponentEnum]): AgentIQ components types to filter search results.
+        component_types (list[AIQComponentEnum]): AIQ Toolkit components types to filter search results.
         top_k (int): Specifies the number of search results to provide.
     """
 
@@ -61,10 +61,10 @@ class SearchResponseItem(BaseModel):
     """Represents an individual item in the search response, including elements of it's discovery metadata.
 
     Args:
-        package (str): The name of the AgentIQ package that includes the component.
-        version (str): The version of the AgentIQ package that includes the component.
-        component_type (AIQComponentEnum): Type of AgentIQ component this item represents.
-        description (str): A description of this AgentIQ component.
+        package (str): The name of the AIQ Toolkit package that includes the component.
+        version (str): The version of the AIQ Toolkit package that includes the component.
+        component_type (AIQComponentEnum): Type of AIQ Toolkit component this item represents.
+        description (str): A description of this AIQ Toolkit component.
         developer_notes (str): Additional details that would help a developer use this component.
     """
 

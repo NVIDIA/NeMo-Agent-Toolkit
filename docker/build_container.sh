@@ -31,7 +31,7 @@ fi
 
 git describe --tags --abbrev=0 2>/dev/null || echo "no-tag"
 
-DOCKER_IMAGE_NAME=${DOCKER_IMAGE_NAME:-"agentiq"}
+DOCKER_IMAGE_NAME=${DOCKER_IMAGE_NAME:-"aiqtoolkit"}
 DOCKER_IMAGE_TAG=${DOCKER_IMAGE_TAG:-"$(git describe --tags --abbrev=0 2> /dev/null)"}
 
 DOCKER_EXTRA_ARGS=${DOCKER_EXTRA_ARGS:-""}

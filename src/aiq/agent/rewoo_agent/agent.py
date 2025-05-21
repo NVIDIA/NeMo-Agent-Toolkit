@@ -30,14 +30,16 @@ from langgraph.graph import StateGraph
 from pydantic import BaseModel
 from pydantic import Field
 
+from aiq.agent.base import AGENT_LOG_PREFIX
+from aiq.agent.base import AGENT_RESPONSE_LOG_MESSAGE
+from aiq.agent.base import INPUT_SCHEMA_MESSAGE
+from aiq.agent.base import NO_INPUT_ERROR_MESSAGE
+from aiq.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
+from aiq.agent.base import TOOL_RESPONSE_LOG_MESSAGE
 from aiq.agent.base import AgentDecision
 from aiq.agent.base import BaseAgent
 
 logger = logging.getLogger(__name__)
-
-TOOL_NOT_FOUND_ERROR_MESSAGE = "There is no tool named {tool_name}. Tool must be one of {tools}."
-INPUT_SCHEMA_MESSAGE = ". Arguments must be provided as a valid JSON object following this format: {schema}"
-NO_INPUT_ERROR_MESSAGE = "No human input received to the agent, Please ask a valid question."
 
 
 class ReWOOGraphState(BaseModel):
@@ -67,14 +69,16 @@ class ReWOOAgentGraph(BaseAgent):
                  detailed_logs: bool = False):
         super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs)
 
-        logger.info('Filling the prompt variables "tools" and "tool_names", using the tools provided in the config.')
+        logger.debug(
+            "%s Filling the prompt variables 'tools' and 'tool_names', using the tools provided in the config.",
+            AGENT_LOG_PREFIX)
         tool_names = ",".join([tool.name for tool in tools[:-1]]) + ',' + tools[-1].name  # prevent trailing ","
         if not use_tool_schema:
             tool_names_and_descriptions = "\n".join(
                 [f"{tool.name}: {tool.description}"
                  for tool in tools[:-1]]) + "\n" + f"{tools[-1].name}: {tools[-1].description}"  # prevent trailing "\n"
         else:
-            logger.info("Adding the tools' input schema to the tools' description")
+            logger.debug("%s Adding the tools' input schema to the tools' description", AGENT_LOG_PREFIX)
             tool_names_and_descriptions = "\n".join([
                 f"{tool.name}: {tool.description}. {INPUT_SCHEMA_MESSAGE.format(schema=tool.input_schema.model_fields)}"
                 for tool in tools[:-1]
@@ -85,13 +89,17 @@ class ReWOOAgentGraph(BaseAgent):
         self.solver_prompt = solver_prompt
         self.tools_dict = {tool.name: tool for tool in tools}
 
-        logger.info("Initialized ReWOO Agent Graph")
+        logger.debug("%s Initialized ReWOO Agent Graph", AGENT_LOG_PREFIX)
 
     def _get_tool(self, tool_name):
         try:
             return self.tools_dict.get(tool_name)
         except Exception as ex:
-            logger.exception("Unable to find tool with the name %s\n%s", tool_name, ex, exc_info=True)
+            logger.exception("%s Unable to find tool with the name %s\n%s",
+                             AGENT_LOG_PREFIX,
+                             tool_name,
+                             ex,
+                             exc_info=True)
             raise ex
 
     @staticmethod
@@ -141,7 +149,7 @@ class ReWOOAgentGraph(BaseAgent):
 
         # If the input is already a dictionary, return it as is
         if isinstance(tool_input, dict):
-            logger.info("Tool input is already a dictionary. Use the tool input as is.")
+            logger.debug("%s Tool input is already a dictionary. Use the tool input as is.", AGENT_LOG_PREFIX)
             return tool_input
 
         # If the input is a string, attempt to parse it as JSON
@@ -149,31 +157,32 @@ class ReWOOAgentGraph(BaseAgent):
             tool_input = tool_input.strip()
             # If the input is already a valid JSON string, load it
             tool_input_parsed = json.loads(tool_input)
-            logger.info("Successfully parsed structured tool input")
+            logger.debug("%s Successfully parsed structured tool input", AGENT_LOG_PREFIX)
 
         except JSONDecodeError:
             try:
                 # Replace single quotes with double quotes and attempt parsing again
                 tool_input_fixed = tool_input.replace("'", '"')
                 tool_input_parsed = json.loads(tool_input_fixed)
-                logger.info(
-                    "Successfully parsed structured tool input after replacing single quotes with double quotes")
+                logger.debug(
+                    "%s Successfully parsed structured tool input after replacing single quotes with double quotes",
+                    AGENT_LOG_PREFIX)
 
             except JSONDecodeError:
                 # If it still fails, fall back to using the input as a raw string
                 tool_input_parsed = tool_input
-                logger.info("Unable to parse structured tool input. Using raw tool input as is.")
+                logger.debug("%s Unable to parse structured tool input. Using raw tool input as is.", AGENT_LOG_PREFIX)
 
         return tool_input_parsed
 
     async def planner_node(self, state: ReWOOGraphState):
         try:
-            logger.debug("Starting the ReWOO Planner Node")
+            logger.debug("%s Starting the ReWOO Planner Node", AGENT_LOG_PREFIX)
 
             planner = self.planner_prompt | self.llm
             task = state.task.content
             if not task:
-                logger.error("No task provided to the ReWOO Agent. Please provide a valid task.")
+                logger.error("%s No task provided to the ReWOO Agent. Please provide a valid task.", AGENT_LOG_PREFIX)
                 return {"result": NO_INPUT_ERROR_MESSAGE}
 
             plan = ""
@@ -183,24 +192,25 @@ class ReWOOAgentGraph(BaseAgent):
             steps = self._parse_planner_output(plan)
 
             if self.detailed_logs:
-                logger.info("The task was: %s", task)
-                logger.info("The planner's thoughts are:\n%s", plan)
-                logger.debug("The steps to solve the task are:\n%s", steps.content)
+                agent_response_log_message = AGENT_RESPONSE_LOG_MESSAGE % (task, plan)
+                logger.info("ReWOO agent planner output: %s", agent_response_log_message)
 
             return {"plan": AIMessage(content=plan), "steps": steps}
 
         except Exception as ex:
-            logger.exception("Failed to call planner_node: %s", ex, exc_info=True)
+            logger.exception("%s Failed to call planner_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
             raise ex
 
     async def executor_node(self, state: ReWOOGraphState):
         try:
-            logger.debug("Starting the ReWOO Executor Node")
+            logger.debug("%s Starting the ReWOO Executor Node", AGENT_LOG_PREFIX)
 
             current_step = self._get_current_step(state)
             # The executor node should not be invoked after all steps are finished
             if current_step < 0:
-                logger.error("ReWOO Executor is invoked with an invalid step number: %s", current_step)
+                logger.error("%s ReWOO Executor is invoked with an invalid step number: %s",
+                             AGENT_LOG_PREFIX,
+                             current_step)
                 raise RuntimeError(f"ReWOO Executor is invoked with an invalid step number: {current_step}")
 
             step_info = state.steps.content[current_step]["evidence"]
@@ -224,8 +234,9 @@ class ReWOOAgentGraph(BaseAgent):
             if not requested_tool:
                 configured_tool_names = list(self.tools_dict.keys())
                 logger.warning(
-                    "ReWOO Agent wants to call tool %s. In the ReWOO Agent's configuration within the config file,"
+                    "%s ReWOO Agent wants to call tool %s. In the ReWOO Agent's configuration within the config file,"
                     "there is no tool with that name: %s",
+                    AGENT_LOG_PREFIX,
                     tool,
                     configured_tool_names)
 
@@ -235,7 +246,7 @@ class ReWOOAgentGraph(BaseAgent):
                 return {"intermediate_results": intermediate_results}
 
             if self.detailed_logs:
-                logger.info("Calling tool %s with input: %s", requested_tool.name, tool_input)
+                logger.debug("%s Calling tool %s with input: %s", AGENT_LOG_PREFIX, requested_tool.name, tool_input)
 
             # Run the tool. Try to use structured input, if possible
             tool_input_parsed = self._parse_tool_input(tool_input)
@@ -251,22 +262,28 @@ class ReWOOAgentGraph(BaseAgent):
             if isinstance(tool_response, dict):
                 tool_response = [tool_response]
 
-            tool_response = ToolMessage(name=tool, tool_call_id=tool, content=tool_response)
+            tool_response_message = ToolMessage(name=tool, tool_call_id=tool, content=tool_response)
 
-            logger.debug("Successfully called the tool")
+            logger.debug("%s Successfully called the tool", AGENT_LOG_PREFIX)
             if self.detailed_logs:
-                logger.debug('The tool returned: %s', tool_response)
+                # The tool response can be very large, so we log only the first 1000 characters
+                tool_response_str = tool_response_message.content
+                tool_response_str = tool_response_str[:1000] + "..." if len(
+                    tool_response_str) > 1000 else tool_response_str
+                tool_response_log_message = TOOL_RESPONSE_LOG_MESSAGE % (
+                    requested_tool.name, tool_input_parsed, tool_response_str)
+                logger.info("ReWOO agent executor output: %s", tool_response_log_message)
 
-            intermediate_results[placeholder] = tool_response
+            intermediate_results[placeholder] = tool_response_message
             return {"intermediate_results": intermediate_results}
 
         except Exception as ex:
-            logger.exception("Failed to call executor_node: %s", ex, exc_info=True)
+            logger.exception("%s Failed to call executor_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
             raise ex
 
     async def solver_node(self, state: ReWOOGraphState):
         try:
-            logger.debug("Starting the ReWOO Solver Node")
+            logger.debug("%s Starting the ReWOO Solver Node", AGENT_LOG_PREFIX)
 
             plan = ""
             # Add the tool outputs of each step to the plan
@@ -299,32 +316,39 @@ class ReWOOAgentGraph(BaseAgent):
                 output_message += event.content
 
             output_message = AIMessage(content=output_message)
+            if self.detailed_logs:
+                solver_output_log_message = AGENT_RESPONSE_LOG_MESSAGE % (task, output_message.content)
+                logger.info("ReWOO agent solver output: %s", solver_output_log_message)
+
             return {"result": output_message}
 
         except Exception as ex:
-            logger.exception("Failed to call solver_node: %s", ex, exc_info=True)
+            logger.exception("%s Failed to call solver_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
             raise ex
 
     async def conditional_edge(self, state: ReWOOGraphState):
         try:
-            logger.debug("Starting the ReWOO Conditional Edge")
+            logger.debug("%s Starting the ReWOO Conditional Edge", AGENT_LOG_PREFIX)
 
             current_step = self._get_current_step(state)
             if current_step == -1:
-                logger.debug("The ReWOO Executor has finished its task")
+                logger.debug("%s The ReWOO Executor has finished its task", AGENT_LOG_PREFIX)
                 return AgentDecision.END
-            else:
-                logger.debug("The ReWOO Executor is still working on the task")
-                return AgentDecision.TOOL
+
+            logger.debug("%s The ReWOO Executor is still working on the task", AGENT_LOG_PREFIX)
+            return AgentDecision.TOOL
 
         except Exception as ex:
-            logger.exception("Failed to determine whether agent is calling a tool: %s", ex, exc_info=True)
-            logger.warning("Ending graph traversal")
+            logger.exception("%s Failed to determine whether agent is calling a tool: %s",
+                             AGENT_LOG_PREFIX,
+                             ex,
+                             exc_info=True)
+            logger.warning("%s Ending graph traversal", AGENT_LOG_PREFIX)
             return AgentDecision.END
 
     async def _build_graph(self, state_schema):
         try:
-            logger.debug("Building and compiling the ReWOO Graph")
+            logger.debug("%s Building and compiling the ReWOO Graph", AGENT_LOG_PREFIX)
 
             graph = StateGraph(state_schema)
             graph.add_node("planner", self.planner_node)
@@ -339,21 +363,21 @@ class ReWOOAgentGraph(BaseAgent):
             graph.set_finish_point("solver")
 
             self.graph = graph.compile()
-            logger.info("ReWOO Graph built and compiled successfully")
+            logger.debug("%s ReWOO Graph built and compiled successfully", AGENT_LOG_PREFIX)
 
             return self.graph
 
         except Exception as ex:
-            logger.exception("Failed to build ReWOO Graph: %s", ex, exc_info=ex)
+            logger.exception("%s Failed to build ReWOO Graph: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
             raise ex
 
     async def build_graph(self):
         try:
             await self._build_graph(state_schema=ReWOOGraphState)
-            logger.info("ReWOO Graph built and compiled successfully")
+            logger.debug("%s ReWOO Graph built and compiled successfully", AGENT_LOG_PREFIX)
             return self.graph
         except Exception as ex:
-            logger.exception("Failed to build ReWOO Graph: %s", ex, exc_info=ex)
+            logger.exception("%s Failed to build ReWOO Graph: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
             raise ex
 
     @staticmethod
@@ -370,7 +394,7 @@ class ReWOOAgentGraph(BaseAgent):
                 errors.append(error_message)
         if errors:
             error_text = "\n".join(errors)
-            logger.exception(error_text)
+            logger.exception("%s %s", AGENT_LOG_PREFIX, error_text)
             raise ValueError(error_text)
         return True
 
@@ -381,6 +405,6 @@ class ReWOOAgentGraph(BaseAgent):
             errors.append("The solver prompt cannot be empty.")
         if errors:
             error_text = "\n".join(errors)
-            logger.exception(error_text)
+            logger.exception("%s %s", AGENT_LOG_PREFIX, error_text)
             raise ValueError(error_text)
         return True

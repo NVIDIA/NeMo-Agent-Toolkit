@@ -18,12 +18,38 @@ from abc import ABC
 from abc import abstractmethod
 from enum import Enum
 
+from colorama import Fore
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 from langgraph.graph.graph import CompiledGraph
 
 log = logging.getLogger(__name__)
+
+TOOL_NOT_FOUND_ERROR_MESSAGE = "There is no tool named {tool_name}. Tool must be one of {tools}."
+INPUT_SCHEMA_MESSAGE = ". Arguments must be provided as a valid JSON object following this format: {schema}"
+NO_INPUT_ERROR_MESSAGE = "No human input recieved to the agent, Please ask a valid question."
+
+AGENT_LOG_PREFIX = "[AGENT]"
+AGENT_RESPONSE_LOG_MESSAGE = f"\n{'-' * 30}\n" + \
+                                 AGENT_LOG_PREFIX + "\n" + \
+                                 Fore.YELLOW + \
+                                 "Agent input: %s\n" + \
+                                 Fore.CYAN + \
+                                 "Agent's thoughts: \n%s" + \
+                                 Fore.RESET + \
+                                 f"\n{'-' * 30}"
+
+TOOL_RESPONSE_LOG_MESSAGE = f"\n{'-' * 30}\n" + \
+                                 AGENT_LOG_PREFIX + "\n" + \
+                                 Fore.WHITE + \
+                                 "Calling tools: %s\n" + \
+                                 Fore.YELLOW + \
+                                 "Tool's input: %s\n" + \
+                                 Fore.CYAN + \
+                                 "Tool's response: \n%s" + \
+                                 Fore.RESET + \
+                                 f"\n{'-' * 30}"
 
 
 class AgentDecision(Enum):

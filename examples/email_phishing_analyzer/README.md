@@ -20,25 +20,22 @@ limitations under the License.
 
 ## Table of Contents
 
-- [An Email phishing analyzer](#an-email-phishing-ayalyzer)
-  - [Table of Contents](#table-of-contents)
-  - [Key Features](#key-features)
-  - [Installation and Setup](#installation-and-setup)
-    - [Setup Virtual Environment and Install AgentIQ](#setup-virtual-environment-and-install-agentiq)
-    - [Install this Workflow:](#install-this-workflow)
-    - [Set Up API Keys](#set-up-api-keys)
-  - [Example Usage](#example-usage)
-    - [Run the Workflow](#run-the-workflow)
-  - [Deployment-Oriented Setup](#deployment-oriented-setup)
-    - [Build the Docker Image](#build-the-docker-image)
-    - [Run the Docker Container](#run-the-docker-container)
-    - [Test the API](#test-the-api)
-    - [Expected API Output](#expected-api-output)
+- [Key Features](#key-features)
+- [Installation and Setup](#installation-and-setup)
+  - [Install this Workflow:](#install-this-workflow)
+  - [Set Up API Keys](#set-up-api-keys)
+- [Example Usage](#example-usage)
+  - [Run the Workflow](#run-the-workflow)
+- [Deployment-Oriented Setup](#deployment-oriented-setup)
+  - [Build the Docker Image](#build-the-docker-image)
+  - [Run the Docker Container](#run-the-docker-container)
+  - [Test the API](#test-the-api)
+  - [Expected API Output](#expected-api-output)
 
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AgentIQ library agent and tools.
+- **Pre-built Tools:** Leverages core AIQ toolkit library agent and tools.
 - **ReAct Agent:** Performs reasoning between tool call; utilizes tool names and descriptions to appropriately route to the correct tool
 - **Custom Plugin System:** Developers can bring in new tools using plugins.
 - **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
@@ -48,18 +45,18 @@ limitations under the License.
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AgentIQ library, run the following commands:
+From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/email_phishing_analyzer
 ```
 
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../docs/source/intro/get-started.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
@@ -69,7 +66,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ### Run the Workflow
 
-Run the following command from the root of the AgentIQ repo to execute this workflow with the specified input:
+Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
 aiq run --config_file examples/email_phishing_analyzer/configs/config.yml --input "Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of $[Amount] to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]"
@@ -78,33 +75,52 @@ aiq run --config_file examples/email_phishing_analyzer/configs/config.yml --inpu
 **Expected Output**
 ```console
 $ aiq run --config_file examples/email_phishing_analyzer/configs/config.yml --input "Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of $[Amount] to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]"
-2025-03-10 21:00:37,349 - aiq.cli.commands.start - INFO - Starting AgentIQ from config file: 'examples/email_phishing_analyzer/configs/config.yml'
-2025-03-10 21:00:37,355 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
-2025-03-10 21:00:37,504 - aiq.profiler.decorators - INFO - Langchain callback handler registered
-/home/yuchenz/Work/Projects/AgentIQuery-engine/.venv/lib/python3.12/site-packages/langchain_nvidia_ai_endpoints/chat_models.py:591: UserWarning: Model 'meta/llama-3.1-405b-instruct' is not known to support tools. Your tool binding may fail at inference time.
-  warnings.warn(
-2025-03-10 21:00:37,809 - aiq.agent.tool_calling_agent.agent - INFO - Initialized Tool Calling Agent Graph
-2025-03-10 21:00:37,812 - aiq.agent.tool_calling_agent.agent - INFO - Tool Calling Agent Graph built and compiled successfully
+2025-04-23 15:24:54,183 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (502.501011 ms). Ensure all imports are inside your registered functions.
+2025-04-23 15:24:54,483 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/email_phishing_analyzer/configs/config.yml'
+2025-04-23 15:24:54,495 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 
 Configuration Summary:
 --------------------
-Workflow Type: tool_calling_agent
+Workflow Type: react_agent
 Number of Functions: 1
-Number of LLMs: 2
+Number of LLMs: 3
 Number of Embedders: 0
 Number of Memory: 0
 Number of Retrievers: 0
 
-2025-03-10 21:00:37,814 - aiq.front_ends.console.console_front_end_plugin - INFO - Processing input: ('Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of 0 to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]',)
-2025-03-10 21:00:37,817 - aiq.agent.tool_calling_agent.agent - INFO - Calling agent
-2025-03-10 21:02:47,001 - aiq.agent.tool_calling_agent.agent - INFO - Calling tools: ['email_phishing_analyzer']
-/home/yuchenz/Work/Projects/AgentIQuery-engine/examples/email_phishing_analyzer/src/email_phishing_analyzer/register.py:42: LangChainDeprecationWarning: The method `BaseChatModel.apredict` was deprecated in langchain-core 0.1.7 and will be removed in 1.0. Use :meth:`~ainvoke` instead.
+2025-04-23 15:24:58,017 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of 0 to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]
+Agent's thoughts:
+Thought: This email seems suspicious as it asks for sensitive information such as account and routing numbers. I should analyze it for signs of phishing.
+
+Action: email_phishing_analyzer
+Action Input: {'text': 'Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of 0 to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]'}
+Observation
+------------------------------
+/AIQToolkit/examples/email_phishing_analyzer/src/aiq_email_phishing_analyzer/register.py:56: LangChainDeprecationWarning: The method `BaseChatModel.apredict` was deprecated in langchain-core 0.1.7 and will be removed in 1.0. Use :meth:`~ainvoke` instead.
   response = await llm.apredict(config.prompt.format(body=text))
-2025-03-10 21:03:00,747 - aiq.agent.tool_calling_agent.agent - INFO - Calling agent
-2025-03-10 21:03:13,356 - aiq.observability.async_otel_listener - INFO - Intermediate step stream completed. No more events will arrive.
-2025-03-10 21:03:13,356 - aiq.front_ends.console.console_front_end_plugin - INFO - --------------------------------------------------
+2025-04-23 15:25:07,477 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: email_phishing_analyzer
+Tool's input: {"text": "Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of 0 to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]"}
+Tool's response:
+{"is_likely_phishing": true, "explanation": "The email exhibits suspicious signals that may indicate phishing. Specifically, the email requests sensitive personal information (account and routing numbers) under the guise of completing a refund transaction. Legitimate companies typically do not request such information via email, as it is a security risk. Additionally, the refund amount of '0' is unusual and may be an attempt to create a sense of urgency or confusion. The tone of the email is also somewhat generic and lacks personalization, which is another common trait of phishing emails."}
+------------------------------
+2025-04-23 15:25:08,862 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of 0 to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]
+Agent's thoughts:
+Thought: I now know the final answer
+Final Answer: This email is likely a phishing attempt, as it requests sensitive personal information and exhibits other suspicious signals.
+------------------------------
+2025-04-23 15:25:08,866 - aiq.front_ends.console.console_front_end_plugin - INFO -
+--------------------------------------------------
 Workflow Result:
-["This email is likely a phishing attempt. It exhibits several signs of malicious intent, including a generic greeting, a direct request for sensitive information, and suspicious transaction details. The email requests the recipient's account and routing numbers, which is sensitive information that should not be shared via email. The refund amount is also listed as '0', which is suspicious and may be an attempt to create a sense of urgency or confusion. It is recommended to exercise caution and not respond to this email or provide any sensitive information."]
+['This email is likely a phishing attempt, as it requests sensitive personal information and exhibits other suspicious signals.']
 --------------------------------------------------
 ```
 ---
@@ -115,7 +131,7 @@ For a production deployment, use Docker:
 
 ### Build the Docker Image
 
-Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AgentIQ virtual environment.
+Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AIQ toolkit virtual environment.
 
 From the root directory of the Simple Calculator repository, build the Docker image:
 
