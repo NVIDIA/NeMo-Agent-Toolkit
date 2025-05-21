@@ -359,14 +359,7 @@ def mock_tool():
 
 @pytest.fixture(scope="function", autouse=True)
 def patched_async_memory_client(monkeypatch):
-
-    with warnings.catch_warnings():
-        # Ignore syntax warnings from qdrant-client (used by mem0) with Python 3.12+ of note is that this only happens
-        # the first time the module is imported and parsed, after that the pyc files in the __pycache__ directory are
-        # used which don't trigger the warnings.
-        # Remove once https://github.com/qdrant/qdrant-client/issues/983 is resolved.
-        warnings.filterwarnings("ignore", category=SyntaxWarning, message=r"^invalid escape sequence.*")
-        from mem0.client.main import MemoryClient
+    from mem0.client.main import MemoryClient
 
     mock_method = mock.MagicMock(return_value=None)
     monkeypatch.setattr(MemoryClient, "_validate_api_key", mock_method)
