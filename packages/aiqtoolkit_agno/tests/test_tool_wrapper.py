@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -29,7 +28,6 @@ from aiq.plugins.agno.tool_wrapper import execute_agno_tool
 from aiq.plugins.agno.tool_wrapper import process_result
 
 
-@pytest.mark.filterwarnings("ignore:coroutine '.*' was never awaited.*:RuntimeWarning")
 class TestToolWrapper:
     """Tests for the agno_tool_wrapper function."""
 
@@ -38,14 +36,6 @@ class TestToolWrapper:
         """Create a mock event loop for testing."""
         loop = MagicMock()
         return loop
-
-    def _waiter(self, func, *args, **kwargs):
-        """Helper function to await a coroutine."""
-
-        async def awaiter():
-            _ = await func(*args, **kwargs)
-
-        asyncio.run(awaiter())
 
     @pytest.fixture
     def mock_function(self):
@@ -59,9 +49,7 @@ class TestToolWrapper:
             return "test_result"
 
         mock_fn.acall_invoke = mock_acall_invoke
-        yield mock_fn
-
-        self._waiter(mock_fn.acall_invoke)
+        return mock_fn
 
     @pytest.fixture
     def mock_model_schema_function(self):
@@ -87,9 +75,7 @@ class TestToolWrapper:
             return "test_result"
 
         mock_fn.acall_invoke = mock_acall_invoke
-        yield mock_fn
-
-        self._waiter(mock_fn.acall_invoke)
+        return mock_fn
 
     @pytest.fixture
     def mock_builder(self):
@@ -262,8 +248,6 @@ class TestToolWrapper:
 
         # Verify that run_coroutine_threadsafe was not called since we blocked the empty query
         mock_run_coroutine_threadsafe.assert_not_called()
-
-        self._waiter(mock_coroutine_fn)
 
     @patch("aiq.plugins.agno.tool_wrapper._tool_call_counters", {"test_tool": 0})
     @patch("aiq.plugins.agno.tool_wrapper._tool_initialization_done", {"test_tool": False})
