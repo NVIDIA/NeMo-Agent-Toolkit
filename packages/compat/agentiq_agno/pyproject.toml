@@ -10,7 +10,7 @@ root = "../../.."
 name = "agentiq-agno"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[agno]~=1.1"
+  "aiqtoolkit[agno]~=1.2"
 ]
 readme = "pypi.md"
 description = "Transitional package for aiqtoolkit-agno, this package is deprecated and will be removed in the future."
