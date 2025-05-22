@@ -66,6 +66,11 @@ def config_file_fixture(test_data_dir: str):
     return os.path.join(test_data_dir, "config.yaml")
 
 
+@pytest.fixture(name="eval_config_file")
+def eval_config_file_fixture() -> str:
+    return os.path.join(EXAMPLES_DIR, "simple/configs/eval_only_config.yml")
+
+
 @pytest.fixture(name="mock_aiohttp_session")
 def mock_aiohttp_session_fixture():
     with mock.patch("aiohttp.ClientSession") as mock_aiohttp_session:
