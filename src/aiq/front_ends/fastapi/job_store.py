@@ -156,6 +156,4 @@ class JobStore:
                         shutil.rmtree(job.output_path)
 
         for job_id in expired_ids:
-            # cleanup output dir if present
-
             del self._jobs[job_id]
