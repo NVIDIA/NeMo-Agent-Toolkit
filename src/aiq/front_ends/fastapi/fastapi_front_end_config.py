@@ -16,9 +16,11 @@
 import logging
 import typing
 from datetime import datetime
+from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import field_validator
 
 from aiq.data_models.front_end import FrontEndBaseConfig
 from aiq.data_models.step_adaptor import StepAdaptorConfig
@@ -35,6 +37,21 @@ class AIQEvaluateRequest(BaseModel):
         default=3600,
         description="Optional time (in seconds) before the job expires. Clamped between 600 (10 min) and 86400 (24h).")
 
+    @field_validator('job_id', mode='after')
+    @classmethod
+    def validate_job_id(cls, job_id: str):
+        job_id = job_id.strip()
+        job_id_path = Path(job_id)
+        if len(job_id_path.parts) > 1 or job_id_path.resolve().name != job_id:
+            raise ValueError(
+                f"Job ID '{job_id}' contains invalid characters. Only alphanumeric characters and underscores are"
+                " allowed.")
+
+        if job_id_path.is_reserved():
+            # reserved names is Windows specific
+            raise ValueError(f"Job ID '{job_id}' is a reserved name. Please choose a different name.")
+
+        return job_id
 
 class AIQEvaluateResponse(BaseModel):
     """Response model for the evaluate endpoint."""
