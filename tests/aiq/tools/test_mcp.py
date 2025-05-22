@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
 import pytest
 from pytest_httpserver import HTTPServer
 
@@ -76,7 +80,6 @@ def _get_sample_schema():
 
 
 def test_schema_generation(sample_schema):
-
     from aiq.tool.mcp.mcp_client import model_from_mcp_schema
     _model = model_from_mcp_schema("test_model", sample_schema)
 
@@ -104,3 +107,135 @@ def test_schema_generation(sample_schema):
 
     m = _model.model_validate(test_input)
     assert isinstance(m, _model)
+
+
+@pytest.mark.asyncio
+async def test_sse_client_usage():
+    '''
+    Create a mock tool and verify that the client can call the tool and get a response.
+    Use the SSE client to connect to the server.
+    '''
+    from mcp import ClientSession
+    from mcp.types import TextContent
+
+    from aiq.tool.mcp.mcp_client import MCPSSEClient
+
+    # Mock the SSE client and session
+    mock_session = AsyncMock(spec=ClientSession)
+    mock_session.initialize = AsyncMock()
+    mock_session.call_tool = AsyncMock(return_value=[TextContent(type="text", text="test response")])
+
+    with patch('aiq.tool.mcp.mcp_client.sse_client') as mock_sse_client:
+        mock_sse_client.return_value.__aenter__.return_value = (AsyncMock(), AsyncMock())
+
+        client = MCPSSEClient("http://localhost:8080/sse")
+        async with client.connect_to_server() as session:
+            assert session == mock_session
+            await session.initialize()
+            result = await session.call_tool("test_tool", {"param": "value"})
+            assert result[0].text == "test response"
+
+
+@pytest.mark.asyncio
+async def test_stdio_client_usage():
+    '''
+    Create a mock tool and verify that the client can call the tool and get a response.
+    Use the stdio client to connect to the server.
+    '''
+    from mcp import ClientSession
+    from mcp.types import TextContent
+
+    from aiq.tool.mcp.mcp_client import MCPStdioClient
+
+    # Mock the stdio client and session
+    mock_session = AsyncMock(spec=ClientSession)
+    mock_session.initialize = AsyncMock()
+    mock_session.call_tool = AsyncMock(return_value=[TextContent(type="text", text="test response")])
+
+    with patch('aiq.tool.mcp.mcp_client.stdio_client') as mock_stdio_client:
+        mock_stdio_client.return_value.__aenter__.return_value = (AsyncMock(), AsyncMock())
+
+        client = MCPStdioClient("python", ["-m", "test_server"], {"TEST_ENV": "test_value"})
+        async with client.connect_to_server() as session:
+            assert session == mock_session
+            await session.initialize()
+            result = await session.call_tool("test_tool", {"param": "value"})
+            assert result[0].text == "test response"
+
+
+@pytest.mark.asyncio
+async def test_mcp_builder_with_stdio():
+    '''
+    Test MCPBuilder methods with stdio client.
+    '''
+    from mcp.types import TextContent
+
+    from aiq.tool.mcp.mcp_client import MCPBuilder
+
+    # Mock the tool response
+    mock_tool = MagicMock()
+    mock_tool.name = "test_tool"
+    mock_tool.description = "Test tool description"
+    mock_tool.inputSchema = {}
+
+    # Mock the session
+    mock_session = AsyncMock()
+    mock_session.initialize = AsyncMock()
+    mock_session.list_tools = AsyncMock(return_value=MagicMock(tools=[mock_tool]))
+    mock_session.call_tool = AsyncMock(return_value=[TextContent(type="text", text="test response")])
+
+    with patch('aiq.tool.mcp.mcp_client.stdio_client') as mock_stdio_client:
+        mock_stdio_client.return_value.__aenter__.return_value = (AsyncMock(), AsyncMock())
+
+        builder = MCPBuilder("python", client_type="stdio", args=["-m", "test_server"], env={"TEST_ENV": "test_value"})
+
+        # Test getting tools
+        tools = await builder.get_tools()
+        assert "test_tool" in tools
+
+        # Test getting a specific tool
+        tool = await builder.get_tool("test_tool")
+        assert tool.name == "test_tool"
+
+        # Test calling a tool
+        result = await builder.call_tool("test_tool", {"param": "value"})
+        assert result[0].text == "test response"
+
+
+@pytest.mark.asyncio
+async def test_mcp_builder_with_sse():
+    '''
+    Test MCPBuilder methods with SSE client.
+    '''
+    from mcp.types import TextContent
+
+    from aiq.tool.mcp.mcp_client import MCPBuilder
+
+    # Mock the tool response
+    mock_tool = MagicMock()
+    mock_tool.name = "test_tool"
+    mock_tool.description = "Test tool description"
+    mock_tool.inputSchema = {}
+
+    # Mock the session
+    mock_session = AsyncMock()
+    mock_session.initialize = AsyncMock()
+    mock_session.list_tools = AsyncMock(return_value=MagicMock(tools=[mock_tool]))
+    mock_session.call_tool = AsyncMock(return_value=[TextContent(type="text", text="test response")])
+
+    with patch('aiq.tool.mcp.mcp_client.sse_client') as mock_sse_client:
+        mock_sse_client.return_value.__aenter__.return_value = (AsyncMock(), AsyncMock())
+
+        builder = MCPBuilder("http://localhost:8080/sse", client_type="sse")
+
+        # Test getting tools
+        tools = await builder.get_tools()
+        assert "test_tool" in tools
+
+        # Test getting a specific tool
+        tool = await builder.get_tool("test_tool")
+        assert tool.name == "test_tool"
+
+        # Test calling a tool
+        result = await builder.call_tool("test_tool", {"param": "value"})
+        assert result[0].text == "test response"
