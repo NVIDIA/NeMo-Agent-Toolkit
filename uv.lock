@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 1
 requires-python = ">=3.11, <3.13"
 resolution-markers = [
     "python_full_version >= '3.12.4' and sys_platform == 'linux'",
@@ -257,7 +257,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiqtoolkit", extras = ["langchain"] },
+    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
     { name = "ansible-runner", specifier = ">=2.3.0" },
     { name = "flask", specifier = ">=3.0.0" },
     { name = "langchain-core" },
