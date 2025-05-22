@@ -46,6 +46,7 @@ class JobInfo(BaseModel):
     created_at: datetime
     updated_at: datetime
     expiry_seconds: int
+    output_str: str | None = None
 
 
 class JobStore:
@@ -80,7 +81,12 @@ class JobStore:
         logger.info("Created new job %s with config %s", job_id, config_file)
         return job_id
 
-    def update_status(self, job_id: str, status: str, error: str | None = None, output_path: str | None = None):
+    def update_status(self,
+                      job_id: str,
+                      status: str,
+                      error: str | None = None,
+                      output_path: str | None = None,
+                      output_str: str | None = None):
         if job_id not in self._jobs:
             raise ValueError(f"Job {job_id} not found")
 
@@ -89,6 +95,7 @@ class JobStore:
         job.error = error
         job.output_path = output_path
         job.updated_at = datetime.now(UTC)
+        job.output_str = output_str
 
     def get_status(self, job_id: str) -> JobInfo | None:
         return self._jobs.get(job_id)
