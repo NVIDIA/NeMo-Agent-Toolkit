@@ -72,6 +72,7 @@ class AIQEvaluateRequest(BaseModel):
 
         return config_file
 
+
 class AIQEvaluateResponse(BaseModel):
     """Response model for the evaluate endpoint."""
     job_id: str = Field(description="Unique identifier for the evaluation job")
