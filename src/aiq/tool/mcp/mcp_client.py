@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 from abc import ABC
 from abc import abstractmethod
+from contextlib import AsyncContextManager
 from contextlib import asynccontextmanager
 from enum import Enum
 from typing import Any
@@ -100,16 +101,11 @@ class MCPBaseClient(ABC):
 
     @abstractmethod
     @asynccontextmanager
-    async def connect_to_server(self):
+    async def connect_to_server(self) -> AsyncContextManager[ClientSession]:
         """
         Establish a session with an MCP server within an async context
         """
         pass
-
-    @abstractmethod
-    def _get_client_params(self) -> dict:
-        """Get parameters needed to create a new instance of this client type."""
-        return {}
 
     async def get_tools(self):
         """
@@ -118,11 +114,9 @@ class MCPBaseClient(ABC):
         async with self.connect_to_server() as session:
             response = await session.list_tools()
 
-        # Reuse the same client type for each tool
-        client = self.__class__(**self._get_client_params())
         return {
             tool.name:
-                MCPToolClient(client=client,
+                MCPToolClient(connect_fn=self.connect_to_server,
                               tool_name=tool.name,
                               tool_description=tool.description,
                               tool_input_schema=tool.input_schema)
@@ -169,11 +163,8 @@ class MCPSSEClient(MCPBaseClient):
         super().__init__(client_type)
         self._url = url
 
-    def _get_client_params(self) -> dict:
-        return {'url': self._url, 'client_type': self._client_type}
-
     @asynccontextmanager
-    async def connect_to_server(self):
+    async def connect_to_server(self) -> AsyncContextManager[ClientSession]:
         """
         Establish a session with an MCP SSE server within an async context
         """
@@ -203,20 +194,39 @@ class MCPStdioClient(MCPBaseClient):
         self._command = command
         self._args = args
         self._env = env
+        self._session = None  # hold session if persistent
+        self._session_cm = None
 
-    def _get_client_params(self) -> dict:
-        return {'command': self._command, 'args': self._args, 'env': self._env, 'client_type': self._client_type}
+    async def start_persistent_session(self):
+        """Starts and holds a persistent session."""
+        server_params = StdioServerParameters(command=self._command, args=self._args, env=self._env)
+        self._session_cm = stdio_client(server_params)
+        read, write = await self._session_cm.__aenter__()
+        self._session = ClientSession(read, write)
+        await self._session.initialize()
+
+    async def stop_persistent_session(self):
+        """Ends the persistent session."""
+        if self._session:
+            await self._session.__aexit__(None, None, None)
+            self._session = None
+        if self._session_cm:
+            await self._session_cm.__aexit__(None, None, None)
+            self._session_cm = None
 
     @asynccontextmanager
-    async def connect_to_server(self):
+    async def connect_to_server(self) -> AsyncContextManager[ClientSession]:
         """
         Establish a session with an MCP server via stdio within an async context
         """
-        server_params = StdioServerParameters(command=self._command, args=self._args or [], env=self._env)
-        async with stdio_client(server_params) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                yield session
+        if self._session:
+            yield self._session
+        else:
+            server_params = StdioServerParameters(command=self._command, args=self._args or [], env=self._env)
+            async with stdio_client(server_params) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    yield session
 
 
 class MCPToolClient:
@@ -224,21 +234,21 @@ class MCPToolClient:
     Client wrapper used to call an MCP tool.
 
     Args:
-        url (str): The url of the MCP server
+        connect_fn (callable): Function that returns an async context manager for connecting to the server
         tool_name (str): The name of the tool to wrap
         tool_description (str): The description of the tool provided by the MCP server.
         tool_input_schema (dict): The input schema for the tool.
     """
 
     def __init__(self,
-                 client: MCPBaseClient,
+                 connect_fn: callable[[], AsyncContextManager[ClientSession]],
                  tool_name: str,
                  tool_description: str | None,
                  tool_input_schema: dict | None = None):
-        self._client = client
+        self._connect_fn = connect_fn
         self._tool_name = tool_name
         self._tool_description = tool_description
-        self._input_schema = model_from_mcp_schema(self._tool_name, tool_input_schema) if tool_input_schema else None
+        self._input_schema = (model_from_mcp_schema(self._tool_name, tool_input_schema) if tool_input_schema else None)
 
     @property
     def name(self):
@@ -274,7 +284,7 @@ class MCPToolClient:
         Args:
             tool_args (dict[str, Any]): A dictionary of key value pairs to serve as inputs for the MCP tool.
         """
-        async with self._client.connect_to_server() as session:
+        async with self._connect_fn() as session:
             result = await session.call_tool(self._tool_name, tool_args)
 
         output = []

@@ -40,6 +40,9 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
                                 description="The command to run for stdio mode (e.g. 'docker' or 'python')")
     args: list[str] | None = Field(default=None, description="Additional arguments for the stdio command")
     env: dict[str, str] | None = Field(default=None, description="Environment variables to set for the stdio process")
+    persistent: bool = Field(
+        default=False,
+        description="If true, keeps the MCP stdio subprocess open across multiple calls. Only applies to stdio mode.")
     description: str | None = Field(default=None,
                                     description="""
         Description for the tool that will override the description provided by the MCP server. Should only be used if
@@ -77,11 +80,15 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=
     from aiq.tool.mcp.mcp_client import MCPStdioClient
     from aiq.tool.mcp.mcp_client import MCPToolClient
 
+    # Initialize the client
     if config.client_type == 'stdio':
         client = MCPStdioClient(command=config.command, args=config.args, env=config.env)
+        if config.persistent:
+            await client.start_persistent_session()
     else:
         client = MCPSSEClient(url=str(config.url))
 
+    # If the tool is found create a MCPToolClient object and set the description if provided
     tool: MCPToolClient = await client.get_tool(config.mcp_tool_name)
     if config.description:
         tool.set_description(description=config.description)
@@ -91,6 +98,8 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=
     else:
         source = f"{config.command} {' '.join(config.args) if config.args else ''}"
     logger.info("Configured to use tool: %s from MCP server at %s", tool.name, source)
+    if config.client_type == "stdio" and not config.persistent:
+        logger.info("MCP stdio tool will launch a fresh subprocess per call (persistent=False).")
 
     def _convert_from_str(input_str: str) -> tool.input_schema:
         return tool.input_schema.model_validate_json(input_str)
