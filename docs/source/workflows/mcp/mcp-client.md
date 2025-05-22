@@ -146,6 +146,10 @@ This configuration launches the MCP server directly as a `subprocess` instead of
 ```bash
 aiq run --config_file examples/simple_calculator/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
+Ensure that MCP server time package is installed in your environment before running the workflow.
+```bash
+uv pip install mcp-server-time
+```
 
 ## Displaying MCP Tools
 The `aiq info mcp` command can be used to list the tools served by an MCP server.
