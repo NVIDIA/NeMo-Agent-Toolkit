@@ -19,8 +19,6 @@ import logging
 import anyio
 import click
 
-from aiq.tool.mcp.mcp_client import MCPBuilder
-
 # Suppress verbose logs from mcp.client.sse and httpx
 logging.getLogger("mcp.client.sse").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -57,24 +55,30 @@ def print_tool(tool_dict, detail=False):
         click.echo("-" * 60)
 
 
-async def list_tools_and_schemas(url, tool_name=None, client_type='sse', args=None, env=None):
+async def list_tools_and_schemas(command, url, tool_name=None, client_type='sse', args=None, env=None):
     if args is None:
         args = []
-    builder = MCPBuilder(url=url, client_type=client_type, args=args, env=env)
+    from aiq.tool.mcp.mcp_client import MCPSSEClient
+    from aiq.tool.mcp.mcp_client import MCPStdioClient
 
     try:
+        if client_type == 'stdio':
+            client = MCPStdioClient(command=command, args=args, env=env)
+        else:
+            client = MCPSSEClient(url=url)
+
         if tool_name:
-            tool = await builder.get_tool(tool_name)
+            tool = await client.get_tool(tool_name)
             return [format_tool(tool)]
         else:
-            tools = await builder.get_tools()
+            tools = await client.get_tools()
             return [format_tool(tool) for tool in tools.values()]
     except Exception as e:
-        click.echo(f"[ERROR] Failed to fetch tools via MCPBuilder: {e}", err=True)
+        click.echo(f"[ERROR] Failed to fetch tools via MCP client: {e}", err=True)
         return []
 
 
-async def list_tools_direct(url, tool_name=None, client_type='sse', args=None, env=None):
+async def list_tools_direct(command, url, tool_name=None, client_type='sse', args=None, env=None):
     if args is None:
         args = []
     from mcp import ClientSession
@@ -86,7 +90,7 @@ async def list_tools_direct(url, tool_name=None, client_type='sse', args=None, e
         if client_type == 'stdio':
 
             def get_stdio_client():
-                return stdio_client(server=StdioServerParameters(command=url, args=args, env=env))
+                return stdio_client(server=StdioServerParameters(command=command, args=args, env=env))
 
             client = get_stdio_client
         else:
@@ -142,17 +146,19 @@ def list_mcp(ctx, direct, url, client_type, command, args, env, tool, detail, js
     if ctx.invoked_subcommand is not None:
         return
 
-    if client_type == 'stdio':
-        if not command:
-            click.echo("[ERROR] --command is required when using stdio client type", err=True)
-            return
-        url = command
+    if client_type == 'stdio' and not command:
+        click.echo("[ERROR] --command is required when using stdio client type", err=True)
+        return
+
+    if client_type == 'sse' and not url:
+        click.echo("[ERROR] --url is required when using sse client type", err=True)
+        return
 
     stdio_args = args.split() if args else []
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
 
     fetcher = list_tools_direct if direct else list_tools_and_schemas
-    tools = anyio.run(fetcher, url, tool, client_type, stdio_args, stdio_env)
+    tools = anyio.run(fetcher, command, url, tool, client_type, stdio_args, stdio_env)
 
     if json_output:
         click.echo(json.dumps(tools, indent=2))
