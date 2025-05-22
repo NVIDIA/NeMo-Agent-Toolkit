@@ -385,6 +385,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             },
         }
 
+        # Create job store for tracking async generation jobs
+        job_store = JobStore()
+
+        # Don't run multiple jobs at the same time, this might be expanded in the future
+        # to allow multiple jobs to run in parallel
+        async_job_lock = asyncio.Lock()
+
         def get_single_endpoint(result_type: type | None):
 
             async def get_single(response: Response, request: Request):
@@ -482,6 +489,40 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             return post_stream
 
+        async def start_async_generation(request: AIQEvaluateRequest,
+                                         background_tasks: BackgroundTasks,
+                                         http_request: Request):
+            """Handle async generation requests."""
+
+            async with session_manager.session(request=http_request):
+
+                # if job_id is present and already exists return the job info
+                if request.job_id:
+                    job = job_store.get_job(request.job_id)
+                    if job:
+                        return AIQEvaluateResponse(job_id=job.job_id, status=job.status)
+
+                job_id = job_store.create_job(request.config_file, request.job_id, request.expiry_seconds)
+                # create_cleanup_task()
+                #background_tasks.add_task(run_evaluation, job_id, request.config_file, request.reps, session_manager)
+
+                return AIQEvaluateResponse(job_id=job_id, status="submitted")
+
+        async def get_async_job_status(job_id: str, http_request: Request) -> AIQEvaluateStatusResponse:
+            """Get the status of an evaluation job."""
+            logger.info("Getting status for job %s", job_id)
+
+            async with session_manager.session(request=http_request):
+
+                # job = job_store.get_job(job_id)
+                # if not job:
+                #     logger.warning("Job %s not found", job_id)
+                #     raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+                # logger.info(f"Found job {job_id} with status {job.status}")
+                # return translate_job_to_response(job)
+
+                pass
+
         if (endpoint.path):
             if (endpoint.method == "GET"):
 
@@ -514,6 +555,19 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     description="Stream raw intermediate steps without any step adaptor translations.\n"
                     "Use filter_steps query parameter to filter steps by type (comma-separated list) or\
                         set to 'none' to suppress all intermediate steps.",
+                )
+
+                app.add_api_route(
+                    path=f"{endpoint.path}/async/job/{{job_id}}",
+                    endpoint=get_async_job_status,
+                    methods=[endpoint.method],
+                    response_model=AIQEvaluateStatusResponse,
+                    description="Get the status of an async job",
+                    responses={
+                        404: {
+                            "description": "Job not found"
+                        }, 500: response_500
+                    },
                 )
 
             elif (endpoint.method == "POST"):
@@ -554,6 +608,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     responses={500: response_500},
                 )
 
+                app.add_api_route(
+                    path=f"{endpoint.path}/async",
+                    endpoint=start_async_generation,
+                    methods=[endpoint.method],
+                    response_model=AIQEvaluateResponse,
+                    description="Start an async generate job",
+                    responses={500: response_500},
+                )
             else:
                 raise ValueError(f"Unsupported method {endpoint.method}")
 
