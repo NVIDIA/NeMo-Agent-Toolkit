@@ -38,6 +38,7 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
     client_type: str = Field(default="sse", description="The type of client to use ('sse' or 'stdio')")
     command: str | None = Field(default=None, description="The command to run for stdio mode (e.g. 'mcp-server')")
     args: list[str] | None = Field(default=None, description="Additional arguments for the stdio command")
+    env: dict[str, str] | None = Field(default=None, description="Environment variables to set for the stdio process")
     description: str | None = Field(default=None,
                                     description="""
         Description for the tool that will override the description provided by the MCP server. Should only be used if
@@ -62,7 +63,7 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=
     if config.client_type == 'stdio':
         if not config.command:
             raise ValueError("command is required when using stdio client type")
-        client = MCPBuilder(url=config.command, client_type=config.client_type, args=config.args)
+        client = MCPBuilder(url=config.command, client_type=config.client_type, args=config.args, env=config.env)
     else:
         if not config.url:
             raise ValueError("url is required when using sse client type")
