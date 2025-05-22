@@ -74,7 +74,9 @@ async def list_tools_and_schemas(url, tool_name=None, client_type='sse', args=No
         return []
 
 
-async def list_tools_direct(url, tool_name=None, client_type='sse', args=[], env=None):
+async def list_tools_direct(url, tool_name=None, client_type='sse', args=None, env=None):
+    if args is None:
+        args = []
     from mcp import ClientSession
     from mcp.client.sse import sse_client
     from mcp.client.stdio import StdioServerParameters
