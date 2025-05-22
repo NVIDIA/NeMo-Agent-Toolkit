@@ -41,7 +41,7 @@ class RAGEvaluator:
     def eval_input_to_ragas(eval_input: EvalInput) -> EvaluationDataset:
         """Converts EvalInput into a Ragas-compatible EvaluationDataset."""
         from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
-
+        event_filter = [IntermediateStepType.TOOL_END, IntermediateStepType.LLM_END, IntermediateStepType.CUSTOM_END]
         samples = []
 
         intermediate_step_adapter = IntermediateStepAdapter()
@@ -55,7 +55,7 @@ class RAGEvaluator:
             reference_contexts = [""]  # Default to empty context
             # implement context extraction from expected_trajectory
 
-            retrieved_contexts = intermediate_step_adapter.get_context(item.trajectory)
+            retrieved_contexts = intermediate_step_adapter.get_context(item.trajectory, event_filter)
             # implement context extraction from expected_trajectory
 
             # Create a SingleTurnSample
