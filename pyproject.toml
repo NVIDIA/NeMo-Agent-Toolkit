@@ -205,7 +205,7 @@ filterwarnings = [
   # trigger the warnings. In Python 3.12 this triggers a SyntaxWarning, in Python 3.11 it triggers a DeprecationWarning
   # Remove once https://github.com/qdrant/qdrant-client/issues/983 is resolved.
   "ignore:^invalid escape sequence:SyntaxWarning",
-  "ignore:^invalid escape sequence:DeprecationWarning"
+  "ignore: invalid escape sequence:DeprecationWarning"
 ]
 testpaths = ["tests", "examples/*/tests", "packages/*/tests"]
 asyncio_mode = "auto"
