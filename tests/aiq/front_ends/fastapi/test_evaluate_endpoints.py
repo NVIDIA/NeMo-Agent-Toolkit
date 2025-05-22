@@ -203,7 +203,7 @@ def test_invalid_config_file_doesnt_exist(test_client: TestClient):
     assert response.status_code >= 400 and response.status_code < 500
 
 
-def test_invalid_config_file_outside_curdir(test_client: TestClient, eval_config_file: str, tmp_path: Path):
+def test_config_file_outside_curdir(test_client: TestClient, eval_config_file: str, tmp_path: Path):
     """Test creating a job with a config file outside the current directory."""
     dest_config_file = tmp_path / "config.yml"
     shutil.copy(eval_config_file, dest_config_file)
@@ -211,4 +211,6 @@ def test_invalid_config_file_outside_curdir(test_client: TestClient, eval_config
 
     response = test_client.post("/evaluate", json={"config_file": str(dest_config_file)})
     # We aren't concerned about the exact status code, but it should be in the 4xx range
-    assert response.status_code >= 400 and response.status_code < 500
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "submitted"
