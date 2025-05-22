@@ -50,7 +50,7 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
 The configuration supports two client types:
 
 1. **SSE (Server-Sent Events)**: The default client type that connects to an MCP server over HTTP. This is the primary and recommended mode for most use cases.
-2. **STDIO**: A mode that launches the MCP server as a subprocess and communicates with it through standard input/output.
+2. **STDIO**: A mode that launches the MCP server as a `subprocess` and communicates with it through standard input/output.
 
 ### SSE Mode Configuration
 For SSE mode, you only need to specify the server URL and the tool name:
@@ -142,7 +142,7 @@ functions:
     description: "Returns the current date and time from the MCP server"
 ```
 
-This configuration launches the MCP server directly as a subprocess instead of connecting to a running server. Run it with:
+This configuration launches the MCP server directly as a `subprocess` instead of connecting to a running server. Run it with:
 ```bash
 aiq run --config_file examples/simple_calculator/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
