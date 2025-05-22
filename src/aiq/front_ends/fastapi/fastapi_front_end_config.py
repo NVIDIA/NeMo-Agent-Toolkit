@@ -53,6 +53,25 @@ class AIQEvaluateRequest(BaseModel):
 
         return job_id
 
+    @field_validator('config_file', mode='after')
+    @classmethod
+    def validate_config_file(cls, config_file: str):
+        config_file = config_file.strip()
+        config_file_path = Path(config_file).resolve()
+
+        # Ensure the config file is located under the current working directory
+        if not Path.cwd() in config_file_path.parents:
+            raise ValueError(f"Config file '{config_file}' must be in the current working directory.")
+
+        if config_file_path.is_reserved():
+            # reserved names is Windows specific
+            raise ValueError(f"Config file '{config_file}' is a reserved name. Please choose a different name.")
+
+        if not config_file_path.exists():
+            raise ValueError(f"Config file '{config_file}' does not exist. Please provide a valid path.")
+
+        return config_file
+
 class AIQEvaluateResponse(BaseModel):
     """Response model for the evaluate endpoint."""
     job_id: str = Field(description="Unique identifier for the evaluation job")
