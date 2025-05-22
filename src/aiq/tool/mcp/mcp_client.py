@@ -125,7 +125,7 @@ class MCPBaseClient(ABC):
                 MCPToolClient(client=client,
                               tool_name=tool.name,
                               tool_description=tool.description,
-                              tool_input_schema=tool.inputSchema)
+                              tool_input_schema=tool.input_schema)
             for tool in response.tools
         }
 
