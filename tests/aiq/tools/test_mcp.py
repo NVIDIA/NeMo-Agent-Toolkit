@@ -13,12 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+from mcp.types import TextContent
 from pytest_httpserver import HTTPServer
+
+from aiq.tool.mcp.mcp_client import MCPBuilder
+from aiq.tool.mcp.mcp_client import MCPSSEClient
+from aiq.tool.mcp.mcp_client import MCPStdioClient
 
 
 @pytest.fixture(name="test_mcp_server")
@@ -109,133 +115,100 @@ def test_schema_generation(sample_schema):
     assert isinstance(m, _model)
 
 
+@pytest.fixture
+def mock_tool():
+    tool = MagicMock()
+    tool.name = "test_tool"
+    tool.description = "Test tool description"
+    tool.inputSchema = {}
+    return tool
+
+
+@pytest.fixture
+def mock_session(mock_tool):
+    session = AsyncMock()
+    session.initialize = AsyncMock()
+    session.list_tools = AsyncMock(return_value=SimpleNamespace(tools=[mock_tool]))
+    session.call_tool = AsyncMock(return_value=[TextContent(type="text", text="test response")])
+    return session
+
+
+@pytest.fixture
+def tool_input():
+    return {"param": "value"}
+
+
 @pytest.mark.asyncio
-async def test_sse_client_usage():
-    '''
-    Create a mock tool and verify that the client can call the tool and get a response.
-    Use the SSE client to connect to the server.
-    '''
-    from mcp import ClientSession
-    from mcp.types import TextContent
-
-    from aiq.tool.mcp.mcp_client import MCPSSEClient
-
-    # Mock the SSE client and session
-    mock_session = AsyncMock(spec=ClientSession)
-    mock_session.initialize = AsyncMock()
-    mock_session.call_tool = AsyncMock(return_value=[TextContent(type="text", text="test response")])
-
-    with patch('aiq.tool.mcp.mcp_client.sse_client') as mock_sse_client:
+async def test_sse_client_usage(mock_session, tool_input):
+    with patch('aiq.tool.mcp.mcp_client.sse_client') as mock_sse_client, \
+     patch('aiq.tool.mcp.mcp_client.ClientSession') as mock_client_session:
         mock_sse_client.return_value.__aenter__.return_value = (AsyncMock(), AsyncMock())
+        mock_client_session.return_value.__aenter__.return_value = mock_session
 
         client = MCPSSEClient("http://localhost:8080/sse")
         async with client.connect_to_server() as session:
-            assert session == mock_session
             await session.initialize()
-            result = await session.call_tool("test_tool", {"param": "value"})
+            result = await session.call_tool("test_tool", tool_input)
             assert result[0].text == "test response"
+
+        mock_sse_client.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_stdio_client_usage():
-    '''
-    Create a mock tool and verify that the client can call the tool and get a response.
-    Use the stdio client to connect to the server.
-    '''
-    from mcp import ClientSession
-    from mcp.types import TextContent
-
-    from aiq.tool.mcp.mcp_client import MCPStdioClient
-
-    # Mock the stdio client and session
-    mock_session = AsyncMock(spec=ClientSession)
-    mock_session.initialize = AsyncMock()
-    mock_session.call_tool = AsyncMock(return_value=[TextContent(type="text", text="test response")])
-
-    with patch('aiq.tool.mcp.mcp_client.stdio_client') as mock_stdio_client:
-        mock_stdio_client.return_value.__aenter__.return_value = (AsyncMock(), AsyncMock())
+async def test_stdio_client_usage(mock_session, tool_input):
+    with patch('aiq.tool.mcp.mcp_client.stdio_client') as mock_stdio_client, \
+     patch('aiq.tool.mcp.mcp_client.ClientSession') as mock_client_session:
+        mock_stdio_client.return_value.__aenter__.return_value = (mock_session, AsyncMock())
+        mock_client_session.return_value.__aenter__.return_value = mock_session
 
         client = MCPStdioClient("python", ["-m", "test_server"], {"TEST_ENV": "test_value"})
         async with client.connect_to_server() as session:
-            assert session == mock_session
             await session.initialize()
-            result = await session.call_tool("test_tool", {"param": "value"})
+            result = await session.call_tool("test_tool", tool_input)
             assert result[0].text == "test response"
+
+        mock_stdio_client.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_mcp_builder_with_stdio():
-    '''
-    Test MCPBuilder methods with stdio client.
-    '''
-    from mcp.types import TextContent
-
-    from aiq.tool.mcp.mcp_client import MCPBuilder
-
-    # Mock the tool response
-    mock_tool = MagicMock()
-    mock_tool.name = "test_tool"
-    mock_tool.description = "Test tool description"
-    mock_tool.inputSchema = {}
-
-    # Mock the session
-    mock_session = AsyncMock()
-    mock_session.initialize = AsyncMock()
-    mock_session.list_tools = AsyncMock(return_value=MagicMock(tools=[mock_tool]))
-    mock_session.call_tool = AsyncMock(return_value=[TextContent(type="text", text="test response")])
-
-    with patch('aiq.tool.mcp.mcp_client.stdio_client') as mock_stdio_client:
-        mock_stdio_client.return_value.__aenter__.return_value = (AsyncMock(), AsyncMock())
+async def test_mcp_builder_with_stdio(mock_session, mock_tool, tool_input):
+    with patch('aiq.tool.mcp.mcp_client.stdio_client') as mock_stdio_client, \
+     patch('aiq.tool.mcp.mcp_client.ClientSession') as mock_client_session:
+        mock_stdio_client.return_value.__aenter__.return_value = (mock_session, AsyncMock())
+        mock_client_session.return_value.__aenter__.return_value = mock_session
 
         builder = MCPBuilder("python", client_type="stdio", args=["-m", "test_server"], env={"TEST_ENV": "test_value"})
 
-        # Test getting tools
         tools = await builder.get_tools()
         assert "test_tool" in tools
 
-        # Test getting a specific tool
         tool = await builder.get_tool("test_tool")
         assert tool.name == "test_tool"
 
-        # Test calling a tool
-        result = await builder.call_tool("test_tool", {"param": "value"})
+        result = await builder.call_tool("test_tool", tool_input)
         assert result[0].text == "test response"
+
+        mock_stdio_client.assert_called()
+        assert mock_client_session.call_count == 3
 
 
 @pytest.mark.asyncio
-async def test_mcp_builder_with_sse():
-    '''
-    Test MCPBuilder methods with SSE client.
-    '''
-    from mcp.types import TextContent
-
-    from aiq.tool.mcp.mcp_client import MCPBuilder
-
-    # Mock the tool response
-    mock_tool = MagicMock()
-    mock_tool.name = "test_tool"
-    mock_tool.description = "Test tool description"
-    mock_tool.inputSchema = {}
-
-    # Mock the session
-    mock_session = AsyncMock()
-    mock_session.initialize = AsyncMock()
-    mock_session.list_tools = AsyncMock(return_value=MagicMock(tools=[mock_tool]))
-    mock_session.call_tool = AsyncMock(return_value=[TextContent(type="text", text="test response")])
-
-    with patch('aiq.tool.mcp.mcp_client.sse_client') as mock_sse_client:
-        mock_sse_client.return_value.__aenter__.return_value = (AsyncMock(), AsyncMock())
+async def test_mcp_builder_with_sse(mock_session, mock_tool, tool_input):
+    with patch('aiq.tool.mcp.mcp_client.sse_client') as mock_sse_client, \
+     patch('aiq.tool.mcp.mcp_client.ClientSession') as mock_client_session:
+        mock_sse_client.return_value.__aenter__.return_value = (mock_session, AsyncMock())
+        mock_client_session.return_value.__aenter__.return_value = mock_session
 
         builder = MCPBuilder("http://localhost:8080/sse", client_type="sse")
 
-        # Test getting tools
         tools = await builder.get_tools()
         assert "test_tool" in tools
 
-        # Test getting a specific tool
         tool = await builder.get_tool("test_tool")
         assert tool.name == "test_tool"
 
-        # Test calling a tool
-        result = await builder.call_tool("test_tool", {"param": "value"})
+        result = await builder.call_tool("test_tool", tool_input)
         assert result[0].text == "test response"
+
+        mock_sse_client.assert_called()
+        assert mock_client_session.call_count == 3
