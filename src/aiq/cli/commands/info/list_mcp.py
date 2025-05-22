@@ -146,13 +146,21 @@ def list_mcp(ctx, direct, url, client_type, command, args, env, tool, detail, js
     if ctx.invoked_subcommand is not None:
         return
 
-    if client_type == 'stdio' and not command:
-        click.echo("[ERROR] --command is required when using stdio client type", err=True)
-        return
+    if client_type == 'stdio':
+        if not command:
+            click.echo("[ERROR] --command is required when using stdio client type", err=True)
+            return
+        if url:
+            click.echo("[ERROR] --url is not allowed when using stdio client type", err=True)
+            return
 
-    if client_type == 'sse' and not url:
-        click.echo("[ERROR] --url is required when using sse client type", err=True)
-        return
+    if client_type == 'sse':
+        if not url:
+            click.echo("[ERROR] --url is required when using sse client type", err=True)
+            return
+        if command or args or env:
+            click.echo("[ERROR] --command, --args, and --env are not allowed when using sse client type", err=True)
+            return
 
     stdio_args = args.split() if args else []
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
