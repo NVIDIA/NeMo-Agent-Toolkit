@@ -57,7 +57,9 @@ def print_tool(tool_dict, detail=False):
         click.echo("-" * 60)
 
 
-async def list_tools_and_schemas(url, tool_name=None, client_type='sse', args=[], env=None):
+async def list_tools_and_schemas(url, tool_name=None, client_type='sse', args=None, env=None):
+    if args is None:
+        args = []
     builder = MCPBuilder(url=url, client_type=client_type, args=args, env=env)
 
     try:
