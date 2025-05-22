@@ -56,7 +56,7 @@ class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
                                  description=("Use OpenAI API for the input/output types to the function. "
                                               "If False, strings will be used."))
     additional_instructions: str | None = Field(
-        default=None, description="Additional instructions to provide to the agent in addition to the base prompt.")
+        default=None, description="Additional instructions to provide to the agent in addition to the system prompt.")
 
 
 @register_function(config_type=ReActAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -67,22 +67,26 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     from langchain_core.prompts import MessagesPlaceholder
     from langgraph.graph.graph import CompiledGraph
 
+    from aiq.agent.react_agent.prompt import SYSTEM_PROMPT
     from aiq.agent.react_agent.prompt import USER_PROMPT
 
     from .agent import ReActAgentGraph
     from .agent import ReActGraphState
     from .prompt import react_agent_prompt
 
-    # the ReAct Agent prompt comes from prompt.py, and can be customized there or via config option system_prompt.
-    if config.system_prompt:
-        _prompt_str = config.system_prompt
+    # the ReAct Agent prompt comes from prompt.py, and can be customized there or via config options system_prompt and
+    # additional_instructions.
+    if config.system_prompt is not None or config.additional_instructions is not None:
+        _prompt_str = config.system_prompt or SYSTEM_PROMPT
         if config.additional_instructions:
             _prompt_str += f" {config.additional_instructions}"
-        valid_prompt = ReActAgentGraph.validate_system_prompt(config.system_prompt)
+
+        valid_prompt = ReActAgentGraph.validate_system_prompt(_prompt_str)
         if not valid_prompt:
-            logger.exception("%s Invalid system_prompt", AGENT_LOG_PREFIX)
-            raise ValueError("Invalid system_prompt")
-        prompt = ChatPromptTemplate([("system", config.system_prompt), ("user", USER_PROMPT),
+            logger.exception("%s Invalid system_prompt: %s", AGENT_LOG_PREFIX, _prompt_str)
+            raise ValueError(f"Invalid system_prompt: {_prompt_str}")
+
+        prompt = ChatPromptTemplate([("system", _prompt_str), ("user", USER_PROMPT),
                                      MessagesPlaceholder(variable_name='agent_scratchpad', optional=True)])
     else:
         prompt = react_agent_prompt
