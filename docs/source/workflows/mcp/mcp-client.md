@@ -32,8 +32,12 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
     Function which connects to a Model Context Protocol (MCP) server and wraps the selected tool as an AIQ function.
     """
     # Add your custom configuration parameters here
-    url: HttpUrl = Field(description="The URL of the MCP server")
+    url: HttpUrl | None = Field(default=None, description="The URL of the MCP server (for SSE mode)")
     mcp_tool_name: str = Field(description="The name of the tool served by the MCP Server that you want to use")
+    client_type: str = Field(default="sse", description="The type of client to use ('sse' or 'stdio')")
+    command: str | None = Field(default=None, description="The command to run for stdio mode (e.g. 'mcp-server')")
+    args: list[str] | None = Field(default=None, description="Additional arguments for the stdio command")
+    env: dict[str, str] | None = Field(default=None, description="Environment variables to set for the stdio process")
     description: str | None = Field(
         default=None,
         description="""
@@ -42,9 +46,14 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
         """
     )
 ```
-In addition to the URL of the server, the configuration also takes as a parameter the name of the MCP tool you want to use as an AIQ toolkit function. This is required because MCP servers can serve multiple tools, and for this wrapper we want to maintain a one-to-one relationship between AIQ toolkit functions and MCP tools. This means that if you want to include multiple tools from an MCP server you will configure multiple `mcp_tool_wrappers`.
 
-For example:
+The configuration supports two client types:
+
+1. **SSE (Server-Sent Events)**: The default client type that connects to an MCP server over HTTP. This is the primary and recommended mode for most use cases.
+2. **STDIO**: A mode that launches the MCP server as a subprocess and communicates with it through standard input/output.
+
+### SSE Mode Configuration
+For SSE mode, you only need to specify the server URL and the tool name:
 
 ```yaml
 functions:
@@ -56,10 +65,28 @@ functions:
     _type: mcp_tool_wrapper
     url: "http://localhost:8080/sse"
     mcp_tool_name: tool_b
-  mcp_tool_c:
+```
+
+### STDIO Mode Configuration
+For STDIO mode, you need to specify the command to run and any additional arguments or environment variables:
+
+```yaml
+functions:
+  github_mcp:
     _type: mcp_tool_wrapper
-    url: "http://localhost:8080/sse"
-    mcp_tool_name: tool_c
+    client_type: stdio
+    command: "docker"
+    args: [
+      "run",
+      "-i",
+      "--rm",
+      "-e",
+      "GITHUB_PERSONAL_ACCESS_TOKEN",
+      "ghcr.io/github/github-mcp-server"
+    ]
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "${input:github_token}"
+    mcp_tool_name: "github_tool"
 ```
 
 The final configuration parameter (the `description`) is optional, and should only be used if the description provided by the MCP server is not sufficient, or if there is no description provided by the server.
@@ -100,6 +127,25 @@ CONTAINER ID   IMAGE                      COMMAND                  CREATED      
 aiq run --config_file examples/simple_calculator/configs/config-mcp-date.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 This will use the `mcp_time_tool` function to get the current hour of the day from the MCP server.
+
+### Using STDIO Mode
+Alternatively, you can run the same example using stdio mode with the `config-mcp-date-stdio.yml` configuration:
+
+```yaml
+functions:
+  mcp_time_tool:
+    _type: mcp_tool_wrapper
+    client_type: stdio
+    command: "python"
+    args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
+    mcp_tool_name: get_current_time
+    description: "Returns the current date and time from the MCP server"
+```
+
+This configuration launches the MCP server directly as a subprocess instead of connecting to a running server. Run it with:
+```bash
+aiq run --config_file examples/simple_calculator/configs/config-mcp-date-stdio.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+```
 
 ## Displaying MCP Tools
 The `aiq info mcp` command can be used to list the tools served by an MCP server.
