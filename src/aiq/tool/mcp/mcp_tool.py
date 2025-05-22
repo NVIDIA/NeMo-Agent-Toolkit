@@ -36,7 +36,8 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
     url: HttpUrl | None = Field(default=None, description="The URL of the MCP server (for SSE mode)")
     mcp_tool_name: str = Field(description="The name of the tool served by the MCP Server that you want to use")
     client_type: str = Field(default="sse", description="The type of client to use ('sse' or 'stdio')")
-    command: str | None = Field(default=None, description="The command to run for stdio mode (e.g. 'mcp-server')")
+    command: str | None = Field(default=None,
+                                description="The command to run for stdio mode (e.g. 'docker' or 'python')")
     args: list[str] | None = Field(default=None, description="Additional arguments for the stdio command")
     env: dict[str, str] | None = Field(default=None, description="Environment variables to set for the stdio process")
     description: str | None = Field(default=None,
@@ -50,6 +51,21 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
         If false, raise the exception.
         """)
 
+    def model_post_init(self, __context):
+        """Validate that stdio and SSE properties are mutually exclusive."""
+        super().model_post_init(__context)
+
+        if self.client_type == 'stdio':
+            if self.url is not None:
+                raise ValueError("url should not be set when using stdio client type")
+            if not self.command:
+                raise ValueError("command is required when using stdio client type")
+        else:
+            if self.command is not None or self.args is not None or self.env is not None:
+                raise ValueError("command, args, and env should not be set when using sse client type")
+            if not self.url:
+                raise ValueError("url is required when using sse client type")
+
 
 @register_function(config_type=MCPToolConfig)
 async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=unused-argument
@@ -57,23 +73,24 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=
     Generate an AIQ Toolkit Function that wraps a tool provided by the MCP server.
     """
 
-    from aiq.tool.mcp.mcp_client import MCPBuilder
+    from aiq.tool.mcp.mcp_client import MCPSSEClient
+    from aiq.tool.mcp.mcp_client import MCPStdioClient
     from aiq.tool.mcp.mcp_client import MCPToolClient
 
     if config.client_type == 'stdio':
-        if not config.command:
-            raise ValueError("command is required when using stdio client type")
-        client = MCPBuilder(url=config.command, client_type=config.client_type, args=config.args, env=config.env)
+        client = MCPStdioClient(command=config.command, args=config.args, env=config.env)
     else:
-        if not config.url:
-            raise ValueError("url is required when using sse client type")
-        client = MCPBuilder(url=str(config.url), client_type=config.client_type)
+        client = MCPSSEClient(url=str(config.url))
 
     tool: MCPToolClient = await client.get_tool(config.mcp_tool_name)
     if config.description:
         tool.set_description(description=config.description)
 
-    logger.info("Configured to use tool: %s from MCP server at %s", tool.name, str(config.url))
+    if config.client_type == "sse":
+        source = config.url
+    else:
+        source = f"{config.command} {' '.join(config.args) if config.args else ''}"
+    logger.info("Configured to use tool: %s from MCP server at %s", tool.name, source)
 
     def _convert_from_str(input_str: str) -> tool.input_schema:
         return tool.input_schema.model_validate_json(input_str)

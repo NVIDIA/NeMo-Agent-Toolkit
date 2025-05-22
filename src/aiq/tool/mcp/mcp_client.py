@@ -92,8 +92,11 @@ class MCPBaseClient(ABC):
     Base client for creating a session and connecting to an MCP server
     """
 
-    def __init__(self, url: str):
-        self.url = url
+    def __init__(self, client_type: str = 'sse'):
+        self._tools = None
+        self._client_type = client_type.lower()
+        if self._client_type not in ['sse', 'stdio']:
+            raise ValueError("client_type must be either 'sse' or 'stdio'")
 
     @abstractmethod
     @asynccontextmanager
@@ -103,89 +106,10 @@ class MCPBaseClient(ABC):
         """
         pass
 
-
-class MCPSSEClient(MCPBaseClient):
-    """
-    Client for creating a session and connecting to an MCP server using SSE
-
-    Args:
-      url (str): The url of the MCP server
-    """
-
-    @asynccontextmanager
-    async def connect_to_server(self):
-        """
-        Establish a session with an MCP SSE server within an async context
-        """
-        async with sse_client(url=self.url) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                yield session
-
-
-class MCPStdioClient(MCPBaseClient):
-    """
-    Client for creating a session and connecting to an MCP server using stdio
-
-    Args:
-      url (str): The command to run
-      args (list[str] | None): Additional arguments for the command
-      env (dict[str, str] | None): Environment variables to set for the process
-    """
-
-    def __init__(self, url: str, args: list[str] | None = None, env: dict[str, str] | None = None):
-        super().__init__(url)
-        self._args = args
-        self._env = env
-
-    @asynccontextmanager
-    async def connect_to_server(self):
-        """
-        Establish a session with an MCP server via stdio within an async context
-        """
-        server_params = StdioServerParameters(command=self.url, args=self._args or [], env=self._env)
-        async with stdio_client(server_params) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                yield session
-
-
-class MCPBuilder(MCPBaseClient):
-    """
-    Builder class used to connect to an MCP Server and generate ToolClients
-
-    Args:
-        url (str): The url of the MCP server (for SSE) or command name (for stdio)
-        client_type (str): The type of client to use ('sse' or 'stdio')
-        args (list[str] | None): Additional arguments for the stdio command
-        env (dict[str, str] | None): Environment variables to set for the stdio process
-    """
-
-    def __init__(self,
-                 url: str,
-                 client_type: str = 'sse',
-                 args: list[str] | None = None,
-                 env: dict[str, str] | None = None):
-        super().__init__(url)
-        self._tools = None
-        self._client_type = client_type.lower()
-        self._args = args
-        self._env = env
-        if self._client_type not in ['sse', 'stdio']:
-            raise ValueError("client_type must be either 'sse' or 'stdio'")
-
-    @asynccontextmanager
-    async def connect_to_server(self):
-        """
-        Establish a session with an MCP server within an async context
-        """
-        if self._client_type == 'sse':
-            client = MCPSSEClient(self.url)
-        else:
-            client = MCPStdioClient(self.url, self._args, self._env)
-
-        async with client.connect_to_server() as session:
-            yield session
+    @abstractmethod
+    def _get_client_params(self) -> dict:
+        """Get parameters needed to create a new instance of this client type."""
+        return {}
 
     async def get_tools(self):
         """
@@ -195,8 +119,7 @@ class MCPBuilder(MCPBaseClient):
             response = await session.list_tools()
 
         # Reuse the same client type for each tool
-        client = MCPSSEClient(self.url) if self._client_type == "sse" \
-            else MCPStdioClient(self.url, self._args, self._env)
+        client = self.__class__(**self._get_client_params())
         return {
             tool.name:
                 MCPToolClient(client=client,
@@ -224,13 +147,76 @@ class MCPBuilder(MCPBaseClient):
 
         tool = self._tools.get(tool_name)
         if not tool:
-            raise ValueError(f"Tool {tool_name} not available at {self.url}")
+            raise ValueError(f"Tool {tool_name} not available")
         return tool
 
     async def call_tool(self, tool_name: str, tool_args: dict | None):
         async with self.connect_to_server() as session:
             result = await session.call_tool(tool_name, tool_args)
             return result
+
+
+class MCPSSEClient(MCPBaseClient):
+    """
+    Client for creating a session and connecting to an MCP server using SSE
+
+    Args:
+      url (str): The url of the MCP server
+      client_type (str): The type of client to use ('sse' or 'stdio')
+    """
+
+    def __init__(self, url: str, client_type: str = 'sse'):
+        super().__init__(client_type)
+        self._url = url
+
+    def _get_client_params(self) -> dict:
+        return {'url': self._url, 'client_type': self._client_type}
+
+    @asynccontextmanager
+    async def connect_to_server(self):
+        """
+        Establish a session with an MCP SSE server within an async context
+        """
+        async with sse_client(url=self._url) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                yield session
+
+
+class MCPStdioClient(MCPBaseClient):
+    """
+    Client for creating a session and connecting to an MCP server using stdio
+
+    Args:
+      command (str): The command to run
+      args (list[str] | None): Additional arguments for the command
+      env (dict[str, str] | None): Environment variables to set for the process
+      client_type (str): The type of client to use ('sse' or 'stdio')
+    """
+
+    def __init__(self,
+                 command: str,
+                 args: list[str] | None = None,
+                 env: dict[str, str] | None = None,
+                 client_type: str = 'stdio'):
+        super().__init__(client_type)
+        self._command = command
+        self._args = args
+        self._env = env
+
+    def _get_client_params(self) -> dict:
+        return {'command': self._command, 'args': self._args, 'env': self._env, 'client_type': self._client_type}
+
+    @asynccontextmanager
+    async def connect_to_server(self):
+        """
+        Establish a session with an MCP server via stdio within an async context
+        """
+        server_params = StdioServerParameters(command=self._command, args=self._args or [], env=self._env)
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                yield session
 
 
 class MCPToolClient:
@@ -292,6 +278,7 @@ class MCPToolClient:
             result = await session.call_tool(self._tool_name, tool_args)
 
         output = []
+
         for res in result.content:
             if isinstance(res, TextContent):
                 output.append(res.text)
