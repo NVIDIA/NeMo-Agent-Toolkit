@@ -72,7 +72,7 @@ async def list_tools_and_schemas(url, tool_name=None, client_type='sse', args=[]
         return []
 
 
-async def list_tools_direct(url, tool_name=None, client_type='sse', args=[]):
+async def list_tools_direct(url, tool_name=None, client_type='sse', args=[], env=None):
     from mcp import ClientSession
     from mcp.client.sse import sse_client
     from mcp.client.stdio import StdioServerParameters
@@ -82,7 +82,7 @@ async def list_tools_direct(url, tool_name=None, client_type='sse', args=[]):
         if client_type == 'stdio':
 
             def get_stdio_client():
-                return stdio_client(server=StdioServerParameters(command=url, args=args))
+                return stdio_client(server=StdioServerParameters(command=url, args=args, env=env))
 
             client = get_stdio_client
         else:
@@ -125,11 +125,12 @@ async def list_tools_direct(url, tool_name=None, client_type='sse', args=[]):
               help='Type of client to use')
 @click.option('--command', help='For stdio: The command to run (e.g. mcp-server)')
 @click.option('--args', help='For stdio: Additional arguments for the command (space-separated)')
+@click.option('--env', help='For stdio: Environment variables in KEY=VALUE format (space-separated)')
 @click.option('--tool', default=None, help='Get details for a specific tool by name')
 @click.option('--detail', is_flag=True, help='Show full details for all tools')
 @click.option('--json-output', is_flag=True, help='Output tool metadata in JSON format')
 @click.pass_context
-def list_mcp(ctx, direct, url, client_type, command, args, tool, detail, json_output):
+def list_mcp(ctx, direct, url, client_type, command, args, env, tool, detail, json_output):
     """
     List tool names (default). Use --detail for full output. If --tool is provided,
     always show full output for that tool.
@@ -144,9 +145,10 @@ def list_mcp(ctx, direct, url, client_type, command, args, tool, detail, json_ou
         url = command
 
     stdio_args = args.split() if args else []
+    stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
 
     fetcher = list_tools_direct if direct else list_tools_and_schemas
-    tools = anyio.run(fetcher, url, tool, client_type, stdio_args)
+    tools = anyio.run(fetcher, url, tool, client_type, stdio_args, stdio_env)
 
     if json_output:
         click.echo(json.dumps(tools, indent=2))
