@@ -69,6 +69,9 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
         self._front_end_config = config.general.front_end
 
+        self._cleanup_tasks: list[str] = []
+        self._cleanup_tasks_lock = asyncio.Lock()
+
     @property
     def config(self) -> AIQConfig:
         return self._config
@@ -93,10 +96,18 @@ class FastApiFrontEndPluginWorkerBase(ABC):
                 yield
 
                 # If a cleanup task is running, cancel it
-                cleanup_task = getattr(starting_app.state, "cleanup_task", None)
-                if cleanup_task:
-                    logger.info("Cancelling cleanup task")
-                    cleanup_task.cancel()
+                await with self._cleanup_tasks_lock:
+
+                    # Cancel all cleanup tasks
+                    for task_name in self._cleanup_tasks:
+                        cleanup_task : asyncio.Task | None = getattr(starting_app.state, task_name, None)
+                        if cleanup_task is not None:
+                            logger.info("Cancelling %s cleanup task", task_name)
+                            cleanup_task.cancel()
+                        else:
+                            logger.warning("No cleanup task found for %s", task_name)
+                    
+                    self._cleanup_tasks.clear()
 
             logger.debug("Closing AIQ Toolkit server from process %s", os.getpid())
 
@@ -153,11 +164,6 @@ class RouteInfo(BaseModel):
 
 
 class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
-
-    def __init__(self, config: AIQConfig):
-        super().__init__(config)
-        self._cleanup_tasks: list[str] = []
-        self._cleanup_tasks_lock = asyncio.Lock()
 
     @staticmethod
     async def _periodic_cleanup(name: str, job_store: JobStore, sleep_time_sec: int = 300):
