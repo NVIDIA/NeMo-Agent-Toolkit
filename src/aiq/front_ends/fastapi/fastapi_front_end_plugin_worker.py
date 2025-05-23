@@ -513,32 +513,38 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             return post_stream
 
-        async def run_generation(job_id: str, config_file: str, reps: int, session_manager: AIQSessionManager):
+        async def run_generation(job_id: str, payload: typing.Any, session_manager: AIQSessionManager):
             """Background task to run the evaluation."""
             async with async_job_lock:
                 try:
-
-                    job_store.update_status(job_id, "success", output_path=str(parent_dir))
+                    result = await generate_single_response(payload=payload,
+                                                            session_manager=session_manager,
+                                                            result_type=GenerateStreamResponseType)
+                    job_store.update_status(job_id, "success", output_str=result.value)
                 except Exception as e:
-                    logger.error("Error in evaluation job %s: %s", job_id, str(e))
+                    logger.error("Error in evaluation job %s: %s", job_id, e)
                     job_store.update_status(job_id, "failure", error=str(e))
 
-        async def start_async_generation(request: AIQEvaluateRequest,
-                                         background_tasks: BackgroundTasks,
-                                         http_request: Request):
+        async def post_async_generation(request: GenerateBodyType,
+                                        background_tasks: BackgroundTasks,
+                                        http_request: Request):
             """Handle async generation requests."""
 
             async with session_manager.session(request=http_request):
 
-                # if job_id is present and already exists return the job info
-                if request.job_id:
-                    job = job_store.get_job(request.job_id)
-                    if job:
-                        return AIQAsyncGenerateResponse(job_id=job.job_id, status=job.status)
+                # TODO deal with this by adding an optioal job_id to GenerateBodyType
+                # # if job_id is present and already exists return the job info
+                # if request.job_id:
+                #     job = job_store.get_job(request.job_id)
+                #     if job:
+                #         return AIQAsyncGenerateResponse(job_id=job.job_id, status=job.status)
 
-                job_id = job_store.create_job(request.config_file, request.job_id, request.expiry_seconds)
+                job_id = job_store.create_job()
                 await self.create_cleanup_task(app=app, name="async_generation", job_store=job_store)
-                background_tasks.add_task(run_generation, job_id, request.config_file, request.reps, session_manager)
+                background_tasks.add_task(run_generation,
+                                          job_id=job_id,
+                                          payload=request,
+                                          session_manager=session_manager)
 
                 return AIQAsyncGenerateResponse(job_id=job_id, status="submitted")
 
@@ -644,13 +650,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     response_model=GenerateStreamResponseType,
                     description="Stream raw intermediate steps without any step adaptor translations.\n"
                     "Use filter_steps query parameter to filter steps by type (comma-separated list) or \
-                        set to 'none' to suppress all intermediate steps."                                                                          ,
+                        set to 'none' to suppress all intermediate steps.",
                     responses={500: response_500},
                 )
 
                 app.add_api_route(
                     path=f"{endpoint.path}/async",
-                    endpoint=start_async_generation,
+                    endpoint=post_async_generation,
                     methods=[endpoint.method],
                     response_model=AIQAsyncGenerateResponse,
                     description="Start an async generate job",

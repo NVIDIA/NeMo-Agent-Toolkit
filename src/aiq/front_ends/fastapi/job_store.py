@@ -61,7 +61,10 @@ class JobStore:
     def __init__(self):
         self._jobs = {}
 
-    def create_job(self, config_file: str, job_id: str | None = None, expiry_seconds: int = DEFAULT_EXPIRY) -> str:
+    def create_job(self,
+                   config_file: str | None = None,
+                   job_id: str | None = None,
+                   expiry_seconds: int = DEFAULT_EXPIRY) -> str:
         if job_id is None:
             job_id = str(uuid4())
 
