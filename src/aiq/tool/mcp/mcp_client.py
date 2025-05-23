@@ -18,8 +18,7 @@ from __future__ import annotations
 import logging
 from abc import ABC
 from abc import abstractmethod
-from collections.abc import Callable
-from contextlib import AbstractAsyncContextManager
+from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 from enum import Enum
 from typing import Any
@@ -28,6 +27,7 @@ from mcp import ClientSession
 from mcp.client.sse import sse_client
 from mcp.client.stdio import StdioServerParameters
 from mcp.client.stdio import stdio_client
+from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import TextContent
 from pydantic import BaseModel
 from pydantic import Field
@@ -97,8 +97,35 @@ class MCPBaseClient(ABC):
     def __init__(self, client_type: str = 'sse'):
         self._tools = None
         self._client_type = client_type.lower()
-        if self._client_type not in ['sse', 'stdio']:
-            raise ValueError("client_type must be either 'sse' or 'stdio'")
+        if self._client_type not in ['sse', 'stdio', 'streamable-http']:
+            raise ValueError("client_type must be either 'sse', 'stdio' or 'streamable-http'")
+
+        self._exit_stack: AsyncExitStack | None = None
+
+        self._session: ClientSession | None = None
+
+    @property
+    def client_type(self) -> str:
+        return self._client_type
+
+    async def __aenter__(self):
+        if self._exit_stack:
+            raise RuntimeError("MCPBaseClient already initialized. Use async with to initialize.")
+
+        self._exit_stack = AsyncExitStack()
+
+        self._session = await self._exit_stack.enter_async_context(self.connect_to_server())
+
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+
+        if not self._exit_stack:
+            raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
+
+        await self._exit_stack.aclose()
+        self._session = None
+        self._exit_stack = None
 
     @abstractmethod
     @asynccontextmanager
@@ -112,12 +139,15 @@ class MCPBaseClient(ABC):
         """
         Retrieve a dictionary of all tools served by the MCP server.
         """
-        async with self.connect_to_server() as session:
-            response = await session.list_tools()
+
+        if not self._session:
+            raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
+
+        response = await self._session.list_tools()
 
         return {
             tool.name:
-                MCPToolClient(connect_fn=self.connect_to_server,
+                MCPToolClient(session=self._session,
                               tool_name=tool.name,
                               tool_description=tool.description,
                               tool_input_schema=tool.inputSchema)
@@ -137,6 +167,9 @@ class MCPBaseClient(ABC):
         Raise:
             ValueError if no tool is available with that name.
         """
+        if not self._exit_stack:
+            raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
+
         if not self._tools:
             self._tools = await self.get_tools()
 
@@ -146,9 +179,11 @@ class MCPBaseClient(ABC):
         return tool
 
     async def call_tool(self, tool_name: str, tool_args: dict | None):
-        async with self.connect_to_server() as session:
-            result = await session.call_tool(tool_name, tool_args)
-            return result
+        if not self._session:
+            raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
+
+        result = await self._session.call_tool(tool_name, tool_args)
+        return result
 
 
 class MCPSSEClient(MCPBaseClient):
@@ -163,6 +198,10 @@ class MCPSSEClient(MCPBaseClient):
     def __init__(self, url: str, client_type: str = 'sse'):
         super().__init__(client_type)
         self._url = url
+
+    @property
+    def url(self) -> str:
+        return self._url
 
     @asynccontextmanager
     async def connect_to_server(self):
@@ -195,39 +234,55 @@ class MCPStdioClient(MCPBaseClient):
         self._command = command
         self._args = args
         self._env = env
-        self._session = None  # hold session if persistent
-        self._session_cm = None
 
-    async def start_persistent_session(self):
-        """Starts and holds a persistent session."""
-        server_params = StdioServerParameters(command=self._command, args=self._args, env=self._env)
-        self._session_cm = stdio_client(server_params)
-        read, write = await self._session_cm.__aenter__()
-        self._session = ClientSession(read, write)
-        await self._session.initialize()
+    @property
+    def command(self) -> str:
+        return self._command
 
-    async def stop_persistent_session(self):
-        """Ends the persistent session."""
-        if self._session:
-            await self._session.__aexit__(None, None, None)
-            self._session = None
-        if self._session_cm:
-            await self._session_cm.__aexit__(None, None, None)
-            self._session_cm = None
+    @property
+    def args(self) -> list[str] | None:
+        return self._args
+
+    @property
+    def env(self) -> dict[str, str] | None:
+        return self._env
 
     @asynccontextmanager
     async def connect_to_server(self):
         """
         Establish a session with an MCP server via stdio within an async context
         """
-        if self._session:
-            yield self._session
-        else:
-            server_params = StdioServerParameters(command=self._command, args=self._args or [], env=self._env)
-            async with stdio_client(server_params) as (read, write):
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
-                    yield session
+
+        server_params = StdioServerParameters(command=self._command, args=self._args or [], env=self._env)
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                yield session
+
+
+class MCPStreamableHTTPClient(MCPBaseClient):
+    """
+    Client for creating a session and connecting to an MCP server using streamable-http
+    """
+
+    def __init__(self, url: str, client_type: str = 'streamable-http'):
+        super().__init__(client_type)
+
+        self._url = url
+
+    @property
+    def url(self) -> str:
+        return self._url
+
+    @asynccontextmanager
+    async def connect_to_server(self):
+        """
+        Establish a session with an MCP server via streamable-http within an async context
+        """
+        async with streamablehttp_client(url=self._url) as (read, write, get_session_id):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                yield session
 
 
 class MCPToolClient:
@@ -242,11 +297,11 @@ class MCPToolClient:
     """
 
     def __init__(self,
-                 connect_fn: Callable[[], AbstractAsyncContextManager[ClientSession]],
+                 session: ClientSession,
                  tool_name: str,
                  tool_description: str | None,
                  tool_input_schema: dict | None = None):
-        self._connect_fn = connect_fn
+        self._session = session
         self._tool_name = tool_name
         self._tool_description = tool_description
         self._input_schema = (model_from_mcp_schema(self._tool_name, tool_input_schema) if tool_input_schema else None)
@@ -285,8 +340,7 @@ class MCPToolClient:
         Args:
             tool_args (dict[str, Any]): A dictionary of key value pairs to serve as inputs for the MCP tool.
         """
-        async with self._connect_fn() as session:
-            result = await session.call_tool(self._tool_name, tool_args)
+        result = await self._session.call_tool(self._tool_name, tool_args)
 
         output = []
 
@@ -296,4 +350,9 @@ class MCPToolClient:
             else:
                 # Log non-text content for now
                 logger.warning("Got not-text output from %s of type %s", self.name, type(res))
-        return "\n".join(output)
+        result_str = "\n".join(output)
+
+        if result.isError:
+            raise RuntimeError(result_str)
+
+        return result_str

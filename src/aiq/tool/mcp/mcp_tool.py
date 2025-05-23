@@ -40,9 +40,6 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
                                 description="The command to run for stdio mode (e.g. 'docker' or 'python')")
     args: list[str] | None = Field(default=None, description="Additional arguments for the stdio command")
     env: dict[str, str] | None = Field(default=None, description="Environment variables to set for the stdio process")
-    persistent: bool = Field(
-        default=False,
-        description="If true, keeps the MCP stdio subprocess open across multiple calls. Only applies to stdio mode.")
     description: str | None = Field(default=None,
                                     description="""
         Description for the tool that will override the description provided by the MCP server. Should only be used if
@@ -78,55 +75,69 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=
 
     from aiq.tool.mcp.mcp_client import MCPSSEClient
     from aiq.tool.mcp.mcp_client import MCPStdioClient
+    from aiq.tool.mcp.mcp_client import MCPStreamableHTTPClient
     from aiq.tool.mcp.mcp_client import MCPToolClient
 
     # Initialize the client
     if config.client_type == 'stdio':
+        if not config.command:
+            raise ValueError("command is required when using stdio client type")
+
         client = MCPStdioClient(command=config.command, args=config.args, env=config.env)
-        if config.persistent:
-            await client.start_persistent_session()
-    else:
+    elif config.client_type == 'streamable-http':
+        if not config.url:
+            raise ValueError("url is required when using streamable-http client type")
+
+        client = MCPStreamableHTTPClient(url=str(config.url))
+    elif config.client_type == 'sse':
+        if not config.url:
+            raise ValueError("url is required when using sse client type")
+
         client = MCPSSEClient(url=str(config.url))
-
-    # If the tool is found create a MCPToolClient object and set the description if provided
-    tool: MCPToolClient = await client.get_tool(config.mcp_tool_name)
-    if config.description:
-        tool.set_description(description=config.description)
-
-    if config.client_type == "sse":
-        source = config.url
     else:
-        source = f"{config.command} {' '.join(config.args) if config.args else ''}"
-    logger.info("Configured to use tool: %s from MCP server at %s", tool.name, source)
-    if config.client_type == "stdio" and not config.persistent:
-        logger.info("MCP stdio tool will launch a fresh subprocess per call (persistent=False).")
+        raise ValueError(f"Invalid client type: {config.client_type}")
 
-    def _convert_from_str(input_str: str) -> tool.input_schema:
-        return tool.input_schema.model_validate_json(input_str)
+    async with client:
+        # If the tool is found create a MCPToolClient object and set the description if provided
+        tool: MCPToolClient = await client.get_tool(config.mcp_tool_name)
+        if config.description:
+            tool.set_description(description=config.description)
 
-    async def _response_fn(tool_input: BaseModel | None = None, **kwargs) -> str:
-        # Run the tool, catching any errors and sending to agent for correction
-        try:
-            if tool_input:
-                args = tool_input.model_dump()
-                return await tool.acall(args)
+        if config.client_type == "sse" or config.client_type == "streamable-http":
+            source = config.url
+        elif config.client_type == "stdio":
+            source = f"{config.command} {' '.join(config.args) if config.args else ''}"
+        else:
+            raise ValueError(f"Invalid client type: {config.client_type}")
 
-            _ = tool.input_schema.model_validate(kwargs)
-            return await tool.acall(kwargs)
-        except Exception as e:
-            if config.return_exception:
+        logger.info("Configured to use tool: %s from MCP server at %s", tool.name, source)
+
+        def _convert_from_str(input_str: str) -> tool.input_schema:
+            return tool.input_schema.model_validate_json(input_str)
+
+        async def _response_fn(tool_input: tool.input_schema) -> str:
+            # Run the tool, catching any errors and sending to agent for correction
+            try:
                 if tool_input:
-                    logger.warning("Error calling tool %s with serialized input: %s",
-                                   tool.name,
-                                   tool_input.model_dump(),
-                                   exc_info=True)
-                else:
-                    logger.warning("Error calling tool %s with input: %s", tool.name, kwargs, exc_info=True)
-                return str(e)
-            # If the tool call fails, raise the exception.
-            raise
+                    args = tool_input.model_dump()
+                    return await tool.acall(args)
 
-    yield FunctionInfo.create(single_fn=_response_fn,
-                              description=tool.description,
-                              input_schema=tool.input_schema,
-                              converters=[_convert_from_str])
+                _ = tool.input_schema.model_validate(kwargs)
+                return await tool.acall(kwargs)
+            except Exception as e:
+                if config.return_exception:
+                    if tool_input:
+                        logger.warning("Error calling tool %s with serialized input: %s",
+                                       tool.name,
+                                       tool_input.model_dump(),
+                                       exc_info=True)
+                    else:
+                        logger.warning("Error calling tool %s with input: %s", tool.name, kwargs, exc_info=True)
+                    return str(e)
+                # If the tool call fails, raise the exception.
+                raise
+
+        yield FunctionInfo.create(single_fn=_response_fn,
+                                  description=tool.description,
+                                  input_schema=tool.input_schema,
+                                  converters=[_convert_from_str])
