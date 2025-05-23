@@ -23,6 +23,7 @@ from ragas.llms import LangchainLLMWrapper
 from ragas.metrics import Metric
 from tqdm import tqdm
 
+from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.evaluator.evaluator_model import EvalOutputItem

@@ -78,7 +78,7 @@ class TrajectoryEvaluator:
                     input=question,
                     agent_trajectory=agent_trajectory,
                     prediction=generated_answer,
-                    reference = reference,
+                    reference=reference,
                 )
             except Exception as e:
                 logger.exception("Error evaluating trajectory for question: %s, Error: %s", question, e, exc_info=True)

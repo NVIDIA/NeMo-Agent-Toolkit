@@ -87,13 +87,13 @@ class IntermediateStepAdapter:
 
         return agent_actions
 
-    def get_context(self, intermediate_steps: list[IntermediateStep], 
-                   event_filter: list[IntermediateStepType]) -> list[str]:
+    def get_context(self, intermediate_steps: list[IntermediateStep],
+                    event_filter: list[IntermediateStepType]) -> list[str]:
         """Grab the output of all the tools and return them as retrieved context."""
         count = 0
         agent_actions = []
         for step in intermediate_steps:
             if step.event_type in event_filter and step.data and step.data.output:
                 agent_actions.append(f"**Step {count}**\n{str(step.data.output)}")
-                count+=1
+                count += 1
         return agent_actions
