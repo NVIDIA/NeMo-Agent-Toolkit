@@ -34,9 +34,10 @@ logger = logging.getLogger(__name__)
 
 class RAGEvaluator:
 
-    def __init__(self, evaluator_llm: LangchainLLMWrapper, metrics: Sequence[Metric]):
+    def __init__(self, evaluator_llm: LangchainLLMWrapper, metrics: Sequence[Metric], max_concurrency=1):
         self.evaluator_llm = evaluator_llm
         self.metrics = metrics
+        self.max_concurrency = max_concurrency
 
     @staticmethod
     def eval_input_to_ragas(eval_input: EvalInput) -> EvaluationDataset:
@@ -127,6 +128,7 @@ class RAGEvaluator:
                                              metrics=self.metrics,
                                              show_progress=True,
                                              llm=self.evaluator_llm,
+                                             run_config=RunConfig(max_workers=self.max_concurrency),
                                              _pbar=pbar)
         except Exception as e:
             # On exception we still continue with other evaluators. Log and return an avg_score of 0.0
