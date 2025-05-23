@@ -61,7 +61,7 @@ class TrajectoryEvaluator:
         from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
 
         intermediate_step_adapter = IntermediateStepAdapter()
-        event_filter = [IntermediateStepType.LLM_END, IntermediateStepType.TOOL_END, IntermediateStepType.CUSTOM_END]
+        event_filter = [IntermediateStepType.LLM_END, IntermediateStepType.TOOL_END]
 
         async def process_item(item: EvalInputItem) -> tuple[float, dict]:
             """
@@ -71,7 +71,6 @@ class TrajectoryEvaluator:
             """
             question = item.input_obj
             generated_answer = item.output_obj
-            reference = item.expected_output_obj
             agent_trajectory = intermediate_step_adapter.get_agent_actions(item.trajectory, event_filter)
             try:
                 eval_result = await self.traj_eval_chain.aevaluate_agent_trajectory(
