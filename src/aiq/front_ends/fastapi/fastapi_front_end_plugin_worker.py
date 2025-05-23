@@ -45,11 +45,11 @@ from aiq.eval.config import EvaluationRunOutput
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQAsyncGenerateResponse
+from aiq.front_ends.fastapi.fastapi_front_end_config import AIQAsyncGenerationStatusResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateRequest
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateStatusResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
-from aiq.front_ends.fastapi.fastapi_front_end_config import AIQAsyncGenerationStatusResponse
 from aiq.front_ends.fastapi.job_store import JobInfo
 from aiq.front_ends.fastapi.job_store import JobStore
 from aiq.front_ends.fastapi.response_helpers import generate_single_response
@@ -717,7 +717,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     }, 500: response_500
                 },
             )
-
 
         if (endpoint.openai_api_path):
             if (endpoint.method == "GET"):
