@@ -96,17 +96,17 @@ class FastApiFrontEndPluginWorkerBase(ABC):
                 yield
 
                 # If a cleanup task is running, cancel it
-                await with self._cleanup_tasks_lock:
+                async with self._cleanup_tasks_lock:
 
                     # Cancel all cleanup tasks
                     for task_name in self._cleanup_tasks:
-                        cleanup_task : asyncio.Task | None = getattr(starting_app.state, task_name, None)
+                        cleanup_task: asyncio.Task | None = getattr(starting_app.state, task_name, None)
                         if cleanup_task is not None:
                             logger.info("Cancelling %s cleanup task", task_name)
                             cleanup_task.cancel()
                         else:
                             logger.warning("No cleanup task found for %s", task_name)
-                    
+
                     self._cleanup_tasks.clear()
 
             logger.debug("Closing AIQ Toolkit server from process %s", os.getpid())
@@ -587,7 +587,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     methods=[endpoint.method],
                     description="Stream raw intermediate steps without any step adaptor translations.\n"
                     "Use filter_steps query parameter to filter steps by type (comma-separated list) or\
-                        set to 'none' to suppress all intermediate steps."                                                                          ,
+                        set to 'none' to suppress all intermediate steps.",
                 )
 
                 app.add_api_route(
@@ -637,7 +637,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     response_model=GenerateStreamResponseType,
                     description="Stream raw intermediate steps without any step adaptor translations.\n"
                     "Use filter_steps query parameter to filter steps by type (comma-separated list) or \
-                        set to 'none' to suppress all intermediate steps."                                                                          ,
+                        set to 'none' to suppress all intermediate steps.",
                     responses={500: response_500},
                 )
 
