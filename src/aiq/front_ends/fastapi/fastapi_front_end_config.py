@@ -93,17 +93,27 @@ class AIQAsyncGenerateResponse(BaseAsyncResponse):
     pass
 
 
-class AIQEvaluateStatusResponse(BaseModel):
-    """Response model for the evaluate status endpoint."""
+class BaseAsyncStatusResponse(BaseModel):
+    """Base model for async status responses."""
     job_id: str = Field(description="Unique identifier for the evaluation job")
     status: str = Field(description="Current status of the evaluation job")
     config_file: str = Field(description="Path to the configuration file used for evaluation")
     error: str | None = Field(default=None, description="Error message if the job failed")
-    output_path: str | None = Field(default=None,
-                                    description="Path to the output file if the job completed successfully")
     created_at: datetime = Field(description="Timestamp when the job was created")
     updated_at: datetime = Field(description="Timestamp when the job was last updated")
     expires_at: datetime | None = Field(default=None, description="Timestamp when the job will expire")
+
+
+class AIQEvaluateStatusResponse(BaseAsyncStatusResponse):
+    """Response model for the evaluate status endpoint."""
+
+    output_path: str | None = Field(default=None,
+                                    description="Path to the output file if the job completed successfully")
+
+
+class AIQAsyncGenerationStatusResponse(BaseAsyncStatusResponse):
+    output_str: str | None = Field(
+        default=None, description="Output string, this is only available if the job completed successfully.")
 
 
 class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
