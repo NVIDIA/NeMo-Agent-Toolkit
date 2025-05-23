@@ -51,7 +51,7 @@ class EvalOutputConfig(BaseModel):
 
 
 class EvalGeneralConfig(BaseModel):
-    max_concurrency: int = 1
+    max_concurrency: int = 8
 
     # Output directory for the workflow and evaluation results
     output_dir: Path = Path("/tmp/aiq/examples/default/")
