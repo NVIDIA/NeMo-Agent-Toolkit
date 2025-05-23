@@ -302,7 +302,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 if not job:
                     logger.warning("Job %s not found", job_id)
                     raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
-                logger.info(f"Found job {job_id} with status {job.status}")
+                logger.info("Found job %s with status %s", job_id, job.status)
                 return translate_job_to_response(job)
 
         async def get_last_job_status(http_request: Request) -> AIQEvaluateStatusResponse:
