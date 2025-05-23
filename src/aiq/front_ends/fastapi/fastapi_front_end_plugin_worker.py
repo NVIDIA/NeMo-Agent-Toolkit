@@ -42,6 +42,7 @@ from aiq.data_models.config import AIQConfig
 from aiq.eval.config import EvaluationRunOutput
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
+from aiq.front_ends.fastapi.fastapi_front_end_config import AIQAsyncGenerateResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateRequest
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateStatusResponse
@@ -500,13 +501,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 if request.job_id:
                     job = job_store.get_job(request.job_id)
                     if job:
-                        return AIQEvaluateResponse(job_id=job.job_id, status=job.status)
+                        return AIQAsyncGenerateResponse(job_id=job.job_id, status=job.status)
 
                 job_id = job_store.create_job(request.config_file, request.job_id, request.expiry_seconds)
                 # create_cleanup_task()
                 #background_tasks.add_task(run_evaluation, job_id, request.config_file, request.reps, session_manager)
 
-                return AIQEvaluateResponse(job_id=job_id, status="submitted")
+                return AIQAsyncGenerateResponse(job_id=job_id, status="submitted")
 
         async def get_async_job_status(job_id: str, http_request: Request) -> AIQEvaluateStatusResponse:
             """Get the status of an evaluation job."""
@@ -612,7 +613,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     path=f"{endpoint.path}/async",
                     endpoint=start_async_generation,
                     methods=[endpoint.method],
-                    response_model=AIQEvaluateResponse,
+                    response_model=AIQAsyncGenerateResponse,
                     description="Start an async generate job",
                     responses={500: response_500},
                 )
