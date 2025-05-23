@@ -12,17 +12,37 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from unittest.mock import AsyncMock
-from unittest.mock import MagicMock
-from unittest.mock import patch
+import argparse
+import asyncio
+import os
 
 import pytest
+import uvicorn
+from mcp.server.fastmcp.server import FastMCP
+from mcp.types import TextContent
+from pydantic.networks import HttpUrl
 from pytest_httpserver import HTTPServer
 
+from aiq.builder.workflow_builder import WorkflowBuilder
+from aiq.tool.mcp.mcp_client import MCPBaseClient
 from aiq.tool.mcp.mcp_client import MCPSSEClient
 from aiq.tool.mcp.mcp_client import MCPStdioClient
-from aiq.tool.mcp.mcp_client import MCPToolClient
+from aiq.tool.mcp.mcp_client import MCPStreamableHTTPClient
+from aiq.tool.mcp.mcp_tool import MCPToolConfig
+
+
+def _create_test_mcp_server(port: int):
+    s = FastMCP(name="Test Server", description="Test Server", port=port)
+
+    @s.tool()
+    async def return_42(param: str):
+        return f"{param} 42 {os.environ['TEST']}"
+
+    @s.tool()
+    async def throw_error(param: str):
+        raise RuntimeError(f"Error message: {param}")
+
+    return s
 
 
 @pytest.fixture(name="test_mcp_server")
@@ -113,150 +133,135 @@ def test_schema_generation(sample_schema):
     assert isinstance(m, _model)
 
 
-@pytest.fixture
-def test_answer():
-    return "42 is the ultimate question of life, the universe, and everything"
+@pytest.fixture(name="mcp_client", params=["stdio", "sse", "streamable-http"])
+async def mcp_client_fixture(request: pytest.FixtureRequest):
+
+    async with asyncio.TaskGroup() as tg:
+
+        server: uvicorn.Server | None = None
+
+        os.environ["TEST"] = "env value"
+
+        if request.param == "stdio":
+
+            client = MCPStdioClient(command="python",
+                                    args=[__file__, "--transport", request.param],
+                                    env={"TEST": os.environ["TEST"]})
+
+        elif request.param == "sse":
+
+            mcp_server = _create_test_mcp_server(port=8123)
+
+            config = uvicorn.Config(
+                mcp_server.sse_app(),
+                host=mcp_server.settings.host,
+                port=mcp_server.settings.port,
+                log_level=mcp_server.settings.log_level.lower(),
+            )
+            server = uvicorn.Server(config)
+
+            tg.create_task(server.serve())
+
+            client = MCPSSEClient(url="http://localhost:8123/sse")
+
+        elif request.param == "streamable-http":
+
+            mcp_server = _create_test_mcp_server(port=8124)
+
+            config = uvicorn.Config(
+                mcp_server.streamable_http_app(),
+                host=mcp_server.settings.host,
+                port=mcp_server.settings.port,
+                log_level=mcp_server.settings.log_level.lower(),
+            )
+            server = uvicorn.Server(config)
+
+            tg.create_task(server.serve())
+
+            client = MCPStreamableHTTPClient(url="http://localhost:8124/mcp/")
+
+        else:
+            raise ValueError(f"Invalid transport: {request.param}")
+
+        yield client
+
+        await asyncio.sleep(1)
+
+        if server:
+            # Signal the server to exit. Task group will wait for the server to exit.
+            server.should_exit = True
+
+    await asyncio.sleep(1)
 
 
-@pytest.fixture
-def mock_tool(test_answer):
-    tool = MagicMock(spec=MCPToolClient)
-    tool.name = "test_tool"
-    tool.description = "A test tool"
-    tool.input_schema = None
-    tool.acall = AsyncMock(return_value=test_answer)
-    return tool
+async def test_mcp_client(mcp_client: MCPBaseClient):
+
+    async with mcp_client:
+
+        # Test get_tools
+        tools = await mcp_client.get_tools()
+        assert len(tools) == 2
+        assert "return_42" in tools
+
+        # Test get_tool
+        tool = await mcp_client.get_tool("return_42")
+        assert tool.name == "return_42"
+
+        # Test call_tool
+        result = await mcp_client.call_tool("return_42", {"param": "value"})
+
+        value = result.content[0]
+
+        assert isinstance(value, TextContent)
+        assert value.text == f"value 42 {os.environ['TEST']}"
 
 
-@pytest.fixture
-def mock_session():
-    session = AsyncMock()
-    session.initialize = AsyncMock()
-    session.list_tools = AsyncMock()
-    session.call_tool = AsyncMock()
-    return session
+async def test_error_handling(mcp_client: MCPBaseClient):
+    async with mcp_client:
+
+        tool = await mcp_client.get_tool("throw_error")
+
+        with pytest.raises(RuntimeError) as e:
+            await tool.acall({"param": "value"})
+
+        assert "Error message: value" in str(e.value)
 
 
-@pytest.fixture
-def tool_input():
-    return {"param": "value"}
+async def test_function(mcp_client: MCPBaseClient):
+    async with WorkflowBuilder() as builder:
+
+        if isinstance(mcp_client, MCPSSEClient):
+            fn_obj = await builder.add_function(name="test_function",
+                                                config=MCPToolConfig(url=HttpUrl(mcp_client.url),
+                                                                     mcp_tool_name="return_42",
+                                                                     client_type=mcp_client.client_type))
+        elif isinstance(mcp_client, MCPStdioClient):
+            fn_obj = await builder.add_function(name="test_function",
+                                                config=MCPToolConfig(mcp_tool_name="return_42",
+                                                                     client_type=mcp_client.client_type,
+                                                                     command=mcp_client.command,
+                                                                     args=mcp_client.args,
+                                                                     env=mcp_client.env))
+        elif isinstance(mcp_client, MCPStreamableHTTPClient):
+            fn_obj = await builder.add_function(name="test_function",
+                                                config=MCPToolConfig(url=HttpUrl(mcp_client.url),
+                                                                     mcp_tool_name="return_42",
+                                                                     client_type=mcp_client.client_type))
+        else:
+            raise ValueError(f"Invalid client type: {type(mcp_client)}")
+
+        assert fn_obj.has_single_output
+
+        result = await fn_obj.acall_invoke(param="value")
+
+        assert result == "value 42 env value"
 
 
-async def test_sse_client_usage(mock_tool, mock_session):
-    # Mock the SSE client to return our mock session
-    with patch('aiq.tool.mcp.mcp_client.sse_client') as mock_sse_client:
-        mock_sse_client.return_value.__aenter__.return_value = (AsyncMock(), AsyncMock())
-        mock_sse_client.return_value.__aexit__.return_value = None
+if __name__ == "__main__":
 
-        # Create the client
-        client = MCPSSEClient(url="http://localhost:8080/sse")
+    parser = argparse.ArgumentParser(description="MCP Server")
+    parser.add_argument("--transport", type=str, default="stdio", help="Transport to use for the server")
 
-        # Mock the session to return our mock session
-        with patch('aiq.tool.mcp.mcp_client.ClientSession') as mock_client_session:
-            mock_client_session.return_value.__aenter__.return_value = mock_session
-            mock_client_session.return_value.__aexit__.return_value = None
+    args = parser.parse_args()
 
-            # Test get_tools
-            mock_session.list_tools.return_value.tools = [mock_tool]
-            tools = await client.get_tools()
-            assert len(tools) == 1
-            assert "test_tool" in tools
-
-            # Test get_tool
-            tool = await client.get_tool("test_tool")
-            assert tool.name == "test_tool"
-
-            # Test call_tool
-            mock_session.call_tool.return_value.content = [MagicMock(text=test_answer)]
-            result = await client.call_tool("test_tool", {"arg": "value"})
-            assert result[0].text == test_answer
-
-
-async def test_stdio_client_usage(mock_tool, mock_session):
-    # Mock the stdio client to return our mock session
-    with patch('aiq.tool.mcp.mcp_client.stdio_client') as mock_stdio_client:
-        mock_stdio_client.return_value.__aenter__.return_value = (AsyncMock(), AsyncMock())
-        mock_stdio_client.return_value.__aexit__.return_value = None
-
-        # Create the client
-        client = MCPStdioClient(command="python", args=["-m", "mcp_server"])
-
-        # Mock the session to return our mock session
-        with patch('aiq.tool.mcp.mcp_client.ClientSession') as mock_client_session:
-            mock_client_session.return_value.__aenter__.return_value = mock_session
-            mock_client_session.return_value.__aexit__.return_value = None
-
-            # Test get_tools
-            mock_session.list_tools.return_value.tools = [mock_tool]
-            tools = await client.get_tools()
-            assert len(tools) == 1
-            assert "test_tool" in tools
-
-            # Test get_tool
-            tool = await client.get_tool("test_tool")
-            assert tool.name == "test_tool"
-
-            # Test call_tool
-            mock_session.call_tool.return_value.content = [MagicMock(text=test_answer)]
-            result = await client.call_tool("test_tool", {"arg": "value"})
-            assert result[0].text == test_answer
-
-
-async def test_mcp_client_with_stdio(mock_tool, mock_session):
-    # Mock the stdio client to return our mock session
-    with patch('aiq.tool.mcp.mcp_client.stdio_client') as mock_stdio_client:
-        mock_stdio_client.return_value.__aenter__.return_value = (AsyncMock(), AsyncMock())
-        mock_stdio_client.return_value.__aexit__.return_value = None
-
-        # Create the client
-        client = MCPStdioClient(command="python", args=["-m", "mcp_server"], env={"TEST": "value"})
-
-        # Mock the session to return our mock session
-        with patch('aiq.tool.mcp.mcp_client.ClientSession') as mock_client_session:
-            mock_client_session.return_value.__aenter__.return_value = mock_session
-            mock_client_session.return_value.__aexit__.return_value = None
-
-            # Test get_tools
-            mock_session.list_tools.return_value.tools = [mock_tool]
-            tools = await client.get_tools()
-            assert len(tools) == 1
-            assert "test_tool" in tools
-
-            # Test get_tool
-            tool = await client.get_tool("test_tool")
-            assert tool.name == "test_tool"
-
-            # Test call_tool
-            mock_session.call_tool.return_value.content = [MagicMock(text=test_answer)]
-            result = await client.call_tool("test_tool", {"arg": "value"})
-            assert result[0].text == test_answer
-
-
-async def test_mcp_client_with_sse(mock_tool, mock_session):
-    # Mock the SSE client to return our mock session
-    with patch('aiq.tool.mcp.mcp_client.sse_client') as mock_sse_client:
-        mock_sse_client.return_value.__aenter__.return_value = (AsyncMock(), AsyncMock())
-        mock_sse_client.return_value.__aexit__.return_value = None
-
-        # Create the client
-        client = MCPSSEClient(url="http://localhost:8080/sse")
-
-        # Mock the session to return our mock session
-        with patch('aiq.tool.mcp.mcp_client.ClientSession') as mock_client_session:
-            mock_client_session.return_value.__aenter__.return_value = mock_session
-            mock_client_session.return_value.__aexit__.return_value = None
-
-            # Test get_tools
-            mock_session.list_tools.return_value.tools = [mock_tool]
-            tools = await client.get_tools()
-            assert len(tools) == 1
-            assert "test_tool" in tools
-
-            # Test get_tool
-            tool = await client.get_tool("test_tool")
-            assert tool.name == "test_tool"
-
-            # Test call_tool
-            mock_session.call_tool.return_value.content = [MagicMock(text=test_answer)]
-            result = await client.call_tool("test_tool", {"arg": "value"})
-            assert result[0].text == test_answer
+    _create_test_mcp_server(port=8122).run(transport=args.transport)
