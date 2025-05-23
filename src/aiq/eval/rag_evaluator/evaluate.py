@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 class RAGEvaluator:
 
-    def __init__(self, evaluator_llm: LangchainLLMWrapper, metrics: Sequence[Metric], max_concurrency=1):
+    def __init__(self, evaluator_llm: LangchainLLMWrapper, metrics: Sequence[Metric], max_concurrency=8):
         self.evaluator_llm = evaluator_llm
         self.metrics = metrics
         self.max_concurrency = max_concurrency
