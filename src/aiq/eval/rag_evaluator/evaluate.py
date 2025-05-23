@@ -118,6 +118,7 @@ class RAGEvaluator:
     async def evaluate(self, eval_input: EvalInput) -> EvalOutput:
         """Run Ragas metrics evaluation on the provided EvalInput"""
         from ragas import evaluate as ragas_evaluate
+        from ragas.run_config import RunConfig
 
         ragas_dataset = self.eval_input_to_ragas(eval_input)
         tqdm_position = TqdmPositionRegistry.claim()
