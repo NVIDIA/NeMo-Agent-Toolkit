@@ -150,9 +150,6 @@ def list_mcp(ctx, direct, url, client_type, command, args, env, tool, detail, js
         if not command:
             click.echo("[ERROR] --command is required when using stdio client type", err=True)
             return
-        if url:
-            click.echo("[ERROR] --url is not allowed when using stdio client type", err=True)
-            return
 
     if client_type == 'sse':
         if not url:

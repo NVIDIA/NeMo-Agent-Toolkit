@@ -18,7 +18,8 @@ from __future__ import annotations
 import logging
 from abc import ABC
 from abc import abstractmethod
-from contextlib import AsyncContextManager
+from collections.abc import Callable
+from contextlib import AbstractAsyncContextManager
 from contextlib import asynccontextmanager
 from enum import Enum
 from typing import Any
@@ -101,7 +102,7 @@ class MCPBaseClient(ABC):
 
     @abstractmethod
     @asynccontextmanager
-    async def connect_to_server(self) -> AsyncContextManager[ClientSession]:
+    async def connect_to_server(self):
         """
         Establish a session with an MCP server within an async context
         """
@@ -119,7 +120,7 @@ class MCPBaseClient(ABC):
                 MCPToolClient(connect_fn=self.connect_to_server,
                               tool_name=tool.name,
                               tool_description=tool.description,
-                              tool_input_schema=tool.input_schema)
+                              tool_input_schema=tool.inputSchema)
             for tool in response.tools
         }
 
@@ -164,7 +165,7 @@ class MCPSSEClient(MCPBaseClient):
         self._url = url
 
     @asynccontextmanager
-    async def connect_to_server(self) -> AsyncContextManager[ClientSession]:
+    async def connect_to_server(self):
         """
         Establish a session with an MCP SSE server within an async context
         """
@@ -215,7 +216,7 @@ class MCPStdioClient(MCPBaseClient):
             self._session_cm = None
 
     @asynccontextmanager
-    async def connect_to_server(self) -> AsyncContextManager[ClientSession]:
+    async def connect_to_server(self):
         """
         Establish a session with an MCP server via stdio within an async context
         """
@@ -241,7 +242,7 @@ class MCPToolClient:
     """
 
     def __init__(self,
-                 connect_fn: callable[[], AsyncContextManager[ClientSession]],
+                 connect_fn: Callable[[], AbstractAsyncContextManager[ClientSession]],
                  tool_name: str,
                  tool_description: str | None,
                  tool_input_schema: dict | None = None):
