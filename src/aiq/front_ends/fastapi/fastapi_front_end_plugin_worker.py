@@ -32,6 +32,7 @@ from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from pydantic import Field
 
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.api_server import AIQChatRequest
@@ -394,6 +395,16 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         GenerateStreamResponseType = workflow.streaming_output_schema  # pylint: disable=invalid-name
         GenerateSingleResponseType = workflow.single_output_schema  # pylint: disable=invalid-name
 
+        # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
+        # Consider prefixing these with "aiq_" to avoid conflicts
+        class AIQAsyncGenerateRequest(GenerateBodyType):
+            job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
+            expiry_seconds: int = Field(default=JobStore.DEFAULT_EXPIRY,
+                                        ge=JobStore.MIN_EXPIRY,
+                                        le=JobStore.MAX_EXPIRY,
+                                        description="Optional time (in seconds) before the job expires. "
+                                        "Clamped between 600 (10 min) and 86400 (24h).")
+
         # Ensure that the input is in the body. POD types are treated as query parameters
         if (not issubclass(GenerateBodyType, BaseModel)):
             GenerateBodyType = typing.Annotated[GenerateBodyType, Body()]
@@ -523,7 +534,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     result = await generate_single_response(payload=payload,
                                                             session_manager=session_manager,
                                                             result_type=result_type)
-                    job_store.update_status(job_id, "success", output_str=result.value)
+                    job_store.update_status(job_id, "success", output=result)
                 except Exception as e:
                     logger.error("Error in evaluation job %s: %s", job_id, e)
                     job_store.update_status(job_id, "failure", error=str(e))
@@ -537,14 +548,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 async with session_manager.session(request=http_request):
 
-                    # TODO deal with this by adding an optioal job_id to GenerateBodyType
-                    # # if job_id is present and already exists return the job info
-                    # if request.job_id:
-                    #     job = job_store.get_job(request.job_id)
-                    #     if job:
-                    #         return AIQAsyncGenerateResponse(job_id=job.job_id, status=job.status)
+                    # if job_id is present and already exists return the job info
+                    if request.job_id:
+                        job = job_store.get_job(request.job_id)
+                        if job:
+                            return AIQAsyncGenerateResponse(job_id=job.job_id, status=job.status)
 
-                    job_id = job_store.create_job()
+                    job_id = job_store.create_job(job_id=request.job_id, expiry_seconds=request.expiry_seconds)
                     await self.create_cleanup_task(app=app, name="async_generation", job_store=job_store)
                     background_tasks.add_task(run_generation,
                                               job_id=job_id,
@@ -568,11 +578,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
                 logger.info("Found job %s with status %s", job_id, job.status)
+                job_output = job.output
+                if job_output is not None:
+                    job_output = job_output.model_dump()
                 return AIQAsyncGenerationStatusResponse(job_id=job.job_id,
                                                         status=job.status,
-                                                        config_file=str(job.config_file),
                                                         error=job.error,
-                                                        output_str=str(job.output_str),
+                                                        output=job_output,
                                                         created_at=job.created_at,
                                                         updated_at=job.updated_at,
                                                         expires_at=job_store.get_expires_at(job))
@@ -651,7 +663,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 app.add_api_route(
                     path=f"{endpoint.path}/async",
-                    endpoint=post_async_generation(request_type=GenerateBodyType,
+                    endpoint=post_async_generation(request_type=AIQAsyncGenerateRequest,
                                                    final_result_type=GenerateSingleResponseType),
                     methods=[endpoint.method],
                     response_model=AIQAsyncGenerateResponse,

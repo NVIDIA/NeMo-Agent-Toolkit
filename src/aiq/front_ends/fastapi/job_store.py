@@ -46,7 +46,7 @@ class JobInfo(BaseModel):
     created_at: datetime
     updated_at: datetime
     expiry_seconds: int
-    output_str: str | None = None
+    output: BaseModel | None = None
 
 
 class JobStore:
@@ -89,7 +89,7 @@ class JobStore:
                       status: str,
                       error: str | None = None,
                       output_path: str | None = None,
-                      output_str: str | None = None):
+                      output: BaseModel | None = None):
         if job_id not in self._jobs:
             raise ValueError(f"Job {job_id} not found")
 
@@ -98,7 +98,7 @@ class JobStore:
         job.error = error
         job.output_path = output_path
         job.updated_at = datetime.now(UTC)
-        job.output_str = output_str
+        job.output = output
 
     def get_status(self, job_id: str) -> JobInfo | None:
         return self._jobs.get(job_id)
@@ -155,6 +155,7 @@ class JobStore:
             expires_at = self.get_expires_at(job)
             if expires_at and now > expires_at:
                 expired_ids.append(job_id)
+                # TODO: JobInfo should contain a reference to the task so that it can be cancelled if needed
                 # cleanup output dir if present
                 if job.output_path:
                     logger.info("Cleaning up output directory for job %s at %s", job_id, job.output_path)

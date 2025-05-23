@@ -97,7 +97,6 @@ class BaseAsyncStatusResponse(BaseModel):
     """Base model for async status responses."""
     job_id: str = Field(description="Unique identifier for the evaluation job")
     status: str = Field(description="Current status of the evaluation job")
-    config_file: str = Field(description="Path to the configuration file used for evaluation")
     error: str | None = Field(default=None, description="Error message if the job failed")
     created_at: datetime = Field(description="Timestamp when the job was created")
     updated_at: datetime = Field(description="Timestamp when the job was last updated")
@@ -106,14 +105,15 @@ class BaseAsyncStatusResponse(BaseModel):
 
 class AIQEvaluateStatusResponse(BaseAsyncStatusResponse):
     """Response model for the evaluate status endpoint."""
-
+    config_file: str = Field(description="Path to the configuration file used for evaluation")
     output_path: str | None = Field(default=None,
                                     description="Path to the output file if the job completed successfully")
 
 
 class AIQAsyncGenerationStatusResponse(BaseAsyncStatusResponse):
-    output_str: str | None = Field(
-        default=None, description="Output string, this is only available if the job completed successfully.")
+    output: dict | None = Field(
+        default=None,
+        description="Output of the generate request, this is only available if the job completed successfully.")
 
 
 class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
