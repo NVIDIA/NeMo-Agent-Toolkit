@@ -154,6 +154,37 @@ class RouteInfo(BaseModel):
 
 class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
+    def __init__(self, config: AIQConfig):
+        super().__init__(config)
+        self._cleanup_tasks: list[str] = []
+        self._cleanup_tasks_lock = asyncio.Lock()
+
+    @staticmethod
+    async def _periodic_cleanup(name: str, job_store: JobStore, sleep_time_sec: int = 300):
+        while True:
+            try:
+                job_store.cleanup_expired_jobs()
+                logger.debug("Expired %s jobs cleaned up", name)
+            except Exception as e:
+                logger.error("Error during %s job cleanup: %s", name, e)
+            await asyncio.sleep(sleep_time_sec)
+
+    async def create_cleanup_task(self, app: FastAPI, name: str, job_store: JobStore, sleep_time_sec: int = 300):
+        # Schedule periodic cleanup of expired jobs on first job creation
+        attr_name = f"{name}_cleanup_task"
+
+        # Cheap check, if it doesn't exist, we will need to re-check after we acquire the lock
+        if not hasattr(app.state, attr_name):
+            async with self._cleanup_tasks_lock:
+                if not hasattr(app.state, attr_name):
+                    logger.info("Starting periodic cleanup task")
+                    setattr(
+                        app.state,
+                        attr_name,
+                        asyncio.create_task(
+                            self._periodic_cleanup(name=name, job_store=job_store, sleep_time_sec=sleep_time_sec)))
+                    self._cleanup_tasks.append(attr_name)
+
     def get_step_adaptor(self) -> StepAdaptor:
 
         return StepAdaptor(self.front_end_config.step_adaptor)
@@ -199,21 +230,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Don't run multiple evaluations at the same time
         evaluation_lock = asyncio.Lock()
 
-        async def periodic_cleanup(job_store: JobStore):
-            while True:
-                try:
-                    job_store.cleanup_expired_jobs()
-                    logger.debug("Expired jobs cleaned up")
-                except Exception as e:
-                    logger.error("Error during job cleanup: %s", str(e))
-                await asyncio.sleep(300)  # every 5 minutes
-
-        def create_cleanup_task():
-            # Schedule periodic cleanup of expired jobs on first job creation
-            if not hasattr(app.state, "cleanup_task"):
-                logger.info("Starting periodic cleanup task")
-                app.state.cleanup_task = asyncio.create_task(periodic_cleanup(job_store))
-
         async def run_evaluation(job_id: str, config_file: str, reps: int, session_manager: AIQSessionManager):
             """Background task to run the evaluation."""
             async with evaluation_lock:
@@ -251,7 +267,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         return AIQEvaluateResponse(job_id=job.job_id, status=job.status)
 
                 job_id = job_store.create_job(request.config_file, request.job_id, request.expiry_seconds)
-                create_cleanup_task()
+                await self.create_cleanup_task(app=app, name="async_evaluation", job_store=job_store)
                 background_tasks.add_task(run_evaluation, job_id, request.config_file, request.reps, session_manager)
 
                 return AIQEvaluateResponse(job_id=job_id, status="submitted")
@@ -490,6 +506,16 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             return post_stream
 
+        async def run_generation(job_id: str, config_file: str, reps: int, session_manager: AIQSessionManager):
+            """Background task to run the evaluation."""
+            async with async_job_lock:
+                try:
+
+                    job_store.update_status(job_id, "success", output_path=str(parent_dir))
+                except Exception as e:
+                    logger.error("Error in evaluation job %s: %s", job_id, str(e))
+                    job_store.update_status(job_id, "failure", error=str(e))
+
         async def start_async_generation(request: AIQEvaluateRequest,
                                          background_tasks: BackgroundTasks,
                                          http_request: Request):
@@ -504,8 +530,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         return AIQAsyncGenerateResponse(job_id=job.job_id, status=job.status)
 
                 job_id = job_store.create_job(request.config_file, request.job_id, request.expiry_seconds)
-                # create_cleanup_task()
-                #background_tasks.add_task(run_evaluation, job_id, request.config_file, request.reps, session_manager)
+                await self.create_cleanup_task(app=app, name="async_generation", job_store=job_store)
+                background_tasks.add_task(run_generation, job_id, request.config_file, request.reps, session_manager)
 
                 return AIQAsyncGenerateResponse(job_id=job_id, status="submitted")
 
@@ -555,7 +581,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     methods=[endpoint.method],
                     description="Stream raw intermediate steps without any step adaptor translations.\n"
                     "Use filter_steps query parameter to filter steps by type (comma-separated list) or\
-                        set to 'none' to suppress all intermediate steps.",
+                        set to 'none' to suppress all intermediate steps."                                                                          ,
                 )
 
                 app.add_api_route(
@@ -605,7 +631,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     response_model=GenerateStreamResponseType,
                     description="Stream raw intermediate steps without any step adaptor translations.\n"
                     "Use filter_steps query parameter to filter steps by type (comma-separated list) or \
-                        set to 'none' to suppress all intermediate steps.",
+                        set to 'none' to suppress all intermediate steps."                                                                          ,
                     responses={500: response_500},
                 )
 
