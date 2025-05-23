@@ -513,40 +513,48 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             return post_stream
 
-        async def run_generation(job_id: str, payload: typing.Any, session_manager: AIQSessionManager):
+        async def run_generation(job_id: str,
+                                 payload: typing.Any,
+                                 session_manager: AIQSessionManager,
+                                 result_type: type):
             """Background task to run the evaluation."""
             async with async_job_lock:
                 try:
                     result = await generate_single_response(payload=payload,
                                                             session_manager=session_manager,
-                                                            result_type=GenerateStreamResponseType)
+                                                            result_type=result_type)
                     job_store.update_status(job_id, "success", output_str=result.value)
                 except Exception as e:
                     logger.error("Error in evaluation job %s: %s", job_id, e)
                     job_store.update_status(job_id, "failure", error=str(e))
 
-        async def post_async_generation(request: GenerateBodyType,
-                                        background_tasks: BackgroundTasks,
-                                        http_request: Request):
-            """Handle async generation requests."""
+        def post_async_generation(request_type: type, final_result_type: type):
 
-            async with session_manager.session(request=http_request):
+            async def start_async_generation(request: request_type,
+                                             background_tasks: BackgroundTasks,
+                                             http_request: Request):
+                """Handle async generation requests."""
 
-                # TODO deal with this by adding an optioal job_id to GenerateBodyType
-                # # if job_id is present and already exists return the job info
-                # if request.job_id:
-                #     job = job_store.get_job(request.job_id)
-                #     if job:
-                #         return AIQAsyncGenerateResponse(job_id=job.job_id, status=job.status)
+                async with session_manager.session(request=http_request):
 
-                job_id = job_store.create_job()
-                await self.create_cleanup_task(app=app, name="async_generation", job_store=job_store)
-                background_tasks.add_task(run_generation,
-                                          job_id=job_id,
-                                          payload=request,
-                                          session_manager=session_manager)
+                    # TODO deal with this by adding an optioal job_id to GenerateBodyType
+                    # # if job_id is present and already exists return the job info
+                    # if request.job_id:
+                    #     job = job_store.get_job(request.job_id)
+                    #     if job:
+                    #         return AIQAsyncGenerateResponse(job_id=job.job_id, status=job.status)
 
-                return AIQAsyncGenerateResponse(job_id=job_id, status="submitted")
+                    job_id = job_store.create_job()
+                    await self.create_cleanup_task(app=app, name="async_generation", job_store=job_store)
+                    background_tasks.add_task(run_generation,
+                                              job_id=job_id,
+                                              payload=request,
+                                              session_manager=session_manager,
+                                              result_type=final_result_type)
+
+                    return AIQAsyncGenerateResponse(job_id=job_id, status="submitted")
+
+            return start_async_generation
 
         async def get_async_job_status(job_id: str, http_request: Request) -> AIQAsyncGenerationStatusResponse:
             """Get the status of an async job."""
@@ -656,7 +664,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 app.add_api_route(
                     path=f"{endpoint.path}/async",
-                    endpoint=post_async_generation,
+                    endpoint=post_async_generation(request_type=GenerateBodyType,
+                                                   final_result_type=GenerateSingleResponseType),
                     methods=[endpoint.method],
                     response_model=AIQAsyncGenerateResponse,
                     description="Start an async generate job",
