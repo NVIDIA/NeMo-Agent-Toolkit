@@ -184,7 +184,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         if not hasattr(app.state, attr_name):
             async with self._cleanup_tasks_lock:
                 if not hasattr(app.state, attr_name):
-                    logger.info("Starting periodic cleanup task")
+                    logger.info("Starting %s periodic cleanup task", name)
                     setattr(
                         app.state,
                         attr_name,
@@ -611,19 +611,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         set to 'none' to suppress all intermediate steps.",
                 )
 
-                app.add_api_route(
-                    path=f"{endpoint.path}/async/job/{{job_id}}",
-                    endpoint=get_async_job_status,
-                    methods=[endpoint.method],
-                    response_model=AIQAsyncGenerationStatusResponse,
-                    description="Get the status of an async job",
-                    responses={
-                        404: {
-                            "description": "Job not found"
-                        }, 500: response_500
-                    },
-                )
-
             elif (endpoint.method == "POST"):
 
                 app.add_api_route(
@@ -673,6 +660,20 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 )
             else:
                 raise ValueError(f"Unsupported method {endpoint.method}")
+
+            app.add_api_route(
+                path=f"{endpoint.path}/async/job/{{job_id}}",
+                endpoint=get_async_job_status,
+                methods=["GET"],
+                response_model=AIQAsyncGenerationStatusResponse,
+                description="Get the status of an async job",
+                responses={
+                    404: {
+                        "description": "Job not found"
+                    }, 500: response_500
+                },
+            )
+
 
         if (endpoint.openai_api_path):
             if (endpoint.method == "GET"):

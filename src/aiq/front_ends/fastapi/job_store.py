@@ -40,7 +40,7 @@ class JobStatus(str, Enum):
 class JobInfo(BaseModel):
     job_id: str
     status: JobStatus
-    config_file: str
+    config_file: str | None
     error: str | None
     output_path: str | None
     created_at: datetime
