@@ -27,6 +27,8 @@ from aiq.data_models.step_adaptor import StepAdaptorConfig
 
 logger = logging.getLogger(__name__)
 
+YAML_EXTENSIONS = (".yaml", ".yml")
+
 
 class AIQEvaluateRequest(BaseModel):
     """Request model for the evaluate endpoint."""
@@ -60,9 +62,10 @@ class AIQEvaluateRequest(BaseModel):
         config_file = config_file.strip()
         config_file_path = Path(config_file).resolve()
 
-        # Ensure the config file is located under the current working directory
-        if not Path.cwd() in config_file_path.parents:
-            raise ValueError(f"Config file '{config_file}' must be in the current working directory.")
+        # Ensure the config file is a YAML file
+        if config_file_path.suffix.lower() not in YAML_EXTENSIONS:
+            raise ValueError(f"Config file '{config_file}' must be a YAML file with one of the following extensions: "
+                             f"{', '.join(YAML_EXTENSIONS)}")
 
         if config_file_path.is_reserved():
             # reserved names is Windows specific
