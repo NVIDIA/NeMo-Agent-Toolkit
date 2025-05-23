@@ -16,6 +16,7 @@
 import asyncio
 import logging
 import os
+import time
 import typing
 from abc import ABC
 from abc import abstractmethod
@@ -399,6 +400,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Consider prefixing these with "aiq_" to avoid conflicts
         class AIQAsyncGenerateRequest(GenerateBodyType):
             job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
+            sync_timeout: int = Field(
+                default=0,
+                ge=0,
+                le=300,
+                description="Attempt to perform the job synchronously up until `sync_timeout` sectonds, "
+                "if the job hasn't been completed by then a job_id will be returned with a status code of 202.")
             expiry_seconds: int = Field(default=JobStore.DEFAULT_EXPIRY,
                                         ge=JobStore.MIN_EXPIRY,
                                         le=JobStore.MAX_EXPIRY,
@@ -539,11 +546,23 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     logger.error("Error in evaluation job %s: %s", job_id, e)
                     job_store.update_status(job_id, "failure", error=str(e))
 
+        def _job_status_to_response(job: JobInfo) -> AIQAsyncGenerationStatusResponse:
+            job_output = job.output
+            if job_output is not None:
+                job_output = job_output.model_dump()
+            return AIQAsyncGenerationStatusResponse(job_id=job.job_id,
+                                                    status=job.status,
+                                                    error=job.error,
+                                                    output=job_output,
+                                                    created_at=job.created_at,
+                                                    updated_at=job.updated_at,
+                                                    expires_at=job_store.get_expires_at(job))
+
         def post_async_generation(request_type: type, final_result_type: type):
 
-            async def start_async_generation(request: request_type,
-                                             background_tasks: BackgroundTasks,
-                                             http_request: Request):
+            async def start_async_generation(
+                    request: request_type, background_tasks: BackgroundTasks, response: Response,
+                    http_request: Request) -> AIQAsyncGenerateResponse | AIQAsyncGenerationStatusResponse:
                 """Handle async generation requests."""
 
                 async with session_manager.session(request=http_request):
@@ -556,12 +575,34 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                     job_id = job_store.create_job(job_id=request.job_id, expiry_seconds=request.expiry_seconds)
                     await self.create_cleanup_task(app=app, name="async_generation", job_store=job_store)
-                    background_tasks.add_task(run_generation,
-                                              job_id=job_id,
-                                              payload=request,
-                                              session_manager=session_manager,
-                                              result_type=final_result_type)
 
+                    # The fastapi/starlette background tasks won't begin executing until after the response is sent
+                    # to the client, so we need to wrap the task in a function, alowing us to start the task now,
+                    # and allowing the background task function to await the results.
+                    task = asyncio.create_task(
+                        run_generation(job_id=job_id,
+                                       payload=request,
+                                       session_manager=session_manager,
+                                       result_type=final_result_type))
+
+                    async def wrapped_task(t: asyncio.Task):
+                        return await t
+
+                    background_tasks.add_task(wrapped_task, task)
+
+                    now = time.time()
+                    sync_timeout = now + request.sync_timeout
+                    while time.time() < sync_timeout:
+                        job = job_store.get_job(job_id)
+                        if job is not None and job.status not in job_store.ACTIVE_STATUS:
+                            # If the job is done, return the result
+                            response.status_code = 200
+                            return _job_status_to_response(job)
+
+                        # Sleep for a short time before checking again
+                        await asyncio.sleep(0.1)
+
+                    response.status_code = 202
                     return AIQAsyncGenerateResponse(job_id=job_id, status="submitted")
 
             return start_async_generation
@@ -578,16 +619,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
                 logger.info("Found job %s with status %s", job_id, job.status)
-                job_output = job.output
-                if job_output is not None:
-                    job_output = job_output.model_dump()
-                return AIQAsyncGenerationStatusResponse(job_id=job.job_id,
-                                                        status=job.status,
-                                                        error=job.error,
-                                                        output=job_output,
-                                                        created_at=job.created_at,
-                                                        updated_at=job.updated_at,
-                                                        expires_at=job_store.get_expires_at(job))
+                return _job_status_to_response(job)
 
         if (endpoint.path):
             if (endpoint.method == "GET"):
@@ -666,7 +698,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     endpoint=post_async_generation(request_type=AIQAsyncGenerateRequest,
                                                    final_result_type=GenerateSingleResponseType),
                     methods=[endpoint.method],
-                    response_model=AIQAsyncGenerateResponse,
+                    response_model=AIQAsyncGenerateResponse | AIQAsyncGenerationStatusResponse,
                     description="Start an async generate job",
                     responses={500: response_500},
                 )
