@@ -74,7 +74,8 @@ def test_eval_input_to_ragas(rag_evaluator, rag_eval_input, intermediate_step_ad
         assert sample.user_input == item.input_obj
         assert sample.reference == item.expected_output_obj
         assert sample.response == item.output_obj
-        assert sample.retrieved_contexts == intermediate_step_adapter.get_context(item.trajectory)
+        assert sample.retrieved_contexts == intermediate_step_adapter.get_context(
+            item.trajectory, intermediate_step_adapter.DEFAULT_EVENT_FILTER)
 
 
 def test_ragas_to_eval_output(rag_evaluator, rag_eval_input, rag_user_inputs, metric_name):
