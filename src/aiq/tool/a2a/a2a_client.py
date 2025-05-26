@@ -14,37 +14,29 @@
 # limitations under the License.
 
 import asyncio
-import json
 import logging
 from collections.abc import AsyncIterable
 from typing import Any
 from uuid import uuid4
 
 import httpx
-from httpx_sse import connect_sse
+from a2a.card import A2ACardResolver
+from a2a.client import A2AClient
+from a2a.types import AgentCard
+from a2a.types import Artifact
+from a2a.types import CancelTaskRequest
+from a2a.types import CancelTaskResponse
+from a2a.types import GetTaskRequest
+from a2a.types import GetTaskResponse
+from a2a.types import MessageSendParams
+from a2a.types import SendMessageRequest
+from a2a.types import SendMessageResponse
+from a2a.types import SendStreamingMessageRequest
+from a2a.types import SendStreamingMessageResponse
+from a2a.types import TaskArtifactUpdateEvent
+from a2a.types import TaskState
+from a2a.types import TaskStatusUpdateEvent
 from pydantic import BaseModel
-
-from .types import A2AClientHTTPError
-from .types import A2AClientJSONError
-from .types import AgentCard
-from .types import Artifact
-from .types import CancelTaskRequest
-from .types import CancelTaskResponse
-from .types import GetTaskPushNotificationRequest
-from .types import GetTaskPushNotificationResponse
-from .types import GetTaskRequest
-from .types import GetTaskResponse
-from .types import JSONRPCRequest
-from .types import JSONRPCResponse
-from .types import SendTaskRequest
-from .types import SendTaskResponse
-from .types import SendTaskStreamingRequest
-from .types import SendTaskStreamingResponse
-from .types import SetTaskPushNotificationRequest
-from .types import SetTaskPushNotificationResponse
-from .types import TaskArtifactUpdateEvent
-from .types import TaskState
-from .types import TaskStatusUpdateEvent
 
 logger = logging.getLogger(__name__)
 
@@ -52,19 +44,14 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class A2AClient:
+class A2AClientHelper:
     """
-    A client for the A2A API. Uses A2A.samples.python.common.client.client.A2AClient as a reference.
-
-    TODO:
-    - Support for push notifications yet to be implemented
-    - Support for user authentication yet to be implemented
-    - Support for data parts other than text yet to be implemented
+    A helper class for the A2A API that wraps the external a2a-sdk client.
     """
 
     def __init__(self, url: str):
         """
-        Initialize the A2AClient
+        Initialize the A2AClientHelper
         """
         self.url = url.rstrip("/")
         self.agent_card = None
@@ -82,6 +69,9 @@ class A2AClient:
         self._wait_time: int = 60
         self._retry_frequency: int = 1
 
+        # Initialize the external client
+        self._a2a_client = A2AClient(httpx_client=self._client, url=self.url)
+
     async def __aenter__(self):
         return self
 
@@ -91,88 +81,71 @@ class A2AClient:
         """
         await self._client.aclose()
 
-    async def _send_request(self, request: JSONRPCRequest) -> dict[str, Any]:
-        """
-        Send a JSONRPC request and return the response
-        """
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug("Request payload: %s", request.model_dump_json(indent=2))
-
-        try:
-            response = await self._client.post(self.url, json=request.model_dump(), timeout=self._post_timeout)
-            response.raise_for_status()
-            data = response.json()
-            rpc_response = JSONRPCResponse(**data)
-            if rpc_response.error:
-                raise A2AClientHTTPError(rpc_response.error.get("code", 400),
-                                         rpc_response.error.get("message", "Unknown error"))
-            return data
-        except httpx.HTTPStatusError as e:
-            # log and raise
-            logger.error("HTTP Error: %s", e, exc_info=True)
-            raise A2AClientHTTPError(e.response.status_code, str(e)) from e
-        except json.JSONDecodeError as e:
-            # log and raise
-            logger.error("Error parsing JSON: %s", e, exc_info=True)
-            raise A2AClientJSONError(str(e)) from e
-
-    async def send_task(self, payload: dict[str, Any]) -> SendTaskResponse:
+    async def send_task(self, payload: dict[str, Any]) -> SendMessageResponse:
         """
         Send a single (non-streaming) task request and return the response
         """
-        request = SendTaskRequest(params=payload, sessionId=self._session_id)
-        return SendTaskResponse(**await self._send_request(request))
+        send_message_payload = {
+            'message': {
+                'role': 'user',
+                'parts': [{
+                    'kind': 'text', 'text': payload.get('message', '')
+                }],
+                'messageId': uuid4().hex,
+            },
+            'sessionId': self._session_id,
+            'acceptedOutputModes': ['text'],
+            'metadata': payload.get('metadata')
+        }
+        request = SendMessageRequest(params=MessageSendParams(**send_message_payload))
+        return await self._a2a_client.send_message(request)
 
-    async def send_task_streaming_async(self, payload: dict[str, Any]) -> AsyncIterable[SendTaskStreamingResponse]:
+    async def send_task_streaming_async(self, payload: dict[str, Any]) -> AsyncIterable[SendStreamingMessageResponse]:
         """
         Send a task streaming request asynchronously.
         """
-        request = SendTaskStreamingRequest(params=payload, sessionId=self._session_id)
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug("Request payload (post_sync=False): %s", request.model_dump_json(indent=2))
+        send_message_payload = {
+            'message': {
+                'role': 'user',
+                'parts': [{
+                    'kind': 'text', 'text': payload.get('message', '')
+                }],
+                'messageId': uuid4().hex,
+            },
+            'sessionId': self._session_id,
+            'acceptedOutputModes': ['text'],
+            'metadata': payload.get('metadata')
+        }
+        request = SendStreamingMessageRequest(params=MessageSendParams(**send_message_payload))
+        async for response in self._a2a_client.send_message_streaming(request):
+            yield response
 
-        async with self._client.stream("POST", self.url, json=request.model_dump(),
-                                       timeout=self._post_timeout) as response:
-            async for line in response.aiter_lines():
-                if line.startswith("data:"):
-                    try:
-                        event_data = line[len("data:"):].strip()
-                        response_obj = SendTaskStreamingResponse(**json.loads(event_data))
-                        if response_obj.error:
-                            logger.error("Error in streaming response: %s", response_obj.error, exc_info=True)
-                            raise A2AClientHTTPError(response_obj.error.get("code", 400),
-                                                     response_obj.error.get("message", "Unknown error"))
-                        yield response_obj
-                    except json.JSONDecodeError as e:
-                        logger.error("Error parsing JSON: %s", e, exc_info=True)
-                        raise A2AClientJSONError(str(e)) from e
-
-    async def send_task_streaming_sync(self, payload: dict[str, Any]) -> AsyncIterable[SendTaskStreamingResponse]:
+    async def send_task_streaming_sync(self, payload: dict[str, Any]) -> AsyncIterable[SendStreamingMessageResponse]:
         """
         Send a task streaming request synchronously. Not used by default.
-        This approach is from A2A.samples.python.common.client.client.A2AClient.send_task_streaming().
         """
-        request = SendTaskStreamingRequest(params=payload, sessionId=self._session_id)
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug("Request payload (post_sync=True): %s", request.model_dump_json(indent=2))
-
-        # Use a separate httpx client to avoid timeout issues.
-        with httpx.Client(timeout=None) as client:
-            with connect_sse(client, "POST", self.url, json=request.model_dump()) as event_source:
-                try:
-                    for sse in event_source.iter_sse():
-                        yield SendTaskStreamingResponse(**json.loads(sse.data))
-                except json.JSONDecodeError as e:
-                    raise A2AClientJSONError(str(e)) from e
-                except httpx.RequestError as e:
-                    raise A2AClientHTTPError(400, str(e)) from e
+        send_message_payload = {
+            'message': {
+                'role': 'user',
+                'parts': [{
+                    'kind': 'text', 'text': payload.get('message', '')
+                }],
+                'messageId': uuid4().hex,
+            },
+            'sessionId': self._session_id,
+            'acceptedOutputModes': ['text'],
+            'metadata': payload.get('metadata')
+        }
+        request = SendStreamingMessageRequest(params=MessageSendParams(**send_message_payload))
+        async for response in self._a2a_client.send_message_streaming(request):
+            yield response
 
     async def get_task(self, payload: dict[str, Any]) -> GetTaskResponse:
         """
         Get the task status and artifact by id
         """
-        request = GetTaskRequest(params=payload)
-        return GetTaskResponse(**await self._send_request(request))
+        request = GetTaskRequest(params={"id": payload["id"]})
+        return await self._a2a_client.get_task(request)
 
     async def get_task_with_retry(self, payload: dict[str, Any]) -> GetTaskResponse:
         """
@@ -195,23 +168,25 @@ class A2AClient:
         """
         Cancel a task by id
         """
-        request = CancelTaskRequest(params=payload)
-        return CancelTaskResponse(**await self._send_request(request))
+        request = CancelTaskRequest(params={"id": payload["id"]})
+        return await self._a2a_client.cancel_task(request)
 
-    async def set_task_callback(self, payload: dict[str, Any]) -> SetTaskPushNotificationResponse:
+    async def get_card(self) -> AgentCard:
         """
-        Set a task callback. This is only used if the client needs to be
-        notified when a task is completed.
+        Get the AgentCard from the server using a well-known path
+        The agent card provides:
+        1. Function description
+        2. Input schema
+        3. Output schema
+        4. Capabilities (streaming, push notifications etc.)
+        5. Authentication
         """
-        request = SetTaskPushNotificationRequest(params=payload)
-        return SetTaskPushNotificationResponse(**await self._send_request(request))
-
-    async def get_task_callback(self, payload: dict[str, Any]) -> GetTaskPushNotificationResponse:
-        """
-        Get the task callback configuration.
-        """
-        request = GetTaskPushNotificationRequest(params=payload)
-        return GetTaskPushNotificationResponse(**await self._send_request(request))
+        resolver = A2ACardResolver(
+            httpx_client=self._client,
+            base_url=self.url,
+        )
+        self.agent_card = await resolver.get_agent_card()
+        return self.agent_card
 
     def artifact_to_output_string(self, artifact: Artifact) -> str:
         """
@@ -314,38 +289,17 @@ class A2AClient:
             else:
                 return self.artifact_to_output_string(taskResult.result.artifacts[0])
 
-    async def get_card(self) -> AgentCard:
-        """
-        Get the AgentCard from the server using a well-known path
-        The agent card provides:
-        1. Function description
-        2. Input schema
-        3. Output schema
-        4. Capabilities (streaming, push notifications etc.)
-        5. Authentication
 
-        TODO: More work is needed to use the info in the agent card better.
-        """
-        base_url = self.url.rstrip("/")
-        agent_card_path = "/.well-known/agent.json".lstrip("/")
-        response = await self._client.get(f"{base_url}/{agent_card_path}")
-        response.raise_for_status()
-        try:
-            logger.info("AgentCard: %s", response.json())
-            self.agent_card = AgentCard(**response.json())
-        except json.JSONDecodeError as e:
-            # log and raise
-            logger.error("Error parsing AgentCard: %s", e, exc_info=True)
-            raise A2AClientJSONError(str(e)) from e
-
-
-class A2AToolClient(A2AClient):
+class A2AToolClient(A2AClientHelper):
+    """
+    A client for the A2A API that includes tool schema information.
+    """
 
     def __init__(self, url: str | None = None, tool_name: str | None = None, tool_input_schema: dict | None = None):
         """
         Initialize the A2AToolClient
         """
-        # Setup the A2AClient using the provided URL
+        # Setup the A2AClientHelper using the provided URL
         super().__init__(url)
 
         # Setup tool attributes
