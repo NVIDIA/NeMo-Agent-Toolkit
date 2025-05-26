@@ -20,7 +20,7 @@ from typing import Any
 from uuid import uuid4
 
 import httpx
-from a2a.card import A2ACardResolver
+from a2a.client import A2ACardResolver
 from a2a.client import A2AClient
 from a2a.types import AgentCard
 from a2a.types import Artifact
@@ -49,9 +49,20 @@ class A2AClientHelper:
     A helper class for the A2A API that wraps the external a2a-sdk client.
     """
 
-    def __init__(self, url: str):
+    def __init__(
+        self,
+        url: str,
+        *,
+        wait_timeout: int = 60,
+        retry_frequency: int = 1,
+    ):
         """
         Initialize the A2AClientHelper
+
+        Args:
+            url: The URL of the A2A server. Required.
+            wait_timeout: Maximum time in seconds to wait for task completion. Defaults to 60.
+            retry_frequency: Time in seconds between retries when polling. Defaults to 1.
         """
         self.url = url.rstrip("/")
         self.agent_card = None
@@ -61,13 +72,9 @@ class A2AClientHelper:
         self._session_id: str = uuid4().hex
         logger.debug("Create A2A Client with Session ID: %s", self._session_id)
 
-        # Post configuration
-        self._post_sync = False
-        self._post_timeout = 30
-
         # Wait time and retry frequency if polling for the task to complete
-        self._wait_time: int = 60
-        self._retry_frequency: int = 1
+        self._wait_time = wait_timeout
+        self._retry_frequency = retry_frequency
 
         # Initialize the external client
         self._a2a_client = A2AClient(httpx_client=self._client, url=self.url)
@@ -81,62 +88,32 @@ class A2AClientHelper:
         """
         await self._client.aclose()
 
+    def _build_message_payload(self, message: str, metadata: dict | None = None) -> MessageSendParams:
+        return MessageSendParams(message={
+            'role': 'user',
+            'parts': [{
+                'kind': 'text', 'text': message
+            }],
+            'messageId': uuid4().hex,
+        },
+                                 sessionId=self._session_id,
+                                 acceptedOutputModes=['text'],
+                                 metadata=metadata)
+
     async def send_task(self, payload: dict[str, Any]) -> SendMessageResponse:
         """
         Send a single (non-streaming) task request and return the response
         """
-        send_message_payload = {
-            'message': {
-                'role': 'user',
-                'parts': [{
-                    'kind': 'text', 'text': payload.get('message', '')
-                }],
-                'messageId': uuid4().hex,
-            },
-            'sessionId': self._session_id,
-            'acceptedOutputModes': ['text'],
-            'metadata': payload.get('metadata')
-        }
-        request = SendMessageRequest(params=MessageSendParams(**send_message_payload))
+        request = SendMessageRequest(
+            params=self._build_message_payload(payload.get('message', ''), payload.get('metadata')))
         return await self._a2a_client.send_message(request)
 
-    async def send_task_streaming_async(self, payload: dict[str, Any]) -> AsyncIterable[SendStreamingMessageResponse]:
+    async def send_task_streaming(self, payload: dict[str, Any]) -> AsyncIterable[SendStreamingMessageResponse]:
         """
-        Send a task streaming request asynchronously.
+        Send a task streaming request.
         """
-        send_message_payload = {
-            'message': {
-                'role': 'user',
-                'parts': [{
-                    'kind': 'text', 'text': payload.get('message', '')
-                }],
-                'messageId': uuid4().hex,
-            },
-            'sessionId': self._session_id,
-            'acceptedOutputModes': ['text'],
-            'metadata': payload.get('metadata')
-        }
-        request = SendStreamingMessageRequest(params=MessageSendParams(**send_message_payload))
-        async for response in self._a2a_client.send_message_streaming(request):
-            yield response
-
-    async def send_task_streaming_sync(self, payload: dict[str, Any]) -> AsyncIterable[SendStreamingMessageResponse]:
-        """
-        Send a task streaming request synchronously. Not used by default.
-        """
-        send_message_payload = {
-            'message': {
-                'role': 'user',
-                'parts': [{
-                    'kind': 'text', 'text': payload.get('message', '')
-                }],
-                'messageId': uuid4().hex,
-            },
-            'sessionId': self._session_id,
-            'acceptedOutputModes': ['text'],
-            'metadata': payload.get('metadata')
-        }
-        request = SendStreamingMessageRequest(params=MessageSendParams(**send_message_payload))
+        request = SendStreamingMessageRequest(
+            params=self._build_message_payload(payload.get('message', ''), payload.get('metadata')))
         async for response in self._a2a_client.send_message_streaming(request):
             yield response
 
@@ -207,36 +184,15 @@ class A2AClientHelper:
         else:
             return "Unknown artifact type"
 
-    def set_post_config(self, post_timeout: int, post_sync: bool):
-        """
-        Set the post configuration.
-        """
-        self._post_timeout = post_timeout
-        self._post_sync = post_sync
-
-    def set_wait_time(self, wait_timeout: int, retry_frequency: int):
-        """
-        Set the wait time and retry frequency. These are used by the complete_task() method
-        to wait for the task to complete.
-        """
-        self._wait_time = wait_timeout
-        self._retry_frequency = retry_frequency
-
     async def complete_task(self, taskId: str, prompt: str) -> dict[str, Any]:
         """
         Create a new task, wait for it to complete, and return the parsed result from the artifact
         """
-        message = {
-            "role": "user", "parts": [{
-                "type": "text",
-                "text": prompt,
-            }]
-        }
         payload = {
             "id": taskId,
             "sessionId": self._session_id,
             "acceptedOutputModes": ["text"],
-            "message": message,
+            "message": prompt,
         }
 
         streaming = self.agent_card.capabilities.streaming
@@ -244,11 +200,7 @@ class A2AClientHelper:
         final_state = None
 
         if streaming:
-            # set async generator based on post_sync configuration
-            if self._post_sync:
-                response_stream = self.send_task_streaming_sync(payload)
-            else:
-                response_stream = self.send_task_streaming_async(payload)
+            response_stream = self.send_task_streaming(payload)
 
             async for result in response_stream:
                 if logger.isEnabledFor(logging.DEBUG):
@@ -290,45 +242,78 @@ class A2AClientHelper:
                 return self.artifact_to_output_string(taskResult.result.artifacts[0])
 
 
-class A2AToolClient(A2AClientHelper):
+class A2AToolClient:
     """
     A client for the A2A API that includes tool schema information.
     """
 
-    def __init__(self, url: str | None = None, tool_name: str | None = None, tool_input_schema: dict | None = None):
+    def __init__(
+        self,
+        url: str,
+        tool_name: str,
+        tool_input_schema: dict | None = None,
+        *,
+        wait_timeout: int = 60,
+        retry_frequency: int = 1,
+        description: str | None = None,
+    ):
         """
         Initialize the A2AToolClient
+
+        Args:
+            url: The URL of the A2A server. Required.
+            tool_name: Name of the tool to use. Required.
+            tool_input_schema: Optional input schema for the tool.
+            wait_timeout: Maximum time in seconds to wait for task completion. Defaults to 60.
+            retry_frequency: Time in seconds between retries when polling. Defaults to 1.
+            description: Optional description for the tool.
         """
-        # Setup the A2AClientHelper using the provided URL
-        super().__init__(url)
+        # Setup the A2A client helper
+        self._client = A2AClientHelper(
+            url,
+            wait_timeout=wait_timeout,
+            retry_frequency=retry_frequency,
+        )
 
         # Setup tool attributes
-        self._tool_name: str | None = tool_name
+        self._tool_name: str = tool_name
         self._tool_description: str | None = None
         # TODO: Create the input schema from the info in the AgentCard
         self._input_schema: type[BaseModel] | None = None
+        self._description = description
+        self._initialized = False
+
+    async def ainitialize(self) -> None:
+        """
+        Initialize the client by fetching the card and setting the description.
+        This must be called before using the client.
+        """
+        if not self._initialized:
+            await self.get_card()
+            # Set the description if provided, otherwise use the AgentCard description
+            if self._description:
+                self._tool_description = self._description
+            elif self._client.agent_card:
+                self._tool_description = self._client.agent_card.description
+            self._initialized = True
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._tool_name
 
     @property
-    def description(self):
+    def description(self) -> str | None:
         return self._tool_description
 
     @property
-    def input_schema(self):
+    def input_schema(self) -> type[BaseModel] | None:
         return self._input_schema
 
-    def set_description(self, description: str):
+    async def get_card(self) -> AgentCard:
         """
-        Set the description for the tool. If a description is provided, it will be used. Otherwise,
-        the description from the AgentCard will be used.
+        Get the AgentCard from the server.
         """
-        if description:
-            self._tool_description = description
-        elif self.agent_card:
-            self._tool_description = self.agent_card.description
+        return await self._client.get_card()
 
     async def acall(self, tool_input: str) -> str:
         """
@@ -337,6 +322,6 @@ class A2AToolClient(A2AClientHelper):
         taskId = uuid4().hex
         logger.debug("Start new Task ID: %s", taskId)
 
-        output = await self.complete_task(taskId=taskId, prompt=tool_input)
+        output = await self._client.complete_task(taskId=taskId, prompt=tool_input)
         logger.debug("Task result: %s", output)
         return output
