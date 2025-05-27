@@ -176,6 +176,24 @@
             "  - Confirm workflow appears in installed components"
           ]
         },
+        "workflowRun": {
+          "description": "Execute workflow run command with optional overrides",
+          "rules": [
+            "When user requests to run a workflow:",
+            "  - Extract workflow config file path and input from request",
+            "  - Execute: aiq run --config_file <config_path> --input '<input>'",
+            "  - If override arguments specified:",
+            "    - Add --override flag for each parameter:",
+            "      - Format: --override <section>.<component>.<parameter> <value>",
+            "      - Example: --override llms.nim_llm.temperature 0.7",
+            "    - Support multiple overrides in single command",
+            "  - Handle command output:",
+            "    - If run successful:",
+            "      - Display workflow result",
+            "      - Confirm all overrides were applied",
+            "  - Handle any other errors appropriately"
+          ]
+        },
         "commandPatterns": {
           "description": "Recognize workflow creation and deletion requests",
           "rules": [
@@ -191,11 +209,18 @@
             "  - 'uninstall workflow <name>'",
             "  - 'reinstall workflow <name>'",
             "  - 'reinstall <name>'",
+            "  - 'run workflow <name> with input <input>'",
+            "  - 'run workflow <name> with input <input> and override <param> to <value>'",
+            "  - 'run workflow <config> with input <input>'",
+            "  - 'run workflow <config> with input <input> and override <param> to <value>'",
             "Extract parameters:",
             "  - workflow_name: Required, must be valid Python package name",
             "  - workflow_dir: Optional, defaults to current directory",
             "  - install: Optional, defaults to true",
-            "  - description: Optional, defaults to template description"
+            "  - description: Optional, defaults to template description",
+            "  - config_file: Required for run command, path to workflow config",
+            "  - input: Required for run command, input text for workflow",
+            "  - overrides: Optional for run command, list of parameter overrides"
           ]
         },
         "parameterValidation": {
@@ -211,7 +236,15 @@
             "  - Convert to absolute path if relative",
             "Validate description:",
             "  - Must be string",
-            "  - Properly escape special characters"
+            "  - Properly escape special characters",
+            "Validate config file:",
+            "  - Must exist",
+            "  - Must be valid YAML",
+            "  - Must contain required sections",
+            "Validate override parameters:",
+            "  - Must follow section.component.parameter format",
+            "  - Values must match expected types",
+            "  - Must reference existing components"
           ]
         },
         "errorHandling": {
@@ -222,6 +255,9 @@
             "  - Directory does not exist",
             "  - Permission denied",
             "  - Package already exists",
+            "  - Invalid config file",
+            "  - Invalid override parameters",
+            "  - Component not found",
             "Provide clear error messages",
             "Suggest corrections when possible"
           ]
