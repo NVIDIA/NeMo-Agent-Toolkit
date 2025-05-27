@@ -194,6 +194,48 @@
             "  - Handle any other errors appropriately"
           ]
         },
+        "workflowAddTool": {
+          "description": "Add new tools to workflow configuration",
+          "rules": [
+            "When user requests to add a tool to workflow:",
+            "  - Extract workflow config file path and tool details",
+            "  - Verify tool type exists in available components:",
+            "    - Execute: aiq info components -t function",
+            "    - Check if requested tool type is available",
+            "  - Add new tool to functions section. If functions section does not exist, create it.",
+            "    - Format:",
+            "      ```yaml",
+            "      functions:",
+            "        <tool_name>:",
+            "          _type: <tool_type>",
+            "          <required_params>: <values>",
+            "          <optional_params>: <values>",
+            "      ```",
+            "    - Example for webpage_query:",
+            "      ```yaml",
+            "      functions:",
+            "        webpage_query:",
+            "          _type: webpage_query",
+            "          webpage_url: <url>",
+            "          description: <desc>",
+            "          embedder_name: nv-embedqa-e5-v5",
+            "          chunk_size: 512",
+            "      ```",
+            "  - Update workflow.tool_names section:",
+            "    - Add new tool name to the list",
+            "    - Example:",
+            "      ```yaml",
+            "      workflow:",
+            "        _type: react_agent",
+            "        tool_names: [tool1, tool2, new_tool]",
+            "      ```",
+            "  - Verify config file is valid YAML",
+            "  - If tool requires additional dependencies:",
+            "    - Update pyproject.toml with required dependencies",
+            "    - Reinstall workflow package",
+            "  - Handle any errors appropriately"
+          ]
+        },
         "commandPatterns": {
           "description": "Recognize workflow creation and deletion requests",
           "rules": [
@@ -209,10 +251,11 @@
             "  - 'uninstall workflow <name>'",
             "  - 'reinstall workflow <name>'",
             "  - 'reinstall <name>'",
-            "  - 'run workflow <name> with input <input>'",
-            "  - 'run workflow <name> with input <input> and override <param> to <value>'",
             "  - 'run workflow <config> with input <input>'",
             "  - 'run workflow <config> with input <input> and override <param> to <value>'",
+            "  - 'add tool <tool_type> to workflow <config>'",
+            "  - 'add <tool_type> tool to workflow <config>'",
+            "  - 'add new tool <tool_type> to workflow <config>'",
             "Extract parameters:",
             "  - workflow_name: Required, must be valid Python package name",
             "  - workflow_dir: Optional, defaults to current directory",
@@ -220,7 +263,10 @@
             "  - description: Optional, defaults to template description",
             "  - config_file: Required for run command, path to workflow config",
             "  - input: Required for run command, input text for workflow",
-            "  - overrides: Optional for run command, list of parameter overrides"
+            "  - overrides: Optional for run command, list of parameter overrides",
+            "  - tool_type: Required for add tool command, type of tool to add",
+            "  - tool_name: Optional for add tool command, name for the new tool",
+            "  - tool_params: Optional for add tool command, parameters for the tool"
           ]
         },
         "parameterValidation": {
@@ -244,7 +290,13 @@
             "Validate override parameters:",
             "  - Must follow section.component.parameter format",
             "  - Values must match expected types",
-            "  - Must reference existing components"
+            "  - Must reference existing components",
+            "Validate tool parameters:",
+            "  - Tool type must exist in available components",
+            "  - Required parameters must be provided",
+            "  - Optional parameters must have valid values",
+            "  - Tool name must be unique in config",
+            "  - Tool name must be valid Python identifier"
           ]
         },
         "errorHandling": {
@@ -258,6 +310,11 @@
             "  - Invalid config file",
             "  - Invalid override parameters",
             "  - Component not found",
+            "  - Tool type not found",
+            "  - Missing required tool parameters",
+            "  - Invalid tool parameters",
+            "  - Duplicate tool name",
+            "  - Missing dependencies",
             "Provide clear error messages",
             "Suggest corrections when possible"
           ]
