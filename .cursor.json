@@ -1,0 +1,210 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "name": "AIQToolkit Project Guidelines",
+      "description": "Best practices for example creation",
+      "type": "Always",
+      "patterns": [
+        "examples/**/*",
+        "src/**/*",
+        "configs/**/*",
+        "data/**/*"
+      ],
+      "settings": {
+        "formatOnSave": true,
+        "lintOnSave": true,
+        "tabSize": 2,
+        "insertSpaces": true
+      },
+      "guidelines": {
+        "projectStructure": {
+          "description": "Project structure guidelines",
+          "rules": [
+            "Follow structure and conventions from examples/simple",
+            "Configuration files must be stored under src/aiq_example_name/configs/",
+            "Data files must be stored under src/aiq_example_name/data/",
+            "Use symbolic links from root configs/ and data/ directories",
+            "Track all data files under src/aiq_example_name/data/** with Git LFS"
+          ]
+        },
+        "codeStandards": {
+          "description": "Code standards and best practices",
+          "rules": [
+            "Use type hints for all function parameters and returns",
+            "Use pytest for testing",
+            "Provide unit and end-to-end tests",
+            "Use asyncio for IO bound APIs",
+            "Follow PEP 8 style guide for Python code",
+            "Use black for code formatting",
+            "Use isort for import sorting",
+            "Use mypy for static type checking",
+            "Maximum line length should be 88 characters (black default)",
+            "Use f-strings for string formatting",
+            "Use dataclasses for data structures",
+            "Implement proper error handling with custom exceptions"
+          ]
+        },
+        "documentation": {
+          "description": "Documentation references and guidelines",
+          "rules": [
+            "Reference NVIDIA AIQ documentation at https://developer.nvidia.com/agent-intelligence-toolkit",
+            "Follow project guidelines from https://github.com/NVIDIA/AIQToolkit",
+            "Keep documentation up to date with code changes",
+            "Include docstrings for all public APIs and classes",
+            "Use Google style docstrings",
+            "Include usage examples in docstrings",
+            "Document all configuration parameters",
+            "Maintain README.md with setup and usage instructions"
+          ]
+        },
+        "testing": {
+          "description": "Testing standards and requirements",
+          "rules": [
+            "Maintain minimum 80% code coverage",
+            "Write tests before implementing features (TDD)",
+            "Include integration tests for API endpoints",
+            "Mock external dependencies in unit tests",
+            "Use pytest fixtures for test setup",
+            "Include performance benchmarks",
+            "Test error handling and edge cases",
+            "Use pytest-asyncio for async tests"
+          ]
+        },
+        "security": {
+          "description": "Security best practices",
+          "rules": [
+            "Never commit sensitive data or credentials",
+            "Use environment variables for configuration",
+            "Implement proper input validation",
+            "Follow OWASP security guidelines",
+            "Use secure defaults for all configurations",
+            "Implement rate limiting for APIs",
+            "Use proper authentication and authorization"
+          ]
+        },
+        "performance": {
+          "description": "Performance optimization guidelines",
+          "rules": [
+            "Profile code for performance bottlenecks",
+            "Use async/await for I/O operations",
+            "Implement proper caching strategies",
+            "Optimize database queries",
+            "Use connection pooling",
+            "Implement proper logging levels",
+            "Monitor memory usage",
+            "Use appropriate data structures"
+          ]
+        },
+        "deployment": {
+          "description": "Deployment and CI/CD guidelines",
+          "rules": [
+            "Use Docker for containerization",
+            "Implement proper health checks",
+            "Use semantic versioning",
+            "Maintain changelog",
+            "Implement proper logging",
+            "Use environment-specific configurations",
+            "Follow 12-factor app principles"
+          ]
+        }
+      }
+    },
+    {
+      "name": "AIQ Workflow Command Execution",
+      "description": "Execute AIQ workflow commands through Cursor",
+      "type": "Always",
+      "patterns": [
+        "examples/**/*",
+        "src/**/*"
+      ],
+      "settings": {
+        "formatOnSave": true,
+        "lintOnSave": true
+      },
+      "guidelines": {
+        "workflowCommands": {
+          "description": "Execute AIQ workflow commands",
+          "rules": [
+            "When user requests to create a workflow:",
+            "  - Extract workflow name from request",
+            "  - Execute: aiq workflow create <workflow_name>",
+            "  - If workflow directory specified:",
+            "    - Execute: aiq workflow create --workflow-dir <dir> <workflow_name>",
+            "  - If no-install flag specified:",
+            "    - Execute: aiq workflow create --no-install <workflow_name>",
+            "  - If description specified:",
+            "    - Execute: aiq workflow create --description '<desc>' <workflow_name>",
+            "  - Handle multiple flags:",
+            "    - Combine all specified flags in command",
+            "  - Verify command execution success",
+            "  - Verify workflow structure:",
+            "    - Check against AIQToolkit Project Guidelines for:",
+            "      - Project structure requirements",
+            "      - Code standards and best practices",
+            "      - Documentation requirements",
+            "      - Testing standards",
+            "      - Security best practices",
+            "      - Performance guidelines",
+            "      - Deployment requirements",
+            "    - If any verification fails:",
+            "      - Report specific missing or incorrect elements",
+            "      - Suggest manual fixes if needed",
+            "  - If installation was not skipped:",
+            "    - Execute: aiq info components -t package",
+            "    - Verify workflow name appears in installed components",
+            "    - If workflow not found in components:",
+            "      - Report installation verification failure",
+            "      - Suggest manual installation if needed",
+            "  - Handle any errors appropriately"
+          ]
+        },
+        "commandPatterns": {
+          "description": "Recognize workflow creation requests",
+          "rules": [
+            "Match patterns like:",
+            "  - 'create workflow <name>'",
+            "  - 'create new workflow <name>'",
+            "  - 'create aiq workflow <name>'",
+            "  - 'create workflow <name> in <dir>'",
+            "  - 'create workflow <name> without installing'",
+            "  - 'create workflow <name> with description <desc>'",
+            "Extract parameters:",
+            "  - workflow_name: Required, must be valid Python package name",
+            "  - workflow_dir: Optional, defaults to current directory",
+            "  - install: Optional, defaults to true",
+            "  - description: Optional, defaults to template description"
+          ]
+        },
+        "parameterValidation": {
+          "description": "Validate workflow creation parameters",
+          "rules": [
+            "Validate workflow name:",
+            "  - Must be valid Python package name",
+            "  - No spaces or special characters",
+            "  - Convert to snake_case if needed",
+            "Validate workflow directory:",
+            "  - Must exist",
+            "  - Must be writable",
+            "  - Convert to absolute path if relative",
+            "Validate description:",
+            "  - Must be string",
+            "  - Properly escape special characters"
+          ]
+        },
+        "errorHandling": {
+          "description": "Handle workflow creation errors",
+          "rules": [
+            "Handle common errors:",
+            "  - Invalid workflow name",
+            "  - Directory does not exist",
+            "  - Permission denied",
+            "  - Package already exists",
+            "Provide clear error messages",
+            "Suggest corrections when possible"
+          ]
+        }
+      }
+    }
+  ]
+}
