@@ -200,11 +200,17 @@ markers = [
   "slow: Slow tests",
 ]
 filterwarnings = [
-  # Add warnings to ignore as a part of pytest here
+  # Ignore warnings from qdrant-client (used by mem0) with Python 3.12+ of note is that this only happens the first
+  # time the module is imported and parsed, after that the pyc files in the __pycache__ directory are used which don't
+  # trigger the warnings. In Python 3.12 this triggers a SyntaxWarning, in Python 3.11 it triggers a DeprecationWarning
+  # which unfortunately pytest is unable to filter.
+  # Remove once https://github.com/qdrant/qdrant-client/issues/983 is resolved.
+  "ignore:^invalid escape sequence:SyntaxWarning"
 ]
 testpaths = ["tests", "examples/*/tests", "packages/*/tests"]
 asyncio_mode = "auto"
-pytest_plugins = ["aiqtoolkit-test"]
+asyncio_default_fixture_loop_scope = "session"
+
 
 ## Pylint configuration begins here
 
