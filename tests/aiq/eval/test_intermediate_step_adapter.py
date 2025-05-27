@@ -99,7 +99,15 @@ def test_get_agent_actions(intermediate_step_adapter, mock_intermediate_steps, f
                                                                 intermediate_step_adapter.DEFAULT_EVENT_FILTER)
 
     assert adapted_steps, "Adapted steps are empty"
-    # Validate TOOL_END Action
-    tool_action, tool_output = adapted_steps[0]
-    assert tool_action.tool == tool_name, "Tool action name mismatch"
+    # Find tool and LLM steps by their names
+    tool_step = next((step for step in adapted_steps if step[0].tool == tool_name), None)
+    llm_step = next((step for step in adapted_steps if step[0].tool == llm_name), None)
+
+    assert tool_step is not None, "Tool step not found"
+    assert llm_step is not None, "LLM step not found"
+
+    tool_action, tool_output = tool_step
+    llm_action, llm_output = llm_step
+
     assert tool_output == "Tool output response", "Tool output mismatch"
+    assert llm_output == "Final AI-generated response", "LLM output mismatch"
