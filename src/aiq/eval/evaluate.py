@@ -88,14 +88,15 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                     # raise an error if the workflow has multiple outputs
                     raise NotImplementedError("Multiple outputs are not supported")
 
-                base_output = None
+                runner_result = None
                 intermediate_future = None
 
                 try:
 
                     # Start usage stats and intermediate steps collection in parallel
                     intermediate_future = pull_intermediate()
-                    base_output = await runner.result()
+                    runner_result = runner.result()
+                    base_output = await runner_result
                     intermediate_steps = await intermediate_future
                 except NotImplementedError as e:
                     # raise original error
@@ -107,7 +108,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
                     # Cancel any coroutines that are still running, avoiding a warning about unawaited coroutines
                     # (typically one of these two is what raised the exception and the other is still running)
-                    for coro in (base_output, intermediate_future):
+                    for coro in (runner_result, intermediate_future):
                         if coro is not None:
                             asyncio.ensure_future(coro).cancel()
 
