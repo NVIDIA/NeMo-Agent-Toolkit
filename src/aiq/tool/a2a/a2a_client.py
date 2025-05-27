@@ -52,87 +52,131 @@ class A2AClientHelper:
     def __init__(
         self,
         url: str,
-        *,
-        wait_timeout: int = 60,
-        retry_frequency: int = 1,
+        wait_timeout: int,
+        retry_frequency: int,
     ):
         """
-        Initialize the A2AClientHelper
-
-        Args:
-            url: The URL of the A2A server. Required.
-            wait_timeout: Maximum time in seconds to wait for task completion. Defaults to 60.
-            retry_frequency: Time in seconds between retries when polling. Defaults to 1.
+        Configure the A2AClientHelper
         """
-        self.url = url.rstrip("/")
-        self.agent_card = None
+        self.url: str = url.rstrip("/")
 
-        self._client = httpx.AsyncClient()
-        # Use a single session id for all tasks submitted by this client
+        # Initialize transport
+        self._transport_client = httpx.AsyncClient()
+        # TODO: Use a single session id for all tasks submitted by this client. Looks like this is no longer needed?
         self._session_id: str = uuid4().hex
         logger.debug("Create A2A Client with Session ID: %s", self._session_id)
 
-        # Wait time and retry frequency if polling for the task to complete
+        # Configuration for waiting for the task to complete
         self._wait_time = wait_timeout
         self._retry_frequency = retry_frequency
 
-        # Initialize the external client
-        self._a2a_client = A2AClient(httpx_client=self._client, url=self.url)
+        # Initialize the external client with the card after it is fetched via get_card
+        self._initialized: bool = False
+        self._public_agent_card: AgentCard | None = None
+        self._extended_agent_card: AgentCard | None = None
+        self._a2a_client = None
 
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
         """
-        Context manager exit method
+        Close any transport resources
         """
-        await self._client.aclose()
+        await self._transport_client.aclose()
 
-    def _build_message_payload(self, message: str, metadata: dict | None = None) -> MessageSendParams:
-        return MessageSendParams(message={
-            'role': 'user',
-            'parts': [{
-                'kind': 'text', 'text': message
-            }],
-            'messageId': uuid4().hex,
-        },
-                                 sessionId=self._session_id,
-                                 acceptedOutputModes=['text'],
-                                 metadata=metadata)
+    @property
+    def agent_card(self) -> AgentCard:
+        """
+        If extended card is supported, return the extended card, otherwise return the public card
+        """
+        return self._extended_agent_card if self._extended_agent_card else self._public_agent_card
 
-    async def send_task(self, payload: dict[str, Any]) -> SendMessageResponse:
+    async def get_agent_card(self, agent_card_path: str, extended_agent_card_path: str) -> AgentCard:
+        """
+        Get the AgentCard from the server using a well-known path
+        The agent card provides:
+        1. Function description - used as the description of the tool
+        2. Input schema - TODO: not used yet
+        3. Output schema - TODO: not used yet
+        4. Capabilities (streaming, push notifications etc.) - TODO: partial support
+        5. Authentication - TODO: partial support
+        """
+        if not self._initialized:
+            resolver = A2ACardResolver(httpx_client=self._transport_client,
+                                       base_url=self.url,
+                                       agent_card_path=agent_card_path)
+            logger.info("Attempting to fetch public agent card from %s", self.url + agent_card_path)
+            self._public_agent_card = await resolver.get_agent_card()
+            logger.info("Got the public agent card: %s",
+                        self._public_agent_card.model_dump_json(indent=2, exclude_none=True))
+
+            if not self._public_agent_card:
+                raise RuntimeError("No public agent card found")
+
+            if self._public_agent_card.supportsAuthenticatedExtendedCard:
+                logger.info("Attempting to fetch extended agent card from %s", self.url + extended_agent_card_path)
+                auth_headers_dict = {"Authorization": "Bearer dummy-token-for-extended-card"}
+                self._extended_agent_card = await resolver.get_agent_card(relative_card_path=extended_agent_card_path,
+                                                                          http_kwargs={"headers": auth_headers_dict})
+                logger.info("Got the extended agent card: %s",
+                            self._extended_agent_card.model_dump_json(indent=2, exclude_none=True))
+
+            # Initialize the external client with the card after it is fetched
+            self._a2a_client = A2AClient(httpx_client=self._transport_client, agent_card=self.agent_card)
+            self._initialized = True
+
+        return self.agent_card
+
+    def _build_message_payload(self, task_id: str, message: str) -> MessageSendParams:
+        """
+        Build the message payload for a task request
+        TODO:
+        1. Add support for other output modes
+        2. Add support for other message types (DataPart, FilePart, etc.)
+        """
+        from a2a.types import Message
+        from a2a.types import MessageSendConfiguration
+        from a2a.types import Role
+        from a2a.types import TextPart
+
+        configuration = MessageSendConfiguration(acceptedOutputModes=["text"])
+        message = Message(messageId=uuid4().hex, role=Role.user, parts=[TextPart(text=message)], taskId=task_id)
+
+        return MessageSendParams(configuration=configuration, message=message, metadata=None)
+
+    async def send_task(self, task_id: str, message: str) -> SendMessageResponse:
         """
         Send a single (non-streaming) task request and return the response
         """
-        request = SendMessageRequest(
-            params=self._build_message_payload(payload.get('message', ''), payload.get('metadata')))
+        request = SendMessageRequest(params=self._build_message_payload(task_id=task_id, message=message))
         return await self._a2a_client.send_message(request)
 
-    async def send_task_streaming(self, payload: dict[str, Any]) -> AsyncIterable[SendStreamingMessageResponse]:
+    async def send_task_streaming(self, task_id: str, message: str) -> AsyncIterable[SendStreamingMessageResponse]:
         """
         Send a task streaming request.
         """
-        request = SendStreamingMessageRequest(
-            params=self._build_message_payload(payload.get('message', ''), payload.get('metadata')))
+        request = SendStreamingMessageRequest(params=self._build_message_payload(task_id=task_id, message=message))
         async for response in self._a2a_client.send_message_streaming(request):
             yield response
 
-    async def get_task(self, payload: dict[str, Any]) -> GetTaskResponse:
+    async def get_task(self, task_id: str) -> GetTaskResponse:
         """
         Get the task status and artifact by id
         """
-        request = GetTaskRequest(params={"id": payload["id"]})
+        request = GetTaskRequest(params={"id": task_id})
         return await self._a2a_client.get_task(request)
 
-    async def get_task_with_retry(self, payload: dict[str, Any]) -> GetTaskResponse:
+    async def get_task_with_retry(self, task_id: str) -> GetTaskResponse:
         """
         Get the task status and artifact by id with retry logic
+        TODO: use an external library for this such as tenacity
         """
         wait_time = self._wait_time
         retry_frequency = self._retry_frequency if self._retry_frequency < wait_time else wait_time
 
         for _ in range(wait_time // retry_frequency):
-            result = await self.get_task(payload)
+            result = await self.get_task(task_id)
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug("Get task result: %s", result.model_dump_json(exclude_none=True))
 
@@ -141,31 +185,14 @@ class A2AClientHelper:
             await asyncio.sleep(retry_frequency)
         return result
 
-    async def cancel_task(self, payload: dict[str, Any]) -> CancelTaskResponse:
+    async def cancel_task(self, task_id: str) -> CancelTaskResponse:
         """
         Cancel a task by id
         """
-        request = CancelTaskRequest(params={"id": payload["id"]})
+        request = CancelTaskRequest(params={"id": task_id})
         return await self._a2a_client.cancel_task(request)
 
-    async def get_card(self) -> AgentCard:
-        """
-        Get the AgentCard from the server using a well-known path
-        The agent card provides:
-        1. Function description
-        2. Input schema
-        3. Output schema
-        4. Capabilities (streaming, push notifications etc.)
-        5. Authentication
-        """
-        resolver = A2ACardResolver(
-            httpx_client=self._client,
-            base_url=self.url,
-        )
-        self.agent_card = await resolver.get_agent_card()
-        return self.agent_card
-
-    def artifact_to_output_string(self, artifact: Artifact) -> str:
+    def _artifact_to_output_string(self, artifact: Artifact) -> str:
         """
         Parse artifact part. This can be of type text, file, or data.
         TODO: This needs some refinement to handle the different types of artifacts.
@@ -184,23 +211,16 @@ class A2AClientHelper:
         else:
             return "Unknown artifact type"
 
-    async def complete_task(self, taskId: str, prompt: str) -> dict[str, Any]:
+    async def complete_task(self, task_id: str, prompt: str) -> dict[str, Any]:
         """
         Create a new task, wait for it to complete, and return the parsed result from the artifact
         """
-        payload = {
-            "id": taskId,
-            "sessionId": self._session_id,
-            "acceptedOutputModes": ["text"],
-            "message": prompt,
-        }
-
         streaming = self.agent_card.capabilities.streaming
         artifacts = []
         final_state = None
 
         if streaming:
-            response_stream = self.send_task_streaming(payload)
+            response_stream = self.send_task_streaming(task_id=task_id, message=prompt)
 
             async for result in response_stream:
                 if logger.isEnabledFor(logging.DEBUG):
@@ -220,26 +240,27 @@ class A2AClientHelper:
             else:
                 # If the artifact was not present in the streaming response,
                 # get the final result from the server
-                taskResult = await self.get_task_with_retry({"id": taskId})
+                task_result = await self.get_task_with_retry(task_id)
                 try:
-                    artifact = taskResult.result.artifacts[0]
+                    artifact = task_result.result.artifacts[0]
                 except IndexError:
                     artifact = None
                 except AttributeError:
                     artifact = None
 
-            return self.artifact_to_output_string(artifact)
+            # TODO: Handle input required
+            return self._artifact_to_output_string(artifact)
         else:
-            taskResult = await self.send_task(payload)
+            taskResult = await self.send_task(task_id=task_id, message=prompt)
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug("Task result: %s", taskResult.model_dump_json(exclude_none=True))
 
             state = getattr(taskResult.result.status, "name", None)
             if state == TaskState.INPUT_REQUIRED.name:
                 # TODO: Handle input required
-                return await self.complete_task(taskId=taskId, prompt=taskResult.result.status.message.parts[0].text)
+                return await self.complete_task(task_id=task_id, prompt=task_result.result.status.message.parts[0].text)
             else:
-                return self.artifact_to_output_string(taskResult.result.artifacts[0])
+                return self._artifact_to_output_string(task_result.result.artifacts[0])
 
 
 class A2AToolClient:
@@ -250,25 +271,18 @@ class A2AToolClient:
     def __init__(
         self,
         url: str,
+        agent_card_path: str,
+        extended_agent_card_path: str,
         tool_name: str,
-        tool_input_schema: dict | None = None,
-        *,
-        wait_timeout: int = 60,
-        retry_frequency: int = 1,
-        description: str | None = None,
+        tool_input_schema: dict,
+        description: str,
+        wait_timeout: int,
+        retry_frequency: int,
     ):
         """
-        Initialize the A2AToolClient
-
-        Args:
-            url: The URL of the A2A server. Required.
-            tool_name: Name of the tool to use. Required.
-            tool_input_schema: Optional input schema for the tool.
-            wait_timeout: Maximum time in seconds to wait for task completion. Defaults to 60.
-            retry_frequency: Time in seconds between retries when polling. Defaults to 1.
-            description: Optional description for the tool.
+        Configure the A2AToolClient
         """
-        # Setup the A2A client helper
+        # Setup the A2A client helper. This sets up transport and session.
         self._client = A2AClientHelper(
             url,
             wait_timeout=wait_timeout,
@@ -277,19 +291,24 @@ class A2AToolClient:
 
         # Setup tool attributes
         self._tool_name: str = tool_name
+        self._description: str = description
+        # The description of the tool is set after the agent card is fetched
         self._tool_description: str | None = None
         # TODO: Create the input schema from the info in the AgentCard
-        self._input_schema: type[BaseModel] | None = None
-        self._description = description
-        self._initialized = False
+        self._input_schema: type[BaseModel] | None = tool_input_schema
 
-    async def ainitialize(self) -> None:
+        # The agent card must be fetched before the tool can be used
+        self._initialized: bool = False
+        self._agent_card_path: str = agent_card_path
+        self._extended_agent_card_path: str = extended_agent_card_path
+
+    async def get_agent_card(self) -> None:
         """
         Initialize the client by fetching the card and setting the description.
         This must be called before using the client.
         """
         if not self._initialized:
-            await self.get_card()
+            await self._client.get_agent_card(self._agent_card_path, self._extended_agent_card_path)
             # Set the description if provided, otherwise use the AgentCard description
             if self._description:
                 self._tool_description = self._description
@@ -309,19 +328,13 @@ class A2AToolClient:
     def input_schema(self) -> type[BaseModel] | None:
         return self._input_schema
 
-    async def get_card(self) -> AgentCard:
-        """
-        Get the AgentCard from the server.
-        """
-        return await self._client.get_card()
-
     async def acall(self, tool_input: str) -> str:
         """
         Create a new task for each tool call
         """
-        taskId = uuid4().hex
-        logger.debug("Start new Task ID: %s", taskId)
+        task_id = uuid4().hex
+        logger.debug("Start new Task ID: %s", task_id)
 
-        output = await self._client.complete_task(taskId=taskId, prompt=tool_input)
+        output = await self._client.complete_task(task_id=task_id, prompt=tool_input)
         logger.debug("Task result: %s", output)
         return output

@@ -37,6 +37,9 @@ class A2AFunctionConfig(FunctionBaseConfig, name="a2a_function_wrapper"):
     retry logic and timeout handling.
     """
     url: HttpUrl = Field(description="URL of the A2A server. Must be a valid HTTP(S) URL.")
+    agent_card_path: str = Field(default="/.well-known/agent.json", description="Path to the agent card file.")
+    extended_agent_card_path: str = Field(default="/agent/authenticatedExtendedCard",
+                                          description="Path to the extended agent card file.")
     a2a_tool_name: str = Field(
         description="Name of the A2A tool to use. This should match the tool name in the A2A server's agent card.")
     description: str | None = Field(default=None,
@@ -61,14 +64,17 @@ async def a2a_function(config: A2AFunctionConfig, builder: Builder):
     # Setup a client for each tool
     tool = A2AToolClient(
         url=str(config.url),
+        agent_card_path=config.agent_card_path,
+        extended_agent_card_path=config.extended_agent_card_path,
         tool_name=config.a2a_tool_name,
+        tool_input_schema=None,
+        description=config.description,
         wait_timeout=config.wait_timeout,
         retry_frequency=config.retry_frequency,
-        description=config.description,
     )
 
-    # Initialize the client
-    await tool.ainitialize()
+    # Get the agent card and initialize the tool
+    await tool.get_agent_card()
 
     logger.info("A2A Function initialized with tool: %s", tool.name)
 
