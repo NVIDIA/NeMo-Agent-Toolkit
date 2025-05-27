@@ -708,12 +708,14 @@ name = "aiqtoolkit-test"
 source = { editable = "packages/aiqtoolkit_test" }
 dependencies = [
     { name = "aiqtoolkit" },
+    { name = "langchain-community" },
     { name = "pytest" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "aiqtoolkit", editable = "." },
+    { name = "langchain-community", specifier = "~=0.3" },
     { name = "pytest", specifier = "~=8.3" },
 ]
 
