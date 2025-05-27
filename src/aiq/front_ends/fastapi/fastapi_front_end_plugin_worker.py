@@ -415,6 +415,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Ensure that the input is in the body. POD types are treated as query parameters
         if (not issubclass(GenerateBodyType, BaseModel)):
             GenerateBodyType = typing.Annotated[GenerateBodyType, Body()]
+        else:
+            logger.info("Expecting generate request payloads in the following format: %s",
+                        GenerateBodyType.model_fields)
 
         response_500 = {
             "description": "Internal Server Error",
@@ -430,9 +433,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Create job store for tracking async generation jobs
         job_store = JobStore()
 
-        # Don't run multiple jobs at the same time, this might be expanded in the future
-        # to allow multiple jobs to run in parallel
-        async_job_lock = asyncio.Lock()
+        # Run up to max_running_async_jobs jobs at the same time
+        async_job_concurrency = asyncio.Semaphore(self._front_end_config.max_running_async_jobs)
 
         def get_single_endpoint(result_type: type | None):
 
@@ -536,7 +538,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                  session_manager: AIQSessionManager,
                                  result_type: type):
             """Background task to run the evaluation."""
-            async with async_job_lock:
+            async with async_job_concurrency:
                 try:
                     result = await generate_single_response(payload=payload,
                                                             session_manager=session_manager,
