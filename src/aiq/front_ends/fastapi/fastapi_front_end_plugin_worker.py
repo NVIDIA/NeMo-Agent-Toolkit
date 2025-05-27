@@ -433,9 +433,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Create job store for tracking async generation jobs
         job_store = JobStore()
 
-        # Don't run multiple jobs at the same time, this might be expanded in the future
-        # to allow multiple jobs to run in parallel
-        async_job_lock = asyncio.Lock()
+        # Run up to 10 jobs at the same time
+        async_job_concurrency = asyncio.Semaphore(10)
 
         def get_single_endpoint(result_type: type | None):
 
@@ -539,7 +538,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                  session_manager: AIQSessionManager,
                                  result_type: type):
             """Background task to run the evaluation."""
-            async with async_job_lock:
+            async with async_job_concurrency:
                 try:
                     result = await generate_single_response(payload=payload,
                                                             session_manager=session_manager,
@@ -655,7 +654,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     methods=[endpoint.method],
                     description="Stream raw intermediate steps without any step adaptor translations.\n"
                     "Use filter_steps query parameter to filter steps by type (comma-separated list) or\
-                        set to 'none' to suppress all intermediate steps."                                                                          ,
+                        set to 'none' to suppress all intermediate steps.",
                 )
 
             elif (endpoint.method == "POST"):
@@ -692,7 +691,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     response_model=GenerateStreamResponseType,
                     description="Stream raw intermediate steps without any step adaptor translations.\n"
                     "Use filter_steps query parameter to filter steps by type (comma-separated list) or \
-                        set to 'none' to suppress all intermediate steps."                                                                          ,
+                        set to 'none' to suppress all intermediate steps.",
                     responses={500: response_500},
                 )
 
