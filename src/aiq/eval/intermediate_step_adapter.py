@@ -79,15 +79,21 @@ class IntermediateStepAdapter:
         for step in steps:
             if step.event_type == IntermediateStepType.LLM_END:
                 last_llm_end_step = step
+                action = self.get_agent_action_single(step, "")
+                agent_actions.append(action)
             else:
                 action = self.get_agent_action_single(step, last_llm_end_step)
                 agent_actions.append(action)
 
         return agent_actions
 
-    def get_context(self, intermediate_steps: list[IntermediateStep]) -> list[str]:
+    def get_context(self, intermediate_steps: list[IntermediateStep],
+                    event_filter: list[IntermediateStepType]) -> list[str]:
         """Grab the output of all the tools and return them as retrieved context."""
-        return [
-            str(step.data.output) for step in intermediate_steps
-            if step.event_type == IntermediateStepType.TOOL_END and step.data and step.data.output
-        ]
+        count = 0
+        agent_actions = []
+        for step in intermediate_steps:
+            if step.event_type in event_filter and step.data and step.data.output:
+                agent_actions.append(f"**Step {count}**\n{str(step.data.output)}")
+                count += 1
+        return agent_actions
