@@ -433,8 +433,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Create job store for tracking async generation jobs
         job_store = JobStore()
 
-        # Run up to 10 jobs at the same time
-        async_job_concurrency = asyncio.Semaphore(10)
+        # Run up to max_running_async_jobs jobs at the same time
+        async_job_concurrency = asyncio.Semaphore(self._front_end_config.max_running_async_jobs)
 
         def get_single_endpoint(result_type: type | None):
 
