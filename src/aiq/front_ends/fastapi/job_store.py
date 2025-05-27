@@ -155,7 +155,6 @@ class JobStore:
             expires_at = self.get_expires_at(job)
             if expires_at and now > expires_at:
                 expired_ids.append(job_id)
-                # TODO: JobInfo should contain a reference to the task so that it can be cancelled if needed
                 # cleanup output dir if present
                 if job.output_path:
                     logger.info("Cleaning up output directory for job %s at %s", job_id, job.output_path)
