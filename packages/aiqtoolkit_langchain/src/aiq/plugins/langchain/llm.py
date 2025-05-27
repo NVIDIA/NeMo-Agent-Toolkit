@@ -16,6 +16,7 @@
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_llm_client
+from aiq.llm.azure_ai_inference_llm import AzureAiInferenceModelConfig
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
 
@@ -34,3 +35,11 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
     from langchain_openai import ChatOpenAI
 
     yield ChatOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
+
+
+@register_llm_client(config_type=AzureAiInferenceModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+async def azure_ai_inference_langchain(llm_config: AzureAiInferenceModelConfig, builder: Builder):
+
+    from langchain_azure_ai.chat_models import AzureAIChatCompletionsModel
+
+    yield AzureAIChatCompletionsModel(**llm_config.model_dump(exclude={"type"}, by_alias=True))
