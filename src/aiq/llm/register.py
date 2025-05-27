@@ -21,3 +21,4 @@
 from . import nim_llm
 from . import openai_llm
 from . import azure_ai_inference_llm
+from . import ollama_llm

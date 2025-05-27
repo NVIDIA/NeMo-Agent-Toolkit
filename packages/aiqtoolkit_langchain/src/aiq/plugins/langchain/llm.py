@@ -18,6 +18,7 @@ from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_llm_client
 from aiq.llm.azure_ai_inference_llm import AzureAiInferenceModelConfig
 from aiq.llm.nim_llm import NIMModelConfig
+from aiq.llm.ollama_llm import OllamaModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
 
 
@@ -43,3 +44,11 @@ async def azure_ai_inference_langchain(llm_config: AzureAiInferenceModelConfig, 
     from langchain_azure_ai.chat_models import AzureAIChatCompletionsModel
 
     yield AzureAIChatCompletionsModel(**llm_config.model_dump(exclude={"type"}, by_alias=True))
+
+
+@register_llm_client(config_type=OllamaModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+async def ollama_langchain(llm_config: OllamaModelConfig, builder: Builder):
+
+    from langchain_ollama import ChatOllama
+
+    yield ChatOllama(**llm_config.model_dump(exclude={"type"}, by_alias=True))
