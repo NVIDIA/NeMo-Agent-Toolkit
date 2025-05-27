@@ -162,8 +162,18 @@
             "  - Extract workflow name from request",
             "  - Execute: yes | aiq workflow delete <workflow_name>",
             "  - Verify deletion using aiq info components -t package",
-            "   - Confirm workflow no longer appears in installed components",
-            "  - Handle any other errors appropriately"
+            "  - Confirm workflow no longer appears in installed components",
+            "  - Handle any errors appropriately"
+          ]
+        },
+        "workflowReinstall": {
+          "description": "Execute workflow reinstall command",
+          "rules": [
+            "When user requests to reinstall a workflow:",
+            "  - Extract workflow name from request",
+            "  - Execute: aiq workflow reinstall <workflow_name>",
+            "  - Verify reinstall using aiq info components -t package",
+            "  - Confirm workflow appears in installed components"
           ]
         },
         "commandPatterns": {
@@ -179,6 +189,8 @@
             "  - 'delete workflow <name>'",
             "  - 'remove workflow <name>'",
             "  - 'uninstall workflow <name>'",
+            "  - 'reinstall workflow <name>'",
+            "  - 'reinstall <name>'",
             "Extract parameters:",
             "  - workflow_name: Required, must be valid Python package name",
             "  - workflow_dir: Optional, defaults to current directory",
