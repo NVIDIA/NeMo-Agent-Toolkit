@@ -53,7 +53,10 @@ function sed_runner() {
 # Update the pypi description file
 # Currently only the pypi.md file for the aiqtoolkit package contains links to documentation
 # Replace this with a `find ./ -name "pypi.md"` if this is needed for the other pypi.md files
-sed_runner "s|https:\/\/docs.nvidia.com\/aiqtoolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/aiqtoolkit\/${NEXT_VERSION}|g" src/aiq/meta/pypi.md
+if [[ -z "${SKIP_MD_UPDATE}" ]]; then
+   sed_runner "s|https:\/\/docs.nvidia.com\/aiqtoolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/aiqtoolkit\/${NEXT_VERSION}|g" src/aiq/meta/pypi.md
+fi
+
 
 
 if [[ "${USE_FULL_VERSION}" == "1" ]]; then

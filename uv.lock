@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.11, <3.13"
 resolution-markers = [
     "python_full_version >= '3.12.4' and sys_platform == 'linux'",
@@ -256,7 +257,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiqtoolkit", extras = ["langchain"] },
+    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
     { name = "ansible-runner", specifier = ">=2.3.0" },
     { name = "flask", specifier = ">=3.0.0" },
     { name = "langchain-core" },
@@ -268,15 +269,11 @@ requires-dist = [
 name = "aiq-automated-description-generation"
 source = { editable = "examples/automated_description_generation" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain"] },
-    { name = "lxml" },
+    { name = "aiqtoolkit", extra = ["ingestion", "langchain"] },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
-    { name = "lxml", specifier = "~=5.4" },
-]
+requires-dist = [{ name = "aiqtoolkit", extras = ["ingestion", "langchain"], editable = "." }]
 
 [[package]]
 name = "aiq-email-phishing-analyzer"
@@ -448,6 +445,9 @@ examples = [
     { name = "aiq-simple-calculator" },
     { name = "aiq-swe-bench" },
 ]
+ingestion = [
+    { name = "lxml" },
+]
 langchain = [
     { name = "aiqtoolkit-langchain" },
 ]
@@ -541,6 +541,7 @@ requires-dist = [
     { name = "httpx", specifier = "~=0.27" },
     { name = "jinja2", specifier = "~=3.1" },
     { name = "jsonpath-ng", specifier = "~=1.7" },
+    { name = "lxml", marker = "extra == 'ingestion'", specifier = "~=5.4" },
     { name = "matplotlib", marker = "extra == 'profiling'", specifier = "~=3.9" },
     { name = "mcp", specifier = ">=1.0.0" },
     { name = "networkx", specifier = "~=3.4" },
@@ -561,6 +562,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
+provides-extras = ["agno", "crewai", "ingestion", "langchain", "llama-index", "mem0ai", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "profiling"]
 
 [package.metadata.requires-dev]
 dev = [
