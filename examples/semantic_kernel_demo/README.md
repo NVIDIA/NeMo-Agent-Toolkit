@@ -21,11 +21,11 @@ A minimal example using Semantic Kernel showcasing a multi-agent travel planning
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ Toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AIQ Toolkit library, run the following commands:
+From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/semantic_kernel_demo
@@ -41,7 +41,7 @@ export OPENAI_API_KEY=<YOUR_API_KEY>
 
 ## Adding Long-Term Memory
 
- With AIQ Toolkit, adding Long Term Memory (LTM) is as simple as adding a new section in the configuration file.
+ With AIQ toolkit, adding Long Term Memory (LTM) is as simple as adding a new section in the configuration file.
 
 Once you add the LTM configuration, export your Mem0 API key, which is a prerequisite for using the LTM service. To create an API key, refer to the instructions in the [Mem0 Platform Guide](https://docs.mem0.ai/platform/quickstart).
 
@@ -84,3 +84,9 @@ Workflow Result:
 ```
 
 The above output demonstrates that the agent was able to draw from memory to provide vegan-friendly recommendations.
+
+Note: The long-term memory feature relies on LLM-based tool invocation, which can occasionally be non-deterministic. If you notice that the memory functionality isn't working as expected (e.g., the agent doesn't remember your preferences), try these solutions:
+* Re-run your first and second inputs to ensure proper tool invocation
+* Fine-tune the `long_term_memory_instructions` section in `config.yml` to better guide the agent's memory usage
+
+These steps will help ensure your preferences are correctly stored and retrieved by the agent.

@@ -9,11 +9,11 @@ root = "../.."
 name = "aiq_simple"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain]~=1.1",
+  "aiqtoolkit[langchain]~=1.2",
   "faiss-cpu==1.9.0",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Simple AIQ Toolkit example"
+description = "Simple AIQ toolkit example"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 

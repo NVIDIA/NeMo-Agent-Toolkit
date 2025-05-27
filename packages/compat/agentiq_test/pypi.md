@@ -18,4 +18,4 @@ limitations under the License.
 # Transitional Package for `aiqtoolkit-test`
 This is a transitional package for `aiqtoolkit-test` to help ease the migration to `aiqtoolkit-test`, and will be removed in a future release. It is recommended to use `aiqtoolkit-test` directly for new projects.
 
-For more information about AIQ Toolkit, please visit the [AIQ Toolkit package](https://pypi.org/project/aiqtoolkit-test/).
+For more information about AIQ toolkit, please visit the [AIQ toolkit package](https://pypi.org/project/aiqtoolkit-test/).

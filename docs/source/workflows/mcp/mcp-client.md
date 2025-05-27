@@ -19,12 +19,12 @@ limitations under the License.
 
 Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
-You can use AIQ Toolkit as an MCP Client to connect to and use tools served by remote MCP servers.
+You can use AIQ toolkit as an MCP Client to connect to and use tools served by remote MCP servers.
 
-This guide will cover how to use AIQ Toolkit as an MCP Client. For more information on how to use AIQ Toolkit as an MCP Server, please refer to the [MCP Server](./mcp-server.md) documentation.
+This guide will cover how to use AIQ toolkit as an MCP Client. For more information on how to use AIQ toolkit as an MCP Server, please refer to the [MCP Server](./mcp-server.md) documentation.
 
 ## Usage
-Tools served by remote MCP servers can be leveraged as AIQ Toolkit functions through configuration of an `mcp_tool_wrapper`.
+Tools served by remote MCP servers can be leveraged as AIQ toolkit functions through configuration of an `mcp_tool_wrapper`.
 
 ```python
 class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
@@ -42,7 +42,7 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
         """
     )
 ```
-In addition to the URL of the server, the configuration also takes as a parameter the name of the MCP tool you want to use as an AIQ Toolkit function. This is required because MCP servers can serve multiple tools, and for this wrapper we want to maintain a one-to-one relationship between AIQ Toolkit functions and MCP tools. This means that if you want to include multiple tools from an MCP server you will configure multiple `mcp_tool_wrappers`.
+In addition to the URL of the server, the configuration also takes as a parameter the name of the MCP tool you want to use as an AIQ toolkit function. This is required because MCP servers can serve multiple tools, and for this wrapper we want to maintain a one-to-one relationship between AIQ toolkit functions and MCP tools. This means that if you want to include multiple tools from an MCP server you will configure multiple `mcp_tool_wrappers`.
 
 For example:
 
@@ -84,9 +84,18 @@ functions:
     description: "Returns the current date and time from the MCP server"
 ```
 
-To run the simple calculator workflow using remote MCP tools,
-- Start the remote MCP server by following the instructions in the `examples/simple_calculator/deploy_external_mcp/README.md` file. Use the `mcp-server-time` service for this example.
-- Run the workflow using the `aiq run` command.
+To run the simple calculator workflow using remote MCP tools, follow these steps:
+1. Start the remote MCP server, `mcp-server-time`, by following the instructions in the `examples/simple_calculator/deploy_external_mcp/README.md` file. Check that the server is running by running the following command:
+```bash
+docker ps --filter "name=mcp-proxy-aiq-time"
+```
+Sample output:
+```
+CONTAINER ID   IMAGE                      COMMAND                  CREATED      STATUS        PORTS                                       NAMES
+4279653533ec   time_service-time_server   "mcp-proxy --pass-en…"   9 days ago   Up 41 hours   0.0.0.0:8080->8080/tcp, :::8080->8080/tcp   mcp-proxy-aiq-time
+```
+
+2. Run the workflow using the `aiq run` command.
 ```bash
 aiq run --config_file examples/simple_calculator/configs/config-mcp-date.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
