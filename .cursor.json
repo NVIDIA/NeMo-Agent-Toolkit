@@ -156,11 +156,25 @@
             "    - If workflow not found in components:",
             "      - Report installation verification failure",
             "      - Suggest manual installation if needed",
-            "  - Handle any errors appropriately"
+            "  - Handle any errors appropriately",
+            "When user requests to delete a workflow:",
+            "  - Extract workflow name from request",
+            "  - Execute: yes | aiq workflow delete <workflow_name>",
+            "  - Handle command output:",
+            "    - If error contains 'No such workflow':",
+            "      - Report that workflow does not exist",
+            "      - List available workflows if requested",
+            "    - If error contains 'Permission denied':",
+            "      - Report permission issues",
+            "      - Suggest running with appropriate permissions",
+            "    - If deletion successful:",
+            "      - Verify deletion using aiq info components -t package",
+            "      - Confirm workflow no longer appears in installed components",
+            "  - Handle any other errors appropriately"
           ]
         },
         "commandPatterns": {
-          "description": "Recognize workflow creation requests",
+          "description": "Recognize workflow creation and deletion requests",
           "rules": [
             "Match patterns like:",
             "  - 'create workflow <name>'",
@@ -169,6 +183,9 @@
             "  - 'create workflow <name> in <dir>'",
             "  - 'create workflow <name> without installing'",
             "  - 'create workflow <name> with description <desc>'",
+            "  - 'delete workflow <name>'",
+            "  - 'remove workflow <name>'",
+            "  - 'uninstall workflow <name>'",
             "Extract parameters:",
             "  - workflow_name: Required, must be valid Python package name",
             "  - workflow_dir: Optional, defaults to current directory",
