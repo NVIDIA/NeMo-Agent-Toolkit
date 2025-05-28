@@ -1,0 +1,92 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Workflow Creation
+- When user requests to create a workflow:
+- Extract workflow name from request
+- Execute: aiq workflow create <workflow_name>
+- If workflow directory specified:
+  - Execute: aiq workflow create --workflow-dir <dir> <workflow_name>
+- If no-install flag specified:
+  - Execute: aiq workflow create --no-install <workflow_name>
+- If description specified:
+  - Execute: aiq workflow create --description '<desc>' <workflow_name>
+- Handle multiple flags:
+  - Combine all specified flags in command
+- Verify command execution success
+- Verify workflow structure
+  - Check against AIQToolkit Project Guidelines for:
+     - Project structure requirements
+     - Code standards and best practices
+     - Documentation requirements
+- If installation was not skipped:
+  - Execute: aiq info components -t package
+  - Verify workflow name appears in installed components
+
+# Workflow Deletion
+When user requests to delete a workflow:
+- Extract workflow name from request
+- Execute: yes | aiq workflow delete <workflow_name>
+- Verify deletion using aiq info components -t package
+  - Confirm workflow no longer appears in installed components
+
+# Workflow Reinstallation
+When user requests to reinstall a workflow:
+- Extract workflow name from request
+- Execute: aiq workflow reinstall <workflow_name>
+- Verify reinstall using aiq info components -t package
+  - Confirm workflow appears in installed components
+
+# Workflow Execution
+When user requests to run a workflow:
+- Extract workflow config file path and input from request
+- Execute: aiq run --config_file <config_path> --input '<input>'
+- If override arguments specified:
+  - Add --override flag for each parameter
+  - Format: --override <section>.<component>.<parameter> <value>
+  - Example: --override llms.nim_llm.temperature 0.7
+  - Support multiple overrides in single command
+
+# Workflow Serving
+When user requests to serve a workflow:
+- Extract workflow config file path from request
+- Execute: aiq serve --config_file <config_path>
+- If host specified:
+  - Add --host <host> flag
+- If port specified:
+  - Add --port <port> flag
+- If workers specified:
+  - Add --workers <num> flag
+- If auto-reload specified:
+  - Add --reload true flag
+
+# Workflow Evaluation
+When user requests to evaluate a workflow:
+- Extract workflow config file path and dataset path from request
+- Execute: aiq eval --config_file <config_path> --dataset <dataset_path>
+- If repetitions specified:
+  - Add --reps <num> flag
+- If result path specified:
+  - Add --result_json_path <path> flag
+- If endpoint specified:
+  - Add --endpoint <url> flag
+
+# Workflow Validation
+When user requests to validate a workflow:
+- Extract workflow config file path from request
+- Execute: aiq validate --config_file <config_path>
+- Display validation results or specific validation errors
+- Suggest fixes for each error if validation fails
+
+# Component Information
+When user requests component information:
+- If requesting all components:
+  - Execute: aiq info components
+- If searching for a specific component name:
+  - Execute: aiq info components -q '<query>'
+- If requesting specific component type:
+  - Execute: aiq info components -t <type>
+- If requesting channel information:
+  - Execute: aiq info channels
