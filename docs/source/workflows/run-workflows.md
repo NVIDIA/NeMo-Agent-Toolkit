@@ -82,8 +82,8 @@ The toolkit offers a programmatic way to execute workflows through its Python AP
 ```
 
 In this example:
-- `config_file`: A string path pointing to your workflow's `config.yml` file
+- `config_file`: A string path pointing to your workflow YAML file
 - `input_str`: A string containing the input for your workflow
-- The `workflow.run(input_str)` method returns an instance of `~aiq.runtime.runner.AIQRunner`
+- The `workflow.run(input_str)` method returns an instance of {py:class}`~aiq.runtime.runner.AIQRunner`
 
 For detailed information about the `AIQRunner` class and its capabilities, please refer to the Python API documentation for the {py:class}`~aiq.runtime.runner.AIQRunner` class.
