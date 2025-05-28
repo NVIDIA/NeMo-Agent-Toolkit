@@ -124,7 +124,7 @@
       },
       "guidelines": {
         "workflowCreate": {
-          "description": "Execute workflow creation command",
+          "description": "When user requests to create a workflow, execute the workflow creation command",
           "rules": [
             "When user requests to create a workflow:",
             "  - Extract workflow name from request",
@@ -156,7 +156,7 @@
           ]
         },
         "workflowDelete": {
-          "description": "Execute workflow deletion command",
+          "description": "When user requests to delete a workflow, execute the workflow deletion command",
           "rules": [
             "When user requests to delete a workflow:",
             "  - Extract workflow name from request",
@@ -177,7 +177,7 @@
           ]
         },
         "workflowRun": {
-          "description": "Execute workflow run command with optional overrides",
+          "description": "When user requests to run a workflow, execute the workflow run command with optional overrides",
           "rules": [
             "When user requests to run a workflow:",
             "  - Extract workflow config file path and input from request",
@@ -195,7 +195,7 @@
           ]
         },
         "workflowAddTool": {
-          "description": "Add new tools to workflow configuration",
+          "description": "When user requests to add a tool to a workflow, add the tool to the workflow configuration",
           "rules": [
             "When user requests to add a tool to workflow:",
             "  - Extract workflow config file path and tool details",
@@ -237,7 +237,7 @@
           ]
         },
         "workflowServe": {
-          "description": "Execute workflow serve command",
+          "description": "When user requests to serve a workflow, execute the workflow serve command",
           "rules": [
             "When user requests to serve a workflow:",
             "  - Extract workflow config file path from request",
@@ -258,7 +258,7 @@
           ]
         },
         "workflowEval": {
-          "description": "Execute workflow evaluation command",
+          "description": "When user requests to evaluate a workflow, execute the workflow evaluation command",
           "rules": [
             "When user requests to evaluate a workflow:",
             "  - Extract workflow config file path and dataset path from request",
@@ -277,7 +277,7 @@
           ]
         },
         "workflowValidate": {
-          "description": "Execute workflow validation command",
+          "description": "When user requests to validate a workflow, execute the workflow validation command",
           "rules": [
             "When user requests to validate a workflow:",
             "  - Extract workflow config file path from request",
@@ -292,15 +292,15 @@
           ]
         },
         "workflowInfo": {
-          "description": "Execute workflow info commands",
+          "description": "When user requests to get information about a workflow, execute the workflow info command",
           "rules": [
             "When user requests component information:",
             "  - If requesting all components:",
             "    - Execute: aiq info components",
+            "  - If searching for a specific component name:",
+            "    - Execute: aiq info components -q '<query>'",
             "  - If requesting specific component type:",
             "    - Execute: aiq info components -t <type>",
-            "  - If searching for components:",
-            "    - Execute: aiq info components -q '<query>'",
             "  - If requesting channel information:",
             "    - Execute: aiq info channels",
             "  - Handle command output:",
@@ -310,7 +310,7 @@
           ]
         },
         "commandPatterns": {
-          "description": "Recognize workflow command requests",
+          "description": "Recognize workflow command requests and extract parameters",
           "rules": [
             "Match patterns like:",
             "  - 'create workflow <name>'",
@@ -352,7 +352,7 @@
           ]
         },
         "parameterValidation": {
-          "description": "Validate workflow creation parameters",
+          "description": "Validate workflow creation parameters and extract parameters",
           "rules": [
             "Validate workflow name:",
             "  - Must be valid Python package name",
@@ -382,7 +382,7 @@
           ]
         },
         "errorHandling": {
-          "description": "Handle workflow creation errors",
+          "description": "Handle workflow creation errors and provide clear error messages",
           "rules": [
             "Handle common errors:",
             "  - Invalid workflow name",

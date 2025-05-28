@@ -33,7 +33,8 @@ or specify a directory:
 ```text
 create a workflow named my_workflow in the examples directory
 ```
-Cursor will run the appropriate `aiq workflow create` command and set up the workflow structure for you.
+
+Cursor will create the workflow for you and verify the directory structure and installation.
 
 ### 2. Delete or Uninstall a Workflow
 
@@ -53,7 +54,7 @@ If you need to reinstall a workflow:
 ```text
 reinstall workflow my_workflow
 ```
-Cursor will run `aiq workflow reinstall my_workflow` and verify the installation.
+Cursor will reinstall the workflow and verify the installation.
 
 ### 4. Run a Workflow
 
@@ -106,17 +107,18 @@ Cursor will check if the configuration file has the correct settings, components
 
 ### 8. Get Component Information
 
-To list available components:
+You can search for specific components by providing a query:
 ```text
-show available components
+Show all the tools that contains "webpage" in the name
 ```
-You can filter by component type:
+
+or provide a description of the component you are looking for:
 ```text
-show available function components
+Is there a tool that can query a webpage?
 ```
-or search for specific components:
+You can also ask for a list of all the components of a specific type:
 ```text
-search for components with query "webpage"
+Show all the tools
 ```
 
 ### 9. Add a Tool to a Workflow
