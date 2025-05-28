@@ -20,7 +20,7 @@ limitations under the License.
 ## Overview
 
 While the AIQ toolkit library provides the capability to implement components that come together to form Agentic AI
-workflow,the command line interface (CLI) provides a no code entrypoint to configure settings, access the features of
+workflow, the command line interface (CLI) provides a no code entrypoint to configure settings, access the features of
 pre-built components, and mechanisms to launch workflows from configuration files. This document describes the layout
 and functionality of the AIQ toolkit CLI. To begin, the command hierarchy is depicted below. Each command will be introduced
 throughout the remainder of this document.
@@ -115,7 +115,7 @@ The `aiq start console` command will run an AIQ toolkit workflow from a provided
 at the command line or from file using the `--inputs` and `--input_file` options, respectively. Additionally, fields in
 the configuration file can be overridden by command line using the `--override` flag and dot notation to traverse to the
 configuration hierarchy to the field being overridden. The run command can be useful running one off tests when
-debugging a workflow debugging. When invoking the run command, the workflow will follow the same harness as the
+debugging a workflow. When invoking the run command, the workflow will follow the same harness as the
 other workflow launch commands. This simplifies the debugging process when transitioning from development to production.
 
 The `aiq start console` help utility provides a brief description of each option to describe is usage.
@@ -174,7 +174,7 @@ The `aiq run` is an alias for the `aiq start console` command and will run an AI
 command line or from file using the `--inputs` and `--input_file` options, respectively. Additionally, fields in the
 configuration file can be overridden by command line using the `--override` flag and dot notation to traverse to the
 configuration hierarchy to the field being overridden. The run command can be useful running one off tests when
-debugging a workflow debugging. When invoking the run command, the workflow will follow the same harness as the
+debugging a workflow. When invoking the run command, the workflow will follow the same harness as the
 other workflow launch commands. This simplifies the debugging process when transitioning from development to production.
 
 The `aiq run` help utility provides a brief description of each option to describe is usage.

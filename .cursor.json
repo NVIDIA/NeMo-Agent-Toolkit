@@ -236,8 +236,81 @@
             "  - Handle any errors appropriately"
           ]
         },
+        "workflowServe": {
+          "description": "Execute workflow serve command",
+          "rules": [
+            "When user requests to serve a workflow:",
+            "  - Extract workflow config file path from request",
+            "  - Execute: aiq serve --config_file <config_path>",
+            "  - If host specified:",
+            "    - Add --host <host> flag",
+            "  - If port specified:",
+            "    - Add --port <port> flag",
+            "  - If workers specified:",
+            "    - Add --workers <num> flag",
+            "  - If auto-reload specified:",
+            "    - Add --reload true flag",
+            "  - Handle command output:",
+            "    - If serve successful:",
+            "      - Display server URL and port",
+            "      - Confirm all options were applied",
+            "  - Handle any errors appropriately"
+          ]
+        },
+        "workflowEval": {
+          "description": "Execute workflow evaluation command",
+          "rules": [
+            "When user requests to evaluate a workflow:",
+            "  - Extract workflow config file path and dataset path from request",
+            "  - Execute: aiq eval --config_file <config_path> --dataset <dataset_path>",
+            "  - If repetitions specified:",
+            "    - Add --reps <num> flag",
+            "  - If result path specified:",
+            "    - Add --result_json_path <path> flag",
+            "  - If endpoint specified:",
+            "    - Add --endpoint <url> flag",
+            "  - Handle command output:",
+            "    - If evaluation successful:",
+            "      - Display evaluation results",
+            "      - Confirm all options were applied",
+            "  - Handle any errors appropriately"
+          ]
+        },
+        "workflowValidate": {
+          "description": "Execute workflow validation command",
+          "rules": [
+            "When user requests to validate a workflow:",
+            "  - Extract workflow config file path from request",
+            "  - Execute: aiq validate --config_file <config_path>",
+            "  - Handle command output:",
+            "    - If validation successful:",
+            "      - Display validation results",
+            "    - If validation fails:",
+            "      - Display specific validation errors",
+            "      - Suggest fixes for each error",
+            "  - Handle any errors appropriately"
+          ]
+        },
+        "workflowInfo": {
+          "description": "Execute workflow info commands",
+          "rules": [
+            "When user requests component information:",
+            "  - If requesting all components:",
+            "    - Execute: aiq info components",
+            "  - If requesting specific component type:",
+            "    - Execute: aiq info components -t <type>",
+            "  - If searching for components:",
+            "    - Execute: aiq info components -q '<query>'",
+            "  - If requesting channel information:",
+            "    - Execute: aiq info channels",
+            "  - Handle command output:",
+            "    - Display component information in readable format",
+            "    - Highlight important details",
+            "  - Handle any errors appropriately"
+          ]
+        },
         "commandPatterns": {
-          "description": "Recognize workflow creation and deletion requests",
+          "description": "Recognize workflow command requests",
           "rules": [
             "Match patterns like:",
             "  - 'create workflow <name>'",
@@ -256,6 +329,15 @@
             "  - 'add tool <tool_type> to workflow <config>'",
             "  - 'add <tool_type> tool to workflow <config>'",
             "  - 'add new tool <tool_type> to workflow <config>'",
+            "  - 'serve workflow <config>'",
+            "  - 'serve workflow <config> on host <host> port <port>'",
+            "  - 'serve workflow <config> with <num> workers'",
+            "  - 'evaluate workflow <config> with dataset <path>'",
+            "  - 'evaluate workflow <config> with <num> repetitions'",
+            "  - 'validate config <path>'",
+            "  - 'show available components'",
+            "  - 'show available <type> components'",
+            "  - 'search for components with query <query>'",
             "Extract parameters:",
             "  - workflow_name: Required, must be valid Python package name",
             "  - workflow_dir: Optional, defaults to current directory",
