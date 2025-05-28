@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import logging
+from typing import Literal
 
-from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
 
@@ -35,7 +35,8 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
     # Add your custom configuration parameters here
     url: HttpUrl | None = Field(default=None, description="The URL of the MCP server (for SSE mode)")
     mcp_tool_name: str = Field(description="The name of the tool served by the MCP Server that you want to use")
-    client_type: str = Field(default="sse", description="The type of client to use ('sse' or 'stdio')")
+    client_type: Literal["sse", "stdio", "streamable-http"] = Field(default="sse",
+                                                                    description="The type of transport to use")
     command: str | None = Field(default=None,
                                 description="The command to run for stdio mode (e.g. 'docker' or 'python')")
     args: list[str] | None = Field(default=None, description="Additional arguments for the stdio command")
@@ -52,7 +53,7 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
         """)
 
     def model_post_init(self, __context):
-        """Validate that stdio and SSE properties are mutually exclusive."""
+        """Validate that stdio and SSE/Streamable HTTP properties are mutually exclusive."""
         super().model_post_init(__context)
 
         if self.client_type == 'stdio':
@@ -60,7 +61,7 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
                 raise ValueError("url should not be set when using stdio client type")
             if not self.command:
                 raise ValueError("command is required when using stdio client type")
-        else:
+        elif self.client_type == 'streamable-http' or self.client_type == 'sse':
             if self.command is not None or self.args is not None or self.env is not None:
                 raise ValueError("command, args, and env should not be set when using sse client type")
             if not self.url:
@@ -83,17 +84,20 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=
         if not config.command:
             raise ValueError("command is required when using stdio client type")
 
+        source = f"{config.command} {' '.join(config.args) if config.args else ''}"
         client = MCPStdioClient(command=config.command, args=config.args, env=config.env)
     elif config.client_type == 'streamable-http':
         if not config.url:
             raise ValueError("url is required when using streamable-http client type")
 
-        client = MCPStreamableHTTPClient(url=str(config.url))
+        source = str(config.url)
+        client = MCPStreamableHTTPClient(url=source)
     elif config.client_type == 'sse':
         if not config.url:
             raise ValueError("url is required when using sse client type")
 
-        client = MCPSSEClient(url=str(config.url))
+        source = str(config.url)
+        client = MCPSSEClient(url=source)
     else:
         raise ValueError(f"Invalid client type: {config.client_type}")
 
@@ -103,19 +107,12 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=
         if config.description:
             tool.set_description(description=config.description)
 
-        if config.client_type == "sse" or config.client_type == "streamable-http":
-            source = config.url
-        elif config.client_type == "stdio":
-            source = f"{config.command} {' '.join(config.args) if config.args else ''}"
-        else:
-            raise ValueError(f"Invalid client type: {config.client_type}")
-
         logger.info("Configured to use tool: %s from MCP server at %s", tool.name, source)
 
         def _convert_from_str(input_str: str) -> tool.input_schema:
             return tool.input_schema.model_validate_json(input_str)
 
-        async def _response_fn(tool_input: tool.input_schema) -> str:
+        async def _response_fn(tool_input: tool.input_schema | None = None, **kwargs) -> str:
             # Run the tool, catching any errors and sending to agent for correction
             try:
                 if tool_input:
