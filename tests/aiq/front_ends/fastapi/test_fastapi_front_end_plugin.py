@@ -219,8 +219,7 @@ async def test_generate_async(fn_use_openai_api: bool):
     )
 
     workflow_path = f"{front_end_config.workflow.path}/async"
-    oai_path = front_end_config.workflow.openai_api_path
-
+    # oai_path = front_end_config.workflow.openai_api_path
     async with _build_client(config) as client:
 
         # Test both the function accepting OAI and also using the OAI API
