@@ -9,19 +9,22 @@ async def execute_api_request_default(request: AuthenticatedRequest) -> None:
     """
     Default callback handler for user requests. This no-op function raises a NotImplementedError error, to indicate that
     a valid request callback was not registered.
+
+    Args:
+        request (AuthenticatedRequest): The authenticated request to be executed.
     """
     raise NotImplementedError("No request callback was registered. Unable to handle request.")
 
 
 async def execute_api_request_console(request: AuthenticatedRequest) -> httpx.Response | None:
     """
-    # TODO EE: Update
+    Callback function that executes an API request in console mode using the provided authenticated request.
 
     Args:
-        request (AuthenticatedRequest): _description_
+        request (AuthenticatedRequest): The authenticated request to be executed.
 
     Returns:
-        httpx.Response | None: _description_
+        httpx.Response | None: The response from the API request, or None if an error occurs.
     """
 
     request_manager: RequestManager = RequestManager()
@@ -39,15 +42,15 @@ async def execute_api_request_console(request: AuthenticatedRequest) -> httpx.Re
     return response
 
 
-async def execute_api_request_server(request: AuthenticatedRequest) -> httpx.Response | None:
+async def execute_api_request_server_http(request: AuthenticatedRequest) -> httpx.Response | None:
     """
-    # TODO EE: Update and Validate the CORS Settings to ensure proper domains can reach the API server.
+    Callback function that executes an API request in http server mode using the provided authenticated request.
 
     Args:
-        request (AuthenticatedRequest): _description_
+        request (AuthenticatedRequest): The authenticated request to be executed.
 
     Returns:
-        httpx.Response | None: _description_
+        httpx.Response | None: The response from the API request, or None if an error occurs.
     """
     request_manager: RequestManager = RequestManager()
     response: httpx.Response | None = None

@@ -37,12 +37,13 @@ from pydantic import Field
 
 from aiq.authentication.request_manager import RequestManager
 from aiq.authentication.response_manager import ResponseManager
-from aiq.authentication.utils import execute_api_request_server
+from aiq.authentication.utils import execute_api_request_server_http
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.api_server import AIQChatResponseChunk
 from aiq.data_models.api_server import AIQResponseIntermediateStep
+from aiq.data_models.authentication import AuthenticationEndpoint
 from aiq.data_models.config import AIQConfig
 from aiq.eval.config import EvaluationRunOutput
 from aiq.eval.evaluate import EvaluationRun
@@ -118,7 +119,22 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
         aiq_app = FastAPI(lifespan=lifespan)
 
+        # Configure app CORS.
         self.set_cors_config(aiq_app)
+
+        @aiq_app.middleware("http")
+        async def _suppress_authentication_logs(request: Request, call_next):
+            """
+            Intercepts authentication request and supreses logs that contain sensitive data.
+            """
+            default_log_level = logging.getLogger("uvicorn.access").level
+            if request.url.path in (AuthenticationEndpoint.REDIRECT_URI.value
+                                    or AuthenticationEndpoint.PROMPT_REDIRECT_URI.value):
+                logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+            response = await call_next(request)
+            logging.getLogger("uvicorn.access").setLevel(default_log_level)
+
+            return response
 
         return aiq_app
 
@@ -460,7 +476,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                async with session_manager.session(request=request, user_request_callback=execute_api_request_server):
+                async with session_manager.session(request=request,
+                                                   user_request_callback=execute_api_request_server_http):
 
                     return await generate_single_response(None, session_manager, result_type=result_type)
 
@@ -470,7 +487,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def get_stream(request: Request):
 
-                async with session_manager.session(request=request, user_request_callback=execute_api_request_server):
+                async with session_manager.session(request=request,
+                                                   user_request_callback=execute_api_request_server_http):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
@@ -504,7 +522,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                async with session_manager.session(request=request, user_request_callback=execute_api_request_server):
+                async with session_manager.session(request=request,
+                                                   user_request_callback=execute_api_request_server_http):
 
                     return await generate_single_response(payload, session_manager, result_type=result_type)
 
@@ -517,7 +536,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_stream(request: Request, payload: request_type):
 
-                async with session_manager.session(request=request, user_request_callback=execute_api_request_server):
+                async with session_manager.session(request=request,
+                                                   user_request_callback=execute_api_request_server_http):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
@@ -800,7 +820,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         from aiq.authentication.credentials_manager import _CredentialsManager
         from aiq.authentication.exceptions import OAuthCodeFlowError
         from aiq.data_models.authentication import AccessCodeTokenRequest
-        from aiq.data_models.authentication import AuthenticationEndpoint
         from aiq.data_models.authentication import HTTPMethod
         from aiq.data_models.authentication import OAuth2Config
         from aiq.data_models.authentication import PromptRedirectRequest
@@ -814,7 +833,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 raise OAuthCodeFlowError("Authorization code and state not provided by authorization provider.")
 
             authentication_provider: OAuth2Config | None = _CredentialsManager()._get_authentication_provider_by_state(
-                state)  # TODO EE: Update this to return the name and provider.
+                state)
 
             if authentication_provider is None:
                 raise OAuthCodeFlowError(

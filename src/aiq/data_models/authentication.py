@@ -116,11 +116,10 @@ class OAuth2Config(AuthenticationBaseConfig):
         default=ConsentPromptMode.BROWSER,
         description="Specifies how the application handles the OAuth 2.0 consent prompt. "
         "Options are 'browser' to open the system's default browser for login, "
-        "or 'polling' to store the login url retrievable via GET /auth/location-url."
-    )  # TODO EE: CORS Needs to be validated if the mode is frontend.
-    consent_prompt_key: str = Field(description="The key used to retrieve the consent prompt 302 redirect, "
+        "or 'polling' to store the login url retrievable via GET /auth/prompt-uri")
+    consent_prompt_key: str = Field(description="The key used to retrieve the consent prompt location header, "
                                     " triggering the browser to complete the OAuth process from the front end.",
-                                    frozen=True)  # TODO EE: Add required validation logic.
+                                    frozen=True)
     client_secret: str = Field(description="The client secret for OAuth 2.0 authentication.")
     client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
     audience: str = Field(description="The audience for OAuth 2.0 authentication.")

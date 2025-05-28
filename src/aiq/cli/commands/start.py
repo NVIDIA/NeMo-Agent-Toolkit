@@ -195,8 +195,8 @@ class StartCommandGroup(click.Group):
 
         # Override default front end config with values from the config file for serverless execution modes.
         _CredentialsManager().full_config = deepcopy(config)
-        serverless_aiq_config = load_config(config_file)
-        _CredentialsManager().full_config.general.front_end = serverless_aiq_config.general.front_end
+        serverless_aiq_config: AIQConfig = load_config(config_file)
+        _CredentialsManager()._validate_and_set_cors_config(serverless_aiq_config.general.front_end)
 
         # Check that we have the right kind of front end
         if (not isinstance(config.general.front_end, front_end.config_type)):

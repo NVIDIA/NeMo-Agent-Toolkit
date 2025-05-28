@@ -48,6 +48,10 @@ class RequestManager(RequestManagerBase):
     def authentication_manager(self) -> AuthenticationManager:
         return self._authentication_manager
 
+    @property
+    def response_manager(self) -> ResponseManager:
+        return self._response_manager
+
     def _validate_data(self, input_dict: dict) -> None:
         # Check to ensure all parameters have values
         invalid_values = [key for key, value in input_dict.items() if not value]
@@ -274,7 +278,8 @@ class RequestManager(RequestManagerBase):
             authentication_provider (str | None): The name of the registered authentication provider.
 
         Returns:
-            httpx.Headers | None: _description_ #TODO EE: Check all doc strings
+            httpx.Headers | None: Returns the authentication header if the provider is valid and credentials are
+            functional, otherwise returns None.
         """
 
         # If no authentication provider is passed, no authentication header is required, return None.

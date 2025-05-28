@@ -84,19 +84,18 @@ class AIQUserInteractionManager:
                                query_params: dict | None = None,
                                body_data: dict | None = None) -> httpx.Response | None:
         """
-        Args: # TODO EE: Update doc strings, error handling and validation logic.
-            url (str | httpx.URL): The base URL to which the request will be sent.
-            http_method (str | HTTPMethod): The HTTP method to use for the request (e.g., "GET", "POST").
-            authentication_provider( str | None): The name of the registered authentication provider to make an
-            authenticated request.
+        Args:
+            url (str): The base URL to which the request will be sent.
+            http_method (str): The HTTP method to use for the request (e.g., "GET", "POST", etc..).
+            authentication_provider (str | None): The name of the registered authentication provider to use for
+            making an authenticated request. If None, no authentication will be applied.
             headers (dict | None): Optional dictionary of HTTP headers.
             query_params (dict | None): Optional dictionary of query parameters.
             body_data (dict | None): Optional dictionary representing the request body.
         Returns:
-            httpx.Response | None: _description_
+            httpx.Response | None: The response from the API request, or None if an error occurs.
         """
         try:
-
             authenticated_request: AuthenticatedRequest = AuthenticatedRequest(
                 url_path=url,
                 method=http_method,
