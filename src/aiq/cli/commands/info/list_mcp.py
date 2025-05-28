@@ -60,19 +60,23 @@ async def list_tools_and_schemas(command, url, tool_name=None, client_type='sse'
         args = []
     from aiq.tool.mcp.mcp_client import MCPSSEClient
     from aiq.tool.mcp.mcp_client import MCPStdioClient
+    from aiq.tool.mcp.mcp_client import MCPStreamableHTTPClient
 
     try:
         if client_type == 'stdio':
             client = MCPStdioClient(command=command, args=args, env=env)
-        else:
+        elif client_type == 'streamable-http':
+            client = MCPStreamableHTTPClient(url=url)
+        else:  # sse
             client = MCPSSEClient(url=url)
 
-        if tool_name:
-            tool = await client.get_tool(tool_name)
-            return [format_tool(tool)]
-        else:
-            tools = await client.get_tools()
-            return [format_tool(tool) for tool in tools.values()]
+        async with client:
+            if tool_name:
+                tool = await client.get_tool(tool_name)
+                return [format_tool(tool)]
+            else:
+                tools = await client.get_tools()
+                return [format_tool(tool) for tool in tools.values()]
     except Exception as e:
         click.echo(f"[ERROR] Failed to fetch tools via MCP client: {e}", err=True)
         return []
@@ -85,6 +89,7 @@ async def list_tools_direct(command, url, tool_name=None, client_type='sse', arg
     from mcp.client.sse import sse_client
     from mcp.client.stdio import StdioServerParameters
     from mcp.client.stdio import stdio_client
+    from mcp.client.streamable_http import streamablehttp_client
 
     try:
         if client_type == 'stdio':
@@ -93,7 +98,13 @@ async def list_tools_direct(command, url, tool_name=None, client_type='sse', arg
                 return stdio_client(server=StdioServerParameters(command=command, args=args, env=env))
 
             client = get_stdio_client
-        else:
+        elif client_type == 'streamable-http':
+
+            def get_streamable_http_client():
+                return streamablehttp_client(url=url)
+
+            client = get_streamable_http_client
+        else:  # sse
 
             def get_sse_client():
                 return sse_client(url=url)
@@ -125,9 +136,9 @@ async def list_tools_direct(command, url, tool_name=None, client_type='sse', arg
 @click.option('--url',
               default='http://localhost:9901/sse',
               show_default=True,
-              help='For SSE: MCP server URL (e.g. http://localhost:8080/sse)')
+              help='For SSE/StreamableHTTP: MCP server URL (e.g. http://localhost:8080/sse)')
 @click.option('--client-type',
-              type=click.Choice(['sse', 'stdio']),
+              type=click.Choice(['sse', 'stdio', 'streamable-http']),
               default='sse',
               show_default=True,
               help='Type of client to use')
@@ -151,12 +162,14 @@ def list_mcp(ctx, direct, url, client_type, command, args, env, tool, detail, js
             click.echo("[ERROR] --command is required when using stdio client type", err=True)
             return
 
-    if client_type == 'sse':
+    if client_type in ['sse', 'streamable-http']:
         if not url:
-            click.echo("[ERROR] --url is required when using sse client type", err=True)
+            click.echo("[ERROR] --url is required when using sse or streamable-http client type", err=True)
             return
         if command or args or env:
-            click.echo("[ERROR] --command, --args, and --env are not allowed when using sse client type", err=True)
+            click.echo(
+                "[ERROR] --command, --args, and --env are not allowed when using sse or streamable-http client type",
+                err=True)
             return
 
     stdio_args = args.split() if args else []
