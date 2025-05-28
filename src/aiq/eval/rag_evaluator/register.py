@@ -133,6 +133,7 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
             metrics.append(metric_callable(**kwargs))
 
     # Create the RAG evaluator
-    _evaluator = RAGEvaluator(evaluator_llm=llm, metrics=metrics) if metrics else None
+    _evaluator = RAGEvaluator(evaluator_llm=llm, metrics=metrics,
+                              max_concurrency=builder.get_max_concurrency()) if metrics else None
 
     yield EvaluatorInfo(config=config, evaluate_fn=evaluate_fn, description="Evaluator for RAGAS metrics")

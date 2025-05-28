@@ -20,6 +20,7 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
   # Keep sorted!!!
   "aiqtoolkit~=1.2",
+  "langchain-community~=0.3",
   "pytest~=8.3",
 ]
 requires-python = ">=3.11,<3.13"
