@@ -254,3 +254,21 @@ async def test_generate_async(fn_use_openai_api: bool):
             assert time.time() < deadline, "Job did not complete in time"
             if status != "success":
                 await asyncio.sleep(0.1)
+
+
+async def test_async_job_status_not_found():
+    front_end_config = FastApiFrontEndConfig()
+
+    config = AIQConfig(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(use_openai_api=False),
+    )
+
+    workflow_path = f"{front_end_config.workflow.path}/async"
+
+    async with _build_client(config) as client:
+        status_path = f"{workflow_path}/job/non_existent_job"
+
+        response = await client.get(status_path)
+
+        assert response.status_code == 404
