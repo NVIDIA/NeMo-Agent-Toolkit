@@ -382,7 +382,7 @@ def test_write_output(evaluation_run, default_eval_config, eval_input, eval_outp
         eval_input_item.output_obj = generated_answer
 
     mock_dataset_handler = MagicMock()
-    workflow_output = json.dumps([item.dict() for item in eval_input.eval_input_items])
+    workflow_output = json.dumps([item.model_dump() for item in eval_input.eval_input_items])
     mock_dataset_handler.publish_eval_input.return_value = workflow_output
 
     # Mock evaluation results
@@ -483,7 +483,6 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
     # Patch functions and classes. Goal here is simply to ensure calls are made to the right functions.
     with patch("aiq.runtime.loader.load_config", mock_load_config), \
          patch("aiq.builder.eval_builder.WorkflowEvalBuilder.from_config", side_effect=mock_eval_builder), \
-         patch("aiq.runtime.session.AIQSessionManager", return_value=session_manager), \
          patch("aiq.eval.evaluate.DatasetHandler", return_value=mock_dataset_handler), \
          patch("aiq.eval.evaluate.OutputUploader", return_value=mock_uploader), \
          patch.object(evaluation_run, "run_workflow_local",
@@ -493,7 +492,7 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
          patch.object(evaluation_run, "write_output", MagicMock()) as mock_write_output:
 
         # Run the function
-        await evaluation_run.run_and_evaluate()
+        await evaluation_run.run_and_evaluate(session_manager=session_manager)
 
         # Ensure config is loaded
         assert evaluation_run.eval_config == default_eval_config, "Evaluation config should be set correctly"

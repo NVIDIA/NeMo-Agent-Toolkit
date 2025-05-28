@@ -37,39 +37,49 @@ class MemoryItem(BaseModel):
     memory : str or None
         Optional memory string. Helpful when returning a memory.
     """
+    # yapf: disable
     model_config = ConfigDict(
-        # Add an example for the schema
         json_schema_extra={
-            "examples": [{
-                "conversation": [
-                    {
-                        "role": "user",
-                        "content": "Hi, I'm Alex. I'm a vegetarian and I'm allergic to nuts.",
-                    },
-                    {
-                        "role": "assistant",
-                        "content": "Hello Alex! I've noted that you're a vegetarian and have a nut allergy.",
-                    },
-                ],
-                "user_id": "user_abc",
-                "metadata": {
-                    "key_value_pairs": {
-                        "type": "technology", "relevance": "high"
+            "examples": [
+                {
+                    "conversation": [
+                        {
+                            "role": "user",
+                            "content": "Hi, I'm Alex. I'm a vegetarian and I'm allergic to nuts."
+                        },
+                        {
+                            "role": "assistant",
+                            "content": "Hello Alex! I've noted that you're a vegetarian and have a nut allergy."
+                        }
+                    ],
+                    "user_id": "user_abc",
+                    "tags": ["diet", "allergy"],
+                    "metadata": {
+                        "key_value_pairs": {
+                            "type": "profile",
+                            "relevance": "high"
+                        }
                     }
+                },
+                {
+                    "memory": "User prefers expensive hotels and is vegan.",
+                    "user_id": "user_abc",
+                    "tags": ["hotel", "restaurant"]
                 }
-            }]
+            ]
         },
         # Allow population of models from arbitrary types (e.g., ORM objects)
         arbitrary_types_allowed=True,
         # Enable aliasing if needed
-        populate_by_name=True)
-
-    conversation: list[dict[str, str]] = Field(description="List of conversation messages. "
-                                               "Each message must have a \"role\" "
-                                               "key (user or assistant. It must "
-                                               "als have a \"content\" key.")
+        populate_by_name=True
+    )
+    # yapf: enable
+    conversation: list[dict[str, str]] | None = Field(
+        description="List of conversation messages. Each message must have a \"role\" "
+        "key (user or assistant. It must also have a \"content\" key.",
+        default=None)
     tags: list[str] = Field(default_factory=list, description="List of tags applied to the item.")
-    metadata: dict[str, typing.Any] = Field(description="Metadata about the memory item.")
+    metadata: dict[str, typing.Any] = Field(description="Metadata about the memory item.", default={})
     user_id: str = Field(description="The user's ID.")
     memory: str | None = Field(default=None)
 

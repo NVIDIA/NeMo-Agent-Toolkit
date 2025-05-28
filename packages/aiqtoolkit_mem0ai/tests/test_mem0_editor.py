@@ -16,14 +16,13 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from mem0 import AsyncMemoryClient
 
 from aiq.memory.models import MemoryItem
 from aiq.plugins.mem0ai.mem0_editor import Mem0Editor
 
 
 @pytest.fixture(name="mock_mem0_client")
-def mock_mem0_client_fixture() -> AsyncMemoryClient:
+def mock_mem0_client_fixture() -> AsyncMock:
     """Fixture to provide a mocked AsyncMemoryClient."""
     return AsyncMock()
 
