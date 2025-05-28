@@ -86,7 +86,8 @@ examples = [
 profiling = [
   "matplotlib~=3.9",
   "prefixspan~=0.5.2",
-  "scikit-learn~=1.6"]
+  "scikit-learn~=1.6",
+]
 
 
 [tool.uv]
@@ -138,8 +139,8 @@ dev = [
   "pytest_httpserver==1.1.*",
   "pytest-asyncio==0.24.*",
   "pytest-cov~=6.1",
+  "pytest-pretty~=1.2.0",
   "pytest~=8.3",
-  "pytest-pretty>=1.2.0",
   "python-docx~=1.1.0",
   "setuptools >= 64",
   "setuptools_scm>=8",
@@ -890,13 +891,13 @@ skip = [
 known_first_party = ["aiq"]
 # Need to declare known third party for namespace packages which have the same name
 known_third_party = [
+  "agno",
+  "crewai",
   "langchain",
   "llama_index",
-  "crewai",
-  "semantic_kernel",
   "mem0ai",
+  "semantic_kernel",
   "zep_cloud",
-  "agno",
 ]
 namespace_packages = ["aiq", "aiq.plugins"]
 
