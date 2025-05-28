@@ -90,6 +90,11 @@ profiling = [
   "scikit-learn~=1.6",
 ]
 
+# Optional dependency needed when use_gunicorn is set to true
+gunicorn = [
+  "gunicorn~=23.0"
+]
+
 
 [tool.uv]
 config-settings = { editable_mode = "compat" }
