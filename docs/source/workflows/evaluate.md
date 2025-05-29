@@ -142,7 +142,7 @@ eval:
 
 A judge LLM is used to evaluate the trajectory produced by the workflow, taking into account the tools available during execution. It returns a floating-point score between 0 and 1, where 1.0 indicates a perfect trajectory.
 
-It is recommended to set max_tokens to 1024 for the judge LLM to ensure sufficient context for evaluation.
+It is recommended to set `max_tokens` to 1024 for the judge LLM to ensure sufficient context for evaluation.
 
 To configure the judge LLM, define it in the `llms` section of the configuration file, and reference it in the evaluator configuration using the `llm_name` key.
 
