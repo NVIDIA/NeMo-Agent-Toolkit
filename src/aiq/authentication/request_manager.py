@@ -291,8 +291,10 @@ class RequestManager(RequestManagerBase):
             authentication_provider)
 
         if (is_validated):
+            # If the authentication provider is valid, construct the authentication header.
             return await self.authentication_manager._construct_authentication_header(authentication_provider)
         else:
+            # If the authentication provider is not valid, attempt to set the credentials and construct the header.
             get_auth_header = await self._authentication_manager._set_auth_provider_credentials(authentication_provider)
 
             if (get_auth_header):

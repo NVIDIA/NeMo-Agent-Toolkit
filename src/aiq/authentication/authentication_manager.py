@@ -41,7 +41,7 @@ class AuthenticationManager:  # TODO EE: Add Tests
     def _set_execution_mode(self, execution_mode: ExecutionMode) -> None:
         self._oauth2_authenticator.execution_mode = execution_mode
 
-    async def _validate_auth_provider_credentials(self, authentication_provider: str) -> bool:
+    async def _validate_auth_provider_credentials(self, authentication_provider_name: str) -> bool:
         """
         Validate the authentication provider credentials.
 
@@ -52,14 +52,15 @@ class AuthenticationManager:  # TODO EE: Add Tests
 
         try:
             provider: AuthenticationProvider | None = _CredentialsManager()._get_authentication_provider(
-                authentication_provider)
+                authentication_provider_name)
 
             if provider is None:
-                raise ValueError(f"Authentication provider {authentication_provider} not found.")
+                raise ValueError(f"Authentication provider {authentication_provider_name} not found.")
 
             if not isinstance(provider, (OAuth2Config | APIKeyConfig)):
-                raise TypeError(f"Authentication type for {authentication_provider} not supported. Supported types can "
-                                f"be found in \"aiq.data_models.authentication\" ")
+                raise TypeError(
+                    f"Authentication type for {authentication_provider_name} not supported. Supported types can "
+                    f"be found in \"aiq.data_models.authentication\" ")
 
             if isinstance(provider, OAuth2Config):
                 # Set the provider of interest.
@@ -73,16 +74,36 @@ class AuthenticationManager:  # TODO EE: Add Tests
                 return is_validated
 
             if isinstance(provider, APIKeyConfig):
-                pass  # TODO EE: Update API key authentication
+                return await self._validate_api_key_credentials(authentication_provider_name, provider)
 
         except (Exception, ValueError, TypeError) as e:
             logger.error("Failed to validate authentication provider credentials: %s Error: %s",
-                         authentication_provider,
+                         authentication_provider_name,
                          str(e),
                          exc_info=True)
             return False
 
-        return False
+    async def _validate_api_key_credentials(self, api_key_name: str, api_key_provider: APIKeyConfig) -> bool:
+        """
+        Ensure that the API key credentials are valid for the given API key configuration.
+
+        Args:
+            api_key_config (APIKeyConfig): The API key configuration instance to validate.
+
+        Returns:
+            bool: True if the API key credentials are valid, False otherwise.
+        """
+        # Ensure there is an API key set.
+        if api_key_provider.api_key is None or api_key_provider.api_key == "":
+            logger.error("API key is not set or is empty for provider: %s", api_key_name)
+            return False
+
+        # Ensure the header name is set.
+        if api_key_provider.header_name is None or api_key_provider.header_name == "":
+            logger.error("API key config header name is not set or is empty for provider: %s", api_key_name)
+            return False
+
+        return True
 
     async def _set_auth_provider_credentials(self, authentication_provider: str) -> bool:
         """
@@ -100,10 +121,6 @@ class AuthenticationManager:  # TODO EE: Add Tests
             if provider is None:
                 raise ValueError(f"Authentication provider {authentication_provider} not found.")
 
-            if not isinstance(provider, (OAuth2Config | APIKeyConfig)):
-                raise TypeError(f"Authentication type for {authentication_provider} not supported. Supported types can "
-                                f"be found in \"aiq.data_models.authentication\" ")
-
             if isinstance(provider, OAuth2Config):
                 # Set the provider of interest.
                 self._oauth2_authenticator.authentication_provider = provider
@@ -114,9 +131,6 @@ class AuthenticationManager:  # TODO EE: Add Tests
                 self._oauth2_authenticator.authentication_provider = None
 
                 return credentials_set
-
-            if isinstance(provider, APIKeyConfig):
-                pass  # TODO EE: Update API key authentication
 
         except (Exception, ValueError, TypeError) as e:
             logger.error("Failed to validate authentication provider credentials: %s Error: %s",
@@ -141,15 +155,17 @@ class AuthenticationManager:  # TODO EE: Add Tests
                 auth_provider: AuthenticationProvider | None = _CredentialsManager()._get_authentication_provider(
                     authentication_provider)
 
+                # Construct Oauth2.0 authentication header.
                 if isinstance(auth_provider, OAuth2Config):
-                    # TODO EE: Authentication schemes to add Basic, API key, JWT
                     auth_header: httpx.Headers = httpx.Headers(
                         {"Authorization": f"Bearer {auth_provider.access_token}"})
-
                     return auth_header
 
+                # Construct API key authentication header.
                 if isinstance(auth_provider, APIKeyConfig):
-                    pass
+                    auth_header: httpx.Headers = httpx.Headers(
+                        {f"{auth_provider.header_name}": f"{auth_provider.header_prefix} {auth_provider.api_key}"})
+                    return auth_header
 
             else:
                 raise ValidationError(f"Authentication provider: {authentication_provider} is not authenticated.")
