@@ -95,6 +95,11 @@ gunicorn = [
   "gunicorn~=23.0"
 ]
 
+dask = [
+  "dask~=2025.5",
+  "distributed~=2025.5",
+]
+
 
 [tool.uv]
 config-settings = { editable_mode = "compat" }
