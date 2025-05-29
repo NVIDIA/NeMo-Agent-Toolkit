@@ -132,7 +132,7 @@ def discover_entrypoints(plugin_type: PluginTypes):
         plugin_groups.append("aiq.evaluators")
 
     # Get the entry points for the specified groups
-    aiq_plugins = reduce(lambda x, y: x + y, [entry_points.select(group=y) for y in plugin_groups])
+    aiq_plugins = reduce(lambda x, y: list(x) + list(y), [entry_points.select(group=y) for y in plugin_groups])
 
     return aiq_plugins
 

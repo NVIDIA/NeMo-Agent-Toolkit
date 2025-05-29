@@ -66,7 +66,7 @@ def fixture_env_vars():
             del os.environ[var]
 
 
-class TestConfig(FunctionBaseConfig, name="my_test_fn"):
+class CustomConfig(FunctionBaseConfig, name="my_test_fn"):
     string_input: str
     int_input: int
     float_input: float
@@ -80,8 +80,8 @@ class TestConfig(FunctionBaseConfig, name="my_test_fn"):
 @pytest.fixture(scope="module", autouse=True)
 async def fixture_register_test_fn():
 
-    @register_function(config_type=TestConfig)
-    async def register(config: TestConfig, b: Builder):
+    @register_function(config_type=CustomConfig)
+    async def register(config: CustomConfig, b: Builder):
 
         async def _inner(some_input: str) -> str:
             return some_input
