@@ -419,7 +419,7 @@ Options:
   -f, --fields [all|package|version|component_name|description|developer_notes]
                                   Fields used when applying query.
   --help                          Show this message and exit.
-  ```
+```
 
 ### Channels Information
 
@@ -440,7 +440,7 @@ Usage: aiq info channels [OPTIONS] COMMAND [ARGS]...
 Options:
   -t, --type TEXT  Filter the results by channel type.
   --help           Show this message and exit.
-  ```
+```
 
 ## Configuration Commands
 
@@ -549,7 +549,7 @@ Commands:
   pull     Pull AIQ toolkit artifacts from a remote registry by package name.
   remove   Remove AIQ toolkit artifact from a remote registry by name and version.
   search   Search for AIQ toolkit artifacts from remote registry.
-  ```
+```
 
 #### Publishing AIQ Toolkit Components
 

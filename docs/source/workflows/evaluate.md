@@ -124,7 +124,7 @@ Evaluation is dependent on the judge LLM's ability to accurately evaluate the ge
     3)- meta/llama-3.1-70b-instruct
     4)- meta/llama-3.3-70b-instruct
 ```
-For a complete list of up-to-date judge LLMs, refer to the [RAGAS NV metrics leadership board](https://github.com/explodinggradients/ragas/blob/main/src/ragas/metrics/_nv_metrics.py)
+For a complete list of up-to-date judge LLMs, refer to the [RAGAS NV metrics leadership board](https://github.com/explodinggradients/ragas/blob/main/ragas/src/ragas/metrics/_nv_metrics.py)
 
 For more information on the prompt used by the judge LLM, refer to the [RAGAS NV metrics](https://github.com/explodinggradients/ragas/blob/main/ragas/src/ragas/metrics/_nv_metrics.py). The prompt for these metrics is not configurable. If you need a custom prompt, you can use the [Tunable RAG Evaluator](../reference/evaluate.md#tunable-rag-evaluator) or implement your own evaluator using the [Custom Evaluator](../extend/custom-evaluator.md) documentation.
 
