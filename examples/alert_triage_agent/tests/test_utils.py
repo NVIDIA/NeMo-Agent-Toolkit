@@ -35,7 +35,6 @@ from aiq_alert_triage_agent.utils import run_ansible_playbook
 from aiq.builder.framework_enum import LLMFrameworkEnum
 
 
-@pytest.mark.asyncio
 async def test_get_llm():
     # Clear the cache before test
     _LLM_CACHE.clear()
@@ -198,7 +197,6 @@ def _mock_ansible_runner(status="successful", rc=0, events=None, stdout=None):
     return runner
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "status, rc, events, stdout, expected_tasks, expected_raw",
     [

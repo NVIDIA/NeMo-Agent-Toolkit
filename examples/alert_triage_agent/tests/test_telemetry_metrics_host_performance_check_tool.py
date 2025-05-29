@@ -16,7 +16,6 @@ from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.component_ref import LLMRef
 
 
-@pytest.mark.asyncio
 async def test_telemetry_metrics_host_performance_check_tool():
     # Test cases with expected API responses and outcomes
     test_cases = [

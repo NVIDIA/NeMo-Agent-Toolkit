@@ -108,7 +108,6 @@ EXAMPLE_LLM_PARSED_OUTPUT = json.dumps(
     sort_keys=True)
 
 
-@pytest.mark.asyncio
 async def test_parse_stdout_lines_success():
     # Test data
     test_stdout_lines = [EXAMPLE_CPU_USAGE_OUTPUT, EXAMPLE_MEMORY_USAGE_OUTPUT, EXAMPLE_DISK_IO_OUTPUT]
@@ -137,7 +136,6 @@ async def test_parse_stdout_lines_success():
             input_data=input_data)
 
 
-@pytest.mark.asyncio
 async def test_parse_stdout_lines_llm_error():
     # Simulate LLM throwing an exception
     with patch('aiq_alert_triage_agent.utils.llm_ainvoke') as mock_llm:
