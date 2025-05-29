@@ -61,6 +61,8 @@ groundedness
 isort
 Jira
 jsonlines
+Langfuse
+LangSmith
 # libcudf isn't styled in the way that cuDF is https://docs.rapids.ai/api/libcudf/stable/
 libcudf
 LLM(s?)
