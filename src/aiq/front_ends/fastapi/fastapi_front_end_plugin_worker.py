@@ -72,6 +72,23 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
         self._front_end_config = config.general.front_end
 
+        if self._front_end_config.scheduler_address is not None:
+            try:
+                from dask.distributed import Client
+
+                self._dask_client = Client(self._front_end_config.scheduler_address)
+                logger.debug("Connected to Dask scheduler at %s", self._front_end_config.scheduler_address)
+            except ImportError as e:
+                raise RuntimeError(
+                    "Unable to import dask however scheduler_address is defined, please install it to use async tasks."
+                ) from e
+            except Exception as e:
+                raise RuntimeError(
+                    f"Failed to connect to Dask scheduler at {self._front_end_config.scheduler_address}: {e}") from e
+        else:
+            self._dask_client = None
+            logger.debug("No Dask scheduler address provided, running without Dask support.")
+
         self._cleanup_tasks: list[str] = []
         self._cleanup_tasks_lock = asyncio.Lock()
 
@@ -111,6 +128,13 @@ class FastApiFrontEndPluginWorkerBase(ABC):
                             logger.warning("No cleanup task found for %s", task_name)
 
                     self._cleanup_tasks.clear()
+                    if self._dask_client is not None:
+                        try:
+                            self._dask_client.close()
+                            self._dask_client = None
+                            logger.debug("Dask client closed")
+                        except Exception as e:
+                            logger.error("Error closing Dask client: %s", e)
 
             logger.debug("Closing AIQ Toolkit server from process %s", os.getpid())
 
