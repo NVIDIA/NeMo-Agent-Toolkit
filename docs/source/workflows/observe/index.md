@@ -121,8 +121,7 @@ The `tracing` section contains one or more tracing providers. Each provider has 
         _type: langfuse
         endpoint: http://localhost:3000/api/public/otel/v1/traces
     ```
-  - See [Observing with Langfuse](./observe-workflow-with-langfuse.md) for more information
-- [**Langsmith**](https://www.langchain.com/langsmith)
+- [**LangSmith**](https://www.langchain.com/langsmith)
   - Example configuration:
     ```yaml
     tracing:
@@ -130,7 +129,6 @@ The `tracing` section contains one or more tracing providers. Each provider has 
         _type: langsmith
         project: default
     ```
-  - See [Observing with Langsmith](./observe-workflow-with-langsmith.md) for more information
 - **Custom providers**
   - See [Registering a New Telemetry Provider as a Plugin](#registering-a-new-telemetry-provider-as-a-plugin) for more information
 
