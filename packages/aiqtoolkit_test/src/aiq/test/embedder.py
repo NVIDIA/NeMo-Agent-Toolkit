@@ -39,6 +39,6 @@ async def embedder_test_provider(config: EmbedderTestConfig, builder: Builder):
 @register_embedder_client(config_type=EmbedderTestConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def embedder_langchain_test_client(config: EmbedderTestConfig, builder: Builder):
 
-    from langchain.embeddings import DeterministicFakeEmbedding
+    from langchain_community.embeddings import DeterministicFakeEmbedding
 
     yield DeterministicFakeEmbedding(size=config.embedding_size)
