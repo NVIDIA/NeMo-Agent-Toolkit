@@ -2,23 +2,23 @@
 build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
+[tool.setuptools]
+packages = []
+
 [tool.setuptools_scm]
 root = "../.."
 
 [project]
-name = "aiq_semantic_kernel_demo"
+name = "aiq_simple_rag"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain,semantic-kernel]~=1.2",
-  "faiss-cpu==1.9.0",
+  "aiqtoolkit[ingestion, langchain, mem0ai]~=1.1"
 ]
 requires-python = ">=3.11,<3.13"
-description = "Semantic Kernel Example"
+description = "Simple Rag AIQ example"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
 aiqtoolkit = { path = "../../", editable = true }
 
-[project.entry-points.'aiq.components']
-aiq_semantic_kernel_demo = "aiq_semantic_kernel_demo.register"

@@ -15,6 +15,7 @@
 
 import logging
 import re
+import warnings
 from contextlib import asynccontextmanager
 from contextlib import contextmanager
 from typing import Any
@@ -30,10 +31,20 @@ from aiq.utils.optional_imports import TelemetryOptionalImportError
 from aiq.utils.optional_imports import try_import_opentelemetry
 
 try:
-    from weave.trace.context import weave_client_context
-    from weave.trace.context.call_context import get_current_call
-    from weave.trace.context.call_context import set_call_stack
-    from weave.trace.weave_client import Call
+    with warnings.catch_warnings():
+        # Ignore deprecation warnings being triggered by weave. https://github.com/wandb/weave/issues/3666
+        # and https://github.com/wandb/weave/issues/4533
+        warnings.filterwarnings("ignore", category=DeprecationWarning, message=r"^`sentry_sdk\.Hub` is deprecated")
+        warnings.filterwarnings("ignore",
+                                category=DeprecationWarning,
+                                message=r"^Using extra keyword arguments on `Field` is deprecated")
+        warnings.filterwarnings("ignore",
+                                category=DeprecationWarning,
+                                message=r"^`include` is deprecated and does nothing")
+        from weave.trace.context import weave_client_context
+        from weave.trace.context.call_context import get_current_call
+        from weave.trace.context.call_context import set_call_stack
+        from weave.trace.weave_client import Call
     WEAVE_AVAILABLE = True
 except ImportError:
     WEAVE_AVAILABLE = False

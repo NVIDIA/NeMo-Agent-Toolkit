@@ -155,7 +155,7 @@ def create_trace_flow_diagram(df: pd.DataFrame, temp_dir: str) -> TraceFlowInfo:
 
         # Draw span box
         color = colors.get(span_kind, "lightgray")
-        rect = plt.Rectangle((x_start, 0.5 * i - 0.2), x_end - x_start, 0.4, color=color, alpha=0.8, edgecolor="black")
+        rect = plt.Rectangle((x_start, 0.5 * i - 0.2), x_end - x_start, 0.4, color=color, alpha=0.8)
 
         ax.add_patch(rect)
 

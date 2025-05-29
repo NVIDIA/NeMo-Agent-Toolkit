@@ -34,7 +34,7 @@ async def main(*,
                collection_name: str,
                clean_cache: bool = True,
                embedding_model: str = "nvidia/nv-embedqa-e5-v5",
-               base_path: str = "./data"):
+               base_path: str = "./.tmp/data"):
 
     embedder = NVIDIAEmbeddings(model=embedding_model, truncate="END")
     vector_store = Milvus(
