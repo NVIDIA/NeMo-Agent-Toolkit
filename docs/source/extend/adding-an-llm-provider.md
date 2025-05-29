@@ -118,7 +118,6 @@ After implementing a new LLM provider, it's important to verify that it works co
 
 ```python
 @pytest.mark.integration
-@pytest.mark.asyncio
 async def test_nim_langchain_agent():
     """
     Test NIM LLM with LangChain agent. Requires NVIDIA_API_KEY to be set.

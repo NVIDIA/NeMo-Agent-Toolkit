@@ -15,15 +15,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Integrating AWS Bedrock Models to AIQ Toolkit Workflow
+# AWS Bedrock Integration
 
-To integrate AWS Bedrock models into your AIQ Toolkit workflow, follow these steps:
+The Agent Intelligence Toolkit supports integration with multiple LLM providers, including AWS Bedrock. This documentation provides a comprehensive guide on how to integrate AWS Bedrock models into your AIQ Toolkit workflow. To view the full list of supported LLM providers, run `aiq info components -t llm_provider`.
 
-1. **Prerequisites**:
-   - Set up AWS credentials by configuring `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`. For detailed setup instructions, refer to the [AWS Bedrock setup guide](https://docs.aws.amazon.com/bedrock/latest/userguide/setting-up.html)
 
-1. **Configuration**:
-   Add the AWS Bedrock LLM configuration to your workflow config file. Make sure the `region_name` matches the region of your `AWS` account, and the `credentials_profile_name` matches the field in your credential file. Here's an example:
+## Configuration
+
+### Prerequisites
+Before integrating AWS Bedrock, ensure you have:
+- Set up AWS credentials by configuring `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
+- For detailed setup instructions, refer to the [AWS Bedrock setup guide](https://docs.aws.amazon.com/bedrock/latest/userguide/setting-up.html)
+
+### Example Configuration
+Add the AWS Bedrock LLM configuration to your workflow config file. Make sure the `region_name` matches the region of your AWS account, and the `credentials_profile_name` matches the field in your credential file:
 
 ```yaml
 llms:
@@ -36,8 +41,17 @@ llms:
     credentials_profile_name: default
 ```
 
-3. **Usage in Workflow**:
-   Reference the AWS Bedrock LLM in your workflow configuration:
+### Configurable Options
+* `model_name`: The name of the AWS Bedrock model to use
+* `temperature`: Controls randomness in the output (0.0 to 1.0)
+* `max_tokens`: Maximum number of tokens to generate
+* `region_name`: AWS region where your Bedrock service is hosted
+* `credentials_profile_name`: AWS credentials profile name to use
+
+## Usage in Workflow
+
+### Basic Integration
+Reference the AWS Bedrock LLM in your workflow configuration:
 
 ```yaml
 workflow:
@@ -45,5 +59,3 @@ workflow:
   llm_name: aws_bedrock_llm
   # ... other workflow configurations
 ```
-
-The AWS Bedrock integration supports various models and configurations, allowing you to leverage AWS's managed LLM services within your AIQ Toolkit workflows.

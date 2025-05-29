@@ -24,7 +24,6 @@ from aiq.llm.openai_llm import OpenAIModelConfig
 
 
 @pytest.mark.integration
-@pytest.mark.asyncio
 async def test_nim_langchain_agent():
     """
     Test NIM LLM with LangChain agent. Requires NVIDIA_API_KEY to be set.
@@ -48,7 +47,6 @@ async def test_nim_langchain_agent():
 
 
 @pytest.mark.integration
-@pytest.mark.asyncio
 async def test_openai_langchain_agent():
     """
     Test OpenAI LLM with LangChain agent. Requires OPENAI_API_KEY to be set.
@@ -71,7 +69,6 @@ async def test_openai_langchain_agent():
 
 
 @pytest.mark.integration
-@pytest.mark.asyncio
 async def test_aws_bedrock_langchain_agent():
     """
     Test AWS Bedrock LLM with LangChain agent.
