@@ -33,7 +33,7 @@ from aiq.utils.type_utils import DecomposedType
 logger = logging.getLogger(__name__)
 
 
-class StartCommandGroup(click.MultiCommand):
+class StartCommandGroup(click.Group):
 
     # pylint: disable=too-many-positional-arguments
     def __init__(

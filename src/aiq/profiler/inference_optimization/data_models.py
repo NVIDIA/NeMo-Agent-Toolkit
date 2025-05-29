@@ -220,7 +220,7 @@ class CallNode(BaseModel):
         return "\n".join([info] + child_strs)
 
 
-CallNode.update_forward_refs()
+CallNode.model_rebuild()
 
 
 class NodeMetrics(BaseModel):
@@ -296,7 +296,7 @@ class ConcurrencyCallNode(CallNode):
     llm_text_output: str | None = None
 
 
-ConcurrencyCallNode.update_forward_refs()
+ConcurrencyCallNode.model_rebuild()
 
 
 class ConcurrencySpikeInfo(BaseModel):

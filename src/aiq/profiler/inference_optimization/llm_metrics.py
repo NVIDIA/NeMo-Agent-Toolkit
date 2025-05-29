@@ -176,8 +176,8 @@ class LLMMetrics:
             return subdf
 
         # Apply the group metrics
-        df = (df.groupby(['example_number', 'function_name'],
-                         group_keys=False).apply(_compute_group_metrics).sort_index())
+        df_group = df.groupby(['example_number', 'function_name'], group_keys=False)
+        df = df_group[df.columns].apply(_compute_group_metrics).sort_index()
 
         # ---------------------------------------------------------------------
         # 5. NOVA-Predicted-OSL
