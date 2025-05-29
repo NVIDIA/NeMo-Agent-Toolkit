@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import os
 import tempfile
 import typing
@@ -20,11 +21,23 @@ import typing
 from aiq.builder.front_end import FrontEndBase
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
+from aiq.front_ends.fastapi.job_store import register_dask_serializers
 from aiq.front_ends.fastapi.main import get_app
 from aiq.utils.io.yaml_tools import yaml_dump
 
+if typing.TYPE_CHECKING:
+    try:
+        from dask.distributed import LocalCluster
+    except ImportError:
+        pass
+
+logger = logging.getLogger(__name__)
+
 
 class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
+
+    # This attribute is set if dask is installed, and an external cluster is not used (scheduler_address is None)
+    _cluster: "LocalCluster | None" = None
 
     def get_worker_class(self) -> type[FastApiFrontEndPluginWorkerBase]:
         from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -48,6 +61,25 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
 
             # Get as dict
             config_dict = self.full_config.model_dump(mode="json", by_alias=True, round_trip=True)
+
+            bool using_dask = False
+            if self.front_end_config.scheduler_address is None:
+                try:
+                    from dask.distributed import LocalCluster
+
+                    self._cluster = LocalCluster(asynchronous=True)
+                    if self._cluster.scheduler is not None:
+                        config_dict["scheduler_address"] = self._cluster.scheduler.address
+                        using_dask = True
+                    else:
+                        raise RuntimeError("Dask LocalCluster did not start correctly, no scheduler address available.")
+                except ImportError:
+                    logger.warning("Dask is not installed, async execution and evaluation will not be available.")
+            else:
+                using_dask = True
+
+            if using_dask:
+                register_dask_serializers()
 
             # Write to YAML file
             yaml_dump(config_dict, config_file)
