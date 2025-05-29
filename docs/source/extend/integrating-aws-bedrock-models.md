@@ -49,8 +49,6 @@ llms:
 * `credentials_profile_name`: AWS credentials profile name to use
 
 ## Usage in Workflow
-
-### Basic Integration
 Reference the AWS Bedrock LLM in your workflow configuration:
 
 ```yaml
