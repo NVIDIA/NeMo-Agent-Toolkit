@@ -16,7 +16,6 @@
 import json
 from unittest.mock import patch
 
-import pytest
 from aiq_alert_triage_agent.host_performance_check_tool import _parse_stdout_lines
 from aiq_alert_triage_agent.prompts import ToolReasoningLayerPrompts
 
