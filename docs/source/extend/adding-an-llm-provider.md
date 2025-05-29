@@ -140,7 +140,7 @@ async def test_nim_langchain_agent():
         assert "3" in response.content.lower()
 ```
 
-Note: Since this test requires an API key, it's marked with `@pytest.mark.integration` to exclude it from CI runs. However, these tests are valuable for maintaining and verifying the functionality of LLM providers and their client integrations.
+Note: Since this test requires an API key, it's marked with `@pytest.mark.integration` to exclude it from CI runs. However, these tests are necessary for maintaining and verifying the functionality of LLM providers and their client integrations.
 
 ## Packaging the Provider and Client
 
