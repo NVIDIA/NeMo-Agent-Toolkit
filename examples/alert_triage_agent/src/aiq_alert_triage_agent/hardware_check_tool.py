@@ -27,6 +27,15 @@ from . import utils
 from .prompts import ToolReasoningLayerPrompts
 
 
+class HardwareCheckToolConfig(FunctionBaseConfig, name="hardware_check"):
+    description: str = Field(
+        default=("This tool checks hardware health status using IPMI monitoring to detect power state, "
+                 "hardware degradation, and anomalies that could explain alerts. Args: host_id: str"),
+        description="Description of the tool for the agent.")
+    llm_name: LLMRef
+    test_mode: bool = Field(default=True, description="Whether to run in test mode")
+
+
 def _get_ipmi_monitor_data(ip_address, username, password):
     """
     Capture IPMI monitoring data using the ipmimonitoring command.
@@ -56,15 +65,6 @@ def _get_ipmi_monitor_data(ip_address, username, password):
         # Log error and return None if command fails
         utils.logger.error("Error executing IPMI monitoring command. Details: %s", e.stderr)
         return None
-
-
-class HardwareCheckToolConfig(FunctionBaseConfig, name="hardware_check"):
-    description: str = Field(
-        default=("This tool checks hardware health status using IPMI monitoring to detect power state, "
-                 "hardware degradation, and anomalies that could explain alerts. Args: host_id: str"),
-        description="Description of the tool for the agent.")
-    llm_name: LLMRef
-    test_mode: bool = Field(default=True, description="Whether to run in test mode")
 
 
 @register_function(config_type=HardwareCheckToolConfig)
