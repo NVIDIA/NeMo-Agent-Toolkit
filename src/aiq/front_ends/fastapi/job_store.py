@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import os
 import shutil
@@ -181,3 +182,30 @@ class JobStore:
         with self._lock:
             for job_id in expired_ids:
                 del self._jobs[job_id]
+
+
+def register_dask_serializers():
+    """
+    Register custom serializers for JobInfo with Dask if available.
+    """
+
+    # Attempt to register custom serialization for JobInfo if dask is available
+    from distributed.protocol import dask_deserialize
+    from distributed.protocol import dask_serialize
+
+    @dask_serialize.register(JobInfo)
+    def serialize_job_info(job: JobInfo) -> tuple[dict, list[bytes]]:
+        """Custom serialization for JobInfo."""
+        header = {}
+
+        job_dict = job.model_dump(mode="json", round_trip=True)
+        json_str = json.dumps(job_dict)
+        frames = [json_str.encode('utf-8')]
+
+        return (header, frames)
+
+    @dask_deserialize.register(JobInfo)
+    def deserialize_job_info(header: dict, frames: list[bytes]) -> JobInfo:
+        """Custom deserialization for JobInfo."""
+        # model_validate_json accepts a bytes string, no need to decode first
+        return JobInfo.model_validate_json(frames[0])
