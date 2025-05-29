@@ -410,6 +410,7 @@ def test_build_dependency_sequence(nested_aiq_config: AIQConfig):
     assert noref_instance_ids == list(noref_order.keys())
 
 
+@pytest.mark.usefixtures("set_test_api_keys")
 async def test_load_hierarchial_workflow(nested_aiq_config: AIQConfig):
 
     # Validate nested workflow instantiation
