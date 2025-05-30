@@ -16,7 +16,6 @@
 import asyncio
 import logging
 import os
-import time
 import typing
 from abc import ABC
 from abc import abstractmethod
@@ -50,8 +49,6 @@ from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateRequest
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateStatusResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
-from aiq.front_ends.fastapi.job_store import JobInfo
-from aiq.front_ends.fastapi.job_store import JobStore
 from aiq.front_ends.fastapi.response_helpers import generate_single_response
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
@@ -61,12 +58,13 @@ from aiq.runtime.session import AIQSessionManager
 
 logger = logging.getLogger(__name__)
 
-_DASK_INSTALLED = False
+_DASK_AVAILABLE = False
 try:
-    from dask.distributed import Variable
-    _DASK_INSTALLED = True
+    from aiq.front_ends.fastapi.job_store import JobInfo
+    from aiq.front_ends.fastapi.job_store import JobStatus
+    from aiq.front_ends.fastapi.job_store import JobStore
+    _DASK_AVAILABLE = True
 except ImportError:
-    # This has already been logged
     pass
 
 
@@ -79,26 +77,19 @@ class FastApiFrontEndPluginWorkerBase(ABC):
                           FastApiFrontEndConfig), ("Front end config is not FastApiFrontEndConfig")
 
         self._front_end_config = config.general.front_end
+        self._dask_available = False
+        self._job_store = None
 
         if self._front_end_config.scheduler_address is not None:
             try:
-                from dask.distributed import Client
-
-                self._dask_client = Client(self._front_end_config.scheduler_address)
+                self._job_store = JobStore(scheduler_address=self._front_end_config.scheduler_address)
+                self._dask_available = True
                 logger.debug("Connected to Dask scheduler at %s", self._front_end_config.scheduler_address)
-            except ImportError as e:
-                raise RuntimeError(
-                    "Unable to import dask however scheduler_address is defined, please install it to use async tasks."
-                ) from e
             except Exception as e:
                 raise RuntimeError(
                     f"Failed to connect to Dask scheduler at {self._front_end_config.scheduler_address}: {e}") from e
         else:
-            self._dask_client = None
             logger.debug("No Dask scheduler address provided, running without Dask support.")
-
-        # self._cleanup_tasks: list[str] = []
-        # self._cleanup_tasks_lock = asyncio.Lock()
 
     @property
     def config(self) -> AIQConfig:
@@ -123,25 +114,9 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
                 yield
 
-                # # If a cleanup task is running, cancel it
-                # async with self._cleanup_tasks_lock:
-
-                #     # Cancel all cleanup tasks
-                #     for task_name in self._cleanup_tasks:
-                #         cleanup_task: asyncio.Task | None = getattr(starting_app.state, task_name, None)
-                #         if cleanup_task is not None:
-                #             logger.info("Cancelling %s cleanup task", task_name)
-                #             cleanup_task.cancel()
-                #         else:
-                #             logger.warning("No cleanup task found for %s", task_name)
-
-                #     self._cleanup_tasks.clear()
-
-                if self._dask_client is not None:
+                if self._job_store is not None:
                     try:
-                        self._dask_client.close()
-                        self._dask_client = None
-                        logger.debug("Dask client closed")
+                        self._job_store.close()
                     except Exception as e:
                         logger.error("Error closing Dask client: %s", e)
 
@@ -201,32 +176,6 @@ class RouteInfo(BaseModel):
 
 class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
-    # @staticmethod
-    # async def _periodic_cleanup(name: str, job_store: JobStore, sleep_time_sec: int = 300):
-    #     while True:
-    #         try:
-    #             job_store.cleanup_expired_jobs()
-    #             logger.debug("Expired %s jobs cleaned up", name)
-    #         except Exception as e:
-    #             logger.error("Error during %s job cleanup: %s", name, e)
-    #         await asyncio.sleep(sleep_time_sec)
-
-    async def create_cleanup_task(self, app: FastAPI, name: str, job_store: JobStore, sleep_time_sec: int = 300):
-        # Schedule periodic cleanup of expired jobs on first job creation
-        attr_name = f"{name}_cleanup_task"
-
-        # # Cheap check, if it doesn't exist, we will need to re-check after we acquire the lock
-        # if not hasattr(app.state, attr_name):
-        #     async with self._cleanup_tasks_lock:
-        #         if not hasattr(app.state, attr_name):
-        #             logger.info("Starting %s periodic cleanup task", name)
-        #             setattr(
-        #                 app.state,
-        #                 attr_name,
-        #                 asyncio.create_task(
-        #                     self._periodic_cleanup(name=name, job_store=job_store, sleep_time_sec=sleep_time_sec)))
-        #             self._cleanup_tasks.append(attr_name)
-
     def get_step_adaptor(self) -> StepAdaptor:
 
         return StepAdaptor(self.front_end_config.step_adaptor)
@@ -267,54 +216,61 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             },
         }
 
-        # Create job store for tracking evaluation jobs
-        job_store = JobStore()
-        # Don't run multiple evaluations at the same time
-        evaluation_lock = asyncio.Lock()
+        if not self._dask_available:
+            raise RuntimeError("Dask is required for evaluation jobs, please install it.")
+
+        # TODO: Find another way to limit the number of concurrent evaluations
+        # evaluation_lock = asyncio.Lock()
 
         async def run_evaluation(job_id: str, config_file: str, reps: int, session_manager: AIQSessionManager):
             """Background task to run the evaluation."""
-            async with evaluation_lock:
-                try:
-                    # Create EvaluationRunConfig using the CLI defaults
-                    eval_config = EvaluationRunConfig(config_file=Path(config_file), dataset=None, reps=reps)
+            # async with evaluation_lock:
+            try:
+                # Create EvaluationRunConfig using the CLI defaults
+                eval_config = EvaluationRunConfig(config_file=Path(config_file), dataset=None, reps=reps)
 
-                    # Create a new EvaluationRun with the evaluation-specific config
-                    job_store.update_status(job_id, "running")
-                    eval_runner = EvaluationRun(eval_config)
-                    output: EvaluationRunOutput = await eval_runner.run_and_evaluate(session_manager=session_manager,
-                                                                                     job_id=job_id)
-                    if output.workflow_interrupted:
-                        job_store.update_status(job_id, "interrupted")
-                    else:
-                        parent_dir = os.path.dirname(
-                            output.workflow_output_file) if output.workflow_output_file else None
+                # Create a new EvaluationRun with the evaluation-specific config
+                job_store.update_status(job_id, "running")
+                eval_runner = EvaluationRun(eval_config)
+                output: EvaluationRunOutput = await eval_runner.run_and_evaluate(session_manager=session_manager,
+                                                                                 job_id=job_id)
+                if output.workflow_interrupted:
+                    job_store.update_status(job_id, "interrupted")
+                else:
+                    parent_dir = os.path.dirname(output.workflow_output_file) if output.workflow_output_file else None
 
-                        job_store.update_status(job_id, "success", output_path=str(parent_dir))
-                except Exception as e:
-                    logger.error("Error in evaluation job %s: %s", job_id, str(e))
-                    job_store.update_status(job_id, "failure", error=str(e))
+                    job_store.update_status(job_id, "success", output_path=str(parent_dir))
+            except Exception as e:
+                logger.error("Error in evaluation job %s: %s", job_id, str(e))
+                job_store.update_status(job_id, "failure", error=str(e))
 
-        async def start_evaluation(request: AIQEvaluateRequest,
-                                   background_tasks: BackgroundTasks,
-                                   http_request: Request):
+        async def start_evaluation(request: AIQEvaluateRequest, http_request: Request):
             """Handle evaluation requests."""
 
             async with session_manager.session(request=http_request):
 
                 # if job_id is present and already exists return the job info
+                # There is a race condition between this check and the actual job submission, however if the client is
+                # supplying their own job_ids, then it is their responsibility to ensure that the job_id is unique.
                 if request.job_id:
-                    job = job_store.get_job(request.job_id)
-                    if job:
-                        return AIQEvaluateResponse(job_id=job.job_id, status=job.status)
+                    job_status = self._job_store.get_status(request.job_id)
+                    if job_status != JobStatus.NOT_FOUND:
+                        return AIQEvaluateResponse(job_id=request.job_id, status=job_status)
 
-                job_id = job_store.create_job(request.config_file, request.job_id, request.expiry_seconds)
-                await self.create_cleanup_task(app=app, name="async_evaluation", job_store=job_store)
-                background_tasks.add_task(run_evaluation, job_id, request.config_file, request.reps, session_manager)
+                job_id = self._job_store.ensure_job_id(request.job_id)
 
-                return AIQEvaluateResponse(job_id=job_id, status="submitted")
+                job_id = self._job_store.submit_job(
+                    job_id=job_id,
+                    config_file=request.config_file,
+                    expiry_seconds=request.expiry_seconds,
+                    job_fn=run_evaluation,
+                    job_args=[job_id, request.config_file, request.reps, session_manager])
 
-        def translate_job_to_response(job: JobInfo) -> AIQEvaluateStatusResponse:
+                logger.info("Submitted evaluation job %s with config %s", job_id, request.config_file)
+
+                return AIQEvaluateResponse(job_id=job_id, status=JobStatus.SUBMITTED)
+
+        def translate_job_to_response(job: "JobInfo") -> AIQEvaluateStatusResponse:
             """Translate a JobInfo object to an AIQEvaluateStatusResponse."""
             return AIQEvaluateStatusResponse(job_id=job.job_id,
                                              status=job.status,
@@ -323,7 +279,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                              output_path=str(job.output_path),
                                              created_at=job.created_at,
                                              updated_at=job.updated_at,
-                                             expires_at=job_store.get_expires_at(job))
+                                             expires_at=self._job_store.get_expires_at(job))
 
         async def get_job_status(job_id: str, http_request: Request) -> AIQEvaluateStatusResponse:
             """Get the status of an evaluation job."""
@@ -331,7 +287,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async with session_manager.session(request=http_request):
 
-                job = job_store.get_job(job_id)
+                job = self._job_store.get_job(job_id)
                 if not job:
                     logger.warning("Job %s not found", job_id)
                     raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
@@ -344,7 +300,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async with session_manager.session(request=http_request):
 
-                job = job_store.get_last_job()
+                job = self._job_store.get_last_job()
                 if not job:
                     logger.warning("No jobs found when requesting last job status")
                     raise HTTPException(status_code=404, detail="No jobs found")
@@ -358,10 +314,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 if status is None:
                     logger.info("Getting all jobs")
-                    jobs = job_store.get_all_jobs()
+                    jobs = self._job_store.get_all_jobs()
                 else:
                     logger.info("Getting jobs with status %s", status)
-                    jobs = job_store.get_jobs_by_status(status)
+                    jobs = self._job_store.get_jobs_by_status(status)
+
                 logger.info("Found %d jobs", len(jobs))
                 return [translate_job_to_response(job) for job in jobs]
 
@@ -429,21 +386,22 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         GenerateStreamResponseType = workflow.streaming_output_schema  # pylint: disable=invalid-name
         GenerateSingleResponseType = workflow.single_output_schema  # pylint: disable=invalid-name
 
-        # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
-        # Consider prefixing these with "aiq_" to avoid conflicts
-        class AIQAsyncGenerateRequest(GenerateBodyType):
-            job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
-            sync_timeout: int = Field(
-                default=0,
-                ge=0,
-                le=300,
-                description="Attempt to perform the job synchronously up until `sync_timeout` sectonds, "
-                "if the job hasn't been completed by then a job_id will be returned with a status code of 202.")
-            expiry_seconds: int = Field(default=JobStore.DEFAULT_EXPIRY,
-                                        ge=JobStore.MIN_EXPIRY,
-                                        le=JobStore.MAX_EXPIRY,
-                                        description="Optional time (in seconds) before the job expires. "
-                                        "Clamped between 600 (10 min) and 86400 (24h).")
+        if _DASK_AVAILABLE:
+            # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
+            # Consider prefixing these with "aiq_" to avoid conflicts
+            class AIQAsyncGenerateRequest(GenerateBodyType):
+                job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
+                sync_timeout: int = Field(
+                    default=0,
+                    ge=0,
+                    le=300,
+                    description="Attempt to perform the job synchronously up until `sync_timeout` sectonds, "
+                    "if the job hasn't been completed by then a job_id will be returned with a status code of 202.")
+                expiry_seconds: int = Field(default=JobStore.DEFAULT_EXPIRY,
+                                            ge=JobStore.MIN_EXPIRY,
+                                            le=JobStore.MAX_EXPIRY,
+                                            description="Optional time (in seconds) before the job expires. "
+                                            "Clamped between 600 (10 min) and 86400 (24h).")
 
         # Ensure that the input is in the body. POD types are treated as query parameters
         if (not issubclass(GenerateBodyType, BaseModel)):
@@ -463,11 +421,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             },
         }
 
-        # Create job store for tracking async generation jobs
-        job_store = JobStore()
-
+        # TODO: Add a way to limit the number of concurrent async jobs in dask
         # Run up to max_running_async_jobs jobs at the same time
-        async_job_concurrency = asyncio.Semaphore(self._front_end_config.max_running_async_jobs)
+        # async_job_concurrency = asyncio.Semaphore(self._front_end_config.max_running_async_jobs)
 
         def get_single_endpoint(result_type: type | None):
 
@@ -571,17 +527,17 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                  session_manager: AIQSessionManager,
                                  result_type: type):
             """Background task to run the evaluation."""
-            async with async_job_concurrency:
-                try:
-                    result = await generate_single_response(payload=payload,
-                                                            session_manager=session_manager,
-                                                            result_type=result_type)
-                    job_store.update_status(job_id, "success", output=result)
-                except Exception as e:
-                    logger.error("Error in evaluation job %s: %s", job_id, e)
-                    job_store.update_status(job_id, "failure", error=str(e))
+            # async with async_job_concurrency:
+            try:
+                result = await generate_single_response(payload=payload,
+                                                        session_manager=session_manager,
+                                                        result_type=result_type)
+                job_store.update_status(job_id, "success", output=result)
+            except Exception as e:
+                logger.error("Error in evaluation job %s: %s", job_id, e)
+                job_store.update_status(job_id, "failure", error=str(e))
 
-        def _job_status_to_response(job: JobInfo) -> AIQAsyncGenerationStatusResponse:
+        def _job_status_to_response(job: "JobInfo") -> AIQAsyncGenerationStatusResponse:
             job_output = job.output
             if job_output is not None:
                 job_output = job_output.model_dump()
@@ -591,7 +547,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                     output=job_output,
                                                     created_at=job.created_at,
                                                     updated_at=job.updated_at,
-                                                    expires_at=job_store.get_expires_at(job))
+                                                    expires_at=self._job_store.get_expires_at(job))
 
         def post_async_generation(request_type: type, final_result_type: type):
 
@@ -604,38 +560,25 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                     # if job_id is present and already exists return the job info
                     if request.job_id:
-                        job = job_store.get_job(request.job_id)
+                        job = self._job_store.get_job(request.job_id)
                         if job:
                             return AIQAsyncGenerateResponse(job_id=job.job_id, status=job.status)
 
-                    job_id = job_store.create_job(job_id=request.job_id, expiry_seconds=request.expiry_seconds)
-                    await self.create_cleanup_task(app=app, name="async_generation", job_store=job_store)
+                    job_id = self._job_store.ensure_job_id(request.job_id)
+                    (_, future) = self._job_store.submit_job(
+                        job_id=job_id,
+                        expiry_seconds=request.expiry_seconds,
+                        job_fn=run_generation,
+                        job_args=[job_id, request, session_manager, final_result_type])
 
-                    # The fastapi/starlette background tasks won't begin executing until after the response is sent
-                    # to the client, so we need to wrap the task in a function, alowing us to start the task now,
-                    # and allowing the background task function to await the results.
-                    task = asyncio.create_task(
-                        run_generation(job_id=job_id,
-                                       payload=request,
-                                       session_manager=session_manager,
-                                       result_type=final_result_type))
-
-                    async def wrapped_task(t: asyncio.Task):
-                        return await t
-
-                    background_tasks.add_task(wrapped_task, task)
-
-                    now = time.time()
-                    sync_timeout = now + request.sync_timeout
-                    while time.time() < sync_timeout:
-                        job = job_store.get_job(job_id)
-                        if job is not None and job.status not in job_store.ACTIVE_STATUS:
-                            # If the job is done, return the result
-                            response.status_code = 200
-                            return _job_status_to_response(job)
-
-                        # Sleep for a short time before checking again
-                        await asyncio.sleep(0.1)
+                    try:
+                        __ = future.result(timeout=request.sync_timeout)
+                        job = self._job_store.get_job(job_id)
+                        assert job is not None, "Job should exist after future result"
+                        response.status_code = 200
+                        return _job_status_to_response(job)
+                    except TimeoutError:
+                        pass
 
                     response.status_code = 202
                     return AIQAsyncGenerateResponse(job_id=job_id, status="submitted")
@@ -648,8 +591,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async with session_manager.session(request=http_request):
 
-                job = job_store.get_job(job_id)
-                if not job:
+                job = self._job_store.get_job(job_id)
+                if job is None:
                     logger.warning("Job %s not found", job_id)
                     raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
@@ -687,7 +630,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     methods=[endpoint.method],
                     description="Stream raw intermediate steps without any step adaptor translations.\n"
                     "Use filter_steps query parameter to filter steps by type (comma-separated list) or\
-                        set to 'none' to suppress all intermediate steps."                                                                          ,
+                        set to 'none' to suppress all intermediate steps.",
                 )
 
             elif (endpoint.method == "POST"):
@@ -724,7 +667,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     response_model=GenerateStreamResponseType,
                     description="Stream raw intermediate steps without any step adaptor translations.\n"
                     "Use filter_steps query parameter to filter steps by type (comma-separated list) or \
-                        set to 'none' to suppress all intermediate steps."                                                                          ,
+                        set to 'none' to suppress all intermediate steps.",
                     responses={500: response_500},
                 )
 

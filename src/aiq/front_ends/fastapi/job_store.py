@@ -17,6 +17,9 @@ import json
 import logging
 import os
 import shutil
+import time
+import typing
+from collections.abc import Callable
 from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
@@ -24,20 +27,17 @@ from enum import Enum
 from operator import attrgetter
 from uuid import uuid4
 
+import dask.config
+from dask.distributed import Client
+from dask.distributed import Future
+from dask.distributed import Lock
+from dask.distributed import Variable
+from dask.distributed import fire_and_forget
+from dask.distributed.protocol import dask_deserialize
+from dask.distributed.protocol import dask_serialize
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
-
-_DASK_AVAILABLE = False
-try:
-    import dask.config
-    from dask.distributed import Client
-    from dask.distributed import Future
-    from dask.distributed import Lock
-    from dask.distributed import Variable
-    _DASK_AVAILABLE = True
-except ImportError:
-    pass
 
 
 class JobStatus(str, Enum):
@@ -72,20 +72,28 @@ class JobStore:
     ACTIVE_STATUS = {"running", "submitted"}
 
     def __init__(self, scheduler_address: str):
-        if not _DASK_AVAILABLE:
-            raise ImportError("Dask is required for JobStore, please install it.")
-
         self._client = Client(scheduler_address)
 
         with dask.config.set({"distributed.scheduler.locks.lease-timeout": "inf"}):
             self._lock = Lock(name="job_store_lock", client=self._client)
 
+    def close(self):
+        """Close the Dask client."""
+        self._client.close()
+
+    def ensure_job_id(self, job_id: str | None) -> str:
+        """Ensure a job ID is provided, generating a new one if necessary."""
+        if job_id is None:
+            job_id = str(uuid4())
+            logger.info("Generated new job ID: %s", job_id)
+
+        return job_id
+
     def create_job(self,
                    config_file: str | None = None,
                    job_id: str | None = None,
                    expiry_seconds: int = DEFAULT_EXPIRY) -> str:
-        if job_id is None:
-            job_id = str(uuid4())
+        job_id = self.ensure_job_id(job_id)
 
         clamped_expiry = max(self.MIN_EXPIRY, min(expiry_seconds, self.MAX_EXPIRY))
         if expiry_seconds != clamped_expiry:
@@ -104,6 +112,26 @@ class JobStore:
             self._client.set_metadata(["jobs", job_id], job)
 
         logger.info("Created new job %s with config %s", job_id, config_file)
+        return job_id
+
+    def submit_job(self,
+                   *,
+                   job_id: str | None = None,
+                   config_file: str | None = None,
+                   expiry_seconds: int = DEFAULT_EXPIRY,
+                   job_fn: Callable[..., typing.Any],
+                   job_args: list[typing.Any],
+                   **job_kwargs) -> (str, Future):
+        job_id = self.create_job(job_id=job_id, config_file=config_file, expiry_seconds=expiry_seconds)
+
+        # We are intentionally not using job_id as the key, since Dask will clear the associated metadata once
+        # the job has completed, and we want the metadata to persist until the job expires.
+        future = self._client.submit(job_fn, *job_args, key=f"{job_id}-job", **job_kwargs)
+
+        future_var = Variable(name=job_id, client=self._client)
+        future_var.set(future)
+        fire_and_forget(future)
+
         return job_id
 
     def update_status(self,
@@ -220,10 +248,6 @@ def register_dask_serializers():
     """
     Register custom serializers for JobInfo with Dask if available.
     """
-
-    # Attempt to register custom serialization for JobInfo if dask is available
-    from distributed.protocol import dask_deserialize
-    from distributed.protocol import dask_serialize
 
     @dask_serialize.register(JobInfo)
     def serialize_job_info(job: JobInfo) -> tuple[dict, list[bytes]]:
