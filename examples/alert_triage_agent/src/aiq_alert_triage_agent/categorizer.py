@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 from langchain_core.messages import HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts import MessagesPlaceholder
@@ -35,6 +37,13 @@ class CategorizerToolConfig(FunctionBaseConfig, name="categorizer"):
     llm_name: LLMRef
 
 
+def _extract_markdown_heading_level(report: str) -> str:
+    """ Extract the markdown heading level from first line (report title)."""
+    m = re.search(r'^(#+)', report, re.MULTILINE)
+    pound_signs = m.group(1) if m else "#"
+    return pound_signs
+
+
 @register_function(config_type=CategorizerToolConfig)
 async def categorizer_tool(config: CategorizerToolConfig, builder: Builder):
     # Set up LLM and chain
@@ -49,8 +58,8 @@ async def categorizer_tool(config: CategorizerToolConfig, builder: Builder):
 
         result = await categorization_chain.ainvoke({"msgs": [HumanMessage(content=report)]})
 
-        # Extract the markdown heading level from first line of report (e.g. '#' or '##')
-        pound_signs = report.split('\n')[0].split(' ')[0]
+        # Extract the title's heading level and add an additional '#' for the section heading
+        pound_signs = _extract_markdown_heading_level(report) + "#"
 
         # Format the root cause category section:
         # - Add newlines before and after section

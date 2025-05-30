@@ -157,7 +157,7 @@ curl -X 'POST' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{"inputs": "My financial goal is to retire at age 60.  I am currently 40 years old, working as a Machine Learning engineer at NVIDIA."}'
-  ```
+```
 
 ### Expected API Output
 The API response should look like this:

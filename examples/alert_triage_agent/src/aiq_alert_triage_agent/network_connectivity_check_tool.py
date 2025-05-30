@@ -28,6 +28,15 @@ from . import utils
 from .prompts import ToolReasoningLayerPrompts
 
 
+class NetworkConnectivityCheckToolConfig(FunctionBaseConfig, name="network_connectivity_check"):
+    description: str = Field(
+        default=("This tool checks network connectivity of a host by running ping and socket connection tests. "
+                 "Args: host_id: str"),
+        description="Description of the tool for the agent.")
+    llm_name: LLMRef
+    test_mode: bool = Field(default=True, description="Whether to run in test mode")
+
+
 def _check_service_banner(host: str, port: int = 80, connect_timeout: float = 10, read_timeout: float = 10) -> str:
     """
     Connects to host:port, reads until the Telnet banner (‘Escape character is '^]'.’) or times out.
@@ -54,15 +63,6 @@ def _check_service_banner(host: str, port: int = 80, connect_timeout: float = 10
     except (socket.timeout, ConnectionRefusedError, OSError):
         # timed out or could not connect
         return ''
-
-
-class NetworkConnectivityCheckToolConfig(FunctionBaseConfig, name="network_connectivity_check"):
-    description: str = Field(
-        default=("This tool checks network connectivity of a host by running ping and socket connection tests. "
-                 "Args: host_id: str"),
-        description="Description of the tool for the agent.")
-    llm_name: LLMRef
-    test_mode: bool = Field(default=True, description="Whether to run in test mode")
 
 
 @register_function(config_type=NetworkConnectivityCheckToolConfig)
