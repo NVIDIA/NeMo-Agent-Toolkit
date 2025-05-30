@@ -24,6 +24,7 @@ dependencies = [
   # error
   "llama-index-core==0.12.21",
   "llama-index-embeddings-nvidia==0.3.1",
+  "llama-index-llms-bedrock==0.3.8",
   "llama-index-llms-nvidia==0.3.1",
   "llama-index-readers-file==0.4.4",
   "llama-index==0.12.21",
