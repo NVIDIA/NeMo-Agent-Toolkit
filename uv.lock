@@ -645,6 +645,7 @@ name = "aiqtoolkit-langchain"
 source = { editable = "packages/aiqtoolkit_langchain" }
 dependencies = [
     { name = "aiqtoolkit" },
+    { name = "langchain-aws" },
     { name = "langchain-core" },
     { name = "langchain-milvus" },
     { name = "langchain-nvidia-ai-endpoints" },
@@ -655,6 +656,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "aiqtoolkit", editable = "." },
+    { name = "langchain-aws", specifier = "~=0.2.1" },
     { name = "langchain-core", specifier = "~=0.3.7" },
     { name = "langchain-milvus", specifier = "~=0.1.5" },
     { name = "langchain-milvus", specifier = "~=0.1.8" },
@@ -671,6 +673,7 @@ dependencies = [
     { name = "llama-index" },
     { name = "llama-index-core" },
     { name = "llama-index-embeddings-nvidia" },
+    { name = "llama-index-llms-bedrock" },
     { name = "llama-index-llms-nvidia" },
     { name = "llama-index-readers-file" },
 ]
@@ -681,6 +684,7 @@ requires-dist = [
     { name = "llama-index", specifier = "==0.12.21" },
     { name = "llama-index-core", specifier = "==0.12.21" },
     { name = "llama-index-embeddings-nvidia", specifier = "==0.3.1" },
+    { name = "llama-index-llms-bedrock", specifier = "==0.3.8" },
     { name = "llama-index-llms-nvidia", specifier = "==0.3.1" },
     { name = "llama-index-readers-file", specifier = "==0.4.4" },
 ]
@@ -802,6 +806,33 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/06/89/9426e3353829ab0c2f0277a14a6bc4d99d301b74533b0c901e7636794e45/ansible_runner-2.4.1.tar.gz", hash = "sha256:11d717da4dd8d93d56703a4a98e5f2154026a7ed1b46d9930902b8298dc67d09", size = 149599 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1a/a7/59265056ce589f73f150e69dcc3666741c884c775b13f2bcdf2143d947d7/ansible_runner-2.4.1-py3-none-any.whl", hash = "sha256:ef4efe906414f6e9a4c2e41d131fabc3bfe952f16edded7bdc06d597b05f0eb6", size = 79558 },
+]
+
+[[package]]
+name = "anthropic"
+version = "0.52.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "distro" },
+    { name = "httpx" },
+    { name = "jiter" },
+    { name = "pydantic" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0c/6b/7d632b680556812f36b663891ccab8f5bf71b61913a3c7332aa7aa2822be/anthropic-0.52.1.tar.gz", hash = "sha256:da4a7c3aeac0170cb45a42dc3369ca1fcf2b3238edf845cb056505d4b0c42fcf", size = 241807 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9d/e7/36ad2dc22811ea004e1f511b2f5604fe71a56bdfd3b969b265892d45affa/anthropic-0.52.1-py3-none-any.whl", hash = "sha256:807cee7ebc5503753da0403a77932decf5a4c036041ddda58b4edcdb2a3da551", size = 286076 },
+]
+
+[package.optional-dependencies]
+bedrock = [
+    { name = "boto3" },
+    { name = "botocore" },
+]
+vertex = [
+    { name = "google-auth", extra = ["requests"] },
 ]
 
 [[package]]
@@ -2133,6 +2164,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/a1/b1/1272c6e80847ba5349f5ccb7574596393d1e222543f5003cb810865c3575/google_auth-2.40.1-py2.py3-none-any.whl", hash = "sha256:ed4cae4f5c46b41bae1d19c036e06f6c371926e97b19e816fc854eff811974ee", size = 216101 },
 ]
 
+[package.optional-dependencies]
+requests = [
+    { name = "requests" },
+]
+
 [[package]]
 name = "google-crc32c"
 version = "1.7.1"
@@ -2988,6 +3024,21 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-aws"
+version = "0.2.18"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "boto3" },
+    { name = "langchain-core" },
+    { name = "numpy" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e5/dc/ea5cd31fadfeb2216578c0c7889490ab7c73e8eba02e13df8ea54192ed5a/langchain_aws-0.2.18.tar.gz", hash = "sha256:5aa98c90eda244419a27a433739ff4cb22ade749efff3dc8f120d76d420102fb", size = 96441 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b3/cf/3b97c6959de16cd474c550abf471822cf6a50eac7cd04d29bcd6041ffbd6/langchain_aws-0.2.18-py3-none-any.whl", hash = "sha256:9407322a0a94cce79e009bdadb64a83219ced87f6149bdc3bbba844768f2f223", size = 118349 },
+]
+
+[[package]]
 name = "langchain-community"
 version = "0.3.24"
 source = { registry = "https://pypi.org/simple" }
@@ -3334,6 +3385,33 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/75/bc/d1a9013b117005a782a253bce16a1d1022349b85fe6206395376477ce6c6/llama_index_indices_managed_llama_cloud-0.6.11.tar.gz", hash = "sha256:925532f760cd2ebb2594828da311adac3d54cd2cae3dff2908491eebb2b8bd0f", size = 12703 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7e/f4/5decd79fd7f2f0e44c5689af62497447e86832e876b7dad11903259de5f9/llama_index_indices_managed_llama_cloud-0.6.11-py3-none-any.whl", hash = "sha256:64e82e2ac178cd3721b76c0817edd57e05a3bd877c412b4148d3abbdeea62d59", size = 14272 },
+]
+
+[[package]]
+name = "llama-index-llms-anthropic"
+version = "0.6.12"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anthropic", extra = ["bedrock", "vertex"] },
+    { name = "llama-index-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a1/e7/4d0b17d799db78956e360037c8cba7f83330b412690b2864afb7d70421f0/llama_index_llms_anthropic-0.6.12.tar.gz", hash = "sha256:ddcc8cfef941bf371190d7c329f1b86e3b1ad663e7cbbb9f4edbc128de9c3f82", size = 11501 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6e/b0/81be98f4d83f3645b08f528523183c6ed40a18f2c2bf0c378840d69db020/llama_index_llms_anthropic-0.6.12-py3-none-any.whl", hash = "sha256:acbfb38dea7827467e585698888acdeb613b07427d584ea4ed1a3917225dba98", size = 11778 },
+]
+
+[[package]]
+name = "llama-index-llms-bedrock"
+version = "0.3.8"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "boto3" },
+    { name = "llama-index-core" },
+    { name = "llama-index-llms-anthropic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ae/b1/f7172ba0c6d808863ea545a2b99c7b4a51b8109caba9df67e44cd8971ca5/llama_index_llms_bedrock-0.3.8.tar.gz", hash = "sha256:8ca2914842a1d09079c35429b15dc50659d697ae84a15a89076a12f90505800e", size = 10771 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ff/2f/7fc5206467151f64764bae61abd0fbbb8392fe84def15b1467f7fb174d7b/llama_index_llms_bedrock-0.3.8-py3-none-any.whl", hash = "sha256:58b804a206146bd7228590a4ee92ce13806a21040d92cb61e3046f2ee64f66cd", size = 11516 },
 ]
 
 [[package]]

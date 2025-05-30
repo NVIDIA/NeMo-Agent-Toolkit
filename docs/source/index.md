@@ -108,6 +108,7 @@ Adding a Custom Evaluator <./extend/custom-evaluator.md>
 ./extend/adding-a-retriever.md
 ./extend/memory.md
 Adding an LLM Provider <./extend/adding-an-llm-provider.md>
+Integrating AWS Bedrock Models <./extend/integrating-aws-bedrock-models.md>
 ```
 
 ```{toctree}
