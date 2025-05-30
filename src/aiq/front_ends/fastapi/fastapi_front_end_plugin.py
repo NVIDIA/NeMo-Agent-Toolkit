@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
 import os
 import tempfile
@@ -54,19 +55,20 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
         return get_class_name(worker_class)
 
     @staticmethod
-    def _periodic_cleanup(scheduler_address: str, sleep_time_sec: int = 300):
+    async def _periodic_cleanup(scheduler_address: str, sleep_time_sec: int = 300):
         from aiq.front_ends.fastapi.job_store import JobStore
         job_store = JobStore(scheduler_address=scheduler_address)
 
         logger.info("Starting periodic cleanup of expired jobs every %d seconds", sleep_time_sec)
+        await asyncio.sleep(sleep_time_sec)
         while True:
             try:
-                job_store.cleanup_expired_jobs()
+                await job_store.cleanup_expired_jobs()
                 logger.debug("Expired jobs cleaned up")
             except Exception as e:
                 logger.error("Error during job cleanup: %s", e)
 
-            time.sleep(sleep_time_sec)
+            await asyncio.sleep(sleep_time_sec)
 
     async def _submit_cleanup_task(self, scheduler_address: str):
         """Submit a cleanup task to the cluster to remove the job after expiry."""
@@ -94,6 +96,8 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
                 try:
                     from dask.distributed import LocalCluster
 
+                    import aiq.front_ends.fastapi.job_store
+
                     self._cluster = await LocalCluster(asynchronous=True)
 
                     if self._cluster.scheduler is not None:
@@ -104,8 +108,6 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
                     logger.warning("Dask is not installed, async execution and evaluation will not be available.")
 
             if scheduler_address is not None:
-                from aiq.front_ends.fastapi.job_store import register_dask_serializers
-                register_dask_serializers()
                 await self._submit_cleanup_task(scheduler_address)
                 os.environ["AIQ_DASK_SCHEDULER_ADDRESS"] = scheduler_address
 

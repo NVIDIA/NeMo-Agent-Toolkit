@@ -17,9 +17,9 @@ import json
 import logging
 import os
 import shutil
-import time
 import typing
 from collections.abc import Callable
+from contextlib import asynccontextmanager
 from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
@@ -62,6 +62,26 @@ class JobInfo(BaseModel):
     output: BaseModel | None = None
 
 
+# Register custom serializers for JobInfo with Dask if available.
+@dask_serialize.register(JobInfo)
+def serialize_job_info(job: JobInfo) -> tuple[dict, list[bytes]]:
+    """Custom serialization for JobInfo."""
+    header = {}
+
+    job_dict = job.model_dump(mode="json", round_trip=True)
+    json_str = json.dumps(job_dict)
+    frames = [json_str.encode('utf-8')]
+
+    return (header, frames)
+
+
+@dask_deserialize.register(JobInfo)
+def deserialize_job_info(header: dict, frames: list[bytes]) -> JobInfo:
+    """Custom deserialization for JobInfo."""
+    # model_validate_json accepts a bytes string, no need to decode first
+    return JobInfo.model_validate_json(frames[0])
+
+
 class JobStore:
 
     MIN_EXPIRY = 600  # 10 minutes
@@ -72,14 +92,33 @@ class JobStore:
     ACTIVE_STATUS = {"running", "submitted"}
 
     def __init__(self, scheduler_address: str):
-        self._client = Client(scheduler_address)
+        self._scheduler_address = scheduler_address
+        self._client: Client | None = None
+        self._lock: Lock | None = None
 
+    @asynccontextmanager
+    async def client(self):
+        if self._client is None:
+            self._client = await Client(address=self._scheduler_address, asynchronous=True)
+
+        yield self._client
+
+    @asynccontextmanager
+    async def lock(self):
+        # refer to https://distributed.dask.org/en/stable/api.html?highlight=future#distributed.Lock
         with dask.config.set({"distributed.scheduler.locks.lease-timeout": "inf"}):
-            self._lock = Lock(name="job_store_lock", client=self._client)
+            if self._lock is None:
+                async with self.client() as client:
+                    self._lock = Lock(name="job_store_lock", client=client)
 
-    def close(self):
+            await self._lock.acquire()
+            yield self._lock
+            await self._lock.release()
+
+    async def close(self):
         """Close the Dask client."""
-        self._client.close()
+        if self._client is not None:
+            await self._client.close()
 
     def ensure_job_id(self, job_id: str | None) -> str:
         """Ensure a job ID is provided, generating a new one if necessary."""
@@ -89,10 +128,10 @@ class JobStore:
 
         return job_id
 
-    def create_job(self,
-                   config_file: str | None = None,
-                   job_id: str | None = None,
-                   expiry_seconds: int = DEFAULT_EXPIRY) -> str:
+    async def create_job(self,
+                         config_file: str | None = None,
+                         job_id: str | None = None,
+                         expiry_seconds: int = DEFAULT_EXPIRY) -> str:
         job_id = self.ensure_job_id(job_id)
 
         clamped_expiry = max(self.MIN_EXPIRY, min(expiry_seconds, self.MAX_EXPIRY))
@@ -108,41 +147,48 @@ class JobStore:
                       output_path=None,
                       expiry_seconds=clamped_expiry)
 
-        with self._lock:
-            self._client.set_metadata(["jobs", job_id], job)
+        async with (self.client() as client, self.lock()):
+            await client.set_metadata(["jobs", job_id], job)
 
         logger.info("Created new job %s with config %s", job_id, config_file)
         return job_id
 
-    def submit_job(self,
-                   *,
-                   job_id: str | None = None,
-                   config_file: str | None = None,
-                   expiry_seconds: int = DEFAULT_EXPIRY,
-                   job_fn: Callable[..., typing.Any],
-                   job_args: list[typing.Any],
-                   **job_kwargs) -> (str, Future):
-        job_id = self.create_job(job_id=job_id, config_file=config_file, expiry_seconds=expiry_seconds)
+    async def submit_job(self,
+                         *,
+                         job_id: str | None = None,
+                         config_file: str | None = None,
+                         expiry_seconds: int = DEFAULT_EXPIRY,
+                         job_fn: Callable[..., typing.Any],
+                         job_args: list[typing.Any],
+                         **job_kwargs) -> (str, Future):
+        job_id = await self.create_job(job_id=job_id, config_file=config_file, expiry_seconds=expiry_seconds)
 
         # We are intentionally not using job_id as the key, since Dask will clear the associated metadata once
         # the job has completed, and we want the metadata to persist until the job expires.
-        future = self._client.submit(job_fn, *job_args, key=f"{job_id}-job", **job_kwargs)
+        async with self.client() as client:
+            print("\n***************\nsubmitting job\n***************\n", flush=True)
+            print(f"job_args: {job_args}, job_kwargs: {job_kwargs}\n***************\n", flush=True)
+            future = client.submit(job_fn, *job_args, key=f"{job_id}-job", **job_kwargs)
 
-        future_var = Variable(name=job_id, client=self._client)
-        future_var.set(future)
-        fire_and_forget(future)
+            print(f"\n***************\nconstructing future for job future={future}\n***************\n", flush=True)
+            future_var = Variable(name=job_id, client=self._client)
 
-        return job_id
+            print("\n***************\nsetting future for job\n***************\n", flush=True)
+            await future_var.set(future)
+            print(f"\n***************\ndone - setting future for job future={future}\n***************\n", flush=True)
+            fire_and_forget(future)
 
-    def update_status(self,
-                      job_id: str,
-                      status: str,
-                      error: str | None = None,
-                      output_path: str | None = None,
-                      output: BaseModel | None = None):
-        with self._lock:
+        return (job_id, future)
+
+    async def update_status(self,
+                            job_id: str,
+                            status: str,
+                            error: str | None = None,
+                            output_path: str | None = None,
+                            output: BaseModel | None = None):
+        async with (self.client() as client, self.lock()):
             try:
-                job: JobInfo = self._client.get_metadata(["jobs", job_id])
+                job: JobInfo = await client.get_metadata(["jobs", job_id])
 
                 job.status = status
                 job.error = error
@@ -150,30 +196,30 @@ class JobStore:
                 job.updated_at = datetime.now(UTC)
                 job.output = output
 
-                self._client.set_metadata(["jobs", job_id], job)
-            except KeyError:
-                raise ValueError(f"Job {job_id} not found")
+                await client.set_metadata(["jobs", job_id], job)
+            except KeyError as e:
+                raise ValueError(f"Job {job_id} not found") from e
 
-    def get_all_jobs(self) -> list[JobInfo]:
-        with self._lock:
-            job_dict: dict[str, JobInfo] = self._client.get_metadata(["jobs"], default={})
+    async def get_all_jobs(self) -> list[JobInfo]:
+        async with (self.client() as client, self.lock()):
+            job_dict: dict[str, JobInfo] = await client.get_metadata(["jobs"], default={})
             return list(job_dict.values())
 
-    def get_job(self, job_id: str) -> JobInfo | None:
+    async def get_job(self, job_id: str) -> JobInfo | None:
         """Get a job by its ID."""
-        with self._lock:
-            return self._client.get_metadata(["jobs", job_id], default=None)
+        async with (self.client() as client, self.lock()):
+            return await client.get_metadata(["jobs", job_id], default=None)
 
-    def get_status(self, job_id: str) -> JobStatus:
-        job = self.get_job(job_id)
+    async def get_status(self, job_id: str) -> JobStatus:
+        job = await self.get_job(job_id)
         if job is not None:
             return job.status
         else:
             return JobStatus.NOT_FOUND
 
-    def get_last_job(self) -> JobInfo | None:
+    async def get_last_job(self) -> JobInfo | None:
         """Get the last created job."""
-        jobs = self.get_all_jobs()
+        jobs = await self.get_all_jobs()
         if len(jobs) == 0:
             logger.info("No jobs found in job store")
             return None
@@ -182,9 +228,9 @@ class JobStore:
         logger.info("Retrieved last job %s created at %s", last_job.job_id, last_job.created_at)
         return last_job
 
-    def get_jobs_by_status(self, status: JobStatus) -> list[JobInfo]:
+    async def get_jobs_by_status(self, status: JobStatus) -> list[JobInfo]:
         """Get all jobs with the specified status."""
-        jobs = self.get_all_jobs()
+        jobs = await self.get_all_jobs()
         return [job for job in jobs if job.status == status]
 
     def get_expires_at(self, job: JobInfo) -> datetime | None:
@@ -193,7 +239,7 @@ class JobStore:
             return None
         return job.updated_at + timedelta(seconds=job.expiry_seconds)
 
-    def cleanup_expired_jobs(self):
+    async def cleanup_expired_jobs(self):
         """
         Cleanup expired jobs, keeping the most recent one.
         Updated_at is used instead of created_at to determine the most recent job.
@@ -202,8 +248,8 @@ class JobStore:
         now = datetime.now(UTC)
 
         # Filter out active jobs
-        with self._lock:
-            jobs: dict[str, JobInfo] = self._client.get_metadata(["jobs"], default={})
+        async with (self.client() as client, self.lock()):
+            jobs: dict[str, JobInfo] = await client.get_metadata(["jobs"], default={})
             finished_jobs = {job_id: job for job_id, job in jobs.items() if job.status not in self.ACTIVE_STATUS}
 
             # Sort finished jobs by updated_at descending
@@ -232,7 +278,7 @@ class JobStore:
                 try:
                     future = var.get(timeout=0)
                     if isinstance(future, Future):
-                        self._client.cancel([future], force=True, reason="Expired job cleanup")
+                        await client.cancel([future], force=True, reason="Expired job cleanup")
 
                 except TimeoutError:
                     pass
@@ -241,27 +287,4 @@ class JobStore:
                 for job_id in expired_ids:
                     del jobs[job_id]
 
-                self._client.set_metadata(["jobs"], jobs)
-
-
-def register_dask_serializers():
-    """
-    Register custom serializers for JobInfo with Dask if available.
-    """
-
-    @dask_serialize.register(JobInfo)
-    def serialize_job_info(job: JobInfo) -> tuple[dict, list[bytes]]:
-        """Custom serialization for JobInfo."""
-        header = {}
-
-        job_dict = job.model_dump(mode="json", round_trip=True)
-        json_str = json.dumps(job_dict)
-        frames = [json_str.encode('utf-8')]
-
-        return (header, frames)
-
-    @dask_deserialize.register(JobInfo)
-    def deserialize_job_info(header: dict, frames: list[bytes]) -> JobInfo:
-        """Custom deserialization for JobInfo."""
-        # model_validate_json accepts a bytes string, no need to decode first
-        return JobInfo.model_validate_json(frames[0])
+                await client.set_metadata(["jobs"], jobs)
