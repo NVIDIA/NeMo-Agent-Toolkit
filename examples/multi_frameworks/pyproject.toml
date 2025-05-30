@@ -9,7 +9,7 @@ root = "../.."
 name = "aiq_multi_frameworks"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[llama-index,langchain]",
+  "aiqtoolkit[langchain,llama-index]~=1.2",
   "arxiv~=2.1.3",
   "bs4==0.0.2",
   "markdown-it-py~=3.0",

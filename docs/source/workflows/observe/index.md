@@ -17,10 +17,10 @@ limitations under the License.
 
 # Observe Workflows
 
-The AIQ toolkit Observability Module provides support for configurable telemetry setup to do logging tracing and metrics for AIQ toolkit workflows.
-- Enables users to configure telemetry options from a predefined list based on their preferences.
-- Listens real-time usage statistics pushed by `IntermediateStepManager`.
-- Translates the usage statistics to OpenTelemetry format and push to the configured provider/method. (e.g., phoenix, OTelCollector, console, file)
+The AIQ toolkit Observability Module provides support for configuring logging, tracing, and metrics for AIQ toolkit workflows. Users can configure telemetry options from a predefined list based on their preferences. The logging and tracing exporters:
+
+- Listen for usage statistics pushed by `IntermediateStepManager`.
+- Translate the usage statistics to OpenTelemetry format and push to the configured provider/method. (e.g., phoenix, OTelCollector, console, file)
 
 These features enable AIQ toolkit developers to test their workflows locally and integrate observability seamlessly.
 
@@ -38,31 +38,10 @@ This will install:
 
 ## Configurable Components
 
-Users can set up telemetry configuration within the workflow configuration file.
+The observability module is configured using the `general.telemetry` section in the workflow configuration file. This section contains two subsections: `logging` and `tracing` and each subsection can contain one or more telemetry providers.
 
-### **Logging Configuration**
-Users can write logs to:
-- **Console** (`console`)
-- **Temporary file** (`file`)
-- **Both** (by specifying both options)
+Illustrated below is a sample configuration file with all configurable components.
 
-#### **Configuration Fields**
-- **`_type`**: Accepted values → `console`, `file`
-- **`level`**: Log level (e.g., `DEBUG`, `INFO`, `WARN`, `ERROR`)
-- **`path`** *(for file logging only)*: File path where logs will be stored.
-
-### **Tracing Configuration**
-Users can set up tracing using:
-- **Phoenix** (requires `[telemetry]` extra)
-- **Custom providers** *(See registration section below.)*
-
-#### **Configuration Fields**
-- **`_type`**: The name of the registered provider.
-- **`endpoint`**: The provider's listening endpoint.
-- **`project`**: The associated project name.
-
-
-Sample Configuration:
 ```yaml
 general:
   telemetry:
@@ -80,6 +59,81 @@ general:
         endpoint: http://localhost:6006/v1/traces
         project: simple_calculator
 ```
+
+### **Logging Configuration**
+
+The `logging` section contains one or more logging providers. Each provider has a `_type` and optional configuration fields. The following logging providers are supported by default:
+
+- `console`: Writes logs to the console.
+- `file`: Writes logs to a file.
+
+To see the complete list of configuration fields for each provider, utilize the `aiq info -t logging` command which will display the configuration fields for each provider. For example:
+
+```bash
+$ aiq info -t logging
+                                                    AIQ Toolkit Search Results
+┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ package    ┃ version              ┃ component_type ┃ component_name ┃ description                                               ┃
+┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ aiqtoolkit │ 1.2.0.dev15+g2322037 │ logging        │ console        │ A logger to write runtime logs to the console.            │
+│            │                      │                │                │                                                           │
+│            │                      │                │                │   Args:                                                   │
+│            │                      │                │                │     _type (str): The type of the object.                  │
+│            │                      │                │                │     level (str): The logging level of console logger.     │
+├────────────┼──────────────────────┼────────────────┼────────────────┼───────────────────────────────────────────────────────────┤
+│ aiqtoolkit │ 1.2.0.dev15+g2322037 │ logging        │ file           │ A logger to write runtime logs to a file.                 │
+│            │                      │                │                │                                                           │
+│            │                      │                │                │   Args:                                                   │
+│            │                      │                │                │     _type (str): The type of the object.                  │
+│            │                      │                │                │     path (str): The file path to save the logging output. │
+│            │                      │                │                │     level (str): The logging level of file logger.        │
+└────────────┴──────────────────────┴────────────────┴────────────────┴───────────────────────────────────────────────────────────┘
+```
+
+### **Tracing Configuration**
+
+The `tracing` section contains one or more tracing providers. Each provider has a `_type` and optional configuration fields. The following tracing providers are supported by default:
+
+- [**W&B Weave**](https://wandb.ai/site/weave/)
+  - Example configuration:
+    ```yaml
+    tracing:
+      weave:
+        _type: weave
+        project: "aiqtoolkit-demo"
+    ```
+  - See [Observing with W&B Weave](./observe-workflow-with-weave.md) for more information
+- [**Phoenix**](https://phoenix.arize.com/)
+  - Example configuration:
+    ```yaml
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: "aiqtoolkit-demo"
+    ```
+  - See [Observing with Phoenix](./observe-workflow-with-phoenix.md) for more information
+- [**Langfuse**](https://langfuse.com/)
+  - Example configuration:
+    ```yaml
+    tracing:
+      langfuse:
+        _type: langfuse
+        endpoint: http://localhost:3000/api/public/otel/v1/traces
+    ```
+- [**LangSmith**](https://www.langchain.com/langsmith)
+  - Example configuration:
+    ```yaml
+    tracing:
+      langsmith:
+        _type: langsmith
+        project: default
+    ```
+- **Custom providers**
+  - See [Registering a New Telemetry Provider as a Plugin](#registering-a-new-telemetry-provider-as-a-plugin) for more information
+
+
+To see the complete list of configuration fields for each provider, utilize the `aiq info -t tracing` command which will display the configuration fields for each provider.
 
 
 ### AIQ Toolkit Observability Components
