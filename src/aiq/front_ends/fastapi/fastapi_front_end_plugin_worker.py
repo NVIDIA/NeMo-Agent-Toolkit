@@ -61,6 +61,14 @@ from aiq.runtime.session import AIQSessionManager
 
 logger = logging.getLogger(__name__)
 
+_DASK_INSTALLED = False
+try:
+    from dask.distributed import Variable
+    _DASK_INSTALLED = True
+except ImportError:
+    # This has already been logged
+    pass
+
 
 class FastApiFrontEndPluginWorkerBase(ABC):
 
@@ -89,8 +97,8 @@ class FastApiFrontEndPluginWorkerBase(ABC):
             self._dask_client = None
             logger.debug("No Dask scheduler address provided, running without Dask support.")
 
-        self._cleanup_tasks: list[str] = []
-        self._cleanup_tasks_lock = asyncio.Lock()
+        # self._cleanup_tasks: list[str] = []
+        # self._cleanup_tasks_lock = asyncio.Lock()
 
     @property
     def config(self) -> AIQConfig:
@@ -115,26 +123,27 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
                 yield
 
-                # If a cleanup task is running, cancel it
-                async with self._cleanup_tasks_lock:
+                # # If a cleanup task is running, cancel it
+                # async with self._cleanup_tasks_lock:
 
-                    # Cancel all cleanup tasks
-                    for task_name in self._cleanup_tasks:
-                        cleanup_task: asyncio.Task | None = getattr(starting_app.state, task_name, None)
-                        if cleanup_task is not None:
-                            logger.info("Cancelling %s cleanup task", task_name)
-                            cleanup_task.cancel()
-                        else:
-                            logger.warning("No cleanup task found for %s", task_name)
+                #     # Cancel all cleanup tasks
+                #     for task_name in self._cleanup_tasks:
+                #         cleanup_task: asyncio.Task | None = getattr(starting_app.state, task_name, None)
+                #         if cleanup_task is not None:
+                #             logger.info("Cancelling %s cleanup task", task_name)
+                #             cleanup_task.cancel()
+                #         else:
+                #             logger.warning("No cleanup task found for %s", task_name)
 
-                    self._cleanup_tasks.clear()
-                    if self._dask_client is not None:
-                        try:
-                            self._dask_client.close()
-                            self._dask_client = None
-                            logger.debug("Dask client closed")
-                        except Exception as e:
-                            logger.error("Error closing Dask client: %s", e)
+                #     self._cleanup_tasks.clear()
+
+                if self._dask_client is not None:
+                    try:
+                        self._dask_client.close()
+                        self._dask_client = None
+                        logger.debug("Dask client closed")
+                    except Exception as e:
+                        logger.error("Error closing Dask client: %s", e)
 
             logger.debug("Closing AIQ Toolkit server from process %s", os.getpid())
 
@@ -192,31 +201,31 @@ class RouteInfo(BaseModel):
 
 class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
-    @staticmethod
-    async def _periodic_cleanup(name: str, job_store: JobStore, sleep_time_sec: int = 300):
-        while True:
-            try:
-                job_store.cleanup_expired_jobs()
-                logger.debug("Expired %s jobs cleaned up", name)
-            except Exception as e:
-                logger.error("Error during %s job cleanup: %s", name, e)
-            await asyncio.sleep(sleep_time_sec)
+    # @staticmethod
+    # async def _periodic_cleanup(name: str, job_store: JobStore, sleep_time_sec: int = 300):
+    #     while True:
+    #         try:
+    #             job_store.cleanup_expired_jobs()
+    #             logger.debug("Expired %s jobs cleaned up", name)
+    #         except Exception as e:
+    #             logger.error("Error during %s job cleanup: %s", name, e)
+    #         await asyncio.sleep(sleep_time_sec)
 
     async def create_cleanup_task(self, app: FastAPI, name: str, job_store: JobStore, sleep_time_sec: int = 300):
         # Schedule periodic cleanup of expired jobs on first job creation
         attr_name = f"{name}_cleanup_task"
 
-        # Cheap check, if it doesn't exist, we will need to re-check after we acquire the lock
-        if not hasattr(app.state, attr_name):
-            async with self._cleanup_tasks_lock:
-                if not hasattr(app.state, attr_name):
-                    logger.info("Starting %s periodic cleanup task", name)
-                    setattr(
-                        app.state,
-                        attr_name,
-                        asyncio.create_task(
-                            self._periodic_cleanup(name=name, job_store=job_store, sleep_time_sec=sleep_time_sec)))
-                    self._cleanup_tasks.append(attr_name)
+        # # Cheap check, if it doesn't exist, we will need to re-check after we acquire the lock
+        # if not hasattr(app.state, attr_name):
+        #     async with self._cleanup_tasks_lock:
+        #         if not hasattr(app.state, attr_name):
+        #             logger.info("Starting %s periodic cleanup task", name)
+        #             setattr(
+        #                 app.state,
+        #                 attr_name,
+        #                 asyncio.create_task(
+        #                     self._periodic_cleanup(name=name, job_store=job_store, sleep_time_sec=sleep_time_sec)))
+        #             self._cleanup_tasks.append(attr_name)
 
     def get_step_adaptor(self) -> StepAdaptor:
 
@@ -678,7 +687,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     methods=[endpoint.method],
                     description="Stream raw intermediate steps without any step adaptor translations.\n"
                     "Use filter_steps query parameter to filter steps by type (comma-separated list) or\
-                        set to 'none' to suppress all intermediate steps.",
+                        set to 'none' to suppress all intermediate steps."                                                                          ,
                 )
 
             elif (endpoint.method == "POST"):
@@ -715,7 +724,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     response_model=GenerateStreamResponseType,
                     description="Stream raw intermediate steps without any step adaptor translations.\n"
                     "Use filter_steps query parameter to filter steps by type (comma-separated list) or \
-                        set to 'none' to suppress all intermediate steps.",
+                        set to 'none' to suppress all intermediate steps."                                                                          ,
                     responses={500: response_500},
                 )
 
