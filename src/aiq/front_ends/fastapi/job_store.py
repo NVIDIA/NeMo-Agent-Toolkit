@@ -17,16 +17,27 @@ import json
 import logging
 import os
 import shutil
-import threading
 from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
 from enum import Enum
+from operator import attrgetter
 from uuid import uuid4
 
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
+
+_DASK_AVAILABLE = False
+try:
+    import dask.config
+    from dask.distributed import Client
+    from dask.distributed import Future
+    from dask.distributed import Lock
+    from dask.distributed import Variable
+    _DASK_AVAILABLE = True
+except ImportError:
+    pass
 
 
 class JobStatus(str, Enum):
@@ -60,9 +71,14 @@ class JobStore:
     # active jobs are exempt from expiry
     ACTIVE_STATUS = {"running", "submitted"}
 
-    def __init__(self):
-        self._jobs = {}
-        self._lock = threading.Lock()  # Ensure thread safety for job operations
+    def __init__(self, scheduler_address: str):
+        if not _DASK_AVAILABLE:
+            raise ImportError("Dask is required for JobStore, please install it.")
+
+        self._client = Client(scheduler_address)
+
+        with dask.config.set({"distributed.scheduler.locks.lease-timeout": "inf"}):
+            self._lock = Lock(name="job_store_lock", client=self._client)
 
     def create_job(self,
                    config_file: str | None = None,
@@ -85,7 +101,7 @@ class JobStore:
                       expiry_seconds=clamped_expiry)
 
         with self._lock:
-            self._jobs[job_id] = job
+            self._client.set_metadata(["jobs", job_id], job)
 
         logger.info("Created new job %s with config %s", job_id, config_file)
         return job_id
@@ -96,49 +112,52 @@ class JobStore:
                       error: str | None = None,
                       output_path: str | None = None,
                       output: BaseModel | None = None):
-        if job_id not in self._jobs:
-            raise ValueError(f"Job {job_id} not found")
-
         with self._lock:
-            job = self._jobs[job_id]
-            job.status = status
-            job.error = error
-            job.output_path = output_path
-            job.updated_at = datetime.now(UTC)
-            job.output = output
+            try:
+                job: JobInfo = self._client.get_metadata(["jobs", job_id])
 
-    def get_status(self, job_id: str) -> JobInfo | None:
-        with self._lock:
-            return self._jobs.get(job_id)
+                job.status = status
+                job.error = error
+                job.output_path = output_path
+                job.updated_at = datetime.now(UTC)
+                job.output = output
 
-    def list_jobs(self):
+                self._client.set_metadata(["jobs", job_id], job)
+            except KeyError:
+                raise ValueError(f"Job {job_id} not found")
+
+    def get_all_jobs(self) -> list[JobInfo]:
         with self._lock:
-            return self._jobs
+            job_dict: dict[str, JobInfo] = self._client.get_metadata(["jobs"], default={})
+            return list(job_dict.values())
 
     def get_job(self, job_id: str) -> JobInfo | None:
         """Get a job by its ID."""
         with self._lock:
-            return self._jobs.get(job_id)
+            return self._client.get_metadata(["jobs", job_id], default=None)
+
+    def get_status(self, job_id: str) -> JobStatus:
+        job = self.get_job(job_id)
+        if job is not None:
+            return job.status
+        else:
+            return JobStatus.NOT_FOUND
 
     def get_last_job(self) -> JobInfo | None:
         """Get the last created job."""
-        with self._lock:
-            if not self._jobs:
-                logger.info("No jobs found in job store")
-                return None
-            last_job = max(self._jobs.values(), key=lambda job: job.created_at)
-            logger.info("Retrieved last job %s created at %s", last_job.job_id, last_job.created_at)
-            return last_job
+        jobs = self.get_all_jobs()
+        if len(jobs) == 0:
+            logger.info("No jobs found in job store")
+            return None
 
-    def get_jobs_by_status(self, status: str) -> list[JobInfo]:
+        last_job = max(jobs, key=attrgetter('created_at'))
+        logger.info("Retrieved last job %s created at %s", last_job.job_id, last_job.created_at)
+        return last_job
+
+    def get_jobs_by_status(self, status: JobStatus) -> list[JobInfo]:
         """Get all jobs with the specified status."""
-        with self._lock:
-            return [job for job in self._jobs.values() if job.status == status]
-
-    def get_all_jobs(self) -> list[JobInfo]:
-        """Get all jobs in the store."""
-        with self._lock:
-            return list(self._jobs.values())
+        jobs = self.get_all_jobs()
+        return [job for job in jobs if job.status == status]
 
     def get_expires_at(self, job: JobInfo) -> datetime | None:
         """Get the time for a job to expire."""
@@ -156,32 +175,45 @@ class JobStore:
 
         # Filter out active jobs
         with self._lock:
-            finished_jobs = {job_id: job for job_id, job in self._jobs.items() if job.status not in self.ACTIVE_STATUS}
+            jobs: dict[str, JobInfo] = self._client.get_metadata(["jobs"], default={})
+            finished_jobs = {job_id: job for job_id, job in jobs.items() if job.status not in self.ACTIVE_STATUS}
 
-        # Sort finished jobs by updated_at descending
-        sorted_finished = sorted(finished_jobs.items(), key=lambda item: item[1].updated_at, reverse=True)
+            # Sort finished jobs by updated_at descending
+            sorted_finished = sorted(finished_jobs.items(), key=lambda item: item[1].updated_at, reverse=True)
 
-        # Always keep the most recent finished job
-        jobs_to_check = sorted_finished[1:]
+            # Always keep the most recent finished job
+            jobs_to_check = sorted_finished[1:]
 
-        expired_ids = []
-        for job_id, job in jobs_to_check:
-            expires_at = self.get_expires_at(job)
-            if expires_at and now > expires_at:
-                expired_ids.append(job_id)
-                # cleanup output dir if present
-                if job.output_path:
-                    logger.info("Cleaning up output directory for job %s at %s", job_id, job.output_path)
-                    # If it is a file remove it
-                    if os.path.isfile(job.output_path):
-                        os.remove(job.output_path)
-                    # If it is a directory remove it
-                    elif os.path.isdir(job.output_path):
-                        shutil.rmtree(job.output_path)
+            expired_ids = []
+            for job_id, job in jobs_to_check:
+                expires_at = self.get_expires_at(job)
+                if expires_at and now > expires_at:
+                    expired_ids.append(job_id)
+                    # cleanup output dir if present
+                    if job.output_path:
+                        logger.info("Cleaning up output directory for job %s at %s", job_id, job.output_path)
+                        # If it is a file remove it
+                        if os.path.isfile(job.output_path):
+                            os.remove(job.output_path)
+                        # If it is a directory remove it
+                        elif os.path.isdir(job.output_path):
+                            shutil.rmtree(job.output_path)
 
-        with self._lock:
-            for job_id in expired_ids:
-                del self._jobs[job_id]
+            if len(expired_ids) > 0:
+                var = Variable(name=job_id, client=self._client)
+                try:
+                    future = var.get(timeout=0)
+                    if isinstance(future, Future):
+                        self._client.cancel([future], force=True, reason="Expired job cleanup")
+
+                except TimeoutError:
+                    pass
+
+                var.delete()
+                for job_id in expired_ids:
+                    del jobs[job_id]
+
+                self._client.set_metadata(["jobs"], jobs)
 
 
 def register_dask_serializers():
