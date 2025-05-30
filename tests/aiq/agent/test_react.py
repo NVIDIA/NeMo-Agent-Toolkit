@@ -25,13 +25,13 @@ from aiq.agent.react_agent.agent import NO_INPUT_ERROR_MESSAGE
 from aiq.agent.react_agent.agent import TOOL_NOT_FOUND_ERROR_MESSAGE
 from aiq.agent.react_agent.agent import ReActAgentGraph
 from aiq.agent.react_agent.agent import ReActGraphState
+from aiq.agent.react_agent.agent import create_react_agent_prompt
 from aiq.agent.react_agent.output_parser import FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
 from aiq.agent.react_agent.output_parser import MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE
 from aiq.agent.react_agent.output_parser import MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE
 from aiq.agent.react_agent.output_parser import ReActOutputParser
 from aiq.agent.react_agent.output_parser import ReActOutputParserException
 from aiq.agent.react_agent.register import ReActAgentWorkflowConfig
-from aiq.agent.react_agent.register import create_react_agent_prompt
 
 
 async def test_state_schema():

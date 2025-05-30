@@ -35,6 +35,7 @@ Use the following format once you have the final answer:
 Thought: I now know the final answer
 Final Answer: the final answer to the original input question
 """
+
 USER_PROMPT = """
 Question: {question}
 """
