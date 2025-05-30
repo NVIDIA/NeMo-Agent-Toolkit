@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import logging
 import os
 import typing
@@ -23,7 +22,6 @@ from contextlib import asynccontextmanager
 from functools import partial
 from pathlib import Path
 
-from fastapi import BackgroundTasks
 from fastapi import Body
 from fastapi import FastAPI
 from fastapi import Request
@@ -53,6 +51,9 @@ from aiq.front_ends.fastapi.response_helpers import generate_single_response
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
 from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
+from aiq.front_ends.fastapi.utils import get_class_name
+from aiq.front_ends.fastapi.utils import get_config_file_path
+from aiq.front_ends.fastapi.utils import import_class_from_string
 from aiq.front_ends.fastapi.websocket import AIQWebSocket
 from aiq.runtime.session import AIQSessionManager
 
@@ -65,7 +66,9 @@ try:
     from aiq.front_ends.fastapi.job_store import JobStore
     _DASK_AVAILABLE = True
 except ImportError:
-    pass
+    JobInfo = None
+    JobStatus = None
+    JobStore = None
 
 
 class FastApiFrontEndPluginWorkerBase(ABC):
@@ -529,23 +532,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             return post_stream
 
-        async def run_generation(scheduler_address: str,
-                                 job_id: str,
-                                 payload: typing.Any,
-                                 session_manager: AIQSessionManager,
-                                 result_type: type):
-            """Background task to run the evaluation."""
-            job_store = JobStore(scheduler_address=scheduler_address)
-            try:
-                result = await generate_single_response(payload=payload,
-                                                        session_manager=session_manager,
-                                                        result_type=result_type)
-                job_store.update_status(job_id, "success", output=result)
-            except Exception as e:
-                logger.error("Error in evaluation job %s: %s", job_id, e)
-                job_store.update_status(job_id, "failure", error=str(e))
-
         def _job_status_to_response(job: "JobInfo") -> AIQAsyncGenerationStatusResponse:
+            assert self._job_store is not None, "JobStore should be initialized when Dask is available"
+
             job_output = job.output
             if job_output is not None:
                 job_output = job_output.model_dump()
@@ -557,6 +546,24 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                     updated_at=job.updated_at,
                                                     expires_at=self._job_store.get_expires_at(job))
 
+        async def run_generation(scheduler_address: str, job_id: str, payload: typing.Any, result_type_name: str):
+            """Background task to run the evaluation."""
+            assert JobStore is not None, "JobStore should be initialized when Dask is available"
+            job_store = JobStore(scheduler_address=scheduler_address)
+            try:
+                from aiq.runtime.loader import load_workflow
+
+                config_file_path = get_config_file_path()
+                result_type = import_class_from_string(result_type_name)
+                async with load_workflow(config_file_path) as workflow:
+                    async with workflow.run(payload) as runner:
+                        result = await runner.result(to_type=result_type)
+
+                job_store.update_status(job_id, "success", output=result)
+            except Exception as e:
+                logger.error("Error in evaluation job %s: %s", job_id, e)
+                job_store.update_status(job_id, "failure", error=str(e))
+
         def post_async_generation(request_type: type, final_result_type: type):
 
             async def start_async_generation(
@@ -565,6 +572,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 """Handle async generation requests."""
 
                 async with session_manager.session(request=http_request):
+                    assert self._job_store is not None, "JobStore should be initialized when Dask is available"
 
                     # if job_id is present and already exists return the job info
                     if request.job_id:
@@ -577,10 +585,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         job_id=job_id,
                         expiry_seconds=request.expiry_seconds,
                         job_fn=run_generation,
-                        job_args=[self._scheduler_address, job_id, request, session_manager, final_result_type])
+                        job_args=[self._scheduler_address, job_id, request, get_class_name(final_result_type)])
 
                     try:
-                        __ = future.result(timeout=request.sync_timeout)
+                        _ = future.result(timeout=request.sync_timeout)
                         job = self._job_store.get_job(job_id)
                         assert job is not None, "Job should exist after future result"
                         response.status_code = 200
@@ -595,6 +603,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         async def get_async_job_status(job_id: str, http_request: Request) -> AIQAsyncGenerationStatusResponse:
             """Get the status of an async job."""
+            assert self._job_store is not None, "JobStore should be initialized when Dask is available"
             logger.info("Getting status for job %s", job_id)
 
             async with session_manager.session(request=http_request):

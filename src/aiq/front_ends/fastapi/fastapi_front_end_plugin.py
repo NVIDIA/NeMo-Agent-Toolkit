@@ -23,6 +23,7 @@ from aiq.builder.front_end import FrontEndBase
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
 from aiq.front_ends.fastapi.main import get_app
+from aiq.front_ends.fastapi.utils import get_class_name
 from aiq.utils.io.yaml_tools import yaml_dump
 
 if typing.TYPE_CHECKING:
@@ -52,7 +53,7 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
 
         worker_class = self.get_worker_class()
 
-        return f"{worker_class.__module__}.{worker_class.__qualname__}"
+        return get_class_name(worker_class)
 
     @staticmethod
     def _periodic_cleanup(scheduler_address: str, sleep_time_sec: int = 300):
