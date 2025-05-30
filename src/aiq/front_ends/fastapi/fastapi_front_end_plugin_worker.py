@@ -79,8 +79,12 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         self._front_end_config = config.general.front_end
         self._dask_available = False
         self._job_store = None
+        self._scheduler_address = self._front_end_config.scheduler_address
 
         if self._front_end_config.scheduler_address is not None:
+            if not _DASK_AVAILABLE:
+                raise RuntimeError("Dask is not available, please install it to use the FastAPI front end with Dask.")
+
             try:
                 self._job_store = JobStore(scheduler_address=self._front_end_config.scheduler_address)
                 self._dask_available = True
@@ -216,16 +220,16 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             },
         }
 
-        if not self._dask_available:
-            raise RuntimeError("Dask is required for evaluation jobs, please install it.")
-
         # TODO: Find another way to limit the number of concurrent evaluations
-        # evaluation_lock = asyncio.Lock()
-
-        async def run_evaluation(job_id: str, config_file: str, reps: int, session_manager: AIQSessionManager):
+        async def run_evaluation(scheduler_address: str,
+                                 job_id: str,
+                                 config_file: str,
+                                 reps: int,
+                                 session_manager: AIQSessionManager):
             """Background task to run the evaluation."""
-            # async with evaluation_lock:
             try:
+                job_store = JobStore(scheduler_address=scheduler_address)
+
                 # Create EvaluationRunConfig using the CLI defaults
                 eval_config = EvaluationRunConfig(config_file=Path(config_file), dataset=None, reps=reps)
 
@@ -264,7 +268,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     config_file=request.config_file,
                     expiry_seconds=request.expiry_seconds,
                     job_fn=run_evaluation,
-                    job_args=[job_id, request.config_file, request.reps, session_manager])
+                    job_args=[self._scheduler_address, job_id, request.config_file, request.reps, session_manager])
 
                 logger.info("Submitted evaluation job %s with config %s", job_id, request.config_file)
 
@@ -323,53 +327,56 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 return [translate_job_to_response(job) for job in jobs]
 
         if self.front_end_config.evaluate.path:
-            # Add last job endpoint first (most specific)
-            app.add_api_route(
-                path=f"{self.front_end_config.evaluate.path}/job/last",
-                endpoint=get_last_job_status,
-                methods=["GET"],
-                response_model=AIQEvaluateStatusResponse,
-                description="Get the status of the last created evaluation job",
-                responses={
-                    404: {
-                        "description": "No jobs found"
-                    }, 500: response_500
-                },
-            )
+            if self._dask_available:
+                # Add last job endpoint first (most specific)
+                app.add_api_route(
+                    path=f"{self.front_end_config.evaluate.path}/job/last",
+                    endpoint=get_last_job_status,
+                    methods=["GET"],
+                    response_model=AIQEvaluateStatusResponse,
+                    description="Get the status of the last created evaluation job",
+                    responses={
+                        404: {
+                            "description": "No jobs found"
+                        }, 500: response_500
+                    },
+                )
 
-            # Add specific job endpoint (least specific)
-            app.add_api_route(
-                path=f"{self.front_end_config.evaluate.path}/job/{{job_id}}",
-                endpoint=get_job_status,
-                methods=["GET"],
-                response_model=AIQEvaluateStatusResponse,
-                description="Get the status of an evaluation job",
-                responses={
-                    404: {
-                        "description": "Job not found"
-                    }, 500: response_500
-                },
-            )
+                # Add specific job endpoint (least specific)
+                app.add_api_route(
+                    path=f"{self.front_end_config.evaluate.path}/job/{{job_id}}",
+                    endpoint=get_job_status,
+                    methods=["GET"],
+                    response_model=AIQEvaluateStatusResponse,
+                    description="Get the status of an evaluation job",
+                    responses={
+                        404: {
+                            "description": "Job not found"
+                        }, 500: response_500
+                    },
+                )
 
-            # Add jobs endpoint with optional status query parameter
-            app.add_api_route(
-                path=f"{self.front_end_config.evaluate.path}/jobs",
-                endpoint=get_jobs,
-                methods=["GET"],
-                response_model=list[AIQEvaluateStatusResponse],
-                description="Get all jobs, optionally filtered by status",
-                responses={500: response_500},
-            )
+                # Add jobs endpoint with optional status query parameter
+                app.add_api_route(
+                    path=f"{self.front_end_config.evaluate.path}/jobs",
+                    endpoint=get_jobs,
+                    methods=["GET"],
+                    response_model=list[AIQEvaluateStatusResponse],
+                    description="Get all jobs, optionally filtered by status",
+                    responses={500: response_500},
+                )
 
-            # Add HTTP endpoint for evaluation
-            app.add_api_route(
-                path=self.front_end_config.evaluate.path,
-                endpoint=start_evaluation,
-                methods=[self.front_end_config.evaluate.method],
-                response_model=AIQEvaluateResponse,
-                description=self.front_end_config.evaluate.description,
-                responses={500: response_500},
-            )
+                # Add HTTP endpoint for evaluation
+                app.add_api_route(
+                    path=self.front_end_config.evaluate.path,
+                    endpoint=start_evaluation,
+                    methods=[self.front_end_config.evaluate.method],
+                    response_model=AIQEvaluateResponse,
+                    description=self.front_end_config.evaluate.description,
+                    responses={500: response_500},
+                )
+            else:
+                logger.warning("Dask is not available, evaluation endpoints will not be added.")
 
     async def add_route(self,
                         app: FastAPI,
@@ -386,7 +393,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         GenerateStreamResponseType = workflow.streaming_output_schema  # pylint: disable=invalid-name
         GenerateSingleResponseType = workflow.single_output_schema  # pylint: disable=invalid-name
 
-        if _DASK_AVAILABLE:
+        if self._dask_available:
             # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
             # Consider prefixing these with "aiq_" to avoid conflicts
             class AIQAsyncGenerateRequest(GenerateBodyType):
@@ -522,12 +529,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             return post_stream
 
-        async def run_generation(job_id: str,
+        async def run_generation(scheduler_address: str,
+                                 job_id: str,
                                  payload: typing.Any,
                                  session_manager: AIQSessionManager,
                                  result_type: type):
             """Background task to run the evaluation."""
-            # async with async_job_concurrency:
+            job_store = JobStore(scheduler_address=scheduler_address)
             try:
                 result = await generate_single_response(payload=payload,
                                                         session_manager=session_manager,
@@ -552,7 +560,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         def post_async_generation(request_type: type, final_result_type: type):
 
             async def start_async_generation(
-                    request: request_type, background_tasks: BackgroundTasks, response: Response,
+                    request: request_type, response: Response,
                     http_request: Request) -> AIQAsyncGenerateResponse | AIQAsyncGenerationStatusResponse:
                 """Handle async generation requests."""
 
@@ -569,7 +577,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                         job_id=job_id,
                         expiry_seconds=request.expiry_seconds,
                         job_fn=run_generation,
-                        job_args=[job_id, request, session_manager, final_result_type])
+                        job_args=[self._scheduler_address, job_id, request, session_manager, final_result_type])
 
                     try:
                         __ = future.result(timeout=request.sync_timeout)
@@ -671,30 +679,34 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     responses={500: response_500},
                 )
 
-                app.add_api_route(
-                    path=f"{endpoint.path}/async",
-                    endpoint=post_async_generation(request_type=AIQAsyncGenerateRequest,
-                                                   final_result_type=GenerateSingleResponseType),
-                    methods=[endpoint.method],
-                    response_model=AIQAsyncGenerateResponse | AIQAsyncGenerationStatusResponse,
-                    description="Start an async generate job",
-                    responses={500: response_500},
-                )
+                if self._dask_available:
+                    app.add_api_route(
+                        path=f"{endpoint.path}/async",
+                        endpoint=post_async_generation(request_type=AIQAsyncGenerateRequest,
+                                                       final_result_type=GenerateSingleResponseType),
+                        methods=[endpoint.method],
+                        response_model=AIQAsyncGenerateResponse | AIQAsyncGenerationStatusResponse,
+                        description="Start an async generate job",
+                        responses={500: response_500},
+                    )
+                else:
+                    logger.warning("Dask is not available, async generation endpoints will not be added.")
             else:
                 raise ValueError(f"Unsupported method {endpoint.method}")
 
-            app.add_api_route(
-                path=f"{endpoint.path}/async/job/{{job_id}}",
-                endpoint=get_async_job_status,
-                methods=["GET"],
-                response_model=AIQAsyncGenerationStatusResponse,
-                description="Get the status of an async job",
-                responses={
-                    404: {
-                        "description": "Job not found"
-                    }, 500: response_500
-                },
-            )
+            if self._dask_available:
+                app.add_api_route(
+                    path=f"{endpoint.path}/async/job/{{job_id}}",
+                    endpoint=get_async_job_status,
+                    methods=["GET"],
+                    response_model=AIQAsyncGenerationStatusResponse,
+                    description="Get the status of an async job",
+                    responses={
+                        404: {
+                            "description": "Job not found"
+                        }, 500: response_500
+                    },
+                )
 
         if (endpoint.openai_api_path):
             if (endpoint.method == "GET"):
