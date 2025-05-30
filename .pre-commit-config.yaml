@@ -19,6 +19,7 @@ repos:
     hooks:
       - id: isort
         args: ["--filter-files", "--settings-file=./pyproject.toml"]
+
   - repo: https://github.com/PyCQA/flake8
     rev: 7.0.0
     hooks:
@@ -26,15 +27,24 @@ repos:
         entry: pflake8
         additional_dependencies: [pyproject-flake8]
         args: ["--config=./pyproject.toml"]
+
   - repo: https://github.com/google/yapf
     rev: v0.43.0
     hooks:
       - id: yapf
         args: ["-i", "--style", "./pyproject.toml"]
+
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: 0.6.2
     hooks:
       - id: uv-lock
+
+  - repo: https://github.com/tcort/markdown-link-check
+    rev: v3.12.2
+    hooks:
+      - id: markdown-link-check
+        args: ["-q", "--config", "ci/markdown-link-check-config.json"]
+        exclude: "^src/aiq/meta/pypi\\.md$"
 
 default_language_version:
   python: python3
