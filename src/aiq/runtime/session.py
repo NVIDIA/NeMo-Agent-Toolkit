@@ -26,6 +26,7 @@ from fastapi import Request
 from aiq.builder.context import AIQContext
 from aiq.builder.context import AIQContextState
 from aiq.builder.workflow import Workflow
+from aiq.data_models.api_server import WebSocketUserMessage
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
@@ -86,7 +87,8 @@ class AIQSessionManager:
     @asynccontextmanager
     async def session(self,
                       user_manager=None,
-                      request: Request = None,
+                      request: Request | None = None,
+                      websocket_user_message: WebSocketUserMessage | None = None,
                       user_input_callback: Callable[[InteractionPrompt], Awaitable[HumanResponse]] = None):
 
         token_user_input = None
@@ -97,7 +99,8 @@ class AIQSessionManager:
         if user_manager is not None:
             token_user_manager = self._context_state.user_manager.set(user_manager)
 
-        self.set_request_attributes(request)
+        self.set_metadata_from_http_request(request)
+        self.set_metadata_from_websocket_user_message(websocket_user_message)
 
         try:
             yield self
@@ -120,13 +123,13 @@ class AIQSessionManager:
             async with self._workflow.run(message) as runner:
                 yield runner
 
-    def set_request_attributes(self, request: Request) -> None:
+    def set_metadata_from_http_request(self, request: Request | None) -> None:
         """
-        Extracts and sets request attributes from an HTTP request.
+        Extracts and sets user metadata request attributes from a HTTP request.
         If request is None, no attributes are set.
         """
         if request is None:
-            return
+            return None
 
         self._context.metadata._request.method = request.method
         self._context.metadata._request.url_path = request.url.path
@@ -138,3 +141,17 @@ class AIQSessionManager:
         self._context.metadata._request.client_host = request.client.host
         self._context.metadata._request.client_port = request.client.port
         self._context.metadata._request.cookies = request.cookies
+
+        if request.headers.get("thread-id"):
+            self._context.metadata._thread_id = request.headers["thread-id"]
+
+    def set_metadata_from_websocket_user_message(self, websocket_user_message: WebSocketUserMessage | None) -> None:
+        """
+        Extracts and sets user metadata from a WebSocketUserMessage.
+        If websocket_user_message is None, no attributes are set.
+        """
+        if websocket_user_message is None:
+            return None
+
+        if websocket_user_message.thread_id:
+            self._context.metadata._thread_id = websocket_user_message.thread_id

@@ -151,7 +151,7 @@ class MessageHandler:
                 await self._process_response()
                 self._background_task = asyncio.create_task(
                     self._websocket_reference.workflow_schema_type.get(self._workflow_schema_type)(
-                        content.text)).add_done_callback(
+                        content.text, message_as_validated_type)).add_done_callback(
                             lambda task: asyncio.create_task(self._on_process_stream_task_done(task)))
 
         except ValueError as e:
