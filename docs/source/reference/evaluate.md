@@ -439,6 +439,25 @@ eval:
         access_key: fake-access-key
         secret_key: fake-secret-key
 ```
+
+### Preserving outputs across multiple runs
+To preserve outputs from multiple evaluation runs, you can enable the `append_job_id_to_output_dir` option:
+
+```yaml
+eval:
+  general:
+    output:
+      dir: ./.tmp/aiq/examples/simple_output/
+      append_job_id_to_output_dir: true
+      cleanup: false
+```
+
+When `append_job_id_to_output_dir` is set to `true`, a unique job ID (`JOB_{UUID}`) is automatically generated for each evaluation run and appended to the output directory path. This results in:
+- Local output path: `./.tmp/aiq/examples/simple/jobs/job_{unique-job-id}/`
+- Remote output path (if S3 is configured): `output/jobs/job_{unique-job-id}/`
+
+By default, evaluation outputs are written to the same directory specified in `eval.general.output.dir`, which means subsequent runs will overwrite previous results.
+
 ### Cleanup output directory
 The contents of the output directory can be deleted before running the evaluation pipeline by specifying the `eval.general.output.cleanup` section in the `config.yml` file. The following is an example configuration to clean up the output directory before running the evaluation pipeline.
 ```yaml
