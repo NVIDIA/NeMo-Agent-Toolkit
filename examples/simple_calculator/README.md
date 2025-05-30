@@ -34,8 +34,8 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the AIQ too
   - [Using Weave for Tracing](#using-weave-for-tracing)
   - [Accuracy Evaluation](#accuracy-evaluation)
   - [MCP (Model Context Protocol)](#mcp-model-context-protocol)
-    - [AIQ toolkit as an MCP Client](#aiq-toolkit-as-an-mcp-client)
-    - [AIQ toolkit as an MCP Server](#aiq-toolkit-as-an-mcp-server)
+    - [AIQ Toolkit as an MCP Client](#aiq-toolkit-as-an-mcp-client)
+    - [AIQ Toolkit as an MCP Server](#aiq-toolkit-as-an-mcp-server)
   - [Deployment-Oriented Setup](#deployment-oriented-setup)
     - [Build the Docker Image](#build-the-docker-image)
     - [Run the Docker Container](#run-the-docker-container)
@@ -289,6 +289,7 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
 
         from aiq.builder.context import AIQContext
         aiq_context = AIQContext.get()
+
         method: str | None = aiq_context.metadata.method
         url_path: str | None = aiq_context.metadata.url_path
         url_scheme: str | None = aiq_context.metadata.url_scheme
@@ -298,6 +299,7 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
         client_host: str | None = aiq_context.metadata.client_host
         client_port: int | None = aiq_context.metadata.client_port
         cookies: dict[str, str] | None = aiq_context.metadata.cookies
+        thread_id: str | None = aiq_context.metadata.thread_id  # Unique identifier for the current chat conversation.
 
     yield FunctionInfo.from_fn(_get_request_attributes,
                                description="Returns the acquired user defined request attriubutes.")
