@@ -51,6 +51,9 @@ def _timeseries_stats(ts):
     Returns:
         str: Markdown formatted string containing summary statistics
     """
+    if len(ts) == 0:
+        return "No data points"
+
     count = len(ts)
     max_val = max(ts)
     min_val = min(ts)
@@ -89,7 +92,11 @@ def _get_llm_analysis_input(timestamp_value_list):
         str: Formatted string containing:
             - JSON array of [datetime_str, value] pairs with human readable timestamps
             - Summary statistics of the metric values
+            - "No data points" if input list is empty
     """
+    if len(timestamp_value_list) == 0:
+        return "No data points"
+
     # Convert Unix timestamps to ISO format datetime strings and preserve values
     # Example: "2022-01-17 12:00:00" for timestamp 1642435200
     data = [[datetime.fromtimestamp(entry[0]).strftime("%Y-%m-%d %H:%M:%S"), entry[1]]
@@ -120,7 +127,7 @@ async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetrics
 
                 # Customize query based on your monitoring setup and metrics
                 # This example queries the CPU usage percentage by subtracting idle CPU from 100%
-                query = '(100 - cpu_usage_idle{cpu="cpu-total",instance=~"{host_id}:9100"})'
+                query = f'(100 - cpu_usage_idle{{cpu="cpu-total",instance=~"{host_id}:9100"}})'
                 url = f"{monitoring_url}/api/query_range"
 
                 # Example values - users should customize these based on their monitoring requirements
