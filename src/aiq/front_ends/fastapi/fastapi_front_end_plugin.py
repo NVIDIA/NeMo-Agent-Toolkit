@@ -26,19 +26,17 @@ from aiq.front_ends.fastapi.main import get_app
 from aiq.front_ends.fastapi.utils import get_class_name
 from aiq.utils.io.yaml_tools import yaml_dump
 
-if typing.TYPE_CHECKING:
-    try:
-        from dask.distributed import LocalCluster
-    except ImportError:
-        pass
-
 logger = logging.getLogger(__name__)
 
 
 class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
 
-    # This attribute is set if dask is installed, and an external cluster is not used (scheduler_address is None)
-    _cluster: "LocalCluster | None" = None
+    def __init__(self, full_config: "AIQConfig"):
+        super().__init__(full_config)
+
+        # This attribute is set if dask is installed, and an external cluster is not used (scheduler_address is None)
+        self._cluster = None
+        self._cleanup_future = None
 
     def get_worker_class(self) -> type[FastApiFrontEndPluginWorkerBase]:
         from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -70,14 +68,14 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
 
             time.sleep(sleep_time_sec)
 
-    def _submit_cleanup_task(self, scheduler_address: str):
+    async def _submit_cleanup_task(self, scheduler_address: str):
         """Submit a cleanup task to the cluster to remove the job after expiry."""
         from dask.distributed import Client
         from dask.distributed import fire_and_forget
 
-        client = Client(self._cluster)
-        future = client.submit(self._periodic_cleanup, scheduler_address=scheduler_address)
-        fire_and_forget(future)
+        client = await Client(self._cluster, asynchronous=True)
+        self._cleanup_future = client.submit(self._periodic_cleanup, scheduler_address=scheduler_address)
+        fire_and_forget(self._cleanup_future)
 
     async def run(self):
 
@@ -87,26 +85,29 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
             # Get as dict
             config_dict = self.full_config.model_dump(mode="json", by_alias=True, round_trip=True)
 
-            using_dask = False
-            if self.front_end_config.scheduler_address is None:
+            # Three possible cases:
+            # 1. Dask is installed and scheduler_address is None, we create a LocalCluster
+            # 2. Dask is installed and scheduler_address is set, we use the existing cluster
+            # 3. Dask is not installed, we skip the cluster setup
+            scheduler_address = self.front_end_config.scheduler_address
+            if scheduler_address is None:
                 try:
                     from dask.distributed import LocalCluster
 
-                    self._cluster = LocalCluster(asynchronous=True)
+                    self._cluster = await LocalCluster(asynchronous=True)
+
                     if self._cluster.scheduler is not None:
-                        config_dict["scheduler_address"] = self._cluster.scheduler.address
-                        using_dask = True
+                        scheduler_address = self._cluster.scheduler.address
                     else:
                         raise RuntimeError("Dask LocalCluster did not start correctly, no scheduler address available.")
                 except ImportError:
                     logger.warning("Dask is not installed, async execution and evaluation will not be available.")
-            else:
-                using_dask = True
 
-            if using_dask:
+            if scheduler_address is not None:
                 from aiq.front_ends.fastapi.job_store import register_dask_serializers
                 register_dask_serializers()
-                self._submit_cleanup_task(config_dict["scheduler_address"])
+                await self._submit_cleanup_task(scheduler_address)
+                os.environ["AIQ_DASK_SCHEDULER_ADDRESS"] = scheduler_address
 
             # Write to YAML file
             yaml_dump(config_dict, config_file)
@@ -160,3 +161,12 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
                 }
 
                 StandaloneApplication(app, options=options).run()
+
+        logger.debug("Shuting down")
+        if self._cleanup_future is not None:
+            logger.info("Cancelling periodic cleanup task.")
+            self._cleanup_future.cancel()
+
+        if self._cluster is not None:
+            logger.info("Closing Dask cluster.")
+            self._cluster.close()
