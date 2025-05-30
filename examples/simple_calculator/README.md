@@ -246,7 +246,7 @@ curl -X 'POST' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{"input_message": "Is the product of 2 * 4 greater than the current hour of the day?"}'
-  ```
+```
 
 ### Expected API Output
 The API response should be similar to the following:
@@ -257,6 +257,7 @@ The API response should be similar to the following:
   "output": "No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 16)."
 }
 ```
+
 ## Accessing Request Metadata
 Users can define custom routes that are dynamically added to the API server, and capture HTTP request metadata such
 as the method, URL path, URL scheme, headers, query parameters, path parameters, host, port, and cookies.
@@ -274,7 +275,7 @@ general:
         method: POST
         description: Gets the request attributes from the request.
         function_name: current_request_attributes
-  ```
+```
 
 ### Access the request metadata
 Get the instance of the `aiq.builder.context.AIQContext` object using the `aiq.builder.context.AIQContext.get()` method. This will give you access to the metadata method which holds the request attributes defined by the user on request. A complete example of the function can be found in `src/aiq/tool/server_tools.py.`

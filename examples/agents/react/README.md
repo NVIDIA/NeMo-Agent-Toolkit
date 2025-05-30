@@ -15,19 +15,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-<!--
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-  SPDX-License-Identifier: Apache-2.0
--->
-
 # ReAct Agent
 
-A configurable ReAct Agent. This agent leverages the AIQ toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
+A configurable ReAct agent. This agent leverages the AIQ toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
 
 ## Key Features
 
 - **Pre-built Tools:** Leverages core AIQ toolkit library agent and tools.
-- **ReAct Agent:** Performs reasoning between tool call; utilizes tool names and descriptions to appropriately route to the correct tool
+- **ReAct agent:** Performs reasoning between tool call; utilizes tool names and descriptions to appropriately route to the correct tool
 - **Custom Plugin System:** Developers can bring in new tools using plugins.
 - **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
 - **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
@@ -61,11 +56,11 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ## Run the Workflow
 
-The ReAct Agent can be used as either a workflow or a function, and there's an example configuration that demonstrates both.
-If you’re looking for an example workflow where the ReAct Agent runs as the main workflow, refer to [config.yml](configs/config.yml).
-To see the ReAct Agent used as a function within a workflow, alongside the Reasoning Agent, refer to [config-reasoning.yml](configs/config-reasoning.yml).
-This README primarily covers the former case, where the ReAct Agent functions as the main workflow, in config.yml.
-For more details, refer to the [ReAct Agent documentation](../../../docs/source/workflows/about/react-agent.md) and the [Reasoning Agent documentation](../../../docs/source/workflows/about/react-agent.md)
+The ReAct agent can be used as either a workflow or a function, and there's an example configuration that demonstrates both.
+If you’re looking for an example workflow where the ReAct agent runs as the main workflow, refer to [config.yml](configs/config.yml).
+To see the ReAct agent used as a function within a workflow, alongside the Reasoning Agent, refer to [config-reasoning.yml](configs/config-reasoning.yml).
+This README primarily covers the former case, where the ReAct agent functions as the main workflow, in config.yml.
+For more details, refer to the [ReAct agent documentation](../../../docs/source/workflows/about/react-agent.md) and the [Reasoning agent documentation](../../../docs/source/workflows/about/reasoning-agent.md)
 
 Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 

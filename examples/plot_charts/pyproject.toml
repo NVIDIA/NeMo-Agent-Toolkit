@@ -9,7 +9,7 @@ root = "../.."
 name = "aiq_plot_charts"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain]~=1.1",
+  "aiqtoolkit[langchain]~=1.2",
   "matplotlib==3.9.*",
   "seaborn==0.13.*",
 ]

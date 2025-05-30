@@ -73,4 +73,17 @@ Refer to `aiq serve --help` for more information on how to customize the server.
 
 ## Using the Python API
 
-Using the Python API for running workflows is outside the scope of this document. Refer to the Python API documentation for the {py:class}`~aiq.runtime.runner.AIQRunner` class for more information.
+The toolkit offers a programmatic way to execute workflows through its Python API, allowing you to integrate workflow execution directly into your Python code. Here's how to use it:
+
+```python
+    async with load_workflow(config_file) as workflow:
+        async with workflow.run(input_str) as runner:
+            result = await runner.result(to_type=str)
+```
+
+In this example:
+- `config_file`: A string path pointing to your workflow YAML file
+- `input_str`: A string containing the input for your workflow
+- The `workflow.run(input_str)` method returns an instance of {py:class}`~aiq.runtime.runner.AIQRunner`
+
+For detailed information about the `AIQRunner` class and its capabilities, please refer to the Python API documentation for the {py:class}`~aiq.runtime.runner.AIQRunner` class.
