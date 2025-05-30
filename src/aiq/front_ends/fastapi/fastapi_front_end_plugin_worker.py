@@ -55,6 +55,7 @@ from aiq.front_ends.fastapi.utils import get_class_name
 from aiq.front_ends.fastapi.utils import get_config_file_path
 from aiq.front_ends.fastapi.utils import import_class_from_string
 from aiq.front_ends.fastapi.websocket import AIQWebSocket
+from aiq.runtime.loader import load_workflow
 from aiq.runtime.session import AIQSessionManager
 
 logger = logging.getLogger(__name__)
@@ -89,6 +90,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
                 raise RuntimeError("Dask is not available, please install it to use the FastAPI front end with Dask.")
 
             try:
+                assert JobStore is not None, "JobStore should be imported when Dask is available"
                 self._job_store = JobStore(scheduler_address=self._front_end_config.scheduler_address)
                 self._dask_available = True
                 logger.debug("Connected to Dask scheduler at %s", self._front_end_config.scheduler_address)
@@ -224,14 +226,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         }
 
         # TODO: Find another way to limit the number of concurrent evaluations
-        async def run_evaluation(scheduler_address: str,
-                                 job_id: str,
-                                 config_file: str,
-                                 reps: int,
-                                 session_manager: AIQSessionManager):
+        async def run_evaluation(scheduler_address: str, job_id: str, config_file: str, reps: int):
             """Background task to run the evaluation."""
+            assert JobStore is not None, "JobStore should be imported when Dask is available"
+            job_store = JobStore(scheduler_address=scheduler_address)
+
             try:
-                job_store = JobStore(scheduler_address=scheduler_address)
+                # We have two config files, one for the workflow and one for the evaluation
+                workflow_config_file_path = get_config_file_path()
 
                 # Create EvaluationRunConfig using the CLI defaults
                 eval_config = EvaluationRunConfig(config_file=Path(config_file), dataset=None, reps=reps)
@@ -239,8 +241,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 # Create a new EvaluationRun with the evaluation-specific config
                 job_store.update_status(job_id, "running")
                 eval_runner = EvaluationRun(eval_config)
-                output: EvaluationRunOutput = await eval_runner.run_and_evaluate(session_manager=session_manager,
-                                                                                 job_id=job_id)
+                async with load_workflow(workflow_config_file_path) as session_manager:
+                    output: EvaluationRunOutput = await eval_runner.run_and_evaluate(session_manager=session_manager,
+                                                                                     job_id=job_id)
                 if output.workflow_interrupted:
                     job_store.update_status(job_id, "interrupted")
                 else:
@@ -255,6 +258,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             """Handle evaluation requests."""
 
             async with session_manager.session(request=http_request):
+                assert self._job_store is not None and JobStatus is not None, "JobStore should be initialized when Dask is available"
 
                 # if job_id is present and already exists return the job info
                 # There is a race condition between this check and the actual job submission, however if the client is
@@ -271,7 +275,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     config_file=request.config_file,
                     expiry_seconds=request.expiry_seconds,
                     job_fn=run_evaluation,
-                    job_args=[self._scheduler_address, job_id, request.config_file, request.reps, session_manager])
+                    job_args=[self._scheduler_address, job_id, request.config_file, request.reps])
 
                 logger.info("Submitted evaluation job %s with config %s", job_id, request.config_file)
 
@@ -399,6 +403,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         if self._dask_available:
             # Append job_id and expiry_seconds to the input schema, this effectively makes these reserved keywords
             # Consider prefixing these with "aiq_" to avoid conflicts
+            assert JobStore is not None, "JobStore should be initialized when Dask is available"
+
             class AIQAsyncGenerateRequest(GenerateBodyType):
                 job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
                 sync_timeout: int = Field(
@@ -551,13 +557,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             assert JobStore is not None, "JobStore should be initialized when Dask is available"
             job_store = JobStore(scheduler_address=scheduler_address)
             try:
-                from aiq.runtime.loader import load_workflow
-
                 config_file_path = get_config_file_path()
                 result_type = import_class_from_string(result_type_name)
-                async with load_workflow(config_file_path) as workflow:
-                    async with workflow.run(payload) as runner:
-                        result = await runner.result(to_type=result_type)
+                async with load_workflow(config_file_path) as session_manager:
+                    result = await generate_single_response(payload, session_manager, result_type=result_type)
 
                 job_store.update_status(job_id, "success", output=result)
             except Exception as e:
