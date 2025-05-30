@@ -37,10 +37,6 @@ class OpenAIModelConfig(LLMBaseConfig, name="openai"):
     top_p: float = Field(default=1.0, description="Top-p for distribution sampling.")
     seed: int | None = Field(default=None, description="Random seed to set for generation.")
     max_retries: int = Field(default=10, description="The max number of retries for the request.")
-    stream_usage: bool = Field(
-        default=True,
-        description=("When using streaming, whether to include usage metadata in the response. "
-                     "This adds a small overhead to the chunk size but is recommended for tracing."))
 
 
 @register_llm_provider(config_type=OpenAIModelConfig)

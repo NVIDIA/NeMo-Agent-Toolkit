@@ -33,4 +33,10 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
 
     from langchain_openai import ChatOpenAI
 
-    yield ChatOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
+    # Default kwargs for OpenAI to include usage metadata in the response. If the user has set stream_usage to False, we
+    # will not include this.
+    default_kwargs = {"stream_usage": True}
+
+    kwargs = {**default_kwargs, **llm_config.model_dump(exclude={"type"}, by_alias=True)}
+
+    yield ChatOpenAI(**kwargs)
