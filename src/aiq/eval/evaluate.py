@@ -18,6 +18,7 @@ import logging
 import shutil
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from pydantic import BaseModel
 from tqdm import tqdm
@@ -274,6 +275,13 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         # Cleanup the output directory
         if self.eval_config.general.output and self.eval_config.general.output.cleanup:
             self.cleanup_output_directory()
+
+        # Generate a job_id if append_job_id_to_output_dir is enabled and no job_id provided
+        if (self.eval_config.general.output and 
+            self.eval_config.general.output.append_job_id_to_output_dir and 
+            not job_id):
+            job_id = 'job_' + str(uuid4())
+            logger.info("Generated job ID for output directory: %s", job_id)
 
         # If a job id is provided keep the data per-job
         if job_id:
