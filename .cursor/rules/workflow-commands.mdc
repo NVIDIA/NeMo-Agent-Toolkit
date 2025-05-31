@@ -1,92 +1,215 @@
 ---
 description:
 globs:
-alwaysApply: true
+alwaysApply: false
 ---
-# Workflow Creation
-- When user requests to create a workflow:
-- Extract workflow name from request
-- Execute: aiq workflow create <workflow_name>
-- If workflow directory specified:
-  - Execute: aiq workflow create --workflow-dir <dir> <workflow_name>
-- If no-install flag specified:
-  - Execute: aiq workflow create --no-install <workflow_name>
-- If description specified:
-  - Execute: aiq workflow create --description '<desc>' <workflow_name>
-- Handle multiple flags:
-  - Combine all specified flags in command
-- Verify command execution success
-- Verify workflow structure
-  - Check against AIQToolkit Project Guidelines for:
+# Workflow Management Commands
+You MUST follow those rules when user requests to create, run, serve, delete, reinstall, evaluate, validate or customized a workflow.
+
+## Workflow Creation
+When creating a new workflow:
+1. Extract workflow name from request
+2. Execute base command:
+   ```bash
+   aiq workflow create <workflow_name>
+   ```
+3. Handle additional options:
+   - For custom directory:
+     ```bash
+     aiq workflow create --workflow-dir <dir> <workflow_name>
+     ```
+   - For no installation:
+     ```bash
+     aiq workflow create --no-install <workflow_name>
+     ```
+   - For custom description:
+     ```bash
+     aiq workflow create --description '<desc>' <workflow_name>
+     ```
+4. For multiple flags, combine them in a single command
+5. Verify execution:
+   - Check command execution success
+   - Validate workflow structure against AIQToolkit Project Guidelines:
      - Project structure requirements
      - Code standards and best practices
      - Documentation requirements
-- If installation was not skipped:
-  - Execute: aiq info components -t package
-  - Verify workflow name appears in installed components
+6. If installation was not skipped:
+   - Run: `aiq info components -t package`
+   - Verify workflow name appears in installed components
 
-# Workflow Deletion
-When user requests to delete a workflow:
-- Extract workflow name from request
-- Execute: yes | aiq workflow delete <workflow_name>
-- Verify deletion using aiq info components -t package
-  - Confirm workflow no longer appears in installed components
+## Workflow Deletion
+When deleting a workflow:
+1. Extract workflow name from request
+2. Execute deletion command:
+   ```bash
+   yes | aiq workflow delete <workflow_name>
+   ```
+3. Verify deletion:
+   - Run: `aiq info components -t package`
+   - Confirm workflow no longer appears in installed components
 
-# Workflow Reinstallation
-When user requests to reinstall a workflow:
-- Extract workflow name from request
-- Execute: aiq workflow reinstall <workflow_name>
-- Verify reinstall using aiq info components -t package
-  - Confirm workflow appears in installed components
+## Workflow Reinstallation
+When reinstalling a workflow:
+1. Extract workflow name from request
+2. Execute reinstallation command:
+   ```bash
+   aiq workflow reinstall <workflow_name>
+   ```
+3. Verify reinstallation:
+   - Run: `aiq info components -t package`
+   - Confirm workflow appears in installed components
 
-# Workflow Execution
-When user requests to run a workflow:
-- Extract workflow config file path and input from request
-- Execute: aiq run --config_file <config_path> --input '<input>'
-- If override arguments specified:
-  - Add --override flag for each parameter
-  - Format: --override <section>.<component>.<parameter> <value>
-  - Example: --override llms.nim_llm.temperature 0.7
-  - Support multiple overrides in single command
+## Workflow Execution
+When running a workflow:
+1. Extract workflow config file path and input from request
+2. Execute base command:
+   ```bash
+   aiq run --config_file <config_path> --input '<input>'
+   ```
+3. Handle override arguments:
+   - Add `--override` flag for each parameter
+   - Format: `--override <section>.<component>.<parameter> <value>`
+   - Example: `--override llms.nim_llm.temperature 0.7`
+   - Support multiple overrides in single command
 
-# Workflow Serving
-When user requests to serve a workflow:
-- Extract workflow config file path from request
-- Execute: aiq serve --config_file <config_path>
-- If host specified:
-  - Add --host <host> flag
-- If port specified:
-  - Add --port <port> flag
-- If workers specified:
-  - Add --workers <num> flag
-- If auto-reload specified:
-  - Add --reload true flag
+## Workflow Serving
+When serving a workflow:
+1. Extract workflow config file path from request
+2. Execute base command:
+   ```bash
+   aiq serve --config_file <config_path>
+   ```
+3. Handle additional options:
+   - Custom host: `--host <host>`
+   - Custom port: `--port <port>`
+   - Worker count: `--workers <num>`
+   - Auto-reload: `--reload true`
 
-# Workflow Evaluation
-When user requests to evaluate a workflow:
-- Extract workflow config file path and dataset path from request
-- Execute: aiq eval --config_file <config_path> --dataset <dataset_path>
-- If repetitions specified:
-  - Add --reps <num> flag
-- If result path specified:
-  - Add --result_json_path <path> flag
-- If endpoint specified:
-  - Add --endpoint <url> flag
+## Workflow Evaluation
+When evaluating a workflow:
+1. Extract workflow config file path and dataset path from request
+2. Execute base command:
+   ```bash
+   aiq eval --config_file <config_path> --dataset <dataset_path>
+   ```
+3. Handle additional options:
+   - Repetitions: `--reps <num>`
+   - Result path: `--result_json_path <path>`
+   - Custom endpoint: `--endpoint <url>`
 
-# Workflow Validation
-When user requests to validate a workflow:
-- Extract workflow config file path from request
-- Execute: aiq validate --config_file <config_path>
-- Display validation results or specific validation errors
-- Suggest fixes for each error if validation fails
+## Workflow Validation
+When validating a workflow:
+1. Extract workflow config file path from request
+2. Execute validation command:
+   ```bash
+   aiq validate --config_file <config_path>
+   ```
+3. Handle validation results:
+   - Display validation results or specific errors
+   - Suggest fixes for each error if validation fails
 
-# Component Information
-When user requests component information:
-- If requesting all components:
-  - Execute: aiq info components
-- If searching for a specific component name:
-  - Execute: aiq info components -q '<query>'
-- If requesting specific component type:
-  - Execute: aiq info components -t <type>
-- If requesting channel information:
-  - Execute: aiq info channels
+## Component Information
+When requesting component information:
+1. For all components:
+   ```bash
+   aiq info components
+   ```
+2. For specific component search:
+   ```bash
+   aiq info components -q '<query>'
+   ```
+3. For specific component type:
+   ```bash
+   aiq info components -t <type>
+   ```
+4. For channel information:
+   ```bash
+   aiq info channels
+   ```
+
+## Command Patterns
+Recognize workflow command requests and extract parameters:
+1. Match patterns like:
+   - 'create workflow <name>'
+   - 'create new workflow <name>'
+   - 'create aiq workflow <name>'
+   - 'create workflow <name> in <dir>'
+   - 'create workflow <name> without installing'
+   - 'create workflow <name> with description <desc>'
+   - 'delete workflow <name>'
+   - 'remove workflow <name>'
+   - 'uninstall workflow <name>'
+   - 'reinstall workflow <name>'
+   - 'reinstall <name>'
+   - 'run workflow <config> with input <input>'
+   - 'run workflow <config> with input <input> and override <param> to <value>'
+   - 'add tool <tool_type> to workflow <config>'
+   - 'add <tool_type> tool to workflow <config>'
+   - 'add new tool <tool_type> to workflow <config>'
+   - 'serve workflow <config>'
+   - 'serve workflow <config> on host <host> port <port>'
+   - 'serve workflow <config> with <num> workers'
+   - 'evaluate workflow <config> with dataset <path>'
+   - 'evaluate workflow <config> with <num> repetitions'
+   - 'validate config <path>'
+   - 'show available components'
+   - 'show available <type> components'
+   - 'search for components with query <query>'
+
+2. Extract parameters:
+   - workflow_name: Required, must be valid Python package name
+   - workflow_dir: Optional, defaults to current directory
+   - install: Optional, defaults to true
+   - description: Optional, defaults to template description
+   - config_file: Required for run command, path to workflow config
+   - input: Required for run command, input text for workflow
+   - overrides: Optional for run command, list of parameter overrides
+   - tool_type: Required for add tool command, type of tool to add
+   - tool_name: Optional for add tool command, name for the new tool
+   - tool_params: Optional for add tool command, parameters for the tool
+
+## Parameter Validation
+Validate workflow creation parameters:
+1. Validate workflow name:
+   - Must be valid Python package name
+   - No spaces or special characters
+   - Convert to snake_case if needed
+2. Validate workflow directory:
+   - Must exist
+   - Must be writable
+   - Convert to absolute path if relative
+3. Validate description:
+   - Must be string
+   - Properly escape special characters
+4. Validate config file:
+   - Must exist
+   - Must be valid YAML
+   - Must contain required sections
+5. Validate override parameters:
+   - Must follow section.component.parameter format
+   - Values must match expected types
+   - Must reference existing components
+6. Validate tool parameters:
+   - Tool type must exist in available components
+   - Required parameters must be provided
+   - Optional parameters must have valid values
+   - Tool name must be unique in config
+   - Tool name must be valid Python identifier
+
+## Error Handling
+Handle workflow creation errors and provide clear error messages:
+1. Handle common errors:
+   - Invalid workflow name
+   - Directory does not exist
+   - Permission denied
+   - Package already exists
+   - Invalid config file
+   - Invalid override parameters
+   - Component not found
+   - Tool type not found
+   - Missing required tool parameters
+   - Invalid tool parameters
+   - Duplicate tool name
+   - Missing dependencies
+2. Provide clear error messages
+3. Suggest corrections when possible

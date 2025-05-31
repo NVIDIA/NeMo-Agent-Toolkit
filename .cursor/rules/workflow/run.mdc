@@ -1,0 +1,50 @@
+---
+description: You MUST follow these rules when the user's request is related to workflow execution.
+globs:
+alwaysApply: false
+---
+# Workflow Execution Rules
+Rules for executing workflows in the AIQ system. These rules ensure proper workflow execution with correct parameters and overrides.
+
+## Command Pattern
+Recognize workflow execution requests and extract parameters:
+1. Match patterns like:
+   - 'run workflow <config> with input <input>'
+   - 'run workflow <config> with input <input> and override <param> to <value>'
+
+## Execution Process
+When running a workflow:
+1. Extract workflow config file path and input from request
+2. Execute base command:
+   ```bash
+   aiq run --config_file <config_path> --input '<input>'
+   ```
+3. Handle override arguments:
+   - Add `--override` flag for each parameter
+   - Format: `--override <section>.<component>.<parameter> <value>`
+   - Example: `--override llms.nim_llm.temperature 0.7`
+   - Support multiple overrides in single command
+
+## Parameter Validation
+1. Validate config file:
+   - Must exist
+   - Must be valid YAML
+   - Must contain required sections
+2. Validate input:
+   - Must be string
+   - Properly escape special characters
+3. Validate override parameters:
+   - Must follow section.component.parameter format
+   - Values must match expected types
+   - Must reference existing components
+
+## Error Handling
+Handle workflow execution errors and provide clear error messages:
+1. Handle common errors:
+   - Invalid config file
+   - Invalid override parameters
+   - Component not found
+   - Missing dependencies
+   - Execution failures
+2. Provide clear error messages
+3. Suggest corrections when possible

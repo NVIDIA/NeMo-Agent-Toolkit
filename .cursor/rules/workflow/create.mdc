@@ -1,0 +1,82 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+# Workflow Creation
+You MUST follow these rules when user required to create a new workflow.
+Rules for creating new workflows in the AIQ system.
+
+## Command Pattern
+Recognize workflow creation requests and extract parameters:
+1. Core command structure:
+   ```bash
+   aiq workflow create <workflow_name> [options]
+   ```
+
+2. Parameter extraction rules:
+   - Workflow name:
+     - Extract after keywords: 'workflow', 'named', 'called'
+     - Must be a valid Python package name
+     - Convert to snake_case if needed
+   - Directory:
+     - Extract after keywords: 'in', 'directory', 'dir', 'under', 'at'
+     - Use --workflow-dir option
+     - Must exist and be writable
+   - Installation:
+     - Extract after keywords: 'without installing', 'no install'
+     - Use --no-install flag
+   - Description:
+     - Extract after keywords: 'description', 'desc', 'with description'
+     - Use --description option
+     - Must be a valid string
+
+3. Natural language processing:
+   - Ignore common filler words: 'please', 'can you', 'could you', 'help me', 'i need', 'i want'
+   - Handle variations of 'create': 'make', 'set up', 'initialize', 'start', 'generate'
+   - Handle directory variations: 'dir', 'directory'
+   - Combine multiple options in a single command
+
+## Creation Process
+When creating a new workflow:
+1. Extract workflow name from request
+2. Execute base command:
+   ```bash
+   aiq workflow create <workflow_name>
+   ```
+3. Handle additional options:
+   - For custom directory:
+     ```bash
+     aiq workflow create --workflow-dir <dir> <workflow_name>
+     ```
+   - For no installation:
+     ```bash
+     aiq workflow create --no-install <workflow_name>
+     ```
+   - For custom description:
+     ```bash
+     aiq workflow create --description '<desc>' <workflow_name>
+     ```
+4. For multiple flags, combine them in a single command
+
+## Validation
+1. Verify execution:
+   - Check command execution success
+   - Validate workflow structure against AIQToolkit Project Guidelines:
+     - Project structure requirements
+     - Code standards and best practices
+     - Documentation requirements
+2. If installation was not skipped:
+   - Run: `aiq info components -t package`
+   - Verify workflow name appears in installed components
+
+## Error Handling
+Handle workflow creation errors and provide clear error messages:
+1. Handle common errors:
+   - Invalid workflow name
+   - Directory does not exist
+   - Permission denied
+   - Package already exists
+   - Missing dependencies
+2. Provide clear error messages
+3. Suggest corrections when possible
