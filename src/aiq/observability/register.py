@@ -24,7 +24,6 @@ from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.utils.optional_imports import telemetry_optional_import
-from aiq.utils.optional_imports import try_import_opentelemetry
 from aiq.utils.optional_imports import try_import_phoenix
 
 logger = logging.getLogger(__name__)
