@@ -21,7 +21,8 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import mock_open
 from unittest.mock import patch
-from uuid import uuid4, UUID
+from uuid import UUID
+from uuid import uuid4
 
 import pytest
 
@@ -526,39 +527,35 @@ def test_append_job_id_to_output_dir(default_eval_config):
     """Test that append_job_id_to_output_dir generates UUID when enabled."""
     # Test case 1: Feature enabled, no job_id provided
     default_eval_config.general.output.append_job_id_to_output_dir = True
-    original_dir = default_eval_config.general.output.dir
-    
+
     # Simulate the logic from run_and_evaluate
     job_id = None
-    if (default_eval_config.general.output and 
-        default_eval_config.general.output.append_job_id_to_output_dir and 
-        not job_id):
-        job_id = 'job_' + str(uuid4())
-    
+    if (default_eval_config.general.output and default_eval_config.general.output.append_job_id_to_output_dir
+            and not job_id):
+        job_id = "job_" + str(uuid4())
+
     # Verify UUID was generated
     assert job_id is not None
-    assert job_id.startswith('job_')
+    assert job_id.startswith("job_")
     UUID(job_id[4:])
-    
+
     # Test case 2: Feature disabled
     default_eval_config.general.output.append_job_id_to_output_dir = False
     job_id = None
-    if (default_eval_config.general.output and 
-        default_eval_config.general.output.append_job_id_to_output_dir and 
-        not job_id):
-        job_id = 'job_' + str(uuid4())
-    
+    if (default_eval_config.general.output and default_eval_config.general.output.append_job_id_to_output_dir
+            and not job_id):
+        job_id = "job_" + str(uuid4())
+
     # Verify no UUID was generated
     assert job_id is None
-    
+
     # Test case 3: Job ID already provided
     default_eval_config.general.output.append_job_id_to_output_dir = True
     provided_job_id = "custom-job"
     job_id = provided_job_id
-    if (default_eval_config.general.output and 
-        default_eval_config.general.output.append_job_id_to_output_dir and 
-        not job_id):
-        job_id = 'job_' + str(uuid4())
-    
+    if (default_eval_config.general.output and default_eval_config.general.output.append_job_id_to_output_dir
+            and not job_id):
+        job_id = "job_" + str(uuid4())
+
     # Verify provided job_id was kept
     assert job_id == provided_job_id

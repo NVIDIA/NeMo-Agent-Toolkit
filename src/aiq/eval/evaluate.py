@@ -277,10 +277,9 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             self.cleanup_output_directory()
 
         # Generate a job_id if append_job_id_to_output_dir is enabled and no job_id provided
-        if (self.eval_config.general.output and 
-            self.eval_config.general.output.append_job_id_to_output_dir and 
-            not job_id):
-            job_id = 'job_' + str(uuid4())
+        if (self.eval_config.general.output and self.eval_config.general.output.append_job_id_to_output_dir
+                and not job_id):
+            job_id = "job_" + str(uuid4())
             logger.info("Generated job ID for output directory: %s", job_id)
 
         # If a job id is provided keep the data per-job
