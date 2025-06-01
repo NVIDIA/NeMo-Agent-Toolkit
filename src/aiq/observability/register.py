@@ -117,9 +117,9 @@ class OtelCollectorTelemetryExporter(TelemetryExporterBaseConfig, name="otelcoll
 @register_telemetry_exporter(config_type=OtelCollectorTelemetryExporter)
 async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder):
     """Create an OpenTelemetry telemetry exporter."""
-    # If the dependencies are not installed, a TelemetryOptionalImportError will be raised
-    opentelemetry = try_import_opentelemetry()
-    yield opentelemetry.sdk.trace.export.OTLPSpanExporter(config.endpoint)
+
+    trace_exporter = telemetry_optional_import("opentelemetry.exporter.otlp.proto.http.trace_exporter")
+    yield trace_exporter.OTLPSpanExporter(endpoint=config.endpoint)
 
 
 class ConsoleLoggingMethod(LoggingBaseConfig, name="console"):
