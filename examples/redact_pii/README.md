@@ -58,6 +58,8 @@ aiq run --config_file examples/redact_pii/src/redact_pii/configs/weave_redact_pi
    - Redacted person names (`PERSON`)
    - Redacted custom keys (`custom_secret`)
 
+![Weave PII Redaction](images/redact_weave_trace.png)
+
 ## Customizing PII Redaction
 
 You can customize what gets redacted by modifying these fields in the `weave_pii_test.yaml` file:
