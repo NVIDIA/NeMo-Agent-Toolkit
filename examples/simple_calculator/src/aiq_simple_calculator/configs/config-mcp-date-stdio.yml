@@ -21,21 +21,38 @@ general:
   use_uvloop: true
 
 functions:
-  calculator_multiply:
-    _type: calculator_multiply
-  calculator_inequality:
-    _type: calculator_inequality
-  calculator_divide:
-    _type: aiq_simple_calculator/calculator_divide
-  mcp_time_tool:
-    _type: mcp_tool_wrapper
-    client_type: stdio
-    command: "python"
-    args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
-    mcp_tool_name: get_current_time
-    description: "Returns the current date and time from the MCP server"
-  calculator_subtract:
-    _type: calculator_subtract
+  mcp_server_aiq_math:
+    _type: mcp_client
+    server:
+      transport: sse
+      url: "http://localhost:9901/sse"
+    # load all tools and use the descriptions from the server
+
+  mcp_server_time_stdio:
+    _type: mcp_client
+    server:
+      transport: stdio
+      command: "python"
+      args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
+    tool_filter:
+      # load 1 of 2 tools and override the description
+      get_current_time:
+        "alias": "mcp_time_tool"
+        "description": "Returns the current date and time from the MCP server"
+
+  mcp_server_github:
+    _type: mcp_client
+    server:
+      transport: stdio
+      command: "docker"
+      args: ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"]
+      env:
+        GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+    tool_filter:
+      # load 2 of 40 tools and use the descriptions from the server
+      - list_issues
+      - get_issue
+
 
 llms:
   nim_llm:
@@ -53,9 +70,10 @@ workflow:
   tool_names:
     - calculator_multiply
     - calculator_inequality
-    - mcp_time_tool
     - calculator_divide
     - calculator_subtract
+    - mcp_time_tool
+
   llm_name: nim_llm
   verbose: true
   retry_parsing_errors: true

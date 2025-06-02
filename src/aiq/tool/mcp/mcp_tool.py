@@ -74,10 +74,10 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=
     Generate an AIQ Toolkit Function that wraps a tool provided by the MCP server.
     """
 
-    from aiq.tool.mcp.mcp_client import MCPSSEClient
-    from aiq.tool.mcp.mcp_client import MCPStdioClient
-    from aiq.tool.mcp.mcp_client import MCPStreamableHTTPClient
-    from aiq.tool.mcp.mcp_client import MCPToolClient
+    from aiq.tool.mcp.mcp_client_base import MCPSSEClient
+    from aiq.tool.mcp.mcp_client_base import MCPStdioClient
+    from aiq.tool.mcp.mcp_client_base import MCPStreamableHTTPClient
+    from aiq.tool.mcp.mcp_client_base import MCPToolClient
 
     # Initialize the client
     if config.client_type == 'stdio':

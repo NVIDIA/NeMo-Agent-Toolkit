@@ -24,10 +24,11 @@ from pydantic.networks import HttpUrl
 from pytest_httpserver import HTTPServer
 
 from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.tool.mcp.mcp_client import MCPBaseClient
-from aiq.tool.mcp.mcp_client import MCPSSEClient
-from aiq.tool.mcp.mcp_client import MCPStdioClient
-from aiq.tool.mcp.mcp_client import MCPStreamableHTTPClient
+from aiq.tool.mcp.mcp_client_base import MCPBaseClient
+from aiq.tool.mcp.mcp_client_base import MCPSSEClient
+from aiq.tool.mcp.mcp_client_base import MCPStdioClient
+from aiq.tool.mcp.mcp_client_base import MCPStreamableHTTPClient
+from aiq.tool.mcp.mcp_client_base import model_from_mcp_schema
 from aiq.tool.mcp.mcp_tool import MCPToolConfig
 
 
@@ -104,7 +105,6 @@ def _get_sample_schema():
 
 
 def test_schema_generation(sample_schema):
-    from aiq.tool.mcp.mcp_client import model_from_mcp_schema
     _model = model_from_mcp_schema("test_model", sample_schema)
 
     for k, _ in sample_schema["properties"].items():
