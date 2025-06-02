@@ -16,12 +16,9 @@
 import logging
 
 from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
-from aiq.data_models.component_ref import EmbedderRef
 from aiq.data_models.function import FunctionBaseConfig
-from typing import Optional, List
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +30,7 @@ class PiiTestConfig(FunctionBaseConfig, name="pii_redaction_test"):
     test_credit_card: str = "4111-1111-1111-1111"
     test_ssn: str = "352-01-1142"
     custom_secret: str = "sk-12jfw23jfwicn34213"
-    
+
 
 @register_function(config_type=PiiTestConfig)
 async def test_pii_redaction(config: PiiTestConfig, builder: Builder):
@@ -44,16 +41,15 @@ async def test_pii_redaction(config: PiiTestConfig, builder: Builder):
         "email": config.test_email,
         "phone": config.test_phone,
         "payment": {
-            "credit_card": config.test_credit_card,
-            "ssn": config.test_ssn
+            "credit_card": config.test_credit_card, "ssn": config.test_ssn
         },
         "custom_secret": config.custom_secret
     }
-    
+
     async def process_user_data(query: str) -> str:
         """Process user data and return results (will be traced with all PII)."""
         return user_data
-    
+
     description = "Test function for demonstrating PII redaction with Weave telemetry."
 
     yield FunctionInfo.from_fn(process_user_data, description=description)
