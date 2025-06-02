@@ -43,6 +43,9 @@ class MCPServerConfig(BaseModel):
     env: dict[str, str] | None = Field(default=None, description="Environment variables for the stdio process")
 
     def model_post_init(self, __context):
+        """Validate that stdio and SSE/Streamable HTTP properties are mutually exclusive."""
+        super().model_post_init(__context)
+
         if self.transport == "stdio":
             if self.url is not None:
                 raise ValueError("url should not be set when using stdio transport")
@@ -83,9 +86,11 @@ async def mcp_client(config: MCPClientConfig, builder: Builder):  # pylint: disa
 
     # 1. Select and instantiate the client
     if config.server.transport == "stdio":
+        source = f"{config.server.command} {' '.join(config.server.args) if config.server.args else ''}"
         client = MCPStdioClient(command=config.server.command, args=config.server.args, env=config.server.env)
     elif config.server.transport == "sse":
-        client = MCPSSEClient(url=str(config.server.url))
+        source = str(config.server.url)
+        client = MCPSSEClient(url=source)
     elif config.server.transport == "streamable-http":
         client = MCPStreamableHTTPClient(url=str(config.server.url))
     else:
@@ -94,7 +99,9 @@ async def mcp_client(config: MCPClientConfig, builder: Builder):  # pylint: disa
     # 2. Connect and discover tools
     async with client:
         all_tools = await client.get_tools()  # Dict[str, MCPToolClient]
+        logger.info("Discovered %d tools from MCP server at %s", len(all_tools), source)
         for tool in all_tools.values():
+            logger.info("Configured to use tool: %s from MCP server at %s", tool.name, source)
             input_schema = tool.input_schema  # Pydantic model
 
             def _convert_from_str(input_str: str) -> input_schema:

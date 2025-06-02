@@ -81,21 +81,12 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=
 
     # Initialize the client
     if config.client_type == 'stdio':
-        if not config.command:
-            raise ValueError("command is required when using stdio client type")
-
         source = f"{config.command} {' '.join(config.args) if config.args else ''}"
         client = MCPStdioClient(command=config.command, args=config.args, env=config.env)
     elif config.client_type == 'streamable-http':
-        if not config.url:
-            raise ValueError("url is required when using streamable-http client type")
-
         source = str(config.url)
         client = MCPStreamableHTTPClient(url=source)
     elif config.client_type == 'sse':
-        if not config.url:
-            raise ValueError("url is required when using sse client type")
-
         source = str(config.url)
         client = MCPSSEClient(url=source)
     else:
