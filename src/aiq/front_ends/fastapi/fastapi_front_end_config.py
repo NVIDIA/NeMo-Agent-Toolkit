@@ -177,6 +177,10 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         default=None,
         description=("Address of the Dask scheduler to use for async jobs. If None, a Dask local cluster is created. "
                      "Note: This requires the optional dask dependency to be installed."))
+    db_url: str | None = Field(
+        default=None,
+        description=
+        "SQLAlchemy database URL for storing async job metadata, if unset a temporary SQLite database is used.")
     max_running_async_jobs: int = Field(default=10,
                                         description="Maximum number of async jobs to run concurrently",
                                         ge=1)

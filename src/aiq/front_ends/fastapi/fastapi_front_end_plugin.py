@@ -17,7 +17,6 @@ import asyncio
 import logging
 import os
 import tempfile
-import time
 import typing
 
 from aiq.builder.front_end import FrontEndBase
@@ -96,8 +95,6 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
                 try:
                     from dask.distributed import LocalCluster
 
-                    import aiq.front_ends.fastapi.job_store
-
                     self._cluster = await LocalCluster(asynchronous=True)
 
                     if self._cluster.scheduler is not None:
@@ -108,6 +105,23 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
                     logger.warning("Dask is not installed, async execution and evaluation will not be available.")
 
             if scheduler_address is not None:
+                from sqlalchemy import create_engine
+
+                import aiq.front_ends.fastapi.job_store
+
+                db_url = self.front_end_config.db_url
+                if db_url is None:
+                    dot_tmp_dir = os.path.join(os.getcwd(), ".tmp")
+                    os.makedirs(dot_tmp_dir, exist_ok=True)
+                    db_file = os.path.join(dot_tmp_dir, "job_store.db")
+                    if os.path.exists(db_file):
+                        logger.warning("Database file %s already exists, it will be overwritten.", db_file)
+                        os.remove(db_file)
+
+                    db_url = f"sqlite:///{db_file}"
+
+                db_engine = create_engine(db_url)
+
                 await self._submit_cleanup_task(scheduler_address)
                 os.environ["AIQ_DASK_SCHEDULER_ADDRESS"] = scheduler_address
 
