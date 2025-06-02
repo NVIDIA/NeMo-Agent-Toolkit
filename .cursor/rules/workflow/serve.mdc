@@ -4,47 +4,50 @@ globs:
 alwaysApply: false
 ---
 # Workflow Serving Rules
+
+## Overview
 Rules for serving workflows in the AIQ system. These rules ensure proper workflow serving with correct host, port, and worker configurations.
 
-## Command Pattern
-Recognize workflow serving requests and extract parameters:
-1. Match patterns like:
-   - 'serve workflow <config>'
-   - 'serve workflow <config> on host <host> port <port>'
-   - 'serve workflow <config> with <num> workers'
+## Command Structure
+```bash
+aiq serve --config_file <config_path> [--host <host>] [--port <port>] [--workers <num>] [--reload true]
+```
+
+### Required Parameters
+- `--config_file <config_path>`: Path to workflow configuration file
+  - Must exist
+  - Must be valid YAML
+  - Must contain required sections
+
+### Optional Parameters
+- `--host <host>`: Custom host to serve on
+  - Must be valid hostname or IP
+  - Defaults to localhost if not specified
+- `--port <port>`: Custom port to serve on
+  - Must be valid port number
+  - Must be available
+  - Defaults to 8000 if not specified
+- `--workers <num>`: Number of worker processes
+  - Must be positive integer
+  - Defaults to 1 if not specified
+- `--reload true`: Enable auto-reload on file changes
+
+## Natural Language Processing
+- Match patterns like:
+  - 'serve workflow <config>'
+  - 'serve workflow <config> on host <host> port <port>'
+  - 'serve workflow <config> with <num> workers'
 
 ## Serving Process
-When serving a workflow:
-1. Extract workflow config file path from request
-2. Execute base command:
+1. Extract workflow config file path and options from request
+2. Execute base command with extracted parameters
+3. For multiple options, combine them in a single command:
    ```bash
-   aiq serve --config_file <config_path>
+   aiq serve --config_file <config_path> --host <host> --port <port> --workers <num> --reload true
    ```
-3. Handle additional options:
-   - Custom host: `--host <host>`
-   - Custom port: `--port <port>`
-   - Worker count: `--workers <num>`
-   - Auto-reload: `--reload true`
-
-## Parameter Validation
-1. Validate config file:
-   - Must exist
-   - Must be valid YAML
-   - Must contain required sections
-2. Validate host:
-   - Must be valid hostname or IP
-   - Default to localhost if not specified
-3. Validate port:
-   - Must be valid port number
-   - Must be available
-   - Default to 8000 if not specified
-4. Validate worker count:
-   - Must be positive integer
-   - Default to 1 if not specified
 
 ## Error Handling
-Handle workflow serving errors and provide clear error messages:
-1. Handle common errors:
+1. Common errors to handle:
    - Invalid config file
    - Port already in use
    - Invalid host configuration

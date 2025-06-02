@@ -4,38 +4,45 @@ globs:
 alwaysApply: false
 ---
 # Workflow Validation Rules
+
+## Overview
 Rules for validating workflows in the AIQ system. These rules ensure proper workflow configuration validation and error reporting.
 
-## Command Pattern
-Recognize workflow validation requests and extract parameters:
-1. Match patterns like:
-   - 'validate config <path>'
-   - 'validate workflow <config>'
+## Command Structure
+```bash
+aiq validate --config_file <config_path>
+```
+
+### Required Parameters
+- `--config_file <config_path>`: Path to workflow configuration file
+  - Must exist
+  - Must be valid YAML
+  - Must contain required sections
+
+## Natural Language Processing
+- Match patterns like:
+  - 'validate config <path>'
+  - 'validate workflow <config>'
 
 ## Validation Process
-When validating a workflow:
 1. Extract workflow config file path from request
-2. Execute validation command:
-   ```bash
-   aiq validate --config_file <config_path>
-   ```
+2. Execute validation command with extracted parameters
 3. Handle validation results:
    - Display validation results or specific errors
    - Suggest fixes for each error if validation fails
 
-## Parameter Validation
-1. Validate config file:
+## Validation Rules
+1. Config File Validation:
    - Must exist
    - Must be valid YAML
    - Must contain required sections
-2. Validate components:
+2. Component Validation:
    - Must reference existing components
    - Must have valid parameters
    - Must follow component schema
 
 ## Error Handling
-Handle workflow validation errors and provide clear error messages:
-1. Handle common errors:
+1. Common errors to handle:
    - Invalid config file
    - Missing required sections
    - Invalid component references

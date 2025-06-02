@@ -4,28 +4,42 @@ globs:
 alwaysApply: false
 ---
 # Workflow Execution Rules
+
+## Overview
 Rules for executing workflows in the AIQ system. These rules ensure proper workflow execution with correct parameters and overrides.
 
-## Command Pattern
-Recognize workflow execution requests and extract parameters:
-1. Match patterns like:
-   - 'run workflow <config> with input <input>'
-   - 'run workflow <config> with input <input> and override <param> to <value>'
+## Command Structure
+```bash
+aiq run --config_file <config_path> --input '<input>' [--override <section>.<component>.<parameter> <value>]
+```
+
+### Required Parameters
+- `--config_file <config_path>`: Path to workflow configuration file
+  - Must exist
+  - Must be valid YAML
+  - Must contain required sections
+- `--input '<input>'`: Input for workflow execution
+  - Must be string
+  - Properly escape special characters
+
+### Optional Parameters
+- `--override <section>.<component>.<parameter> <value>`: Override specific parameters
+  - Format: `--override <section>.<component>.<parameter> <value>`
+  - Example: `--override llms.nim_llm.temperature 0.7`
+  - Support multiple overrides in single command
+
+## Natural Language Processing
+- Match patterns like:
+  - 'run workflow <config> with input <input>'
+  - 'run workflow <config> with input <input> and override <param> to <value>'
 
 ## Execution Process
-When running a workflow:
 1. Extract workflow config file path and input from request
-2. Execute base command:
-   ```bash
-   aiq run --config_file <config_path> --input '<input>'
-   ```
-3. Handle override arguments:
-   - Add `--override` flag for each parameter
-   - Format: `--override <section>.<component>.<parameter> <value>`
-   - Example: `--override llms.nim_llm.temperature 0.7`
-   - Support multiple overrides in single command
+2. Execute base command with extracted parameters
+3. Add override arguments if specified
+4. Support multiple overrides in a single command
 
-## Parameter Validation
+## Validation
 1. Validate config file:
    - Must exist
    - Must be valid YAML
@@ -39,8 +53,7 @@ When running a workflow:
    - Must reference existing components
 
 ## Error Handling
-Handle workflow execution errors and provide clear error messages:
-1. Handle common errors:
+1. Common errors to handle:
    - Invalid config file
    - Invalid override parameters
    - Component not found

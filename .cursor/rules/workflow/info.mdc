@@ -4,45 +4,49 @@ globs:
 alwaysApply: false
 ---
 # Component Information Rules
+
+## Overview
 Rules for retrieving component information in the AIQ system. These rules ensure proper component discovery and information retrieval.
 
-## Command Pattern
-Recognize component information requests and extract parameters:
-1. Match patterns like:
-   - 'show available components'
-   - 'show available <type> components'
-   - 'search for components with query <query>'
+## Command Structure
+```bash
+# List all components
+aiq info components
+
+# Search components
+aiq info components -q '<query>'
+
+# List components by type
+aiq info components -t <type>
+
+# List channels
+aiq info channels
+```
+
+### Optional Parameters
+- `-q '<query>'`: Search query for components
+  - Must be string
+  - Properly escape special characters
+- `-t <type>`: Filter by component type
+  - Must be valid component type
+  - Must be one of: package, tool, channel, etc.
+
+## Natural Language Processing
+- Match patterns like:
+  - 'show available components'
+  - 'show available <type> components'
+  - 'search for components with query <query>'
 
 ## Information Retrieval Process
-When requesting component information:
-1. For all components:
-   ```bash
-   aiq info components
-   ```
-2. For specific component search:
-   ```bash
-   aiq info components -q '<query>'
-   ```
-3. For specific component type:
-   ```bash
-   aiq info components -t <type>
-   ```
-4. For channel information:
-   ```bash
-   aiq info channels
-   ```
-
-## Parameter Validation
-1. Validate query:
-   - Must be string
-   - Properly escape special characters
-2. Validate type:
-   - Must be valid component type
-   - Must be one of: package, tool, channel, etc.
+1. Extract query parameters and type from request
+2. Execute appropriate command based on request type:
+   - List all components
+   - Search with query
+   - Filter by type
+   - List channels
 
 ## Error Handling
-Handle component information errors and provide clear error messages:
-1. Handle common errors:
+1. Common errors to handle:
    - Invalid component type
    - No components found
    - Query syntax errors

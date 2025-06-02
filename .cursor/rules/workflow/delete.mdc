@@ -4,35 +4,36 @@ globs:
 alwaysApply: false
 ---
 # Workflow Deletion Rules
+
+## Overview
 Rules for deleting workflows from the AIQ system. These rules ensure proper workflow removal and cleanup.
 
-## Command Pattern
-Recognize workflow deletion requests and extract parameters:
-1. Match patterns like:
-   - 'delete workflow <name>'
-   - 'remove workflow <name>'
-   - 'uninstall workflow <name>'
+## Command Structure
+```bash
+yes | aiq workflow delete <workflow_name>
+```
+
+### Required Parameters
+- `workflow_name`: Name of the workflow to delete
+  - Must be valid Python package name
+  - Must exist in installed components
+  - No spaces or special characters
+
+## Natural Language Processing
+- Match patterns like:
+  - 'delete workflow <name>'
+  - 'remove workflow <name>'
+  - 'uninstall workflow <name>'
 
 ## Deletion Process
-When deleting a workflow:
 1. Extract workflow name from request
-2. Execute deletion command:
-   ```bash
-   yes | aiq workflow delete <workflow_name>
-   ```
+2. Execute deletion command with extracted parameters
 3. Verify deletion:
    - Run: `aiq info components -t package`
    - Confirm workflow no longer appears in installed components
 
-## Parameter Validation
-1. Validate workflow name:
-   - Must be valid Python package name
-   - Must exist in installed components
-   - No spaces or special characters
-
 ## Error Handling
-Handle workflow deletion errors and provide clear error messages:
-1. Handle common errors:
+1. Common errors to handle:
    - Workflow not found
    - Permission denied
    - Dependencies preventing deletion

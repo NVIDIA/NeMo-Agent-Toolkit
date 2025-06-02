@@ -4,34 +4,35 @@ globs:
 alwaysApply: false
 ---
 # Workflow Reinstallation Rules
+
+## Overview
 Rules for reinstalling workflows in the AIQ system. These rules ensure proper workflow reinstallation and dependency management.
 
-## Command Pattern
-Recognize workflow reinstallation requests and extract parameters:
-1. Match patterns like:
-   - 'reinstall workflow <name>'
-   - 'reinstall <name>'
+## Command Structure
+```bash
+aiq workflow reinstall <workflow_name>
+```
+
+### Required Parameters
+- `workflow_name`: Name of the workflow to reinstall
+  - Must be valid Python package name
+  - Must exist in workflow directory
+  - No spaces or special characters
+
+## Natural Language Processing
+- Match patterns like:
+  - 'reinstall workflow <name>'
+  - 'reinstall <name>'
 
 ## Reinstallation Process
-When reinstalling a workflow:
 1. Extract workflow name from request
-2. Execute reinstallation command:
-   ```bash
-   aiq workflow reinstall <workflow_name>
-   ```
+2. Execute reinstallation command with extracted parameters
 3. Verify reinstallation:
    - Run: `aiq info components -t package`
    - Confirm workflow appears in installed components
 
-## Parameter Validation
-1. Validate workflow name:
-   - Must be valid Python package name
-   - Must exist in workflow directory
-   - No spaces or special characters
-
 ## Error Handling
-Handle workflow reinstallation errors and provide clear error messages:
-1. Handle common errors:
+1. Common errors to handle:
    - Workflow not found
    - Permission denied
    - Dependency conflicts
