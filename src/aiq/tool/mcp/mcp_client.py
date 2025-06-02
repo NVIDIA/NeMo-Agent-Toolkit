@@ -107,19 +107,22 @@ async def mcp_client(config: MCPClientConfig, builder: Builder):  # pylint: disa
             def _convert_from_str(input_str: str) -> input_schema:
                 return input_schema.model_validate_json(input_str)
 
-            async def _response_fn(tool_input: input_schema | None = None, **kwargs):
+            async def _response_fn(tool_input: input_schema | None = None, **kwargs) -> str:
                 try:
                     if tool_input:
                         args = tool_input.model_dump()
                         return await tool.acall(args)
+
                     _ = input_schema.model_validate(kwargs)
                     return await tool.acall(kwargs)
                 except Exception as e:
                     # Optionally handle/return exception
                     return str(e)
 
+            logger.info("(Before yield) Creating function info for tool: %s", tool.name)
             fn = FunctionInfo.create(single_fn=_response_fn,
                                      description=tool.description,
                                      input_schema=input_schema,
                                      converters=[_convert_from_str])
             yield fn
+            logger.info("(After yield) Created function info for tool: %s", tool.name)
