@@ -58,9 +58,9 @@ def print_tool(tool_dict, detail=False):
 async def list_tools_and_schemas(command, url, tool_name=None, client_type='sse', args=None, env=None):
     if args is None:
         args = []
-    from aiq.tool.mcp.mcp_client import MCPSSEClient
-    from aiq.tool.mcp.mcp_client import MCPStdioClient
-    from aiq.tool.mcp.mcp_client import MCPStreamableHTTPClient
+    from aiq.tool.mcp.mcp_client_base import MCPSSEClient
+    from aiq.tool.mcp.mcp_client_base import MCPStdioClient
+    from aiq.tool.mcp.mcp_client_base import MCPStreamableHTTPClient
 
     try:
         if client_type == 'stdio':
