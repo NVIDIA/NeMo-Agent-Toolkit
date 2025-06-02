@@ -323,6 +323,10 @@ class AsyncOtelSpanListener:
             sub_span.set_attribute(SpanAttributes.OUTPUT_VALUE, serialized_output)
             sub_span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE, "application/json" if is_json else "text/plain")
 
+        # Optional: add metadata to the span from TraceMetadata
+        if step.payload.metadata:
+            sub_span.set_attribute("aiq.metadata", step.payload.metadata.model_dump_json())
+
         end_ns = _ns_timestamp(step.payload.event_timestamp)
 
         # End the subspan
