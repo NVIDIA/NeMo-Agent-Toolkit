@@ -434,6 +434,7 @@ crewai = [
 dask = [
     { name = "dask" },
     { name = "distributed" },
+    { name = "sqlalchemy" },
 ]
 examples = [
     { name = "aiq-agno-personal-finance" },
@@ -569,6 +570,7 @@ requires-dist = [
     { name = "ragas", specifier = "~=0.2.14" },
     { name = "rich", specifier = "~=13.9" },
     { name = "scikit-learn", marker = "extra == 'profiling'", specifier = "~=1.6" },
+    { name = "sqlalchemy", marker = "extra == 'dask'", specifier = "~=2.0" },
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]

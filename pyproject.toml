@@ -81,24 +81,15 @@ examples = [
   "aiq_swe_bench",
   "aiq_automated_description_generation",
   "aiq_agno_personal_finance",
-  "aiq_profiler_agent"
+  "aiq_profiler_agent",
 ]
 
-profiling = [
-  "matplotlib~=3.9",
-  "prefixspan~=0.5.2",
-  "scikit-learn~=1.6",
-]
+profiling = ["matplotlib~=3.9", "prefixspan~=0.5.2", "scikit-learn~=1.6"]
 
 # Optional dependency needed when use_gunicorn is set to true
-gunicorn = [
-  "gunicorn~=23.0"
-]
+gunicorn = ["gunicorn~=23.0"]
 
-dask = [
-  "dask~=2025.5",
-  "distributed~=2025.5",
-]
+dask = ["dask~=2025.5", "distributed~=2025.5", "sqlalchemy~=2.0"]
 
 
 [tool.uv]
@@ -128,7 +119,7 @@ aiq_simple_calculator = { path = "examples/simple_calculator", editable = true }
 aiq_swe_bench = { path = "examples/swe_bench", editable = true }
 aiq_automated_description_generation = { path = "examples/automated_description_generation", editable = true }
 aiq_agno_personal_finance = { path = "examples/agno_personal_finance", editable = true }
-aiq_profiler_agent = {path = "examples/profiler_agent", editable = true}
+aiq_profiler_agent = { path = "examples/profiler_agent", editable = true }
 
 
 [tool.uv.workspace]
@@ -216,7 +207,7 @@ filterwarnings = [
   # trigger the warnings. In Python 3.12 this triggers a SyntaxWarning, in Python 3.11 it triggers a DeprecationWarning
   # which unfortunately pytest is unable to filter.
   # Remove once https://github.com/qdrant/qdrant-client/issues/983 is resolved.
-  "ignore:^invalid escape sequence:SyntaxWarning"
+  "ignore:^invalid escape sequence:SyntaxWarning",
 ]
 testpaths = ["tests", "examples/*/tests", "packages/*/tests"]
 asyncio_mode = "auto"
