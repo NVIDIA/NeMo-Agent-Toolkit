@@ -77,23 +77,43 @@ class AIQEvaluateRequest(BaseModel):
         return config_file
 
 
-class AIQEvaluateResponse(BaseModel):
+class BaseAsyncResponse(BaseModel):
+    """Base model for async responses."""
+    job_id: str = Field(description="Unique identifier for the job")
+    status: str = Field(description="Current status of the job")
+
+
+class AIQEvaluateResponse(BaseAsyncResponse):
     """Response model for the evaluate endpoint."""
-    job_id: str = Field(description="Unique identifier for the evaluation job")
-    status: str = Field(description="Current status of the evaluation job")
+    pass
 
 
-class AIQEvaluateStatusResponse(BaseModel):
-    """Response model for the evaluate status endpoint."""
+class AIQAsyncGenerateResponse(BaseAsyncResponse):
+    """Response model for the async generation endpoint."""
+    pass
+
+
+class BaseAsyncStatusResponse(BaseModel):
+    """Base model for async status responses."""
     job_id: str = Field(description="Unique identifier for the evaluation job")
     status: str = Field(description="Current status of the evaluation job")
-    config_file: str = Field(description="Path to the configuration file used for evaluation")
     error: str | None = Field(default=None, description="Error message if the job failed")
-    output_path: str | None = Field(default=None,
-                                    description="Path to the output file if the job completed successfully")
     created_at: datetime = Field(description="Timestamp when the job was created")
     updated_at: datetime = Field(description="Timestamp when the job was last updated")
     expires_at: datetime | None = Field(default=None, description="Timestamp when the job will expire")
+
+
+class AIQEvaluateStatusResponse(BaseAsyncStatusResponse):
+    """Response model for the evaluate status endpoint."""
+    config_file: str = Field(description="Path to the configuration file used for evaluation")
+    output_path: str | None = Field(default=None,
+                                    description="Path to the output file if the job completed successfully")
+
+
+class AIQAsyncGenerationStatusResponse(BaseAsyncStatusResponse):
+    output: dict | None = Field(
+        default=None,
+        description="Output of the generate request, this is only available if the job completed successfully.")
 
 
 class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
@@ -153,6 +173,9 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     port: int = Field(default=8000, description="Port to bind the server to", ge=0, le=65535)
     reload: bool = Field(default=False, description="Enable auto-reload for development")
     workers: int = Field(default=1, description="Number of workers to run", ge=1)
+    max_running_async_jobs: int = Field(default=10,
+                                        description="Maximum number of async jobs to run concurrently",
+                                        ge=1)
     step_adaptor: StepAdaptorConfig = StepAdaptorConfig()
 
     workflow: typing.Annotated[EndpointBase, Field(description="Endpoint for the default workflow.")] = EndpointBase(
