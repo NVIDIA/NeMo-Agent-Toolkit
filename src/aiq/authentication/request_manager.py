@@ -22,9 +22,11 @@ import httpx
 from pydantic import ValidationError
 
 from aiq.authentication.authentication_manager import AuthenticationManager
+from aiq.authentication.exceptions import APIRequestError
 from aiq.authentication.exceptions import BaseUrlValidationError
 from aiq.authentication.exceptions import BodyValidationError
-from aiq.authentication.exceptions import HeaderValidationError
+from aiq.authentication.exceptions import HTTPHeaderValidationError
+from aiq.authentication.exceptions import HTTPMethodValidationError
 from aiq.authentication.exceptions import OAuthCodeFlowError
 from aiq.authentication.exceptions import QueryParameterValidationError
 from aiq.authentication.interfaces import RequestManagerBase
@@ -53,11 +55,31 @@ class RequestManager(RequestManagerBase):
         return self._response_manager
 
     def _validate_data(self, input_dict: dict) -> None:
-        # Check to ensure all parameters have values
-        invalid_values = [key for key, value in input_dict.items() if not value]
+        """
+        Validates that the provided dictionary has valid keys and values.
 
+        Args:
+            input_dict (dict): The dictionary of key-value pairs to validate.
+
+        Raises:
+            ValueError: If any key is invalid or any value is empty or invalid.
+        """
+        # Check empty, whitespace-only, or non-string keys.
+        invalid_keys = [
+            repr(key) for key in input_dict.keys() if key is None or not isinstance(key, str) or key.strip() == ""
+        ]
+
+        if invalid_keys:
+            raise ValueError(f"Invalid keys detected in input: {input_dict}. "
+                             f"Invalid Keys: {', '.join(invalid_keys)}")
+
+        # Check for None or empty-string values.
+        invalid_values = [
+            key for key, value in input_dict.items()
+            if value is None or (isinstance(value, str) and value.strip() == "")
+        ]
         if invalid_values:
-            raise ValueError(f"Empty or invalid values for input: {input_dict}. "
+            raise ValueError(f"Empty or invalid values detected in input: {input_dict}. "
                              f"Invalid Values: {', '.join(invalid_values)}")
 
     def _validate_base_url(self, url: str | httpx.URL) -> None:
@@ -66,7 +88,7 @@ class RequestManager(RequestManagerBase):
         if isinstance(url, httpx.URL):
             url = str(url)
 
-        parsed_url: urllib.parse.ParseResult = urllib.parse.urlparse(url)  # TODO EE: Add Tests.
+        parsed_url: urllib.parse.ParseResult = urllib.parse.urlparse(url)
 
         # Ensure URL has both scheme and network location
         if not parsed_url.scheme or not parsed_url.netloc:
@@ -88,58 +110,84 @@ class RequestManager(RequestManagerBase):
             http_method (str): The HTTP method to validate (e.g., 'GET', 'POST').
         """
         try:
-            HTTPMethod(http_method.upper())  # TODO EE: Add Tests
+            HTTPMethod(http_method.upper())
         except ValueError as e:
             valid_http_methods = ', '.join([method.value for method in HTTPMethod])
-            raise ValueError(f"Invalid HTTP method: '{http_method}'. Must be one of {valid_http_methods}.") from e
+            raise HTTPMethodValidationError(
+                f"Invalid HTTP method: '{http_method}'. Must be one of {valid_http_methods}.") from e
 
     def _validate_headers(self, headers: dict | httpx.Headers | None) -> None:
         """
-        Validates that the provided headers are valid for HTTP request.
+        Validates that the provided headers are valid for an HTTP request.
 
         Args:
             headers (dict): Dictionary of headers.
         """
-        if headers is None:
-            return
+        try:
+            if headers is None:
+                return None
 
-        if isinstance(headers, httpx.Headers):
-            headers = dict(headers)
+            if isinstance(headers, httpx.Headers):
+                headers = dict(headers)
 
-        self._validate_data(headers)
+            self._validate_data(headers)
 
-        for key, value in headers.items():
-            # Checking for valid ascii characters.
-            if not re.fullmatch(r"[A-Za-z0-9-]+", key):  # TODO EE: Add Tests
-                raise HeaderValidationError(f"Invalid header name: {key}")
+            for key, value in headers.items():
 
-            # Checking for any disallowed control characters.
-            if any(ord(char) < 32 and char != '\t' or ord(char) == 127 for char in str(value)):
-                raise HeaderValidationError(f"Invalid control character in header value: {key}: {value}")
+                # Checking for valid ASCII characters in the header name
+                if not re.fullmatch(r"[A-Za-z0-9-]+", key):
+                    raise HTTPHeaderValidationError(f"Invalid header name: {key}")
+
+                # Checking for disallowed control characters
+                if any(ord(char) < 32 and char != '\t' or ord(char) == 127 for char in value):
+                    raise HTTPHeaderValidationError(f"Invalid control character in header value: {key}: {value}")
+
+        except ValueError as e:
+            raise HTTPHeaderValidationError(f"Invalid header data: {e}") from e
 
     def _validate_query_parameters(self, query_params: dict | httpx.QueryParams | None) -> None:
         """
-        Validates that the provided query parameters are valid for HTTP request.
+        Validates that the provided query parameters are valid for an HTTP request.
 
         Args:
             query_params (dict, httpx.QueryParams): Dictionary of query parameters.
         """
-        if query_params is None:
-            return
+        try:
+            if query_params is None:
+                return None
 
-        if isinstance(query_params, httpx.QueryParams):
-            query_params = dict(query_params)
+            if isinstance(query_params, httpx.QueryParams):
+                query_params = dict(query_params)
 
-        self._validate_data(query_params)
+            self._validate_data(query_params)
 
-        # Checking if the key can be safely encoded
-        for key, value in query_params.items():  # TODO EE: Add Tests
-            try:
-                urllib.parse.quote(str(key))
-                urllib.parse.quote(str(value))
-            except Exception as e:
-                raise QueryParameterValidationError(
-                    f"Unable to encode query parameters safely: ({key}: {value})") from e
+            for key, value in query_params.items():
+
+                # Catch keys with leading/trailing whitespace to prevent ambiguous parsing or bypassing
+                if key.strip() != key:
+                    raise QueryParameterValidationError(f"Key has leading or trailing whitespace: '{key}'")
+
+                # Catch newlines in keys to prevent header injection and log splitting vulnerabilities
+                if isinstance(key, str) and ('\n' in key or '\r' in key):
+                    raise QueryParameterValidationError(f"Key contains newline or control character: '{key}'")
+
+                # Catch newlines in values to avoid header injection and log splitting vulnerabilities
+                if isinstance(value, str) and ('\n' in value or '\r' in value):
+                    raise QueryParameterValidationError(
+                        f"Value contains newline or control character for key '{key}': '{value}'")
+
+                # Try to URL-encode the key and value to ensure they are safe
+                try:
+
+                    urllib.parse.quote(str(key), safe='')
+                    urllib.parse.quote(str(value), safe='')
+
+                except Exception as e:
+                    raise QueryParameterValidationError(
+                        f"Unable to safely encode query parameter: ({key}: {value})") from e
+
+        except ValueError as e:
+            raise QueryParameterValidationError(f"Invalid query parameter data: {e}") from e
 
     def _validate_body_data(self, body_data: dict | None) -> None:
         """
@@ -212,9 +260,18 @@ class RequestManager(RequestManagerBase):
             headers (dict | None): Optional dictionary of HTTP headers.
             query_params (dict | None): Optional dictionary of query parameters.
             data (dict | None): Optional dictionary representing the request body.
+
+        Returns:
+            httpx.Response | None: The response from the HTTP request, or None if an error occurs.
         """
         try:
+            response: httpx.Response | None = None
             authentication_header: httpx.Headers | None = await self._get_authenticated_header(authentication_provider)
+
+            if (authentication_provider is not None and authentication_header is None):
+                logger.error("Unable to acquire authenticated credentials for provider: %s", authentication_provider)
+                return None
+
             merged_headers: httpx.Headers = httpx.Headers({**(headers or {}), **(authentication_header or {})})
 
             # Validate the incoming base url.
@@ -232,41 +289,58 @@ class RequestManager(RequestManagerBase):
             # Validate incoming body
             self._validate_body_data(body_data)
 
-            response: httpx.Response | None = None
-
             async with httpx.AsyncClient() as client:
+
                 if http_method.upper() == HTTPMethod.GET.value:
                     response = await client.get(url, params=query_params, headers=merged_headers, timeout=10.0)
+
                 if http_method.upper() == HTTPMethod.POST.value:
                     response = await client.post(url,
                                                  params=query_params,
                                                  headers=merged_headers,
                                                  json=body_data,
                                                  timeout=10.0)
+
                 if http_method.upper() == HTTPMethod.PUT.value:
                     response = await client.put(url,
                                                 params=query_params,
                                                 headers=merged_headers,
                                                 json=body_data,
                                                 timeout=10.0)
+
                 if http_method.upper() == HTTPMethod.DELETE.value:
                     response = await client.delete(url, params=query_params, headers=merged_headers, timeout=10.0)
 
+                if http_method.upper() == HTTPMethod.PATCH.value:
+                    response = await client.patch(url,
+                                                  params=query_params,
+                                                  headers=merged_headers,
+                                                  json=body_data,
+                                                  timeout=10.0)
+
+                if http_method.upper() == HTTPMethod.HEAD.value:
+                    response = await client.head(url, params=query_params, headers=merged_headers, timeout=10.0)
+
+                if http_method.upper() == HTTPMethod.OPTIONS.value:
+                    response = await client.options(url, params=query_params, headers=merged_headers, timeout=10.0)
+
         except (BaseUrlValidationError,
+                HTTPMethodValidationError,
                 ValidationError,
-                HeaderValidationError,
+                HTTPHeaderValidationError,
                 QueryParameterValidationError,
                 BodyValidationError) as e:
+
             logger.error("An error occured while building request url: %s", str(e), exc_info=True)
-            return None
+            raise APIRequestError("An error occured while building request url.") from e
 
         except (httpx.RequestError, httpx.TimeoutException, httpx.HTTPStatusError, httpx.NetworkError) as e:
             logger.error("An error occured while sending request: %s", str(e), exc_info=True)
-            return None
+            raise APIRequestError("An error occured while sending request.") from e
 
         except Exception as e:
             logger.error("Unexpected eror occured sending request %s", str(e), exc_info=True)
-            return None
+            raise APIRequestError("An unexpected error occured while sending request.") from e
 
         return response
 
@@ -290,14 +364,13 @@ class RequestManager(RequestManagerBase):
         is_validated: bool = await self.authentication_manager._validate_auth_provider_credentials(
             authentication_provider)
 
-        if (is_validated):
-            # If the authentication provider is valid, construct the authentication header.
-            return await self.authentication_manager._construct_authentication_header(authentication_provider)
-        else:
-            # If the authentication provider is not valid, attempt to set the credentials and construct the header.
+        if not is_validated:
+
+            # If the auth provider credentials are not valid, attempt to set the credentials and construct the header.
             get_auth_header = await self._authentication_manager._set_auth_provider_credentials(authentication_provider)
 
-            if (get_auth_header):
-                return await self.authentication_manager._construct_authentication_header(authentication_provider)
+            if not get_auth_header:
+                return None
 
-        return None
+        # Construct the authentication header.
+        return await self.authentication_manager._construct_authentication_header(authentication_provider)

@@ -2,9 +2,10 @@ authentication:
   jira:
     _type: oauth2
     consent_prompt_mode: "browser"
+    consent_prompt_key: mock_consent_prompt_key
     client_server_url: "mock_url"
     authorization_url: mock_authorization_url
-    authorization_token_url: https://auth.atlassian.com/oauth/token
+    authorization_token_url: https://mock.token.url.com/oauth/token
     client_id: mock_client_id
     client_secret: mock_client_secret
     audience: mock_audience

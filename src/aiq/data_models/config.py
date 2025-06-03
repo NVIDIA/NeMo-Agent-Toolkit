@@ -324,10 +324,6 @@ class AIQConfig(HashableBaseModel):
 
         WorkflowAnnotation = typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig),
                                               Discriminator(TypedBaseModel.discriminator)]
-        # TODO EE: Update
-        # AuthenticationAnnotation = dict[str,
-        #                                 typing.Annotated[type_registry.compute_annotation(AuthenticationBaseConfig),
-        #                                                  Discriminator(TypedBaseModel.discriminator)]]
 
         should_rebuild = False
 
@@ -360,11 +356,6 @@ class AIQConfig(HashableBaseModel):
         if workflow_field is not None and workflow_field.annotation != WorkflowAnnotation:
             workflow_field.annotation = WorkflowAnnotation
             should_rebuild = True
-
-        # authentication_field = cls.model_fields.get("authentication") # TODO EE: Update
-        # if authentication_field is not None and authentication_field.annotation != AuthenticationAnnotation:
-        #     authentication_field.annotation = AuthenticationAnnotation
-        #     should_rebuild = True
 
         if (GeneralConfig.rebuild_annotations()):
             should_rebuild = True

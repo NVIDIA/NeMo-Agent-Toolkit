@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from aiq.authentication.response_manager import ResponseManager
 
 
-class AuthenticationManager:  # TODO EE: Add Tests
+class AuthenticationManager:
 
     def __init__(self, request_manager: "RequestManager", response_manager: "ResponseManager") -> None:
         self._oauth2_authenticator: OAuth2Authenticator = OAuth2Authenticator(request_manager=request_manager,
@@ -56,11 +56,6 @@ class AuthenticationManager:  # TODO EE: Add Tests
 
             if provider is None:
                 raise ValueError(f"Authentication provider {authentication_provider_name} not found.")
-
-            if not isinstance(provider, (OAuth2Config | APIKeyConfig)):
-                raise TypeError(
-                    f"Authentication type for {authentication_provider_name} not supported. Supported types can "
-                    f"be found in \"aiq.data_models.authentication\" ")
 
             if isinstance(provider, OAuth2Config):
                 # Set the provider of interest.
@@ -107,7 +102,7 @@ class AuthenticationManager:  # TODO EE: Add Tests
 
     async def _set_auth_provider_credentials(self, authentication_provider: str) -> bool:
         """
-        Gets the authentication provider credentials for the registered provider.
+        Gets and persists the authentication provider credentials for the registered provider.
 
         Args:
             authentication_provider (str): The name of the registered authentication provider.
@@ -133,7 +128,7 @@ class AuthenticationManager:  # TODO EE: Add Tests
                 return credentials_set
 
         except (Exception, ValueError, TypeError) as e:
-            logger.error("Failed to validate authentication provider credentials: %s Error: %s",
+            logger.error("Failed get and persist authentication provider credentials: %s Error: %s",
                          authentication_provider,
                          str(e),
                          exc_info=True)
@@ -168,10 +163,11 @@ class AuthenticationManager:  # TODO EE: Add Tests
                     return auth_header
 
             else:
-                raise ValidationError(f"Authentication provider: {authentication_provider} is not authenticated.")
+                raise ValidationError(
+                    f"Authentication provider: {authentication_provider} credentials can not be validated.")
 
         except (ValidationError) as e:
-            logger.error("Authentication provider: %s is not authenticated. %s",
+            logger.error("Authentication provider: %s credentials can not be validated: %s",
                          authentication_provider,
                          str(e),
                          exc_info=True)

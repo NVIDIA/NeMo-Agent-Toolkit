@@ -26,6 +26,7 @@ from fastapi import WebSocketException
 from starlette.endpoints import WebSocketEndpoint
 from starlette.websockets import WebSocketDisconnect
 
+from aiq.authentication.exceptions import APIRequestError
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.api_server import AIQChatResponseChunk
@@ -169,11 +170,20 @@ class AIQWebSocket(WebSocketEndpoint):
 
         request_manager.authentication_manager._set_execution_mode(ExecutionMode.SERVER)
 
-        response = await request_manager._send_request(url=request.url_path,
-                                                       http_method=request.method,
-                                                       authentication_provider=request.authentication_provider,
-                                                       headers=request.headers,
-                                                       query_params=request.query_params,
-                                                       body_data=request.body_data)
+        try:
+
+            response = await request_manager._send_request(url=request.url_path,
+                                                           http_method=request.method,
+                                                           authentication_provider=request.authentication_provider,
+                                                           headers=request.headers,
+                                                           query_params=request.query_params,
+                                                           body_data=request.body_data)
+
+            if response is None:
+                raise APIRequestError("An unexpected error occured while sending request.")
+
+        except APIRequestError as e:
+            logger.error("An error occured during the API request: %s", str(e), exc_info=True)
+            return None
 
         return response

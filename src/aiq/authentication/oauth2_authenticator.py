@@ -115,8 +115,16 @@ class OAuth2Authenticator(AuthenticationBase):
 
             return await self._validate_credentials()
 
-        except ValueError as e:
-            logger.error("Failed to get OAuth2.0 credentials: %s", str(e), exc_info=True)
+        except OAuthCodeFlowError as e:
+            logger.error("Failed to get OAuth2.0 credentials using code flow: %s", str(e), exc_info=True)
+            return False
+
+        except OAuthRefreshTokenError as e:
+            logger.error("Failed to get OAuth2.0 credentials using refresh token: %s", str(e), exc_info=True)
+            return False
+
+        except Exception as e:
+            logger.error("Failed to get OAuth2.0 credentials due to unexpected error: %s", str(e), exc_info=True)
             return False
 
     async def _initiate_authorization_code_flow_console(self) -> None:
@@ -139,6 +147,7 @@ class OAuth2Authenticator(AuthenticationBase):
         except OAuthCodeFlowError as e:
             logger.error("Failed to complete OAuth2.0 authentication for provider Error: %s", str(e), exc_info=True)
             await self._shutdown_code_flow_dispatch[self.execution_mode]()
+            raise e
 
     async def _initiate_authorization_code_flow_server(self) -> None:
         """
@@ -155,6 +164,7 @@ class OAuth2Authenticator(AuthenticationBase):
         except OAuthCodeFlowError as e:
             logger.error("Failed to complete OAuth2.0 authentication for provider Error: %s", str(e), exc_info=True)
             await self._shutdown_code_flow_dispatch[self.execution_mode]()
+            raise e
 
     async def _send_oauth_authorization_request(self) -> None:
         """
@@ -184,13 +194,13 @@ class OAuth2Authenticator(AuthenticationBase):
         """
         try:
             if not self.authentication_provider.refresh_token:
-                raise ValueError("Refresh token is missing during the refresh token request.")
+                raise OAuthRefreshTokenError("Refresh token is missing during the refresh token request.")
 
             if not self.authentication_provider.client_id:
-                raise ValueError("Client ID is missing during the refresh token request.")
+                raise OAuthRefreshTokenError("Client ID is missing during the refresh token request.")
 
             if not self.authentication_provider.client_secret:
-                raise ValueError("Client secret is missing during the refresh token request.")
+                raise OAuthRefreshTokenError("Client secret is missing during the refresh token request.")
 
             body_data: RefreshTokenRequest = RefreshTokenRequest(
                 client_id=self._authentication_provider.client_id,
@@ -206,20 +216,21 @@ class OAuth2Authenticator(AuthenticationBase):
                 body_data=body_data.model_dump())
 
             if response is None:
-                raise ValueError("Invalid response received while making refresh token request.")
+                raise OAuthRefreshTokenError("Invalid response received while making refresh token request.")
 
             if not response.status_code == 200:
                 await self._response_manager._handle_oauth_authorization_response_codes(
                     response, self._authentication_provider)
 
             if response.json().get("access_token") is None:
-                raise ValueError("Access token not in successful token request response payload.")
+                raise OAuthRefreshTokenError("Access token not in successful token request response payload.")
 
             if response.json().get("expires_in") is None:
-                raise ValueError("Access token expiration time not in successful token request response payload.")
+                raise OAuthRefreshTokenError(
+                    "Access token expiration time not in successful token request response payload.")
 
             if response.json().get("refresh_token") is None:
-                raise ValueError("Refresh token not in successful token request response payload.")
+                raise OAuthRefreshTokenError("Refresh token not in successful token request response payload.")
 
             self.authentication_provider.access_token = response.json().get("access_token")
 
@@ -228,8 +239,9 @@ class OAuth2Authenticator(AuthenticationBase):
 
             self.authentication_provider.refresh_token = response.json().get("refresh_token")
 
-        except OAuthRefreshTokenError as e:
+        except Exception as e:
             logger.error("Failed to complete OAuth2.0 authentication for provider Error: %s", str(e), exc_info=True)
+            raise OAuthRefreshTokenError("Failed to get OAuth2.0 credentials using refresh token.") from e
 
     async def _spawn_oauth_client_server(self) -> None:
         """

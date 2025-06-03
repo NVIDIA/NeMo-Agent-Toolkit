@@ -22,7 +22,7 @@ from contextvars import ContextVar
 
 import httpx
 
-from aiq.authentication.utils import execute_api_request_default
+from aiq.authentication.utils import execute_api_request_server_http
 from aiq.builder.intermediate_step_manager import IntermediateStepManager
 from aiq.builder.user_interaction_manager import AIQUserInteractionManager
 from aiq.data_models.api_server import AuthenticatedRequest
@@ -82,7 +82,7 @@ class AIQContextState(metaclass=Singleton):
 
         self.user_request_callback: ContextVar[Callable[[AuthenticatedRequest], Awaitable[httpx.Response | None]]
                                                | None] = ContextVar("user_request_callback",
-                                                                    default=execute_api_request_default)
+                                                                    default=execute_api_request_server_http)
 
     @staticmethod
     def get() -> "AIQContextState":

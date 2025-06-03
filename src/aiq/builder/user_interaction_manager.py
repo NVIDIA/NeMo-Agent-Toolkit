@@ -84,6 +84,11 @@ class AIQUserInteractionManager:
                                query_params: dict | None = None,
                                body_data: dict | None = None) -> httpx.Response | None:
         """
+        Constructs and sends an API request, authenticating the user using OAuth 2.0 or API keys based on the
+        credentials specified in the YAML configuration file. If no authentication provider is specified, the request
+        is sent without authentication. The user is responsible for handling all responses, which are propagated back
+        to the user on both successful and unsuccessful requests.
+
         Args:
             url (str): The base URL to which the request will be sent.
             http_method (str): The HTTP method to use for the request (e.g., "GET", "POST", etc..).
@@ -92,8 +97,10 @@ class AIQUserInteractionManager:
             headers (dict | None): Optional dictionary of HTTP headers.
             query_params (dict | None): Optional dictionary of query parameters.
             body_data (dict | None): Optional dictionary representing the request body.
+
         Returns:
-            httpx.Response | None: The response from the API request, or None if an error occurs.
+            httpx.Response | None: The successful or unsuccessful response from the API request, or None if an error
+            occurs during the authentication process or sending the request.
         """
         try:
             authenticated_request: AuthenticatedRequest = AuthenticatedRequest(
@@ -107,7 +114,7 @@ class AIQUserInteractionManager:
             response: httpx.Response | None = await self._context_state.user_request_callback.get()(
                 authenticated_request)
 
-        except NotImplementedError as e:
+        except Exception as e:
             logger.error("Error while making API request: %s", str(e), exc_info=True)
             return None
 

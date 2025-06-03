@@ -29,16 +29,26 @@ class BaseUrlValidationError(Exception):
     pass
 
 
+class HTTPMethodValidationError(Exception):
+    """Raised when HTTP Method validation fails unexpectedly."""
+    pass
+
+
 class QueryParameterValidationError(Exception):
     """Raised when HTTP Query Parameter validation fails unexpectedly."""
     pass
 
 
-class HeaderValidationError(Exception):
+class HTTPHeaderValidationError(Exception):
     """Raised when HTTP Header validation fails unexpectedly."""
     pass
 
 
 class BodyValidationError(Exception):
     """Raised when HTTP Body validation fails unexpectedly."""
+    pass
+
+
+class APIRequestError(Exception):
+    """Raised when making an API request fails unexpectedly."""
     pass

@@ -536,8 +536,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_stream(request: Request, payload: request_type):
 
-                async with session_manager.session(request=request,
-                                                   user_request_callback=execute_api_request_server_http):
+                async with session_manager.session(request=request):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(

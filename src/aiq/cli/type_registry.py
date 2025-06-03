@@ -40,8 +40,6 @@ from aiq.builder.function_base import FunctionBase
 from aiq.builder.function_info import FunctionInfo
 from aiq.builder.llm import LLMProviderInfo
 from aiq.builder.retriever import RetrieverProviderInfo
-# from aiq.data_models.authentication import AuthenticationBaseConfig # TODO EE: Update
-# from aiq.data_models.authentication import AuthenticationBaseConfigT # TODO EE: Update
 from aiq.data_models.common import TypedBaseModelT
 from aiq.data_models.component import AIQComponentEnum
 from aiq.data_models.config import AIQConfig
@@ -114,10 +112,6 @@ RetrieverProviderRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder],
 RetrieverClientRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 RegistryHandlerRegisteredCallableT = Callable[[RegistryHandlerBaseConfigT],
                                               AbstractAsyncContextManager[AbstractRegistryHandler]]
-
-# # TODO EE: Update.
-# AuthenticationProviderRegisteredCallableT = Callable[[AuthenticationBaseConfigT, Builder],
-#                                                      AbstractAsyncContextManager[AuthenticationInfo]]
 
 
 class RegisteredInfo(BaseModel, typing.Generic[TypedBaseModelT]):
@@ -269,16 +263,6 @@ class RegisteredRegistryHandlerInfo(RegisteredInfo[RegistryHandlerBaseConfig]):
     build_fn: RegistryHandlerRegisteredCallableT = Field(repr=False)
 
 
-# class RegisteredAuthenticationProviderInfo(RegisteredInfo[AuthenticationBaseConfig]):
-#     """
-#     Represents a registered Authentication provider. Authentication Providers are the API servers in which
-#     authentication is granted. i.e. Google, Microsoft, Facebook, AWS.
-#     etc.
-#     """
-
-#     build_fn: AuthenticationProviderRegisteredCallableT = Field(repr=False)  # TODO EE: Update
-
-
 class RegisteredPackage(BaseModel):
     package_name: str
     discovery_metadata: DiscoveryMetadata
@@ -325,10 +309,6 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         self._retriever_client_framework_to_provider: dict[str | None,
                                                            dict[type[RetrieverBaseConfig],
                                                                 RegisteredRetrieverClientInfo]] = {}
-
-        # # Authentication Providers # TODO EE: Update
-        # self._registered_authentication_provider_infos: dict[type[AuthenticationBaseConfig],
-        #                                                      RegisteredAuthenticationProviderInfo] = {}
 
         # Registry Handlers
         self._registered_registry_handler_infos: dict[type[RegistryHandlerBaseConfig],
@@ -649,10 +629,6 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         return client_info
 
-    # def get_registered_authentication_providers(self) -> list[RegisteredInfo[AuthenticationBaseConfig]]:
-
-    #     return list(self._registered_authentication_provider_infos.values())  # TODO EE: Update
-
     def register_tool_wrapper(self, registration: RegisteredToolWrapper):
 
         if (registration.llm_framework in self._registered_tool_wrappers):
@@ -871,9 +847,6 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         if issubclass(cls, LoggingBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_logging_method())
-
-        # if issubclass(cls, AuthenticationBaseConfig):  # TODO EE: Update
-        #     return self._do_compute_annotation(cls, self.get_registered_authentication_providers())
 
         raise ValueError(f"Supplied an unsupported component type {cls}")
 

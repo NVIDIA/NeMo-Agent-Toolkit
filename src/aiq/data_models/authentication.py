@@ -30,9 +30,6 @@ class AuthenticationBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     pass
 
 
-AuthenticationBaseConfigT = typing.TypeVar("AuthenticationBaseConfigT", bound=AuthenticationBaseConfig)
-
-
 class ExecutionMode(str, Enum):
     CONSOLE = "console"
     SERVER = "server"

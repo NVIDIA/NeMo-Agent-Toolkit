@@ -74,8 +74,11 @@ class ResponseManager:
                 await self._handle_oauth_302_consent_browser(redirect_location_header, authentication_provider)
 
             # Handles the 4xx client status codes from OAuth2.0 authorization server.
-            if response.status_code >= 400 and response.status_code < 500:
+            elif response.status_code >= 400 and response.status_code < 500:
                 await self._oauth_400_status_code_handler(response)
+
+            else:
+                raise OAuthCodeFlowError(f"Unknown response code: {response.status_code}. Response: {response.text}")
 
         except Exception as e:
             logger.error("Unexpected error occured while handling authorization request response: %s",
@@ -107,10 +110,12 @@ class ResponseManager:
                 )._get_registered_authentication_provider_name(authentication_provider)
 
                 logger.info(
+                    "\n\n******************************************************************\n\n"
                     "OAuth2.0 consent request needed for Authentication provider: [ %s ] "
-                    "in headless execution mode. "
+                    "in headless execution mode.\n"
                     "Please ensure your client sends a POST request with the registered [ consent_prompt_key ] to "
-                    "continue OAuth2.0 code flow.",
+                    "continue OAuth2.0 code flow.\n\n"
+                    "******************************************************************",
                     authentication_provider_name)
 
                 if (self.message_handler):
@@ -133,7 +138,7 @@ class ResponseManager:
             logger.error("Exception occured: %s", str(e), exc_info=True)
             raise OAuthCodeFlowError("Unable to complete OAuth2.0 process.") from e
 
-    async def _oauth_400_status_code_handler(self, response: httpx.Response):
+    async def _oauth_400_status_code_handler(self, response: httpx.Response) -> None:
         """
         Handles the response to a protected resource request with an authentication attempt using
         an expired or invalid access token. According to RFC 6750 When a request fails, the resource server
@@ -146,22 +151,29 @@ class ResponseManager:
         """
         # 400 Bad Request: Invalid refresh token provided or malformed request.
         if response.status_code == 400:
-            raise OAuthCodeFlowError(f"Invalid request. Please check the request parameters. Response: {response.text}")
+            raise OAuthCodeFlowError("Invalid request. Please check the request parameters. "
+                                     f"Response code: {response.status_code}, Response description: {response.text}")
 
         # 401 Unauthorized: Token is missing, revoked, invlaid or expired.
-        if response.status_code == 401:
-            raise OAuthCodeFlowError(
-                f"Access token is missing, revoked, or expired. Please re-authenticate. Response: {response.text}")
+        elif response.status_code == 401:
+            raise OAuthCodeFlowError("Access token is missing, revoked, or expired. Please re-authenticate. "
+                                     f"Response code: {response.status_code}, Response Description: {response.text}")
 
         # 403 Forbidden: The client is authenticated but does not have proper permission.
-        if response.status_code == 403:
-            raise OAuthCodeFlowError(f"Access token is valid, but the client does not have permission to access the "
-                                     f"requested resource. Please check your permissions. Response: {response.text}")
+        elif response.status_code == 403:
+            raise OAuthCodeFlowError("Access token is valid, but the client does not have permission to access the "
+                                     "requested resource. Please check your permissions. "
+                                     f"Response code: {response.status_code}, Response Description: {response.text}")
 
         # 404 Not Found: The requested endpoint or resource server does not exist.
-        if response.status_code == 404:
-            raise OAuthCodeFlowError(f"The requested endpoint does not exist. Response: {response.text}")
+        elif response.status_code == 404:
+            raise OAuthCodeFlowError("The requested endpoint does not exist. "
+                                     f"Response code: {response.status_code}, Response Description: {response.text}")
 
         # 405 Method Not Allowed: HTTP method not allowed to the authorization server.
-        if response.status_code == 405:
-            raise OAuthCodeFlowError(f"The HTTP method is not allowed. Response: {response.text}")
+        elif response.status_code == 405:
+            raise OAuthCodeFlowError("The HTTP method is not allowed. "
+                                     f"Response code: {response.status_code}, Response Description: {response.text}")
+        else:
+            raise OAuthCodeFlowError("Unknown response. "
+                                     f"Response code: {response.status_code}, Response Description: {response.text}")
