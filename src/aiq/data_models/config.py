@@ -73,7 +73,10 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
                 registered_keys = GlobalTypeRegistry.get().get_registered_evaluators()
             elif (info.field_name == "front_ends"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_front_ends()
-
+            elif (info.field_name == "client_functions"):
+                # Client functions are handled differently - they don't need type validation
+                # as they are processed by register_client_functions
+                return
             else:
                 assert False, f"Unknown field name {info.field_name} in validator"
 
@@ -251,6 +254,13 @@ class AIQConfig(HashableBaseModel):
     # Evaluation Options
     eval: EvalConfig = EvalConfig()
 
+    # Client Functions Configuration (dynamic MCP tools, etc.)
+    client_functions: dict[str, dict] = {}
+    """
+    Dictionary of client function configs (e.g., MCP clients) to dynamically register tools/functions at runtime.
+    Each entry should specify the connection/config for a remote tool provider.
+    """
+
     def print_summary(self, stream: typing.TextIO = sys.stdout):
         """Print a summary of the configuration"""
 
@@ -264,8 +274,16 @@ class AIQConfig(HashableBaseModel):
         stream.write(f"Number of Embedders: {len(self.embedders)}\n")
         stream.write(f"Number of Memory: {len(self.memory)}\n")
         stream.write(f"Number of Retrievers: {len(self.retrievers)}\n")
+        stream.write(f"Number of Client Functions: {len(self.client_functions)}\n")
 
-    @field_validator("functions", "llms", "embedders", "memory", "retrievers", "workflow", mode="wrap")
+    @field_validator("functions",
+                     "llms",
+                     "embedders",
+                     "memory",
+                     "retrievers",
+                     "workflow",
+                     "client_functions",
+                     mode="wrap")
     @classmethod
     def validate_components(cls, value: typing.Any, handler: ValidatorFunctionWrapHandler, info: ValidationInfo):
 
@@ -305,6 +323,9 @@ class AIQConfig(HashableBaseModel):
         WorkflowAnnotation = typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig),
                                               Discriminator(TypedBaseModel.discriminator)]
 
+        # Client functions don't need type discrimination since they are handled by register_client_functions
+        ClientFunctionsAnnotation = dict[str, dict]
+
         should_rebuild = False
 
         llms_field = cls.model_fields.get("llms")
@@ -335,6 +356,11 @@ class AIQConfig(HashableBaseModel):
         workflow_field = cls.model_fields.get("workflow")
         if workflow_field is not None and workflow_field.annotation != WorkflowAnnotation:
             workflow_field.annotation = WorkflowAnnotation
+            should_rebuild = True
+
+        client_functions_field = cls.model_fields.get("client_functions")
+        if client_functions_field is not None and client_functions_field.annotation != ClientFunctionsAnnotation:
+            client_functions_field.annotation = ClientFunctionsAnnotation
             should_rebuild = True
 
         if (GeneralConfig.rebuild_annotations()):
