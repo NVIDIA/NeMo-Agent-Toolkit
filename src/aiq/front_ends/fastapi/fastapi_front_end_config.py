@@ -79,8 +79,8 @@ class AIQEvaluateRequest(BaseModel):
 
 class BaseAsyncResponse(BaseModel):
     """Base model for async responses."""
-    job_id: str = Field(description="Unique identifier for the evaluation job")
-    status: str = Field(description="Current status of the evaluation job")
+    job_id: str = Field(description="Unique identifier for the job")
+    status: str = Field(description="Current status of the job")
 
 
 class AIQEvaluateResponse(BaseAsyncResponse):
