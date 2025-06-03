@@ -593,8 +593,13 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         Args:
             config (AIQConfig): The configuration object containing component definitions.
             skip_workflow (bool): If True, skips the workflow instantiation step. Defaults to False.
-
         """
+        # Process client_functions before anything else. This special casing may be
+        # removed in the future if remote functions have dependencies on other components.
+        if config.client_functions:
+            from aiq.tool.client_functions import register_client_functions
+            await register_client_functions(self, config.client_functions)
+
         # Generate the build sequence
         build_sequence = build_dependency_sequence(config)
 

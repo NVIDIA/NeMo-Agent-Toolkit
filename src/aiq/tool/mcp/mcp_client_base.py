@@ -22,6 +22,7 @@ from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 from enum import Enum
 from typing import Any
+from typing import override
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
@@ -204,6 +205,7 @@ class MCPSSEClient(MCPBaseClient):
         return self._url
 
     @asynccontextmanager
+    @override
     async def connect_to_server(self):
         """
         Establish a session with an MCP SSE server within an async context
@@ -248,6 +250,7 @@ class MCPStdioClient(MCPBaseClient):
         return self._env
 
     @asynccontextmanager
+    @override
     async def connect_to_server(self):
         """
         Establish a session with an MCP server via stdio within an async context

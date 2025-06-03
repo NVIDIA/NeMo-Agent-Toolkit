@@ -40,6 +40,7 @@ from aiq.builder.function_base import FunctionBase
 from aiq.builder.function_info import FunctionInfo
 from aiq.builder.llm import LLMProviderInfo
 from aiq.builder.retriever import RetrieverProviderInfo
+from aiq.data_models.client_functions import ClientFunctionConfig
 from aiq.data_models.common import TypedBaseModelT
 from aiq.data_models.component import AIQComponentEnum
 from aiq.data_models.config import AIQConfig
@@ -847,6 +848,10 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         if issubclass(cls, LoggingBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_logging_method())
+
+        if issubclass(cls, ClientFunctionConfig):
+            # For client functions, we need to handle raw config data
+            return dict[str, dict]
 
         raise ValueError(f"Supplied an unsupported component type {cls}")
 
