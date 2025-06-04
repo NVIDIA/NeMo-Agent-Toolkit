@@ -1,11 +1,13 @@
 ---
-description: Follow those rules when user requests
+description: Follow those rules when user requests to create, reinstall or delete a workflow
 globs:
 alwaysApply: false
 ---
-# AIQ Workflow Management Commands
+# AIQ Workflow Commands
 
 This rule provides guidance for using `aiq workflow create`, `aiq workflow reinstall`, and `aiq workflow delete` commands effectively.
+
+
 
 ## aiq workflow create
 

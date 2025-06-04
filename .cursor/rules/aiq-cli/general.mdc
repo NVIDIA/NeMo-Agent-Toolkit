@@ -1,0 +1,10 @@
+---
+description: Follow these rules when users request is related to AIQ CLI commands
+globs:
+alwaysApply: false
+---
+# General Rules for AIQ CLI commands
+
+- For requests related to AIQ CLI commands, provide detailed information using the relevant sections from the [cli.md](mdc:docs/source/reference/cli.md) documen Encourage users to review the documentation themselves for a deeper understanding.
+
+- If CLI commands do not function as expected, refer back to [cli.md](mdc:docs/source/reference/cli.md) and update any discrepancies in ts, as the documentation may have been updated without corresponding changes to the rules.
