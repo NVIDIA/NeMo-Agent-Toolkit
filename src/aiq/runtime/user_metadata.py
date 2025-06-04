@@ -16,18 +16,17 @@
 from starlette.datastructures import Headers
 from starlette.datastructures import QueryParams
 
-from aiq.data_models.api_server import RequestAttributes
+from aiq.data_models.api_server import Request
 
 
-class SessionMetadata:
+class RequestAttributes:
     """
-    The SessionMetadata class is responsible for managing user http and webscoket session
+    The RequestAttributes class is responsible for managing user http and webscoket session
     metadata. It provides a way to store and expose session attributes to workflow tools.
     """
 
     def __init__(self) -> None:
-        self._request: RequestAttributes = RequestAttributes()
-        self._thread_id: str | None = None
+        self._request: Request = Request()
 
     @property
     def method(self) -> str | None:
@@ -129,13 +128,3 @@ class SessionMetadata:
             dict[str, str] | None
         """
         return self._request.cookies
-
-    @property
-    def thread_id(self) -> str | None:
-        """
-        This property retrieves the thread ID which is the unique identifier for the current chat conversation.
-
-        Returns:
-            str | None
-        """
-        return self._thread_id

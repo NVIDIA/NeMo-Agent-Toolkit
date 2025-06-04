@@ -33,9 +33,9 @@ from aiq.data_models.interactive import HumanPrompt
 from aiq.utils.type_converter import GlobalTypeConverter
 
 
-class RequestAttributes(BaseModel):
+class Request(BaseModel):
     """
-    RequestAttributes is a data model that represents HTTP request attributes.
+    Request is a data model that represents HTTP request attributes.
     """
     model_config = ConfigDict(extra="forbid")
 

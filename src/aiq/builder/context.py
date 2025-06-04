@@ -29,7 +29,7 @@ from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.data_models.intermediate_step import StreamEventData
 from aiq.data_models.invocation_node import InvocationNode
-from aiq.runtime.session_metadata import SessionMetadata
+from aiq.runtime.user_metadata import RequestAttributes
 from aiq.utils.reactive.subject import Subject
 
 
@@ -61,9 +61,10 @@ class ActiveFunctionContextManager:
 class AIQContextState(metaclass=Singleton):
 
     def __init__(self):
+        self._thread_id: ContextVar[str | None] = ContextVar("thread_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
         self.user_manager: ContextVar[typing.Any] = ContextVar("user_manager", default=None)
-        self.metadata: ContextVar[SessionMetadata] = ContextVar("session_metadata", default=SessionMetadata())
+        self.metadata: ContextVar[RequestAttributes] = ContextVar("session_metadata", default=RequestAttributes())
         self.event_stream: ContextVar[Subject[IntermediateStep] | None] = ContextVar("event_stream", default=Subject())
         self.active_function: ContextVar[InvocationNode] = ContextVar("active_function",
                                                                       default=InvocationNode(function_id="root",
@@ -147,6 +148,23 @@ class AIQContext:
                 from the context state.
         """
         return IntermediateStepManager(self._context_state)
+
+    @property
+    def thread_id(self) -> str | None:
+        """
+        This property retrieves the thread ID which is the unique identifier for the current chat conversation.
+
+        Returns:
+            str | None
+        """
+        return self._context_state._thread_id.get()
+
+    @thread_id.setter
+    def thread_id(self, thread_id: str):
+        """
+        This property sets the thread ID which is the unique identifier for the current chat conversation.
+        """
+        self._context_state._thread_id.set(thread_id)
 
     @contextmanager
     def push_active_function(self, function_name: str, input_data: typing.Any | None):

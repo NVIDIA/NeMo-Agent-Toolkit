@@ -31,7 +31,6 @@ from aiq.data_models.api_server import AIQChatResponseChunk
 from aiq.data_models.api_server import AIQResponsePayloadOutput
 from aiq.data_models.api_server import AIQResponseSerializable
 from aiq.data_models.api_server import WebSocketMessageStatus
-from aiq.data_models.api_server import WebSocketUserMessage
 from aiq.data_models.api_server import WorkflowSchemaType
 from aiq.front_ends.fastapi.message_handler import MessageHandler
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response
@@ -111,13 +110,12 @@ class AIQWebSocket(WebSocketEndpoint):
 
     async def _process_message(self,
                                payload: typing.Any,
-                               user_message: WebSocketUserMessage = None,
+                               thread_id: str | None = None,
                                result_type: type | None = None,
                                output_type: type | None = None) -> None:
 
         async with self._session_manager.session(
-                websocket_user_message=user_message,
-                user_input_callback=self._message_handler.human_interaction) as session:
+                thread_id=thread_id, user_input_callback=self._message_handler.human_interaction) as session:
 
             async for value in generate_streaming_response(payload,
                                                            session_manager=session,
@@ -134,21 +132,21 @@ class AIQWebSocket(WebSocketEndpoint):
                 await self._message_handler.create_websocket_message(data_model=value,
                                                                      status=WebSocketMessageStatus.IN_PROGRESS)
 
-    async def process_generate_stream(self, payload: str, user_message: WebSocketUserMessage):
+    async def process_generate_stream(self, payload: str, thread_id: str) -> None:
 
-        return await self._process_message(payload, user_message=user_message, result_type=None, output_type=None)
+        return await self._process_message(payload, thread_id=thread_id, result_type=None, output_type=None)
 
-    async def process_chat_stream(self, payload: AIQChatRequest, user_message: WebSocketUserMessage):
+    async def process_chat_stream(self, payload: AIQChatRequest, thread_id: str):
 
         return await self._process_message(payload,
-                                           user_message=user_message,
+                                           thread_id=thread_id,
                                            result_type=AIQChatResponse,
                                            output_type=AIQChatResponseChunk)
 
-    async def process_generate(self, payload: typing.Any, user_message: WebSocketUserMessage):
+    async def process_generate(self, payload: typing.Any, thread_id: str):
 
-        return await self._process_message(payload, user_message=user_message)
+        return await self._process_message(payload, thread_id=thread_id)
 
-    async def process_chat(self, payload: AIQChatRequest, user_message: WebSocketUserMessage):
+    async def process_chat(self, payload: AIQChatRequest, thread_id: str):
 
-        return await self._process_message(payload, user_message=user_message, result_type=AIQChatResponse)
+        return await self._process_message(payload, thread_id=thread_id, result_type=AIQChatResponse)
