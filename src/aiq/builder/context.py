@@ -64,7 +64,7 @@ class AIQContextState(metaclass=Singleton):
         self._thread_id: ContextVar[str | None] = ContextVar("thread_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
         self.user_manager: ContextVar[typing.Any] = ContextVar("user_manager", default=None)
-        self.metadata: ContextVar[RequestAttributes] = ContextVar("session_metadata", default=RequestAttributes())
+        self.metadata: ContextVar[RequestAttributes] = ContextVar("request_attributes", default=RequestAttributes())
         self.event_stream: ContextVar[Subject[IntermediateStep] | None] = ContextVar("event_stream", default=Subject())
         self.active_function: ContextVar[InvocationNode] = ContextVar("active_function",
                                                                       default=InvocationNode(function_id="root",
