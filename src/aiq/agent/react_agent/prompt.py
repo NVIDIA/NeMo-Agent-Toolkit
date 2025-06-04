@@ -14,8 +14,6 @@
 # limitations under the License.
 
 # flake8: noqa
-from langchain_core.prompts.chat import ChatPromptTemplate
-from langchain_core.prompts.chat import MessagesPlaceholder
 
 SYSTEM_PROMPT = """
 Answer the following questions as best you can. You may ask the human to use the following tools:
@@ -37,10 +35,7 @@ Use the following format once you have the final answer:
 Thought: I now know the final answer
 Final Answer: the final answer to the original input question
 """
+
 USER_PROMPT = """
 Question: {question}
 """
-
-# This is the prompt - (ReAct Agent prompt)
-react_agent_prompt = ChatPromptTemplate([("system", SYSTEM_PROMPT), ("user", USER_PROMPT),
-                                         MessagesPlaceholder(variable_name='agent_scratchpad', optional=True)])

@@ -57,6 +57,7 @@ maintainers = [{ name = "NVIDIA Corporation" }]
 # Keep sorted!!!
 agno = ["aiqtoolkit-agno"]
 crewai = ["aiqtoolkit-crewai"]
+ingestion = ["lxml~=5.4"]
 langchain = ["aiqtoolkit-langchain"]
 llama-index = ["aiqtoolkit-llama-index"]
 mem0ai = ["aiqtoolkit-mem0ai"]
@@ -87,6 +88,11 @@ profiling = [
   "matplotlib~=3.9",
   "prefixspan~=0.5.2",
   "scikit-learn~=1.6",
+]
+
+# Optional dependency needed when use_gunicorn is set to true
+gunicorn = [
+  "gunicorn~=23.0"
 ]
 
 
@@ -139,6 +145,7 @@ dev = [
   "pytest_httpserver==1.1.*",
   "pytest-asyncio==0.24.*",
   "pytest-cov~=6.1",
+  "pytest-pretty~=1.2.0",
   "pytest~=8.3",
   "python-docx~=1.1.0",
   "setuptools >= 64",
@@ -199,11 +206,17 @@ markers = [
   "slow: Slow tests",
 ]
 filterwarnings = [
-  # Add warnings to ignore as a part of pytest here
+  # Ignore warnings from qdrant-client (used by mem0) with Python 3.12+ of note is that this only happens the first
+  # time the module is imported and parsed, after that the pyc files in the __pycache__ directory are used which don't
+  # trigger the warnings. In Python 3.12 this triggers a SyntaxWarning, in Python 3.11 it triggers a DeprecationWarning
+  # which unfortunately pytest is unable to filter.
+  # Remove once https://github.com/qdrant/qdrant-client/issues/983 is resolved.
+  "ignore:^invalid escape sequence:SyntaxWarning"
 ]
 testpaths = ["tests", "examples/*/tests", "packages/*/tests"]
 asyncio_mode = "auto"
-pytest_plugins = ["aiqtoolkit-test"]
+asyncio_default_fixture_loop_scope = "session"
+
 
 ## Pylint configuration begins here
 
@@ -889,7 +902,15 @@ skip = [
 ]
 known_first_party = ["aiq"]
 # Need to declare known third party for namespace packages which have the same name
-known_third_party = ["langchain", "llama_index", "crewai", "semantic_kernel", "mem0ai", "zep_cloud", "agno"]
+known_third_party = [
+  "agno",
+  "crewai",
+  "langchain",
+  "llama_index",
+  "mem0ai",
+  "semantic_kernel",
+  "zep_cloud",
+]
 namespace_packages = ["aiq", "aiq.plugins"]
 
 [tool.flake8]

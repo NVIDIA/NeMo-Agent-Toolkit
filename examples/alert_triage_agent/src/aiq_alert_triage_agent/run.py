@@ -139,19 +139,25 @@ def receive_alert():
     HTTP endpoint to receive a JSON alert via POST.
     Expects application/json with a single alert dict or a list of alerts.
     """
+    # use the globals-set ENV_FILE
+    if ENV_FILE is None:
+        raise ValueError("ENV_FILE must be set before processing alerts")
+
     try:
         data = request.get_json(force=True)
     except Exception:
         return jsonify({"error": "Invalid JSON"}), 400
 
     alerts = data if isinstance(data, list) else [data]
+    if not all(isinstance(alert, dict) for alert in alerts):
+        return jsonify({"error": "Alerts not represented as dictionaries"}), 400
 
     for alert in alerts:
-        alert_id = alert.get('alert_id')
+        if 'alert_id' not in alert:
+            return jsonify({"error": "`alert_id` is absent in the alert payload"}), 400
+
+        alert_id = alert['alert_id']
         processed_alerts.append(alert_id)
-        # use the globals-set ENV_FILE
-        if ENV_FILE is None:
-            raise ValueError("ENV_FILE must be set before processing alerts")
         start_process(alert, ENV_FILE)
 
     return jsonify({"received_alert_count": len(alerts), "total_launched": len(processed_alerts)}), 200

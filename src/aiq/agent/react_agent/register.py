@@ -63,29 +63,13 @@ class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
 async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builder):
     from langchain.schema import BaseMessage
     from langchain_core.messages import trim_messages
-    from langchain_core.prompts import ChatPromptTemplate
-    from langchain_core.prompts import MessagesPlaceholder
     from langgraph.graph.graph import CompiledGraph
 
-    from aiq.agent.react_agent.prompt import USER_PROMPT
+    from aiq.agent.react_agent.agent import ReActAgentGraph
+    from aiq.agent.react_agent.agent import ReActGraphState
+    from aiq.agent.react_agent.agent import create_react_agent_prompt
 
-    from .agent import ReActAgentGraph
-    from .agent import ReActGraphState
-    from .prompt import react_agent_prompt
-
-    # the ReAct Agent prompt comes from prompt.py, and can be customized there or via config option system_prompt.
-    if config.system_prompt:
-        _prompt_str = config.system_prompt
-        if config.additional_instructions:
-            _prompt_str += f" {config.additional_instructions}"
-        valid_prompt = ReActAgentGraph.validate_system_prompt(config.system_prompt)
-        if not valid_prompt:
-            logger.exception("%s Invalid system_prompt", AGENT_LOG_PREFIX)
-            raise ValueError("Invalid system_prompt")
-        prompt = ChatPromptTemplate([("system", config.system_prompt), ("user", USER_PROMPT),
-                                     MessagesPlaceholder(variable_name='agent_scratchpad', optional=True)])
-    else:
-        prompt = react_agent_prompt
+    prompt = create_react_agent_prompt(config)
 
     # we can choose an LLM for the ReAct agent in the config file
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
