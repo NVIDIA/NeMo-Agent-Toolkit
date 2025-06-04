@@ -1,0 +1,284 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Customizing AIQ Workflows
+
+## Overview
+
+Workflow customization can be achieved through two approaches:
+1. **Parameter Overrides**: Using the `--override` flag (recommended for simple changes)
+2. **Configuration File Modification**: Copying and modifying the configuration file (for complex changes)
+
+## Parameter Override Method
+
+### Basic Override Syntax
+```bash
+aiq run --config_file config.yml --input "question" --override path.to.parameter value
+```
+
+### Single Parameter Override
+```bash
+# Override LLM temperature
+aiq run --config_file examples/simple/configs/config.yml \
+  --input "What is LangSmith?" \
+  --override llms.nim_llm.temperature 0.7
+```
+
+### Multiple Parameter Overrides
+```bash
+# Override multiple parameters at once
+aiq run --config_file examples/simple/configs/config.yml \
+  --input "What is LangSmith?" \
+  --override llms.nim_llm.temperature 0.7 \
+  --override llms.nim_llm.model_name meta/llama-3.3-70b-instruct
+```
+
+## Common Override Patterns
+
+### LLM Configuration Overrides
+```bash
+# Change model
+--override llms.nim_llm.model_name meta/llama-3.3-70b-instruct
+
+# Adjust temperature
+--override llms.nim_llm.temperature 0.8
+
+# Modify max tokens
+--override llms.nim_llm.max_tokens 2048
+
+# Change API base URL
+--override llms.nim_llm.base_url https://custom-api-endpoint.com
+```
+
+### Tool Configuration Overrides
+```bash
+# Change webpage URL for webpage_query tool
+--override functions.webpage_query.webpage_url https://different-site.com
+
+# Adjust chunk size
+--override functions.webpage_query.chunk_size 1024
+
+# Change embedder
+--override functions.webpage_query.embedder_name nvidia/nv-embedqa-e5-v5
+
+# Update tool description
+--override functions.webpage_query.description "New tool description"
+```
+
+### Workflow-Level Overrides
+```bash
+# Enable/disable verbose mode
+--override workflow.verbose true
+
+# Change retry settings
+--override workflow.max_retries 5
+--override workflow.retry_parsing_errors false
+
+# Modify LLM reference
+--override workflow.llm_name different_llm
+```
+
+### Embedder Configuration Overrides
+```bash
+# Change embedder model
+--override embedders.nv-embedqa-e5-v5.model_name nvidia/different-embedder
+
+# Modify embedder provider
+--override embedders.nv-embedqa-e5-v5._type different_provider
+```
+
+## Discovering Available Parameters
+
+### Query Component Types
+```bash
+# List all available LLM providers and their parameters
+aiq info components -t llm_provider
+
+# Query specific LLM provider details
+aiq info components -t llm_provider -q nim
+
+# List all function types
+aiq info components -t function
+
+# Query specific function details
+aiq info components -t function -q webpage_query
+```
+
+### Understanding Configuration Structure
+```yaml
+# Example configuration showing override paths
+functions:                    # functions.*
+  webpage_query:              # functions.webpage_query.*
+    _type: webpage_query      # functions.webpage_query._type
+    webpage_url: "..."        # functions.webpage_query.webpage_url
+    chunk_size: 512           # functions.webpage_query.chunk_size
+
+llms:                         # llms.*
+  nim_llm:                    # llms.nim_llm.*
+    _type: nim                # llms.nim_llm._type
+    model_name: "..."         # llms.nim_llm.model_name
+    temperature: 0.0          # llms.nim_llm.temperature
+
+workflow:                     # workflow.*
+  _type: react_agent          # workflow._type
+  tool_names: [...]           # workflow.tool_names
+  llm_name: nim_llm           # workflow.llm_name
+  verbose: true               # workflow.verbose
+```
+
+## Override Best Practices
+
+### 1. Parameter Path Construction
+- Use dot notation: `section.component.parameter`
+- Match exact YAML structure
+- Case-sensitive parameter names
+
+### 2. Value Types
+```bash
+# String values (quotes optional for simple strings)
+--override llms.nim_llm.model_name meta/llama-3.1-70b-instruct
+--override llms.nim_llm.model_name "meta/llama-3.1-70b-instruct"
+
+# Numeric values
+--override llms.nim_llm.temperature 0.7
+--override functions.webpage_query.chunk_size 1024
+
+# Boolean values
+--override workflow.verbose true
+--override workflow.retry_parsing_errors false
+
+# List values (use JSON format)
+--override workflow.tool_names '["tool1", "tool2", "tool3"]'
+```
+
+### 3. Complex Overrides
+```bash
+# For complex nested structures, use JSON
+--override functions.new_tool '{"_type": "webpage_query", "webpage_url": "https://example.com", "description": "New tool"}'
+```
+
+## When to Use Configuration File Modification
+
+### Use File Modification For:
+1. **Adding New Components**:
+   ```yaml
+   functions:
+     new_tool:
+       _type: webpage_query
+       webpage_url: https://new-site.com
+       description: "New tool functionality"
+   ```
+
+2. **Complex Structural Changes**:
+   ```yaml
+   workflow:
+     tool_names: [tool1, tool2, new_tool]  # Adding tools to list
+   ```
+
+3. **Multiple Related Changes**:
+   - Adding several new tools
+   - Completely changing workflow structure
+   - Creating reusable configurations
+
+### Configuration File Best Practices
+```bash
+# Copy original configuration
+cp examples/simple/configs/config.yml my_custom_config.yml
+
+# Edit the copied file
+# ... make modifications ...
+
+# Run with custom configuration
+aiq run --config_file my_custom_config.yml --input "question"
+```
+
+## Common Override Scenarios
+
+### Model Comparison Testing
+```bash
+# Test different models on same input
+aiq run --config_file config.yml --input "test" --override llms.nim_llm.model_name meta/llama-3.1-70b-instruct
+aiq run --config_file config.yml --input "test" --override llms.nim_llm.model_name meta/llama-3.3-70b-instruct
+```
+
+### Temperature Experimentation
+```bash
+# Conservative (low creativity)
+aiq run --config_file config.yml --input "test" --override llms.nim_llm.temperature 0.1
+
+# Balanced
+aiq run --config_file config.yml --input "test" --override llms.nim_llm.temperature 0.5
+
+# Creative (high variability)
+aiq run --config_file config.yml --input "test" --override llms.nim_llm.temperature 0.9
+```
+
+### Tool Customization
+```bash
+# Change data source for existing tool
+aiq run --config_file config.yml --input "test" \
+  --override functions.webpage_query.webpage_url https://docs.python.org \
+  --override functions.webpage_query.description "Search Python documentation"
+```
+
+### Debugging and Development
+```bash
+# Enable verbose logging
+aiq run --config_file config.yml --input "test" --override workflow.verbose true
+
+# Reduce retries for faster testing
+aiq run --config_file config.yml --input "test" --override workflow.max_retries 1
+```
+
+## Validation and Error Handling
+
+### Common Override Errors
+1. **Invalid Path**: Ensure the parameter path exists in the configuration
+2. **Type Mismatch**: Match the expected parameter type (string, number, boolean)
+3. **Invalid Values**: Use valid values for enum-type parameters
+
+### Debugging Overrides
+```bash
+# Check override confirmation in logs
+aiq run --config_file config.yml --input "test" --override llms.nim_llm.temperature 0.7
+
+# Look for: "Successfully set override for llms.nim_llm.temperature with value: 0.7"
+```
+
+### Override Validation
+- Verify override paths match YAML structure exactly
+- Confirm parameter names are spelled correctly
+- Check that the override value is the correct type
+- Use `aiq info components` to verify available parameters
+
+## Advanced Override Patterns
+
+### Environment-Specific Configurations
+```bash
+# Development (more verbose, faster)
+aiq run --config_file config.yml --input "test" \
+  --override workflow.verbose true \
+  --override llms.nim_llm.temperature 0.0 \
+  --override workflow.max_retries 1
+
+# Production (less verbose, robust)
+aiq run --config_file config.yml --input "test" \
+  --override workflow.verbose false \
+  --override workflow.max_retries 3 \
+  --override workflow.retry_parsing_errors true
+```
+
+### A/B Testing Framework
+```bash
+# Configuration A
+aiq run --config_file config.yml --input "test" \
+  --override llms.nim_llm.model_name meta/llama-3.1-70b-instruct \
+  --override llms.nim_llm.temperature 0.3
+
+# Configuration B
+aiq run --config_file config.yml --input "test" \
+  --override llms.nim_llm.model_name meta/llama-3.3-70b-instruct \
+  --override llms.nim_llm.temperature 0.7
+```

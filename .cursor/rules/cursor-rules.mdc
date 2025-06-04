@@ -30,14 +30,32 @@ How to add new cursor rules to the project
     └── ...
     ```
 
-4. Never place rule files:
+4. For related rules sharing the same topic, create a subdirectory:
+    ```
+    .cursor/rules/
+    ├── topic-name/
+    │   ├── general.mdc          # General rules for this topic
+    │   ├── specific-rule.mdc    # Specific rules within the topic
+    │   └── another-rule.mdc
+    ├── another-topic/
+    │   ├── general.mdc
+    │   └── specific-rule.mdc
+    └── standalone-rule.mdc
+    ```
+
+5. When creating topic subdirectories:
+    - Use kebab-case for directory names
+    - Always include a `general.mdc` file with overarching guidelines for the topic
+    - Place specific rules as separate .mdc files within the subdirectory
+    - Example: `aiq-cli/` folder contains general AIQ CLI rules in `general.mdc` and specific command rules in separate files
+
+6. Never place rule files:
     - In the project root
     - In subdirectories outside .cursor/rules
     - In any other location
 
-5. Cursor rules have the following structure:
+7. Cursor rules have the following structure:
 
-````
 ---
 description: Short description of the rule's purpose
 globs: optional/path/pattern/**/*
@@ -62,4 +80,3 @@ function badExample() {
   // Implementation not following guidelines
 }
 ```
-````

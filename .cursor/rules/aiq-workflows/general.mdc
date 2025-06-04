@@ -1,0 +1,128 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# AIQ Workflow General Guidelines
+
+## Core Commands and Information
+
+1. **Query Available Components**:
+   ```bash
+   # List all available tools/functions
+   aiq info components -t function
+
+   # List all available LLM providers
+   aiq info components -t llm_provider
+
+   # Query specific component details
+   aiq info components -t llm_provider -q nim
+   ```
+
+2. **Running Workflows**:
+   ```bash
+   # Basic workflow run
+   aiq run --config_file path/to/config.yml --input "Your question here"
+
+   # With parameter overrides
+   aiq run --config_file config.yml --input "question" --override llms.nim_llm.temperature 0.7
+   ```
+
+3. **Workflow Management**:
+   ```bash
+   # Create new workflow
+   aiq workflow create --workflow-dir path/to/dir workflow_name
+
+   # Reinstall workflow after changes
+   aiq workflow reinstall workflow_name
+
+   # Delete workflow
+   aiq workflow delete workflow_name
+   ```
+
+## Configuration File Structure
+
+### Standard YAML Structure:
+```yaml
+functions:
+  tool_name:
+    _type: tool_type
+    # tool-specific parameters
+
+llms:
+  llm_name:
+    _type: provider_type
+    model_name: model/name
+    temperature: 0.0
+
+embedders:
+  embedder_name:
+    _type: provider_type
+    model_name: embedding/model
+
+workflow:
+  _type: workflow_type
+  tool_names: [tool1, tool2]
+  llm_name: llm_name
+  verbose: true
+```
+
+## Best Practices
+
+1. **Naming Conventions**:
+   - Use descriptive names for tools and models
+   - Follow snake_case for tool names
+   - Use kebab-case for directory names
+
+2. **Configuration Management**:
+   - Always specify `_type` for components
+   - Use meaningful descriptions for tools
+   - Set appropriate chunk sizes for text processing tools
+
+3. **Environment Setup**:
+   - Set required API keys as environment variables
+   - Install dependencies using `uv pip install -e .`
+   - Use framework-specific installations like `aiqtoolkit[langchain]`
+
+4. **File Organization**:
+   ```
+   workflow_dir/
+   ├── pyproject.toml
+   ├── config -> src/workflow_name/configs
+   ├── data -> src/workflow_name/data
+   └── src/
+       └── workflow_name/
+           ├── __init__.py
+           ├── register.py
+           ├── configs/
+           ├── data/
+           └── tool_function.py
+   ```
+
+## Common Patterns
+
+1. **Tool Function Registration**:
+   ```python
+   @register_function(config_type=YourToolConfig)
+   async def your_tool_function(config: YourToolConfig, builder: Builder):
+       # Tool implementation
+       yield FunctionInfo.from_fn(inner_function, description=config.description)
+   ```
+
+2. **Configuration Classes**:
+   ```python
+   class YourToolConfig(FunctionBaseConfig, name="your_tool_type"):
+       description: str
+       # Additional parameters
+   ```
+
+3. **pyproject.toml Dependencies**:
+   ```toml
+   dependencies = [
+       "aiqtoolkit[langchain]~=1.1",
+       # Additional dependencies
+   ]
+
+   [project.entry-points.'aiq.components']
+   your_workflow = "your_workflow.register"
+   ```
