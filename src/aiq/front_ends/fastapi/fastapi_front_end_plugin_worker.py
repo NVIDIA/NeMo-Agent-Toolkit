@@ -20,6 +20,8 @@ import time
 import typing
 from abc import ABC
 from abc import abstractmethod
+from collections.abc import Awaitable
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from functools import partial
 from pathlib import Path
@@ -123,18 +125,8 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         self.set_cors_config(aiq_app)
 
         @aiq_app.middleware("http")
-        async def _suppress_authentication_logs(request: Request, call_next):
-            """
-            Intercepts authentication request and supreses logs that contain sensitive data.
-            """
-            default_log_level = logging.getLogger("uvicorn.access").level
-            if request.url.path in (AuthenticationEndpoint.REDIRECT_URI.value
-                                    or AuthenticationEndpoint.PROMPT_REDIRECT_URI.value):
-                logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
-            response = await call_next(request)
-            logging.getLogger("uvicorn.access").setLevel(default_log_level)
-
-            return response
+        async def authentication_log_filter(request: Request, call_next: Callable[[Request], Awaitable[Response]]):
+            return await self._suppress_authentication_logs(request, call_next)
 
         return aiq_app
 
@@ -169,6 +161,25 @@ class FastApiFrontEndPluginWorkerBase(ABC):
             CORSMiddleware,
             **cors_kwargs,
         )
+
+    async def _suppress_authentication_logs(self, request: Request,
+                                            call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+        """
+        Intercepts authentication request and supreses logs that contain sensitive data.
+        """
+        from aiq.utils.log_utils import LogFilter
+
+        logs_to_suppress: list[str] = [
+            AuthenticationEndpoint.REDIRECT_URI.value, AuthenticationEndpoint.PROMPT_REDIRECT_URI.value
+        ]
+
+        logging.getLogger("uvicorn.access").addFilter(LogFilter(logs_to_suppress))
+        try:
+            response = await call_next(request)
+        finally:
+            logging.getLogger("uvicorn.access").removeFilter(LogFilter(logs_to_suppress))
+
+        return response
 
     @abstractmethod
     async def configure(self, app: FastAPI, builder: WorkflowBuilder):

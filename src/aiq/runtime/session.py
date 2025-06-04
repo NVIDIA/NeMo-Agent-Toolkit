@@ -13,16 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import httpx
 import asyncio
 import contextvars
 import typing
-
 from collections.abc import Awaitable
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 from contextlib import nullcontext
 
+import httpx
 from fastapi import Request
 
 from aiq.builder.context import AIQContext

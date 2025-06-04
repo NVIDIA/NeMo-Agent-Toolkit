@@ -13,23 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-authentication:
-  jira:
-    _type: oauth2
-    consent_prompt_mode: "browser"
-    consent_prompt_key: mock_consent_prompt_key
-    client_server_url: "mock_url"
-    authorization_url: mock_authorization_url
-    authorization_token_url: https://mock.token.url.com/oauth/token
-    client_id: mock_client_id
-    client_secret: mock_client_secret
-    audience: mock_audience
-    scope:
-      - report:mock
-      - read:mock
-      - manage:mock
-  jira_api_key:
-    _type: api_key
-    api_key: mock_api_key
-    header_name: Authorization
-    header_prefix: Bearer
+import logging
+
+
+class LogFilter(logging.Filter):
+    """
+    This class is used to filter log records based on a defined set of criteria.
+    """
+
+    def __init__(self, filter_criteria: list[str]):
+        self._filter_criteria = filter_criteria
+        super().__init__()
+
+    def filter(self, record: logging.LogRecord):
+        """
+        Evaluates whether a log record should be emitted based on the message content.
+
+        Returns:
+            False if the message content contains any of the filter criteria, True otherwise.
+        """
+        if any(match in record.getMessage() for match in self._filter_criteria):
+            return False
+        return True
