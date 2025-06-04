@@ -143,7 +143,8 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # p
                                         name=model_name,
                                         UUID=run_id,
                                         data=StreamEventData(input=copy.deepcopy(messages[0])),
-                                        metadata=TraceMetadata(chat_inputs=copy.deepcopy(messages[0])),
+                                        metadata=TraceMetadata(chat_inputs=copy.deepcopy(messages[0]),
+                                                               additional_input_metadata=copy.deepcopy(kwargs)),
                                         usage_info=UsageInfo(token_usage=TokenUsageBaseModel(),
                                                              num_llm_calls=1,
                                                              seconds_between_calls=int(time.time() -
@@ -224,7 +225,8 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # p
                 data=StreamEventData(input=self._run_id_to_llm_input.get(str(kwargs.get("run_id", "")), ""),
                                      output=llm_text_output),
                 usage_info=UsageInfo(token_usage=self._extract_token_base_model(usage_metadata)),
-                metadata=TraceMetadata(chat_responses=[generation] if generation else []))
+                metadata=TraceMetadata(chat_responses=[generation] if generation else [],
+                                       additional_output_metadata=copy.deepcopy(kwargs)))
 
             self.step_manager.push_intermediate_step(usage_stat)
 

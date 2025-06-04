@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+import json
 import re
 import warnings
 from contextlib import asynccontextmanager
@@ -73,6 +74,24 @@ except TelemetryOptionalImportError:
     TracerProvider = DummyTracerProvider
     Span = DummySpan
     set_span_in_context = dummy_set_span_in_context
+
+
+def merge_dicts(dict1, dict2):
+    """
+    Merge two dictionaries, prioritizing non-null values from the first dictionary.
+    
+    Args:
+        dict1 (dict): First dictionary (higher priority)
+        dict2 (dict): Second dictionary (lower priority)
+    
+    Returns:
+        dict: Merged dictionary with non-null values from dict1 taking precedence
+    """
+    result = dict2.copy()  # Start with a copy of the second dictionary
+    for key, value in dict1.items():
+        if value is not None:  # Only update if value is not None
+            result[key] = value
+    return result
 
 
 def _ns_timestamp(seconds_float: float) -> int:
@@ -285,6 +304,10 @@ class AsyncOtelSpanListener:
                 sub_span.set_attribute(SpanAttributes.INPUT_VALUE, serialized_input)
                 sub_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE, "application/json" if is_json else "text/plain")
 
+        # Optional: add metadata to the span from TraceMetadata
+        if step.payload.metadata:
+            sub_span.set_attribute("aiq.metadata", step.payload.metadata.model_dump_json())                
+
         self._span_stack[step.UUID] = sub_span
 
         self._outstanding_spans[step.UUID] = sub_span
@@ -325,7 +348,10 @@ class AsyncOtelSpanListener:
 
         # Optional: add metadata to the span from TraceMetadata
         if step.payload.metadata:
-            sub_span.set_attribute("aiq.metadata", step.payload.metadata.model_dump_json())
+            pre_metadata = json.loads(sub_span.attributes.get("aiq.metadata", {}))
+            post_metadata = json.loads(step.payload.metadata.model_dump_json())
+            merged_metadata = merge_dicts(pre_metadata, post_metadata)
+            sub_span.set_attribute("aiq.metadata", json.dumps(merged_metadata))
 
         end_ns = _ns_timestamp(step.payload.event_timestamp)
 
