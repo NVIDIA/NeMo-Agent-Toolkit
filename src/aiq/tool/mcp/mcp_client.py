@@ -77,7 +77,7 @@ class MCPClientConfig(ClientFunctionConfig, name="mcp_client"):
         # ServerConfig already validates mutually exclusive fields
 
 
-class SingleMCPToolConfig(FunctionBaseConfig, name="mcp_single_tool"):
+class MCPSingleToolConfig(FunctionBaseConfig, name="mcp_single_tool"):
     client: MCPBaseClient = Field(..., description="MCP client to use for the tool")
     tool_name: str = Field(..., description="Name of the tool to use")
     tool_description: str | None = Field(default=None, description="Description of the tool")
@@ -85,8 +85,8 @@ class SingleMCPToolConfig(FunctionBaseConfig, name="mcp_single_tool"):
     model_config = {"arbitrary_types_allowed": True}
 
 
-@register_function(config_type=SingleMCPToolConfig)
-async def single_mcp_tool(config: SingleMCPToolConfig, builder: Builder):
+@register_function(config_type=MCPSingleToolConfig)
+async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
     tool = await config.client.get_tool(config.tool_name)
     if config.tool_description:
         tool.set_description(description=config.tool_description)
@@ -117,6 +117,11 @@ async def single_mcp_tool(config: SingleMCPToolConfig, builder: Builder):
 async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder):  # pylint: disable=unused-argument
     """
     Connects to an MCP server, discovers all tools, and adds them as functions to the builder.
+
+    builder: This is the main workflow builder (not the child builder). This is needed because -
+    1. we need access to the builder's lifecycle to add the client to the exit stack
+    2. we dynamically add tools to the builder
+
     TODO: Add tool_filter support and tool name/description override support
     """
     from aiq.tool.mcp.mcp_client_base import MCPSSEClient
@@ -145,7 +150,7 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
     # 3. Add all tools to the builder dynamically
     for tool in all_tools.values():
         await builder.add_function(tool.name,
-                                   SingleMCPToolConfig(
+                                   MCPSingleToolConfig(
                                        client=client,
                                        tool_name=tool.name,
                                        tool_description=None,
@@ -155,8 +160,6 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
 """
 TODO:
 - Add tool_filter support
-- Add tool name/description override support
-- Add a way to get all dynamic tools via a special workflow keyword
-- Allow the react agent to use all dynamic tools
 - Add ClientFunctionConfig to the registry by making mcp_client_function_handler yield an idle function
+- Add a way to get all dynamic tools via a special workflow keyword
 """
