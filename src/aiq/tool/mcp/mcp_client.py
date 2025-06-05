@@ -30,18 +30,12 @@ from aiq.tool.mcp.mcp_client_base import MCPBaseClient
 
 logger = logging.getLogger(__name__)
 
-# Global client cache for sharing MCP clients
-# TODO:this needs to be added to the builder
-_mcp_clients: dict[str, MCPBaseClient] = {}
-
 
 class MCPServerConfig(BaseModel):
     """
     Server connection details for MCP client.
     Supports stdio, sse, and streamable-http transports.
     """
-    client_id: str | None = Field(default=None,
-                                  description="Enables setting up multiple MCP clients with the same server")
     transport: Literal["stdio", "sse", "streamable-http"] = Field(
         ..., description="Transport type to connect to the MCP server (stdio, sse, or streamable-http)")
     url: HttpUrl | None = Field(default=None,
@@ -83,63 +77,30 @@ class MCPClientConfig(ClientFunctionConfig, name="mcp_client"):
         # ServerConfig already validates mutually exclusive fields
 
 
-class MCPDynamicToolConfig(FunctionBaseConfig, name="mcp_dynamic_tool"):
-    """
-    Configuration for individual MCP tools that are dynamically discovered and registered.
-    """
-    server: MCPServerConfig = Field(..., description="Server connection details")
-    description: str | None = Field(default=None, description="Description of the tool")
-    tool_name: str = Field(..., description="Name of the specific tool to use")
+class SingleMCPToolConfig(FunctionBaseConfig, name="mcp_single_tool"):
+    client: MCPBaseClient = Field(..., description="MCP client to use for the tool")
+    tool_name: str = Field(..., description="Name of the tool to use")
+    tool_description: str | None = Field(default=None, description="Description of the tool")
+
+    model_config = {"arbitrary_types_allowed": True}
 
 
-def _get_client_key(server_config: MCPServerConfig) -> str:
-    """Create a unique key for the server config to enable client sharing.
-    If client_id is set, it will be included in the key.
-    """
-
-    if server_config.transport == "stdio":
-        args_str = ':'.join(server_config.args or [])
-        env_str = ':'.join(f"{k}={v}" for k, v in sorted((server_config.env or {}).items()))
-        if server_config.client_id:
-            return f"{server_config.client_id}:stdio:{server_config.command}:{args_str}:{env_str}"
-        else:
-            return f"stdio:{server_config.command}:{args_str}:{env_str}"
-    else:
-        if server_config.client_id:
-            return f"{server_config.client_id}:{server_config.transport}:{server_config.url}"
-        else:
-            return f"{server_config.transport}:{server_config.url}"
-
-
-@register_function(config_type=MCPDynamicToolConfig)
-async def mcp_dynamic_tool(config: MCPDynamicToolConfig, builder: Builder):
-    """
-    Dynamic function for an MCP tool that uses shared client connections.
-    """
-    global _mcp_clients
-
-    client_key = _get_client_key(config.server)
-
-    # If the client is not there throw an error
-    if client_key not in _mcp_clients:
-        raise ValueError(f"MCP client for key: {client_key} not found")
-    client = _mcp_clients[client_key]
-
-    # This is for a single tool, so we don't need to get all tools
-    tool = await client.get_tool(config.tool_name)
-
-    # Create function info for the specific tool
+@register_function(config_type=SingleMCPToolConfig)
+async def single_mcp_tool(config: SingleMCPToolConfig, builder: Builder):
+    tool = await config.client.get_tool(config.tool_name)
+    if config.tool_description:
+        tool.set_description(description=config.tool_description)
     input_schema = tool.input_schema
 
-    def _convert_from_str(input_str: str) -> input_schema:
+    logger.info("Configured to use tool: %s from MCP server at %s", tool.name, config.client.server_name)
+
+    def _convert_from_str(input_str: str) -> BaseModel:
         return input_schema.model_validate_json(input_str)
 
     async def _response_fn(tool_input: input_schema | None = None, **kwargs) -> str:
         try:
             if tool_input:
-                args = tool_input.model_dump()
-                return await tool.acall(args)
-
+                return await tool.acall(tool_input.model_dump())
             _ = input_schema.model_validate(kwargs)
             return await tool.acall(kwargs)
         except Exception as e:
@@ -161,47 +122,40 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
     from aiq.tool.mcp.mcp_client_base import MCPSSEClient
     from aiq.tool.mcp.mcp_client_base import MCPStdioClient
     from aiq.tool.mcp.mcp_client_base import MCPStreamableHTTPClient
-    global _mcp_clients
 
-    # 1. Check if the client already exists
-    client_key = _get_client_key(config.server)
-    # If the client is already there, throw an error
-    if client_key in _mcp_clients:
-        raise ValueError(f"MCP client for key: {client_key} already exists")
-
-    # 2. Instantiate the client
+    # 1. Instantiate the client
     if config.server.transport == "stdio":
-        source = f"{config.server.command} {' '.join(config.server.args) if config.server.args else ''}"
         client = MCPStdioClient(command=config.server.command, args=config.server.args, env=config.server.env)
     elif config.server.transport == "sse":
-        source = str(config.server.url)
-        client = MCPSSEClient(url=source)
+        client = MCPSSEClient(url=str(config.server.url))
     elif config.server.transport == "streamable-http":
         client = MCPStreamableHTTPClient(url=str(config.server.url))
     else:
         raise ValueError("Unsupported transport")
 
-    # 3. Store the client in the global cache, this is used by the dynamic tool function
-    _mcp_clients[client_key] = client
+    logger.info("Configured to use MCP server at %s", client.server_name)
 
-    # 4. Connect to the server and find all tools
+    # 2. Connect to the server and find all tools
     # Store the client in the builder's exit stack to ensure it's cleaned up when the builder is done
     await builder._get_exit_stack().enter_async_context(client)
+
     # Find all tools
     all_tools = await client.get_tools()
 
-    # 5. Add all tools to the builder
+    # 3. Add all tools to the builder dynamically
     for tool in all_tools.values():
-        # Add a tool of type MCPDynamicToolConfig, don't worry about the tool description or input schema
-        # as they are handled by the dynamic tool function
-        await builder.add_function(tool.name, MCPDynamicToolConfig(server=config.server, tool_name=tool.name))
+        await builder.add_function(tool.name,
+                                   SingleMCPToolConfig(
+                                       client=client,
+                                       tool_name=tool.name,
+                                       tool_description=None,
+                                   ))
 
 
 """
 TODO:
 - Add tool_filter support
 - Add tool name/description override support
-- Move the client cache to the builder
 - Add a way to get all dynamic tools via a special workflow keyword
 - Allow the react agent to use all dynamic tools
 - Add ClientFunctionConfig to the registry by making mcp_client_function_handler yield an idle function

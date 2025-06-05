@@ -128,6 +128,13 @@ class MCPBaseClient(ABC):
         self._session = None
         self._exit_stack = None
 
+    @property
+    def server_name(self):
+        """
+        Provide server name for logging
+        """
+        return self._client_type
+
     @abstractmethod
     @asynccontextmanager
     async def connect_to_server(self):
@@ -204,6 +211,10 @@ class MCPSSEClient(MCPBaseClient):
     def url(self) -> str:
         return self._url
 
+    @property
+    def server_name(self):
+        return f"sse:{self._url}"
+
     @asynccontextmanager
     @override
     async def connect_to_server(self):
@@ -242,6 +253,10 @@ class MCPStdioClient(MCPBaseClient):
         return self._command
 
     @property
+    def server_name(self):
+        return f"stdio:{self._command}:{self._args}:{self._env}"
+
+    @property
     def args(self) -> list[str] | None:
         return self._args
 
@@ -276,6 +291,10 @@ class MCPStreamableHTTPClient(MCPBaseClient):
     @property
     def url(self) -> str:
         return self._url
+
+    @property
+    def server_name(self):
+        return f"streamable-http:{self._url}"
 
     @asynccontextmanager
     async def connect_to_server(self):

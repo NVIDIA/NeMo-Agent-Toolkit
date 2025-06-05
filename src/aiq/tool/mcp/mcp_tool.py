@@ -81,14 +81,11 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=
 
     # Initialize the client
     if config.client_type == 'stdio':
-        source = f"{config.command} {' '.join(config.args) if config.args else ''}"
         client = MCPStdioClient(command=config.command, args=config.args, env=config.env)
     elif config.client_type == 'streamable-http':
-        source = str(config.url)
-        client = MCPStreamableHTTPClient(url=source)
+        client = MCPStreamableHTTPClient(url=str(config.url))
     elif config.client_type == 'sse':
-        source = str(config.url)
-        client = MCPSSEClient(url=source)
+        client = MCPSSEClient(url=str(config.url))
     else:
         raise ValueError(f"Invalid client type: {config.client_type}")
 
@@ -98,7 +95,7 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=
         if config.description:
             tool.set_description(description=config.description)
 
-        logger.info("Configured to use tool: %s from MCP server at %s", tool.name, source)
+        logger.info("Configured to use tool: %s from MCP server at %s", tool.name, client.server_name)
 
         def _convert_from_str(input_str: str) -> tool.input_schema:
             return tool.input_schema.model_validate_json(input_str)
