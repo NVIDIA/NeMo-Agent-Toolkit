@@ -33,7 +33,7 @@ class HardwareCheckToolConfig(FunctionBaseConfig, name="hardware_check"):
                  "hardware degradation, and anomalies that could explain alerts. Args: host_id: str"),
         description="Description of the tool for the agent.")
     llm_name: LLMRef
-    test_mode: bool = Field(default=True, description="Whether to run in test mode")
+    offline_mode: bool = Field(default=True, description="Whether to run in offline model")
 
 
 def _get_ipmi_monitor_data(ip_address, username, password):
@@ -74,14 +74,14 @@ async def hardware_check_tool(config: HardwareCheckToolConfig, builder: Builder)
         utils.log_header("Hardware Status Checker")
 
         try:
-            if not config.test_mode:
+            if not config.offline_mode:
                 ip = "ipmi_ip"  # Replace with your actual IPMI IP address
                 user = "ipmi_user"  # Replace with your actual username
                 pwd = "ipmi_password"  # Replace with your actual password
                 monitoring_data = _get_ipmi_monitor_data(ip, user, pwd)
             else:
-                # In test mode, load test data from CSV file
-                df = utils.get_test_data()
+                # In offline model, load test data from CSV file
+                df = utils.get_offline_data()
 
                 # Get IPMI data from test data, falling back to static data if needed
                 monitoring_data = utils.load_column_or_static(

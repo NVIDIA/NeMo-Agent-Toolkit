@@ -20,28 +20,28 @@ functions:
   hardware_check:
     _type: hardware_check
     llm_name: tool_reasoning_llm
-    test_mode: true
+    offline_mode: true
   host_performance_check:
     _type: host_performance_check
     llm_name: tool_reasoning_llm
-    test_mode: true
+    offline_mode: true
   monitoring_process_check:
     _type: monitoring_process_check
     llm_name: tool_reasoning_llm
-    test_mode: true
+    offline_mode: true
   network_connectivity_check:
     _type: network_connectivity_check
     llm_name: tool_reasoning_llm
-    test_mode: true
+    offline_mode: true
   telemetry_metrics_host_heartbeat_check:
     _type: telemetry_metrics_host_heartbeat_check
     llm_name: tool_reasoning_llm
-    test_mode: true
+    offline_mode: true
     metrics_url: http://your-monitoring-server:9090 # Replace with your monitoring system URL if running in live mode
   telemetry_metrics_host_performance_check:
     _type: telemetry_metrics_host_performance_check
     llm_name: tool_reasoning_llm
-    test_mode: true
+    offline_mode: true
     metrics_url: http://your-monitoring-server:9090 # Replace with your monitoring system URL if running in live mode
   telemetry_metrics_analysis_agent:
     _type: telemetry_metrics_analysis_agent
@@ -66,11 +66,11 @@ workflow:
     - network_connectivity_check
     - telemetry_metrics_analysis_agent
   llm_name: ata_agent_llm
-  test_mode: true
-  # The below paths are only used if test_mode is true
-  test_data_path: examples/alert_triage_agent/data/test_data.csv
-  benign_fallback_data_path: examples/alert_triage_agent/data/benign_fallback_test_data.json
-  test_output_path: .tmp/aiq/examples/alert_triage_agent/output/test_output.csv
+  offline_mode: true
+  # The below paths are only used if offline_mode is true
+  offline_data_path: examples/alert_triage_agent/data/offline_data.csv
+  benign_fallback_data_path: examples/alert_triage_agent/data/benign_fallback_offline_data.json
+  offline_output_path: .tmp/aiq/examples/alert_triage_agent/output/offline_output.csv
 
 llms:
   ata_agent_llm:
