@@ -19,11 +19,6 @@
 
 general:
   use_uvloop: true
-  #telemetry:
-  #  tracing:
-  #    weave:
-  #      _type: weave
-  #      project: "ak-simple-calculator-mcp-date-stdio"
 
 client_functions:
   mcp_time:
@@ -32,9 +27,10 @@ client_functions:
       transport: stdio
       command: "python"
       args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
+    # load some tools and override tool attributes
     tool_filter:
-      # load some tools and override tool attributes
       get_current_time:
+        alias: get_current_time_mcp_tool
         description: "Returns the current date and time from the MCP server"
       convert_time:
         alias: convert_time_mcp_tool
@@ -59,7 +55,7 @@ llms:
 
 workflow:
   _type: react_agent
-  # ideally we should be able to fetch all dynamic tools
+  # ideally we should be able to fetch all dynamic tools without enumerating them here
   tool_names: ["get_current_time", "calculator_multiply", "calculator_divide", "calculator_subtract", "calculator_inequality"]
   llm_name: nim_llm
   verbose: true
