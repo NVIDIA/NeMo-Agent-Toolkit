@@ -65,10 +65,28 @@ def _get_sample_schema():
                 'default': False, 'description': 'Optional Boolean Field.', 'title': 'Raw', 'type': 'boolean'
             },
             'optional_array_field': {
-                'default': ['item'], 'description': 'Optional Array Field.', 'title': 'Array', 'type': 'array', 'items': {'type': 'string'}
+                'default': ['item'],
+                'description': 'Optional Array Field.',
+                'title': 'Array',
+                'type': 'array',
+                'items': {
+                    'type': 'string'
+                }
             },
             'optional_array_object_field': {
-                'default': [{'key': 'value'}], 'description': 'Optional Array Field.', 'title': 'Array', 'type': 'array', 'items': {'type': 'object', 'properties': {'key': {'type': 'string'}}}
+                'default': [{
+                    'key': 'value'
+                }],
+                'description': 'Optional Array Field.',
+                'title': 'Array',
+                'type': 'array',
+                'items': {
+                    'type': 'object', 'properties': {
+                        'key': {
+                            'type': 'string'
+                        }
+                    }
+                }
             }
         },
         'required': [
@@ -107,7 +125,9 @@ def test_schema_generation(sample_schema):
         "required_int_field": 4,
         "required_float_field": 5.5,
         "optional_array_field": ["item1"],
-        "optional_array_object_field": [{'key': 'value1'}],
+        "optional_array_object_field": [{
+            'key': 'value1'
+        }],
     }
 
     m = _model.model_validate(test_input)
