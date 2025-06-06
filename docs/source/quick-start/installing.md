@@ -100,7 +100,7 @@ Before you begin using AIQ toolkit, ensure that you meet the following software 
 
     In addition to plugins, there are optional dependencies needed for profiling. To install these dependencies, run the following:
     ```bash
-    uv pip install -e .[profiling]
+    uv pip install -e '.[profiling]'
     ```
 1. Verify that you've installed the AIQ toolkit library.
 

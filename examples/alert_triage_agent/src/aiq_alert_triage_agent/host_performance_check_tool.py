@@ -92,19 +92,18 @@ async def _parse_stdout_lines(config, builder, stdout_lines):
     Returns:
         str: Structured data parsed from the output in string format.
     """
-    # Join the list of lines into a single text block
-    input_data = "\n".join(stdout_lines) if stdout_lines else ""
-
-    prompt = ToolReasoningLayerPrompts.HOST_PERFORMANCE_CHECK_PARSING.format(input_data=input_data)
-
     response = None
     try:
-        response = await utils.llm_ainvoke(config, builder, user_prompt=prompt)
-        structured_data = response
+        # Join the list of lines into a single text block
+        input_data = "\n".join(stdout_lines) if stdout_lines else ""
+
+        prompt = ToolReasoningLayerPrompts.HOST_PERFORMANCE_CHECK_PARSING.format(input_data=input_data)
+
+        response = await utils.llm_ainvoke(config=config, builder=builder, user_prompt=prompt)
     except Exception as e:
-        structured_data = ('{{"error": "Failed to parse nvda_nim response", '
-                           '"exception": "{}", "raw_response": "{}"}}').format(str(e), response)
-    return structured_data
+        response = ('{{"error": "Failed to parse stdout from the playbook run.", '
+                    '"exception": "{}", "raw_response": "{}"}}').format(str(e), response)
+    return response
 
 
 @register_function(config_type=HostPerformanceCheckToolConfig)
