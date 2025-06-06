@@ -68,7 +68,6 @@ workflow:
   # The below paths are only used if offline_mode is true
   offline_data_path: null
   benign_fallback_data_path: null
-  offline_output_path: null
 
 llms:
   ata_agent_llm:

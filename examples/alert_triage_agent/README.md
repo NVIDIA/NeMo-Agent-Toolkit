@@ -34,6 +34,9 @@ This example demonstrates how to build an intelligent alert triage system using 
       - [Functions](#functions)
       - [Workflow](#workflow)
       - [LLMs](#llms)
+      - [Evaluation](#evaluation)
+        - [General](#general)
+        - [Evaluators](#evaluators)
   - [Installation and setup](#installation-and-setup)
     - [Install this workflow](#install-this-workflow)
     - [Set up environment variables](#set-up-environment-variables)
@@ -188,7 +191,6 @@ workflow:
   offline_mode: true
   offline_data_path: ...
   benign_fallback_data_path: ...
-  offline_output_path: ...
 ```
 
 * `_type`: The name of the agent (matching the agent's name in `register.py`).
@@ -197,7 +199,6 @@ workflow:
 * `offline_mode`: Enables offline execution using predefined input/output instead of real systems.
 * `offline_data_path`: CSV file containing offline test alerts and their corresponding mocked tool responses.
 * `benign_fallback_data_path`: JSON file with baseline healthy system responses for tools not explicitly mocked.
-* `offline_output_path`: Output CSV file path where the agent writes triage results. Each processed alert adds a new `output` column with the generated report.
 
 #### LLMs
 
@@ -218,6 +219,50 @@ ata_agent_llm:
 * `temperature`, `top_p`, `max_tokens`: LLM generation parameters (passed directly into the API).
 
 Each tool or agent can use a dedicated LLM tailored for its task.
+
+#### Evaluation
+
+The `eval` section defines how the system evaluates pipeline outputs using predefined metrics. It includes the location of the dataset used for evaluation and the configuration of evaluation metrics.
+
+```yaml
+eval:
+  general:
+    output_dir: .tmp/aiq/examples/alert_triage_agent/output/
+    dataset:
+      _type: json
+      file_path: examples/alert_triage_agent/data/offline_data.json
+  evaluators:
+    rag_accuracy:
+      _type: ragas
+      metric: AnswerAccuracy
+      llm_name: nim_rag_eval_llm
+    rag_groundedness:
+      _type: ragas
+      metric: ResponseGroundedness
+      llm_name: nim_rag_eval_llm
+    rag_relevance:
+      _type: ragas
+      metric: ContextRelevance
+      llm_name: nim_rag_eval_llm
+```
+
+##### General
+
+* `output_dir`: Directory where outputs (e.g., pipeline output texts, evaluation scores, agent traces) are saved.
+* `dataset.file_path`: Path to the JSON dataset used for evaluation.
+
+##### Evaluators
+
+Each entry under `evaluators` defines a specific metric to evaluate the pipeline's output. All listed evaluators use the `ragas` (Retrieval-Augmented Generation Assessment) framework.
+
+* `metric`: The specific `ragas` metric used to assess the output.
+
+  * `AnswerAccuracy`: Measures whether the agent's response matches the expected answer.
+  * `ResponseGroundedness`: Assesses whether the response is supported by retrieved context.
+  * `ContextRelevance`: Evaluates whether the retrieved context is relevant to the query.
+* `llm_name`: The name of the LLM listed in the above `llms` section that is used to do the evaluation. This LLM should be capable of understanding both the context and generated responses to make accurate assessments.
+
+The list of evaluators can be extended or swapped out depending on your evaluation goals.
 
 ## Installation and setup
 
@@ -379,25 +424,27 @@ To run in offline mode:
 
    Make sure `offline_mode: true` is set in both the `workflow` section and individual tool sections of your config file (see [Understanding the config](#understanding-the-config) section).
 
-1. **How it works**
-- The **main CSV offline dataset** provides both alert details and a mock environment. For each alert, expected tool return values are included. These simulate how the environment would behave if the alert occurred on a real system.
+2. **How it works**
+- The **main CSV offline dataset** (`offline_data_path`) provides both alert details and a mock environment. For each alert, expected tool return values are included. These simulate how the environment would behave if the alert occurred on a real system.
+   - The **JSON offline dataset** (`eval.general.dataset.filepath` in the config) contains a subset of the information from the main CSV: the alert inputs and their associated ground truth root causes. It is used to run `aiq eval`, focusing only on the essential data needed for running the workflow, while the full CSV retains the complete mock environment context.
+   - At runtime, the system links each alert in the JSON dataset to its corresponding context in the CSV using the unique host IDs included in both datasets.
 - The **benign fallback dataset** fills in tool responses when the agent calls a tool not explicitly defined in the alert's offline data. These fallback responses mimic healthy system behavior and help provide the "background scenery" without obscuring the true root cause.
 
 3. **Run the agent in offline mode**
 
    Run the agent with:
    ```bash
-   aiq run --config_file=examples/alert_triage_agent/configs/config_offline_mode.yml --input "offline_mode"
+   aiq eval --config_file=examples/alert_triage_agent/configs/config_offline_mode.yml
    ```
-    Note: The `--input` value is ignored in offline mode.
 
     The agent will:
-   - Load alerts from the offline dataset specified in `offline_data_path` in the workflow config
-   - Simulate an investigation using predefined tool results
-   - Iterate through all the alerts in the dataset
-   - Save reports as a new column in a copy of the offline CSV file to the path specified in `offline_output_path` in the workflow config
+   - Load alerts from the JSON dataset specified in the config `eval.general.dataset.filepath`
+   - Investigate the alerts using predefined tool responses in the CSV file (path set in the config `workflow.offline_data_path`)
+   - Process all alerts in the dataset in parallel
+   - Run evaluation for the metrics specified in the config `eval.evaluators`
+   - Save the pipeline output along with the evaluation results to the path specified by `eval.output_dir`
 
-2. **Understanding the output**
+4. **Understanding the output**
 
    The output file will contain a new column named `output`, which includes the markdown report generated by the agent for each data point (i.e., each row in the CSV). Navigate to that rightmost `output` column to view the report for each test entry.
 
