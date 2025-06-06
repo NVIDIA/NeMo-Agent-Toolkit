@@ -41,7 +41,7 @@ This example demonstrates how to build an intelligent alert triage system using 
     - [Running in a live environment](#running-in-a-live-environment)
       - [Note on credentials and access](#note-on-credentials-and-access)
     - [Running live with a HTTP server listening for alerts](#running-live-with-a-http-server-listening-for-alerts)
-    - [Running in offline model](#running-in-offline-model)
+    - [Running in offline mode](#running-in-offline-mode)
 
 
 ## Use case description
@@ -149,7 +149,7 @@ The triage agent may call one or more of the following tools based on the alert 
 
 #### Functions
 
-Each entry in the `functions` section defines a tool or sub-agent that can be invoked by the main workflow agent. Tools can operate in offline model, using mocked data for simulation.
+Each entry in the `functions` section defines a tool or sub-agent that can be invoked by the main workflow agent. Tools can operate in offline mode, using mocked data for simulation.
 
 Example:
 
@@ -240,7 +240,7 @@ export $(grep -v '^#' .env | xargs)
 ```
 
 ## Example Usage
-You can run the agent in [offline model](#running-in-offline-mode) or [live mode](#running-live-with-a-http-server-listening-for-alerts). offline model allows you to evaluate the agent in a controlled, offline environment using synthetic data. Live mode allows you to run the agent in a real environment.
+You can run the agent in [offline mode](#running-in-offline-mode) or [live mode](#running-live-with-a-http-server-listening-for-alerts). offline mode allows you to evaluate the agent in a controlled, offline environment using synthetic data. Live mode allows you to run the agent in a real environment.
 
 ### Running in a live environment
 In live mode, each tool used by the triage agent connects to real systems to collect data. These systems can include:
@@ -262,11 +262,11 @@ To run the agent live, follow these steps:
 
    If your environment includes unique systems or data sources, you can define new tools or modify existing ones. This allows your triage agent to pull in the most relevant data for your alerts and infrastructure.
 
-3. **Disable offline model**
+3. **Disable offline mode**
 
    Set `offline_mode: false` in the workflow section and for each tool in the functions section of your config file to ensure the agent uses real data instead of offline datasets.
 
-   You can also selectively keep some tools in offline model by leaving their `offline_mode: true` for more granular testing.
+   You can also selectively keep some tools in offline mode by leaving their `offline_mode: true` for more granular testing.
 
 4. **Run the agent with a real alert**
 
@@ -371,10 +371,10 @@ To use this mode, first ensure you have configured your live environment as desc
 
    You can monitor the progress of the triage process through these logs and the generated reports.
 
-### Running in offline model
-offline model lets you evaluate the triage agent in a controlled, offline environment using synthetic data. Instead of calling real systems, the agent uses predefined inputs to simulate alerts and tool outputs, ideal for development, debugging, and tuning.
+### Running in offline mode
+offline mode lets you evaluate the triage agent in a controlled, offline environment using synthetic data. Instead of calling real systems, the agent uses predefined inputs to simulate alerts and tool outputs, ideal for development, debugging, and tuning.
 
-To run in offline model:
+To run in offline mode:
 1. **Set required environment variables**
 
    Make sure `offline_mode: true` is set in both the `workflow` section and individual tool sections of your config file (see [Understanding the config](#understanding-the-config) section).
@@ -383,13 +383,13 @@ To run in offline model:
 - The **main CSV offline dataset** provides both alert details and a mock environment. For each alert, expected tool return values are included. These simulate how the environment would behave if the alert occurred on a real system.
 - The **benign fallback dataset** fills in tool responses when the agent calls a tool not explicitly defined in the alert's offline data. These fallback responses mimic healthy system behavior and help provide the "background scenery" without obscuring the true root cause.
 
-3. **Run the agent in offline model**
+3. **Run the agent in offline mode**
 
    Run the agent with:
    ```bash
    aiq run --config_file=examples/alert_triage_agent/configs/config_offline_mode.yml --input "offline_mode"
    ```
-    Note: The `--input` value is ignored in offline model.
+    Note: The `--input` value is ignored in offline mode.
 
     The agent will:
    - Load alerts from the offline dataset specified in `offline_data_path` in the workflow config

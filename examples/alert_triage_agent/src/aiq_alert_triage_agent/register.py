@@ -69,7 +69,7 @@ class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agen
         default="examples/alert_triage_agent/data/benign_fallback_offline_data.json",
         description="Path to the JSON file with baseline/normal system behavior data")
     offline_output_path: str | None = Field(default=".tmp/aiq/examples/alert_triage_agent/output/offline_output.csv",
-                                         description="Path to save the offline output CSV file")
+                                            description="Path to save the offline output CSV file")
 
 
 @register_function(config_type=AlertTriageAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -181,7 +181,7 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
     try:
         if config.offline_mode:
             utils.preload_offline_data(offline_data_path=config.offline_data_path,
-                                    benign_fallback_data_path=config.benign_fallback_data_path)
+                                       benign_fallback_data_path=config.benign_fallback_data_path)
             utils.log_header("Running in offline model", dash_length=120, level=logging.INFO)
             yield _response_offline_fn
         else:

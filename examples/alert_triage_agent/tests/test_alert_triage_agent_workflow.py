@@ -34,7 +34,8 @@ async def test_full_workflow():
 
     package_name = inspect.getmodule(AlertTriageAgentWorkflowConfig).__package__
 
-    config_file: Path = importlib.resources.files(package_name).joinpath("configs", "config_offline_mode.yml").absolute()
+    config_file: Path = importlib.resources.files(package_name).joinpath("configs",
+                                                                         "config_offline_mode.yml").absolute()
 
     with open(config_file, "r") as file:
         config = yaml.safe_load(file)
