@@ -16,10 +16,10 @@
 import importlib
 import importlib.resources
 import inspect
+import json
 import logging
 from pathlib import Path
 
-import pandas as pd
 import pytest
 import yaml
 from aiq_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
@@ -39,31 +39,30 @@ async def test_full_workflow():
 
     with open(config_file, "r") as file:
         config = yaml.safe_load(file)
-        output_filepath = config["workflow"]["offline_output_path"]
-    output_filepath_abs = importlib.resources.files(package_name).joinpath("../../../../", output_filepath).absolute()
+        input_filepath = config["eval"]["general"]["dataset"]["file_path"]
 
-    input_message = "run in offline model"
+    input_filepath_abs = importlib.resources.files(package_name).joinpath("../../../../", input_filepath).absolute()
+
+    # Load input data
+    with open(input_filepath_abs, 'r') as f:
+        input_data = json.load(f)
+
+    # Run the workflow
+    results = []
     async with load_workflow(config_file) as workflow:
+        for item in input_data:
+            async with workflow.run(item["question"]) as runner:
+                result = await runner.result(to_type=str)
+                results.append(result)
 
-        async with workflow.run(input_message) as runner:
+    # Check that the results are as expected
+    assert len(results) == len(input_data)
+    for i, result in enumerate(results):
+        assert len(result) > 0, f"Result for item {i} is empty"
 
-            result = await runner.result(to_type=str)
+    # Deterministic data point: host under maintenance
+    assert 'maintenance' in results[3]
 
-        assert result == f"Successfully processed 4 alerts. Results saved to {output_filepath}"
-
-        output_df = pd.read_csv(output_filepath_abs)
-
-        # Check that the output dataframe has the correct number of rows and columns
-        assert output_df.shape[0] == 4
-        assert output_df.shape[1] == 11
-        assert output_df.columns[-1] == "output"
-
-        # Check that all rows in 'output' column contain non-empty strings
-        assert all(isinstance(output, str) and len(output.strip()) > 0 for output in output_df["output"])
-
-        # Deterministic data point: host under maintenance
-        assert 'maintenance' in output_df.iloc[3]["output"]
-
-        # Check that rows 0-2 (hosts not under maintenance) contain root cause categorization
-        for i in range(3):
-            assert "root cause category" in output_df.iloc[i]["output"].lower()
+    # Check that rows 0-2 (hosts not under maintenance) contain root cause categorization
+    for i in range(3):
+        assert "root cause category" in results[i].lower()
