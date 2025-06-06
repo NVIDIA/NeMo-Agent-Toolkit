@@ -112,6 +112,36 @@ Similar to the registration function for the provider, the client registration f
 In the above example, the `ChatOpenAI` class is imported lazily, allowing for the client to be registered without importing the client class until it is needed. Thus, improving performance and startup times.
 :::
 
+## Test the Combination of LLM Provider and Client
+
+After implementing a new LLM provider, it's important to verify that it works correctly with all existing LLM clients. This can be done by writing integration tests. Here's an example of how to test the integration between the NIM LLM provider and the LangChain framework:
+
+```python
+@pytest.mark.integration
+async def test_nim_langchain_agent():
+    """
+    Test NIM LLM with LangChain agent. Requires NVIDIA_API_KEY to be set.
+    """
+
+    prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
+
+    llm_config = NIMModelConfig(model_name="meta/llama-3.1-70b-instruct", temperature=0.0)
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_llm("nim_llm", llm_config)
+        llm = await builder.get_llm("nim_llm", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+
+        agent = prompt | llm
+
+        response = await agent.ainvoke({"input": "What is 1+2?"})
+        assert isinstance(response, AIMessage)
+        assert response.content is not None
+        assert isinstance(response.content, str)
+        assert "3" in response.content.lower()
+```
+
+Note: Since this test requires an API key, it's marked with `@pytest.mark.integration` to exclude it from CI runs. However, these tests are necessary for maintaining and verifying the functionality of LLM providers and their client integrations.
+
 ## Packaging the Provider and Client
 
 The provider and client will need to be bundled into a Python package, which in turn will be registered with AIQ toolkit as a [plugin](../extend/plugins.md). In the `pyproject.toml` file of the package the `project.entry-points.'aiq.components'` section, defines a Python module as the entry point of the plugin. Details on how this is defined are found in the [Entry Point](../extend/plugins.md#entry-point) section of the plugins document. By convention, the entry point module is named `register.py`, but this is not a requirement.

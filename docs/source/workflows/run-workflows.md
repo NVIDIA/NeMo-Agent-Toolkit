@@ -76,9 +76,11 @@ Refer to `aiq serve --help` for more information on how to customize the server.
 The toolkit offers a programmatic way to execute workflows through its Python API, allowing you to integrate workflow execution directly into your Python code. Here's how to use it:
 
 ```python
-    async with load_workflow(config_file) as workflow:
-        async with workflow.run(input_str) as runner:
-            result = await runner.result(to_type=str)
+from aiq.runtime.loader import load_workflow
+
+async with load_workflow(config_file) as workflow:
+   async with workflow.run(input_str) as runner:
+      result = await runner.result(to_type=str)
 ```
 
 In this example:

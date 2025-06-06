@@ -83,6 +83,7 @@ def _load_maintenance_data(path: str) -> pd.DataFrame:
     required = {"host_id", "maintenance_start", "maintenance_end"}
     missing = required - set(df.columns)
     if missing:
+        missing = sorted(missing)
         utils.logger.error("Missing required columns: %s", ", ".join(missing))
         raise ValueError(f"Missing required columns: {', '.join(missing)}")
 
@@ -96,25 +97,27 @@ def _parse_alert_data(input_message: str) -> dict | None:
     """
     Parse alert data from an input message containing JSON into a dictionary.
 
-    Note: This function assumes the input message contains exactly one JSON object (the alert)
-    with potential extra text before and/or after the JSON.
+    This function extracts and parses a JSON object from a text message that may contain
+    additional text before and/or after the JSON. It handles both double and single quoted
+    JSON strings and can parse nested JSON structures.
 
     Args:
-        input_message (str): Input message containing JSON alert data
+        input_message (str): Input message containing a JSON object, which may be surrounded
+                            by additional text. The JSON object should contain alert details
+                            like host_id and timestamp.
 
     Returns:
-        dict | None: The parsed alert data as a dictionary containing alert details,
-                    or None if parsing fails
-
-    Raises:
-        ValueError: If no JSON object is found in the input message
-        json.JSONDecodeError: If the JSON parsing fails
+        dict | None: The parsed alert data as a dictionary if successful parsing,
+                    containing fields like host_id and timestamp.
+                    Returns None if no valid JSON object is found or parsing fails.
     """
     # Extract everything between first { and last }
     start = input_message.find("{")
     end = input_message.rfind("}") + 1
     if start == -1 or end == 0:
-        raise ValueError("No JSON object found in input message")
+        utils.logger.error("No JSON object found in input message")
+        return None
+
     alert_json_str = input_message[start:end]
     try:
         return json.loads(alert_json_str.replace("'", '"'))
