@@ -61,15 +61,15 @@ class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agen
     """
     tool_names: list[str] = []
     llm_name: LLMRef
-    test_mode: bool = Field(default=True, description="Whether to run in test mode")
-    test_data_path: str | None = Field(
-        default="examples/alert_triage_agent/data/test_data.csv",
-        description="Path to the main test dataset in CSV format containing alerts and their simulated environments")
+    offline_mode: bool = Field(default=True, description="Whether to run in offline model")
+    offline_data_path: str | None = Field(
+        default="examples/alert_triage_agent/data/offline_data.csv",
+        description="Path to the main offline dataset in CSV format containing alerts and their simulated environments")
     benign_fallback_data_path: str | None = Field(
-        default="examples/alert_triage_agent/data/benign_fallback_test_data.json",
+        default="examples/alert_triage_agent/data/benign_fallback_offline_data.json",
         description="Path to the JSON file with baseline/normal system behavior data")
-    test_output_path: str | None = Field(default=".tmp/aiq/examples/alert_triage_agent/output/test_output.csv",
-                                         description="Path to save the test output CSV file")
+    offline_output_path: str | None = Field(default=".tmp/aiq/examples/alert_triage_agent/output/offline_output.csv",
+                                            description="Path to save the offline output CSV file")
 
 
 @register_function(config_type=AlertTriageAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -144,20 +144,20 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
         finally:
             utils.logger.info("Finished agent execution")
 
-    async def _response_test_fn(input_message: str) -> str:
-        """Test mode response function that processes multiple alerts from a CSV file.
+    async def _response_offline_fn(input_message: str) -> str:
+        """offline model response function that processes multiple alerts from a CSV file.
 
         Args:
-            input_message: Not used in test mode, alerts are read from CSV instead
+            input_message: Not used in offline model, alerts are read from CSV instead
 
         Returns:
             Confirmation message after processing completes
         """
-        if config.test_output_path is None:
-            raise ValueError("test_output_path must be provided")
+        if config.offline_output_path is None:
+            raise ValueError("offline_output_path must be provided")
 
         # Load test alerts from CSV file
-        df = utils.get_test_data()
+        df = utils.get_offline_data()
         df["output"] = ""  # Initialize output column
         utils.log_header(f"Processing {len(df)} Alerts")
 
@@ -172,18 +172,18 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
         utils.log_header("Saving Results")
 
         # Write results to output CSV
-        os.makedirs(os.path.dirname(config.test_output_path), exist_ok=True)
-        df.to_csv(config.test_output_path, index=False)
+        os.makedirs(os.path.dirname(config.offline_output_path), exist_ok=True)
+        df.to_csv(config.offline_output_path, index=False)
 
         utils.log_footer()
-        return f"Successfully processed {len(df)} alerts. Results saved to {config.test_output_path}"
+        return f"Successfully processed {len(df)} alerts. Results saved to {config.offline_output_path}"
 
     try:
-        if config.test_mode:
-            utils.preload_test_data(test_data_path=config.test_data_path,
-                                    benign_fallback_data_path=config.benign_fallback_data_path)
-            utils.log_header("Running in test mode", dash_length=120, level=logging.INFO)
-            yield _response_test_fn
+        if config.offline_mode:
+            utils.preload_offline_data(offline_data_path=config.offline_data_path,
+                                       benign_fallback_data_path=config.benign_fallback_data_path)
+            utils.log_header("Running in offline model", dash_length=120, level=logging.INFO)
+            yield _response_offline_fn
         else:
             yield _response_fn
 
