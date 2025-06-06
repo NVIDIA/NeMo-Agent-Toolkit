@@ -52,6 +52,7 @@ from aiq.data_models.discovery_metadata import DiscoveryMetadata
 from aiq.data_models.embedder import EmbedderBaseConfigT
 from aiq.data_models.evaluator import EvaluatorBaseConfigT
 from aiq.data_models.front_end import FrontEndConfigT
+from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.function import FunctionConfigT
 from aiq.data_models.llm import LLMBaseConfigT
 from aiq.data_models.memory import MemoryBaseConfigT
@@ -167,6 +168,64 @@ def register_function(config_type: type[FunctionConfigT],
         return context_manager_fn
 
     return register_function_inner
+
+
+def register_simple_function(workflow_name: str, framework_wrappers: list[LLMFrameworkEnum | str] | None = None):
+    """
+    Register a simple function with a workflow name, creating a synthetic config type.
+
+    Args:
+        workflow_name: The name of the workflow/function
+        framework_wrappers: Optional framework wrappers for automatic profiler hooking
+    """
+
+    def _inner(fn: FunctionBuildCallableT) -> FunctionRegisteredCallableT:
+        # Create a simple class name based on workflow name
+        import inspect
+
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredFunctionInfo
+
+        # Get module information 
+        module = inspect.getmodule(fn)
+        module_name = module.__name__ if module else "unknown"
+
+        # Create simple class name using workflow name
+        class_name = f"SimpleFunctionConfig_{workflow_name}"
+
+        # Create synthetic config class dynamically
+        # We need to properly call __init_subclass__ with the name parameter
+        synthetic_config_type = type(class_name, (FunctionBaseConfig, ), {
+            "__module__": module_name,
+        })
+
+        # Properly initialize the subclass by calling __init_subclass__ with the name
+        synthetic_config_type.__init_subclass__(name=workflow_name)
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        if framework_wrappers is None:
+            framework_wrappers_list: list[str] = []
+        else:
+            framework_wrappers_list = list(framework_wrappers)
+
+        discovery_metadata = DiscoveryMetadata.from_fn(fn=fn,
+                                                       wrapper_type="simple_function",
+                                                       component_type=AIQComponentEnum.FUNCTION,
+                                                       component_name=workflow_name)
+
+        GlobalTypeRegistry.get().register_function(
+            RegisteredFunctionInfo(
+                full_type=synthetic_config_type.full_type,
+                config_type=synthetic_config_type,
+                build_fn=context_manager_fn,
+                framework_wrappers=framework_wrappers_list,
+                discovery_metadata=discovery_metadata,
+            ))
+
+        return context_manager_fn
+
+    return _inner
 
 
 def register_llm_provider(config_type: type[LLMBaseConfigT]):

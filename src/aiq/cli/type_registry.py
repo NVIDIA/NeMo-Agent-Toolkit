@@ -813,6 +813,11 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
             if (short_names[key.local_name] == 1):
                 type_list.append((key.local_name, key.config_type))
 
+        # Ensure we have at least 2 types for the Union
+        if len(type_list) < 2:
+            # Add a dummy type to ensure Union has at least 2 types
+            type_list.append(("_dummy", cls))
+
         # pylint: disable=consider-alternative-union-syntax
         return typing.Union[tuple(typing.Annotated[x_type, Tag(x_id)] for x_id, x_type in type_list)]
 
