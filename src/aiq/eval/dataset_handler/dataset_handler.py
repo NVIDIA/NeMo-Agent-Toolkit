@@ -14,17 +14,27 @@
 # limitations under the License.
 
 import json
+import logging
+import subprocess
+import sys
+from pathlib import Path
 
 import pandas as pd
 
 from aiq.data_models.dataset_handler import EvalDatasetConfig
+from aiq.data_models.dataset_handler import EvalDatasetCsvConfig
 from aiq.data_models.dataset_handler import EvalDatasetJsonConfig
+from aiq.data_models.dataset_handler import EvalDatasetJsonlConfig
+from aiq.data_models.dataset_handler import EvalDatasetParquetConfig
+from aiq.data_models.dataset_handler import EvalDatasetXlsConfig
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.eval.dataset_handler.dataset_downloader import DatasetDownloader
 from aiq.eval.dataset_handler.dataset_filter import DatasetFilter
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
+
+logger = logging.getLogger(__name__)
 
 
 class DatasetHandler:
@@ -108,6 +118,68 @@ class DatasetHandler:
 
         return input_df
 
+    @staticmethod
+    def run_custom_script(dataset_config: EvalDatasetConfig) -> Path | None:
+        """
+        Run a custom script to transform the dataset.
+        Passes the original dataset --file_path and --output_path as arguments along with
+        the kwargs provided in the dataset config. The custom script is expected to write the new
+        dataset to the output_path.
+        """
+        if not dataset_config.custom_script:
+            return None
+
+        script_config = dataset_config.custom_script
+        script_path = script_config.script
+
+        if not script_path.exists():
+            raise FileNotFoundError(f"Custom script {script_path} does not exist.")
+
+        output_path = script_config.output_path
+        # make the output directory if it doesn't exist
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        args = [
+            sys.executable,
+            str(script_path),
+            "--file_path",
+            str(dataset_config.file_path),
+            "--output_path",
+            str(output_path)
+        ]
+
+        if script_config.kwargs:
+            for key, value in script_config.kwargs.items():
+                args.extend([f"--{key}", str(value)])
+
+        display_args = " ".join(f'"{arg}"' if " " in arg else arg for arg in args[1:])
+        logger.info("Running custom script: %s %s", script_path, display_args)
+
+        try:
+            subprocess.run(args, check=True, text=True)
+            if not output_path.exists():
+                logger.warning("Script completed but did not write to expected output path: %s", output_path)
+                return None
+            return output_path
+        except subprocess.CalledProcessError as e:
+            logger.error("Custom script failed: %s", e)
+            raise
+
+    @staticmethod
+    def _get_dataset_config_class_for_format(output_format: str):
+        """Get the appropriate dataset config class based on the output format."""
+        format_to_config_class = {
+            "json": EvalDatasetJsonConfig,
+            "jsonl": EvalDatasetJsonlConfig,
+            "csv": EvalDatasetCsvConfig,
+            "parquet": EvalDatasetParquetConfig,
+            "xls": EvalDatasetXlsConfig,
+        }
+        if output_format not in format_to_config_class:
+            raise ValueError(
+                f"Unsupported output format: {output_format}. Supported formats: {list(format_to_config_class.keys())}")
+        return format_to_config_class[output_format]
+
     def get_eval_input_from_dataset(self, dataset: str) -> EvalInput:
         # read the dataset and convert it to EvalInput
 
@@ -118,8 +190,20 @@ class DatasetHandler:
         downloader = DatasetDownloader(dataset_config=dataset_config)
         downloader.download_dataset()
 
-        parser, kwargs = dataset_config.parser()
+        # Run a custom script to transform the dataset
+        new_file_path = self.run_custom_script(dataset_config)
+
         # Parse the dataset into a DataFrame
+        if new_file_path:
+            # parser for the new file is dependent on the output format
+            # create a new dataset config with the new file path and format
+            output_format = dataset_config.custom_script.output_format
+            if not output_format:
+                raise ValueError("Output format is not provided in the custom script")
+            dataset_config_class = self._get_dataset_config_class_for_format(output_format)
+            dataset_config = dataset_config_class(file_path=new_file_path)
+
+        parser, kwargs = dataset_config.parser()
         input_df = parser(dataset_config.file_path, **kwargs)
 
         # Apply filters and deduplicate

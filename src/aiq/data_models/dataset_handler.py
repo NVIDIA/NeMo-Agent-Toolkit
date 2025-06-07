@@ -17,6 +17,7 @@ import json
 import typing
 from collections.abc import Callable
 from pathlib import Path
+from typing import Literal
 
 import pandas as pd
 from pydantic import BaseModel
@@ -26,6 +27,18 @@ from pydantic import Tag
 
 from aiq.data_models.common import BaseModelRegistryTag
 from aiq.data_models.common import TypedBaseModel
+
+
+class EvalInputCustomScriptConfig(BaseModel):
+    # Path to the script to run, the script is expected to write the new
+    # dataset to the output_path.
+    script: Path
+    # Keyword arguments to pass to the script
+    kwargs: dict[str, str] = {}
+
+    # Path to the new file and format should be provided
+    output_path: Path
+    output_format: Literal["json", "jsonl", "csv", "parquet", "xls"] = "json"
 
 
 class EvalS3Config(BaseModel):
@@ -68,6 +81,8 @@ class EvalDatasetBaseConfig(TypedBaseModel, BaseModelRegistryTag):
 
     remote_file_path: str | None = None  # only for s3
     file_path: Path | str = Path(".tmp/aiq/examples/default/default.json")
+
+    custom_script: EvalInputCustomScriptConfig | None = None
 
 
 class EvalDatasetJsonConfig(EvalDatasetBaseConfig, name="json"):
