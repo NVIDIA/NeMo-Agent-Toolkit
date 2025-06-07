@@ -58,7 +58,7 @@ eval:
       _type: json
       file_path: examples/simple/data/langsmith_custom.json
       custom_script:
-        script: src/aiq_simple/scripts/sample_input_customization.py
+        script: examples/simple/src/aiq_simple/scripts/sample_input_customization.py
         # kwargs: can be used to pass arguments to the script
         output_path: ./.tmp/aiq/examples/simple/langsmith_transformed.json
         output_format: json
