@@ -56,9 +56,10 @@ You are a Triage Agent responsible for diagnosing and troubleshooting system ale
 - Analyze tool outputs before taking any additional action.
 - Stay concise, structured, and actionable."""
 
+
 class CategorizerPrompts:
     # Fixed node in the pipeline, not an agent tool. (no prompt engineering required for this tool description)
-    TOOL_DESCRIPTION = """This is a categorization tool used at the end of the pipeline."""  
+    TOOL_DESCRIPTION = """This is a categorization tool used at the end of the pipeline."""
     PROMPT = """You will be given a system-generated alert triage report. Your job is to read the report carefully and determine the most likely root cause of the issue. Then, categorize the root cause into one of the following predefined categories:
 
 **Valid Categories**
@@ -80,6 +81,7 @@ Ping and curl to the host both failed, and telnet to the monitored port timed ou
 - Base your categorization only on evidence presented in the report.
 - If no category clearly fits, default to `need_investigation`."""
 
+
 class MaintenanceCheckPrompts:
     # Fixed node in the pipeline, not an agent tool. (no prompt engineering required for this tool description)
     TOOL_DESCRIPTION = """Check if a host is under maintenance during the time of an alert to help determine if the alert can be deprioritized."""
@@ -100,6 +102,7 @@ Generate a markdown report in the following format:
 
 ## Alert Status
 (can deprioritize the investigation of the alert, host under maintenance)"""
+
 
 class NetworkConnectivityCheckPrompts:
     TOOL_DESCRIPTION = """This tool checks network connectivity of a host by running ping and socket connection tests. Args: host_id: str"""
@@ -123,6 +126,7 @@ Ping Output:
 
 Telnet Output:
 {telnet_data}"""
+
 
 class MonitoringProcessCheckPrompts:
     TOOL_DESCRIPTION = """This tool checks the status of critical monitoring processes and services on a target host by executing system commands. Args: host_id: str"""
@@ -177,6 +181,7 @@ System Metrics Output:
 {input_data}
 """
 
+
 class HardwareCheckPrompts:
     TOOL_DESCRIPTION = """This tool checks hardware health status using IPMI monitoring to detect power state, hardware degradation, and anomalies that could explain alerts. Args: host_id: str"""
     PROMPT = """You are analyzing IPMI metrics to support host monitoring and alert triage. Use the provided IPMI output to assess overall system status. Your goals are to:
@@ -197,6 +202,7 @@ Hardware Health: Normal / Issues Detected
 Observed Anomalies: [List any irregularities or warning signs]
 Possible Cause of Alert: [e.g., hardware issue, thermal spike, power fluctuation, no clear issue]
 Next Steps: [Recommended actions or checks for further triage]"""
+
 
 class TelemetryMetricsAnalysisAgentPrompts:
     TOOL_DESCRIPTION = """This is a telemetry metrics tool used to monitor remotely collected telemetry data. It checks server heartbeat data to determine whether the server is up and running and analyzes CPU usage patterns over the past 14 days to identify potential CPU issues. Args: host_id: str, alert_type: str"""
@@ -220,11 +226,13 @@ Your response should include:
 - A concise summary of findings
 - Any insights or hypotheses that explain the alert"""
 
+
 class TelemetryMetricsHostHeartbeatCheckPrompts:
     TOOL_DESCRIPTION = """This tool checks if a host's telemetry monitoring service is reporting heartbeat metrics. This tells us if the host is up and running. Args: host_id: str"""
     PROMPT = """The following is the telemetry metrics fetched for the host to see if it's been up and running (if result is empty, then the monitoring service on the host is down):
 {data}
 Based on the data, summarize the fetched data and provide a conclusion of the host's running status."""
+
 
 class TelemetryMetricsHostPerformanceCheckPrompts:
     TOOL_DESCRIPTION = """This tool checks the performance of the host by analyzing the CPU usage timeseries. Args: host_id: str"""

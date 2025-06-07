@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import json
-from unittest.mock import patch
 from unittest.mock import MagicMock
+from unittest.mock import patch
 
 from aiq_alert_triage_agent.host_performance_check_tool import _parse_stdout_lines
 from aiq_alert_triage_agent.prompts import HostPerformanceCheckPrompts
@@ -136,8 +136,7 @@ async def test_parse_stdout_lines_success():
         assert 'builder' in call_args
         assert 'user_prompt' in call_args
         input_data = "\n".join(test_stdout_lines)
-        assert call_args['user_prompt'] == HostPerformanceCheckPrompts.PARSING_PROMPT.format(
-            input_data=input_data)
+        assert call_args['user_prompt'] == HostPerformanceCheckPrompts.PARSING_PROMPT.format(input_data=input_data)
 
 
 async def test_parse_stdout_lines_llm_error():

@@ -28,11 +28,9 @@ from .prompts import HardwareCheckPrompts
 
 
 class HardwareCheckToolConfig(FunctionBaseConfig, name="hardware_check"):
-    description: str = Field(default=HardwareCheckPrompts.TOOL_DESCRIPTION,
-                             description="Description of the tool.")
+    description: str = Field(default=HardwareCheckPrompts.TOOL_DESCRIPTION, description="Description of the tool.")
     llm_name: LLMRef
-    prompt: str = Field(default=HardwareCheckPrompts.PROMPT,
-                        description="Main prompt for the hardware check task.")
+    prompt: str = Field(default=HardwareCheckPrompts.PROMPT, description="Main prompt for the hardware check task.")
     offline_mode: bool = Field(default=True, description="Whether to run in offline model")
 
 

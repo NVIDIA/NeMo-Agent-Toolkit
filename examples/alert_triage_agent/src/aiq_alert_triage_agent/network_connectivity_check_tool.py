@@ -106,8 +106,7 @@ async def network_connectivity_check_tool(config: NetworkConnectivityCheckToolCo
             # Additional LLM reasoning layer on playbook output to provide a summary of the results
             utils.log_header("LLM Reasoning", dash_length=50)
 
-            prompt = config.prompt.format(ping_data=ping_data,
-                                          telnet_data=telnet_data)
+            prompt = config.prompt.format(ping_data=ping_data, telnet_data=telnet_data)
             conclusion = await utils.llm_ainvoke(config, builder, prompt)
 
             utils.logger.debug(conclusion)

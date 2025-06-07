@@ -37,8 +37,7 @@ NO_ONGOING_MAINTENANCE_STR = "No ongoing maintenance found for the host."
 
 
 class MaintenanceCheckToolConfig(FunctionBaseConfig, name="maintenance_check"):
-    description: str = Field(default=MaintenanceCheckPrompts.TOOL_DESCRIPTION,
-                             description="Description of the tool.")
+    description: str = Field(default=MaintenanceCheckPrompts.TOOL_DESCRIPTION, description="Description of the tool.")
     llm_name: LLMRef
     prompt: str = Field(default=MaintenanceCheckPrompts.PROMPT,
                         description="Main prompt for the maintenance check task.")
@@ -250,13 +249,11 @@ async def maintenance_check(config: MaintenanceCheckToolConfig, builder: Builder
         # maintenance info found, summarize alert and return a report (agent execution will be skipped)
         utils.logger.info("Host: [%s] is under maintenance according to the maintenance database", host)
 
-        report = _summarize_alert(
-            llm=llm,
-            prompt_template=config.prompt,
-            alert=alert,
-            maintenance_start_str=maintenance_start_str,
-            maintenance_end_str=maintenance_end_str
-        )
+        report = _summarize_alert(llm=llm,
+                                  prompt_template=config.prompt,
+                                  alert=alert,
+                                  maintenance_start_str=maintenance_start_str,
+                                  maintenance_end_str=maintenance_end_str)
 
         utils.log_footer()
         return report

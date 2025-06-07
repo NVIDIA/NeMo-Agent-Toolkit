@@ -69,8 +69,7 @@ async def telemetry_metrics_host_heartbeat_check_tool(config: TelemetryMetricsHo
             # Additional LLM reasoning layer on playbook output to provide a summary of the results
             utils.log_header("LLM Reasoning", dash_length=30)
 
-            conclusion = await utils.llm_ainvoke(
-                config, builder, user_prompt=config.prompt.format(data=data))
+            conclusion = await utils.llm_ainvoke(config, builder, user_prompt=config.prompt.format(data=data))
 
             utils.logger.debug(conclusion)
             utils.log_footer(dash_length=50)
