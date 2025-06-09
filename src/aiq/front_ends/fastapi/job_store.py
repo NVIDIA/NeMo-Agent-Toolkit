@@ -16,6 +16,7 @@
 import logging
 import os
 import shutil
+import threading
 from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
@@ -40,12 +41,13 @@ class JobStatus(str, Enum):
 class JobInfo(BaseModel):
     job_id: str
     status: JobStatus
-    config_file: str
+    config_file: str | None
     error: str | None
     output_path: str | None
     created_at: datetime
     updated_at: datetime
     expiry_seconds: int
+    output: BaseModel | None = None
 
 
 class JobStore:
@@ -59,8 +61,12 @@ class JobStore:
 
     def __init__(self):
         self._jobs = {}
+        self._lock = threading.Lock()  # Ensure thread safety for job operations
 
-    def create_job(self, config_file: str, job_id: str | None = None, expiry_seconds: int = DEFAULT_EXPIRY) -> str:
+    def create_job(self,
+                   config_file: str | None = None,
+                   job_id: str | None = None,
+                   expiry_seconds: int = DEFAULT_EXPIRY) -> str:
         if job_id is None:
             job_id = str(uuid4())
 
@@ -76,46 +82,62 @@ class JobStore:
                       error=None,
                       output_path=None,
                       expiry_seconds=clamped_expiry)
-        self._jobs[job_id] = job
+
+        with self._lock:
+            self._jobs[job_id] = job
+
         logger.info("Created new job %s with config %s", job_id, config_file)
         return job_id
 
-    def update_status(self, job_id: str, status: str, error: str | None = None, output_path: str | None = None):
+    def update_status(self,
+                      job_id: str,
+                      status: str,
+                      error: str | None = None,
+                      output_path: str | None = None,
+                      output: BaseModel | None = None):
         if job_id not in self._jobs:
             raise ValueError(f"Job {job_id} not found")
 
-        job = self._jobs[job_id]
-        job.status = status
-        job.error = error
-        job.output_path = output_path
-        job.updated_at = datetime.now(UTC)
+        with self._lock:
+            job = self._jobs[job_id]
+            job.status = status
+            job.error = error
+            job.output_path = output_path
+            job.updated_at = datetime.now(UTC)
+            job.output = output
 
     def get_status(self, job_id: str) -> JobInfo | None:
-        return self._jobs.get(job_id)
+        with self._lock:
+            return self._jobs.get(job_id)
 
     def list_jobs(self):
-        return self._jobs
+        with self._lock:
+            return self._jobs
 
     def get_job(self, job_id: str) -> JobInfo | None:
         """Get a job by its ID."""
-        return self._jobs.get(job_id)
+        with self._lock:
+            return self._jobs.get(job_id)
 
     def get_last_job(self) -> JobInfo | None:
         """Get the last created job."""
-        if not self._jobs:
-            logger.info("No jobs found in job store")
-            return None
-        last_job = max(self._jobs.values(), key=lambda job: job.created_at)
-        logger.info("Retrieved last job %s created at %s", last_job.job_id, last_job.created_at)
-        return last_job
+        with self._lock:
+            if not self._jobs:
+                logger.info("No jobs found in job store")
+                return None
+            last_job = max(self._jobs.values(), key=lambda job: job.created_at)
+            logger.info("Retrieved last job %s created at %s", last_job.job_id, last_job.created_at)
+            return last_job
 
     def get_jobs_by_status(self, status: str) -> list[JobInfo]:
         """Get all jobs with the specified status."""
-        return [job for job in self._jobs.values() if job.status == status]
+        with self._lock:
+            return [job for job in self._jobs.values() if job.status == status]
 
     def get_all_jobs(self) -> list[JobInfo]:
         """Get all jobs in the store."""
-        return list(self._jobs.values())
+        with self._lock:
+            return list(self._jobs.values())
 
     def get_expires_at(self, job: JobInfo) -> datetime | None:
         """Get the time for a job to expire."""
@@ -132,7 +154,8 @@ class JobStore:
         now = datetime.now(UTC)
 
         # Filter out active jobs
-        finished_jobs = {job_id: job for job_id, job in self._jobs.items() if job.status not in self.ACTIVE_STATUS}
+        with self._lock:
+            finished_jobs = {job_id: job for job_id, job in self._jobs.items() if job.status not in self.ACTIVE_STATUS}
 
         # Sort finished jobs by updated_at descending
         sorted_finished = sorted(finished_jobs.items(), key=lambda item: item[1].updated_at, reverse=True)
@@ -155,7 +178,6 @@ class JobStore:
                     elif os.path.isdir(job.output_path):
                         shutil.rmtree(job.output_path)
 
-        for job_id in expired_ids:
-            # cleanup output dir if present
-
-            del self._jobs[job_id]
+        with self._lock:
+            for job_id in expired_ids:
+                del self._jobs[job_id]

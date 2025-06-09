@@ -63,9 +63,9 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
         elif json_type == "array" and "items" in field_properties:
             item_properties = field_properties.get("items", {})
             if item_properties.get("type") == "object":
-                item_type = model_from_mcp_schema(name=field_name, mcp_input_schema=field_properties)
+                item_type = model_from_mcp_schema(name=field_name, mcp_input_schema=item_properties)
             else:
-                item_type = _type_map.get(json_type, Any)
+                item_type = _type_map.get(item_properties.get("type", "string"), Any)
             field_type = list[item_type]
         else:
             field_type = _type_map.get(json_type, Any)

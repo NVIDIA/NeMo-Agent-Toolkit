@@ -68,7 +68,7 @@ async def test_telemetry_metrics_host_heartbeat_check_tool():
     # Configure the tool
     config = TelemetryMetricsHostHeartbeatCheckToolConfig(
         llm_name=LLMRef(value="dummy"),
-        test_mode=False,  # Important: testing in live mode
+        offline_mode=False,  # Important: testing in live mode
         metrics_url="http://test-monitoring-system:9090")
 
     # Set up mock builder and LLM

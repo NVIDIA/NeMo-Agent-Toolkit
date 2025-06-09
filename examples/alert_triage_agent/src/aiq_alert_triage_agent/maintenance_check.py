@@ -31,17 +31,16 @@ from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
 
 from . import utils
-from .prompts import PipelineNodePrompts
+from .prompts import MaintenanceCheckPrompts
 
 NO_ONGOING_MAINTENANCE_STR = "No ongoing maintenance found for the host."
 
 
 class MaintenanceCheckToolConfig(FunctionBaseConfig, name="maintenance_check"):
-    description: str = Field(
-        default=("Check if a host is under maintenance during the time of an alert to help determine "
-                 "if the alert can be deprioritized."),
-        description="Description of the tool for the agent.")
+    description: str = Field(default=MaintenanceCheckPrompts.TOOL_DESCRIPTION, description="Description of the tool.")
     llm_name: LLMRef
+    prompt: str = Field(default=MaintenanceCheckPrompts.PROMPT,
+                        description="Main prompt for the maintenance check task.")
     static_data_path: str | None = Field(
         default="examples/alert_triage_agent/data/maintenance_static_dataset.csv",
         description=(
@@ -167,12 +166,13 @@ def _get_active_maintenance(df: pd.DataFrame, host_id: str, alert_time: datetime
     return start_time_str, end_time_str
 
 
-def _summarize_alert(llm, alert, maintenance_start_str, maintenance_end_str):
+def _summarize_alert(llm, prompt_template, alert, maintenance_start_str, maintenance_end_str):
     """
     Generate a summary report for an alert when the affected host is under maintenance.
 
     Args:
         llm: The language model to use for generating the summary
+        prompt_template: The prompt template to use for generating the summary
         alert (dict): Dictionary containing the alert details
         maintenance_start_str (str): Start time of maintenance window in "YYYY-MM-DD HH:MM:SS" format
         maintenance_end_str (str): End time of maintenance window in "YYYY-MM-DD HH:MM:SS" format,
@@ -181,8 +181,8 @@ def _summarize_alert(llm, alert, maintenance_start_str, maintenance_end_str):
     Returns:
         str: A markdown-formatted report summarizing the alert and maintenance status
     """
-    sys_prompt = PipelineNodePrompts.MAINTENANCE_CHECK_PROMPT.format(maintenance_start_str=maintenance_start_str,
-                                                                     maintenance_end_str=maintenance_end_str)
+    sys_prompt = prompt_template.format(maintenance_start_str=maintenance_start_str,
+                                        maintenance_end_str=maintenance_end_str)
     prompt_template = ChatPromptTemplate([("system", sys_prompt), MessagesPlaceholder("msgs")])
     summarization_chain = prompt_template | llm
     alert_json_str = json.dumps(alert)
@@ -249,7 +249,11 @@ async def maintenance_check(config: MaintenanceCheckToolConfig, builder: Builder
         # maintenance info found, summarize alert and return a report (agent execution will be skipped)
         utils.logger.info("Host: [%s] is under maintenance according to the maintenance database", host)
 
-        report = _summarize_alert(llm, alert, maintenance_start_str, maintenance_end_str)
+        report = _summarize_alert(llm=llm,
+                                  prompt_template=config.prompt,
+                                  alert=alert,
+                                  maintenance_start_str=maintenance_start_str,
+                                  maintenance_end_str=maintenance_end_str)
 
         utils.log_footer()
         return report

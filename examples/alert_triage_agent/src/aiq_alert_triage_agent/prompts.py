@@ -57,8 +57,10 @@ You are a Triage Agent responsible for diagnosing and troubleshooting system ale
 - Stay concise, structured, and actionable."""
 
 
-class PipelineNodePrompts:
-    CATEGORIZER_PROMPT = """You will be given a system-generated alert triage report. Your job is to read the report carefully and determine the most likely root cause of the issue. Then, categorize the root cause into one of the following predefined categories:
+class CategorizerPrompts:
+    # Fixed node in the pipeline, not an agent tool. (no prompt engineering required for this tool description)
+    TOOL_DESCRIPTION = """This is a categorization tool used at the end of the pipeline."""
+    PROMPT = """You will be given a system-generated alert triage report. Your job is to read the report carefully and determine the most likely root cause of the issue. Then, categorize the root cause into one of the following predefined categories:
 
 **Valid Categories**
 - `software`: The alert was triggered due to a malfunctioning or inactive monitoring service (e.g., Telegraf not running).
@@ -79,7 +81,11 @@ Ping and curl to the host both failed, and telnet to the monitored port timed ou
 - Base your categorization only on evidence presented in the report.
 - If no category clearly fits, default to `need_investigation`."""
 
-    MAINTENANCE_CHECK_PROMPT = """User will provide you with a system alert represented in JSON format. You know for a fact that there is maintenance happening for the host. Maintenance start time for this host is : [{maintenance_start_str}]; end time is: [{maintenance_end_str}] (end time empty means that there is not yet a set end time for the maintenance on the host)
+
+class MaintenanceCheckPrompts:
+    # Fixed node in the pipeline, not an agent tool. (no prompt engineering required for this tool description)
+    TOOL_DESCRIPTION = """Check if a host is under maintenance during the time of an alert to help determine if the alert can be deprioritized."""
+    PROMPT = """User will provide you with a system alert represented in JSON format. You know for a fact that there is maintenance happening for the host. Maintenance start time for this host is : [{maintenance_start_str}]; end time is: [{maintenance_end_str}] (end time empty means that there is not yet a set end time for the maintenance on the host)
 Generate a markdown report in the following format:
 
 ## Alert Summary
@@ -98,8 +104,9 @@ Generate a markdown report in the following format:
 (can deprioritize the investigation of the alert, host under maintenance)"""
 
 
-class ToolReasoningLayerPrompts:
-    NETWORK_CONNECTIVITY_CHECK = """You are assisting with alert triage by checking the network connectivity status of a host. Use the outputs from `ping` and `telnet` commands to determine whether the host is reachable. If connectivity issues are detected, analyze the possible root causes and provide a structured summary of your findings.
+class NetworkConnectivityCheckPrompts:
+    TOOL_DESCRIPTION = """This tool checks network connectivity of a host by running ping and socket connection tests. Args: host_id: str"""
+    PROMPT = """You are assisting with alert triage by checking the network connectivity status of a host. Use the outputs from `ping` and `telnet` commands to determine whether the host is reachable. If connectivity issues are detected, analyze the possible root causes and provide a structured summary of your findings.
 
 Instructions:
 1. Interpret the `ping` and `telnet` results to assess host reachability.
@@ -120,7 +127,10 @@ Ping Output:
 Telnet Output:
 {telnet_data}"""
 
-    MONITORING_PROCESS_CHECK = """You are checking whether the telegraf service is running on the server. Use the monitoring output below to verify its status. If it’s not running, identify possible reasons and assess the impact.
+
+class MonitoringProcessCheckPrompts:
+    TOOL_DESCRIPTION = """This tool checks the status of critical monitoring processes and services on a target host by executing system commands. Args: host_id: str"""
+    PROMPT = """You are checking whether the telegraf service is running on the server. Use the monitoring output below to verify its status. If it’s not running, identify possible reasons and assess the impact.
 
 Instructions:
 1. Check if the telegraf process is present and active.
@@ -136,7 +146,10 @@ Format your response as a structured summary:
 Monitoring Output:
 {input_data}"""
 
-    HOST_PERFORMANCE_CHECK_PARSING = """You are given system performance data captured from a host. Your task is to extract and organize the information into a clean, structured JSON format. The input contains system details and performance metrics, such as CPU, memory, and disk I/O.
+
+class HostPerformanceCheckPrompts:
+    TOOL_DESCRIPTION = """This tool retrieves CPU usage, memory usage, and hardware I/O usage details for a given host. Args: host_id: str"""
+    PARSING_PROMPT = """You are given system performance data captured from a host. Your task is to extract and organize the information into a clean, structured JSON format. The input contains system details and performance metrics, such as CPU, memory, and disk I/O.
 
 Follow these instructions:
 
@@ -148,8 +161,7 @@ Follow these instructions:
 
 Here is the input data:
 {input_data}"""
-
-    HOST_PERFORMANCE_CHECK_ANALYSIS = """You are analyzing system metrics to assess CPU and memory usage. Use the output below to determine whether CPU or memory usage is abnormally high, identify which processes are consuming the most resources, and assess whether the usage patterns could explain a recent alert.
+    ANALYSIS_PROMPT = """You are analyzing system metrics to assess CPU and memory usage. Use the output below to determine whether CPU or memory usage is abnormally high, identify which processes are consuming the most resources, and assess whether the usage patterns could explain a recent alert.
 
 Instructions:
 1. Evaluate overall CPU and memory usage levels.
@@ -169,7 +181,10 @@ System Metrics Output:
 {input_data}
 """
 
-    HARDWARE_CHECK = """You are analyzing IPMI metrics to support host monitoring and alert triage. Use the provided IPMI output to assess overall system status. Your goals are to:
+
+class HardwareCheckPrompts:
+    TOOL_DESCRIPTION = """This tool checks hardware health status using IPMI monitoring to detect power state, hardware degradation, and anomalies that could explain alerts. Args: host_id: str"""
+    PROMPT = """You are analyzing IPMI metrics to support host monitoring and alert triage. Use the provided IPMI output to assess overall system status. Your goals are to:
 
 1. Determine the system's current power state.
 2. Identify any signs of hardware degradation or failure.
@@ -189,8 +204,9 @@ Possible Cause of Alert: [e.g., hardware issue, thermal spike, power fluctuation
 Next Steps: [Recommended actions or checks for further triage]"""
 
 
-class TelemetryMetricsAnalysisPrompts:
-    AGENT = """You arg a helpful alert triage assistant. Your task is to investigate an alert that was just triggered on a specific host. You will be given two inputs:
+class TelemetryMetricsAnalysisAgentPrompts:
+    TOOL_DESCRIPTION = """This is a telemetry metrics tool used to monitor remotely collected telemetry data. It checks server heartbeat data to determine whether the server is up and running and analyzes CPU usage patterns over the past 14 days to identify potential CPU issues. Args: host_id: str, alert_type: str"""
+    PROMPT = """You arg a helpful alert triage assistant. Your task is to investigate an alert that was just triggered on a specific host. You will be given two inputs:
 - `host_id`: the identifier of the host where the alert occurred.
 - `alert_type`: the type of alert that triggered.
 
@@ -210,11 +226,17 @@ Your response should include:
 - A concise summary of findings
 - Any insights or hypotheses that explain the alert"""
 
-    HOST_HEARTBEAT_CHECK = """The following is the telemetry metrics fetched for the host to see if it's been up and running (if result is empty, then the monitoring service on the host is down):
+
+class TelemetryMetricsHostHeartbeatCheckPrompts:
+    TOOL_DESCRIPTION = """This tool checks if a host's telemetry monitoring service is reporting heartbeat metrics. This tells us if the host is up and running. Args: host_id: str"""
+    PROMPT = """The following is the telemetry metrics fetched for the host to see if it's been up and running (if result is empty, then the monitoring service on the host is down):
 {data}
 Based on the data, summarize the fetched data and provide a conclusion of the host's running status."""
 
-    HOST_PERFORMANCE_CHECK = """You are an expert on analyzing CPU usage timeseries. Periodic usage peaks are expected benign system behavior.
+
+class TelemetryMetricsHostPerformanceCheckPrompts:
+    TOOL_DESCRIPTION = """This tool checks the performance of the host by analyzing the CPU usage timeseries. Args: host_id: str"""
+    PROMPT = """You are an expert on analyzing CPU usage timeseries. Periodic usage peaks are expected benign system behavior.
 User will provide data in the format of a list of lists, where each sublist contains two elements: timestamp and CPU usage percentage. User will also provide statistics on the timeseries. Write a markdown report about what was observed in the timeseries.
 
 Example format:
