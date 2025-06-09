@@ -39,6 +39,8 @@ This document provides a comprehensive reference for all available Cursor rules 
     - [General Workflow Guidelines](#general-workflow-guidelines)
     - [Adding Functions to Workflows](#adding-functions-to-workflows)
     - [Adding Tools to Workflows](#adding-tools-to-workflows)
+  - [Agent Rules](#agent-rules)
+    - [AIQ Agents Integration \& Selection](#aiq-agents-integration--selection)
   - [Quick Reference](#quick-reference)
   - [Usage Tips](#usage-tips)
 
@@ -358,6 +360,28 @@ async def register_custom_tool(config: CustomToolConfig, builder: Builder):
 
 ---
 
+## Agent Rules
+
+### AIQ Agents Integration & Selection
+
+**Rule ID**: `aiq-agents/general`  
+**Purpose**: Guidelines for integrating or selecting ReAct, Tool-Calling, Reasoning, or ReWOO agents within AIQ workflows.
+
+**Prompt**:
+```
+Help me choose and configure the correct AIQ agent (ReAct, Tool-Calling, ReWOO, or Reasoning) for my workflow.
+```
+
+**Capabilities**:
+- Integration steps for each agent type
+- Configuration parameters for each agent
+- Decision matrix for selecting the appropriate agent
+- Best practices and known limitations
+
+**Related Documentation**: [Agent Docs](../workflows/about/index.md)
+
+---
+
 ## Quick Reference
 
 | Rule Category | Rule ID | Primary Use Case |
@@ -374,6 +398,7 @@ async def register_custom_tool(config: CustomToolConfig, builder: Builder):
 | Workflow | `aiq-workflows/general` | Workflow design |
 | Workflow | `aiq-workflows/add-functions` | Function development |
 | Workflow | `aiq-workflows/add-tools` | Tool integration |
+| Agents | `aiq-agents/general` | Agent selection & integration |
 
 ## Usage Tips
 
