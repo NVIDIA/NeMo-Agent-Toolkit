@@ -144,6 +144,8 @@ class DatasetHandler:
             str(script_path),
             "--input_path",
             str(dataset_config.file_path),
+            "--input_format",
+            str(dataset_config.type),
             "--output_path",
             str(output_path),
             "--output_format",

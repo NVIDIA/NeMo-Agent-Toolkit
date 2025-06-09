@@ -34,12 +34,23 @@ def transform_record(raw: dict, index: int) -> dict:
     }
 
 
-def transform_dataset(input_path: Path, output_path: Path, output_format: str, max_rows: int | None = None):
+def transform_dataset(input_path: Path,
+                      input_format: str,
+                      output_path: Path,
+                      output_format: str,
+                      max_rows: int | None = None):
     """
     Transform the input dataset to a JSON or CSV file that can be used by the AIQ evaluation system.
     """
-    with input_path.open() as infile:
-        original_data = json.load(infile)
+    if input_format == "json":
+        with input_path.open() as infile:
+            original_data = json.load(infile)
+    elif input_format == "csv":
+        with input_path.open() as infile:
+            reader = csv.DictReader(infile)
+            original_data = list(reader)
+    else:
+        raise ValueError(f"Unsupported input format: {input_format}")
 
     if not isinstance(original_data, list):
         raise ValueError("Expected input JSON to be a list of records")
@@ -64,6 +75,11 @@ def transform_dataset(input_path: Path, output_path: Path, output_format: str, m
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_path", type=Path, required=True, help="Path to original input JSON")
+    parser.add_argument("--input_format",
+                        type=str,
+                        required=True,
+                        choices=["json", "csv"],
+                        help="Input format: json or csv")
     parser.add_argument("--output_path", type=Path, required=True, help="Path to transformed output file")
     parser.add_argument("--output_format",
                         type=str,
@@ -72,7 +88,7 @@ def main():
                         help="Output format: json or csv")
     parser.add_argument("--max_rows", type=int, default=None, help="Maximum number of records to process")
     args = parser.parse_args()
-    transform_dataset(args.input_path, args.output_path, args.output_format, args.max_rows)
+    transform_dataset(args.input_path, args.input_format, args.output_path, args.output_format, args.max_rows)
 
 
 if __name__ == "__main__":

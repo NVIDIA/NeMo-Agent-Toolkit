@@ -131,6 +131,36 @@ eval:
               - sympy__sympy-21055
 ```
 
+## Customizing the Input Dataset
+In some cases, the input dataset may not be in a format directly usable by the AIQ evaluation system—for example, it may be nested inside a larger structure or stored in a different format. To handle such cases, you can provide a `custom script` that transforms the dataset into a compatible format.
+
+**Example:**
+`examples/simple/configs/eval_custom_input_config.yml`:
+```yaml
+eval:
+  general:
+    dataset:
+      _type: json
+      file_path: examples/simple/data/langsmith.json
+      custom_script:
+        script: examples/simple/src/aiq_simple/scripts/sample_input_customization.py
+        kwargs:
+          max_rows: 10
+        output_path: ./.tmp/aiq/examples/simple/langsmith_transformed.csv
+        output_format: csv
+```
+In this example, `sample_input_customization.py` is a script that reads a JSON file, transforms the data, and writes it to a CSV file that the AIQ evaluation system can consume.
+
+**Custom Script Arguments:**
+The custom script is called with the following arguments:
+- `--input_path`: Path to the original input dataset, `eval.general.dataset.file_path` in the config.
+- `--input_format`: Format of the original dataset, `eval.general.dataset.format` in the config.
+- `--output_path`: Path where the transformed dataset should be saved, `eval.general.dataset.custom_script.output_path` in the config.
+- `--output_format`: Target format of the transformed dataset, `eval.general.dataset.custom_script.output_format` in the config.
+- any additional arguments specified in the `eval.general.dataset.custom_script.kwargs` section.
+
+The transformed dataset should be in the configured `output_format` and written to the `output_path`.
+
 ## AIQ Toolkit Built-in Evaluators
 AIQ toolkit provides the following built-in evaluator:
 - `ragas` - An evaluator to run and evaluate RAG-like workflows using the public RAGAS API.
