@@ -34,6 +34,9 @@ This example demonstrates how to build an intelligent alert triage system using 
       - [Functions](#functions)
       - [Workflow](#workflow)
       - [LLMs](#llms)
+      - [Evaluation](#evaluation)
+        - [General](#general)
+        - [Evaluators](#evaluators)
   - [Installation and setup](#installation-and-setup)
     - [Install this workflow](#install-this-workflow)
     - [Set up environment variables](#set-up-environment-variables)
@@ -41,7 +44,7 @@ This example demonstrates how to build an intelligent alert triage system using 
     - [Running in a live environment](#running-in-a-live-environment)
       - [Note on credentials and access](#note-on-credentials-and-access)
     - [Running live with a HTTP server listening for alerts](#running-live-with-a-http-server-listening-for-alerts)
-    - [Running in test mode](#running-in-test-mode)
+    - [Running in offline mode](#running-in-offline-mode)
 
 
 ## Use case description
@@ -149,7 +152,7 @@ The triage agent may call one or more of the following tools based on the alert 
 
 #### Functions
 
-Each entry in the `functions` section defines a tool or sub-agent that can be invoked by the main workflow agent. Tools can operate in test mode, using mocked data for simulation.
+Each entry in the `functions` section defines a tool or sub-agent that can be invoked by the main workflow agent. Tools can operate in offline mode, using mocked data for simulation.
 
 Example:
 
@@ -157,12 +160,12 @@ Example:
 hardware_check:
   _type: hardware_check
   llm_name: tool_reasoning_llm
-  test_mode: true
+  offline_mode: true
 ```
 
 * `_type`: Identifies the name of the tool (matching the names in the tools' python files.)
 * `llm_name`: LLM used to support the tool’s reasoning of the raw fetched data.
-* `test_mode`: If `true`, the tool uses predefined mock results for offline testing.
+* `offline_mode`: If `true`, the tool uses predefined mock results for offline testing.
 
 Some entries, like `telemetry_metrics_analysis_agent`, are sub-agents that coordinate multiple tools:
 
@@ -185,19 +188,17 @@ workflow:
     - hardware_check
     - ...
   llm_name: ata_agent_llm
-  test_mode: true
-  test_data_path: ...
+  offline_mode: true
+  offline_data_path: ...
   benign_fallback_data_path: ...
-  test_output_path: ...
 ```
 
 * `_type`: The name of the agent (matching the agent's name in `register.py`).
 * `tool_names`: List of tools (from the `functions` section) used in the triage process.
 * `llm_name`: Main LLM used by the agent for reasoning, tool-calling, and report generation.
-* `test_mode`: Enables test execution using predefined input/output instead of real systems.
-* `test_data_path`: CSV file containing test alerts and their corresponding mocked tool responses.
+* `offline_mode`: Enables offline execution using predefined input/output instead of real systems.
+* `offline_data_path`: CSV file containing offline test alerts and their corresponding mocked tool responses.
 * `benign_fallback_data_path`: JSON file with baseline healthy system responses for tools not explicitly mocked.
-* `test_output_path`: Output CSV file path where the agent writes triage results. Each processed alert adds a new `output` column with the generated report.
 
 #### LLMs
 
@@ -218,6 +219,50 @@ ata_agent_llm:
 * `temperature`, `top_p`, `max_tokens`: LLM generation parameters (passed directly into the API).
 
 Each tool or agent can use a dedicated LLM tailored for its task.
+
+#### Evaluation
+
+The `eval` section defines how the system evaluates pipeline outputs using predefined metrics. It includes the location of the dataset used for evaluation and the configuration of evaluation metrics.
+
+```yaml
+eval:
+  general:
+    output_dir: .tmp/aiq/examples/alert_triage_agent/output/
+    dataset:
+      _type: json
+      file_path: examples/alert_triage_agent/data/offline_data.json
+  evaluators:
+    rag_accuracy:
+      _type: ragas
+      metric: AnswerAccuracy
+      llm_name: nim_rag_eval_llm
+    rag_groundedness:
+      _type: ragas
+      metric: ResponseGroundedness
+      llm_name: nim_rag_eval_llm
+    rag_relevance:
+      _type: ragas
+      metric: ContextRelevance
+      llm_name: nim_rag_eval_llm
+```
+
+##### General
+
+* `output_dir`: Directory where outputs (e.g., pipeline output texts, evaluation scores, agent traces) are saved.
+* `dataset.file_path`: Path to the JSON dataset used for evaluation.
+
+##### Evaluators
+
+Each entry under `evaluators` defines a specific metric to evaluate the pipeline's output. All listed evaluators use the `ragas` (Retrieval-Augmented Generation Assessment) framework.
+
+* `metric`: The specific `ragas` metric used to assess the output.
+
+  * `AnswerAccuracy`: Measures whether the agent's response matches the expected answer.
+  * `ResponseGroundedness`: Assesses whether the response is supported by retrieved context.
+  * `ContextRelevance`: Evaluates whether the retrieved context is relevant to the query.
+* `llm_name`: The name of the LLM listed in the above `llms` section that is used to do the evaluation. This LLM should be capable of understanding both the context and generated responses to make accurate assessments.
+
+The list of evaluators can be extended or swapped out depending on your evaluation goals.
 
 ## Installation and setup
 
@@ -240,7 +285,7 @@ export $(grep -v '^#' .env | xargs)
 ```
 
 ## Example Usage
-You can run the agent in [test mode](#running-in-test-mode) or [live mode](#running-live-with-a-http-server-listening-for-alerts). Test mode allows you to evaluate the agent in a controlled, offline environment using synthetic data. Live mode allows you to run the agent in a real environment.
+You can run the agent in [offline mode](#running-in-offline-mode) or [live mode](#running-live-with-a-http-server-listening-for-alerts). offline mode allows you to evaluate the agent in a controlled, offline environment using synthetic data. Live mode allows you to run the agent in a real environment.
 
 ### Running in a live environment
 In live mode, each tool used by the triage agent connects to real systems to collect data. These systems can include:
@@ -262,11 +307,11 @@ To run the agent live, follow these steps:
 
    If your environment includes unique systems or data sources, you can define new tools or modify existing ones. This allows your triage agent to pull in the most relevant data for your alerts and infrastructure.
 
-3. **Disable test mode**
+3. **Disable offline mode**
 
-   Set `test_mode: false` in the workflow section and for each tool in the functions section of your config file to ensure the agent uses real data instead of synthetic test datasets.
+   Set `offline_mode: false` in the workflow section and for each tool in the functions section of your config file to ensure the agent uses real data instead of offline datasets.
 
-   You can also selectively keep some tools in test mode by leaving their `test_mode: true` for more granular testing.
+   You can also selectively keep some tools in offline mode by leaving their `offline_mode: true` for more granular testing.
 
 4. **Run the agent with a real alert**
 
@@ -371,33 +416,35 @@ To use this mode, first ensure you have configured your live environment as desc
 
    You can monitor the progress of the triage process through these logs and the generated reports.
 
-### Running in test mode
-Test mode lets you evaluate the triage agent in a controlled, offline environment using synthetic data. Instead of calling real systems, the agent uses predefined inputs to simulate alerts and tool outputs, ideal for development, debugging, and tuning.
+### Running in offline mode
+offline mode lets you evaluate the triage agent in a controlled, offline environment using synthetic data. Instead of calling real systems, the agent uses predefined inputs to simulate alerts and tool outputs, ideal for development, debugging, and tuning.
 
-To run in test mode:
+To run in offline mode:
 1. **Set required environment variables**
 
-   Make sure `test_mode: true` is set in both the `workflow` section and individual tool sections of your config file (see [Understanding the config](#understanding-the-config) section).
+   Make sure `offline_mode: true` is set in both the `workflow` section and individual tool sections of your config file (see [Understanding the config](#understanding-the-config) section).
 
-1. **How it works**
-- The **main test CSV** provides both alert details and a mock environment. For each alert, expected tool return values are included. These simulate how the environment would behave if the alert occurred on a real system.
-- The **benign fallback dataset** fills in tool responses when the agent calls a tool not explicitly defined in the alert's test data. These fallback responses mimic healthy system behavior and help provide the "background scenery" without obscuring the true root cause.
+2. **How it works**
+- The **main CSV offline dataset** (`offline_data_path`) provides both alert details and a mock environment. For each alert, expected tool return values are included. These simulate how the environment would behave if the alert occurred on a real system.
+   - The **JSON offline dataset** (`eval.general.dataset.filepath` in the config) contains a subset of the information from the main CSV: the alert inputs and their associated ground truth root causes. It is used to run `aiq eval`, focusing only on the essential data needed for running the workflow, while the full CSV retains the complete mock environment context.
+   - At runtime, the system links each alert in the JSON dataset to its corresponding context in the CSV using the unique host IDs included in both datasets.
+- The **benign fallback dataset** fills in tool responses when the agent calls a tool not explicitly defined in the alert's offline data. These fallback responses mimic healthy system behavior and help provide the "background scenery" without obscuring the true root cause.
 
-3. **Run the agent in test mode**
+3. **Run the agent in offline mode**
 
    Run the agent with:
    ```bash
-   aiq run --config_file=examples/alert_triage_agent/configs/config_test_mode.yml --input "test_mode"
+   aiq eval --config_file=examples/alert_triage_agent/configs/config_offline_mode.yml
    ```
-    Note: The `--input` value is ignored in test mode.
 
     The agent will:
-   - Load alerts from the test dataset specified in `test_data_path` in the workflow config
-   - Simulate an investigation using predefined tool results
-   - Iterate through all the alerts in the dataset
-   - Save reports as a new column in a copy of the test CSV file to the path specified in `test_output_path` in the workflow config
+   - Load alerts from the JSON dataset specified in the config `eval.general.dataset.filepath`
+   - Investigate the alerts using predefined tool responses in the CSV file (path set in the config `workflow.offline_data_path`)
+   - Process all alerts in the dataset in parallel
+   - Run evaluation for the metrics specified in the config `eval.evaluators`
+   - Save the pipeline output along with the evaluation results to the path specified by `eval.output_dir`
 
-2. **Understanding the output**
+4. **Understanding the output**
 
    The output file will contain a new column named `output`, which includes the markdown report generated by the agent for each data point (i.e., each row in the CSV). Navigate to that rightmost `output` column to view the report for each test entry.
 

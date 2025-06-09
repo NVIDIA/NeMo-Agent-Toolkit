@@ -142,9 +142,18 @@ eval:
 
 A judge LLM is used to evaluate the trajectory produced by the workflow, taking into account the tools available during execution. It returns a floating-point score between 0 and 1, where 1.0 indicates a perfect trajectory.
 
+To configure the judge LLM, define it in the `llms` section of the configuration file, and reference it in the evaluator configuration using the `llm_name` key. 
+
 It is recommended to set `max_tokens` to 1024 for the judge LLM to ensure sufficient context for evaluation.
 
-To configure the judge LLM, define it in the `llms` section of the configuration file, and reference it in the evaluator configuration using the `llm_name` key.
+Note: Trajectory evaluation may result in frequent LLM API calls. If you encounter rate-limiting errors (such as `[429] Too Many Requests` error), you can reduce the number of concurrent requests by adjusting the `max_concurrency` parameter in your config. For example:
+
+```yaml
+eval:
+  general:
+    max_concurrency: 2
+```
+This setting reduces the number of concurrent requests to avoid overwhelming the LLM endpoint.
 
 ## Workflow Output
 The `aiq eval` command runs the workflow on all the entries in the `dataset`. The output of these runs is stored in a file named `workflow_output.json` under the `output_dir` specified in the configuration file.
