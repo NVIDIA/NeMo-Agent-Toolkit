@@ -186,12 +186,12 @@ def register_simple_function(workflow_name: str, framework_wrappers: list[LLMFra
         from .type_registry import GlobalTypeRegistry
         from .type_registry import RegisteredFunctionInfo
 
-        # Get module information 
+        # Get module information
         module = inspect.getmodule(fn)
         module_name = module.__name__ if module else "unknown"
 
         # Create simple class name using workflow name
-        class_name = f"SimpleFunctionConfig_{workflow_name}"
+        class_name = f"{workflow_name}WorkflowConfig"
 
         # Create synthetic config class dynamically
         # We need to properly call __init_subclass__ with the name parameter
@@ -210,9 +210,8 @@ def register_simple_function(workflow_name: str, framework_wrappers: list[LLMFra
             framework_wrappers_list = list(framework_wrappers)
 
         discovery_metadata = DiscoveryMetadata.from_fn(fn=fn,
-                                                       wrapper_type="simple_function",
-                                                       component_type=AIQComponentEnum.FUNCTION,
-                                                       component_name=workflow_name)
+                                                       component_name=workflow_name,
+                                                       component_type=AIQComponentEnum.FUNCTION)
 
         GlobalTypeRegistry.get().register_function(
             RegisteredFunctionInfo(
@@ -432,9 +431,9 @@ def register_tool_wrapper(wrapper_type: LLMFrameworkEnum | str):
     def _inner(fn: ToolWrapperBuildCallableT) -> ToolWrapperBuildCallableT:
         from .type_registry import GlobalTypeRegistry
 
-        discovery_metadata = DiscoveryMetadata.from_fn_wrapper(fn=fn,
-                                                               wrapper_type=wrapper_type,
-                                                               component_type=AIQComponentEnum.TOOL_WRAPPER)
+        discovery_metadata = DiscoveryMetadata.from_tool_wrapper(fn=fn,
+                                                                 wrapper_type=wrapper_type,
+                                                                 component_type=AIQComponentEnum.TOOL_WRAPPER)
         GlobalTypeRegistry.get().register_tool_wrapper(
             RegisteredToolWrapper(llm_framework=wrapper_type, build_fn=fn, discovery_metadata=discovery_metadata))
 
