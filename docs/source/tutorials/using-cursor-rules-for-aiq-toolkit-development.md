@@ -47,8 +47,8 @@ AIQ Toolkit provides a comprehensive set of Cursor rules to assist with developm
 
 - **[Foundation Rules](../reference/cursor-rules-reference.md#foundation-rules)**: Code quality standards and cursor rules management
 - **[Setup and Installation Rules](../reference/cursor-rules-reference.md#setup-and-installation-rules)**: Environment setup and toolkit installation
-- **[CLI Command Rules](../reference/cursor-rules-api.md#cli-command-rules)**: All AIQ CLI operations and commands
-- **[Workflow Development Rules](../reference/cursor-rules-api.md#workflow-development-rules)**: Function and tool development for workflows
+- **[CLI Command Rules](../reference/cursor-rules-reference.md#cli-command-rules)**: All AIQ CLI operations and commands
+- **[Workflow Development Rules](../reference/cursor-rules-reference.md#workflow-development-rules)**: Function and tool development for workflows
 
 For a **complete list of all tasks** that Cursor rules can handle, including detailed prompts, examples, and capabilities for each rule, refer to the **[Cursor Rules Reference](../reference/cursor-rules-reference.md)**.
 
