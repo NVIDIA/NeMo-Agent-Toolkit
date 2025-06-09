@@ -13,11 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+import textwrap
+
 import pandas as pd
 import pytest
 
 from aiq.data_models.dataset_handler import EvalDatasetJsonConfig
 from aiq.data_models.dataset_handler import EvalDatasetStructureConfig
+from aiq.data_models.dataset_handler import EvalInputCustomScriptConfig
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
@@ -278,3 +282,92 @@ def test_filter_intermediate_steps(dataset_handler, mock_intermediate_steps):
     assert filtered_steps[1]["payload"]["event_type"] == IntermediateStepType.TOOL_START, \
         "Second step should be TOOL_START"
     assert filtered_steps[2]["payload"]["event_type"] == IntermediateStepType.TOOL_END, "Third step should be TOOL_END"
+
+
+@pytest.fixture
+def dataset_config_with_mock_script(tmp_path):
+    # Prepare dummy input file
+    input_path = tmp_path / "input.json"
+    input_path.write_text(
+        json.dumps([{
+            "content": {
+                "question_text": "What is AI?", "answer_text": "Artificial Intelligence."
+            }
+        }]))
+
+    # Write a mock transformation script
+    script_path = tmp_path / "mock_script.py"
+    script_path.write_text(
+        textwrap.dedent("""
+        import argparse
+        import json
+        import csv
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--input_path", required=True)
+        parser.add_argument("--input_format", required=True)
+        parser.add_argument("--output_path", required=True)
+        parser.add_argument("--output_format", required=True)
+        parser.add_argument("--max_rows", type=int, default=None)
+        args = parser.parse_args()
+
+        with open(args.output_path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=["id", "question", "answer"])
+            writer.writeheader()
+            writer.writerow({"id": "1", "question": "What is AI?", "answer": "Artificial Intelligence."})
+    """))
+
+    output_path = tmp_path / "output.csv"
+
+    dataset_config = EvalDatasetJsonConfig(file_path=input_path,
+                                           custom_script=EvalInputCustomScriptConfig(script=script_path,
+                                                                                     output_path=output_path,
+                                                                                     output_format="csv",
+                                                                                     kwargs={"max_rows": 1}))
+    return dataset_config
+
+
+def test_run_custom_script_with_mock(dataset_config_with_mock_script):
+    """ Run a custom script on the input dataset and validate the output """
+    handler = DatasetHandler(dataset_config_with_mock_script, reps=1)
+    output_path = handler.run_custom_script(dataset_config_with_mock_script)
+    assert output_path.exists()
+    assert output_path.is_file()
+
+    contents = output_path.read_text()
+    assert "What is AI?" in contents
+    assert "Artificial Intelligence." in contents
+
+
+@pytest.fixture
+def failing_dataset_config(tmp_path):
+    # Create dummy input path
+    input_path = tmp_path / "input.json"
+    input_path.write_text("[]")
+
+    # Write a script that exits with an error
+    script_path = tmp_path / "fail_script.py"
+    script_path.write_text(textwrap.dedent("""
+        import sys
+        sys.exit(1)
+    """))
+
+    output_path = tmp_path / "output.csv"
+
+    return EvalDatasetJsonConfig(file_path=input_path,
+                                 custom_script=EvalInputCustomScriptConfig(
+                                     script=script_path,
+                                     output_path=output_path,
+                                     output_format="csv",
+                                 ))
+
+
+def test_custom_script_failure_raises(failing_dataset_config):
+    """ Test error handling if the custom script execution fails """
+    handler = DatasetHandler(failing_dataset_config)
+
+    with pytest.raises(Exception) as exc_info:
+        handler.run_custom_script(failing_dataset_config)
+
+    # assert that the exception is raised
+    assert "Custom script failed" in str(exc_info.value) or "exit status" in str(exc_info.value)

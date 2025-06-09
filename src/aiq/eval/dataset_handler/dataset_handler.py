@@ -125,6 +125,8 @@ class DatasetHandler:
         Passes the original dataset (--input_path) and (--output_path/--output_format) as
         arguments along with the kwargs provided in the dataset config. The custom script is
         expected to write the new dataset to the output_path with the output_format.
+
+        If the custom script fails an exception is raised
         """
         if not dataset_config.custom_script:
             return None
@@ -160,7 +162,8 @@ class DatasetHandler:
         logger.info("Running custom script: %s %s", script_path, display_args)
 
         try:
-            subprocess.run(args, check=True, text=True)
+            output = subprocess.run(args, check=True, text=True, capture_output=True)
+            logger.info("Custom script output: %s", output.stdout)
             if not output_path.exists():
                 logger.warning("Script completed but did not write to expected output path: %s", output_path)
                 return None
