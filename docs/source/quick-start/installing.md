@@ -22,6 +22,7 @@ This guide will help you set up your NVIDIA Agent Intelligence (AIQ) toolkit dev
 ## Supported LLM APIs:
 - NIM (such as Llama-3.1-70b-instruct and Llama-3.3-70b-instruct)
 - OpenAI
+- AWS Bedrock
 
 ## Framework Integrations
 

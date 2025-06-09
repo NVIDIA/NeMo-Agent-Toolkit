@@ -1,6 +1,6 @@
 ---
 description: Follow those rules when user requests to evaluate a workflow
-globs:
+globs: 
 alwaysApply: false
 ---
 # AIQ Evaluation Commands
@@ -123,6 +123,62 @@ evaluation:
     - "bleu_score"
     - "semantic_similarity"
 ```
+
+## Handling Missing Evaluation Configuration
+
+When working with configuration files that may not contain an evaluation section, follow these rules:
+
+### 1. Auto-detection of Evaluation Configuration
+If the specified configuration file does not contain an `evaluation` section:
+
+1. **Search for alternative config files**: Look for configuration files in the same directory that contain an `evaluation` section
+2. **Common evaluation config patterns**: Check for files with names like:
+   - `*_eval.yml` or `*_eval.yaml`
+   - `*_evaluation.yml` or `*_evaluation.yaml`
+   - `eval_*.yml` or `eval_*.yaml`
+   - `evaluation_*.yml` or `evaluation_*.yaml`
+3. **Suggest available options**: If multiple evaluation configs are found, present them to the user for selection
+
+### 2. User Guidance for Missing Evaluation Section
+If no evaluation configuration can be found automatically:
+
+1. **Inform the user**: Clearly explain that no evaluation section was found in the configuration file
+2. **Request essential information**: Ask the user to provide the following required information:
+   - **Dataset path**: Location of the evaluation dataset (JSON file with questions and ground truth)
+   - **Evaluators**: Which evaluation metrics to use (e.g., semantic_similarity, factual_accuracy)
+   - **Output preferences**: Where to save results and what format to use
+
+### 3. Interactive Configuration Building
+When evaluation configuration is missing, guide the user through creating one:
+
+```bash
+# Example prompts for missing evaluation config
+"No evaluation section found in config file. Please provide:"
+"1. Dataset file path (JSON with questions and ground_truth):"
+"2. Evaluation metrics (comma-separated): [semantic_similarity, factual_accuracy, bleu_score]:"
+"3. Output file path (optional):"
+```
+
+### 4. Minimal Evaluation Configuration Template
+When user provides minimal information, create a basic evaluation configuration:
+
+```yaml
+evaluation:
+  dataset: "path/to/user/provided/dataset.json"
+  evaluators:
+    - _type: "semantic_similarity"
+      threshold: 0.8
+  metrics:
+    - "accuracy"
+    - "semantic_similarity"
+```
+
+### 5. Configuration Validation
+Before proceeding with evaluation:
+1. Verify the dataset file exists and is accessible
+2. Validate the dataset format (contains required `question` and `ground_truth` fields)
+3. Confirm all specified evaluators are available
+4. Warn if essential evaluation components are missing
 
 ## Result JSON Path Usage
 
