@@ -1,5 +1,5 @@
 ---
-description: ollow these rules when the user's request involves AIQ CLI commands, operations, or functionality
+description: Follow these rules when the user's request involves AIQ CLI commands, operations, or functionality
 globs: 
 alwaysApply: false
 ---
