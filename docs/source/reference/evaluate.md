@@ -139,9 +139,12 @@ In some cases, the input dataset may not be in a format directly usable by the A
 ```yaml
 eval:
   general:
+    output:
+      dir: ./.tmp/aiq/examples/simple/
+      cleanup: true
     dataset:
       _type: json
-      file_path: examples/simple/data/langsmith.json
+      file_path: examples/simple/data/langsmith_custom.json
       custom_script:
         script: examples/simple/src/aiq_simple/scripts/sample_input_customization.py
         kwargs:
@@ -149,7 +152,7 @@ eval:
         output_path: ./.tmp/aiq/examples/simple/langsmith_transformed.csv
         output_format: csv
 ```
-In this example, `sample_input_customization.py` is a script that reads a JSON file, transforms the data, and writes it to a CSV file that the AIQ evaluation system can consume.
+In this example, the original dataset `examples/simple/data/langsmith_custom.json` is a JSON file that is in a format that is not directly usable by the AIQ evaluation system. The sample custom script `sample_input_customization.py` reads the JSON file, transforms the data, and writes it to a CSV file that the AIQ evaluation system can consume.
 
 **Custom Script Arguments:**
 The custom script is called with the following arguments:

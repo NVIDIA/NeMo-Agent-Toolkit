@@ -65,7 +65,7 @@ The dataset file provides a list of questions and expected answers. The followin
 ]
 ```
 
-You can also provide a custom script to transform the dataset into a format that can be used by the AIQ evaluation system. For more information, refer to the [Customizing the Input Dataset](../reference/evaluate.md#customizing-the-input-dataset) documentation.
+You can also provide a custom script to transform any dataset into a format that can be used by the AIQ evaluation system. For more information, refer to the [Customizing the Input Dataset](../reference/evaluate.md#customizing-the-input-dataset) documentation.
 
 ## Understanding the Evaluator Configuration
 The evaluators section specifies the evaluators to use for evaluating the workflow output. The evaluator configuration includes the evaluator type, the metric to evaluate, and any additional parameters required by the evaluator.
