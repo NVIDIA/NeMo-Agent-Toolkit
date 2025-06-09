@@ -13,11 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Sample input custom script to convert the input to a JSON file that can be used
-by the aiq eval system.
+Sample input custom script to convert input to a JSON or CSV file
+that can be used by the AIQ evaluation system.
 """
 
 import argparse
+import csv
 import json
 from pathlib import Path
 
@@ -33,19 +34,45 @@ def transform_record(raw: dict, index: int) -> dict:
     }
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--file_path", type=Path, required=True)
-    parser.add_argument("--output_path", type=Path, required=True)
-    args = parser.parse_args()
-
-    with args.file_path.open() as infile:
+def transform_dataset(input_path: Path, output_path: Path, output_format: str, max_rows: int | None = None):
+    """
+    Transform the input dataset to a JSON or CSV file that can be used by the AIQ evaluation system.
+    """
+    with input_path.open() as infile:
         original_data = json.load(infile)
 
-    transformed_data = [transform_record(entry, i) for i, entry in enumerate(original_data)]
+    if not isinstance(original_data, list):
+        raise ValueError("Expected input JSON to be a list of records")
 
-    with args.output_path.open("w") as outfile:
-        json.dump(transformed_data, outfile, indent=2)
+    sliced_data = original_data[:max_rows] if max_rows else original_data
+    transformed_data = [transform_record(entry, i) for i, entry in enumerate(sliced_data)]
+
+    if output_format == "json":
+        with output_path.open("w") as outfile:
+            json.dump(transformed_data, outfile, indent=2)
+
+    elif output_format == "csv":
+        fieldnames = ["id", "question", "answer"]
+        with output_path.open("w", newline="") as outfile:
+            writer = csv.DictWriter(outfile, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(transformed_data)
+
+    print(f"✅ Transformed {len(transformed_data)} records to {output_format.upper()} at {output_path}")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input_path", type=Path, required=True, help="Path to original input JSON")
+    parser.add_argument("--output_path", type=Path, required=True, help="Path to transformed output file")
+    parser.add_argument("--output_format",
+                        type=str,
+                        required=True,
+                        choices=["json", "csv"],
+                        help="Output format: json or csv")
+    parser.add_argument("--max_rows", type=int, default=None, help="Maximum number of records to process")
+    args = parser.parse_args()
+    transform_dataset(args.input_path, args.output_path, args.output_format, args.max_rows)
 
 
 if __name__ == "__main__":

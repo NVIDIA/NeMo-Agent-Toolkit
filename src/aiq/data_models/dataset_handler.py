@@ -17,6 +17,7 @@ import json
 import typing
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 from typing import Literal
 
 import pandas as pd
@@ -34,7 +35,7 @@ class EvalInputCustomScriptConfig(BaseModel):
     # dataset to the output_path.
     script: Path
     # Keyword arguments to pass to the script
-    kwargs: dict[str, str] = {}
+    kwargs: dict[str, Any] = {}
 
     # Path to the new file and format should be provided
     output_path: Path

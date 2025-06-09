@@ -122,9 +122,9 @@ class DatasetHandler:
     def run_custom_script(dataset_config: EvalDatasetConfig) -> Path | None:
         """
         Run a custom script to transform the dataset.
-        Passes the original dataset --file_path and --output_path as arguments along with
-        the kwargs provided in the dataset config. The custom script is expected to write the new
-        dataset to the output_path.
+        Passes the original dataset (--input_path) and (--output_path/--output_format) as
+        arguments along with the kwargs provided in the dataset config. The custom script is
+        expected to write the new dataset to the output_path with the output_format.
         """
         if not dataset_config.custom_script:
             return None
@@ -142,10 +142,12 @@ class DatasetHandler:
         args = [
             sys.executable,
             str(script_path),
-            "--file_path",
+            "--input_path",
             str(dataset_config.file_path),
             "--output_path",
-            str(output_path)
+            str(output_path),
+            "--output_format",
+            str(script_config.output_format),
         ]
 
         if script_config.kwargs:

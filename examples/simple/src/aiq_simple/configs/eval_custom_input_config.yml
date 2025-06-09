@@ -59,10 +59,10 @@ eval:
       file_path: examples/simple/data/langsmith_custom.json
       custom_script:
         script: examples/simple/src/aiq_simple/scripts/sample_input_customization.py
-        # kwargs: can be used to pass arguments to the script
-        output_path: ./.tmp/aiq/examples/simple/langsmith_transformed.json
-        output_format: json
-
+        kwargs:
+          max_rows: 10
+        output_path: ./.tmp/aiq/examples/simple/langsmith_transformed.csv
+        output_format: csv
 
   evaluators:
     rag_accuracy:
