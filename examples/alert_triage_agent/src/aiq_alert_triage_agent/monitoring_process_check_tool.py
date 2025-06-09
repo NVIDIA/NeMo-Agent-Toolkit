@@ -23,14 +23,15 @@ from aiq.data_models.function import FunctionBaseConfig
 
 from . import utils
 from .playbooks import MONITOR_PROCESS_CHECK_PLAYBOOK
-from .prompts import ToolReasoningLayerPrompts
+from .prompts import MonitoringProcessCheckPrompts
 
 
 class MonitoringProcessCheckToolConfig(FunctionBaseConfig, name="monitoring_process_check"):
-    description: str = Field(default=("This tool checks the status of critical monitoring processes and services "
-                                      "on a target host by executing system commands. Args: host_id: str"),
-                             description="Description of the tool for the agent.")
+    description: str = Field(default=MonitoringProcessCheckPrompts.TOOL_DESCRIPTION,
+                             description="Description of the tool.")
     llm_name: LLMRef
+    prompt: str = Field(default=MonitoringProcessCheckPrompts.PROMPT,
+                        description="Main prompt for the monitoring process check task.")
     offline_mode: bool = Field(default=True, description="Whether to run in offline model")
 
 
@@ -104,7 +105,7 @@ async def monitoring_process_check_tool(config: MonitoringProcessCheckToolConfig
             # Additional LLM reasoning layer on playbook output to provide a summary of the results
             utils.log_header("LLM Reasoning", dash_length=50)
 
-            prompt = ToolReasoningLayerPrompts.MONITORING_PROCESS_CHECK.format(input_data=output_for_prompt)
+            prompt = config.prompt.format(input_data=output_for_prompt)
 
             conclusion = await utils.llm_ainvoke(config, builder, prompt)
 

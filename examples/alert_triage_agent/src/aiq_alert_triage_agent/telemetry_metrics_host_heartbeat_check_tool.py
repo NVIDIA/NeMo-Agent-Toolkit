@@ -23,15 +23,15 @@ from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
 
 from . import utils
-from .prompts import TelemetryMetricsAnalysisPrompts
+from .prompts import TelemetryMetricsHostHeartbeatCheckPrompts
 
 
 class TelemetryMetricsHostHeartbeatCheckToolConfig(FunctionBaseConfig, name="telemetry_metrics_host_heartbeat_check"):
-    description: str = Field(
-        default=("This tool checks if a host's telemetry monitoring service is reporting heartbeat metrics. "
-                 "This tells us if the host is up and running. Args: host_id: str"),
-        description="Description of the tool for the agent.")
+    description: str = Field(default=TelemetryMetricsHostHeartbeatCheckPrompts.TOOL_DESCRIPTION,
+                             description="Description of the tool.")
     llm_name: LLMRef
+    prompt: str = Field(default=TelemetryMetricsHostHeartbeatCheckPrompts.PROMPT,
+                        description="Main prompt for the telemetry metrics host heartbeat check task.")
     offline_mode: bool = Field(default=True, description="Whether to run in offline model")
     metrics_url: str = Field(default="", description="URL of the monitoring system")
 
@@ -69,8 +69,7 @@ async def telemetry_metrics_host_heartbeat_check_tool(config: TelemetryMetricsHo
             # Additional LLM reasoning layer on playbook output to provide a summary of the results
             utils.log_header("LLM Reasoning", dash_length=30)
 
-            conclusion = await utils.llm_ainvoke(
-                config, builder, user_prompt=TelemetryMetricsAnalysisPrompts.HOST_HEARTBEAT_CHECK.format(data=data))
+            conclusion = await utils.llm_ainvoke(config, builder, user_prompt=config.prompt.format(data=data))
 
             utils.logger.debug(conclusion)
             utils.log_footer(dash_length=50)

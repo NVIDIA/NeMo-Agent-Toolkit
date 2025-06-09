@@ -24,15 +24,13 @@ from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
 
 from . import utils
-from .prompts import ToolReasoningLayerPrompts
+from .prompts import HardwareCheckPrompts
 
 
 class HardwareCheckToolConfig(FunctionBaseConfig, name="hardware_check"):
-    description: str = Field(
-        default=("This tool checks hardware health status using IPMI monitoring to detect power state, "
-                 "hardware degradation, and anomalies that could explain alerts. Args: host_id: str"),
-        description="Description of the tool for the agent.")
+    description: str = Field(default=HardwareCheckPrompts.TOOL_DESCRIPTION, description="Description of the tool.")
     llm_name: LLMRef
+    prompt: str = Field(default=HardwareCheckPrompts.PROMPT, description="Main prompt for the hardware check task.")
     offline_mode: bool = Field(default=True, description="Whether to run in offline model")
 
 
@@ -94,7 +92,7 @@ async def hardware_check_tool(config: HardwareCheckToolConfig, builder: Builder)
                 # Additional LLM reasoning layer on playbook output to provide a summary of the results
                 utils.log_header("LLM Reasoning", dash_length=50)
 
-                prompt = ToolReasoningLayerPrompts.HARDWARE_CHECK.format(input_data=monitoring_data)
+                prompt = config.prompt.format(input_data=monitoring_data)
 
                 # Get analysis from LLM
                 conclusion = await utils.llm_ainvoke(config, builder, prompt)
