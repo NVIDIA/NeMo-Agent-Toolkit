@@ -23,5 +23,5 @@ limitations under the License.
 ./customize-a-workflow.md
 ./add-tools-to-a-workflow.md
 ./create-a-new-workflow.md
-./using-cursor-rules-for-development-tasks.md
+./using-cursor-rules-for-aiq-toolkit-development.md
 ```

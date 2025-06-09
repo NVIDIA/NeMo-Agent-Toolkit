@@ -120,6 +120,7 @@ Integrating AWS Bedrock Models <./extend/integrating-aws-bedrock-models.md>
 API Server Endpoints <./reference/api-server-endpoints.md>
 ./reference/websockets.md
 Command Line Interface (CLI) <./reference/cli.md>
+Cursor Rules Reference <./reference/cursor-rules-reference.md>
 Evaluation <./reference/evaluate.md>
 Evaluation Endpoints <./reference/evaluate-api.md>
 Troubleshooting <./troubleshooting.md>
