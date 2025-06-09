@@ -1,5 +1,5 @@
 ---
-description: Follow these rules when generating code
+description: Follow these rules when creating, modifying, or generating any code, tests, documentation, or configuration files
 globs: 
 alwaysApply: false
 ---

@@ -1,5 +1,5 @@
 ---
-description: Follow those rules when user requests to evaluate a workflow
+description: Follow these rules when the user requests to evaluate a workflow
 globs: 
 alwaysApply: false
 ---

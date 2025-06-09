@@ -1,5 +1,5 @@
 ---
-description: Follow those rules when user requests to query the information of aiq component (front_end, function, tool_wrapper, llm_provider, llm_client, embedder_provider, embedder_client, evaluator, memory, retriever_provider, retriever_client, registry_handler, logging, tracing, package)
+description: Follow these rules when the user requests information about AIQ components, including: front_end, function, tool_wrapper, llm_provider, llm_client, embedder_provider, embedder_client, evaluator, memory, retriever_provider, retriever_client, registry_handler, logging, tracing, or package
 globs: 
 alwaysApply: false
 ---

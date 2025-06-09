@@ -1,6 +1,6 @@
 ---
-description: How to add or edit Cursor rules in our project
-globs:
+description: Follow these rules when the user's request involves creating, modifying, organizing, or structuring Cursor rules within the project
+globs: 
 alwaysApply: false
 ---
 # Cursor Rules Location

@@ -1,6 +1,6 @@
 ---
-description: Follow those rules when user requests to run or serve a workflow
-globs:
+description: Follow these rules when the user's request involves running, serving, or executing AIQ workflows
+globs: 
 alwaysApply: false
 ---
 # AIQ Run and Serve Commands
