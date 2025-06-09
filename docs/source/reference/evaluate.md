@@ -132,7 +132,7 @@ eval:
 ```
 
 ## Customizing the Input Dataset
-In some cases, the input dataset may not be in a format directly usable by the AIQ evaluation system—for example, it may be nested inside a larger structure or stored in a different format. To handle such cases, you can provide a `custom script` that transforms the dataset into a compatible format.
+In some cases, the input dataset may not be in a format directly usable by the AIQ evaluation system. For example, it may be nested inside a larger structure or stored in a different format. To handle such cases, you can provide a `custom_script` that transforms the dataset into a compatible format.
 
 **Example:**
 `examples/simple/configs/eval_custom_input_config.yml`:
@@ -157,7 +157,7 @@ In this example, the original dataset `examples/simple/data/langsmith_custom.jso
 **Custom Script Arguments:**
 The custom script is called with the following arguments:
 - `--input_path`: Path to the original input dataset, `eval.general.dataset.file_path` in the config.
-- `--input_format`: Format of the original dataset, `eval.general.dataset.format` in the config.
+- `--input_format`: Format of the original dataset, `eval.general.dataset._type` in the config.
 - `--output_path`: Path where the transformed dataset should be saved, `eval.general.dataset.custom_script.output_path` in the config.
 - `--output_format`: Target format of the transformed dataset, `eval.general.dataset.custom_script.output_format` in the config.
 - any additional arguments specified in the `eval.general.dataset.custom_script.kwargs` section.

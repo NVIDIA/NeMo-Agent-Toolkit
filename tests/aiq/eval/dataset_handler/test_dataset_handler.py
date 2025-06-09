@@ -364,7 +364,7 @@ def failing_dataset_config(tmp_path):
 
 def test_custom_script_failure_raises(failing_dataset_config):
     """ Test error handling if the custom script execution fails """
-    handler = DatasetHandler(failing_dataset_config)
+    handler = DatasetHandler(failing_dataset_config, reps=1)
 
     with pytest.raises(Exception) as exc_info:
         handler.run_custom_script(failing_dataset_config)
