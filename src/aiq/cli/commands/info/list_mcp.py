@@ -18,6 +18,7 @@ import logging
 
 import anyio
 import click
+from pydantic import BaseModel
 
 # Suppress verbose logs from mcp.client.sse and httpx
 logging.getLogger("mcp.client.sse").setLevel(logging.WARNING)
@@ -29,12 +30,19 @@ def format_tool(tool):
     description = getattr(tool, 'description', '')
     input_schema = getattr(tool, 'input_schema', None) or getattr(tool, 'inputSchema', None)
 
-    schema_str = None
-    if input_schema:
-        if hasattr(input_schema, "schema_json"):
-            schema_str = input_schema.schema_json(indent=2)
-        else:
-            schema_str = str(input_schema)
+    # Normalize schema to JSON string
+    if isinstance(input_schema, BaseModel):
+        schema_str = input_schema.model_json_schema(indent=2)
+    elif hasattr(input_schema, "schema_json"):
+        schema_str = input_schema.schema_json(indent=2)
+    elif isinstance(input_schema, dict):
+        try:
+            schema_str = json.dumps(input_schema, indent=2)
+        except TypeError:
+            schema_str = json.dumps(input_schema, default=str, indent=2)
+    else:
+        # Final fallback: attempt to dump stringified version wrapped as JSON string
+        schema_str = json.dumps({"raw": str(input_schema)}, indent=2)
 
     return {
         "name": name,
