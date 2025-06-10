@@ -30,12 +30,18 @@ from uuid import uuid4
 import dask.config
 from dask.distributed import Client
 from dask.distributed import Future
-from dask.distributed import Lock
 from dask.distributed import Variable
 from dask.distributed import fire_and_forget
-from dask.distributed.protocol import dask_deserialize
-from dask.distributed.protocol import dask_serialize
 from pydantic import BaseModel
+from sqlalchemy import String
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import Session
+from sqlalchemy.orm import mapped_column
+from sqlalchemy import create_engine
+
+if typing.TYPE_CHECKING:
+    from sqlalchemy.engine import Engine
 
 logger = logging.getLogger(__name__)
 
@@ -49,37 +55,23 @@ class JobStatus(str, Enum):
     NOT_FOUND = "not_found"
 
 
+class Base(DeclarativeBase):
+    pass
+
+
 # pydantic model for the job status
-class JobInfo(BaseModel):
-    job_id: str
-    status: JobStatus
-    config_file: str | None
-    error: str | None
-    output_path: str | None
-    created_at: datetime
-    updated_at: datetime
-    expiry_seconds: int
-    output: BaseModel | None = None
+class JobInfo(Base):
+    __tablename__ = "job_info"
 
-
-# Register custom serializers for JobInfo with Dask if available.
-@dask_serialize.register(JobInfo)
-def serialize_job_info(job: JobInfo) -> tuple[dict, list[bytes]]:
-    """Custom serialization for JobInfo."""
-    header = {}
-
-    job_dict = job.model_dump(mode="json", round_trip=True)
-    json_str = json.dumps(job_dict)
-    frames = [json_str.encode('utf-8')]
-
-    return (header, frames)
-
-
-@dask_deserialize.register(JobInfo)
-def deserialize_job_info(header: dict, frames: list[bytes]) -> JobInfo:
-    """Custom deserialization for JobInfo."""
-    # model_validate_json accepts a bytes string, no need to decode first
-    return JobInfo.model_validate_json(frames[0])
+    job_id: Mapped[str] = mapped_column(primary_key=True)
+    status: Mapped[JobStatus] = mapped_column(String(11))
+    config_file: Mapped[str]
+    error: Mapped[str]
+    output_path: Mapped[str]
+    created_at: Mapped[datetime]
+    updated_at: Mapped[datetime]
+    expiry_seconds: Mapped[int]
+    output: Mapped[str]
 
 
 class JobStore:
@@ -94,7 +86,6 @@ class JobStore:
     def __init__(self, scheduler_address: str):
         self._scheduler_address = scheduler_address
         self._client: Client | None = None
-        self._lock: Lock | None = None
 
     @asynccontextmanager
     async def client(self):
@@ -102,18 +93,6 @@ class JobStore:
             self._client = await Client(address=self._scheduler_address, asynchronous=True)
 
         yield self._client
-
-    @asynccontextmanager
-    async def lock(self):
-        # refer to https://distributed.dask.org/en/stable/api.html?highlight=future#distributed.Lock
-        with dask.config.set({"distributed.scheduler.locks.lease-timeout": "inf"}):
-            if self._lock is None:
-                async with self.client() as client:
-                    self._lock = Lock(name="job_store_lock", client=client)
-
-            await self._lock.acquire()
-            yield self._lock
-            await self._lock.release()
 
     async def close(self):
         """Close the Dask client."""
@@ -146,9 +125,6 @@ class JobStore:
                       error=None,
                       output_path=None,
                       expiry_seconds=clamped_expiry)
-
-        async with (self.client() as client, self.lock()):
-            await client.set_metadata(["jobs", job_id], job)
 
         logger.info("Created new job %s with config %s", job_id, config_file)
         return job_id
@@ -186,24 +162,31 @@ class JobStore:
                             error: str | None = None,
                             output_path: str | None = None,
                             output: BaseModel | None = None):
-        async with (self.client() as client, self.lock()):
-            try:
-                job: JobInfo = await client.get_metadata(["jobs", job_id])
 
-                job.status = status
-                job.error = error
-                job.output_path = output_path
-                job.updated_at = datetime.now(UTC)
-                job.output = output
+        try:
+            job: JobInfo = 
 
-                await client.set_metadata(["jobs", job_id], job)
-            except KeyError as e:
-                raise ValueError(f"Job {job_id} not found") from e
+            job.status = status
+            job.error = error
+            job.output_path = output_path
+            job.updated_at = datetime.now(UTC)
+
+            if isinstance(output, BaseModel):
+                # Convert BaseModel to JSON string for storage
+                output = output.model_dump_json(mode="json", round_trip=True)
+                
+            if isinstance(output, (dict, list)):
+                # Convert dict or list to JSON string for storage
+                output = json.dumps(output)
+
+            job.output = output
+
+        except KeyError as e:
+            raise ValueError(f"Job {job_id} not found") from e
 
     async def get_all_jobs(self) -> list[JobInfo]:
-        async with (self.client() as client, self.lock()):
-            job_dict: dict[str, JobInfo] = await client.get_metadata(["jobs"], default={})
-            return list(job_dict.values())
+        job_dict: dict[str, JobInfo] = await client.get_metadata(["jobs"], default={})
+        return list(job_dict.values())
 
     async def get_job(self, job_id: str) -> JobInfo | None:
         """Get a job by its ID."""
@@ -288,3 +271,19 @@ class JobStore:
                     del jobs[job_id]
 
                 await client.set_metadata(["jobs"], jobs)
+
+
+def get_db_engine(db_url: str | None = None) -> "Engine":
+    if db_url is None:
+        db_url = os.environ.get("AIQ_JOB_STORE_DB_URL")
+        if db_url is None:
+            dot_tmp_dir = os.path.join(os.getcwd(), ".tmp")
+            os.makedirs(dot_tmp_dir, exist_ok=True)
+            db_file = os.path.join(dot_tmp_dir, "job_store.db")
+            if os.path.exists(db_file):
+                logger.warning("Database file %s already exists, it will be overwritten.", db_file)
+                os.remove(db_file)
+
+            db_url = f"sqlite:///{db_file}"
+
+    return create_engine(db_url)

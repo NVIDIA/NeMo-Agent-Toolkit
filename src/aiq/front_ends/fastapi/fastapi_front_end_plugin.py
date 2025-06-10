@@ -105,25 +105,18 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
                     logger.warning("Dask is not installed, async execution and evaluation will not be available.")
 
             if scheduler_address is not None:
-                from sqlalchemy import create_engine
 
-                import aiq.front_ends.fastapi.job_store
+                from aiq.front_ends.fastapi.job_store import get_db_engine
+                from aiq.front_ends.fastapi.job_store import Base
 
-                db_url = self.front_end_config.db_url
-                if db_url is None:
-                    dot_tmp_dir = os.path.join(os.getcwd(), ".tmp")
-                    os.makedirs(dot_tmp_dir, exist_ok=True)
-                    db_file = os.path.join(dot_tmp_dir, "job_store.db")
-                    if os.path.exists(db_file):
-                        logger.warning("Database file %s already exists, it will be overwritten.", db_file)
-                        os.remove(db_file)
-
-                    db_url = f"sqlite:///{db_file}"
-
-                db_engine = create_engine(db_url)
+                db_engine = get_db_engine(self.front_end_config.db_url)
+                Base.metadata.create_all(db_engine)  # create tables if they do not exist
 
                 await self._submit_cleanup_task(scheduler_address)
                 os.environ["AIQ_DASK_SCHEDULER_ADDRESS"] = scheduler_address
+
+                # If self.front_end_config.db_url is None, then we need to get the actual resolved url from the engine
+                os.environ["AIQ_JOB_STORE_DB_URL"] = str(db_engine.url)
 
             # Write to YAML file
             yaml_dump(config_dict, config_file)
