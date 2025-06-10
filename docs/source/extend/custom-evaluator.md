@@ -96,13 +96,13 @@ An `EvalInputItem` encapsulates all relevant information for evaluating a single
 An `EvalOutputItem` represents the result of evaluating a single item. It includes:
 - `id`: The identifier of the evaluated input item (copied from `EvalInputItem.id`).
 - `score`: The computed score for this item. This is typically a floating-point number used for average score computation across the dataset. However, it can be any JSON-serializable object. If the score is not numeric, the average score in EvalOutput will be omitted.
-- `reasoning`: An explanation or trace of how the score was computed. This can contain any serializable structure (e.g., dictionary, string, list), and is often shown in logs or UI output for interpretability.
+- `reasoning`: An explanation or trace of how the score was computed. This can contain any serializable structure (e.g., dictionary, string, list), and is often shown in logs or UI output for `interpretability`.
 
 ### Similarity Evaluator (Custom Evaluator Example)
 AIQ Toolkit provides a convenient `BaseEvaluator` class that simplifies writing custom evaluators. It handles common tasks such as:
 - Asynchronous evaluation of input items
 - Concurrency control
-- Progress bar display using tqdm
+- Progress bar display using `tqdm`
 
 To create a custom evaluator, subclass `BaseEvaluator` and implement the `evaluate_item` method. This method is responsible for computing the evaluation result for a single `EvalInputItem`, and should return an `EvalOutputItem`.
 
