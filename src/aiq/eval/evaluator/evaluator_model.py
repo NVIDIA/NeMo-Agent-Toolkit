@@ -27,7 +27,7 @@ class EvalInputItem(BaseModel):
     output_obj: typing.Any
     expected_trajectory: list[IntermediateStep]
     trajectory: list[IntermediateStep]
-    full_dataset_entry: typing.Any
+    full_dataset_entry: typing.Any = None
 
 
 class EvalInput(BaseModel):
