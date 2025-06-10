@@ -103,87 +103,43 @@ Similarity evaluator is used as an example to demonstrate the process of creatin
 
 `examples/simple/src/aiq_simple/similarity_evaluator.py`:
 ```python
-import asyncio
+from typing import override
 
+# import libraries needed by the custom metric
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from tqdm import tqdm
 
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalOutput
-from aiq.eval.evaluator.evaluator_model import EvalOutputItem
+# import the aiq evaluator base class
+from aiq.eval.evaluator.custom_base_evaluator import BaseEvaluator
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
-from aiq.eval.utils.tqdm_position_registry import TqdmPositionRegistry
+from aiq.eval.evaluator.evaluator_model import EvalOutputItem
 
-
-class SimilarityEvaluator:
-    '''Similarity evaluator class'''
-
-    def __init__(self, similarity_type: str, max_concurrency: int):
-        self.max_concurrency = max_concurrency
+class SimilarityEvaluator(BaseEvaluator):
+    def __init__(self, similarity_type: str = "cosine", max_concurrency: int = 4):
+        super().__init__(max_concurrency, tqdm_desc="Evaluating Similarity")
         self.similarity_type = similarity_type
         self.vectorizer = TfidfVectorizer()
-        self.semaphore = asyncio.Semaphore(self.max_concurrency)
 
-    async def evaluate(self, eval_input: EvalInput) -> EvalOutput:
-        '''Evaluate function'''
+    @override
+    async def evaluate_item(self, item: EvalInputItem) -> EvalOutputItem:
+        question = item.input_obj
+        answer = item.expected_output_obj
+        generated_answer = item.output_obj
 
-        async def process_item(item):
-            """Compute cosine similarity for an individual item"""
-            question = item.input_obj
-            answer = item.expected_output_obj
-            generated_answer = item.output_obj
+        tfidf_matrix = self.vectorizer.fit_transform([answer, generated_answer])
 
-            # Compute TF-IDF vectors
-            tfidf_matrix = self.vectorizer.fit_transform([answer, generated_answer])
+        similarity_score = round(cosine_similarity(tfidf_matrix[0], tfidf_matrix[1])[0][0], 2)
 
-            # Compute cosine similarity score
-            similarity_score = round(cosine_similarity(tfidf_matrix[0], tfidf_matrix[1])[0][0], 2)
+        # Reasoning is a dictionary of any serializable type, store any information
+        # that you want to display to the user.
+        reasoning = {
+            "question": question,
+            "answer": answer,
+            "generated_answer": generated_answer,
+            "similarity_type": self.similarity_type,
+        }
 
-            # Provide reasoning for the score
-            reasoning = {
-                "question": question,
-                "answer": answer,
-                "generated_answer": generated_answer,
-                "similarity_type": "cosine"
-            }
-            return similarity_score, reasoning
-
-        async def wrapped_process(item: EvalInputItem) -> tuple[float, dict]:
-            """
-            Process an item asynchronously and update the progress bar.
-            Use the semaphore to limit the number of concurrent items.
-            """
-            async with self.semaphore:
-              result = await process_item(item)
-              # Update the progress bar
-              pbar.update(1)
-              return result
-
-        try:
-            # Claim a tqdm position to display the progress bar
-            tqdm_position = TqdmPositionRegistry.claim()
-            # Create a progress bar
-            pbar = tqdm(total=len(eval_input.eval_input_items), desc="Evaluating Similarity", position=tqdm_position)
-            # Process items concurrently with a limit on concurrency
-            results = await asyncio.gather(*[wrapped_process(item) for item in eval_input.eval_input_items])
-        finally:
-            pbar.close()
-            TqdmPositionRegistry.release(tqdm_position)
-
-        # Extract scores and reasonings
-        sample_scores, sample_reasonings = zip(*results) if results else ([], [])
-
-        # Compute average score
-        avg_score = round(sum(sample_scores) / len(sample_scores), 2) if sample_scores else 0.0
-
-        # Construct EvalOutputItems
-        eval_output_items = [
-            EvalOutputItem(id=item.id, score=score, reasoning=reasoning)
-            for item, score, reasoning in zip(eval_input.eval_input_items, sample_scores, sample_reasonings)
-        ]
-
-        return EvalOutput(average_score=avg_score, eval_output_items=eval_output_items)
+        return  EvalOutputItem(id=item.id, score=similarity_score, reasoning=reasoning)
 ```
 `SimilarityEvaluator` class is used to compute the similarity between the expected output and the generated output. The `evaluate` method computes the cosine similarity between the expected output and the generated output for each item in the evaluation input.
 

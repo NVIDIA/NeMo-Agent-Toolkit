@@ -1,0 +1,66 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import asyncio
+from abc import ABC
+from abc import abstractmethod
+
+from tqdm import tqdm
+
+from aiq.eval.evaluator.evaluator_model import EvalInput
+from aiq.eval.evaluator.evaluator_model import EvalInputItem
+from aiq.eval.evaluator.evaluator_model import EvalOutput
+from aiq.eval.evaluator.evaluator_model import EvalOutputItem
+from aiq.eval.utils.tqdm_position_registry import TqdmPositionRegistry
+
+
+class BaseEvaluator(ABC):
+    """
+    Base class for custom evaluators.
+
+    Each custom evaluator must implement the `evaluate_item` method which is used to evaluate a
+    single EvalInputItem.
+    """
+
+    def __init__(self, max_concurrency: int = 4, tqdm_desc: str = "Evaluating"):
+        self.max_concurrency = max_concurrency
+        self.semaphore = asyncio.Semaphore(max_concurrency)
+        self.tqdm_desc = tqdm_desc
+
+    @abstractmethod
+    async def evaluate_item(self, item: EvalInputItem) -> EvalOutputItem:
+        """Each evaluator must implement this for item-level evaluation"""
+        pass
+
+    async def evaluate(self, eval_input: EvalInput) -> EvalOutput:
+        try:
+            tqdm_position = TqdmPositionRegistry.claim()
+            pbar = tqdm(total=len(eval_input.eval_input_items), desc=self.tqdm_desc, position=tqdm_position)
+
+            async def wrapped(item):
+                async with self.semaphore:
+                    output_item = await self.evaluate_item(item)
+                    pbar.update(1)
+                    return output_item
+
+            eval_output_items = await asyncio.gather(*[wrapped(item) for item in eval_input.eval_input_items])
+        finally:
+            pbar.close()
+            TqdmPositionRegistry.release(tqdm_position)
+
+        avg_score = (round(sum(item.score for item in eval_output_items) /
+                           len(eval_output_items), 2) if eval_output_items else 0.0)
+
+        return EvalOutput(average_score=avg_score, eval_output_items=eval_output_items)
