@@ -52,9 +52,14 @@ class BaseEvaluator(ABC):
 
             async def wrapped(item):
                 async with self.semaphore:
-                    output_item = await self.evaluate_item(item)
-                    pbar.update(1)
-                    return output_item
+                    try:
+                        output_item = await self.evaluate_item(item)
+                        pbar.update(1)
+                        return output_item
+                    except Exception as e:
+                        # If the evaluator fails, return an error item with a score of 0.0
+                        pbar.update(1)
+                        return EvalOutputItem(id=item.id, score=0.0, reasoning={"error": f"Evaluator error: {str(e)}"})
 
             output_items = await asyncio.gather(*[wrapped(item) for item in eval_input.eval_input_items])
         finally:
