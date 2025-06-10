@@ -39,7 +39,7 @@ class EvalOutputConfig(BaseModel):
     # Output directory for the workflow and evaluation results
     dir: Path = Path("/tmp/aiq/examples/default/")
     # Whether to append a unique job ID to the output directory for each run
-    append_job_id_to_output_dir: bool | None = None
+    append_job_id_to_output_dir: bool = False
     # S3 prefix for the workflow and evaluation results
     remote_dir: str | None = None
     # Custom scripts to run after the workflow and evaluation results are saved
