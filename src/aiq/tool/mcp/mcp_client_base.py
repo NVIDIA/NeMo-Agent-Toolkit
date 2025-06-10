@@ -95,10 +95,10 @@ class MCPBaseClient(ABC):
     Base client for creating a session and connecting to an MCP server
     """
 
-    def __init__(self, client_type: str = 'sse'):
+    def __init__(self, transport: str = 'sse'):
         self._tools = None
-        self._client_type = client_type.lower()
-        if self._client_type not in ['sse', 'stdio', 'streamable-http']:
+        self._transport = transport.lower()
+        if self._transport not in ['sse', 'stdio', 'streamable-http']:
             raise ValueError("client_type must be either 'sse', 'stdio' or 'streamable-http'")
 
         self._exit_stack: AsyncExitStack | None = None
@@ -106,8 +106,8 @@ class MCPBaseClient(ABC):
         self._session: ClientSession | None = None
 
     @property
-    def client_type(self) -> str:
-        return self._client_type
+    def transport(self) -> str:
+        return self._transport
 
     async def __aenter__(self):
         if self._exit_stack:
@@ -133,7 +133,7 @@ class MCPBaseClient(ABC):
         """
         Provide server name for logging
         """
-        return self._client_type
+        return self._transport
 
     @abstractmethod
     @asynccontextmanager
@@ -203,8 +203,8 @@ class MCPSSEClient(MCPBaseClient):
       client_type (str): The type of client to use ('sse' or 'stdio')
     """
 
-    def __init__(self, url: str, client_type: str = 'sse'):
-        super().__init__(client_type)
+    def __init__(self, url: str, transport: str = 'sse'):
+        super().__init__(transport)
         self._url = url
 
     @property
@@ -242,8 +242,8 @@ class MCPStdioClient(MCPBaseClient):
                  command: str,
                  args: list[str] | None = None,
                  env: dict[str, str] | None = None,
-                 client_type: str = 'stdio'):
-        super().__init__(client_type)
+                 transport: str = 'stdio'):
+        super().__init__(transport)
         self._command = command
         self._args = args
         self._env = env
@@ -283,8 +283,8 @@ class MCPStreamableHTTPClient(MCPBaseClient):
     Client for creating a session and connecting to an MCP server using streamable-http
     """
 
-    def __init__(self, url: str, client_type: str = 'streamable-http'):
-        super().__init__(client_type)
+    def __init__(self, url: str, transport: str = 'streamable-http'):
+        super().__init__(transport)
 
         self._url = url
 
