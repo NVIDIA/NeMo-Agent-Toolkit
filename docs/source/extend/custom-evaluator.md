@@ -120,7 +120,7 @@ from aiq.eval.evaluator.evaluator_model import EvalInputItem, EvalOutputItem
 
 class SimilarityEvaluator(BaseEvaluator):
     def __init__(self, similarity_type: str = "cosine", max_concurrency: int = 4):
-        super().__init__(max_concurrency, tqdm_desc="Evaluating Similarity")
+        super().__init__(max_concurrency, tqdm_desc=f"Evaluating {similarity_type} similarity")
         self.similarity_type = similarity_type
         self.vectorizer = TfidfVectorizer()
 
