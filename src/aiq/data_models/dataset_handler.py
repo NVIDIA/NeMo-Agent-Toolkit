@@ -59,6 +59,7 @@ class EvalDatasetStructureConfig(BaseModel):
 class EvalDatasetBaseConfig(TypedBaseModel, BaseModelRegistryTag):
 
     id_key: str = "id"
+    pass_full_entry: bool = False  # pass the full entry to the evaluator
     structure: EvalDatasetStructureConfig = EvalDatasetStructureConfig()
 
     # Filters
