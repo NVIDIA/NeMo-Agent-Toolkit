@@ -76,7 +76,7 @@ except TelemetryOptionalImportError:
     set_span_in_context = dummy_set_span_in_context
 
 
-def merge_dicts(dict1, dict2):
+def merge_dicts(dict1: dict, dict2: dict) -> dict:
     """
     Merge two dictionaries, prioritizing non-null values from the first dictionary.
 
