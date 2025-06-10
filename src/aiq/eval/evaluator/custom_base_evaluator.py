@@ -45,6 +45,7 @@ class BaseEvaluator(ABC):
         pass
 
     async def evaluate(self, eval_input: EvalInput) -> EvalOutput:
+        pbar = None
         try:
             tqdm_position = TqdmPositionRegistry.claim()
             pbar = tqdm(total=len(eval_input.eval_input_items), desc=self.tqdm_desc, position=tqdm_position)
