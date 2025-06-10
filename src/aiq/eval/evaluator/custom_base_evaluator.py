@@ -55,12 +55,13 @@ class BaseEvaluator(ABC):
                     pbar.update(1)
                     return output_item
 
-            eval_output_items = await asyncio.gather(*[wrapped(item) for item in eval_input.eval_input_items])
+            output_items = await asyncio.gather(*[wrapped(item) for item in eval_input.eval_input_items])
         finally:
             pbar.close()
             TqdmPositionRegistry.release(tqdm_position)
 
-        avg_score = (round(sum(item.score for item in eval_output_items) /
-                           len(eval_output_items), 2) if eval_output_items else 0.0)
+        # Compute average if possible
+        numeric_scores = [item.score for item in output_items if isinstance(item.score, (int, float))]
+        avg_score = round(sum(numeric_scores) / len(numeric_scores), 2) if numeric_scores else None
 
-        return EvalOutput(average_score=avg_score, eval_output_items=eval_output_items)
+        return EvalOutput(average_score=avg_score, eval_output_items=output_items)
