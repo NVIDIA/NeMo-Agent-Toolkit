@@ -346,12 +346,12 @@ class AsyncOtelSpanListener:
             sub_span.set_attribute(SpanAttributes.OUTPUT_VALUE, serialized_output)
             sub_span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE, "application/json" if is_json else "text/plain")
 
-        # Optional: add metadata to the span from TraceMetadata
+        # # Optional: add metadata to the span from TraceMetadata
         if step.payload.metadata:
-            pre_metadata = json.loads(sub_span.attributes.get("aiq.metadata", {}))
-            post_metadata = json.loads(step.payload.metadata.model_dump_json())
-            merged_metadata = merge_dicts(pre_metadata, post_metadata)
-            sub_span.set_attribute("aiq.metadata", json.dumps(merged_metadata))
+            start_event_metadata = json.loads(sub_span.attributes.get("aiq.metadata", {}))
+            end_event_metadata = json.loads(step.payload.metadata.model_dump_json())
+            merged_event_metadata = merge_dicts(start_event_metadata, end_event_metadata)
+            sub_span.set_attribute("aiq.metadata", json.dumps(merged_event_metadata))
 
         end_ns = _ns_timestamp(step.payload.event_timestamp)
 
