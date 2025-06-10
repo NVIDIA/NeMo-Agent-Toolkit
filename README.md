@@ -76,60 +76,60 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
 ### Install From Source
 
 1. Clone the NeMo Agent toolkit repository to your local machine.
-    ```bash
-    git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git aiqtoolkit
-    cd aiqtoolkit
-    ```
+   ```bash
+   git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git aiqtoolkit
+   cd aiqtoolkit
+   ```
 
 2. Initialize, fetch, and update submodules in the Git repository.
-    ```bash
-    git submodule update --init --recursive
-    ```
+   ```bash
+   git submodule update --init --recursive
+   ```
 
 3. Fetch the data sets by downloading the LFS files.
-    ```bash
-    git lfs install
-    git lfs fetch
-    git lfs pull
-    ```
+   ```bash
+   git lfs install
+   git lfs fetch
+   git lfs pull
+   ```
 
 4. Create a Python environment.
-    ```bash
-    uv venv --seed .venv
-    source .venv/bin/activate
-    ```
-    Make sure the environment is built with Python version `3.11` or `3.12`. If you have multiple Python versions installed,
-    you can specify the desired version using the `--python` flag. For example, to use Python 3.11:
-    ```bash
-    uv venv --seed .venv --python 3.11
-    ```
-    You can replace `--python 3.11` with any other Python version (`3.11` or `3.12`) that you have installed.
+   ```bash
+   uv venv --seed .venv
+   source .venv/bin/activate
+   ```
+   Make sure the environment is built with Python version `3.11` or `3.12`. If you have multiple Python versions installed,
+   you can specify the desired version using the `--python` flag. For example, to use Python 3.11:
+   ```bash
+   uv venv --seed .venv --python 3.11
+   ```
+   You can replace `--python 3.11` with any other Python version (`3.11` or `3.12`) that you have installed.
 
 5. Install the NeMo Agent toolkit library.
-    To install the NeMo Agent toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
-    ```bash
-    uv sync --all-groups --all-extras
-    ```
+   To install the NeMo Agent toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
+   ```bash
+   uv sync --all-groups --all-extras
+   ```
 
-    Alternatively to install just the core NeMo Agent toolkit without any plugins, run the following:
-    ```bash
-    uv sync
-    ```
+   Alternatively to install just the core NeMo Agent toolkit without any plugins, run the following:
+   ```bash
+   uv sync
+   ```
 
-    At this point individual plugins, which are located under the `packages` directory, can be installed with the following command `uv pip install -e '.[<plugin_name>]'`.
-    For example, to install the `langchain` plugin, run the following:
-    ```bash
-    uv pip install -e '.[langchain]'
-    ```
+   At this point individual plugins, which are located under the `packages` directory, can be installed with the following command `uv pip install -e '.[<plugin_name>]'`.
+   For example, to install the `langchain` plugin, run the following:
+   ```bash
+   uv pip install -e '.[langchain]'
+   ```
 
-    > [!NOTE]
-    > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/simple/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
+   > [!NOTE]
+   > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/simple/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
 
 
-    In addition to plugins, there are optional dependencies needed for profiling. To install these dependencies, run the following:
-    ```bash
-    uv pip install -e '.[profiling]'
-    ```
+   In addition to plugins, there are optional dependencies needed for profiling. To install these dependencies, run the following:
+   ```bash
+   uv pip install -e '.[profiling]'
+   ```
 
 6. Verify the installation using the NeMo Agent toolkit CLI
 
