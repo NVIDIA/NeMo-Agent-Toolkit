@@ -23,16 +23,18 @@ from aiq.data_models.function import FunctionBaseConfig
 
 from . import utils
 from .playbooks import HOST_PERFORMANCE_CHECK_PLAYBOOK
-from .prompts import ToolReasoningLayerPrompts
+from .prompts import HostPerformanceCheckPrompts
 
 
 class HostPerformanceCheckToolConfig(FunctionBaseConfig, name="host_performance_check"):
-    description: str = Field(
-        default=("This is the Host Performance Check Tool. This tool retrieves CPU usage, memory usage, "
-                 "and hardware I/O usage details for a given host. Args: host_id: str"),
-        description="Description of the tool for the agent.")
+    description: str = Field(default=HostPerformanceCheckPrompts.TOOL_DESCRIPTION,
+                             description="Description of the tool.")
     llm_name: LLMRef
-    test_mode: bool = Field(default=True, description="Whether to run in test mode")
+    parsing_prompt: str = Field(default=HostPerformanceCheckPrompts.PARSING_PROMPT,
+                                description="Prompt for parsing the raw host performance data.")
+    analysis_prompt: str = Field(default=HostPerformanceCheckPrompts.ANALYSIS_PROMPT,
+                                 description="Prompt for analyzing the parsed host performance data.")
+    offline_mode: bool = Field(default=True, description="Whether to run in offline model")
 
 
 async def _run_ansible_playbook_for_host_performance_check(config: HostPerformanceCheckToolConfig,
@@ -97,7 +99,7 @@ async def _parse_stdout_lines(config, builder, stdout_lines):
         # Join the list of lines into a single text block
         input_data = "\n".join(stdout_lines) if stdout_lines else ""
 
-        prompt = ToolReasoningLayerPrompts.HOST_PERFORMANCE_CHECK_PARSING.format(input_data=input_data)
+        prompt = config.parsing_prompt.format(input_data=input_data)
 
         response = await utils.llm_ainvoke(config=config, builder=builder, user_prompt=prompt)
     except Exception as e:
@@ -113,7 +115,7 @@ async def host_performance_check_tool(config: HostPerformanceCheckToolConfig, bu
         utils.log_header("Host Performance Analyzer")
 
         try:
-            if not config.test_mode:
+            if not config.offline_mode:
                 # In production mode, use actual Ansible connection details
                 # Replace placeholder values with connection info from configuration
                 ansible_host = "your.host.example.name"  # Input your target host
@@ -130,8 +132,8 @@ async def host_performance_check_tool(config: HostPerformanceCheckToolConfig, bu
                     ansible_port=ansible_port,
                     ansible_private_key_path=ansible_private_key_path)
             else:
-                # In test mode, load performance data from test dataset
-                df = utils.get_test_data()
+                # In offline model, load performance data from test dataset
+                df = utils.get_offline_data()
 
                 # Get CPU metrics from test data, falling back to static data if needed
                 data_top_cpu = utils.load_column_or_static(df=df,
@@ -146,7 +148,7 @@ async def host_performance_check_tool(config: HostPerformanceCheckToolConfig, bu
             # Additional LLM reasoning layer on playbook output to provide a summary of the results
             utils.log_header("LLM Reasoning", dash_length=50)
 
-            prompt_template = ToolReasoningLayerPrompts.HOST_PERFORMANCE_CHECK_ANALYSIS.format(input_data=output)
+            prompt_template = config.analysis_prompt.format(input_data=output)
 
             conclusion = await utils.llm_ainvoke(config, builder, user_prompt=prompt_template)
 

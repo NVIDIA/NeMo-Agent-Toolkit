@@ -30,8 +30,8 @@ logger = logging.getLogger("aiq_alert_triage_agent")
 
 # module‐level variable; loaded on first use
 _DATA_CACHE: dict[str, pd.DataFrame | dict | None] = {
-    'test_data': None,
-    'benign_fallback_test_data': None,
+    'offline_data': None,
+    'benign_fallback_offline_data': None,
 }
 
 # Cache LLMs by name and wrapper type
@@ -86,40 +86,40 @@ def log_footer(dash_length: int = 100, level: int = logging.DEBUG):
     logger.log(level, footer)
 
 
-def preload_test_data(test_data_path: str | None, benign_fallback_data_path: str | None):
+def preload_offline_data(offline_data_path: str | None, benign_fallback_data_path: str | None):
     """
     Preloads test data from CSV and JSON files into module-level cache.
 
     Args:
-        test_data_path (str): Path to the test data CSV file
+        offline_data_path (str): Path to the test data CSV file
         benign_fallback_data_path (str): Path to the benign fallback data JSON file
     """
-    if test_data_path is None:
-        raise ValueError("test_data_path must be provided")
+    if offline_data_path is None:
+        raise ValueError("offline_data_path must be provided")
 
     if benign_fallback_data_path is None:
         raise ValueError("benign_fallback_data_path must be provided")
 
-    _DATA_CACHE['test_data'] = pd.read_csv(test_data_path)
-    logger.info(f"Preloaded test data from: {test_data_path}")
+    _DATA_CACHE['offline_data'] = pd.read_csv(offline_data_path)
+    logger.info(f"Preloaded test data from: {offline_data_path}")
 
     with open(benign_fallback_data_path, "r") as f:
-        _DATA_CACHE['benign_fallback_test_data'] = json.load(f)
+        _DATA_CACHE['benign_fallback_offline_data'] = json.load(f)
     logger.info(f"Preloaded benign fallback data from: {benign_fallback_data_path}")
 
 
-def get_test_data() -> pd.DataFrame:
+def get_offline_data() -> pd.DataFrame:
     """Returns the preloaded test data."""
-    if _DATA_CACHE['test_data'] is None:
-        raise ValueError("Test data not preloaded. Call `preload_test_data` first.")
-    return pd.DataFrame(_DATA_CACHE['test_data'])
+    if _DATA_CACHE['offline_data'] is None:
+        raise ValueError("Test data not preloaded. Call `preload_offline_data` first.")
+    return pd.DataFrame(_DATA_CACHE['offline_data'])
 
 
 def _get_static_data():
     """Returns the preloaded benign fallback test data."""
-    if _DATA_CACHE['benign_fallback_test_data'] is None:
-        raise ValueError("Benign fallback test data not preloaded. Call `preload_test_data` first.")
-    return _DATA_CACHE['benign_fallback_test_data']
+    if _DATA_CACHE['benign_fallback_offline_data'] is None:
+        raise ValueError("Benign fallback test data not preloaded. Call `preload_offline_data` first.")
+    return _DATA_CACHE['benign_fallback_offline_data']
 
 
 def load_column_or_static(df, host_id, column):

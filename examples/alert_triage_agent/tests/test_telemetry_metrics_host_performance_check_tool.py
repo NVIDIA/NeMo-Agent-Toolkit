@@ -82,7 +82,7 @@ async def test_telemetry_metrics_host_performance_check_tool():
     # Configure the tool
     config = TelemetryMetricsHostPerformanceCheckToolConfig(
         llm_name=LLMRef(value="dummy"),
-        test_mode=False,  # Testing in live mode
+        offline_mode=False,  # Testing in live mode
         metrics_url="http://test-monitoring-system:9090")
 
     # Set up mock builder and LLM

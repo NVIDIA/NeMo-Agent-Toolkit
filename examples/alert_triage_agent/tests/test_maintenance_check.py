@@ -42,7 +42,8 @@ from aiq.data_models.component_ref import LLMRef
 def test_load_maintenance_data():
     # Load paths from config like in test_utils.py
     package_name = inspect.getmodule(AlertTriageAgentWorkflowConfig).__package__
-    config_file: Path = importlib.resources.files(package_name).joinpath("configs", "config_test_mode.yml").absolute()
+    config_file: Path = importlib.resources.files(package_name).joinpath("configs",
+                                                                         "config_offline_mode.yml").absolute()
     with open(config_file, "r") as file:
         config = yaml.safe_load(file)
         maintenance_data_path = config["functions"]["maintenance_check"]["static_data_path"]
