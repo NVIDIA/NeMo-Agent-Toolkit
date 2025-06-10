@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import get_args
+
 import pytest
 from pydantic import ValidationError
 from pytest_httpserver import HTTPServer
@@ -38,6 +40,12 @@ def _get_sample_schema():
             },
             'optional_string_field': {
                 'default': 'default_string',
+                'description': 'Optional field that needs to be a string',
+                'minLength': 1,
+                'title': 'OptionalString',
+                'type': 'string'
+            },
+            'optional_string_field_no_default': {
                 'description': 'Optional field that needs to be a string',
                 'minLength': 1,
                 'title': 'OptionalString',
@@ -133,6 +141,16 @@ def test_schema_generation(sample_schema):
 
     m = _model.model_validate(test_input)
     assert isinstance(m, _model)
+
+    # Check that the optional field with no default is -
+    # 1. present
+    # 2. has a default value of None
+    # 3. has a type of str | None
+    assert hasattr(m, "optional_string_field_no_default")
+    assert m.optional_string_field_no_default is None
+    field_type = m.model_fields["optional_string_field_no_default"].annotation
+    args = get_args(field_type)
+    assert str in args and type(None) in args, f"Expected str | None, got {field_type}"
 
 
 def test_schema_missing_required_fields_raises(sample_schema):
