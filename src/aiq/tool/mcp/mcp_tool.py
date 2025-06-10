@@ -35,8 +35,8 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
     # Add your custom configuration parameters here
     url: HttpUrl | None = Field(default=None, description="The URL of the MCP server (for SSE mode)")
     mcp_tool_name: str = Field(description="The name of the tool served by the MCP Server that you want to use")
-    client_type: Literal["sse", "stdio", "streamable-http"] = Field(default="sse",
-                                                                    description="The type of transport to use")
+    transport: Literal["sse", "stdio", "streamable-http"] = Field(default="sse",
+                                                                  description="The type of transport to use")
     command: str | None = Field(default=None,
                                 description="The command to run for stdio mode (e.g. 'docker' or 'python')")
     args: list[str] | None = Field(default=None, description="Additional arguments for the stdio command")
@@ -56,12 +56,12 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
         """Validate that stdio and SSE/Streamable HTTP properties are mutually exclusive."""
         super().model_post_init(__context)
 
-        if self.client_type == 'stdio':
+        if self.transport == 'stdio':
             if self.url is not None:
                 raise ValueError("url should not be set when using stdio client type")
             if not self.command:
                 raise ValueError("command is required when using stdio client type")
-        elif self.client_type == 'streamable-http' or self.client_type == 'sse':
+        elif self.transport == 'streamable-http' or self.transport == 'sse':
             if self.command is not None or self.args is not None or self.env is not None:
                 raise ValueError("command, args, and env should not be set when using sse client type")
             if not self.url:
@@ -80,14 +80,14 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=
     from aiq.tool.mcp.mcp_client_base import MCPToolClient
 
     # Initialize the client
-    if config.client_type == 'stdio':
+    if config.transport == 'stdio':
         client = MCPStdioClient(command=config.command, args=config.args, env=config.env)
-    elif config.client_type == 'streamable-http':
+    elif config.transport == 'streamable-http':
         client = MCPStreamableHTTPClient(url=str(config.url))
-    elif config.client_type == 'sse':
+    elif config.transport == 'sse':
         client = MCPSSEClient(url=str(config.url))
     else:
-        raise ValueError(f"Invalid client type: {config.client_type}")
+        raise ValueError(f"Invalid transport type: {config.transport}")
 
     async with client:
         # If the tool is found create a MCPToolClient object and set the description if provided
