@@ -122,8 +122,9 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
    uv pip install -e '.[langchain]'
    ```
 
-   > [!NOTE]
-   > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/simple/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
+> [!NOTE]
+> Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/simple/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
+
 
 
    In addition to plugins, there are optional dependencies needed for profiling. To install these dependencies, run the following:
