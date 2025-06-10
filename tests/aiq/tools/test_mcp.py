@@ -14,7 +14,10 @@
 # limitations under the License.
 
 import pytest
+from pydantic import ValidationError
 from pytest_httpserver import HTTPServer
+
+from aiq.tool.mcp.mcp_client import model_from_mcp_schema
 
 
 @pytest.fixture(name="test_mcp_server")
@@ -100,8 +103,6 @@ def _get_sample_schema():
 
 
 def test_schema_generation(sample_schema):
-
-    from aiq.tool.mcp.mcp_client import model_from_mcp_schema
     _model = model_from_mcp_schema("test_model", sample_schema)
 
     for k, _ in sample_schema["properties"].items():
@@ -132,3 +133,20 @@ def test_schema_generation(sample_schema):
 
     m = _model.model_validate(test_input)
     assert isinstance(m, _model)
+
+
+def test_schema_missing_required_fields_raises(sample_schema):
+    """Ensure that the required descriptor is respected in the schema generation"""
+    _model = model_from_mcp_schema("test_model", sample_schema)
+
+    incomplete_input = {
+        "required_string_field": "ok",  # 'required_int_field' is missing
+        "required_float_field": 5.5
+    }
+
+    with pytest.raises(ValidationError) as exc_info:
+        _model.model_validate(incomplete_input)
+
+    errors = exc_info.value.errors()
+    missing_fields = {e['loc'][0] for e in errors if e['type'] == 'missing'}
+    assert 'required_int_field' in missing_fields
