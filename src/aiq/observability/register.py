@@ -102,7 +102,7 @@ async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, build
     if not api_key:
         raise ValueError("API key is required for langsmith")
 
-    headers = {"x-api-key": api_key, "LANGSMITH_PROJECT": config.project}
+    headers = {"x-api-key": api_key, "Langsmith-Project": config.project}
     yield trace_exporter.OTLPSpanExporter(endpoint=config.endpoint, headers=headers)
 
 
