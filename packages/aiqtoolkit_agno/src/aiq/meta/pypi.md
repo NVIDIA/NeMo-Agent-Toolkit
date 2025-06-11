@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA Agent Intelligence Toolkit](https://media.githubusercontent.com/media/NVIDIA/AIQToolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
+![NVIDIA Agent Intelligence Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
 
 # NVIDIA Agent Intelligence Toolkit Subpackage
 
