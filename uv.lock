@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.11, <3.13"
 resolution-markers = [
     "python_full_version >= '3.12.4' and sys_platform == 'linux'",
@@ -566,6 +567,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
+provides-extras = ["agno", "crewai", "ingestion", "langchain", "llama-index", "mem0ai", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "profiling", "gunicorn"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -655,7 +657,7 @@ requires-dist = [
     { name = "langchain-milvus", specifier = "~=0.1.5" },
     { name = "langchain-milvus", specifier = "~=0.1.8" },
     { name = "langchain-nvidia-ai-endpoints", specifier = "~=0.3.5" },
-    { name = "langchain-openai", specifier = "~=0.2.8" },
+    { name = "langchain-openai", specifier = "~=0.3.5" },
     { name = "langgraph", specifier = "~=0.2.50" },
 ]
 
@@ -3048,16 +3050,16 @@ wheels = [
 
 [[package]]
 name = "langchain-openai"
-version = "0.2.14"
+version = "0.3.17"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "openai" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e5/fd/8256eba9a159f95a13c5bf7f1f49683de93b3876585b768e6be5dc3a5765/langchain_openai-0.2.14.tar.gz", hash = "sha256:7a514f309e356b182a337c0ed36ab3fbe34d9834a235a3b85cb7f91ae775d978", size = 43647 }
+sdist = { url = "https://files.pythonhosted.org/packages/81/85/4c5f34d177a442a48273688c52b8e2d285e6fa77329ef3de62ca8cdaecfb/langchain_openai-0.3.17.tar.gz", hash = "sha256:10bcdfac3edb3dea4a8aabb12f01566e5ff8756634cc52aa169c62e4c4b73801", size = 271556 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ed/54/63c8264d7dbc3bf31ba61bf97740fdd76386b2d4f9a58f58afd3961ce7d7/langchain_openai-0.2.14-py3-none-any.whl", hash = "sha256:d232496662f79ece9a11caf7d798ba863e559c771bc366814f7688e0fe664fe8", size = 50876 },
+    { url = "https://files.pythonhosted.org/packages/a9/60/886dc53c91031e26542f7ac1ea4062b7ebe542d22970996acaee59aa1cab/langchain_openai-0.3.17-py3-none-any.whl", hash = "sha256:d4d9cf945e2453ee5895ccd12fd8a3ea9131a0f6130dcc21427c77cc2206b1c0", size = 62891 },
 ]
 
 [[package]]
