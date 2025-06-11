@@ -142,7 +142,7 @@ def test_schema_generation(sample_schema):
     m = _model.model_validate(test_input)
     assert isinstance(m, _model)
 
-    # Check that the optional field with no default is -
+    # Check that the optional field with no default is
     # 1. present
     # 2. has a default value of None
     # 3. has a type of str | None
