@@ -29,7 +29,7 @@ from aiq_alert_triage_agent.utils import _DATA_CACHE
 from aiq_alert_triage_agent.utils import _LLM_CACHE
 from aiq_alert_triage_agent.utils import _get_llm
 from aiq_alert_triage_agent.utils import load_column_or_static
-from aiq_alert_triage_agent.utils import preload_test_data
+from aiq_alert_triage_agent.utils import preload_offline_data
 from aiq_alert_triage_agent.utils import run_ansible_playbook
 
 from aiq.builder.framework_enum import LLMFrameworkEnum
@@ -87,53 +87,55 @@ async def test_get_llm():
     assert _LLM_CACHE[(llm_name_2, wrapper_type)] is llms[(llm_name_2, wrapper_type)]
 
 
-def test_preload_test_data():
+def test_preload_offline_data():
     # Clear the data cache before test
     _DATA_CACHE.clear()
-    _DATA_CACHE.update({'test_data': None, 'benign_fallback_test_data': None})
+    _DATA_CACHE.update({'offline_data': None, 'benign_fallback_offline_data': None})
 
     # Load paths from config
     package_name = inspect.getmodule(AlertTriageAgentWorkflowConfig).__package__
-    config_file: Path = importlib.resources.files(package_name).joinpath("configs", "config_test_mode.yml").absolute()
+    config_file: Path = importlib.resources.files(package_name).joinpath("configs",
+                                                                         "config_offline_mode.yml").absolute()
     with open(config_file, "r") as file:
         config = yaml.safe_load(file)
-        test_data_path = config["workflow"]["test_data_path"]
+        offline_data_path = config["workflow"]["offline_data_path"]
         benign_fallback_data_path = config["workflow"]["benign_fallback_data_path"]
-    test_data_path_abs = importlib.resources.files(package_name).joinpath("../../../../", test_data_path).absolute()
+    offline_data_path_abs = importlib.resources.files(package_name).joinpath("../../../../",
+                                                                             offline_data_path).absolute()
     benign_fallback_data_path_abs = importlib.resources.files(package_name).joinpath(
         "../../../../", benign_fallback_data_path).absolute()
 
     # Test successful loading with actual test files
-    preload_test_data(test_data_path_abs, benign_fallback_data_path_abs)
+    preload_offline_data(offline_data_path_abs, benign_fallback_data_path_abs)
 
     # Verify data was loaded correctly
     assert len(_DATA_CACHE) == 2
-    assert isinstance(_DATA_CACHE['test_data'], pd.DataFrame)
-    assert isinstance(_DATA_CACHE['benign_fallback_test_data'], dict)
-    assert not _DATA_CACHE['test_data'].empty
-    assert len(_DATA_CACHE['benign_fallback_test_data']) > 0
+    assert isinstance(_DATA_CACHE['offline_data'], pd.DataFrame)
+    assert isinstance(_DATA_CACHE['benign_fallback_offline_data'], dict)
+    assert not _DATA_CACHE['offline_data'].empty
+    assert len(_DATA_CACHE['benign_fallback_offline_data']) > 0
 
     # Test error cases
-    with pytest.raises(ValueError, match="test_data_path must be provided"):
-        preload_test_data(None, benign_fallback_data_path)
+    with pytest.raises(ValueError, match="offline_data_path must be provided"):
+        preload_offline_data(None, benign_fallback_data_path)
 
     with pytest.raises(ValueError, match="benign_fallback_data_path must be provided"):
-        preload_test_data(test_data_path, None)
+        preload_offline_data(offline_data_path, None)
 
     # Test with non-existent files
     with pytest.raises(FileNotFoundError):
-        preload_test_data("nonexistent.csv", benign_fallback_data_path)
+        preload_offline_data("nonexistent.csv", benign_fallback_data_path)
 
     with pytest.raises(FileNotFoundError):
-        preload_test_data(test_data_path, "nonexistent.json")
+        preload_offline_data(offline_data_path, "nonexistent.json")
 
 
 def test_load_column_or_static():
     # Clear and initialize the data cache with test data
     _DATA_CACHE.clear()
     _DATA_CACHE.update({
-        'test_data': None,
-        'benign_fallback_test_data': {
+        'offline_data': None,
+        'benign_fallback_offline_data': {
             'static_column': 'static_value', 'another_static': 'another_value'
         }
     })
@@ -169,8 +171,8 @@ def test_load_column_or_static():
         load_column_or_static(df_duplicate, 'host1', 'string_column')
 
     # Test error when benign fallback data not preloaded
-    _DATA_CACHE['benign_fallback_test_data'] = None
-    with pytest.raises(ValueError, match="Benign fallback test data not preloaded. Call `preload_test_data` first."):
+    _DATA_CACHE['benign_fallback_offline_data'] = None
+    with pytest.raises(ValueError, match="Benign fallback test data not preloaded. Call `preload_offline_data` first."):
         load_column_or_static(df, 'host1', 'static_column')
 
 

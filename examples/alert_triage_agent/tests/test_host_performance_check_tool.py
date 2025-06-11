@@ -14,10 +14,11 @@
 # limitations under the License.
 
 import json
+from unittest.mock import MagicMock
 from unittest.mock import patch
 
 from aiq_alert_triage_agent.host_performance_check_tool import _parse_stdout_lines
-from aiq_alert_triage_agent.prompts import ToolReasoningLayerPrompts
+from aiq_alert_triage_agent.prompts import HostPerformanceCheckPrompts
 
 EXAMPLE_CPU_USAGE_OUTPUT = """
 03:45:00 PM  CPU    %usr   %nice    %sys %iowait    %irq   %soft  %steal  %guest  %gnice   %idle
@@ -111,13 +112,17 @@ async def test_parse_stdout_lines_success():
     # Test data
     test_stdout_lines = [EXAMPLE_CPU_USAGE_OUTPUT, EXAMPLE_MEMORY_USAGE_OUTPUT, EXAMPLE_DISK_IO_OUTPUT]
 
+    # Create mock config with parsing_prompt
+    mock_config = MagicMock()
+    mock_config.parsing_prompt = HostPerformanceCheckPrompts.PARSING_PROMPT
+
     # Mock the LLM response
     with patch('aiq_alert_triage_agent.utils.llm_ainvoke') as mock_llm:
         mock_llm.return_value = EXAMPLE_LLM_PARSED_OUTPUT
 
         # Call the function
         result = await _parse_stdout_lines(
-            config=None,  # unused, mocked
+            config=mock_config,
             builder=None,  # unused, mocked
             stdout_lines=test_stdout_lines)
 
@@ -131,8 +136,7 @@ async def test_parse_stdout_lines_success():
         assert 'builder' in call_args
         assert 'user_prompt' in call_args
         input_data = "\n".join(test_stdout_lines)
-        assert call_args['user_prompt'] == ToolReasoningLayerPrompts.HOST_PERFORMANCE_CHECK_PARSING.format(
-            input_data=input_data)
+        assert call_args['user_prompt'] == HostPerformanceCheckPrompts.PARSING_PROMPT.format(input_data=input_data)
 
 
 async def test_parse_stdout_lines_llm_error():
@@ -141,8 +145,12 @@ async def test_parse_stdout_lines_llm_error():
         mock_llm.side_effect = Exception("LLM error")
         mock_llm.return_value = None
 
+        # Create mock config with parsing_prompt
+        mock_config = MagicMock()
+        mock_config.parsing_prompt = HostPerformanceCheckPrompts.PARSING_PROMPT
+
         result = await _parse_stdout_lines(
-            config=None,  # unused, mocked
+            config=mock_config,
             builder=None,  # unused, mocked
             stdout_lines=["Some test output"])
 

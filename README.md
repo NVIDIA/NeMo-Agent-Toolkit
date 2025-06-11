@@ -15,17 +15,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA Agent Intelligence Toolkit](./docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
+![NVIDIA NeMo Agent Toolkit](./docs/source/_static/aiqtoolkit_banner.png "NeMo Agent toolkit banner image")
 
-# NVIDIA Agent Intelligence Toolkit
+# NVIDIA NeMo Agent Toolkit
 
-NVIDIA Agent Intelligence (AIQ) toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
+NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.
 
-> Note: Agent Intelligence toolkit was previously known as <!-- vale off -->AgentIQ<!-- vale on -->, however the API has not changed and is fully compatible with previous releases. Users should update their dependencies to depend on `aiqtoolkit` instead of `agentiq`. The transitional package named `agentiq` is available for backwards compatibility, but will be removed in the future.
+> [!NOTE]
+> NeMo Agent toolkit was previously known as the Agent Intelligence (AIQ) toolkit, and <!-- vale off -->AgentIQ<!-- vale on -->. The library was renamed to better reflect the purpose of the toolkit and to align with the NVIDIA NeMo family of products. The core technologies, performance and roadmap remain unchanged and the API is fully compatible with previous releases.
+>
+> The rename is still in progress and references to the previous name may still be found in the codebase and documentation.
 
 ## Key Features
 
-- [**Framework Agnostic:**](./docs/source/quick-start/installing.md#framework-integrations) AIQ toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), and [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. AIQ toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
+- [**Framework Agnostic:**](./docs/source/quick-start/installing.md#framework-integrations) NeMo Agent toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), and [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
 
 - [**Reusability:**](./docs/source/extend/sharing-components.md) Every agent, tool, and agentic workflow in this library exists as a function call that works together in complex software applications. The composability between these agents, tools, and workflows allows you to build once and reuse in different scenarios.
 
@@ -37,25 +40,25 @@ NVIDIA Agent Intelligence (AIQ) toolkit is a flexible, lightweight, and unifying
 
 - [**Evaluation System:**](./docs/source/workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 
-- [**User Interface:**](./docs/source/quick-start/launching-ui.md) Use the AIQ toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
+- [**User Interface:**](./docs/source/quick-start/launching-ui.md) Use the NeMo Agent toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 
-- [**Full MCP Support:**](./docs/source/workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use AIQ toolkit as an [MCP client](./docs/source/workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use AIQ toolkit as an [MCP server](./docs/source/workflows/mcp/mcp-server.md) to publish tools via MCP.
+- [**Full MCP Support:**](./docs/source/workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent toolkit as an [MCP client](./docs/source/workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use NeMo Agent toolkit as an [MCP server](./docs/source/workflows/mcp/mcp-server.md) to publish tools via MCP.
 
-With AIQ toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
+With NeMo Agent toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 
 ## Component Overview
 
-The following diagram illustrates the key components of AIQ toolkit and how they interact. It provides a high-level view of the architecture, including agents, plugins, workflows, and user interfaces. Use this as a reference to understand how to integrate and extend AIQ toolkit in your projects.
+The following diagram illustrates the key components of NeMo Agent toolkit and how they interact. It provides a high-level view of the architecture, including agents, plugins, workflows, and user interfaces. Use this as a reference to understand how to integrate and extend NeMo Agent toolkit in your projects.
 
-![AIQ toolkit Components Diagram](docs/source/_static/aiqtoolkit_gitdiagram.png)
+![NeMo Agent toolkit Components Diagram](docs/source/_static/aiqtoolkit_gitdiagram.png)
 
 ## Links
 
- * [Documentation](https://docs.nvidia.com/aiqtoolkit): Explore the full documentation for AIQ toolkit.
- * [Get Started Guide](./docs/source/quick-start/installing.md): Set up your environment and start building with AIQ toolkit.
- * [Examples](./examples/README.md): Explore examples of AIQ toolkit workflows located in the [`examples`](./examples) directory of the source repository.
- * [Create and Customize AIQ toolkit Workflows](docs/source/tutorials/customize-a-workflow.md): Learn how to create and customize AIQ toolkit workflows.
- * [Evaluate with AIQ toolkit](./docs/source/workflows/evaluate.md): Learn how to evaluate your AIQ toolkit workflows.
+ * [Documentation](https://docs.nvidia.com/aiqtoolkit): Explore the full documentation for NeMo Agent toolkit.
+ * [Get Started Guide](./docs/source/quick-start/installing.md): Set up your environment and start building with NeMo Agent toolkit.
+ * [Examples](./examples/README.md): Explore examples of NeMo Agent toolkit workflows located in the [`examples`](./examples) directory of the source repository.
+ * [Create and Customize NeMo Agent toolkit Workflows](docs/source/tutorials/customize-a-workflow.md): Learn how to create and customize NeMo Agent toolkit workflows.
+ * [Evaluate with NeMo Agent toolkit](./docs/source/workflows/evaluate.md): Learn how to evaluate your NeMo Agent toolkit workflows.
  * [Troubleshooting](./docs/source/troubleshooting.md): Get help with common issues.
 
 
@@ -63,7 +66,7 @@ The following diagram illustrates the key components of AIQ toolkit and how they
 
 ### Prerequisites
 
-Before you begin using AIQ toolkit, ensure that you meet the following software prerequisites.
+Before you begin using NeMo Agent toolkit, ensure that you meet the following software prerequisites.
 
 - Install [Git](https://git-scm.com/)
 - Install [Git Large File Storage](https://git-lfs.github.com/) (LFS)
@@ -72,69 +75,70 @@ Before you begin using AIQ toolkit, ensure that you meet the following software 
 
 ### Install From Source
 
-1. Clone the AIQ toolkit repository to your local machine.
-    ```bash
-    git clone git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit
-    cd aiqtoolkit
-    ```
+1. Clone the NeMo Agent toolkit repository to your local machine.
+   ```bash
+   git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit.git aiqtoolkit
+   cd aiqtoolkit
+   ```
 
 2. Initialize, fetch, and update submodules in the Git repository.
-    ```bash
-    git submodule update --init --recursive
-    ```
+   ```bash
+   git submodule update --init --recursive
+   ```
 
 3. Fetch the data sets by downloading the LFS files.
-    ```bash
-    git lfs install
-    git lfs fetch
-    git lfs pull
-    ```
+   ```bash
+   git lfs install
+   git lfs fetch
+   git lfs pull
+   ```
 
 4. Create a Python environment.
-    ```bash
-    uv venv --seed .venv
-    source .venv/bin/activate
-    ```
-    Make sure the environment is built with Python version `3.11` or `3.12`. If you have multiple Python versions installed,
-    you can specify the desired version using the `--python` flag. For example, to use Python 3.11:
-    ```bash
-    uv venv --seed .venv --python 3.11
-    ```
-    You can replace `--python 3.11` with any other Python version (`3.11` or `3.12`) that you have installed.
+   ```bash
+   uv venv --seed .venv
+   source .venv/bin/activate
+   ```
+   Make sure the environment is built with Python version `3.11` or `3.12`. If you have multiple Python versions installed,
+   you can specify the desired version using the `--python` flag. For example, to use Python 3.11:
+   ```bash
+   uv venv --seed .venv --python 3.11
+   ```
+   You can replace `--python 3.11` with any other Python version (`3.11` or `3.12`) that you have installed.
 
-5. Install the AIQ toolkit library.
-    To install the AIQ toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
-    ```bash
-    uv sync --all-groups --all-extras
-    ```
+5. Install the NeMo Agent toolkit library.
+   To install the NeMo Agent toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
+   ```bash
+   uv sync --all-groups --all-extras
+   ```
 
-    Alternatively to install just the core AIQ toolkit without any plugins, run the following:
-    ```bash
-    uv sync
-    ```
+   Alternatively to install just the core NeMo Agent toolkit without any plugins, run the following:
+   ```bash
+   uv sync
+   ```
 
-    At this point individual plugins, which are located under the `packages` directory, can be installed with the following command `uv pip install -e '.[<plugin_name>]'`.
-    For example, to install the `langchain` plugin, run the following:
-    ```bash
-    uv pip install -e '.[langchain]'
-    ```
+   At this point individual plugins, which are located under the `packages` directory, can be installed with the following command `uv pip install -e '.[<plugin_name>]'`.
+   For example, to install the `langchain` plugin, run the following:
+   ```bash
+   uv pip install -e '.[langchain]'
+   ```
 
-    > [!NOTE]
-    > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/simple/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
+   > [!NOTE]
+   > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/simple/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
 
 
-    In addition to plugins, there are optional dependencies needed for profiling. To install these dependencies, run the following:
-    ```bash
-    uv pip install -e '.[profiling]'
-    ```
 
-6. Verify the installation using the AIQ toolkit CLI
+   In addition to plugins, there are optional dependencies needed for profiling. To install these dependencies, run the following:
+   ```bash
+   uv pip install -e '.[profiling]'
+   ```
+
+6. Verify the installation using the NeMo Agent toolkit CLI
 
    ```bash
    aiq --version
    ```
 
-   This should output the AIQ toolkit version which is currently installed.
+   This should output the NeMo Agent toolkit version which is currently installed.
 
 ## Hello World Example
 
@@ -144,7 +148,7 @@ Before you begin using AIQ toolkit, ensure that you meet the following software 
    export NVIDIA_API_KEY=<your_api_key>
    ```
 
-2. Create the AIQ toolkit workflow configuration file. This file will define the agents, tools, and workflows that will be used in the example. Save the following as `workflow.yaml`:
+2. Create the NeMo Agent toolkit workflow configuration file. This file will define the agents, tools, and workflows that will be used in the example. Save the following as `workflow.yaml`:
 
    ```yaml
    functions:
@@ -154,7 +158,7 @@ Before you begin using AIQ toolkit, ensure that you meet the following software 
          max_results: 2
 
    llms:
-      # Tell AIQ toolkit which LLM to use for the agent
+      # Tell NeMo Agent toolkit which LLM to use for the agent
       nim_llm:
          _type: nim
          model_name: meta/llama-3.1-70b-instruct
@@ -190,11 +194,11 @@ Before you begin using AIQ toolkit, ensure that you meet the following software 
 
 ## Feedback
 
-We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AIQToolkit/issues) if you have any feedback or feature requests.
+We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) if you have any feedback or feature requests.
 
 ## Acknowledgements
 
-We would like to thank the following open source projects that made AIQ toolkit possible:
+We would like to thank the following open source projects that made NeMo Agent toolkit possible:
 
 - [CrewAI](https://github.com/crewAIInc/crewAI)
 - [FastAPI](https://github.com/tiangolo/fastapi)
