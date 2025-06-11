@@ -146,17 +146,14 @@ def mock_swe_bench_input_df(dataset_swe_bench_id_key):
     }])
 
 
-@pytest.mark.parametrize("pass_full_entry", [True, False])
 def test_get_eval_input_from_df_with_additional_fields(mock_input_df_with_extras,
                                                        input_entry_with_extras,
-                                                       pass_full_entry,
                                                        dataset_id_key,
                                                        dataset_structure):
     """
-    Test that additional fields are passed to the evaluator if dataset config has
-    pass_full_entry set to true.
+    Test that additional fields are always passed to the evaluator as full_dataset_entry.
     """
-    dataset_config = EvalDatasetJsonConfig(pass_full_entry=pass_full_entry)
+    dataset_config = EvalDatasetJsonConfig()
     dataset_handler = DatasetHandler(dataset_config, reps=1)
     eval_input = dataset_handler.get_eval_input_from_df(mock_input_df_with_extras)
 
@@ -167,10 +164,8 @@ def test_get_eval_input_from_df_with_additional_fields(mock_input_df_with_extras
     assert eval_input.eval_input_items[0].expected_trajectory == input_entry_with_extras[
         dataset_structure.expected_trajectory_key]
 
-    if pass_full_entry:
-        assert eval_input.eval_input_items[0].full_dataset_entry == input_entry_with_extras
-    else:
-        assert eval_input.eval_input_items[0].full_dataset_entry is None
+    # full_dataset_entry should always be provided
+    assert eval_input.eval_input_items[0].full_dataset_entry == input_entry_with_extras
 
 
 def test_get_eval_input_from_df(dataset_handler,

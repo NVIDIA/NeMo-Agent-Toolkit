@@ -87,19 +87,8 @@ eval:
         disable: true
 ```
 
-### Passing the Full Dataset Entry to the Evaluator
-In some evaluation scenarios, you may have additional fields in your dataset that are not consumed by the workflow but are required by the evaluator (e.g., metadata, references, or labels). To make these fields available during evaluation, enable the `pass_full_entry` option in your dataset configuration.
-
-When `eval.general.dataset.pass_full_entry` is set to true, the entire dataset entry is passed as a dictionary to the evaluator via the `full_dataset_entry` field in the `EvalInputItem` object.
-
-**Example:**
-```yaml
-eval:
-  general:
-    dataset:
-      pass_full_entry: true
-```
-This is useful for custom evaluators that require access to fields like `reference_answers` or `metadata` which are not part of the workflow's inputs but are relevant for scoring or analysis.
+### Accessing Additional Dataset Fields in Custom Evaluators
+In some evaluation scenarios, you may have additional fields in your dataset that are not consumed by the workflow but are required by the evaluator. These fields are automatically available during evaluation via the `full_dataset_entry` field in the `EvalInputItem` object. The entire dataset entry is passed as a dictionary to the evaluator, making all dataset fields available for custom evaluators that require access to fields like `labels` or `metadata` which are not part of the workflow's inputs but are relevant for scoring or analysis.
 
 ### Filtering Datasets
 While evaluating large datasets, you can filter the dataset to a
@@ -144,6 +133,7 @@ eval:
               - sympy__sympy-20590
               - sympy__sympy-21055
 ```
+
 
 ## AIQ Toolkit Built-in Evaluators
 AIQ toolkit provides the following built-in evaluator:
