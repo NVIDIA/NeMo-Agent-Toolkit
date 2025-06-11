@@ -21,21 +21,22 @@ This guide explains how to organize, create, and maintain Cursor rules within th
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Rule Organization Structure](#rule-organization-structure)
-   - [Core Rules Files](#core-rules-files)
-     - [`cursor-rules.mdc`](#cursor-rulesmdc)
-     - [`general.mdc`](#generalmdc)
-   - [Topic-Based Subdirectories](#topic-based-subdirectories)
-     - [`aiq-agents/`](#aiq-agents)
-     - [`aiq-cli/`](#aiq-cli)
-     - [`aiq-setup/`](#aiq-setup)
-     - [`aiq-workflows/`](#aiq-workflows)
-3. [Creating and Maintaining Cursor Rules](#creating-and-maintaining-cursor-rules)
-   - [Fundamental Principles](#fundamental-principles)
-   - [Rule Creation Process](#rule-creation-process)
-   - [Select Proper Rule Type and Add Description](#select-proper-rule-type-and-add-description)
-   - [Writing Effective Agent-Requested Rule Descriptions](#writing-effective-agent-requested-rule-descriptions)
+- [Cursor Rules Developer Guide](#cursor-rules-developer-guide)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Rule Organization Structure](#rule-organization-structure)
+    - [Core Rules Files](#core-rules-files)
+      - [`cursor-rules.mdc`](#cursor-rulesmdc)
+      - [`general.mdc`](#generalmdc)
+    - [Topic-Based Subdirectories](#topic-based-subdirectories)
+      - [`aiq-agents/`](#aiq-agents)
+      - [`aiq-cli/`](#aiq-cli)
+      - [`aiq-setup/`](#aiq-setup)
+      - [`aiq-workflows/`](#aiq-workflows)
+  - [Creating and Maintaining Cursor Rules](#creating-and-maintaining-cursor-rules)
+    - [Fundamental Principles](#fundamental-principles)
+    - [Rule Creation Process](#rule-creation-process)
+    - [Writing Effective Agent-Requested Rule Descriptions](#writing-effective-agent-requested-rule-descriptions)
 
 ## Overview
 

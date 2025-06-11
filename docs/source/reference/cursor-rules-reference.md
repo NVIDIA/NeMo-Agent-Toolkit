@@ -313,4 +313,4 @@ Integrate ReAct agent to the workflow
 4. **Reference Documentation**: Follow the "Related Documentation" links for deeper understanding
 5. **Test Incrementally**: Apply one rule at a time and test the results
 
-For tutorials and examples on using these rules, see [Using Cursor Rules for AIQ Toolkit Development](../tutorials/using-cursor-rules-for-aiq-toolkit-development.md). 
+For tutorials and examples on using these rules, see [Cursor Rules for AIQ Toolkit Development](../tutorials/cursor-rules-for-aiq-toolkit-development.md). 

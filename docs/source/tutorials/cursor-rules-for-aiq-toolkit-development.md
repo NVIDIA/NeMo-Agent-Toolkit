@@ -143,7 +143,7 @@ Prompt:
 Create a new workflow named `demo_workflow` in the examples folder
 ```
 
-The assistant will reference and apply the [aiq-workflows/general](../../.cursor/rules/aiq-workflows/general.mdc) rule to generate a new workflow using the `aiq workflow create` command.
+The assistant will reference and apply the [aiq-workflows/general](../../../.cursor/rules/aiq-workflows/general.mdc) rule to generate a new workflow using the `aiq workflow create` command.
 
 <div align="center">
   <img src="../_static/cursor_rules_demo/create_workflow.gif" width="600">
