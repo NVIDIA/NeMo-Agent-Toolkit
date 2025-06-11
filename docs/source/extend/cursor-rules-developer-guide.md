@@ -162,7 +162,7 @@ Each subdirectory focuses on a specific area of the toolkit:
    | **Agent Requested** (`alwaysApply: false` + `description`) | Available to the AI, which decides whether to include it | Task-specific rules that the AI should choose based on context |
    | **Manual** (`alwaysApply: false`, no `description`) | Only included when explicitly mentioned using @ruleName | Rules that should only be applied when explicitly requested |
 
-   ### Writing Effective Agent Requested Rule Descriptions
+### Writing Effective Agent Requested Rule Descriptions
 
    For **Agent Requested** rules, the description is crucial as it helps the AI determine when to apply the rule. Based on existing AIQ Toolkit rules, follow these patterns:
 
