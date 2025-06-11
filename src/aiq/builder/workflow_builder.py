@@ -593,6 +593,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         Args:
             config (AIQConfig): The configuration object containing component definitions.
             skip_workflow (bool): If True, skips the workflow instantiation step. Defaults to False.
+
         """
         # Generate the build sequence
         build_sequence = build_dependency_sequence(config)
