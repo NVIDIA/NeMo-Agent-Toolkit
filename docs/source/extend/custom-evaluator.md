@@ -36,7 +36,7 @@ To extend AIQ toolkit with custom evaluators, you need to create an evaluator fu
 This section provides a step-by-step guide to create and register a custom evaluator with AIQ toolkit. A similarity evaluator is used as an example to demonstrate the process.
 
 ### Evaluator Configuration
-The evaluator configuration defines the evaluator's name and any evaluator-specific parameters. This configuration is paired with a registration function that yields an asynchronous evaluation method.
+The evaluator configuration defines the evaluator name and any evaluator-specific parameters. This configuration is paired with a registration function that yields an asynchronous evaluation method.
 
 The following example shows how to define and register a custom evaluator. The code is added to a new `evaluator_register.py` file in the simple example directory for testing purposes.
 
