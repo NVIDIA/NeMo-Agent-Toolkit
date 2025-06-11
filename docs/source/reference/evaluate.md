@@ -87,7 +87,7 @@ eval:
         disable: true
 ```
 
-### Accessing Additional Dataset Fields in Custom Evaluators
+### Accessing Additional Dataset Fields in Evaluators
 In some evaluation scenarios, you may have additional fields in your dataset that are not consumed by the workflow but are required by the evaluator. These fields are automatically available during evaluation via the `full_dataset_entry` field in the `EvalInputItem` object. The entire dataset entry is passed as a dictionary to the evaluator, making all dataset fields available for custom evaluators that require access to fields like `labels` or `metadata` which are not part of the workflow's inputs but are relevant for scoring or analysis.
 
 ### Filtering Datasets
@@ -133,7 +133,6 @@ eval:
               - sympy__sympy-20590
               - sympy__sympy-21055
 ```
-
 
 ## AIQ Toolkit Built-in Evaluators
 AIQ toolkit provides the following built-in evaluator:
