@@ -82,14 +82,14 @@ The AIQ Toolkit uses a hierarchical structure for organizing Cursor rules under 
 The foundation file containing meta-rules that define:
 * File naming conventions (kebab-case with `.mdc` extension)
 * Directory structure requirements
-* YAML frontmatter format specifications
+* YAML format specifications
 * Documentation referencing patterns
 * Guidelines for writing effective rule descriptions
 
 #### `general.mdc`
 Contains project-wide coding standards including:
 * Project structure guidelines
-* Code formatting and import rules (isort, yapf)
+* Code formatting and import rules
 * Type hints requirements
 * Documentation standards (Google-style docstrings)
 * Testing practices with pytest

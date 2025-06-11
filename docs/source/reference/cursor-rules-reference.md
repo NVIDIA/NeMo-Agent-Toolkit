@@ -60,7 +60,7 @@ Create a new Python function with proper type hints, docstrings, and formatting 
 
 **Capabilities**:
 - Project structure guidelines
-- Code formatting standards (isort, yapf)
+- Code formatting standards
 - Type hint requirements
 - Documentation standards
 - Testing practices
