@@ -66,7 +66,7 @@ Create a new Python function with proper type hints, docstrings, and formatting 
 - Testing practices
 - CI/CD compliance
 
-**Related Documentation**: [General Coding Guidelines](../resources/contributing.md#coding-standards)
+**Related Documentation**: [Contributing Guidelines](../resources/contributing.md)
 
 ---
 
@@ -162,7 +162,7 @@ Create a workflow named demo_workflow in examples directory with description "De
 
 
 
-**Related Documentation**: [CLI Reference - Workflow Commands](./cli.md#workflow-commands)
+**Related Documentation**: [CLI Reference - Workflow Commands](./cli.md#workflow)
 
 ---
 
@@ -179,7 +179,7 @@ Run my workflow locally for testing and then serve it as an API endpoint on port
 
 
 **Related Documentation**: 
-- [CLI Reference - Run Commands](./cli.md#run-commands)
+- [CLI Reference - Run Commands](./cli.md#run)
 - [Running Workflows](../workflows/run-workflows.md)
 
 ---
@@ -197,7 +197,7 @@ Evaluate my workflow performance using a test dataset with accuracy and precisio
 
 
 **Related Documentation**: 
-- [CLI Reference - Evaluation Commands](./cli.md#evaluation-commands)
+- [CLI Reference - Evaluation Commands](./cli.md#evaluation)
 - [Workflow Evaluation](../workflows/evaluate.md)
 
 ---
@@ -214,7 +214,7 @@ Show me system information and list all available AIQ components with their deta
 
 
 
-**Related Documentation**: [CLI Reference - Info Commands](./cli.md#info-commands)
+**Related Documentation**: [CLI Reference - Info Commands](./cli.md#information-commands)
 
 ---
 
