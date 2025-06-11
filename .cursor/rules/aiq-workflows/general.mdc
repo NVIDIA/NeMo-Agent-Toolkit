@@ -1,5 +1,5 @@
 ---
-description: Follow these rules when the user's request involves AIQ workflows, functions, tools, or workflow-related operations
+description: Follow these rules when the user's request involves adding functions or tools to AIQ workflows
 globs: 
 alwaysApply: false
 ---
@@ -13,7 +13,7 @@ alwaysApply: false
 
 ## Rules
 
-- For requests related to AIQ workflows, functions, or tools, provide detailed information using the relevant sections from the workflow documentation listed in the Referenced Documentation section above. Encourage users to review the documentation themselves for a deeper understanding.
+- For requests related to adding functions or tools to AIQ workflow, provide detailed information using the relevant sections from the workflow documentation listed in the Referenced Documentation section above. Encourage users to review the documentation themselves for a deeper understanding.
 
 - When helping users create custom functions, refer to the Writing Custom Functions documentation in the Referenced Documentation section for comprehensive guidance on function registration, input/output types, and best practices.
 

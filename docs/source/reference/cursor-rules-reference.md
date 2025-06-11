@@ -50,7 +50,7 @@ This document provides a comprehensive reference for all available Cursor rules 
 
 ### General Development Guidelines
 
-**Rule ID**: `general`  
+**Cursor Rule file**: [`general`](../../../.cursor/rules/general.mdc)  
 **Purpose**: Overarching standards for all source, test, documentation, and CI files.
 
 **Prompt**:
@@ -72,12 +72,12 @@ Create a new Python function with proper type hints, docstrings, and formatting 
 
 ### Cursor Rules Management
 
-**Rule ID**: `cursor-rules`  
+**Cursor Rule file**: [`cursor-rules`](../../../.cursor/rules/cursor-rules.mdc)  
 **Purpose**: Guidelines for creating and managing cursor rules themselves.
 
 **Prompt**:
 ```
-Create a new cursor rule file for handling database operations with proper naming conventions and structure.
+Create a new Cursor rule for creating a new AIQ workflow
 ```
 
 **Capabilities**:
@@ -94,7 +94,7 @@ Create a new cursor rule file for handling database operations with proper namin
 
 ### General Setup Guidelines
 
-**Rule ID**: `aiq-setup/general`  
+**Cursor Rule file**: [`aiq-setup/general`](../../../.cursor/rules/aiq-setup/general.mdc)  
 **Purpose**: Guidance for AIQ toolkit installation, setup, and environment configuration.
 
 **Prompt**:
@@ -114,7 +114,7 @@ Help me set up AIQ Toolkit development environment with all required dependencie
 
 ### AIQ Toolkit Installation
 
-**Rule ID**: `aiq-setup/aiq-toolkit-installation`  
+**Cursor Rule file**: [`aiq-setup/aiq-toolkit-installation`](../../../.cursor/rules/aiq-setup/aiq-toolkit-installation.mdc)  
 **Purpose**: Detailed installation procedures and setup guidance.
 
 **Prompt**:
@@ -122,17 +122,7 @@ Help me set up AIQ Toolkit development environment with all required dependencie
 Install AIQ Toolkit with all plugins and verify the installation is working correctly.
 ```
 
-**Example**:
-```bash
-# Install AIQ Toolkit with all dependencies
-pip install aiq-toolkit[all]
 
-# Verify installation
-aiq --version
-
-# Initialize a new project
-aiq init my-project
-```
 
 **Related Documentation**: [Installation Guide](../quick-start/installing.md)
 
@@ -142,12 +132,12 @@ aiq init my-project
 
 ### General CLI Guidelines
 
-**Rule ID**: `aiq-cli/general`  
+**Cursor Rule file**: [`aiq-cli/general`](../../../.cursor/rules/aiq-cli/general.mdc)  
 **Purpose**: Guidance for all AIQ CLI commands, operations, and functionality.
 
 **Prompt**:
 ```
-Show me how to use AIQ CLI commands to manage workflows and troubleshoot common issues.
+Show me how to use AIQ CLI commands to manage workflows
 ```
 
 **Capabilities**:
@@ -162,7 +152,7 @@ Show me how to use AIQ CLI commands to manage workflows and troubleshoot common 
 
 ### AIQ Workflow Commands
 
-**Rule ID**: `aiq-cli/aiq-workflow`  
+**Cursor Rule file**: [`aiq-cli/aiq-workflow`](../../../.cursor/rules/aiq-cli/aiq-workflow.mdc)  
 **Purpose**: Creating, reinstalling, and deleting AIQ workflows.
 
 **Prompt**:
@@ -170,17 +160,7 @@ Show me how to use AIQ CLI commands to manage workflows and troubleshoot common 
 Create a workflow named demo_workflow in examples directory with description "Demo workflow for testing features".
 ```
 
-**Examples**:
-```bash
-# Create a new workflow
-aiq workflow create my_rag_workflow --description "A custom RAG workflow for document processing"
 
-# Reinstall after code changes
-aiq workflow reinstall my_rag_workflow
-
-# Delete a workflow
-aiq workflow delete my_rag_workflow
-```
 
 **Related Documentation**: [CLI Reference - Workflow Commands](./cli.md#workflow-commands)
 
@@ -188,7 +168,7 @@ aiq workflow delete my_rag_workflow
 
 ### AIQ Run and Serve Commands
 
-**Rule ID**: `aiq-cli/aiq-run-serve`  
+**Cursor Rule file**: [`aiq-cli/aiq-run-serve`](../../../.cursor/rules/aiq-cli/aiq-run-serve.mdc)  
 **Purpose**: Running, serving, and executing AIQ workflows.
 
 **Prompt**:
@@ -196,17 +176,7 @@ aiq workflow delete my_rag_workflow
 Run my workflow locally for testing and then serve it as an API endpoint on port 8080.
 ```
 
-**Examples**:
-```bash
-# Run a workflow locally
-aiq run my_workflow --config config.yaml
 
-# Serve a workflow as an API
-aiq serve my_workflow --port 8000 --host 0.0.0.0
-
-# Run with custom parameters
-aiq run my_workflow --param input_text="Hello World"
-```
 
 **Related Documentation**: 
 - [CLI Reference - Run Commands](./cli.md#run-commands)
@@ -216,7 +186,7 @@ aiq run my_workflow --param input_text="Hello World"
 
 ### AIQ Evaluation Commands
 
-**Rule ID**: `aiq-cli/aiq-eval`  
+**Cursor Rule file**: [`aiq-cli/aiq-eval`](../../../.cursor/rules/aiq-cli/aiq-eval.mdc)  
 **Purpose**: Evaluating workflow performance and quality.
 
 **Prompt**:
@@ -224,14 +194,7 @@ aiq run my_workflow --param input_text="Hello World"
 Evaluate my workflow performance using a test dataset with accuracy and precision metrics.
 ```
 
-**Examples**:
-```bash
-# Evaluate a workflow
-aiq eval my_workflow --dataset test_data.json
 
-# Run evaluation with custom metrics
-aiq eval my_workflow --metrics accuracy,precision,recall --output results.json
-```
 
 **Related Documentation**: 
 - [CLI Reference - Evaluation Commands](./cli.md#evaluation-commands)
@@ -241,7 +204,7 @@ aiq eval my_workflow --metrics accuracy,precision,recall --output results.json
 
 ### AIQ Info Commands
 
-**Rule ID**: `aiq-cli/aiq-info`  
+**Cursor Rule file**: [`aiq-cli/aiq-info`](../../../.cursor/rules/aiq-cli/aiq-info.mdc)  
 **Purpose**: Getting information about AIQ components and system status.
 
 **Prompt**:
@@ -249,17 +212,7 @@ aiq eval my_workflow --metrics accuracy,precision,recall --output results.json
 Show me system information and list all available AIQ components with their details.
 ```
 
-**Examples**:
-```bash
-# Get system information
-aiq info system
 
-# List available components
-aiq info components
-
-# Get component details
-aiq info component llm_provider
-```
 
 **Related Documentation**: [CLI Reference - Info Commands](./cli.md#info-commands)
 
@@ -269,13 +222,8 @@ aiq info component llm_provider
 
 ### General Workflow Guidelines
 
-**Rule ID**: `aiq-workflows/general`  
+**Cursor Rule file**: [`aiq-workflows/general`](../../../.cursor/rules/aiq-workflows/general.mdc)  
 **Purpose**: Guidance for AIQ workflows, functions, and tools.
-
-**Prompt**:
-```
-Help me design a workflow architecture with proper function and tool integration following best practices.
-```
 
 **Capabilities**:
 - Workflow architecture patterns
@@ -291,7 +239,7 @@ Help me design a workflow architecture with proper function and tool integration
 
 ### Adding Functions to Workflows
 
-**Rule ID**: `aiq-workflows/add-functions`  
+**Cursor Rule file**: [`aiq-workflows/add-functions`](../../../.cursor/rules/aiq-workflows/add-functions.mdc)  
 **Purpose**: Implementing, adding, creating, or modifying functions within AIQ workflows.
 
 **Prompt**:
@@ -299,28 +247,7 @@ Help me design a workflow architecture with proper function and tool integration
 Add a text processing function to my workflow that splits text into sentences and counts words.
 ```
 
-**Example**:
-```python
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.cli.register_workflow import register_function
-from aiq.builder.builder import Builder
-from pydantic import Field
 
-# 1. Define configuration
-class MyFunctionConfig(FunctionBaseConfig, name="my_function"):
-    """Configuration for My Function."""
-    greeting: str = Field("Hello", description="The greeting to use.")
-    repeat_count: int = Field(1, description="Number of times to repeat.")
-
-# 2. Register the function
-@register_function(config_type=MyFunctionConfig)
-async def register_my_function(config: MyFunctionConfig, builder: Builder):
-    async def _my_function(message: str) -> str:
-        """My function implementation."""
-        return f"{config.greeting}, {message}" * config.repeat_count
-    
-    yield _my_function
-```
 
 **Related Documentation**: 
 - [Writing Custom Functions](../extend/functions.md)
@@ -330,7 +257,7 @@ async def register_my_function(config: MyFunctionConfig, builder: Builder):
 
 ### Adding Tools to Workflows
 
-**Rule ID**: `aiq-workflows/add-tools`  
+**Cursor Rule file**: [`aiq-workflows/add-tools`](../../../.cursor/rules/aiq-workflows/add-tools.mdc)  
 **Purpose**: Adding, integrating, implementing, or configuring tools for AIQ workflows.
 
 **Prompt**:
@@ -338,23 +265,7 @@ async def register_my_function(config: MyFunctionConfig, builder: Builder):
 Integrate a web search tool into my workflow that can fetch and process search results from the internet.
 ```
 
-**Example**:
-```python
-from aiq.builder.tool_wrapper import ToolWrapper
-from aiq.data_models.tool_wrapper import ToolWrapperConfig
 
-# Define tool configuration
-class CustomToolConfig(ToolWrapperConfig, name="custom_tool"):
-    """Configuration for custom tool."""
-    api_key: str = Field(description="API key for the tool")
-    base_url: str = Field("https://api.example.com", description="Base URL")
-
-# Register the tool
-@register_tool(config_type=CustomToolConfig)
-async def register_custom_tool(config: CustomToolConfig, builder: Builder):
-    tool = CustomTool(api_key=config.api_key, base_url=config.base_url)
-    yield ToolWrapper(tool=tool)
-```
 
 **Related Documentation**: [Adding Tools Tutorial](../tutorials/add-tools-to-a-workflow.md)
 
@@ -364,19 +275,13 @@ async def register_custom_tool(config: CustomToolConfig, builder: Builder):
 
 ### AIQ Agents Integration & Selection
 
-**Rule ID**: `aiq-agents/general`  
+**Cursor Rule file**: [`aiq-agents/general`](../../../.cursor/rules/aiq-agents/general.mdc)  
 **Purpose**: Guidelines for integrating or selecting ReAct, Tool-Calling, Reasoning, or ReWOO agents within AIQ workflows.
 
 **Prompt**:
 ```
-Help me choose and configure the correct AIQ agent (ReAct, Tool-Calling, ReWOO, or Reasoning) for my workflow.
+Integrate ReAct agent to the workflow
 ```
-
-**Capabilities**:
-- Integration steps for each agent type
-- Configuration parameters for each agent
-- Decision matrix for selecting the appropriate agent
-- Best practices and known limitations
 
 **Related Documentation**: [Agent Docs](../workflows/about/index.md)
 
@@ -384,7 +289,7 @@ Help me choose and configure the correct AIQ agent (ReAct, Tool-Calling, ReWOO, 
 
 ## Quick Reference
 
-| Rule Category | Rule ID | Primary Use Case |
+| Rule Category | Cursor Rule file | Primary Use Case |
 |---------------|---------|------------------|
 | Foundation | `general` | Code quality and standards |
 | Foundation | `cursor-rules` | Managing cursor rules |
