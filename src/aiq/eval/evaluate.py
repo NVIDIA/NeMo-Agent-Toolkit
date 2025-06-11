@@ -24,6 +24,7 @@ from pydantic import BaseModel
 from tqdm import tqdm
 
 from aiq.data_models.evaluate import EvalConfig
+from aiq.data_models.evaluate import JobEvictionPolicy
 from aiq.eval.config import EvaluationRunConfig
 from aiq.eval.config import EvaluationRunOutput
 from aiq.eval.dataset_handler.dataset_handler import DatasetHandler
@@ -179,10 +180,57 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
     def cleanup_output_directory(self):
         '''Remove contents of the output directory if it exists'''
-        if self.eval_config.general.output and self.eval_config.general.output.dir and \
-                self.eval_config.general.output.dir.exists():
-            logger.info("Cleaning up output directory %s", self.eval_config.general.output.dir)
-            shutil.rmtree(self.eval_config.general.output.dir)
+        if not (self.eval_config.general.output and self.eval_config.general.output.dir
+                and self.eval_config.general.output.dir.exists()):
+            return
+
+        output_config = self.eval_config.general.output
+
+        # If cleanup is true, remove the entire directory and we are done
+        if output_config.cleanup:
+            logger.info("Cleaning up entire output directory: %s", output_config.dir)
+            shutil.rmtree(output_config.dir)
+            return
+
+        if not (hasattr(output_config, "max_jobs") and output_config.max_jobs and output_config.max_jobs > 0):
+            return
+        base_dir = self.eval_config.general.output_dir.parent
+        if not base_dir.exists():
+            return
+
+        # Get all subdirectories, which represent individual job runs
+        job_dirs = [d for d in base_dir.iterdir() if d.is_dir()]
+        if len(job_dirs) <= output_config.max_jobs:
+            return
+
+        # Determine sort key based on eviction_policy, defaulting to creation time
+        if hasattr(output_config,
+                   "eviction_policy") and output_config.eviction_policy == JobEvictionPolicy.TIME_MODIFIED:
+
+            def sort_key(x):
+                return x.stat().st_mtime
+
+            logger.info("Using last modified time for job eviction policy.")
+        else:
+
+            def sort_key(x):
+                return x.stat().st_ctime
+
+            logger.info("Using creation time for job eviction policy.")
+
+        # Sort directories (oldest first)
+        job_dirs.sort(key=sort_key)
+
+        num_to_delete = len(job_dirs) - output_config.max_jobs
+        logger.info("Found %d jobs, exceeding limit of %d. Removing %d oldest jobs.",
+                    len(job_dirs),
+                    output_config.max_jobs,
+                    num_to_delete)
+
+        for i in range(num_to_delete):
+            dir_to_delete = job_dirs[i]
+            logger.info("Deleting old job directory: %s", dir_to_delete)
+            shutil.rmtree(dir_to_delete)
 
     def write_output(self, dataset_handler: DatasetHandler):
         workflow_output_file = self.eval_config.general.output_dir / "workflow_output.json"
@@ -273,7 +321,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         logger.debug("Loaded evaluation configuration: %s", self.eval_config)
 
         # Cleanup the output directory
-        if self.eval_config.general.output and self.eval_config.general.output.cleanup:
+        if self.eval_config.general.output:
             self.cleanup_output_directory()
 
         # Generate a job_id if append_job_id_to_output_dir is enabled and no job_id provided
