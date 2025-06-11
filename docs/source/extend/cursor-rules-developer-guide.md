@@ -26,8 +26,8 @@ This guide explains how to organize, create, and maintain Cursor rules within th
   - [Overview](#overview)
   - [Rule Organization Structure](#rule-organization-structure)
     - [Core Rules Files](#core-rules-files)
-      - [cursor-rules.mdc](#cursor-rulesmdc)
-      - [general.mdc](#generalmdc)
+      - [Cursor Rules MDC](#cursor-rules-mdc)
+      - [General MDC](#general-mdc)
     - [Topic-Based Subdirectories](#topic-based-subdirectories)
       - [`aiq-agents/`](#aiq-agents)
       - [`aiq-cli/`](#aiq-cli)
@@ -78,16 +78,16 @@ The AIQ Toolkit uses a hierarchical structure for organizing Cursor rules under 
 
 ### Core Rules Files
 
-#### cursor-rules.mdc
-The foundation file containing meta-rules that define:
+#### Cursor Rules MDC
+The foundation file (`cursor-rules.mdc`) containing meta-rules that define:
 * File naming conventions (kebab-case with `.mdc` extension)
 * Directory structure requirements
 * YAML format specifications
 * Documentation referencing patterns
 * Guidelines for writing effective rule descriptions
 
-#### general.mdc
-Contains project-wide coding standards including:
+#### General MDC
+The general rules file (`general.mdc`) contains project-wide coding standards including:
 * Project structure guidelines
 * Code formatting and import rules
 * Type hints requirements
