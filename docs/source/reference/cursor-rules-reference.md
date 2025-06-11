@@ -40,7 +40,7 @@ This document provides a comprehensive reference for all available Cursor rules 
     - [Adding Functions to Workflows](#adding-functions-to-workflows)
     - [Adding Tools to Workflows](#adding-tools-to-workflows)
   - [Agent Rules](#agent-rules)
-    - [AIQ Agents Integration \& Selection](#aiq-agents-integration--selection)
+    - [AIQ Agents Integration and Selection](#aiq-agents-integration-and-selection)
   - [Quick Reference](#quick-reference)
   - [Usage Tips](#usage-tips)
 
@@ -273,7 +273,7 @@ Integrate a web search tool into my workflow that can fetch and process search r
 
 ## Agent Rules
 
-### AIQ Agents Integration & Selection
+### AIQ Agents Integration and Selection
 
 **Cursor Rule file**: [`aiq-agents/general`](../../../.cursor/rules/aiq-agents/general.mdc)  
 **Purpose**: Guidelines for integrating or selecting ReAct, Tool-Calling, Reasoning, or ReWOO agents within AIQ workflows.
