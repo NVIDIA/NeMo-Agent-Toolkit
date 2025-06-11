@@ -29,6 +29,14 @@ from aiq.tool.mcp.mcp_client_base import MCPBaseClient
 logger = logging.getLogger(__name__)
 
 
+class ToolOverrideConfig(BaseModel):
+    """
+    Configuration for overriding tool properties when exposing from MCP server.
+    """
+    alias: str | None = Field(default=None, description="Override the tool name (function name in the workflow)")
+    description: str | None = Field(default=None, description="Override the tool description")
+
+
 class MCPServerConfig(BaseModel):
     """
     Server connection details for MCP client.
@@ -64,10 +72,15 @@ class MCPClientConfig(FunctionBaseConfig, name="mcp_client"):
     Configuration for connecting to an MCP server as a client and exposing selected tools.
     """
     server: MCPServerConfig = Field(..., description="Server connection details (transport, url/command, etc.)")
-    # TODO: Add tool_filter support
-    tool_filter: dict | list | None = Field(default=None,
-                                            description="Filter or map tools to expose from the server. \
-            Can be a list of tool names or a dict mapping tool names to alias/description.")
+    tool_filter: dict[str, ToolOverrideConfig] | list[str] | None = Field(
+        default=None,
+        description="""Filter or map tools to expose from the server (list or dict).
+        Can be:
+        - A list of tool names to expose: ['tool1', 'tool2']
+        - A dict mapping tool names to override configs:
+          {'tool1': {'alias': 'new_name', 'description': 'New desc'}}
+          {'tool2': {'description': 'Override description only'}}  # alias defaults to 'tool2'
+        """)
 
     def model_post_init(self, __context):
         super().model_post_init(__context)
@@ -111,56 +124,91 @@ async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
 
 
 @register_function(MCPClientConfig)
-async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder):  # pylint: disable=unused-argument
+async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder):
     """
-    Connects to an MCP server, discovers all tools, and adds them as functions to the builder.
+    Connect to an MCP server, discover tools, and register them as functions in the workflow.
 
-    builder: This is the main workflow builder (not the child builder). This is needed because -
-    1. we need access to the builder's lifecycle to add the client to the exit stack
-    2. we dynamically add tools to the builder
-
-    TODO: Add tool_filter support and tool name/description override support
+    Note:
+    - Uses builder's exit stack to manage client lifecycle
+    - Applies tool filters if provided
     """
     from aiq.tool.mcp.mcp_client_base import MCPSSEClient
     from aiq.tool.mcp.mcp_client_base import MCPStdioClient
     from aiq.tool.mcp.mcp_client_base import MCPStreamableHTTPClient
 
-    # 1. Instantiate the client
-    if config.server.transport == "stdio":
-        client = MCPStdioClient(command=config.server.command, args=config.server.args, env=config.server.env)
-    elif config.server.transport == "sse":
-        client = MCPSSEClient(url=str(config.server.url))
-    elif config.server.transport == "streamable-http":
-        client = MCPStreamableHTTPClient(url=str(config.server.url))
-    else:
-        raise ValueError("Unsupported transport")
+    # Build the appropriate client
+    client_cls = {
+        "stdio": lambda: MCPStdioClient(config.server.command, config.server.args, config.server.env),
+        "sse": lambda: MCPSSEClient(str(config.server.url)),
+        "streamable-http": lambda: MCPStreamableHTTPClient(str(config.server.url)),
+    }.get(config.server.transport)
 
+    if not client_cls:
+        raise ValueError(f"Unsupported transport: {config.server.transport}")
+
+    client = client_cls()
     logger.info("Configured to use MCP server at %s", client.server_name)
 
-    # 2. Connect to the server and store the client in the exit stack to ensure
-    # it's cleaned up when the workflow is done
+    # client aenter connects to the server and stores the client in the exit stack
+    # so it's cleaned up when the workflow is done
     async with client:
-        # Find all tools
         all_tools = await client.get_tools()
+        tool_configs = _filter_and_configure_tools(all_tools, config.tool_filter)
 
-        # 3. Add all tools to the builder dynamically
-        for tool in all_tools.values():
-            await builder.add_function(tool.name,
-                                       MCPSingleToolConfig(
-                                           client=client,
-                                           tool_name=tool.name,
-                                           tool_description=None,
-                                       ))
+        for tool_name, tool_cfg in tool_configs.items():
+            await builder.add_function(
+                tool_cfg["function_name"],
+                MCPSingleToolConfig(
+                    client=client,
+                    tool_name=tool_name,
+                    tool_description=tool_cfg["description"],
+                ))
 
-        # 4. Add an idle function to the builder to indicate that the client is connected
         async def idle_fn(text: str) -> str:
             return f"MCP client connected: {text}"
 
         yield FunctionInfo.create(single_fn=idle_fn, description="MCP client")
 
 
+def _filter_and_configure_tools(all_tools: dict, tool_filter) -> dict[str, dict]:
+    """
+    Apply tool filtering and optional aliasing/description overrides.
+
+    Returns:
+        Dict[str, dict] where each value has:
+            - function_name
+            - description
+    """
+    if tool_filter is None:
+        return {name: {"function_name": name, "description": tool.description} for name, tool in all_tools.items()}
+
+    if isinstance(tool_filter, list):
+        return {
+            name: {
+                "function_name": name, "description": all_tools[name].description
+            }
+            for name in tool_filter if name in all_tools
+        }
+
+    if isinstance(tool_filter, dict):
+        result = {}
+        for name, override in tool_filter.items():
+            tool = all_tools.get(name)
+            if not tool:
+                logger.warning("Tool '%s' specified in tool_filter not found in MCP server", name)
+                continue
+
+            if isinstance(override, ToolOverrideConfig):
+                result[name] = {
+                    "function_name": override.alias or name, "description": override.description or tool.description
+                }
+            else:
+                logger.warning("Unsupported override type for '%s': %s", name, type(override))
+                result[name] = {"function_name": name, "description": tool.description}
+        return result
+
+
 """
 TODO:
-- Add tool_filter support
-- Add a way to get all dynamic tools via a special workflow keyword
+- Add a way to get all dynamic tools with hitl
 """
