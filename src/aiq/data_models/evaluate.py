@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import typing
+from enum import Enum
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -26,6 +27,12 @@ from aiq.data_models.dataset_handler import EvalS3Config
 from aiq.data_models.evaluator import EvaluatorBaseConfig
 from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.data_models.profiler import ProfilerConfig
+
+
+class JobEvictionPolicy(str, Enum):
+    """Policy for evicting old jobs when max_jobs is exceeded."""
+    TIME_CREATED = "time_created"
+    TIME_MODIFIED = "time_modified"
 
 
 class EvalCustomScriptConfig(BaseModel):
@@ -48,6 +55,11 @@ class EvalOutputConfig(BaseModel):
     s3: EvalS3Config | None = None
     # Whether to cleanup the output directory before running the workflow
     cleanup: bool = True
+    # Maximum number of jobs to keep in the output directory. Oldest jobs will be evicted.
+    # A value of 0 or None means no limit.
+    max_jobs: int | None = None
+    # Policy for evicting old jobs. Defaults to using time_created.
+    eviction_policy: JobEvictionPolicy = JobEvictionPolicy.TIME_CREATED
     # Filter for the workflow output steps
     workflow_output_step_filter: list[IntermediateStepType] | None = None
 
