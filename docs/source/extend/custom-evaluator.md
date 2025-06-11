@@ -36,7 +36,7 @@ To extend AIQ toolkit with custom evaluators, you need to create an evaluator fu
 This section provides a step-by-step guide to create and register a custom evaluator with AIQ toolkit. A similarity evaluator is used as an example to demonstrate the process.
 
 ### Evaluator Configuration
-The evaluator configuration defines the evaluator’s name and any evaluator-specific parameters. This configuration is paired with a registration function that yields an asynchronous evaluation method.
+The evaluator configuration defines the evaluator's name and any evaluator-specific parameters. This configuration is paired with a registration function that yields an asynchronous evaluation method.
 
 The following example shows how to define and register a custom evaluator. The code is added to a new `evaluator_register.py` file in the simple example directory for testing purposes.
 
@@ -71,7 +71,7 @@ async def register_similarity_evaluator(config: SimilarityEvaluatorConfig, build
 The evaluator logic is implemented in the `SimilarityEvaluator` class described in the [Similarity Evaluator](#similarity-evaluator-custom-evaluator-example) section.
 
 ### Importing for registration
-To ensure the evaluator is registered at runtime, import the evaluator function in the example project’s register.py file — even if the function is not called directly.
+To ensure the evaluator is registered at runtime, import the evaluator function in the example project's register.py file — even if the function is not called directly.
 `examples/simple/src/aiq_simple/register.py`:
 ```python
 from .evaluator_register import register_similarity_evaluator  # pylint: disable=unused-import
@@ -115,7 +115,7 @@ from typing import override
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from aiq.eval.evaluator.custom_base_evaluator import BaseEvaluator
+from aiq.eval.evaluator.base_evaluator import BaseEvaluator
 from aiq.eval.evaluator.evaluator_model import EvalInputItem, EvalOutputItem
 
 class SimilarityEvaluator(BaseEvaluator):

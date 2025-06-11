@@ -15,7 +15,7 @@
 
 import pytest
 
-from aiq.eval.evaluator.custom_base_evaluator import BaseEvaluator
+from aiq.eval.evaluator.base_evaluator import BaseEvaluator
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutputItem
