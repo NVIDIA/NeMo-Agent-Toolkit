@@ -1,0 +1,30 @@
+---
+description: 
+globs: *.md
+alwaysApply: false
+---
+# General Documentation Rules
+
+Follow these rules when working with any documentation in the AIQ Toolkit project.
+
+## Referenced Documentation
+
+- **Project Documentation Structure**: [docs/source/](mdc:docs/source) - Main documentation source directory using Sphinx
+- **Documentation README**: [docs/README.md](mdc:docs/README.md) - Documentation build and contribution guidelines
+- **Sphinx Configuration**: [docs/source/conf.py](mdc:docs/source/conf.py) - Sphinx build configuration and settings
+- **Index Page**: [docs/source/index.md](mdc:docs/source/index.md) - Main documentation landing page
+- **Troubleshooting Guide**: [docs/source/troubleshooting.md](mdc:docs/source/troubleshooting.md) - Common issues and solutions
+- **Support Information**: [docs/source/support.md](mdc:docs/source/support.md) - Support channels and resources
+
+## Documentation Standards
+
+### Terminology and Naming
+- Make sure to follow this naming convention for all the documentation. If there is any documentation not following this rule, you MUST update it.
+- **Full name on first use**: "NVIDIA NeMo Agent toolkit"
+- **Subsequent references**: "Agent toolkit" 
+- Examples:
+  - "In the Agent toolkit, you can…"
+  - "Change directory to the Agent toolkit repo root…"
+- This aligns with other NeMo products and differentiates from the AI-Q Blueprint
+- Consistently use this terminology throughout all documentation
+
