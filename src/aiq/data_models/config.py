@@ -74,9 +74,7 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
             elif (info.field_name == "front_ends"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_front_ends()
             elif (info.field_name == "client_functions"):
-                # Client functions are handled differently - they don't need type validation
-                # as they are processed by register_client_functions
-                return
+                registered_keys = GlobalTypeRegistry.get().get_registered_functions()
             else:
                 assert False, f"Unknown field name {info.field_name} in validator"
 
@@ -255,7 +253,7 @@ class AIQConfig(HashableBaseModel):
     eval: EvalConfig = EvalConfig()
 
     # Client Functions Configuration (dynamic MCP tools, etc.)
-    client_functions: dict[str, dict] = {}
+    client_functions: dict[str, FunctionBaseConfig] = {}
     """
     Dictionary of client function configs (e.g., MCP clients) to dynamically register tools/functions at runtime.
     Each entry should specify the connection/config for a remote tool provider.
@@ -323,8 +321,9 @@ class AIQConfig(HashableBaseModel):
         WorkflowAnnotation = typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig),
                                               Discriminator(TypedBaseModel.discriminator)]
 
-        # Client functions don't need type discrimination since they are handled by register_client_functions
-        ClientFunctionsAnnotation = dict[str, dict]
+        ClientFunctionsAnnotation = dict[str,
+                                         typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig),
+                                                          Discriminator(TypedBaseModel.discriminator)]]
 
         should_rebuild = False
 

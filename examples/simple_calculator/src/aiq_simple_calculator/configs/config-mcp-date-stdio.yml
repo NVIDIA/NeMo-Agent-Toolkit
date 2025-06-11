@@ -20,20 +20,18 @@
 general:
   use_uvloop: true
 
-client_functions:
+functions:
   mcp_time:
     _type: mcp_client
     server:
       transport: stdio
       command: "python"
       args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
-    # load some tools and override tool attributes
+    # load 1 of 2 tools and override tool attributes
     tool_filter:
       get_current_time:
         alias: get_current_time_mcp_tool
         description: "Returns the current date and time from the MCP server"
-      convert_time:
-        alias: convert_time_mcp_tool
 
   mcp_math:
     _type: mcp_client
