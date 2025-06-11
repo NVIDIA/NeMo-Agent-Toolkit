@@ -23,9 +23,7 @@ from pydantic import HttpUrl
 from aiq.builder.builder import Builder
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
-from aiq.data_models.client_functions import ClientFunctionConfig
 from aiq.data_models.function import FunctionBaseConfig
-from aiq.tool.client_functions import register_client_function_handler
 from aiq.tool.mcp.mcp_client_base import MCPBaseClient
 
 logger = logging.getLogger(__name__)
@@ -61,10 +59,9 @@ class MCPServerConfig(BaseModel):
                 raise ValueError("url is required when using sse or streamable-http transport")
 
 
-class MCPClientConfig(ClientFunctionConfig, name="mcp_client"):
+class MCPClientConfig(FunctionBaseConfig, name="mcp_client"):
     """
     Configuration for connecting to an MCP server as a client and exposing selected tools.
-    Supports stdio, sse, and streamable-http transports, as well as tool filtering and aliasing.
     """
     server: MCPServerConfig = Field(..., description="Server connection details (transport, url/command, etc.)")
     # TODO: Add tool_filter support
@@ -113,7 +110,7 @@ async def mcp_single_tool(config: MCPSingleToolConfig, builder: Builder):
     yield fn
 
 
-@register_client_function_handler(MCPClientConfig)
+@register_function(MCPClientConfig)
 async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder):  # pylint: disable=unused-argument
     """
     Connects to an MCP server, discovers all tools, and adds them as functions to the builder.
@@ -140,26 +137,30 @@ async def mcp_client_function_handler(config: MCPClientConfig, builder: Builder)
 
     logger.info("Configured to use MCP server at %s", client.server_name)
 
-    # 2. Connect to the server and find all tools
-    # Store the client in the builder's exit stack to ensure it's cleaned up when the builder is done
-    await builder._get_exit_stack().enter_async_context(client)
+    # 2. Connect to the server and store the client in the exit stack to ensure
+    # it's cleaned up when the workflow is done
+    async with client:
+        # Find all tools
+        all_tools = await client.get_tools()
 
-    # Find all tools
-    all_tools = await client.get_tools()
+        # 3. Add all tools to the builder dynamically
+        for tool in all_tools.values():
+            await builder.add_function(tool.name,
+                                       MCPSingleToolConfig(
+                                           client=client,
+                                           tool_name=tool.name,
+                                           tool_description=None,
+                                       ))
 
-    # 3. Add all tools to the builder dynamically
-    for tool in all_tools.values():
-        await builder.add_function(tool.name,
-                                   MCPSingleToolConfig(
-                                       client=client,
-                                       tool_name=tool.name,
-                                       tool_description=None,
-                                   ))
+        # 4. Add an idle function to the builder to indicate that the client is connected
+        async def idle_fn(text: str) -> str:
+            return f"MCP client connected: {text}"
+
+        yield FunctionInfo.create(single_fn=idle_fn, description="MCP client")
 
 
 """
 TODO:
 - Add tool_filter support
-- Add ClientFunctionConfig to the registry by making mcp_client_function_handler yield an idle function
 - Add a way to get all dynamic tools via a special workflow keyword
 """
