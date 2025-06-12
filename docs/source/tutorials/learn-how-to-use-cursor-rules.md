@@ -15,9 +15,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Cursor Rules for AIQ Toolkit Development
+# Learn how to use Cursor rules for AIQ toolkit development to create and run a demo agent workflow
 
-Learn how to use Cursor rules for AIQ toolkit development to create and run a demo agent workflow.
+**Streamline AIQ workflow creation with intelligent prompts.** Cursor rules enable you to build complete agent workflows, integrate functions, and configure tools through natural language commands – transforming complex development tasks into simple conversational interactions.
+
+**Looking to accelerate your AIQ development workflow?** This guide demonstrates how to harness Cursor rules for efficient, consistent AIQ Toolkit development.
 
 ## Table of Contents
 
