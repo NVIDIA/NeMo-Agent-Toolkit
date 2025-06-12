@@ -17,59 +17,29 @@ limitations under the License.
 
 # Cursor Rules for AIQ Toolkit Development
 
-**Streamline AIQ workflow creation with intelligent prompts.** Cursor rules enable you to build complete agent workflows, integrate functions, and configure tools through natural language commands – transforming complex development tasks into simple conversational interactions.
-
-**Looking to accelerate your AIQ development workflow?** This guide demonstrates how to harness Cursor rules for efficient, consistent AIQ Toolkit development.
+Learn how to use Cursor rules for AIQ toolkit development to create and run a demo agent workflow.
 
 ## Table of Contents
 
-- [Why Use Cursor Rules](#why-use-cursor-rules)
-  - [Benefits for Newcomers](#benefits-for-newcomers)
-  - [Benefits for Expert Developers](#benefits-for-expert-developers)
-  - [Code Quality Benefits](#code-quality-benefits)
+- [About Cursor Rules](#about-cursor-rules)
+- [Common Prompts](#common-prompts)
+  - [Install AIQ Toolkit](#install-aiq-toolkit)
+  - [Explore Available Tools](#explore-available-tools)
+  - [Create the Workflow](#create-the-workflow)
+  - [Configure the DateTime Function](#configure-the-datetime-function)
+  - [Integrate the ReAct Agent](#integrate-the-react-agent)
+  - [Run the Workflow](#run-the-workflow)
 - [Cursor Rules Organization](#cursor-rules-organization)
-- [Getting Started with Common Prompts](#getting-started-with-common-prompts)
-- [Practical Example: Building a Demo Agent with Cursor Rules](#practical-example-building-a-demo-agent-with-cursor-rules)
-  - [Step 1: Install AIQ Toolkit](#step-1-install-aiq-toolkit)
-  - [Step 2: Explore Available Tools](#step-2-explore-available-tools)
-  - [Step 3: Create the Workflow](#step-3-create-the-workflow)
-  - [Step 4: Configure DateTime Function](#step-4-configure-datetime-function)
-  - [Step 5: Integrate React Agent](#step-5-integrate-react-agent)
-  - [Step 6: Execute the Workflow](#step-6-execute-the-workflow)
-- [Summary](#summary)
 
-## Why Use Cursor Rules
+## About Cursor Rules
+Cursor rules in AIQ toolkit act as an intelligent development that offers structured assistance for developers at all experience levels. The key functionalities of Cursor rules are as follows:
+* Streamline AIQ workflow creation with intelligent prompts: You can build complete agent workflows, integrate functions, and configure tools through natural language commands. It allows you to transform complex development tasks into simple conversational interactions.
+* Accelerate AIQ development workflows: You can use Cursor rules to develop AIQ toolkit efficiently and consistently as it provides streamlined workflows with established and tested patterns. It also enhances productivity by minimizing routine tasks, while applying best practices for coding, documentation, and configuration.
+* Learn and understand AIQ quickly and simply: For less experienced developers, Cursor rules provide an interactive approach to mastering AIQ Toolkit through contextual assistance and comprehensive examples for typical development workflows.
+* Standardization: Ensures uniform development standards, such as formatting, type annotations, and documentation requirements, across development teams and projects. Thus, decreasing code review overhead during submissions.
 
-Cursor rules in AIQ Toolkit act as an intelligent development companion that offers structured assistance for developers at all experience levels:
 
-### Benefits for Newcomers
-- **Guided Learning Experience**: Provides an interactive approach to mastering AIQ Toolkit through contextual assistance
-- **Progressive Guidance**: Offers comprehensive examples for typical development workflows
-- **Simplified onboarding**: Eliminates the complexity of memorizing intricate CLI syntax and configuration structures
-
-### Benefits for Expert Developers
-- **Accelerated Development**: Provides streamlined workflows with established, tested patterns
-- **Enhanced Productivity**: Minimizes routine tasks while automatically applying best practices
-- **Standardized Workflows**: Ensures uniform development approaches across development teams and projects
-
-### Code Quality Benefits
-- **Best Practice Enforcement**: Automatically applies standards for coding practices, documentation, and configuration
-- **Improved Code Standards**: Maintains consistent formatting, type annotations, and documentation requirements
-- **Streamlined Code Reviews**: Decreases review overhead by ensuring consistent patterns in submissions
-- **Standards Compliance**: Assists in maintaining adherence to project conventions and requirements
-
-## Cursor Rules Organization
-
-AIQ Toolkit offers a comprehensive collection of Cursor rules organized into four primary categories:
-
-- **[Foundation Rules](../reference/cursor-rules-reference.md#foundation-rules)**: Core code quality standards and cursor rules management
-- **[Setup and Installation Rules](../reference/cursor-rules-reference.md#setup-and-installation-rules)**: Environment configuration and toolkit installation procedures
-- **[CLI Command Rules](../reference/cursor-rules-reference.md#cli-command-rules)**: Complete AIQ CLI operations and command handling
-- **[Workflow Development Rules](../reference/cursor-rules-reference.md#workflow-development-rules)**: Function and tool development for workflow creation
-
-For a **comprehensive overview of all supported tasks**, including detailed prompts, examples, and capabilities for each rule, refer to the **[Cursor Rules Reference](../reference/cursor-rules-reference.md)**.
-
-## Getting Started with Common Prompts
+## Common Prompts
 
 :::{note}
 For optimal Cursor rules experience, avoid using the `Auto` mode for LLM model selection. Instead, manually choose a model from the selection menu, such as `claude-4-sonnet`.
@@ -104,11 +74,9 @@ Run my workflow locally for testing and then serve it as an API endpoint on port
 
 For complete documentation with all available rules, prompts, and examples, refer to the **[Cursor Rules Reference](../reference/cursor-rules-reference.md)**.
 
-## Practical Example: Building a Demo Agent with Cursor Rules
 
-Follow the steps below for a comprehensive example that demonstrates creating and running a functional agent workflow using Cursor rules:
 
-### Step 1: Install AIQ Toolkit
+### Install AIQ Toolkit
 
 Prompt:
 ```
@@ -121,7 +89,7 @@ The assistant will reference and apply the [toolkit-installation](../../../.curs
   <img src="../_static/cursor_rules_demo/install.gif" width="600">
 </div>
 
-### Step 2: Explore Available Tools
+### Explore Available Tools
 
 Prompt:
 ```
@@ -134,7 +102,7 @@ The assistant will reference and apply the [info](../../../.cursor/rules/aiq-cli
 </div>
 
 
-### Step 3: Create the Workflow
+### Create the Workflow
 
 Prompt:
 ```
@@ -147,7 +115,7 @@ The assistant will reference and apply the [general](../../../.cursor/rules/aiq-
   <img src="../_static/cursor_rules_demo/create_workflow.gif" width="600">
 </div>
 
-### Step 4: Configure DateTime Function
+### Configure the DateTime Function
 
 Prompt:
 ```
@@ -161,7 +129,7 @@ The assistant will reference and apply the [add-functions](../../../.cursor/rule
 </div>
 
 
-### Step 5: Integrate React Agent
+### Integrate the ReAct Agent
 
 Prompt:
 ```
@@ -173,7 +141,7 @@ The assistant will reference and apply the [general](../../../.cursor/rules/aiq-
   <img src="../_static/cursor_rules_demo/react_agent.gif" width="600">
 </div>
 
-### Step 6: Execute the Workflow
+### Run the Workflow
 
 Prompt:
 ```
@@ -192,6 +160,13 @@ Congratulations! You have successfully created a functional demo workflow using 
 Keep your prompts specific and concise. For instance, rather than stating "Create a workflow", specify "Create a workflow named `demo_workflow` in examples directory with description `Demo workflow for testing features`".
 :::
 
-## Summary
+## Cursor Rules Organization
 
-Cursor rules in AIQ Toolkit offer a powerful approach to streamline development processes, ensure consistency, and maintain superior code quality. By leveraging these guidelines and applying the appropriate rules for each development task, you can substantially enhance your development efficiency while creating robust, maintainable AIQ workflows.
+AIQ Toolkit offers a comprehensive collection of Cursor rules organized into four primary categories:
+
+- **[Foundation Rules](../reference/cursor-rules-reference.md#foundation-rules)**: Core code quality standards and cursor rules management
+- **[Setup and Installation Rules](../reference/cursor-rules-reference.md#setup-and-installation-rules)**: Environment configuration and toolkit installation procedures
+- **[CLI Command Rules](../reference/cursor-rules-reference.md#cli-command-rules)**: Complete AIQ CLI operations and command handling
+- **[Workflow Development Rules](../reference/cursor-rules-reference.md#workflow-development-rules)**: Function and tool development for workflow creation
+
+For a **comprehensive overview of all supported tasks**, including detailed prompts, examples, and capabilities for each rule, refer to the **[Cursor Rules Reference](../reference/cursor-rules-reference.md)**.
