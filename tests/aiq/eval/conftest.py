@@ -52,9 +52,15 @@ def rag_eval_input(rag_user_inputs, rag_expected_outputs, rag_generated_outputs,
             expected_output_obj=expected_output,
             output_obj=generated_output,
             expected_trajectory=[],  # Modify if needed
-            trajectory=intermediate_steps_map[index]  # Ensure correct step assignment
-        ) for index, (user_input, expected_output,
-                      generated_output) in enumerate(zip(rag_user_inputs, rag_expected_outputs, rag_generated_outputs))
+            trajectory=intermediate_steps_map[index],  # Ensure correct step assignment
+            full_dataset_entry={
+                "id": index + 1,
+                "question": user_input,
+                "answer": expected_output,
+                "generated_answer": generated_output
+            })
+        for index, (user_input, expected_output,
+                    generated_output) in enumerate(zip(rag_user_inputs, rag_expected_outputs, rag_generated_outputs))
     ]
 
     return EvalInput(eval_input_items=eval_items)
