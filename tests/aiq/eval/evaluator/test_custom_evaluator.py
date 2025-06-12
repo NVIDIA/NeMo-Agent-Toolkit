@@ -51,18 +51,25 @@ class FailingEvaluator(BaseEvaluator):
 @pytest.fixture
 def mock_input_items():
     return EvalInput(eval_input_items=[
-        EvalInputItem(id="1",
-                      input_obj="Q1",
-                      expected_output_obj="This is the expected answer.",
-                      output_obj="This is the output.",
-                      trajectory=[],
-                      expected_trajectory=[]),
+        EvalInputItem(
+            id="1",
+            input_obj="Q1",
+            expected_output_obj="This is the expected answer.",
+            output_obj="This is the output.",
+            trajectory=[],
+            expected_trajectory=[],
+            full_dataset_entry={
+                "question": "Q1", "expected_answer": "This is the expected answer.", "output": "This is the output."
+            }),
         EvalInputItem(id="2",
                       input_obj="Q2",
                       expected_output_obj="Short",
                       output_obj="Shorter",
                       trajectory=[],
-                      expected_trajectory=[])
+                      expected_trajectory=[],
+                      full_dataset_entry={
+                          "question": "Q2", "expected_answer": "Short", "output": "Shorter"
+                      })
     ])
 
 
