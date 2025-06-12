@@ -15,13 +15,15 @@
 
 import asyncio
 import logging
+from tqdm import tqdm
+from typing import Callable
 
 from langchain.output_parsers import ResponseSchema
 from langchain.output_parsers import StructuredOutputParser
 from langchain.schema import HumanMessage
 from langchain.schema import SystemMessage
 from langchain_core.language_models import BaseChatModel
-from tqdm import tqdm
+from langchain_core.runnables import RunnableLambda
 
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
@@ -69,18 +71,46 @@ def evaluation_prompt(judge_llm_prompt: str,
     return EVAL_PROMPT if not default_scoring else DEFAULT_EVAL_PROMPT
 
 
+def runnable_with_retries(original_fn: Callable, llm_retry_control_params: dict | None = None):
+    runnable = RunnableLambda(original_fn)
+    
+    if llm_retry_control_params is None:
+        llm_retry_control_params = {
+            "stop_after_attempt": 3,
+            "initial_backoff_delay_seconds": 2,
+            "has_exponential_jitter": True
+        }
+        
+    if llm_retry_control_params["has_exponential_jitter"] is None:
+        llm_retry_control_params["has_exponential_jitter"] = True
+    if llm_retry_control_params["stop_after_attempt"] is None:
+        llm_retry_control_params["stop_after_attempt"] = 3
+    if llm_retry_control_params["initial_backoff_delay_seconds"] is None:
+        llm_retry_control_params["initial_backoff_delay_seconds"] = 2
+
+    # Add retry logic with exponential backoff and jitter
+    return runnable.with_retry(
+        retry_if_exception_type=(Exception,), # Retry on any error
+        wait_exponential_jitter=llm_retry_control_params["has_exponential_jitter"], # Add jitter to exponential backoff
+        stop_after_attempt=llm_retry_control_params["stop_after_attempt"],                       
+        exponential_jitter_params={"initial": llm_retry_control_params["initial_backoff_delay_seconds"]} # Optional: set initial backoff (seconds)
+    )
+
+
 class TunableRagEvaluator:
     '''Tunable RAG evaluator class with customizable LLM prompt for scoring.'''
 
     def __init__(self,
                  llm: BaseChatModel,
                  judge_llm_prompt: str,
+                 llm_retry_control_params: dict | None,
                  max_concurrency: int,
                  default_scoring: bool,
                  default_score_weights: dict):
         self.llm = llm
         self.max_concurrency = max_concurrency
         self.judge_llm_prompt = judge_llm_prompt
+        self.llm_retry_control_params = llm_retry_control_params
         self.semaphore = asyncio.Semaphore(self.max_concurrency)
         self.default_scoring = default_scoring
         # Use user-provided weights if available; otherwise, set equal weights for each score
@@ -149,7 +179,7 @@ class TunableRagEvaluator:
                 SystemMessage(content="You must respond only in JSON format."), HumanMessage(content=eval_prompt)
             ]
 
-            response = await self.llm.ainvoke(messages)
+            response = await runnable_with_retries(self.llm.ainvoke, self.llm_retry_control_params)(messages)
 
             # Initialize default values to handle service errors
             coverage_score = 0.0
