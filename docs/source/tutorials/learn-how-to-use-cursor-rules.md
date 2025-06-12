@@ -21,6 +21,7 @@ limitations under the License.
 
 - [About Cursor Rules](#about-cursor-rules)
 - [Common Prompts](#common-prompts)
+- [Practical Example: Building a Demo Agent with Cursor Rules](#practical-example-building-a-demo-agent-with-cursor-rules)
   - [Install AIQ Toolkit](#install-aiq-toolkit)
   - [Explore Available Tools](#explore-available-tools)
   - [Create the Workflow](#create-the-workflow)
@@ -72,7 +73,9 @@ Run my workflow locally for testing and then serve it as an API endpoint on port
 
 For complete documentation with all available rules, prompts, and examples, refer to the **[Cursor Rules Reference](../reference/cursor-rules-reference.md)**.
 
+## Practical Example: Building a Demo Agent with Cursor Rules
 
+Follow the steps below for a comprehensive example that demonstrates creating and running a functional agent workflow using Cursor rules:
 
 ### Install AIQ Toolkit
 
