@@ -77,7 +77,7 @@ def runnable_with_retries(original_fn: Callable, llm_retry_control_params: dict 
     if llm_retry_control_params is None:
         llm_retry_control_params = {
             "stop_after_attempt": 3,
-            "initial_backoff_delay_seconds": 2,
+            "initial_backoff_delay_seconds": 1,
             "has_exponential_jitter": True
         }
         
@@ -86,7 +86,7 @@ def runnable_with_retries(original_fn: Callable, llm_retry_control_params: dict 
     if llm_retry_control_params["stop_after_attempt"] is None:
         llm_retry_control_params["stop_after_attempt"] = 3
     if llm_retry_control_params["initial_backoff_delay_seconds"] is None:
-        llm_retry_control_params["initial_backoff_delay_seconds"] = 2
+        llm_retry_control_params["initial_backoff_delay_seconds"] = 1
 
     # Add retry logic with exponential backoff and jitter
     return runnable.with_retry(

@@ -236,7 +236,7 @@ eval:
       llm_retry_control_params:
         stop_after_attempt: 3
         # set initial backoff (seconds)
-        initial_backoff_delay_seconds: 2
+        initial_backoff_delay_seconds: 1
         # Add jitter to exponential backoff
         has_exponential_jitter: true
       default_scoring: false
