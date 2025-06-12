@@ -21,28 +21,26 @@ This document provides a comprehensive reference for all available Cursor rules 
 
 ## Table of Contents
 
-- [Cursor Rules Reference](#cursor-rules-reference)
-  - [Table of Contents](#table-of-contents)
-  - [Foundation Rules](#foundation-rules)
-    - [General Development Guidelines](#general-development-guidelines)
-    - [Cursor Rules Management](#cursor-rules-management)
-  - [Setup and Installation Rules](#setup-and-installation-rules)
-    - [General Setup Guidelines](#general-setup-guidelines)
-    - [AIQ Toolkit Installation](#aiq-toolkit-installation)
-  - [CLI Command Rules](#cli-command-rules)
-    - [General CLI Guidelines](#general-cli-guidelines)
-    - [AIQ Workflow Commands](#aiq-workflow-commands)
-    - [AIQ Run and Serve Commands](#aiq-run-and-serve-commands)
-    - [AIQ Evaluation Commands](#aiq-evaluation-commands)
-    - [AIQ Info Commands](#aiq-info-commands)
-  - [Workflow Development Rules](#workflow-development-rules)
-    - [General Workflow Guidelines](#general-workflow-guidelines)
-    - [Adding Functions to Workflows](#adding-functions-to-workflows)
-    - [Adding Tools to Workflows](#adding-tools-to-workflows)
-  - [Agent Rules](#agent-rules)
-    - [AIQ Agents Integration and Selection](#aiq-agents-integration-and-selection)
-  - [Quick Reference](#quick-reference)
-  - [Usage Tips](#usage-tips)
+- [Foundation Rules](#foundation-rules)
+  - [General Development Guidelines](#general-development-guidelines)
+  - [Cursor Rules Management](#cursor-rules-management)
+- [Setup and Installation Rules](#setup-and-installation-rules)
+  - [General Setup Guidelines](#general-setup-guidelines)
+  - [AIQ Toolkit Installation](#aiq-toolkit-installation)
+- [CLI Command Rules](#cli-command-rules)
+  - [General CLI Guidelines](#general-cli-guidelines)
+  - [AIQ Workflow Commands](#aiq-workflow-commands)
+  - [AIQ Run and Serve Commands](#aiq-run-and-serve-commands)
+  - [AIQ Evaluation Commands](#aiq-evaluation-commands)
+  - [AIQ Info Commands](#aiq-info-commands)
+- [Workflow Development Rules](#workflow-development-rules)
+  - [General Workflow Guidelines](#general-workflow-guidelines)
+  - [Adding Functions to Workflows](#adding-functions-to-workflows)
+  - [Adding Tools to Workflows](#adding-tools-to-workflows)
+- [Agent Rules](#agent-rules)
+  - [AIQ Agents Integration and Selection](#aiq-agents-integration-and-selection)
+- [Quick Reference](#quick-reference)
+- [Usage Tips](#usage-tips)
 
 ---
 
@@ -50,7 +48,7 @@ This document provides a comprehensive reference for all available Cursor rules 
 
 ### General Development Guidelines
 
-**Cursor Rule file**: [`general`](../../../.cursor/rules/general.mdc)  
+**Cursor Rule file**: `.cursor/rules/general.mdc`  
 **Purpose**: Overarching standards for all source, test, documentation, and CI files.
 
 **Prompt**:
@@ -72,7 +70,7 @@ Create a new Python function with proper type hints, docstrings, and formatting 
 
 ### Cursor Rules Management
 
-**Cursor Rule file**: [`cursor-rules`](../../../.cursor/rules/cursor-rules.mdc)  
+**Cursor Rule file**: `.cursor/rules/cursor-rules.mdc`  
 **Purpose**: Guidelines for creating and managing cursor rules themselves.
 
 **Prompt**:
@@ -94,7 +92,7 @@ Create a new Cursor rule for creating a new AIQ workflow
 
 ### General Setup Guidelines
 
-**Cursor Rule file**: [`aiq-setup/general`](../../../.cursor/rules/aiq-setup/general.mdc)  
+**Cursor Rule file**: `.cursor/rules/aiq-setup/general.mdc`  
 **Purpose**: Guidance for AIQ toolkit installation, setup, and environment configuration.
 
 **Prompt**:
@@ -114,7 +112,7 @@ Help me set up AIQ Toolkit development environment with all required dependencie
 
 ### AIQ Toolkit Installation
 
-**Cursor Rule file**: [`aiq-setup/aiq-toolkit-installation`](../../../.cursor/rules/aiq-setup/aiq-toolkit-installation.mdc)  
+**Cursor Rule file**: `.cursor/rules/aiq-setup/aiq-toolkit-installation.mdc`  
 **Purpose**: Detailed installation procedures and setup guidance.
 
 **Prompt**:
@@ -132,7 +130,7 @@ Install AIQ Toolkit with all plugins and verify the installation is working corr
 
 ### General CLI Guidelines
 
-**Cursor Rule file**: [`aiq-cli/general`](../../../.cursor/rules/aiq-cli/general.mdc)  
+**Cursor Rule file**: `.cursor/rules/aiq-cli/general.mdc`  
 **Purpose**: Guidance for all AIQ CLI commands, operations, and functionality.
 
 **Prompt**:
@@ -152,7 +150,7 @@ Show me how to use AIQ CLI commands to manage workflows
 
 ### AIQ Workflow Commands
 
-**Cursor Rule file**: [`aiq-cli/aiq-workflow`](../../../.cursor/rules/aiq-cli/aiq-workflow.mdc)  
+**Cursor Rule file**: `.cursor/rules/aiq-cli/aiq-workflow.mdc`  
 **Purpose**: Creating, reinstalling, and deleting AIQ workflows.
 
 **Prompt**:
@@ -168,7 +166,7 @@ Create a workflow named demo_workflow in examples directory with description "De
 
 ### AIQ Run and Serve Commands
 
-**Cursor Rule file**: [`aiq-cli/aiq-run-serve`](../../../.cursor/rules/aiq-cli/aiq-run-serve.mdc)  
+**Cursor Rule file**: `.cursor/rules/aiq-cli/aiq-run-serve.mdc`  
 **Purpose**: Running, serving, and executing AIQ workflows.
 
 **Prompt**:
@@ -186,7 +184,7 @@ Run my workflow locally for testing and then serve it as an API endpoint on port
 
 ### AIQ Evaluation Commands
 
-**Cursor Rule file**: [`aiq-cli/aiq-eval`](../../../.cursor/rules/aiq-cli/aiq-eval.mdc)  
+**Cursor Rule file**: `.cursor/rules/aiq-cli/aiq-eval.mdc`  
 **Purpose**: Evaluating workflow performance and quality.
 
 **Prompt**:
@@ -204,7 +202,7 @@ Evaluate my workflow performance using a test dataset with accuracy and precisio
 
 ### AIQ Info Commands
 
-**Cursor Rule file**: [`aiq-cli/aiq-info`](../../../.cursor/rules/aiq-cli/aiq-info.mdc)  
+**Cursor Rule file**: `.cursor/rules/aiq-cli/aiq-info.mdc`  
 **Purpose**: Getting information about AIQ components and system status.
 
 **Prompt**:
@@ -222,7 +220,7 @@ Show me system information and list all available AIQ components with their deta
 
 ### General Workflow Guidelines
 
-**Cursor Rule file**: [`aiq-workflows/general`](../../../.cursor/rules/aiq-workflows/general.mdc)  
+**Cursor Rule file**: `.cursor/rules/aiq-workflows/general.mdc`  
 **Purpose**: Guidance for AIQ workflows, functions, and tools.
 
 **Capabilities**:
@@ -239,7 +237,7 @@ Show me system information and list all available AIQ components with their deta
 
 ### Adding Functions to Workflows
 
-**Cursor Rule file**: [`aiq-workflows/add-functions`](../../../.cursor/rules/aiq-workflows/add-functions.mdc)  
+**Cursor Rule file**: `.cursor/rules/aiq-workflows/add-functions.mdc`  
 **Purpose**: Implementing, adding, creating, or modifying functions within AIQ workflows.
 
 **Prompt**:
@@ -257,7 +255,7 @@ Add a text processing function to my workflow that splits text into sentences an
 
 ### Adding Tools to Workflows
 
-**Cursor Rule file**: [`aiq-workflows/add-tools`](../../../.cursor/rules/aiq-workflows/add-tools.mdc)  
+**Cursor Rule file**: `.cursor/rules/aiq-workflows/add-tools.mdc`  
 **Purpose**: Adding, integrating, implementing, or configuring tools for AIQ workflows.
 
 **Prompt**:
@@ -275,7 +273,7 @@ Integrate a web search tool into my workflow that can fetch and process search r
 
 ### AIQ Agents Integration and Selection
 
-**Cursor Rule file**: [`aiq-agents/general`](../../../.cursor/rules/aiq-agents/general.mdc)  
+**Cursor Rule file**: `.cursor/rules/aiq-agents/general.mdc`  
 **Purpose**: Guidelines for integrating or selecting ReAct, Tool-Calling, Reasoning, or ReWOO agents within AIQ workflows.
 
 **Prompt**:
@@ -307,10 +305,10 @@ Integrate ReAct agent to the workflow
 
 ## Usage Tips
 
-1. **Copy Exact Prompts**: Use the provided prompts exactly as shown for best results
-2. **Customize for Your Needs**: Modify prompts with specific project details
-3. **Chain Rules**: Use multiple rules together for complex development tasks
-4. **Reference Documentation**: Follow the "Related Documentation" links for deeper understanding
-5. **Test Incrementally**: Apply one rule at a time and test the results
+* **Copy Exact Prompts**: Use the provided prompts exactly as shown for best results
+* **Customize for Your Needs**: Modify prompts with specific project details
+* **Chain Rules**: Use multiple rules together for complex development tasks
+* **Reference Documentation**: Follow the "Related Documentation" links for deeper understanding
+* **Test Incrementally**: Apply one rule at a time and test the results
 
 For tutorials and examples on using these rules, see [Cursor Rules for AIQ Toolkit Development](../tutorials/cursor-rules-for-aiq-toolkit-development.md). 

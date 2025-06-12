@@ -360,9 +360,9 @@ Options:
   --help                    Show this message and exit.
 ```
 
-Also, a configuration file will be generated. To launch the new workflow from the CLI
-(e.g. using `aiq run` or `aiq serve`), a configuration file that maps to these components'
-configuration objects is necessary. For more information on configuration objects, refer to
+Also, a configuration file will be generated when you run the `aiq workflow create` command. To launch the new workflow from the CLI
+(e.g. using `aiq run` or `aiq serve`), you will need a configuration file that maps to these component
+configuration objects. For more information on configuration objects, refer to
 [Workflow Configuration](../workflows/workflow-configuration.md).
 
 ### Reinstall
@@ -395,7 +395,7 @@ For example, after updating the dependencies in your workflow's `pyproject.toml`
 aiq workflow reinstall my_workflow
 ```
 
-This will:
+After running the `aiq workflow reinstall` command, the following actions will happen:
 1. Rebuild the workflow package
 2. Uninstall the existing version
 3. Install the updated version

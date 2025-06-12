@@ -23,22 +23,20 @@ limitations under the License.
 
 ## Table of Contents
 
-- [Cursor Rules for AIQ Toolkit Development](#cursor-rules-for-aiq-toolkit-development)
-  - [Table of Contents](#table-of-contents)
-  - [Why Use Cursor Rules](#why-use-cursor-rules)
-    - [Benefits for Newcomers](#benefits-for-newcomers)
-    - [Benefits for Expert Developers](#benefits-for-expert-developers)
-    - [Code Quality Benefits](#code-quality-benefits)
-  - [Cursor Rules Organization](#cursor-rules-organization)
-  - [Getting Started with Common Prompts](#getting-started-with-common-prompts)
-  - [Practical Example: Building a Demo Agent with Cursor Rules](#practical-example-building-a-demo-agent-with-cursor-rules)
-    - [Step 1: Install AIQ Toolkit](#step-1-install-aiq-toolkit)
-    - [Step 2: Explore Available Tools](#step-2-explore-available-tools)
-    - [Step 3: Create the Workflow](#step-3-create-the-workflow)
-    - [Step 4: Configure DateTime Function](#step-4-configure-datetime-function)
-    - [Step 5: Integrate React Agent](#step-5-integrate-react-agent)
-    - [Step 6: Execute the Workflow](#step-6-execute-the-workflow)
-  - [Summary](#summary)
+- [Why Use Cursor Rules](#why-use-cursor-rules)
+  - [Benefits for Newcomers](#benefits-for-newcomers)
+  - [Benefits for Expert Developers](#benefits-for-expert-developers)
+  - [Code Quality Benefits](#code-quality-benefits)
+- [Cursor Rules Organization](#cursor-rules-organization)
+- [Getting Started with Common Prompts](#getting-started-with-common-prompts)
+- [Practical Example: Building a Demo Agent with Cursor Rules](#practical-example-building-a-demo-agent-with-cursor-rules)
+  - [Step 1: Install AIQ Toolkit](#step-1-install-aiq-toolkit)
+  - [Step 2: Explore Available Tools](#step-2-explore-available-tools)
+  - [Step 3: Create the Workflow](#step-3-create-the-workflow)
+  - [Step 4: Configure DateTime Function](#step-4-configure-datetime-function)
+  - [Step 5: Integrate React Agent](#step-5-integrate-react-agent)
+  - [Step 6: Execute the Workflow](#step-6-execute-the-workflow)
+- [Summary](#summary)
 
 ## Why Use Cursor Rules
 
@@ -69,7 +67,7 @@ AIQ Toolkit offers a comprehensive collection of Cursor rules organized into fou
 - **[CLI Command Rules](../reference/cursor-rules-reference.md#cli-command-rules)**: Complete AIQ CLI operations and command handling
 - **[Workflow Development Rules](../reference/cursor-rules-reference.md#workflow-development-rules)**: Function and tool development for workflow creation
 
-For a **comprehensive overview of all supported tasks**, including detailed prompts, examples, and capabilities for each rule, see the **[Cursor Rules Reference](../reference/cursor-rules-reference.md)**.
+For a **comprehensive overview of all supported tasks**, including detailed prompts, examples, and capabilities for each rule, refer to the **[Cursor Rules Reference](../reference/cursor-rules-reference.md)**.
 
 ## Getting Started with Common Prompts
 
@@ -77,7 +75,7 @@ For a **comprehensive overview of all supported tasks**, including detailed prom
 For optimal Cursor rules experience, avoid using the `Auto` mode for LLM model selection. Instead, manually choose a model from the selection menu, such as `claude-4-sonnet`.
 :::
 
-Here are frequently used prompts to begin your development:
+The following are frequently used prompts to begin development:
 
 **Installing AIQ Toolkit:**
 ```
@@ -108,7 +106,7 @@ For complete documentation with all available rules, prompts, and examples, refe
 
 ## Practical Example: Building a Demo Agent with Cursor Rules
 
-This comprehensive example demonstrates creating and running a functional agent workflow using Cursor rules:
+Follow the steps below for a comprehensive example that demonstrates creating and running a functional agent workflow using Cursor rules:
 
 ### Step 1: Install AIQ Toolkit
 
