@@ -26,6 +26,7 @@ from aiq.data_models.evaluator import EvaluatorBaseConfig
 class TunableRagEvaluatorConfig(EvaluatorBaseConfig, name="tunable_rag_evaluator"):
     '''Configuration for tunable RAG evaluator'''
     llm_name: LLMRef = Field(description="Name of the judge LLM")
+    llm_retry_control_params: dict | None = Field(description="Parameters to control LLM retry behavior", default=None)
     judge_llm_prompt: str = Field(description="LLM prompt for the judge LLM")
     default_scoring: bool = Field(description="Whether to use default scoring", default=False)
     default_score_weights: dict = Field(
@@ -43,6 +44,7 @@ async def register_tunable_rag_evaluator(config: TunableRagEvaluatorConfig, buil
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     evaluator = TunableRagEvaluator(llm,
                                     config.judge_llm_prompt,
+                                    config.llm_retry_control_params,
                                     builder.get_max_concurrency(),
                                     config.default_scoring,
                                     config.default_score_weights)
