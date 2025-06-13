@@ -136,7 +136,9 @@ def test_load_column_or_static():
     _DATA_CACHE.update({
         'offline_data': None,
         'benign_fallback_offline_data': {
-            'static_column': 'static_value', 'another_static': 'another_value', 'potentially_null_column': 'static_value_for_nulls'
+            'static_column': 'static_value',
+            'another_static': 'another_value',
+            'potentially_null_column': 'static_value_for_nulls'
         }
     })
 
