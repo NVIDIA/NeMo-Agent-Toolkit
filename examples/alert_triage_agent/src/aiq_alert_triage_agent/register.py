@@ -47,6 +47,8 @@ from . import telemetry_metrics_analysis_agent
 from . import telemetry_metrics_host_heartbeat_check_tool
 from . import telemetry_metrics_host_performance_check_tool
 from . import utils
+# Import custom evaluator
+from .classification_evaluator import register_classification_evaluator
 from .prompts import ALERT_TRIAGE_AGENT_PROMPT
 
 

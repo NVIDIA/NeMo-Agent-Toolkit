@@ -113,6 +113,7 @@ eval:
     output_dir: .tmp/aiq/examples/alert_triage_agent/output/
     dataset:
       _type: json
+      pass_full_entry: true
       # JSON representation of the offline CSV data (including just the alerts, the expected output, and the label)
       file_path: examples/alert_triage_agent/data/offline_data.json
   evaluators:
@@ -128,3 +129,5 @@ eval:
       _type: ragas
       metric: ContextRelevance
       llm_name: nim_rag_eval_llm
+    classification_accuracy:
+      _type: classification_accuracy
