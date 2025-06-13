@@ -178,7 +178,7 @@ class TunableRagEvaluator:
                 SystemMessage(content="You must respond only in JSON format."), HumanMessage(content=eval_prompt)
             ]
 
-            response = await runnable_with_retries(self.llm.ainvoke, self.llm_retry_control_params)(messages)
+            response = await runnable_with_retries(self.llm.ainvoke, self.llm_retry_control_params).ainvoke(messages)
 
             # Initialize default values to handle service errors
             coverage_score = 0.0
