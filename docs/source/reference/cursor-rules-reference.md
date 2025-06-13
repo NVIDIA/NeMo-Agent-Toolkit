@@ -23,7 +23,7 @@ This document provides a comprehensive reference for all available Cursor rules 
 
 ### General Development Guidelines
 
-**Cursor Rule file**: `.cursor/rules/general.mdc`  
+**Cursor Rule file**: `.cursor/rules/general.mdc`
 **Purpose**: Overarching standards for all source, test, documentation, and CI files.
 
 **Prompt**:
@@ -38,8 +38,6 @@ Create a new Python function with proper type hints, docstrings, and formatting 
 - Documentation standards
 - Testing practices
 - CI/CD compliance
-
-**Related Documentation**: [Contributing Guidelines](../resources/contributing.md)
 
 ---
 
@@ -58,8 +56,6 @@ Create a new Cursor rule for creating a new AIQ workflow
 - Directory structure for rules
 - Documentation standards for rules
 - Best practices for rule descriptions
-
-**Related Documentation**: [Contributing Guidelines](../resources/contributing.md)
 
 ---
 
@@ -167,8 +163,6 @@ Run my workflow locally for testing and then serve it as an API endpoint on port
 Evaluate my workflow performance using a test dataset with accuracy and precision metrics.
 ```
 
-
-
 **Related Documentation**: 
 - [CLI Reference - Evaluation Commands](./cli.md#evaluation)
 - [Workflow Evaluation](../workflows/evaluate.md)
@@ -185,8 +179,6 @@ Evaluate my workflow performance using a test dataset with accuracy and precisio
 Show me system information and list all available AIQ components with their details.
 ```
 
-
-
 **Related Documentation**: [CLI Reference - Info Commands](./cli.md#information-commands)
 
 ---
@@ -195,7 +187,7 @@ Show me system information and list all available AIQ components with their deta
 
 ### General Workflow Guidelines
 
-**Cursor Rule file**: `.cursor/rules/aiq-workflows/general.mdc`  
+**Cursor Rule file**: `.cursor/rules/aiq-workflows/general.mdc`
 **Purpose**: Guidance for AIQ workflows, functions, and tools.
 
 **Capabilities**:
@@ -220,8 +212,6 @@ Show me system information and list all available AIQ components with their deta
 Add a text processing function to my workflow that splits text into sentences and counts words.
 ```
 
-
-
 **Related Documentation**: 
 - [Writing Custom Functions](../extend/functions.md)
 - [Functions Overview](../workflows/functions/index.md)
@@ -237,8 +227,6 @@ Add a text processing function to my workflow that splits text into sentences an
 ```
 Integrate a web search tool into my workflow that can fetch and process search results from the internet.
 ```
-
-
 
 **Related Documentation**: [Adding Tools Tutorial](../tutorials/add-tools-to-a-workflow.md)
 

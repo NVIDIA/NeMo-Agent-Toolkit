@@ -17,8 +17,7 @@ limitations under the License.
 
 # Cursor Rules Developer Guide
 
-This guide explains how to organize, create, and maintain Cursor rules within the AIQ Toolkit project. Cursor rules provide structured guidance to AI assistants for specific development tasks, ensuring consistent and accurate responses across different scenarios.
-
+This guide explains how to organize, create, and maintain Cursor rules within the AIQ Toolkit project.
 
 ## Overview
 
