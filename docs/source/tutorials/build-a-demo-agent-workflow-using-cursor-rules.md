@@ -15,20 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Learn how to use Cursor rules for AIQ toolkit development to create and run a demo agent workflow
+# Build a Demo Agent Workflow Using Cursor Rules for AIQ Toolkit
 
-## Table of Contents
-
-- [About Cursor Rules](#about-cursor-rules)
-- [Common Prompts](#common-prompts)
-- [Practical Example: Building a Demo Agent with Cursor Rules](#practical-example-building-a-demo-agent-with-cursor-rules)
-  - [Install AIQ Toolkit](#install-aiq-toolkit)
-  - [Explore Available Tools](#explore-available-tools)
-  - [Create the Workflow](#create-the-workflow)
-  - [Configure the DateTime Function](#configure-the-datetime-function)
-  - [Integrate the ReAct Agent](#integrate-the-react-agent)
-  - [Run the Workflow](#run-the-workflow)
-- [Cursor Rules Organization](#cursor-rules-organization)
+Learn how to use Cursor rules for AIQ toolkit development to create and run a demo agent workflow.
 
 ## About Cursor Rules
 Cursor rules in AIQ toolkit act as an intelligent development that offers structured assistance for developers at all experience levels. The key functionalities of Cursor rules are as follows:
@@ -73,7 +62,7 @@ Run my workflow locally for testing and then serve it as an API endpoint on port
 
 For complete documentation with all available rules, prompts, and examples, refer to the **[Cursor Rules Reference](../reference/cursor-rules-reference.md)**.
 
-## Practical Example: Building a Demo Agent with Cursor Rules
+## Building a Demo Agent with Cursor Rules
 
 Follow the steps below for a comprehensive example that demonstrates creating and running a functional agent workflow using Cursor rules:
 

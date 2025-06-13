@@ -19,31 +19,6 @@ limitations under the License.
 
 This document provides a comprehensive reference for all available Cursor rules in AIQ Toolkit. Each rule includes a purpose description, usage prompt, and practical examples.
 
-## Table of Contents
-
-- [Foundation Rules](#foundation-rules)
-  - [General Development Guidelines](#general-development-guidelines)
-  - [Cursor Rules Management](#cursor-rules-management)
-- [Setup and Installation Rules](#setup-and-installation-rules)
-  - [General Setup Guidelines](#general-setup-guidelines)
-  - [AIQ Toolkit Installation](#aiq-toolkit-installation)
-- [CLI Command Rules](#cli-command-rules)
-  - [General CLI Guidelines](#general-cli-guidelines)
-  - [AIQ Workflow Commands](#aiq-workflow-commands)
-  - [AIQ Run and Serve Commands](#aiq-run-and-serve-commands)
-  - [AIQ Evaluation Commands](#aiq-evaluation-commands)
-  - [AIQ Info Commands](#aiq-info-commands)
-- [Workflow Development Rules](#workflow-development-rules)
-  - [General Workflow Guidelines](#general-workflow-guidelines)
-  - [Adding Functions to Workflows](#adding-functions-to-workflows)
-  - [Adding Tools to Workflows](#adding-tools-to-workflows)
-- [Agent Rules](#agent-rules)
-  - [AIQ Agents Integration and Selection](#aiq-agents-integration-and-selection)
-- [Quick Reference](#quick-reference)
-- [Usage Tips](#usage-tips)
-
----
-
 ## Foundation Rules
 
 ### General Development Guidelines
@@ -311,4 +286,4 @@ Integrate ReAct agent to the workflow
 * **Reference Documentation**: Follow the "Related Documentation" links for deeper understanding
 * **Test Incrementally**: Apply one rule at a time and test the results
 
-For tutorials and examples on using these rules, see [Cursor Rules for AIQ Toolkit Development](../tutorials/learn-how-to-use-cursor-rules.md). 
+For tutorials and examples on using these rules, see [Build a Demo Agent Workflow Using Cursor Rules for AIQ Toolkit](../tutorials/build-a-demo-agent-workflow-using-cursor-rules.md). 

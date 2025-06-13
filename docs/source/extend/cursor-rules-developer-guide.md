@@ -19,24 +19,6 @@ limitations under the License.
 
 This guide explains how to organize, create, and maintain Cursor rules within the AIQ Toolkit project. Cursor rules provide structured guidance to AI assistants for specific development tasks, ensuring consistent and accurate responses across different scenarios.
 
-## Table of Contents
-
-- [Cursor Rules Developer Guide](#cursor-rules-developer-guide)
-  - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-  - [Rule Organization Structure](#rule-organization-structure)
-    - [Core Rules Files](#core-rules-files)
-      - [Cursor Rules MDC](#cursor-rules-mdc)
-      - [General MDC](#general-mdc)
-    - [Topic-Based Subdirectories](#topic-based-subdirectories)
-      - [`aiq-agents/`](#aiq-agents)
-      - [`aiq-cli/`](#aiq-cli)
-      - [`aiq-setup/`](#aiq-setup)
-      - [`aiq-workflows/`](#aiq-workflows)
-  - [Creating and Maintaining Cursor Rules](#creating-and-maintaining-cursor-rules)
-    - [Fundamental Principles](#fundamental-principles)
-    - [Rule Creation Process](#rule-creation-process)
-    - [Writing Effective Agent Requested Rule Descriptions](#writing-effective-agent-requested-rule-descriptions)
 
 ## Overview
 
