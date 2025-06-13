@@ -43,13 +43,25 @@ def rag_eval_input():
                       expected_output_obj="AI is artificial intelligence.",
                       output_obj="AI is the simulation of human intelligence.",
                       expected_trajectory=[],
-                      trajectory=[]),
+                      trajectory=[],
+                      full_dataset_entry={
+                          "id": "1",
+                          "question": "What is AI?",
+                          "answer": "AI is artificial intelligence.",
+                          "generated_answer": "AI is the simulation of human intelligence."
+                      }),
         EvalInputItem(id="2",
                       input_obj="Define ML",
                       expected_output_obj="Machine Learning is a subset of AI.",
                       output_obj="ML helps machines learn.",
                       expected_trajectory=[],
-                      trajectory=[])
+                      trajectory=[],
+                      full_dataset_entry={
+                          "id": "2",
+                          "question": "Define ML",
+                          "answer": "Machine Learning is a subset of AI.",
+                          "generated_answer": "ML helps machines learn."
+                      })
     ]
     return EvalInput(eval_input_items=items)
 
@@ -128,7 +140,13 @@ async def test_evaluate_custom_scoring():
                       expected_output_obj="Study of language processing",
                       output_obj="It's about language.",
                       expected_trajectory=[],
-                      trajectory=[])
+                      trajectory=[],
+                      full_dataset_entry={
+                          "id": "1",
+                          "question": "What is NLP?",
+                          "answer": "Study of language processing",
+                          "generated_answer": "It's about language."
+                      })
     ])
 
     llm.ainvoke = AsyncMock(return_value=MagicMock(content='{"score": 0.75, "reasoning": "Fair explanation."}'))

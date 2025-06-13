@@ -154,3 +154,27 @@ async def file_logging_method(config: FileLoggingMethod, builder: Builder):
     handler = logging.FileHandler(filename=config.path, mode="a", encoding="utf-8")
     handler.setLevel(level)
     yield handler
+
+
+class PatronusTelemetryExporter(TelemetryExporterBaseConfig, name="patronus"):
+    """A telemetry exporter to transmit traces to Patronus service."""
+
+    endpoint: str = Field(description="The Patronus OTEL endpoint")
+    api_key: str = Field(description="The Patronus API key", default="")
+    project: str = Field(description="The project name to group the telemetry traces.")
+
+
+@register_telemetry_exporter(config_type=PatronusTelemetryExporter)
+async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder: Builder):
+    """Create a Patronus telemetry exporter."""
+    trace_exporter = telemetry_optional_import("opentelemetry.exporter.otlp.proto.grpc.trace_exporter")
+
+    api_key = config.api_key or os.environ.get("PATRONUS_API_KEY")
+    if not api_key:
+        raise ValueError("API key is required for Patronus")
+
+    headers = {
+        "x-api-key": api_key,
+        "pat-project-name": config.project,
+    }
+    yield trace_exporter.OTLPSpanExporter(endpoint=config.endpoint, headers=headers)
