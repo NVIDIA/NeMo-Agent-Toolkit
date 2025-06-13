@@ -15,7 +15,6 @@
 
 import asyncio
 import logging
-from tqdm import tqdm
 from typing import Callable
 
 from langchain.output_parsers import ResponseSchema
@@ -24,6 +23,7 @@ from langchain.schema import HumanMessage
 from langchain.schema import SystemMessage
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import RunnableLambda
+from tqdm import tqdm
 
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
@@ -73,14 +73,12 @@ def evaluation_prompt(judge_llm_prompt: str,
 
 def runnable_with_retries(original_fn: Callable, llm_retry_control_params: dict | None = None):
     runnable = RunnableLambda(original_fn)
-    
+
     if llm_retry_control_params is None:
         llm_retry_control_params = {
-            "stop_after_attempt": 3,
-            "initial_backoff_delay_seconds": 1,
-            "has_exponential_jitter": True
+            "stop_after_attempt": 3, "initial_backoff_delay_seconds": 1, "has_exponential_jitter": True
         }
-        
+
     if llm_retry_control_params["has_exponential_jitter"] is None:
         llm_retry_control_params["has_exponential_jitter"] = True
     if llm_retry_control_params["stop_after_attempt"] is None:
@@ -90,10 +88,11 @@ def runnable_with_retries(original_fn: Callable, llm_retry_control_params: dict 
 
     # Add retry logic with exponential backoff and jitter
     return runnable.with_retry(
-        retry_if_exception_type=(Exception,), # Retry on any error
-        wait_exponential_jitter=llm_retry_control_params["has_exponential_jitter"], # Add jitter to exponential backoff
-        stop_after_attempt=llm_retry_control_params["stop_after_attempt"],                       
-        exponential_jitter_params={"initial": llm_retry_control_params["initial_backoff_delay_seconds"]} # Optional: set initial backoff (seconds)
+        retry_if_exception_type=(Exception, ),  # Retry on any error
+        wait_exponential_jitter=llm_retry_control_params["has_exponential_jitter"],  # Add jitter to exponential backoff
+        stop_after_attempt=llm_retry_control_params["stop_after_attempt"],
+        exponential_jitter_params={"initial": llm_retry_control_params["initial_backoff_delay_seconds"]
+                                   }  # Optional: set initial backoff (seconds)
     )
 
 
