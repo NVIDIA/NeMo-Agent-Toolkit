@@ -128,3 +128,5 @@ eval:
       _type: ragas
       metric: ContextRelevance
       llm_name: nim_rag_eval_llm
+    classification_accuracy:
+      _type: classification_accuracy

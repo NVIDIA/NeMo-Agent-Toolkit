@@ -81,6 +81,7 @@ class DatasetHandler:
                 output_obj=row.get(self.generated_answer_key, "") if structured else "",
                 trajectory=row.get(self.trajectory_key, []) if structured else [],
                 expected_trajectory=row.get(self.expected_trajectory_key, []) if structured else [],
+                full_dataset_entry=row.to_dict(),
             )
 
         # if input dataframe is empty return an empty list

@@ -156,7 +156,17 @@ def load_column_or_static(df, host_id, column):
         raise KeyError(f"No row for host_id='{host_id}' in DataFrame")
     if len(subset) > 1:
         raise ValueError(f"Multiple rows found for host_id='{host_id}' in DataFrame. Expected unique host_ids.")
-    return subset.values[0]
+
+    data = subset.values[0]
+    if pd.isna(data) or (data == ""):
+        # If data is None, empty, or NaN, try loading from static JSON file
+        static_data = _get_static_data()
+        try:
+            return static_data[column]
+        except KeyError as exc:
+            raise KeyError(f"Column '{column}' not found in static data") from exc
+
+    return data
 
 
 async def run_ansible_playbook(playbook: list,
