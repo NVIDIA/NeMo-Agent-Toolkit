@@ -235,6 +235,13 @@ eval:
     tuneable_eval:
       _type: tunable_rag_evaluator
       llm_name: nim_rag_eval_llm
+      # (optional) retry control params for handling rate limiting
+      llm_retry_control_params:
+        stop_after_attempt: 3
+        # set initial backoff (seconds)
+        initial_backoff_delay_seconds: 1
+        # Add jitter to exponential backoff
+        has_exponential_jitter: true
       default_scoring: false
       default_score_weights:
         coverage: 0.5
