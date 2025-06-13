@@ -1,0 +1,162 @@
+---
+description: Follow these rules when the user's request involves running, serving, or executing AIQ workflows
+globs: 
+alwaysApply: false
+---
+# AIQ Run and Serve Commands
+
+This rule provides guidance for using `aiq run` and `aiq serve` commands to execute and deploy AIQ toolkit workflows.
+
+## aiq run
+
+Runs an AIQ toolkit workflow from a configuration file with command-line inputs. This is an alias for `aiq start console`.
+
+### Basic Usage
+```bash
+aiq run --config_file CONFIG_FILE [OPTIONS]
+```
+
+### Required Arguments
+- `--config_file FILE`: A JSON/YAML file that sets the parameters for the workflow
+
+### Available Options
+- `--override <TEXT TEXT>...`: Override config values using dot notation (e.g., `--override llms.nim_llm.temperature 0.7`)
+- `--input TEXT`: A single input to submit to the workflow
+- `--input_file FILE`: Path to a JSON file of inputs to submit to the workflow
+
+### Examples
+```bash
+# Basic workflow execution with single input
+aiq run --config_file configs/rag_config.yml --input "What is machine learning?"
+
+# Run with input file
+aiq run --config_file configs/rag_config.yml --input_file inputs/questions.json
+
+# Override configuration parameters
+aiq run --config_file configs/rag_config.yml --input "Hello" --override llms.nim_llm.temperature 0.5
+
+# Multiple configuration overrides
+aiq run --config_file configs/rag_config.yml --input "Test query" \
+  --override llms.nim_llm.temperature 0.7 \
+  --override retriever.top_k 10
+```
+
+### Use Cases
+- One-off testing and debugging
+- Running workflows in development
+- Batch processing with input files
+- Quick validation of workflow configurations
+
+## aiq serve
+
+Serves a FastAPI endpoint for the workflow. This is an alias for `aiq start fastapi`.
+
+### Basic Usage
+```bash
+aiq serve --config_file CONFIG_FILE [OPTIONS]
+```
+
+### Required Arguments
+- `--config_file FILE`: A JSON/YAML file that sets the parameters for the workflow
+
+### Available Options
+- `--override <TEXT TEXT>...`: Override config values using dot notation
+- `--root_path TEXT`: The root path for the API
+- `--host TEXT`: Host to bind the server to
+- `--port INTEGER`: Port to bind the server to
+- `--reload BOOLEAN`: Enable auto-reload for development
+- `--workers INTEGER`: Number of workers to run
+- `--use_gunicorn BOOLEAN`: Use Gunicorn to run the FastAPI app
+- `--runner_class TEXT`: The AIQ toolkit runner class to use when launching from multiple processes
+
+### Examples
+```bash
+# Basic local development server
+aiq serve --config_file configs/rag_config.yml --host 0.0.0.0 --port 8000
+
+# Production server with multiple workers
+aiq serve --config_file configs/rag_config.yml --host 0.0.0.0 --port 8000 --workers 4 --use_gunicorn true
+
+# Development server with auto-reload
+aiq serve --config_file configs/rag_config.yml --host localhost --port 8000 --reload true
+
+# Serve with configuration overrides
+aiq serve --config_file configs/rag_config.yml --port 8080 \
+  --override llms.nim_llm.max_tokens 2048 \
+  --override retriever.top_k 5
+```
+
+### API Documentation
+Once served, Swagger API documentation is available at: `http://<HOST>:<PORT>/docs`
+
+Example: `http://localhost:8000/docs`
+
+### Use Cases
+- Microservice deployment
+- Production API endpoints
+- Development testing with REST clients
+- Integration with other applications
+
+## Configuration File Requirements
+
+Both commands require a valid workflow configuration file that:
+- Defines the workflow components and their parameters
+- Uses proper YAML or JSON format
+- Maps to registered AIQ toolkit components
+
+### Example Configuration Structure
+```yaml
+llms:
+  nim_llm:
+    _type: "nim_llm"
+    model: "meta/llama-3.1-8b-instruct"
+    temperature: 0.7
+
+retrievers:
+  milvus_retriever:
+    _type: "milvus"
+    host: "localhost"
+    port: 19530
+
+workflow:
+  _type: "simple_rag"
+  llm: llms.nim_llm
+  retriever: retrievers.milvus_retriever
+```
+
+## Best Practices
+
+1. **Use descriptive config names**: Name configuration files clearly (e.g., `rag_config.yml`, `qa_config.yml`)
+2. **Validate configs first**: Use `aiq validate --config_file CONFIG` before running
+3. **Start with run command**: Test workflows with `aiq run` before serving
+4. **Use overrides for testing**: Test different parameters without modifying config files
+5. **Enable reload in development**: Use `--reload true` when developing
+6. **Use proper ports**: Choose appropriate ports for your deployment environment
+7. **Check API docs**: Always verify endpoints at `/docs` after serving
+
+## Common Development Workflow
+1. **Validate**: `aiq validate --config_file config.yml`
+2. **Test**: `aiq run --config_file config.yml --input "test input"`
+3. **Serve locally**: `aiq serve --config_file config.yml --host localhost --port 8000 --reload true`
+4. **Check API**: Open `http://localhost:8000/docs` in browser
+5. **Deploy**: `aiq serve --config_file config.yml --host 0.0.0.0 --port 8000 --workers 4`
+
+## Input File Format
+
+When using `--input_file`, the JSON file should contain a list of inputs:
+
+```json
+[
+  "What is artificial intelligence?",
+  "Explain machine learning",
+  "How does deep learning work?"
+]
+```
+
+Or for more complex inputs:
+```json
+[
+  {"query": "What is AI?", "context": "technical"},
+  {"query": "Explain ML", "context": "beginner"}
+]
+```
