@@ -109,6 +109,7 @@ Adding a Custom Evaluator <./extend/custom-evaluator.md>
 ./extend/memory.md
 Adding an LLM Provider <./extend/adding-an-llm-provider.md>
 Integrating AWS Bedrock Models <./extend/integrating-aws-bedrock-models.md>
+Cursor Rules Developer Guide <./extend/cursor-rules-developer-guide.md>
 ```
 
 ```{toctree}
@@ -120,6 +121,7 @@ Integrating AWS Bedrock Models <./extend/integrating-aws-bedrock-models.md>
 API Server Endpoints <./reference/api-server-endpoints.md>
 ./reference/websockets.md
 Command Line Interface (CLI) <./reference/cli.md>
+Cursor Rules Reference <./reference/cursor-rules-reference.md>
 Evaluation <./reference/evaluate.md>
 Evaluation Endpoints <./reference/evaluate-api.md>
 Troubleshooting <./troubleshooting.md>

@@ -1,0 +1,88 @@
+---
+description: Follow these rules when creating, modifying, or generating any code, tests, documentation, or configuration files
+globs: 
+alwaysApply: false
+---
+# AIQToolkit General Coding Guidelines
+
+These are the overarching standards that every **source, test, documentation and CI file** in this repository must follow.  Adhering to these rules locally ensures the project's automated checks and pipelines succeed on your first push.
+
+---
+
+## Project Structure
+
+- All importable Python code lives under `src/` or `packages/<pkg>/src/` so namespace-packages resolve correctly.
+- Each example is an installable package in `examples/<example_name>` and exposes an `__main__.py` for `python -m <example_name>` execution.
+- Unit tests live in `tests/` (or `examples/*/tests`) and use the markers defined in `pyproject.toml` (e.g. `e2e`, `integration`).
+- Documentation sources are Markdown files under `docs/source`.
+- Configuration files consumed by code are stored next to that code in a `configs/` folder.
+- Large / binary assets **must** be committed with Git-LFS and placed in a neighbouring `data/` folder.
+- Shell or utility scripts belong in `scripts/` or `ci/scripts/` – never mix them with library code.
+
+## Code Formatting & Imports
+
+- Run **isort** first (`line_length = 120`, `multi_line_output = 3`, `include_trailing_comma = true`, `force_single_line = true`).
+- Run **yapf** second (PEP 8 base, `column_limit = 120`).
+- Indent with 4 spaces, never tabs, and ensure every file ends with a single newline.
+- CI fails if formatting is wrong; run `pre-commit run --all-files` locally before pushing.
+
+## Linting
+
+- **pylint** is executed using the configuration embedded in `pyproject.toml` – do not override this file locally.
+- Respect the naming schemes: `snake_case` for functions & variables, `PascalCase` for classes, `UPPER_CASE` for constants.
+- **flake8** (via `pflake8`) also runs via pre-commit; fix warnings unless they're explicitly ignored in `pyproject.toml`.
+
+## Type Hints
+
+- All public APIs require Python 3.11+ type hints on parameters and return values.
+- Prefer `collections.abc` / `typing` abstractions (`Sequence` over `list`).
+- Use `typing.Annotated` for units or extra metadata when useful.
+- Treat `pyright` warnings (configured in `pyproject.toml`) as errors during development.
+
+## Documentation
+
+- Provide Google-style docstrings for every public module, class, function and CLI command.
+- The first line must be a concise description ending with a period (Vale checks this).
+- Surround code entities with backticks to avoid Vale false-positives.
+- Keep docs in sync with code; the **documentation** pipeline will fail on Sphinx errors or broken links.
+
+## Testing
+
+- Use **pytest** with `pytest-asyncio` for asynchronous code.
+- Name test files `test_*.py` and store them alongside the code in a `tests/` folder.
+- Maintain **≥ 80 %** coverage; add or update tests when introducing changes.
+- Mock external services with `pytest_httpserver` or `unittest.mock` instead of hitting live endpoints.
+- Mark expensive tests with `@pytest.mark.slow` or `@pytest.mark.integration` so they can be skipped in the default test suite.
+
+## Continuous Integration
+
+- Never commit code that fails `pre-commit run --all-files` or `ci/scripts/run_ci_local.sh check`.
+- Every file must start with the standard SPDX Apache-2.0 header.
+- New dependencies must be added to **both** `pyproject.toml` (alphabetically) and `uv.lock` via `uv pip install <pkg> --sync`.
+- Sign commits with `--signoff` to comply with the Developer Certificate of Origin (DCO).
+
+## Versioning
+
+- The project follows **semantic versioning** (MAJOR.MINOR.PATCH).  Patch releases must remain backward-compatible.
+- Version numbers are derived automatically by `setuptools-scm`; never hard-code them in code or docs.
+- Add user-visible changes to `CHANGELOG.md` under the appropriate section.
+
+## Security
+
+- Never commit API keys, credentials or personal data; use environment variables or `.env` files excluded from Git.
+- Validate and sanitise all user input, especially in web or CLI interfaces.
+- Prefer `httpx` with SSL verification enabled by default and follow OWASP Top-10 recommendations.
+- Periodically run `uv pip list --outdated` and upgrade dependencies.
+
+## Performance
+
+- Use `async`/`await` for I/O-bound work (HTTP, DB, file reads).
+- Profile CPU-heavy paths with `cProfile` or `mprof` before optimising.
+- Cache expensive computations with `functools.lru_cache` or an external cache when appropriate.
+- Leverage NumPy vectorised operations whenever beneficial and feasible.
+
+## Licensing
+
+- All source files must include the SPDX Apache-2.0 header template (copy from an existing file).
+- Binary assets committed via Git-LFS must have licensing info recorded in `LICENSE-3rd-party.txt` when required.
+- CI verifies headers via `ci/scripts/github/checks.sh`; do **not** bypass this check.
