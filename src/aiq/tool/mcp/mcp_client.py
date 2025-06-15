@@ -45,6 +45,7 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
     }
 
     properties = mcp_input_schema.get("properties", {})
+    required_fields = set(mcp_input_schema.get("required", []))
     schema_dict = {}
 
     def _generate_valid_classname(class_name: str):
@@ -70,7 +71,17 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
         else:
             field_type = _type_map.get(json_type, Any)
 
-        default_value = field_properties.get("default", ...)
+        # Determine the default value based on whether the field is required
+        if field_name in required_fields:
+            # Field is required - use explicit default if provided, otherwise make it required
+            default_value = field_properties.get("default", ...)
+        else:
+            # Field is optional - use explicit default if provided, otherwise None
+            default_value = field_properties.get("default", None)
+            # Make the type optional if no default was provided
+            if "default" not in field_properties:
+                field_type = field_type | None
+
         nullable = field_properties.get("nullable", False)
         description = field_properties.get("description", "")
 

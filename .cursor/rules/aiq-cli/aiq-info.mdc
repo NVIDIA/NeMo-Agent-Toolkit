@@ -1,0 +1,199 @@
+---
+description: Follow these rules when the user requests information about AIQ components, including: functions, tools, etc.
+globs: 
+alwaysApply: false
+---
+# AIQ Info Commands
+
+This rule provides guidance for using `aiq info` commands to discover locally registered AIQ toolkit components and configured registry channels.
+
+## aiq info components
+
+Lists the locally registered AIQ toolkit components with filtering and search capabilities.
+
+### Basic Usage
+```bash
+aiq info components [OPTIONS]
+```
+
+### Available Options
+- `-t, --types`: Filter by component type (front_end, function, tool_wrapper, llm_provider, llm_client, embedder_provider, embedder_client, evaluator, memory, retriever_provider, retriever_client, registry_handler, logging, tracing, package, undefined)
+- `-o, --output_path TEXT`: Path to save search results
+- `-q, --query TEXT`: Query string for searching (default: "")
+- `-n, --num_results INTEGER`: Number of results to return (default: -1, meaning all)
+- `-f, --fields`: Fields to include in results (all, package, version, component_name, description, developer_notes)
+
+### Output Columns
+- `package`: The Python package containing the component
+- `version`: The version of the Python package
+- `component_type`: Type of AIQ toolkit component
+- `component_name`: Name to use in the `_type` field of configuration
+- `description`: Component description, configuration parameters, and default values
+
+### Examples
+```bash
+# List all registered components
+aiq info components
+
+# Filter by component type
+aiq info components --types llm_provider
+aiq info components --types retriever_provider
+aiq info components --types function
+
+# Search for specific components
+aiq info components --query "milvus"
+aiq info components --query "embedding"
+
+# Filter multiple component types
+aiq info components --types llm_provider --types embedder_provider
+
+# Limit results and save to file
+aiq info components --query "rag" --num_results 10 --output_path component_search.json
+
+# Show only specific fields
+aiq info components --fields component_name --fields description
+```
+
+### Use Cases
+- **Configuration Discovery**: Find component names to use in YAML config files
+- **Parameter Research**: Understand component configuration options and defaults
+- **Component Exploration**: Discover available components for workflow development
+- **Documentation**: Generate component inventories and documentation
+
+## aiq info channels
+
+Lists the configured remote registry channels and their settings.
+
+### Basic Usage
+```bash
+aiq info channels [OPTIONS]
+```
+
+### Available Options
+- `-t, --type TEXT`: Filter results by channel type (rest, pypi)
+
+### Examples
+```bash
+# List all configured channels
+aiq info channels
+
+# Filter by channel type
+aiq info channels --type rest
+aiq info channels --type pypi
+```
+
+### Use Cases
+- **Registry Management**: View configured remote registries
+- **Channel Verification**: Confirm channel configurations before publishing or pulling
+- **Environment Setup**: Verify remote registry setup
+
+## Common Information Gathering Workflows
+
+### 1. Setting Up a New Workflow
+```bash
+# Find available LLM providers
+aiq info components --types llm_provider
+
+# Find available retrievers
+aiq info components --types retriever_provider
+
+# Search for specific functionality
+aiq info components --query "embedding"
+```
+
+### 2. Debugging Configuration Issues
+```bash
+# Verify component exists and get exact name
+aiq info components --query "component_name"
+
+# Check available parameters for a component
+aiq info components --query "specific_component" --fields description
+
+# List all components in a package
+aiq info components --query "package_name"
+```
+
+### 3. Component Discovery
+```bash
+# Explore all available tools
+aiq info components --types tool_wrapper
+
+# Find evaluation components
+aiq info components --types evaluator
+
+# Search for memory components
+aiq info components --types memory
+```
+
+### 4. Registry Management
+```bash
+# Check configured registries
+aiq info channels
+
+# Verify specific registry type
+aiq info channels --type rest
+```
+
+## Component Types Reference
+
+- **front_end**: User interfaces and interaction components
+- **function**: Core workflow functions and logic
+- **tool_wrapper**: External tool integrations
+- **llm_provider**: Large language model providers
+- **llm_client**: LLM client implementations
+- **embedder_provider**: Embedding model providers
+- **embedder_client**: Embedding client implementations
+- **evaluator**: Workflow evaluation components
+- **memory**: Memory and state management components
+- **retriever_provider**: Document retrieval providers
+- **retriever_client**: Document retrieval client implementations
+- **registry_handler**: Registry interaction components
+- **logging**: Logging and monitoring components
+- **tracing**: Workflow tracing and debugging components
+- **package**: Package-level components
+
+## Best Practices
+
+1. **Start with component discovery**: Use `aiq info components` before writing configurations
+2. **Use type filters**: Narrow down searches with `--types` to find relevant components
+3. **Save search results**: Use `--output_path` for documentation and reference
+4. **Check descriptions carefully**: Component descriptions contain crucial configuration details
+5. **Verify component names**: Use exact component names from search results in configs
+6. **Explore systematically**: Search by functionality keywords to discover relevant components
+
+## Integration with Other Commands
+
+### Before Configuration
+```bash
+# Discover components for your workflow
+aiq info components --types llm_provider --types retriever_provider
+
+# Create configuration file using discovered component names
+# Then validate the configuration
+aiq validate --config_file my_config.yml
+```
+
+### Before Registry Operations
+```bash
+# Check available channels before publishing
+aiq info channels
+
+# Verify specific channel exists
+aiq info channels --type rest
+```
+
+### During Development
+```bash
+# Find tools to integrate
+aiq info components --types tool_wrapper --query "search_term"
+
+# Check available evaluators
+aiq info components --types evaluator
+```
+
+## Output Format Tips
+
+- Results are displayed in tabular format by default
+- Use `--output_path` to save results as JSON for programmatic use
+- Filter fields with `--fields` to focus on specific information
+- Use `--num_results` to limit output for large result sets

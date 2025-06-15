@@ -136,7 +136,9 @@ def test_load_column_or_static():
     _DATA_CACHE.update({
         'offline_data': None,
         'benign_fallback_offline_data': {
-            'static_column': 'static_value', 'another_static': 'another_value'
+            'static_column': 'static_value',
+            'another_static': 'another_value',
+            'potentially_null_column': 'static_value_for_nulls'
         }
     })
 
@@ -154,6 +156,16 @@ def test_load_column_or_static():
     # Test fallback to static JSON when column not in DataFrame
     assert load_column_or_static(df, 'host1', 'static_column') == 'static_value'
     assert load_column_or_static(df, 'host2', 'another_static') == 'another_value'
+
+    # Test fallback to static JSON when DataFrame value is None, empty string, or NaN
+    df_with_nulls = pd.DataFrame({
+        'host_id': ['host1', 'host2', 'host3', 'host4'],
+        'potentially_null_column': [None, '', pd.NA, 'value4'],
+    })
+    assert load_column_or_static(df_with_nulls, 'host1', 'potentially_null_column') == 'static_value_for_nulls'
+    assert load_column_or_static(df_with_nulls, 'host2', 'potentially_null_column') == 'static_value_for_nulls'
+    assert load_column_or_static(df_with_nulls, 'host3', 'potentially_null_column') == 'static_value_for_nulls'
+    assert load_column_or_static(df_with_nulls, 'host4', 'potentially_null_column') == 'value4'
 
     # Test error when column not found in either source
     with pytest.raises(KeyError, match="Column 'nonexistent' not found in test and benign fallback data"):
