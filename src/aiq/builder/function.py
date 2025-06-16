@@ -183,31 +183,28 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         """
         Runs the function with the given input and returns a stream of outputs from the function. This is the main entry
         point for running a function with streaming output.
-
-        Parameters
-        ----------
-        value : InputT | typing.Any
-            The input to the function.
-        to_type : type | None, optional
-            The type to convert the output to using the function's converter. When not specified, the
-            output will match `streaming_output_type`.
-
-        Yields
-        ------
-        typing.Any
-            The output of the function optionally converted to the specified type.
         """
 
-        with self._context.push_active_function(self.instance_name, input_data=value):
+        with self._context.push_active_function(self.instance_name, input_data=value) as manager:
             try:
                 converted_input: InputT = self._convert_input(value)  # type: ignore
 
-                async for data in self._astream(converted_input):
+                # Collect streaming outputs to capture the final result
+                final_output = None
 
+                async for data in self._astream(converted_input):
                     if to_type is not None and not isinstance(data, to_type):
-                        yield self._converter.convert(data, to_type=to_type)
+                        converted_data = self._converter.convert(data, to_type=to_type)
+                        final_output = converted_data
+                        yield converted_data
                     else:
+                        final_output = data
                         yield data
+
+                # Set the final output for intermediate step tracking
+                if final_output is not None:
+                    manager.set_output(final_output)
+
             except Exception as e:
                 logger.error("Error with astream in function with input: %s.", value, exc_info=True)
                 raise e
