@@ -24,7 +24,7 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 logger = logging.getLogger(__name__)
 
 
-class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="new_weave"):
+class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
     """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
     project: str = Field(description="The W&B project name.")
     entity: str | None = Field(default=None, description="The W&B username or team name.")

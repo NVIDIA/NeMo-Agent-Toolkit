@@ -24,7 +24,7 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 logger = logging.getLogger(__name__)
 
 
-class PhoenixTelemetryExporter(TelemetryExporterBaseConfig, name="new_phoenix"):
+class PhoenixTelemetryExporter(TelemetryExporterBaseConfig, name="phoenix"):
     """A telemetry exporter to transmit traces to externally hosted phoenix service."""
 
     endpoint: str = Field(description="The phoenix endpoint to export telemetry traces.")
