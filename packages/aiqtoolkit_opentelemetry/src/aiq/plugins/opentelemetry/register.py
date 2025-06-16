@@ -91,3 +91,28 @@ async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builde
     from aiq.plugins.opentelemetry.otlp_span_exporter import OTLPSpanExporter
 
     yield OTLPSpanExporter(endpoint=config.endpoint)
+
+
+class PatronusTelemetryExporter(TelemetryExporterBaseConfig, name="patronus"):
+    """A telemetry exporter to transmit traces to Patronus service."""
+
+    endpoint: str = Field(description="The Patronus OTEL endpoint")
+    api_key: str = Field(description="The Patronus API key", default="")
+    project: str = Field(description="The project name to group the telemetry traces.")
+
+
+@register_telemetry_exporter(config_type=PatronusTelemetryExporter)
+async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder: Builder):  # pylint: disable=W0613
+    """Create a Patronus telemetry exporter."""
+
+    from aiq.plugins.opentelemetry.otlp_span_exporter import OTLPSpanExporter
+
+    api_key = config.api_key or os.environ.get("PATRONUS_API_KEY")
+    if not api_key:
+        raise ValueError("API key is required for Patronus")
+
+    headers = {
+        "x-api-key": api_key,
+        "pat-project-name": config.project,
+    }
+    yield OTLPSpanExporter(endpoint=config.endpoint, headers=headers)
