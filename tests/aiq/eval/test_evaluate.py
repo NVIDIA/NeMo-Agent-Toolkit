@@ -64,7 +64,10 @@ def eval_input():
                               expected_output_obj="Golden answer",
                               output_obj=None,
                               expected_trajectory=[],
-                              trajectory=[])
+                              trajectory=[],
+                              full_dataset_entry={
+                                  "id": 1, "question": "User input", "answer": "Golden answer"
+                              })
     return EvalInput(eval_input_items=[eval_item])
 
 
@@ -221,13 +224,19 @@ async def test_run_workflow_local_skip_completed(evaluation_run, session_manager
                                    expected_output_obj="Golden Answer",
                                    output_obj=old_answer,
                                    expected_trajectory=[],
-                                   trajectory=[])
+                                   trajectory=[],
+                                   full_dataset_entry={
+                                       "id": 1, "question": "Completed Question", "answer": "Golden Answer"
+                                   })
     pending_item = EvalInputItem(id=2,
                                  input_obj="Pending Question",
                                  expected_output_obj="Golden Answer",
                                  output_obj=None,
                                  expected_trajectory=[],
-                                 trajectory=[])
+                                 trajectory=[],
+                                 full_dataset_entry={
+                                     "id": 2, "question": "Pending Question", "answer": "Golden Answer"
+                                 })
 
     # Assign mock eval input items to the evaluation run
     evaluation_run.eval_input = EvalInput(eval_input_items=[completed_item, pending_item])
