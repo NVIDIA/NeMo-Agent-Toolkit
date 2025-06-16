@@ -20,6 +20,8 @@ import warnings
 from contextlib import AbstractAsyncContextManager
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
+from collections.abc import Awaitable
+from collections.abc import Callable
 
 from aiq.builder.builder import Builder
 from aiq.builder.builder import UserManagerHolder
@@ -54,17 +56,9 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.memory.interfaces import MemoryEditor
 from aiq.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
 from aiq.profiler.utils import detect_llm_frameworks_in_build_fn
-from aiq.utils.optional_imports import TelemetryOptionalImportError
-from aiq.utils.optional_imports import try_import_opentelemetry
 from aiq.utils.type_utils import override
-
-# SpanExporter is needed to define ConfiguredExporter. Handling when OpenTelemetry is not installed here.
-try:
-    opentelemetry = try_import_opentelemetry()
-    from opentelemetry.sdk.trace.export import SpanExporter
-except TelemetryOptionalImportError:
-    from aiq.utils.optional_imports import DummySpanExporter  # pylint: disable=ungrouped-imports
-    SpanExporter = DummySpanExporter
+from aiq.observability.base_exporter import AbstractExporter
+from aiq.observability.exporter_manager import ExporterManager
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +66,7 @@ logger = logging.getLogger(__name__)
 @dataclasses.dataclass
 class ConfiguredExporter:
     config: TelemetryExporterBaseConfig
-    instance: SpanExporter
+    factory: Callable[[], Awaitable[AbstractExporter]]
 
 
 @dataclasses.dataclass
@@ -139,6 +133,10 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self.function_dependencies: dict[str, FunctionDependencies] = {}
         self.current_function_building: str | None = None
 
+        # Create a mapping to track exporter name -> exporter factory
+        self._exporter_registrations: dict[str, ConfiguredExporter] = {}
+        self._exporter_manager = ExporterManager()
+
     async def __aenter__(self):
 
         self._exit_stack = AsyncExitStack()
@@ -161,43 +159,10 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Now attach to AIQ Toolkit's root logger
             logging.getLogger().addHandler(handler)
 
-        # If tracing is configured, try to import telemetry dependencies and set up tracing
+        # If tracing is configured, register the exporter factories
         if telemetry_config.tracing:
-            # If the dependencies are not installed, a TelemetryOptionalImportError will be raised
-
-            # pylint: disable=unused-variable,redefined-outer-name
-            opentelemetry = try_import_opentelemetry()  # noqa: F841
-            from openinference.semconv.resource import ResourceAttributes
-            from opentelemetry import trace
-            from opentelemetry.sdk.resources import Resource
-            from opentelemetry.sdk.trace import TracerProvider
-            from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-            from aiq.observability.register import PhoenixTelemetryExporter
-
-            # Create a default provider first
-            provider = TracerProvider()
-
-            # Check if we have a phoenix telemetry exporter and use its project name
             for key, trace_exporter_config in telemetry_config.tracing.items():
-                if isinstance(trace_exporter_config, PhoenixTelemetryExporter):
-                    provider = TracerProvider(resource=Resource(
-                        attributes={ResourceAttributes.PROJECT_NAME: trace_exporter_config.project}))
-                    break
-
-            trace.set_tracer_provider(provider)
-
-            for key, trace_exporter_config in telemetry_config.tracing.items():
-
-                exporter_info = self._registry.get_telemetry_exporter(type(trace_exporter_config))
-
-                instance = await self._exit_stack.enter_async_context(
-                    exporter_info.build_fn(trace_exporter_config, self))
-
-                span_processor_instance = BatchSpanProcessor(instance)
-                provider.add_span_processor(span_processor_instance)
-
-                self._exporters[key] = ConfiguredExporter(config=trace_exporter_config, instance=instance)
+                await self._register_exporter(key, trace_exporter_config)
 
         return self
 
@@ -598,6 +563,22 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     @override
     def get_user_manager(self):
         return UserManagerHolder(context=AIQContext(self._context_state))
+
+    async def _register_exporter(self, name: str, config: TelemetryExporterBaseConfig) -> None:
+        """Register an exporter factory with the exporter manager.
+
+        Args:
+            name: The name to register the exporter under
+            config: The configuration for the exporter
+        """
+        exporter_info = self._registry.get_telemetry_exporter(type(config))
+
+        async def create_exporter():
+            return await self._exit_stack.enter_async_context(
+                exporter_info.build_fn(config, self))
+
+        await self._exporter_manager.add_exporter(name, create_exporter)
+        self._exporter_registrations[name] = ConfiguredExporter(config=config, factory=create_exporter)     
 
     async def populate_builder(self, config: AIQConfig, skip_workflow: bool = False):
         """

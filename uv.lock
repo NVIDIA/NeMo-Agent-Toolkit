@@ -1,5 +1,4 @@
 version = 1
-revision = 1
 requires-python = ">=3.11, <3.13"
 resolution-markers = [
     "python_full_version >= '3.12.4' and sys_platform == 'linux'",
@@ -18,6 +17,8 @@ members = [
     "aiqtoolkit-langchain",
     "aiqtoolkit-llama-index",
     "aiqtoolkit-mem0ai",
+    "aiqtoolkit-opentelemetry",
+    "aiqtoolkit-phoenix",
     "aiqtoolkit-semantic-kernel",
     "aiqtoolkit-test",
     "aiqtoolkit-weave",
@@ -460,6 +461,12 @@ llama-index = [
 mem0ai = [
     { name = "aiqtoolkit-mem0ai" },
 ]
+opentelemetry = [
+    { name = "aiqtoolkit-opentelemetry" },
+]
+phoenix = [
+    { name = "aiqtoolkit-phoenix" },
+]
 profiling = [
     { name = "matplotlib" },
     { name = "prefixspan" },
@@ -469,9 +476,9 @@ semantic-kernel = [
     { name = "aiqtoolkit-semantic-kernel" },
 ]
 telemetry = [
-    { name = "arize-phoenix" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-sdk" },
+    { name = "aiqtoolkit-opentelemetry" },
+    { name = "aiqtoolkit-phoenix" },
+    { name = "aiqtoolkit-weave" },
 ]
 weave = [
     { name = "aiqtoolkit-weave" },
@@ -534,10 +541,14 @@ requires-dist = [
     { name = "aiqtoolkit-langchain", marker = "extra == 'langchain'", editable = "packages/aiqtoolkit_langchain" },
     { name = "aiqtoolkit-llama-index", marker = "extra == 'llama-index'", editable = "packages/aiqtoolkit_llama_index" },
     { name = "aiqtoolkit-mem0ai", marker = "extra == 'mem0ai'", editable = "packages/aiqtoolkit_mem0ai" },
+    { name = "aiqtoolkit-opentelemetry", marker = "extra == 'opentelemetry'", editable = "packages/aiqtoolkit_opentelemetry" },
+    { name = "aiqtoolkit-opentelemetry", marker = "extra == 'telemetry'", editable = "packages/aiqtoolkit_opentelemetry" },
+    { name = "aiqtoolkit-phoenix", marker = "extra == 'phoenix'", editable = "packages/aiqtoolkit_phoenix" },
+    { name = "aiqtoolkit-phoenix", marker = "extra == 'telemetry'", editable = "packages/aiqtoolkit_phoenix" },
     { name = "aiqtoolkit-semantic-kernel", marker = "extra == 'semantic-kernel'", editable = "packages/aiqtoolkit_semantic_kernel" },
+    { name = "aiqtoolkit-weave", marker = "extra == 'telemetry'", editable = "packages/aiqtoolkit_weave" },
     { name = "aiqtoolkit-weave", marker = "extra == 'weave'", editable = "packages/aiqtoolkit_weave" },
     { name = "aiqtoolkit-zep-cloud", marker = "extra == 'zep-cloud'", editable = "packages/aiqtoolkit_zep_cloud" },
-    { name = "arize-phoenix", marker = "extra == 'telemetry'", specifier = "~=6.1" },
     { name = "click", specifier = "~=8.1" },
     { name = "colorama", specifier = "~=0.4.6" },
     { name = "expandvars", specifier = "~=1.0" },
@@ -553,8 +564,6 @@ requires-dist = [
     { name = "numpy", specifier = "~=1.26" },
     { name = "openinference-semantic-conventions", specifier = "~=0.1.14" },
     { name = "openpyxl", specifier = "~=3.1" },
-    { name = "opentelemetry-api", marker = "extra == 'telemetry'", specifier = "~=1.2" },
-    { name = "opentelemetry-sdk", marker = "extra == 'telemetry'", specifier = "~=1.3" },
     { name = "pkginfo", specifier = "~=1.12" },
     { name = "platformdirs", specifier = "~=4.3" },
     { name = "prefixspan", marker = "extra == 'profiling'", specifier = "~=0.5.2" },
@@ -567,7 +576,6 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["agno", "crewai", "ingestion", "langchain", "llama-index", "mem0ai", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "profiling", "gunicorn"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -697,6 +705,36 @@ dependencies = [
 requires-dist = [
     { name = "aiqtoolkit", editable = "." },
     { name = "mem0ai", specifier = "~=0.1.30" },
+]
+
+[[package]]
+name = "aiqtoolkit-opentelemetry"
+source = { editable = "packages/aiqtoolkit_opentelemetry" }
+dependencies = [
+    { name = "aiqtoolkit" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-sdk" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiqtoolkit", editable = "." },
+    { name = "opentelemetry-api", specifier = "~=1.2" },
+    { name = "opentelemetry-sdk", specifier = "~=1.3" },
+]
+
+[[package]]
+name = "aiqtoolkit-phoenix"
+source = { editable = "packages/aiqtoolkit_phoenix" }
+dependencies = [
+    { name = "aiqtoolkit", extra = ["opentelemetry"] },
+    { name = "arize-phoenix" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiqtoolkit", extras = ["opentelemetry"], editable = "." },
+    { name = "arize-phoenix", specifier = "~=6.1" },
 ]
 
 [[package]]

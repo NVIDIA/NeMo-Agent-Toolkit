@@ -61,11 +61,16 @@ ingestion = ["lxml~=5.4"]
 langchain = ["aiqtoolkit-langchain"]
 llama-index = ["aiqtoolkit-llama-index"]
 mem0ai = ["aiqtoolkit-mem0ai"]
+opentelemetry = ["aiqtoolkit-opentelemetry"]
+phoenix = ["aiqtoolkit-phoenix"]
 semantic-kernel = ["aiqtoolkit-semantic-kernel"]
 telemetry = [
-  "arize-phoenix~=6.1",
-  "opentelemetry-api~=1.2",
-  "opentelemetry-sdk~=1.3",
+  #"arize-phoenix~=6.1",
+  #"opentelemetry-api~=1.2",
+  #"opentelemetry-sdk~=1.3",
+  "aiqtoolkit-opentelemetry",
+  "aiqtoolkit-phoenix",
+  "aiqtoolkit-weave",
 ]
 weave = ["aiqtoolkit-weave"]
 zep-cloud = ["aiqtoolkit-zep-cloud"]
@@ -111,6 +116,8 @@ aiqtoolkit-test = { workspace = true }
 aiqtoolkit-zep-cloud = { workspace = true }
 aiqtoolkit-agno = { workspace = true }
 aiqtoolkit-weave = { workspace = true }
+aiqtoolkit-opentelemetry = { workspace = true }
+aiqtoolkit-phoenix = { workspace = true }
 
 # All examples here
 aiq_alert_triage_agent = { path = "examples/alert_triage_agent", editable = true }

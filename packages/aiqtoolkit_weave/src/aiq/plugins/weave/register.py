@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=unused-import
-# flake8: noqa
-# isort:skip_file
+import logging
 
-from . import weave_sdk
+from pydantic import Field
+
+from aiq.builder.builder import Builder
+from aiq.cli.register_workflow import register_telemetry_exporter
+from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+
+logger = logging.getLogger(__name__)
+
+
+class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="new_weave"):
+    """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
+    project: str = Field(description="The W&B project name.")
+    entity: str | None = Field(default=None, description="The W&B username or team name.")
+
+
+@register_telemetry_exporter(config_type=WeaveTelemetryExporter)
+async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Builder):
+    import weave
+
+    from aiq.plugins.weave.weave_exporter import WeaveExporter
+
+    if config.entity:
+        _ = weave.init(project_name=f"{config.entity}/{config.project}")
+    else:
+        _ = weave.init(project_name=config.project)
+
+    yield WeaveExporter(project=config.project, entity=config.entity)

@@ -21,7 +21,7 @@ from aiq.builder.context import AIQContext
 from aiq.builder.context import AIQContextState
 from aiq.builder.function import Function
 from aiq.data_models.invocation_node import InvocationNode
-from aiq.observability.async_otel_listener import AsyncOtelSpanListener
+from aiq.observability.exporter_manager import ExporterManager
 from aiq.utils.reactive.subject import Subject
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class AIQRunner:
         # Before we start, we need to convert the input message to the workflow input type
         self._input_message = input_message
 
-        self._span_manager = AsyncOtelSpanListener(context_state=context_state)
+        self._exporter_manager = ExporterManager()
 
     @property
     def context(self) -> AIQContext:
@@ -130,12 +130,12 @@ class AIQRunner:
             if (not self._entry_fn.has_single_output):
                 raise ValueError("Workflow does not support single output")
 
-            async with self._span_manager.start():
+            async with self._exporter_manager.start():
                 # Run the workflow
                 result = await self._entry_fn.ainvoke(self._input_message, to_type=to_type)
 
-                # Close the intermediate stream
-                self._context_state.event_stream.get().on_complete()
+            # Close the intermediate stream
+            self._context_state.event_stream.get().on_complete()
 
             self._state = AIQRunnerState.COMPLETED
 

@@ -1,0 +1,338 @@
+import asyncio
+import logging
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from typing import Any
+from weakref import WeakKeyDictionary
+
+logger = logging.getLogger(__name__)
+
+
+def _ns_timestamp(seconds_float: float) -> int:
+    """
+    Convert a float timestamp in seconds to an integer nanosecond timestamp.
+
+    Args:
+        seconds_float (float): The timestamp in seconds (as a float).
+
+    Returns:
+        int: The timestamp in nanoseconds (as an integer).
+    """
+    return int(seconds_float * 1e9)
+
+
+class KeyedLock:
+    """
+    A lock manager that provides an asyncio-compatible lock for each unique key.
+
+    This allows for fine-grained locking based on arbitrary keys, so that
+    concurrent operations on different keys do not block each other.
+    """
+
+    def __init__(self):
+        """
+        Initialize the KeyedLock with an internal AsyncSafeWeakKeyDictionary to store locks per key.
+        """
+        #self._locks: AsyncSafeWeakKeyDictionary = AsyncSafeWeakKeyDictionary()
+        self._locks: AsyncDictionary = AsyncDictionary()
+
+    @asynccontextmanager
+    async def get_lock(self, key: Any) -> AsyncGenerator[None]:
+        """
+        Async context manager to acquire a lock for a specific key.
+
+        Args:
+            key (Any): The key to lock on.
+
+        Yields:
+            None: Control is yielded while the lock is held.
+        """
+        lock = await self._locks.get(key)
+        if lock is None:
+            lock = asyncio.Lock()
+            await self._locks.set(key, lock)
+        async with lock:
+            yield
+
+    async def delete(self, key: Any) -> None:
+        """
+        Remove the lock associated with the given key, if it exists.
+
+        Args:
+            key (Any): The key whose lock should be removed.
+        """
+        await self._locks.delete(key)
+
+    async def clear(self) -> None:
+        """
+        Remove all locks managed by this KeyedLock instance.
+        """
+        await self._locks.clear()
+
+
+# class AsyncSafeWeakKeyDictionary:
+#     """
+#     An asyncio-safe, weakly-referenced dictionary.
+
+#     This class wraps a WeakKeyDictionary with an asyncio.Lock to ensure
+#     thread safety for concurrent async operations.
+#     """
+
+#     def __init__(self):
+#         """
+#         Initialize the AsyncSafeWeakKeyDictionary with a WeakKeyDictionary and an asyncio.Lock.
+#         """
+#         self._weakref_dict: WeakKeyDictionary = WeakKeyDictionary()
+#         self._lock = asyncio.Lock()
+
+#     async def get(self, key: Any, default: Any | None = None) -> Any | None:
+#         """
+#         Get the value associated with the given key, or return default if not found.
+
+#         Args:
+#             key (Any): The key to look up.
+#             default (Any | None, optional): The value to return if key is not found. Defaults to None.
+
+#         Returns:
+#             Any | None: The value associated with the key, or default.
+#         """
+#         async with self._lock:
+#             return self._weakref_dict.get(key, default)
+
+#     async def keys(self) -> list[Any]:
+#         """
+#         Get a list of all keys currently in the dictionary.
+
+#         Returns:
+#             list[Any]: A list of keys.
+#         """
+#         async with self._lock:
+#             return list(self._weakref_dict.keys())
+
+#     async def values(self) -> list[Any]:
+#         """
+#         Get a list of all values currently in the dictionary.
+
+#         Returns:
+#             list[Any]: A list of values.
+#         """
+#         async with self._lock:
+#             return list(self._weakref_dict.values())
+
+#     async def set(self, key: Any, value: Any) -> None:
+#         """
+#         Set the value for the given key, overwriting any existing value.
+
+#         Args:
+#             key (Any): The key to set.
+#             value (Any): The value to associate with the key.
+#         """
+#         async with self._lock:
+#             self._weakref_dict[key] = value
+
+#     async def set_strict(self, key: Any, value: Any) -> None:
+#         """
+#         Set the value for the given key only if the key does not already exist.
+
+#         Args:
+#             key (Any): The key to set.
+#             value (Any): The value to associate with the key.
+
+#         Raises:
+#             ValueError: If the key already exists in the dictionary.
+#         """
+#         async with self._lock:
+#             if key in self._weakref_dict:
+#                 raise ValueError(f"Key '{key}' already exists")
+#             self._weakref_dict[key] = value
+
+#     async def delete(self, key: Any) -> None:
+#         """
+#         Remove the value associated with the given key, if it exists.
+
+#         Args:
+#             key (Any): The key to remove.
+#         """
+#         async with self._lock:
+#             self._weakref_dict.pop(key, None)
+
+#     async def delete_strict(self, key: Any) -> None:
+#         """
+#         Remove the value associated with the given key, raising an error if the key does not exist.
+
+#         Args:
+#             key (Any): The key to remove.
+
+#         Raises:
+#             ValueError: If the key does not exist in the dictionary.
+#         """
+#         async with self._lock:
+#             if key not in self._weakref_dict:
+#                 raise ValueError(f"Key '{key}' does not exist")
+#             self._weakref_dict.pop(key)
+
+#     async def clear(self) -> None:
+#         """
+#         Remove all items from the dictionary.
+#         """
+#         async with self._lock:
+#             self._weakref_dict.clear()
+
+#     async def items(self) -> dict[Any, Any]:
+#         """
+#         Get a copy of the dictionary's items as a regular dict.
+
+#         Returns:
+#             dict[Any, Any]: A copy of the dictionary's items.
+#         """
+#         async with self._lock:
+#             return dict(self._weakref_dict)  # Return a copy to prevent external modification
+
+
+class AsyncDictionary:
+    """
+    An asyncio-safe dictionary.
+
+    This class wraps a regular dictionary with an asyncio.Lock to ensure
+    thread safety for concurrent async operations.
+    """
+
+    def __init__(self):
+        """
+        Initialize the AsyncDictionary with a regular dictionary and an asyncio.Lock.
+        """
+        self._dict: dict = {}
+        self._lock = asyncio.Lock()
+
+    async def get(self, key: Any, default: Any | None = None) -> Any | None:
+        """
+        Get the value associated with the given key, or return default if not found.
+
+        Args:
+            key (Any): The key to look up.
+            default (Any | None, optional): The value to return if key is not found. Defaults to None.
+
+        Returns:
+            Any | None: The value associated with the key, or default.
+        """
+        async with self._lock:
+            return self._dict.get(key, default)
+
+    async def keys(self) -> list[Any]:
+        """
+        Get a list of all keys currently in the dictionary.
+
+        Returns:
+            list[Any]: A list of keys.
+        """
+        async with self._lock:
+            return list(self._dict.keys())
+
+    async def values(self) -> list[Any]:
+        """
+        Get a list of all values currently in the dictionary.
+
+        Returns:
+            list[Any]: A list of values.
+        """
+        async with self._lock:
+            return list(self._dict.values())
+
+    async def set(self, key: Any, value: Any) -> None:
+        """
+        Set the value for the given key, overwriting any existing value.
+
+        Args:
+            key (Any): The key to set.
+            value (Any): The value to associate with the key.
+        """
+        async with self._lock:
+            self._dict[key] = value
+
+    async def set_strict(self, key: Any, value: Any) -> None:
+        """
+        Set the value for the given key only if the key does not already exist.
+
+        Args:
+            key (Any): The key to set.
+            value (Any): The value to associate with the key.
+
+        Raises:
+            ValueError: If the key already exists in the dictionary.
+        """
+        async with self._lock:
+            if key in self._dict:
+                raise ValueError(f"Key '{key}' already exists")
+            self._dict[key] = value
+
+    async def delete(self, key: Any) -> None:
+        """
+        Remove the value associated with the given key, if it exists.
+
+        Args:
+            key (Any): The key to remove.
+        """
+        async with self._lock:
+            self._dict.pop(key, None)
+
+    async def delete_strict(self, key: Any) -> None:
+        """
+        Remove the value associated with the given key, raising an error if the key does not exist.
+
+        Args:
+            key (Any): The key to remove.
+
+        Raises:
+            ValueError: If the key does not exist in the dictionary.
+        """
+        async with self._lock:
+            if key not in self._dict:
+                raise ValueError(f"Key '{key}' does not exist")
+            self._dict.pop(key)
+
+    async def clear(self) -> None:
+        """
+        Remove all items from the dictionary.
+        """
+        async with self._lock:
+            self._dict.clear()
+
+    async def items(self) -> dict[Any, Any]:
+        """
+        Get a copy of the dictionary's items as a regular dict.
+
+        Returns:
+            dict[Any, Any]: A copy of the dictionary's items.
+        """
+        async with self._lock:
+            return dict(self._dict)  # Return a copy to prevent external modification
+
+
+class AsyncSafeWeakKeyDictionary(AsyncDictionary):
+    """
+    An asyncio-safe, weakly-referenced dictionary.
+
+    This class wraps a WeakKeyDictionary with an asyncio.Lock to ensure
+    thread safety for concurrent async operations.
+    """
+
+    def __init__(self):
+        """
+        Initialize the AsyncSafeWeakKeyDictionary with a WeakKeyDictionary and an asyncio.Lock.
+        """
+        super().__init__()
+        self._dict: WeakKeyDictionary = WeakKeyDictionary()
+        self._lock = asyncio.Lock()
+
+
+def log_task_exception(task):
+    """
+    Log any exception raised by an asyncio.Task.
+
+    Args:
+        task (asyncio.Task): The task whose exception (if any) should be logged.
+    """
+    try:
+        task.result()
+    except Exception as e:
+        logger.error("Exception in cleanup task: %s", e, exc_info=True)
