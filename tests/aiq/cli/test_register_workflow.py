@@ -35,6 +35,7 @@ from aiq.cli.register_workflow import register_llm_client
 from aiq.cli.register_workflow import register_llm_provider
 from aiq.cli.register_workflow import register_memory
 from aiq.cli.register_workflow import register_registry_handler
+from aiq.cli.register_workflow import register_simple_function
 from aiq.cli.register_workflow import register_tool_wrapper
 from aiq.cli.type_registry import TypeRegistry
 from aiq.memory.interfaces import MemoryEditor
@@ -87,6 +88,23 @@ def test_register_function(registry: TypeRegistry):
     assert func_info.full_type == FunctionTestConfig.static_full_type()
     assert func_info.local_name == FunctionTestConfig.static_type()
     assert func_info.config_type is FunctionTestConfig
+    assert func_info.build_fn is build_fn
+
+
+def test_register_simple_function(registry: TypeRegistry):
+
+    @register_simple_function(workflow_name="TestWorkflow")
+    async def build_fn(builder: Builder):
+
+        async def _arun():
+            pass
+
+        yield _arun
+
+    func_info = registry.get_function(TestWorkflowConfig)
+    assert func_info.full_type == TestWorkflowConfig.static_full_type()
+    assert func_info.local_name == TestWorkflowConfig.static_type()
+    assert func_info.config_type is TestWorkflowConfig
     assert func_info.build_fn is build_fn
 
 

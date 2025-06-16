@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import importlib.metadata
 import inspect
 import json
@@ -33,6 +35,7 @@ from aiq.utils.metadata_utils import generate_config_type_docs
 
 if TYPE_CHECKING:
     from aiq.cli.type_registry import FunctionBuildCallableT
+    from aiq.cli.type_registry import SimpleFunctionBuildCallableT
     from aiq.cli.type_registry import ToolWrapperBuildCallableT
     from aiq.data_models.common import TypedBaseModelT
 
@@ -190,7 +193,6 @@ class DiscoveryMetadata(BaseModel):
 
         try:
             module = inspect.getmodule(fn)
-
             root_package: str = module.__package__.split(".")[0]
             root_package = DiscoveryMetadata.get_distribution_name(root_package)
             try:
@@ -232,14 +234,14 @@ class DiscoveryMetadata(BaseModel):
         return DiscoveryMetadata._from_fn(fn=fn, component_name=wrapper_type, component_type=component_type)
 
     @staticmethod
-    def from_fn(fn: "FunctionBuildCallableT",
+    def from_fn(fn: FunctionBuildCallableT | SimpleFunctionBuildCallableT,
                 component_name: str,
-                component_type: AIQComponentEnum = AIQComponentEnum.UNDEFINED
-                ) -> "DiscoveryMetadata":
+                component_type: AIQComponentEnum = AIQComponentEnum.FUNCTION) -> "DiscoveryMetadata":
         """Generates discovery metadata from function with specified function type.
 
         Args:
-            fn (FunctionBuildCallableT): A function callable to source component metadata.
+            fn (FunctionBuildCallableT | SimpleFunctionBuildCallableT): A function callable to source
+            component metadata.
 
             component_name (str, optional): The name of the registered component. Defaults to an empty string.
 
@@ -249,9 +251,7 @@ class DiscoveryMetadata(BaseModel):
         Returns:
             DiscoveryMetadata: A an object containing component metadata to facilitate discovery and reuse.
         """
-        return DiscoveryMetadata._from_fn(fn=fn,
-                                          component_name=component_name,
-                                          component_type=component_type)
+        return DiscoveryMetadata._from_fn(fn=fn, component_name=component_name, component_type=component_type)
 
     @staticmethod
     def from_package_name(package_name: str, package_version: str | None) -> "DiscoveryMetadata":
@@ -309,7 +309,6 @@ class DiscoveryMetadata(BaseModel):
 
         try:
             module = inspect.getmodule(config_type)
-
             root_package: str = module.__package__.split(".")[0]
             root_package = DiscoveryMetadata.get_distribution_name(root_package)
             try:

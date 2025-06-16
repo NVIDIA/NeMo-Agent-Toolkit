@@ -43,6 +43,7 @@ from aiq.cli.type_registry import RetrieverClientBuildCallableT
 from aiq.cli.type_registry import RetrieverClientRegisteredCallableT
 from aiq.cli.type_registry import RetrieverProviderBuildCallableT
 from aiq.cli.type_registry import RetrieverProviderRegisteredCallableT
+from aiq.cli.type_registry import SimpleFunctionBuildCallableT
 from aiq.cli.type_registry import TeleExporterRegisteredCallableT
 from aiq.cli.type_registry import TelemetryExporterBuildCallableT
 from aiq.cli.type_registry import TelemetryExporterConfigT
@@ -179,7 +180,7 @@ def register_simple_function(workflow_name: str, framework_wrappers: list[LLMFra
         framework_wrappers: Optional framework wrappers for automatic profiler hooking
     """
 
-    def _inner(fn: FunctionBuildCallableT) -> FunctionRegisteredCallableT:
+    def _inner(fn: SimpleFunctionBuildCallableT) -> FunctionRegisteredCallableT:
         # Create a simple class name based on workflow name
         import inspect
 
@@ -191,16 +192,20 @@ def register_simple_function(workflow_name: str, framework_wrappers: list[LLMFra
         module_name = module.__name__ if module else "unknown"
 
         # Create simple class name using workflow name
-        class_name = f"{workflow_name}WorkflowConfig"
+        class_name = f"{workflow_name}Config"
 
         # Create synthetic config class dynamically
         # We need to properly call __init_subclass__ with the name parameter
-        synthetic_config_type = type(class_name, (FunctionBaseConfig, ), {
+        config_type = type(class_name, (FunctionBaseConfig, ), {
             "__module__": module_name,
         })
 
         # Properly initialize the subclass by calling __init_subclass__ with the name
-        synthetic_config_type.__init_subclass__(name=workflow_name)
+        config_type.__init_subclass__(name=workflow_name)
+
+        # Add the new type to the globals of the module where the function is defined
+        if module:
+            setattr(module, class_name, config_type)
 
         context_manager_fn = asynccontextmanager(fn)
 
@@ -215,8 +220,8 @@ def register_simple_function(workflow_name: str, framework_wrappers: list[LLMFra
 
         GlobalTypeRegistry.get().register_function(
             RegisteredFunctionInfo(
-                full_type=synthetic_config_type.full_type,
-                config_type=synthetic_config_type,
+                full_type=config_type.full_type,
+                config_type=config_type,
                 build_fn=context_manager_fn,
                 framework_wrappers=framework_wrappers_list,
                 discovery_metadata=discovery_metadata,
