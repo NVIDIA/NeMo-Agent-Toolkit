@@ -38,6 +38,7 @@ llms:
   nim_llm:
     _type: nim
     model_name: meta/llama-3.3-70b-instruct
+    # base_url: http://192.168.5.173:8000/v1
     temperature: 0.0
     max_tokens: 250
   openai_llm:

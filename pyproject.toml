@@ -61,6 +61,7 @@ ingestion = ["lxml~=5.4"]
 langchain = ["aiqtoolkit-langchain"]
 llama-index = ["aiqtoolkit-llama-index"]
 mem0ai = ["aiqtoolkit-mem0ai"]
+redis = ["aiqtoolkit-redis"]
 semantic-kernel = ["aiqtoolkit-semantic-kernel"]
 telemetry = [
   "arize-phoenix~=6.1",
@@ -106,6 +107,7 @@ aiqtoolkit-crewai = { workspace = true }
 aiqtoolkit-langchain = { workspace = true }
 aiqtoolkit-llama-index = { workspace = true }
 aiqtoolkit-mem0ai = { workspace = true }
+aiqtoolkit-redis = { workspace = true }
 aiqtoolkit-semantic-kernel = { workspace = true }
 aiqtoolkit-test = { workspace = true }
 aiqtoolkit-zep-cloud = { workspace = true }
@@ -908,6 +910,7 @@ known_third_party = [
   "langchain",
   "llama_index",
   "mem0ai",
+  "redis",
   "semantic_kernel",
   "zep_cloud",
 ]

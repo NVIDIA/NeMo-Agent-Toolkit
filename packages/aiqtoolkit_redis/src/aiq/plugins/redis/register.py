@@ -13,26 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-services:
-  kibana:
-    container_name: kibana
-    image: docker.elastic.co/kibana/kibana:8.12.0
-    environment:
-      # - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=elastic
-    ports:
-      - 5601:5601
+# pylint: disable=unused-import
+# flake8: noqa
+# isort:skip_file
 
-  attu:
-    image: zilliz/attu:v2.3.5
-    container_name: attu
-    hostname: attu
-    environment:
-      MILVUS_URL: http://milvus:19530
-    ports:
-      - "8000:3000"
+# Import any providers which need to be automatically registered here
 
-networks:
-  default:
-    name: nvidia-rag-test
-
+from . import memory
