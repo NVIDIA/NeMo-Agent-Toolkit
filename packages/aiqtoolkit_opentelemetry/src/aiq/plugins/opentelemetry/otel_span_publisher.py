@@ -22,10 +22,10 @@ from opentelemetry.trace import SpanContext
 
 from aiq.builder.context import AIQContextState
 from aiq.data_models.intermediate_step import IntermediateStep
+from aiq.observability.span_publisher import AbstractSpanPublisher
+from aiq.observability.utils import _ns_timestamp
 from aiq.plugins.opentelemetry.otel_span import OtelSpan
 from aiq.plugins.opentelemetry.otel_span import event_type_to_span_kind
-from aiq.observability.utils import _ns_timestamp
-from aiq.observability.span_publisher import AbstractSpanPublisher
 
 logger = logging.getLogger(__name__)
 

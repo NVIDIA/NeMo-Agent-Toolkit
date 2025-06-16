@@ -17,9 +17,9 @@ import asyncio
 import logging
 
 from aiq.builder.context import AIQContextState
-from aiq.plugins.opentelemetry.otel_span_publisher import OtelSpanPublisher
 from aiq.observability.utils import AsyncSafeWeakKeyDictionary
 from aiq.observability.utils import KeyedLock
+from aiq.plugins.opentelemetry.otel_span_publisher import OtelSpanPublisher
 
 logger = logging.getLogger(__name__)
 
@@ -116,13 +116,14 @@ class SpanPublisherManager:
                 # We only want one publisher per subject as to not produce duplicate spans
                 if not publisher._running:
                     try:
+
                         async def _start_publisher():
                             async with publisher.start():
                                 await publisher.wait_ready()
                                 await publisher._stop_event.wait()
 
                         task = asyncio.create_task(_start_publisher())
-                        
+
                         await cls._tasks.set(context_subject, task)
                         logger.debug("Started publisher task for contect subject=%s", context_subject)
                         logger.info("Started exporter '%s'", publisher.name)

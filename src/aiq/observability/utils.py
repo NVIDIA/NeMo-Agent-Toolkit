@@ -33,7 +33,6 @@ class KeyedLock:
         """
         Initialize the KeyedLock with an internal AsyncSafeWeakKeyDictionary to store locks per key.
         """
-        #self._locks: AsyncSafeWeakKeyDictionary = AsyncSafeWeakKeyDictionary()
         self._locks: AsyncDictionary = AsyncDictionary()
 
     @asynccontextmanager
@@ -68,6 +67,7 @@ class KeyedLock:
         Remove all locks managed by this KeyedLock instance.
         """
         await self._locks.clear()
+
 
 class AsyncDictionary:
     """

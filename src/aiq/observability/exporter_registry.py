@@ -16,7 +16,8 @@
 import asyncio
 import logging
 import threading
-from collections.abc import Callable, Awaitable
+from collections.abc import Awaitable
+from collections.abc import Callable
 from typing import TypeAlias
 
 from aiq.observability.base_exporter import AbstractExporter
@@ -67,9 +68,7 @@ class ExporterRegistry:
         if getattr(self, '_initialized', False):
             return
         # The default exporter is the generic span publisher
-        self._exporter_factories: dict[str, ExporterFactory] = {
-            "span_publisher": self._create_span_publisher
-        }
+        self._exporter_factories: dict[str, ExporterFactory] = {"span_publisher": self._create_span_publisher}
         self._lock = asyncio.Lock()
         self._initialized = True
 
@@ -91,7 +90,7 @@ class ExporterRegistry:
 
         Args:
             name (str): The name of the exporter.
-            exporter_factory (Callable[[], Awaitable[AbstractExporter]]): 
+            exporter_factory (Callable[[], Awaitable[AbstractExporter]]):
                 Factory function that creates a new exporter instance.
 
         Raises:

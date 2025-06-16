@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class PhoenixOtelExporter(PhoenixMixin, AbstractOtelExporter):
     """A Phoenix exporter that exports telemetry traces to externally hosted phoenix service."""
+
     def __init__(self, context_state=None, **phoenix_kwargs):
         PhoenixMixin.__init__(self, **phoenix_kwargs)
         AbstractOtelExporter.__init__(self, context_state=context_state)

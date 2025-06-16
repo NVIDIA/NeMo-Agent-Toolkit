@@ -33,7 +33,7 @@ def event_type_to_span_kind(event_type: str) -> OpenInferenceSpanKindValues:
     return EVENT_TYPE_TO_SPAN_KIND_MAP.get(event_type, OpenInferenceSpanKindValues.UNKNOWN)
 
 
-class OtelSpan(Span):
+class OtelSpan(Span):  # pylint: disable=too-many-public-methods
     """A manually created OpenTelemetry span."""
 
     def __init__(
@@ -78,6 +78,7 @@ class OtelSpan(Span):
         self._dropped_attributes = 0
         self._dropped_events = 0
         self._dropped_links = 0
+        self._status_description = None
 
         # Add parent span as a link if provided
         if parent is not None:
@@ -204,17 +205,20 @@ class OtelSpan(Span):
         """Set multiple attributes on the span."""
         self._attributes.update(attributes)
 
-    def add_event(self, name: str, attributes: dict[str, Any] | None = None) -> None:
+    def add_event(self, name: str, attributes: dict[str, Any] | None = None, timestamp: int | None = None) -> None:
         """Add an event to the span."""
-        self._events.append({"name": name, "attributes": attributes or {}, "timestamp": int(time.time() * 1e9)})
+        if timestamp is None:
+            timestamp = int(time.time() * 1e9)
+        self._events.append({"name": name, "attributes": attributes or {}, "timestamp": timestamp})
 
     def update_name(self, name: str) -> None:
         """Update the span name."""
         self._name = name
 
-    def set_status(self, status: Status) -> None:
+    def set_status(self, status: Status, description: str | None = None) -> None:
         """Set the span status."""
         self._status = status
+        self._status_description = description
 
     def get_links(self) -> list:
         """Get all links of the span."""
@@ -232,14 +236,24 @@ class OtelSpan(Span):
         """Get the parent span."""
         return self._parent
 
-    def record_exception(self, exception: Exception, attributes: dict[str, Any] | None = None) -> None:
+    def record_exception(self,
+                         exception: Exception,
+                         attributes: dict[str, Any] | None = None,
+                         timestamp: int | None = None,
+                         escaped: bool = False) -> None:
         """
         Record an exception on the span.
 
         Args:
             exception: The exception to record
             attributes: Optional dictionary of attributes to add to the event
+            timestamp: Optional timestamp for the event
+            escaped: Whether the exception was escaped
         """
+
+        if timestamp is None:
+            timestamp = int(time.time() * 1e9)
+
         # Get the exception type and message
         exc_type = type(exception).__name__
         exc_message = str(exception)

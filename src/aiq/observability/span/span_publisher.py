@@ -24,11 +24,11 @@ from aiq.builder.context import AIQContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.observability.span.span import MimeTypes
 from aiq.observability.span.span import Span
-from aiq.observability.span.span import SpanContext
 from aiq.observability.span.span import SpanAttributes
+from aiq.observability.span.span import SpanContext
 from aiq.observability.span.span import event_type_to_span_kind
-from aiq.observability.utils import _ns_timestamp
 from aiq.observability.span_publisher import AbstractSpanPublisher
+from aiq.observability.utils import _ns_timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class SpanPublisher(AbstractSpanPublisher):
                 trace_id=parent_span.context.trace_id,
                 span_id=uuid.uuid4().int & ((1 << 64) - 1),
             )
-            
+
         # Extract start/end times from the step
         # By convention, `span_event_timestamp` is the time we started, `event_timestamp` is the time we ended.
         # If span_event_timestamp is missing, we default to event_timestamp (meaning zero-length).

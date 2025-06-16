@@ -34,10 +34,10 @@ class LangfuseTelemetryExporter(TelemetryExporterBaseConfig, name="langfuse"):
 
 
 @register_telemetry_exporter(config_type=LangfuseTelemetryExporter)
-async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder: Builder):
-    """Create a Langfuse telemetry exporter."""
+async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder: Builder):  # pylint: disable=W0613
 
     import base64
+
     from aiq.plugins.opentelemetry.otlp_span_exporter import OTLPSpanExporter
 
     secret_key = config.secret_key or os.environ.get("LANGFUSE_SECRET_KEY")
@@ -64,7 +64,7 @@ class LangsmithTelemetryExporter(TelemetryExporterBaseConfig, name="langsmith"):
 
 
 @register_telemetry_exporter(config_type=LangsmithTelemetryExporter)
-async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, builder: Builder):
+async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, builder: Builder):  # pylint: disable=W0613
     """Create a Langsmith telemetry exporter."""
 
     from aiq.plugins.opentelemetry.otlp_span_exporter import OTLPSpanExporter
@@ -85,7 +85,7 @@ class OtelCollectorTelemetryExporter(TelemetryExporterBaseConfig, name="otelcoll
 
 
 @register_telemetry_exporter(config_type=OtelCollectorTelemetryExporter)
-async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder):
+async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder):  # pylint: disable=W0613
     """Create an OpenTelemetry telemetry exporter."""
 
     from aiq.plugins.opentelemetry.otlp_span_exporter import OTLPSpanExporter

@@ -31,7 +31,7 @@ class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="new_weave"):
 
 
 @register_telemetry_exporter(config_type=WeaveTelemetryExporter)
-async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Builder):
+async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Builder):  # pylint: disable=unused-argument
     import weave
 
     from aiq.plugins.weave.weave_exporter import WeaveExporter

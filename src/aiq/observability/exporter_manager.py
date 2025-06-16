@@ -122,7 +122,7 @@ class ExporterManager:
                 task = asyncio.create_task(self._run_exporter(name, exporter))
                 self._tasks[name] = task
                 tasks.append(task)
-            
+
             # Wait for all exporters to be ready
             await asyncio.gather(*[exporter.wait_ready() for exporter in exporters.values()])
 

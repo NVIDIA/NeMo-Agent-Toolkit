@@ -15,8 +15,8 @@
 
 import asyncio
 import logging
-from typing import Any
 from abc import abstractmethod
+from typing import Any
 
 from pydantic import BaseModel
 from pydantic import TypeAdapter
@@ -44,7 +44,7 @@ class AbstractSpanPublisher(AbstractExporter):
         """
         if not isinstance(event, IntermediateStep):
             return
-        
+
         if (event.event_state == IntermediateStepState.START):
             self._process_start_event(event)
         elif (event.event_state == IntermediateStepState.END):

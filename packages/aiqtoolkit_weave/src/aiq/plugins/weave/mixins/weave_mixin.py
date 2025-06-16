@@ -48,7 +48,7 @@ class WeaveMixin:
     def parent_call(self, trace_id: str, parent_call_id: str):
         dummy_call = Call(trace_id=trace_id, id=parent_call_id, _op_name="", project_id="", parent_id=None, inputs={})
         with set_call_stack([dummy_call]):
-            yield        
+            yield
 
     def _create_weave_call(self, span: Span):
         """
@@ -85,7 +85,7 @@ class WeaveMixin:
 
         # Create input dictionary
         inputs = {}
-        input_value = span.attributes.get(SpanAttributes.INPUT_VALUE.value) 
+        input_value = span.attributes.get(SpanAttributes.INPUT_VALUE.value)
         if input_value is not None:
             try:
                 # Add the input to the Weave call

@@ -159,14 +159,14 @@ class AIQRunner:
                 raise ValueError("Workflow does not support streaming output")
 
             # Run the workflow
-            async with self._span_manager.start():
+            async with self._exporter_manager.start():
                 async for m in self._entry_fn.astream(self._input_message, to_type=to_type):
                     yield m
 
-                self._state = AIQRunnerState.COMPLETED
+            self._state = AIQRunnerState.COMPLETED
 
-                # Close the intermediate stream
-                self._context_state.event_stream.get().on_complete()
+            # Close the intermediate stream
+            self._context_state.event_stream.get().on_complete()
 
         except Exception as e:
             logger.exception("Error running workflow: %s", e)

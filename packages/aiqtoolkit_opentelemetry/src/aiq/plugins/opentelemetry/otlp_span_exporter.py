@@ -15,14 +15,15 @@
 
 import logging
 
-from aiq.plugins.opentelemetry.otel_exporter import AbstractOtelExporter
 from aiq.plugins.opentelemetry.mixins.otlp_span_exporter_mixin import OTLPSpanExporterMixin
+from aiq.plugins.opentelemetry.otel_exporter import AbstractOtelExporter
 
 logger = logging.getLogger(__name__)
 
 
 class OTLPSpanExporter(OTLPSpanExporterMixin, AbstractOtelExporter):
     """A opentelemetry otlp span exporter that exports telemetry traces to externally hosted otlp service."""
+
     def __init__(self, context_state=None, **otlp_kwargs):
         OTLPSpanExporterMixin.__init__(self, **otlp_kwargs)
         AbstractOtelExporter.__init__(self, context_state=context_state)

@@ -32,7 +32,7 @@ class PhoenixTelemetryExporter(TelemetryExporterBaseConfig, name="new_phoenix"):
 
 
 @register_telemetry_exporter(config_type=PhoenixTelemetryExporter)
-async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: Builder):
+async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: Builder):  # pylint: disable=W0613
     """Create a Phoenix telemetry exporter."""
 
     try:
