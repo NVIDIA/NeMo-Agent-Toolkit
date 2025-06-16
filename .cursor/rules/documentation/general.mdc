@@ -1,0 +1,54 @@
+---
+description: 
+globs: **/*.md
+alwaysApply: false
+---
+# General Documentation Rules
+
+Follow these rules when working with any documentation in the AIQ Toolkit project.
+
+## Referenced Documentation
+
+- **Project Documentation Structure**: [docs/source/](mdc:AgentIQ/docs/source) - Main documentation source directory using Sphinx
+- **Documentation README**: [docs/README.md](mdc:AgentIQ/docs/README.md) - Documentation build and contribution guidelines
+- **Sphinx Configuration**: [docs/source/conf.py](mdc:AgentIQ/docs/source/conf.py) - Sphinx build configuration and settings
+- **Index Page**: [docs/source/index.md](mdc:AgentIQ/docs/source/index.md) - Main documentation landing page
+- **Troubleshooting Guide**: [docs/source/troubleshooting.md](mdc:AgentIQ/docs/source/troubleshooting.md) - Common issues and solutions
+- **Support Information**: [docs/source/support.md](mdc:AgentIQ/docs/source/support.md) - Support channels and resources
+
+## Style Guide Rules
+
+- **Writing Process**: [writing-process.mdc](mdc:AgentIQ/.cursor/rules/documentation/writing-process.mdc) - 8-step technical writing process and best practices
+- **Voice and Tone**: [voice-and-tone.mdc](mdc:AgentIQ/.cursor/rules/documentation/voice-and-tone.mdc) - Authoritative, instructive, and welcoming writing style guidelines
+- **Formatting**: [formatting.mdc](mdc:AgentIQ/.cursor/rules/documentation/formatting.mdc) - Code samples, UI elements, and text formatting standards
+- **Punctuation**: [punctuation.mdc](mdc:AgentIQ/.cursor/rules/documentation/punctuation.mdc) - Comprehensive punctuation rules for technical documentation
+- **Capitalization**: [capitalization.mdc](mdc:AgentIQ/.cursor/rules/documentation/capitalization.mdc) - Title case, sentence case, and proper noun guidelines
+- **Lists and Tables**: [lists-and-tables.mdc](mdc:AgentIQ/.cursor/rules/documentation/lists-and-tables.mdc) - Structured content formatting and organization
+- **Numbers and Dates**: [numbers-and-dates.mdc](mdc:AgentIQ/.cursor/rules/documentation/numbers-and-dates.mdc) - Numerical content and date formatting standards
+
+## Documentation Standards
+
+### Terminology and Naming
+- Make sure to follow this naming convention for all the documentation. If there is any documentation not following this rule, you MUST update it.
+- **Full name on first use**: "NVIDIA NeMo Agent toolkit"
+- **Subsequent references**: "Agent toolkit" 
+- Examples:
+  - "In the Agent toolkit, you can…"
+  - "Change directory to the Agent toolkit repo root…"
+- Consistently use this terminology throughout all documentation
+
+### Style Guide Compliance
+When creating, updating, or reviewing documentation, follow the comprehensive style guide rules listed in the Referenced Documentation section above. These rules cover:
+
+- **Writing Process**: Follow the 8-step process for all documentation projects
+- **Voice and Tone**: Write with authority, instruction, and accessibility in mind
+- **Formatting**: Apply consistent formatting for code, UI elements, and technical content
+- **Grammar and Style**: Use proper punctuation, capitalization, lists, and number formatting
+
+### Quality Standards
+- **Audience-focused**: Always consider your target audience when writing
+- **SME Review**: Have subject matter experts review technical content for accuracy
+- **Consistency**: Apply the same style rules throughout all documentation
+- **Accessibility**: Ensure content is accessible to users with different abilities and technical levels
+- **Scannability**: Structure content so users can quickly find what they need
+

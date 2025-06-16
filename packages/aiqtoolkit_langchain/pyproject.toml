@@ -24,7 +24,7 @@ dependencies = [
   "langchain-core~=0.3.7",
   "langchain-nvidia-ai-endpoints~=0.3.5",
   "langchain-milvus~=0.1.5",
-  "langchain-openai~=0.2.8",
+  "langchain-openai~=0.3.5",
   "langgraph~=0.2.50",
   "langchain-milvus~=0.1.8"
 ]

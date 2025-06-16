@@ -26,7 +26,7 @@ from aiq.data_models.llm import LLMBaseConfig
 class OpenAIModelConfig(LLMBaseConfig, name="openai"):
     """An OpenAI LLM provider to be used with an LLM client."""
 
-    model_config = ConfigDict(protected_namespaces=())
+    model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
     api_key: str | None = Field(default=None, description="OpenAI API key to interact with hosted model.")
     base_url: str | None = Field(default=None, description="Base url to the hosted model.")
