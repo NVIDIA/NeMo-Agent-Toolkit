@@ -42,11 +42,19 @@ class EvalCustomScriptConfig(BaseModel):
     kwargs: dict[str, str] = {}
 
 
+class JobManagementConfig(BaseModel):
+    # Whether to append a unique job ID to the output directory for each run
+    append_job_id_to_output_dir: bool = False
+    # Maximum number of jobs to keep in the output directory. Oldest jobs will be evicted.
+    # A value of 0 means no limit.
+    max_jobs: int = 0
+    # Policy for evicting old jobs. Defaults to using time_created.
+    eviction_policy: JobEvictionPolicy = JobEvictionPolicy.TIME_CREATED
+
+
 class EvalOutputConfig(BaseModel):
     # Output directory for the workflow and evaluation results
     dir: Path = Path("/tmp/aiq/examples/default/")
-    # Whether to append a unique job ID to the output directory for each run
-    append_job_id_to_output_dir: bool = False
     # S3 prefix for the workflow and evaluation results
     remote_dir: str | None = None
     # Custom scripts to run after the workflow and evaluation results are saved
@@ -55,11 +63,8 @@ class EvalOutputConfig(BaseModel):
     s3: EvalS3Config | None = None
     # Whether to cleanup the output directory before running the workflow
     cleanup: bool = True
-    # Maximum number of jobs to keep in the output directory. Oldest jobs will be evicted.
-    # A value of 0 or None means no limit.
-    max_jobs: int | None = None
-    # Policy for evicting old jobs. Defaults to using time_created.
-    eviction_policy: JobEvictionPolicy = JobEvictionPolicy.TIME_CREATED
+    # Job management configuration (job id, eviction, etc.)
+    job_management: JobManagementConfig = JobManagementConfig()
     # Filter for the workflow output steps
     workflow_output_step_filter: list[IntermediateStepType] | None = None
 

@@ -180,11 +180,11 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
     def cleanup_output_directory(self):
         '''Remove contents of the output directory if it exists'''
-        if not (self.eval_config.general.output and self.eval_config.general.output.dir
-                and self.eval_config.general.output.dir.exists()):
-            return
-
         output_config = self.eval_config.general.output
+        output_dir = output_config.dir
+
+        if not (output_config and output_dir.exists()):
+            return
 
         # If cleanup is true, remove the entire directory and we are done
         if output_config.cleanup:
@@ -192,20 +192,21 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             shutil.rmtree(output_config.dir)
             return
 
-        if not (hasattr(output_config, "max_jobs") and output_config.max_jobs and output_config.max_jobs > 0):
+        if output_config.job_management.max_jobs == 0:
+            # No eviction policy
             return
-        base_dir = self.eval_config.general.output_dir.parent
+
+        base_dir = output_dir / "jobs"
         if not base_dir.exists():
             return
 
         # Get all subdirectories, which represent individual job runs
         job_dirs = [d for d in base_dir.iterdir() if d.is_dir()]
-        if len(job_dirs) <= output_config.max_jobs:
+        if len(job_dirs) <= output_config.job_management.max_jobs:
             return
 
         # Determine sort key based on eviction_policy, defaulting to creation time
-        if hasattr(output_config,
-                   "eviction_policy") and output_config.eviction_policy == JobEvictionPolicy.TIME_MODIFIED:
+        if output_config.job_management.eviction_policy == JobEvictionPolicy.TIME_MODIFIED:
 
             def sort_key(x):
                 return x.stat().st_mtime
@@ -220,17 +221,19 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         # Sort directories (oldest first)
         job_dirs.sort(key=sort_key)
+        num_to_delete = len(job_dirs) - output_config.job_management.max_jobs
 
-        num_to_delete = len(job_dirs) - output_config.max_jobs
         logger.info("Found %d jobs, exceeding limit of %d. Removing %d oldest jobs.",
                     len(job_dirs),
-                    output_config.max_jobs,
+                    output_config.job_management.max_jobs,
                     num_to_delete)
 
-        for i in range(num_to_delete):
-            dir_to_delete = job_dirs[i]
-            logger.info("Deleting old job directory: %s", dir_to_delete)
-            shutil.rmtree(dir_to_delete)
+        for dir_to_delete in job_dirs[:num_to_delete]:
+            try:
+                logger.info("Deleting old job directory: %s", dir_to_delete)
+                shutil.rmtree(dir_to_delete)
+            except Exception as e:
+                logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e, exc_info=True)
 
     def write_output(self, dataset_handler: DatasetHandler):
         workflow_output_file = self.eval_config.general.output_dir / "workflow_output.json"
@@ -325,8 +328,8 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             self.cleanup_output_directory()
 
         # Generate a job_id if append_job_id_to_output_dir is enabled and no job_id provided
-        if (self.eval_config.general.output and self.eval_config.general.output.append_job_id_to_output_dir
-                and not job_id):
+        if (self.eval_config.general.output
+                and self.eval_config.general.output.job_management.append_job_id_to_output_dir and not job_id):
             job_id = "job_" + str(uuid4())
             logger.info("Generated job ID for output directory: %s", job_id)
 

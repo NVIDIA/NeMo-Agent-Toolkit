@@ -33,6 +33,7 @@ from aiq.data_models.dataset_handler import EvalDatasetJsonConfig
 from aiq.data_models.evaluate import EvalConfig
 from aiq.data_models.evaluate import EvalOutputConfig
 from aiq.data_models.evaluate import JobEvictionPolicy
+from aiq.data_models.evaluate import JobManagementConfig
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
@@ -538,12 +539,12 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
 def test_append_job_id_to_output_dir(default_eval_config):
     """Test that append_job_id_to_output_dir generates UUID when enabled."""
     # Test case 1: Feature enabled, no job_id provided
-    default_eval_config.general.output.append_job_id_to_output_dir = True
+    default_eval_config.general.output.job_management.append_job_id_to_output_dir = True
 
     # Simulate the logic from run_and_evaluate
     job_id = None
-    if (default_eval_config.general.output and default_eval_config.general.output.append_job_id_to_output_dir
-            and not job_id):
+    if (default_eval_config.general.output
+            and default_eval_config.general.output.job_management.append_job_id_to_output_dir and not job_id):
         job_id = "job_" + str(uuid4())
 
     # Verify UUID was generated
@@ -552,21 +553,21 @@ def test_append_job_id_to_output_dir(default_eval_config):
     UUID(job_id[4:])
 
     # Test case 2: Feature disabled
-    default_eval_config.general.output.append_job_id_to_output_dir = False
+    default_eval_config.general.output.job_management.append_job_id_to_output_dir = False
     job_id = None
-    if (default_eval_config.general.output and default_eval_config.general.output.append_job_id_to_output_dir
-            and not job_id):
+    if (default_eval_config.general.output
+            and default_eval_config.general.output.job_management.append_job_id_to_output_dir and not job_id):
         job_id = "job_" + str(uuid4())
 
     # Verify no UUID was generated
     assert job_id is None
 
     # Test case 3: Job ID already provided
-    default_eval_config.general.output.append_job_id_to_output_dir = True
+    default_eval_config.general.output.job_management.append_job_id_to_output_dir = True
     provided_job_id = "custom-job"
     job_id = provided_job_id
-    if (default_eval_config.general.output and default_eval_config.general.output.append_job_id_to_output_dir
-            and not job_id):
+    if (default_eval_config.general.output
+            and default_eval_config.general.output.job_management.append_job_id_to_output_dir and not job_id):
         job_id = "job_" + str(uuid4())
 
     # Verify provided job_id was kept
@@ -606,14 +607,16 @@ def create_job_dirs(base_dir: Path, count: int) -> list[Path]:
             ["job_3", "job_4"],
         ),
         (6, JobEvictionPolicy.TIME_CREATED, None, ["job_0", "job_1", "job_2", "job_3", "job_4", "job_5"]),
-        (None, JobEvictionPolicy.TIME_CREATED, None, ["job_0", "job_1", "job_2", "job_3", "job_4", "job_5"]),
+        (0, JobEvictionPolicy.TIME_CREATED, None, ["job_0", "job_1", "job_2", "job_3", "job_4", "job_5"]),
     ],
     ids=["creation_time", "modified_time", "under_limit", "disabled_none"],
 )
 def test_output_directory_cleanup(max_jobs, eviction_policy, modify_jobs_fn, expected_remaining_names, job_output_dir):
     """Tests the output directory cleanup logic with various eviction policies and limits."""
-    initial_job_dirs = create_job_dirs(job_output_dir, 5)  # Creates job_0 to job_4
-    current_job_dir = job_output_dir / "job_5"
+    jobs_dir = job_output_dir / "jobs"
+    jobs_dir.mkdir()
+    initial_job_dirs = create_job_dirs(jobs_dir, 5)  # Creates job_0 to job_4 inside jobs/
+    current_job_dir = jobs_dir / "job_5"
     current_job_dir.mkdir()
 
     if modify_jobs_fn:
@@ -621,14 +624,15 @@ def test_output_directory_cleanup(max_jobs, eviction_policy, modify_jobs_fn, exp
         modify_jobs_fn(all_job_dirs)
 
     eval_config = EvalConfig()
-    eval_config.general.output = EvalOutputConfig(
-        dir=current_job_dir,
-        cleanup=False,
-        max_jobs=max_jobs,
-        eviction_policy=eviction_policy,
-    )
+    eval_config.general.output = EvalOutputConfig(dir=job_output_dir,
+                                                  cleanup=False,
+                                                  job_management=JobManagementConfig(
+                                                      append_job_id_to_output_dir=True,
+                                                      max_jobs=max_jobs,
+                                                      eviction_policy=eviction_policy,
+                                                  ))
 
-    eval_config.general.output_dir = current_job_dir
+    eval_config.general.output_dir = job_output_dir
 
     run_config = EvaluationRunConfig(config_file=Path("dummy.yaml"), dataset="dummy_dataset")
     evaluation_run = EvaluationRun(run_config)
@@ -636,5 +640,5 @@ def test_output_directory_cleanup(max_jobs, eviction_policy, modify_jobs_fn, exp
 
     evaluation_run.cleanup_output_directory()
 
-    remaining_dirs = sorted(p.name for p in job_output_dir.iterdir())
+    remaining_dirs = sorted(p.name for p in jobs_dir.iterdir())
     assert remaining_dirs == sorted(expected_remaining_names)
