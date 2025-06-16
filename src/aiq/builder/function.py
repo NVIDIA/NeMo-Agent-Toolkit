@@ -198,7 +198,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
             The output of the function optionally converted to the specified type.
         """
 
-        with self._context.push_active_function(self.config.type, input_data=value):
+        with self._context.push_active_function(self.instance_name, input_data=value):
             try:
                 converted_input: InputT = self._convert_input(value)  # type: ignore
 

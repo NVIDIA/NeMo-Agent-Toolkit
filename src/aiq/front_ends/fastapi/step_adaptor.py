@@ -292,6 +292,10 @@ class StepAdaptor:
         return event
 
     def process(self, step: IntermediateStep) -> AIQResponseSerializable | None:
+
+        if not isinstance(step, IntermediateStep):
+            return
+
         # Track the chunk
         self._history.append(step)
         payload = step.payload
