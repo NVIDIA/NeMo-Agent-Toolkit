@@ -1,0 +1,237 @@
+---
+description: Follow these rules when the user's request involves installing, setting up, or configuring AIQ Toolkit or its plugins
+globs: 
+alwaysApply: false
+---
+# AIQ Toolkit Installation Guide
+
+This rule provides comprehensive instructions for installing NVIDIA Agent Intelligence (AIQ) toolkit from source, including prerequisites, installation options, and verification steps.
+
+## Prerequisites Check
+
+Before installing AIQ toolkit, verify all prerequisites are installed:
+
+1. **Check Git installation:**
+   ```bash
+   git --version
+   ```
+
+2. **Check Git LFS installation:**
+   ```bash
+   git lfs version
+   ```
+
+3. **Check uv installation:**
+   ```bash
+   uv --version
+   ```
+
+4. **Check Python version (must be 3.11 or 3.12):**
+   ```bash
+   python --version
+   # or
+   python3 --version
+   ```
+
+If any prerequisite is missing, install them:
+- [Git](mdc:https:/git-scm.com)
+- [Git Large File Storage (LFS)](mdc:https:/git-lfs.github.com)
+- [uv](mdc:https:/docs.astral.sh/uv/getting-started/installation)
+
+## Installation Steps
+
+### 1. Clone Repository and Setup
+
+```bash
+# Clone the AIQ toolkit repository
+git clone git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit
+cd aiqtoolkit
+
+# Initialize, fetch, and update submodules
+git submodule update --init --recursive
+
+# Fetch LFS files
+git lfs install
+git lfs fetch
+git lfs pull
+```
+
+### 2. Create Python Environment
+
+```bash
+# Create virtual environment with seed packages
+uv venv --seed .venv
+
+# For specific Python version (if multiple versions available):
+uv venv --seed .venv --python 3.11
+# or
+uv venv --seed .venv --python 3.12
+
+# Activate the environment
+source .venv/bin/activate
+```
+
+### 3. Installation Options
+
+Choose the appropriate installation option based on requirements:
+
+#### Option A: Full Installation (Recommended for Development)
+Install with all plugins and developer tools:
+```bash
+uv sync --all-groups --all-extras
+```
+
+#### Option B: Core Only Installation
+Install just the core AIQ toolkit without plugins:
+```bash
+uv sync
+```
+
+#### Option C: Core + Specific Plugins
+Install core plus individual plugins as needed:
+```bash
+# First install core
+uv sync
+
+# Then install specific plugins (examples):
+uv pip install -e '.[langchain]'
+uv pip install -e '.[llama-index]'
+uv pip install -e '.[crewai]'
+uv pip install -e '.[mem0ai]'
+```
+
+#### Option D: Core + Profiling Tools
+Install core with profiling dependencies:
+```bash
+uv sync
+uv pip install -e '.[profiling]'
+```
+
+## Available Plugin Options
+
+When installing specific plugins, these are the available options:
+- `langchain` - LangChain integration
+- `llama-index` - LlamaIndex integration  
+- `crewai` - CrewAI integration
+- `mem0ai` - Mem0 integration
+- `semantic-kernel` - Microsoft Semantic Kernel integration
+- `agno` - Agno integration
+- `zep-cloud` - Zep integration
+- `weave` - Weights & Biases Weave integration
+- `test` - Testing utilities
+- `profiling` - Profiling tools
+
+## Verification Steps
+
+After installation, verify AIQ toolkit is properly installed:
+
+```bash
+# Check version
+aiq --version
+
+# Check help
+aiq --help
+```
+
+Expected output should show version information and help text without errors.
+
+## API Key Setup
+
+For most workflows, set up the NVIDIA API key:
+
+```bash
+# Set NVIDIA API key (obtain from build.nvidia.com)
+export NVIDIA_API_KEY=<your_api_key>
+
+# Optionally add to shell profile for persistence:
+echo 'export NVIDIA_API_KEY=<your_api_key>' >> ~/.bashrc
+# or for zsh:
+echo 'export NVIDIA_API_KEY=<your_api_key>' >> ~/.zshrc
+```
+
+## Quick Test - Hello World Example
+
+Create a test workflow to verify installation:
+
+```bash
+# Create workflow.yaml
+cat << 'EOF' > workflow.yaml
+functions:
+   wikipedia_search:
+      _type: wiki_search
+      max_results: 2
+
+llms:
+   nim_llm:
+      _type: nim
+      model_name: meta/llama-3.1-70b-instruct
+      temperature: 0.0
+
+workflow:
+   _type: react_agent
+   tool_names: [wikipedia_search]
+   llm_name: nim_llm
+   verbose: true
+   retry_parsing_errors: true
+   max_retries: 3
+EOF
+
+# Test the workflow
+aiq run --config_file workflow.yaml --input "List five subspecies of Aardvarks"
+```
+
+## Ready State Checklist
+
+AIQ toolkit is ready for development when:
+
+- [ ] `aiq --version` returns version information
+- [ ] `aiq --help` shows command options
+- [ ] NVIDIA_API_KEY environment variable is set
+- [ ] Virtual environment is activated
+- [ ] Required plugins are installed for your use case
+- [ ] Hello world example runs successfully (optional but recommended)
+
+## Common Installation Issues
+
+1. **Python version mismatch**: Ensure Python 3.11 or 3.12 is used
+2. **Git LFS not installed**: Large files won't download properly
+3. **Submodules not initialized**: Some dependencies will be missing
+4. **Virtual environment not activated**: Commands may not work
+5. **Missing API key**: Most workflows require NVIDIA_API_KEY
+
+## Example Installation Commands for Different Use Cases
+
+### For LangChain Development:
+```bash
+git clone git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit && cd aiqtoolkit
+git submodule update --init --recursive
+git lfs install && git lfs fetch && git lfs pull
+uv venv --seed .venv && source .venv/bin/activate
+uv sync
+uv pip install -e '.[langchain]'
+export NVIDIA_API_KEY=<your_key>
+aiq --version
+```
+
+### For Full Development Environment:
+```bash
+git clone git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit && cd aiqtoolkit
+git submodule update --init --recursive
+git lfs install && git lfs fetch && git lfs pull
+uv venv --seed .venv && source .venv/bin/activate
+uv sync --all-groups --all-extras
+export NVIDIA_API_KEY=<your_key>
+aiq --version
+```
+
+### For Testing Existing Workflows:
+```bash
+git clone git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit && cd aiqtoolkit
+git submodule update --init --recursive
+git lfs install && git lfs fetch && git lfs pull
+uv venv --seed .venv && source .venv/bin/activate
+uv sync
+uv pip install -e examples/simple
+export NVIDIA_API_KEY=<your_key>
+aiq run --config_file=examples/simple/configs/config.yml --input "What is LangSmith"
+```

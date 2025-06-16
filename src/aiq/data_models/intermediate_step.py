@@ -17,6 +17,7 @@ import time
 import typing
 import uuid
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -82,6 +83,26 @@ class UsageInfo(BaseModel):
     seconds_between_calls: int = 0
 
 
+class ToolParameters(BaseModel):
+    properties: dict[str, typing.Any] = Field(..., description="The properties of the function parameters.")
+    required: list[str] = Field(default_factory=list, description="The required properties of the function parameters.")
+    type_: Literal["object"] = Field(default="object", description="The type of the function parameters.", alias="type")
+    additionalProperties: bool = Field(default=False,
+                                       description="Enable function parameters allow additional properties.")
+    strict: bool = Field(default=True, description="Ensure function calls reliably adhere to the function schema.")
+
+
+class ToolDetails(BaseModel):
+    name: str = Field(..., description="The name of the function.")
+    description: str = Field(..., description="The description of the function.")
+    parameters: ToolParameters = Field(..., description="The parameters of the function.")
+
+
+class ToolSchema(BaseModel):
+    type: Literal["function"] = Field(..., description="The type of the tool.")
+    function: ToolDetails = Field(..., description="The function details.")
+
+
 class TraceMetadata(BaseModel):
     chat_responses: typing.Any | None = None
     chat_inputs: typing.Any | None = None
@@ -91,6 +112,8 @@ class TraceMetadata(BaseModel):
     span_inputs: typing.Any | None = None
     span_outputs: typing.Any | None = None
     provided_metadata: typing.Any | None = None
+    tools_schema: list[ToolSchema] = Field(default_factory=list,
+                                           description="The schema of tools used in a tool calling request.")
 
     # Allow extra fields in the model_config to support derived models
     model_config = ConfigDict(extra="allow")

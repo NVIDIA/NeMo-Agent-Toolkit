@@ -1,0 +1,21 @@
+---
+description: Follow these rules when the user's request involves AIQ toolkit installation, setup, environment configuration, or getting started with the toolkit
+globs: 
+alwaysApply: false
+---
+# General Rules for AIQ Setup and Installation
+
+## Referenced Documentation
+
+- **README**: [README.md](mdc:README.md) - Main project overview, features, and getting started guide
+- **Installation Guide**: [installing.md](mdc:docs/source/quick-start/installing.md) - Comprehensive installation instructions and setup guide
+
+## Rules
+
+- For requests related to AIQ toolkit setup, installation, or getting started, provide detailed information using the relevant sections from the documentation listed in the Referenced Documentation section above. Encourage users to review the documentation themselves for a deeper understanding.
+
+- If installation or setup procedures do not function as expected, refer back to the documentation in the Referenced Documentation section and update any discrepancies, as the documentation may have been updated without corresponding changes to the rules.
+
+- When helping users with environment setup, dependency installation, or initial configuration, always reference the specific steps and prerequisites outlined in the Referenced Documentation section.
+
+- For questions about supported frameworks, API integrations, or plugin installations, direct users to the appropriate sections in the Referenced Documentation section that cover these topics comprehensively.

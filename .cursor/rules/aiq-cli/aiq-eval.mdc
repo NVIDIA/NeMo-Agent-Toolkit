@@ -1,0 +1,312 @@
+---
+description: Follow these rules when the user requests to evaluate a workflow
+globs: 
+alwaysApply: false
+---
+# AIQ Evaluation Commands
+
+This rule provides guidance for using `aiq eval` command to assess the accuracy of AIQ toolkit workflows and instrument their performance characteristics.
+
+## aiq eval
+
+Evaluates a workflow with a specified dataset to assess accuracy and performance.
+
+### Basic Usage
+```bash
+aiq eval --config_file CONFIG_FILE [OPTIONS]
+```
+
+### Required Arguments
+- `--config_file FILE`: A JSON/YAML file that sets the parameters for the workflow and evaluation
+
+### Available Options
+- `--dataset FILE`: A JSON file with questions and ground truth answers (overrides dataset path in config)
+- `--result_json_path TEXT`: JSON path to extract result from workflow output (default: `$`)
+- `--skip_workflow`: Skip workflow execution and use provided dataset for evaluation
+- `--skip_completed_entries`: Skip dataset entries that already have generated answers
+- `--endpoint TEXT`: Use endpoint for running workflow (e.g., `http://localhost:8000/generate`)
+- `--endpoint_timeout INTEGER`: HTTP response timeout in seconds (default: 300)
+- `--reps INTEGER`: Number of repetitions for evaluation (default: 1)
+
+### Examples
+```bash
+# Basic evaluation with config file
+aiq eval --config_file configs/eval_config.yml
+
+# Evaluate with custom dataset
+aiq eval --config_file configs/eval_config.yml --dataset data/test_questions.json
+
+# Evaluate against running endpoint
+aiq eval --config_file configs/eval_config.yml --endpoint http://localhost:8000/generate
+
+# Skip workflow execution (evaluate existing results)
+aiq eval --config_file configs/eval_config.yml --skip_workflow
+
+# Multiple evaluation repetitions
+aiq eval --config_file configs/eval_config.yml --reps 3
+
+# Extract specific result field
+aiq eval --config_file configs/eval_config.yml --result_json_path "$.response.answer"
+
+# Skip already completed entries and extend timeout
+aiq eval --config_file configs/eval_config.yml --skip_completed_entries --endpoint_timeout 600
+```
+
+## Dataset Format
+
+The evaluation dataset should be a JSON file containing questions and ground truth answers:
+
+### Basic Format
+```json
+[
+  {
+    "question": "What is machine learning?",
+    "ground_truth": "Machine learning is a subset of artificial intelligence..."
+  },
+  {
+    "question": "Explain neural networks",
+    "ground_truth": "Neural networks are computing systems inspired by..."
+  }
+]
+```
+
+### Extended Format
+```json
+[
+  {
+    "question": "What is deep learning?",
+    "ground_truth": "Deep learning is a subset of machine learning...",
+    "context": "AI fundamentals",
+    "difficulty": "intermediate",
+    "category": "technical"
+  }
+]
+```
+
+### Dataset with Generated Answers (for skip_workflow)
+```json
+[
+  {
+    "question": "What is AI?",
+    "ground_truth": "Artificial intelligence refers to...",
+    "generated_answer": "AI is the simulation of human intelligence..."
+  }
+]
+```
+
+## Configuration File for Evaluation
+
+The evaluation configuration should include both workflow and evaluation settings:
+
+```yaml
+# Workflow components
+llms:
+  nim_llm:
+    _type: "nim_llm"
+    model: "meta/llama-3.1-8b-instruct"
+    temperature: 0.7
+
+workflow:
+  _type: "simple_rag"
+  llm: llms.nim_llm
+
+# Evaluation settings
+evaluation:
+  dataset: "data/eval_dataset.json"
+  evaluators:
+    - _type: "semantic_similarity"
+      threshold: 0.8
+    - _type: "factual_accuracy"
+
+  metrics:
+    - "accuracy"
+    - "bleu_score"
+    - "semantic_similarity"
+```
+
+## Handling Missing Evaluation Configuration
+
+When working with configuration files that may not contain an evaluation section, follow these rules:
+
+### 1. Auto-detection of Evaluation Configuration
+If the specified configuration file does not contain an `evaluation` section:
+
+1. **Search for alternative config files**: Look for configuration files in the same directory that contain an `evaluation` section
+2. **Common evaluation config patterns**: Check for files with names like:
+   - `*_eval.yml` or `*_eval.yaml`
+   - `*_evaluation.yml` or `*_evaluation.yaml`
+   - `eval_*.yml` or `eval_*.yaml`
+   - `evaluation_*.yml` or `evaluation_*.yaml`
+3. **Suggest available options**: If multiple evaluation configs are found, present them to the user for selection
+
+### 2. User Guidance for Missing Evaluation Section
+If no evaluation configuration can be found automatically:
+
+1. **Inform the user**: Clearly explain that no evaluation section was found in the configuration file
+2. **Request essential information**: Ask the user to provide the following required information:
+   - **Dataset path**: Location of the evaluation dataset (JSON file with questions and ground truth)
+   - **Evaluators**: Which evaluation metrics to use (e.g., semantic_similarity, factual_accuracy)
+   - **Output preferences**: Where to save results and what format to use
+
+### 3. Interactive Configuration Building
+When evaluation configuration is missing, guide the user through creating one:
+
+```bash
+# Example prompts for missing evaluation config
+"No evaluation section found in config file. Please provide:"
+"1. Dataset file path (JSON with questions and ground_truth):"
+"2. Evaluation metrics (comma-separated): [semantic_similarity, factual_accuracy, bleu_score]:"
+"3. Output file path (optional):"
+```
+
+### 4. Minimal Evaluation Configuration Template
+When user provides minimal information, create a basic evaluation configuration:
+
+```yaml
+evaluation:
+  dataset: "path/to/user/provided/dataset.json"
+  evaluators:
+    - _type: "semantic_similarity"
+      threshold: 0.8
+  metrics:
+    - "accuracy"
+    - "semantic_similarity"
+```
+
+### 5. Configuration Validation
+Before proceeding with evaluation:
+1. Verify the dataset file exists and is accessible
+2. Validate the dataset format (contains required `question` and `ground_truth` fields)
+3. Confirm all specified evaluators are available
+4. Warn if essential evaluation components are missing
+
+## Result JSON Path Usage
+
+Use `--result_json_path` to extract specific fields from complex workflow outputs:
+
+### Example Workflow Output
+```json
+{
+  "metadata": {"timestamp": "2024-01-01T00:00:00"},
+  "response": {
+    "answer": "The actual answer text",
+    "confidence": 0.95,
+    "sources": ["doc1.pdf", "doc2.pdf"]
+  },
+  "debug_info": {"tokens_used": 150}
+}
+```
+
+### JSON Path Examples
+```bash
+# Extract just the answer
+aiq eval --config_file config.yml --result_json_path "$.response.answer"
+
+# Extract answer with confidence
+aiq eval --config_file config.yml --result_json_path "$.response"
+
+# Extract root level (default)
+aiq eval --config_file config.yml --result_json_path "$"
+```
+
+## Endpoint Evaluation
+
+When evaluating against a running service:
+
+### Prerequisites
+1. Start the service: `aiq serve --config_file config.yml --host localhost --port 8000`
+2. Verify service is running: Check `http://localhost:8000/docs`
+
+### Evaluation
+```bash
+# Evaluate against local service
+aiq eval --config_file eval_config.yml --endpoint http://localhost:8000/generate
+
+# Evaluate against remote service with timeout
+aiq eval --config_file eval_config.yml --endpoint https://api.example.com/workflow --endpoint_timeout 300
+```
+
+## Evaluation Workflows
+
+### 1. Initial Workflow Evaluation
+```bash
+# Validate configuration
+aiq validate --config_file eval_config.yml
+
+# Run evaluation
+aiq eval --config_file eval_config.yml --dataset test_data.json
+
+# Review results and iterate
+```
+
+### 2. Continuous Evaluation
+```bash
+# Skip completed entries for incremental evaluation
+aiq eval --config_file eval_config.yml --skip_completed_entries
+
+# Multiple repetitions for statistical significance
+aiq eval --config_file eval_config.yml --reps 5
+```
+
+### 3. Production Endpoint Evaluation
+```bash
+# Start production service
+aiq serve --config_file prod_config.yml --host 0.0.0.0 --port 8000 --workers 4
+
+# Evaluate production endpoint
+aiq eval --config_file eval_config.yml --endpoint http://localhost:8000/generate --endpoint_timeout 600
+```
+
+### 4. Evaluation-Only Mode
+```bash
+# When you have pre-generated results
+aiq eval --config_file eval_config.yml --skip_workflow --dataset results_with_generated_answers.json
+```
+
+## Best Practices
+
+1. **Prepare Quality Datasets**: Ensure ground truth answers are accurate and comprehensive
+2. **Use Representative Data**: Include diverse questions that reflect real-world usage
+3. **Configure Multiple Evaluators**: Use different evaluation metrics for comprehensive assessment
+4. **Start Small**: Test with a small dataset before running full evaluations
+5. **Version Control Datasets**: Track dataset versions alongside code changes
+6. **Document Evaluation Setup**: Keep clear records of evaluation configurations and results
+7. **Use Timeouts Appropriately**: Set reasonable timeouts based on expected response times
+8. **Incremental Evaluation**: Use `--skip_completed_entries` for long-running evaluations
+9. **Statistical Significance**: Use multiple repetitions (`--reps`) for robust results
+10. **Monitor Resource Usage**: Consider memory and compute requirements for large datasets
+
+## Common Evaluation Scenarios
+
+### A/B Testing Configurations
+```bash
+# Evaluate baseline configuration
+aiq eval --config_file baseline_config.yml --dataset test_set.json --output results_baseline.json
+
+# Evaluate improved configuration
+aiq eval --config_file improved_config.yml --dataset test_set.json --output results_improved.json
+
+# Compare results
+```
+
+### Parameter Tuning
+```bash
+# Evaluate different temperature settings
+aiq eval --config_file config.yml --override llms.nim_llm.temperature 0.3 --dataset tune_set.json
+aiq eval --config_file config.yml --override llms.nim_llm.temperature 0.7 --dataset tune_set.json
+aiq eval --config_file config.yml --override llms.nim_llm.temperature 0.9 --dataset tune_set.json
+```
+
+### Performance Monitoring
+```bash
+# Regular evaluation with metrics collection
+aiq eval --config_file monitor_config.yml --endpoint http://prod-service:8000/generate --reps 3
+```
+
+## Troubleshooting
+
+- **Timeout Errors**: Increase `--endpoint_timeout` for slow workflows
+- **Memory Issues**: Process datasets in smaller batches
+- **Connection Errors**: Verify endpoint URLs and service availability
+- **JSON Path Errors**: Test JSON paths with sample outputs first
+- **Missing Ground Truth**: Ensure dataset format matches expected structure
