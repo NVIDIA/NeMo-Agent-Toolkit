@@ -25,11 +25,11 @@ from aiq.cli.register_workflow import register_function
 from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.component_ref import ITSStrategyRef
 from aiq.data_models.function import FunctionBaseConfig
-from aiq.inference_time_scaling.models.its_item import ITSItem
-from aiq.inference_time_scaling.models.stage_enums import PipelineTypeEnum
-from aiq.inference_time_scaling.models.stage_enums import StageTypeEnum
-from aiq.inference_time_scaling.models.tool_use_config import ToolUseInputSchema
-from aiq.inference_time_scaling.models.tool_use_config import ToolUseList
+from aiq.experimental.inference_time_scaling.models.its_item import ITSItem
+from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
+from aiq.experimental.inference_time_scaling.models.tool_use_config import ToolUseInputSchema
+from aiq.experimental.inference_time_scaling.models.tool_use_config import ToolUseList
 
 logger = logging.getLogger(__name__)
 

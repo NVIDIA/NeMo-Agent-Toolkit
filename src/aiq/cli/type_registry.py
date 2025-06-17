@@ -66,7 +66,7 @@ from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfigT
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterConfigT
-from aiq.inference_time_scaling.models.strategy_base import StrategyBase
+from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
 from aiq.registry_handlers.registry_handler_base import AbstractRegistryHandler
 from aiq.utils.optional_imports import TelemetryOptionalImportError

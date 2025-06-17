@@ -18,11 +18,12 @@ import logging
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_its_strategy
-from aiq.inference_time_scaling.models.its_item import ITSItem
-from aiq.inference_time_scaling.models.selection_config import LLMBasedOutputMergingConfig
-from aiq.inference_time_scaling.models.stage_enums import PipelineTypeEnum
-from aiq.inference_time_scaling.models.stage_enums import StageTypeEnum
-from aiq.inference_time_scaling.models.strategy_base import StrategyBase
+from aiq.data_models.its_strategy import ITSStrategyBaseConfig
+from aiq.experimental.inference_time_scaling.models.its_item import ITSItem
+from aiq.experimental.inference_time_scaling.models.selection_config import LLMBasedOutputMergingConfig
+from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
+from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.utils.io.think_tags import remove_r1_think_tags
 
 logger = logging.getLogger(__name__)
@@ -30,11 +31,15 @@ logger = logging.getLogger(__name__)
 
 class LLMBasedOutputMergingSelector(StrategyBase):
 
+    def __init__(self, config: ITSStrategyBaseConfig) -> None:
+        super().__init__(config)
+        self.llm_bound = None
+
     async def build_components(self, builder: Builder) -> None:
         """
         Build the components required for the selector.
         """
-        self.config.selection_llm = await builder.get_llm(self.config.selection_llm,
+        self.llm_bound = await builder.get_llm(self.config.selection_llm,
                                                           wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     def supported_pipeline_types(self) -> [PipelineTypeEnum]:
@@ -65,20 +70,20 @@ class LLMBasedOutputMergingSelector(StrategyBase):
             from langchain_core.prompts import PromptTemplate
         except ImportError:
             raise ImportError("langchain-core is not installed. Please install it to use SingleShotMultiPlanPlanner.\n"
-                              "This error can be resolved by installing agentiq-langchain.")
+                              "This error can be resolved by installing aiqtoolkit-langchain.")
 
         from typing import Callable
 
         from pydantic import BaseModel
 
-        if not isinstance(self.config.selection_llm, BaseChatModel):
+        if not isinstance(self.llm_bound, BaseChatModel):
             raise ValueError("The `selection_llm` must be an instance of `BaseChatModel`.")
 
         if not self.pipeline_type:
             raise RuntimeError("Pipeline type is not set. Ensure that the pipeline "
                                "type is set before invoking the selector.")
 
-        model: BaseChatModel = self.config.selection_llm
+        model: BaseChatModel = self.llm_bound
 
         results = ""
         if self.pipeline_type == PipelineTypeEnum.AGENT_EXECUTION:

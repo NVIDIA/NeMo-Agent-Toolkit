@@ -27,7 +27,7 @@ from aiq.builder.function_base import StreamingOutputT
 from aiq.builder.llm import LLMProviderInfo
 from aiq.builder.retriever import RetrieverProviderInfo
 from aiq.data_models.config import AIQConfig
-from aiq.inference_time_scaling.models.strategy_base import StrategyBase
+from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
 from aiq.runtime.runner import AIQRunner
 from aiq.utils.optional_imports import TelemetryOptionalImportError

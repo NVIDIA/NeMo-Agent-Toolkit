@@ -20,11 +20,11 @@ import re
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_its_strategy
-from aiq.inference_time_scaling.models.its_item import ITSItem
-from aiq.inference_time_scaling.models.search_config import MultiLLMPlanConfig
-from aiq.inference_time_scaling.models.stage_enums import PipelineTypeEnum
-from aiq.inference_time_scaling.models.stage_enums import StageTypeEnum
-from aiq.inference_time_scaling.models.strategy_base import StrategyBase
+from aiq.experimental.inference_time_scaling.models.its_item import ITSItem
+from aiq.experimental.inference_time_scaling.models.search_config import MultiLLMPlanConfig
+from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
+from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.utils.io.think_tags import remove_r1_think_tags
 
 logger = logging.getLogger(__name__)
@@ -96,7 +96,7 @@ class MultiLLMPlanner(StrategyBase):
             from langchain_core.prompts import PromptTemplate
         except ImportError:
             raise ImportError("langchain-core is not installed. Please install it to use MultiLLMPlanner.\n"
-                              "This error can be resolve by installing agentiq-langchain.")
+                              "This error can be resolve by installing aiqtoolkit-langchain.")
 
         # Create a single PromptTemplate
         planning_template = PromptTemplate(template=self.config.planning_template,

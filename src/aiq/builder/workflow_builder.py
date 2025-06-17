@@ -53,9 +53,9 @@ from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.inference_time_scaling.models.stage_enums import PipelineTypeEnum
-from aiq.inference_time_scaling.models.stage_enums import StageTypeEnum
-from aiq.inference_time_scaling.models.strategy_base import StrategyBase
+from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
+from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
 from aiq.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
 from aiq.profiler.utils import detect_llm_frameworks_in_build_fn

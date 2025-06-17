@@ -26,16 +26,16 @@ from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.component_ref import ITSStrategyRef
 from aiq.data_models.function import FunctionBaseConfig
-from aiq.inference_time_scaling.models.its_item import ITSItem
-from aiq.inference_time_scaling.models.stage_enums import PipelineTypeEnum
-from aiq.inference_time_scaling.models.stage_enums import StageTypeEnum
+from aiq.experimental.inference_time_scaling.models.its_item import ITSItem
+from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
 
 logger = logging.getLogger(__name__)
 
 
 class PlanSelectExecuteFunctionConfig(FunctionBaseConfig, name="plan_select_execute_function"):
     """
-    Defines an AgentIQ function that performs reasoning on the input data.
+    Defines an aiqtoolkit function that performs reasoning on the input data.
     Output is passed to the next function in the workflow.
 
     Designed to be used with an InterceptingFunction.
@@ -83,7 +83,7 @@ async def plan_select_execute_function(config: PlanSelectExecuteFunctionConfig, 
         from langchain_core.prompts import PromptTemplate
     except ImportError:
         raise ImportError("langchain-core is not installed. Please install it to use SingleShotMultiPlanPlanner.\n"
-                          "This error can be resolved by installing agentiq-langchain.")
+                          "This error can be resolved by installing aiqtoolkit-langchain.")
 
     # Get the augmented function's description
     augmented_function = builder.get_function(config.augmented_fn)

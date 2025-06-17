@@ -6,11 +6,12 @@ from typing import List
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_its_strategy
-from aiq.inference_time_scaling.models.its_item import ITSItem
-from aiq.inference_time_scaling.models.scoring_config import MotivationAwareScoringConfig
-from aiq.inference_time_scaling.models.stage_enums import PipelineTypeEnum
-from aiq.inference_time_scaling.models.stage_enums import StageTypeEnum
-from aiq.inference_time_scaling.models.strategy_base import StrategyBase
+from aiq.data_models.its_strategy import ITSStrategyBaseConfig
+from aiq.experimental.inference_time_scaling.models.its_item import ITSItem
+from aiq.experimental.inference_time_scaling.models.scoring_config import MotivationAwareScoringConfig
+from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
+from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.utils.io.think_tags import remove_r1_think_tags
 
 logger = logging.getLogger(__name__)
@@ -22,8 +23,12 @@ class MotivationAwareScorer(StrategyBase):
     addresses both the original input (task) and the 'motivation' from metadata.
     """
 
+    def __init__(self, config: ITSStrategyBaseConfig) -> None:
+        super().__init__(config)
+        self.llm_bound = None
+
     async def build_components(self, builder: Builder) -> None:
-        self.config.scoring_llm = await builder.get_llm(self.config.scoring_llm,
+        self.llm_bound = await builder.get_llm(self.config.scoring_llm,
                                                         wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     def supported_pipeline_types(self) -> List[PipelineTypeEnum]:
@@ -44,10 +49,10 @@ class MotivationAwareScorer(StrategyBase):
         from langchain_core.language_models import BaseChatModel
         from langchain_core.prompts import PromptTemplate
 
-        if not isinstance(self.config.scoring_llm, BaseChatModel):
+        if not isinstance(self.llm_bound, BaseChatModel):
             raise ValueError("scoring_llm must be a BaseChatModel instance for MotivationAwareScorer.")
 
-        scoring_model: BaseChatModel = self.config.scoring_llm
+        scoring_model: BaseChatModel = self.llm_bound
 
         scoring_template = PromptTemplate(template=self.config.scoring_template,
                                           input_variables=["task", "motivation", "output"],

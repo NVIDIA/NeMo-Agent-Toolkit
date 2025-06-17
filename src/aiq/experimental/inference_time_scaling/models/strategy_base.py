@@ -17,8 +17,8 @@ from abc import ABC
 from abc import abstractmethod
 
 from aiq.builder.builder import Builder
-from aiq.inference_time_scaling.models.its_item import ITSItem
-from aiq.inference_time_scaling.models.stage_enums import StageTypeEnum, PipelineTypeEnum
+from aiq.experimental.inference_time_scaling.models.its_item import ITSItem
+from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum, PipelineTypeEnum
 from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 
 

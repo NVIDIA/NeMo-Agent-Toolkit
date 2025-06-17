@@ -98,7 +98,7 @@ async def register_its_tool_wrapper_function(
         from langchain_core.prompts import PromptTemplate
     except ImportError:
         raise ImportError("langchain-core is not installed. Please install it to use SingleShotMultiPlanPlanner.\n"
-                          "This error can be resolved by installing agentiq-langchain.")
+                          "This error can be resolved by installing aiqtoolkit-langchain.")
 
     augmented_function: Function = builder.get_function(config.augmented_fn)
     input_llm: BaseChatModel = await builder.get_llm(config.input_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

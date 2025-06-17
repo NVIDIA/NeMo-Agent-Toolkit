@@ -20,11 +20,12 @@ import re
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_its_strategy
-from aiq.inference_time_scaling.models.its_item import ITSItem
-from aiq.inference_time_scaling.models.search_config import SingleShotMultiPlanConfig
-from aiq.inference_time_scaling.models.stage_enums import PipelineTypeEnum
-from aiq.inference_time_scaling.models.stage_enums import StageTypeEnum
-from aiq.inference_time_scaling.models.strategy_base import StrategyBase
+from aiq.data_models.its_strategy import ITSStrategyBaseConfig
+from aiq.experimental.inference_time_scaling.models.its_item import ITSItem
+from aiq.experimental.inference_time_scaling.models.search_config import SingleShotMultiPlanConfig
+from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
+from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.utils.io.think_tags import remove_r1_think_tags
 
 logger = logging.getLogger(__name__)
@@ -36,8 +37,12 @@ class SingleShotMultiPlanPlanner(StrategyBase):
     This planner generates multiple plans in a single shot.
     """
 
+    def __init__(self, config: ITSStrategyBaseConfig) -> None:
+        super().__init__(config)
+        self.llm_bound = None
+
     async def build_components(self, builder: Builder) -> None:
-        self.config.planning_llm = await builder.get_llm(self.config.planning_llm,
+        self.llm_bound = await builder.get_llm(self.config.planning_llm,
                                                          wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     def supported_pipeline_types(self) -> [PipelineTypeEnum]:
@@ -60,7 +65,7 @@ class SingleShotMultiPlanPlanner(StrategyBase):
             from langchain_core.prompts import PromptTemplate
         except ImportError:
             raise ImportError("langchain-core is not installed. Please install it to use SingleShotMultiPlanPlanner.\n"
-                              "This error can be resolve by installing agentiq-langchain.")
+                              "This error can be resolve by installing aiqtoolkit-langchain.")
 
         planning_template = PromptTemplate(template=self.config.planning_template,
                                            input_variables=["context", "prompt"],
@@ -70,10 +75,10 @@ class SingleShotMultiPlanPlanner(StrategyBase):
         })).to_string()
 
         # assert self.config.planning llm is a BaseChatModel
-        if not isinstance(self.config.planning_llm, BaseChatModel):
+        if not isinstance(self.llm_bound, BaseChatModel):
             raise ValueError("The `planning_llm` must be an instance of `BaseChatModel`.")
 
-        model: BaseChatModel = self.config.planning_llm
+        model: BaseChatModel = self.llm_bound
 
         async def generate_plan(llm: BaseChatModel, plan_prompt: str, temperature: float) -> ITSItem:
             """

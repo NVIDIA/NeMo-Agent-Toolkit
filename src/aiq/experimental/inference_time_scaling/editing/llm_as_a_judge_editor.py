@@ -21,11 +21,11 @@ from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_its_strategy
 from aiq.data_models.its_strategy import ITSStrategyBaseConfig
-from aiq.inference_time_scaling.models.editor_config import LLMAsAJudgeEditorConfig
-from aiq.inference_time_scaling.models.its_item import ITSItem
-from aiq.inference_time_scaling.models.stage_enums import PipelineTypeEnum
-from aiq.inference_time_scaling.models.stage_enums import StageTypeEnum
-from aiq.inference_time_scaling.models.strategy_base import StrategyBase
+from aiq.experimental.inference_time_scaling.models.editor_config import LLMAsAJudgeEditorConfig
+from aiq.experimental.inference_time_scaling.models.its_item import ITSItem
+from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
+from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.utils.io.think_tags import remove_r1_think_tags
 
 logger = logging.getLogger(__name__)
@@ -37,18 +37,21 @@ class LLMAsAJudgeEditor(StrategyBase):
     Then edits the plan based on feedback.
     """
 
+    def __init__(self, config: ITSStrategyBaseConfig) -> None:
+        super().__init__(config)
+        self.feedback_llm = None
+        self.editing_llm = None
+
     async def build_components(self, builder: Builder) -> None:
         """
         Build the components required for the editor.
         """
         # Get the feedback LLM
-        self.config.feedback_llm = await builder.get_llm(self.config.feedback_llm,
+        self.feedback_llm = await builder.get_llm(self.config.feedback_llm,
                                                          wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
-        if self.config.editing_llm:
-            # Get the editing LLM
-            self.config.editing_llm = await builder.get_llm(self.config.editing_llm,
-                                                            wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        self.editing_llm = await builder.get_llm(self.config.editing_llm,
+                                                        wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     def supported_pipeline_types(self) -> [PipelineTypeEnum]:
         return [PipelineTypeEnum.PLANNING]
@@ -137,15 +140,15 @@ class LLMAsAJudgeEditor(StrategyBase):
         from langchain_core.prompts import PromptTemplate
 
         # assert self.config.feedback_llm is a BaseChatModel
-        if not isinstance(self.config.feedback_llm, BaseChatModel):
+        if not isinstance(self.feedback_llm, BaseChatModel):
             raise ValueError("The `feedback_llm` must be an instance of `BaseChatModel`.")
 
         # assert self.config.editing_llm is a BaseChatModel
-        if not isinstance(self.config.editing_llm, BaseChatModel):
+        if not isinstance(self.editing_llm, BaseChatModel):
             raise ValueError("The `editing_llm` must be an instance of `BaseChatModel`.")
 
-        feedback_model: BaseChatModel = self.config.feedback_llm
-        editing_model: BaseChatModel = self.config.editing_llm
+        feedback_model: BaseChatModel = self.feedback_llm
+        editing_model: BaseChatModel = self.editing_llm
 
         feedback_template = PromptTemplate(template=self.config.feedback_template,
                                            input_variables=["context", "original_prompt", "plan", "num_feedback"],

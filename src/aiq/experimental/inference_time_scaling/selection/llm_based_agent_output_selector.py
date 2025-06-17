@@ -19,27 +19,32 @@ import re
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_its_strategy
-from aiq.inference_time_scaling.models.its_item import ITSItem
-from aiq.inference_time_scaling.models.selection_config import LLMBasedPlanSelectionConfig
-from aiq.inference_time_scaling.models.stage_enums import PipelineTypeEnum
-from aiq.inference_time_scaling.models.stage_enums import StageTypeEnum
-from aiq.inference_time_scaling.models.strategy_base import StrategyBase
+from aiq.data_models.its_strategy import ITSStrategyBaseConfig
+from aiq.experimental.inference_time_scaling.models.its_item import ITSItem
+from aiq.experimental.inference_time_scaling.models.selection_config import LLMBasedAgentOutputSelectionConfig
+from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
+from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.utils.io.think_tags import remove_r1_think_tags
 
 logger = logging.getLogger(__name__)
 
 
-class LLMBasedPlanSelector(StrategyBase):
+class LLMBasedAgentOutputSelector(StrategyBase):
+
+    def __init__(self, config: ITSStrategyBaseConfig) -> None:
+        super().__init__(config)
+        self.llm_bound = None
 
     async def build_components(self, builder: Builder) -> None:
         """
         Build the components required for the selector.
         """
-        self.config.selection_llm = await builder.get_llm(self.config.selection_llm,
+        self.llm_bound = await builder.get_llm(self.config.selection_llm,
                                                           wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     def supported_pipeline_types(self) -> [PipelineTypeEnum]:
-        return [PipelineTypeEnum.PLANNING]
+        return [PipelineTypeEnum.AGENT_EXECUTION]
 
     def stage_type(self) -> StageTypeEnum:
         return StageTypeEnum.SELECTION
@@ -66,25 +71,28 @@ class LLMBasedPlanSelector(StrategyBase):
             from langchain_core.prompts import PromptTemplate
         except ImportError:
             raise ImportError("langchain-core is not installed. Please install it to use SingleShotMultiPlanPlanner.\n"
-                              "This error can be resolved by installing agentiq-langchain.")
+                              "This error can be resolved by installing aiqtoolkit-langchain.")
 
-        if not isinstance(self.config.selection_llm, BaseChatModel):
+        from pydantic import BaseModel
+
+        if not isinstance(self.llm_bound, BaseChatModel):
             raise ValueError("The `selection_llm` must be an instance of `BaseChatModel`.")
 
-        model: BaseChatModel = self.config.selection_llm
+        model: BaseChatModel = self.llm_bound
 
-        plans = ""
+        results = ""
         for idx, item in enumerate(items):
-            plans += f"{idx + 1}. {remove_r1_think_tags(item.plan)}\n"
+            item_str = str(item.output.model_dump()) if isinstance(item.output, BaseModel) else str(item.output)
+            results += f"{idx + 1}. {remove_r1_think_tags(item_str)}\n\n"
 
         prompt_template = PromptTemplate(
             template=self.config.selection_template,
-            input_variables=["original_prompt", "context", "plans"],
+            input_variables=["objective", "input", "results"],
             validate_template=True,
         )
 
         prompt = (await prompt_template.ainvoke(input={
-            "original_prompt": original_prompt, "context": agent_context, "plans": plans
+            "objective": agent_context, "input": original_prompt, "results": results
         })).to_string()
 
         selected_plan_index = remove_r1_think_tags((await model.ainvoke(prompt)).content)
@@ -95,10 +103,10 @@ class LLMBasedPlanSelector(StrategyBase):
             logger.warning(f"Invalid response from LLM for selected plan index: {selected_plan_index}.")
             raise ValueError("Unable to parse the selected plan index.")
         selected_plan_index = selected_plan_index.strip()
-        match = re.match(r'^\s*SELECTED PLAN:\s+(\d+)', selected_plan_index)
+        match = re.match(r'^\s*SELECTED ITEM:\s+(\d+)', selected_plan_index)
         if not match:
             logger.warning(f"Could not parse the selected plan index from the response: {selected_plan_index}.")
-            raise ValueError("The response format for selecting the plan is incorrect.")
+            raise ValueError("The response format for selecting the item is incorrect.")
         index = match.group(1)
 
         try:
@@ -114,11 +122,11 @@ class LLMBasedPlanSelector(StrategyBase):
                              "Ensure the response follows the expected format.") from e
 
 
-@register_its_strategy(config_type=LLMBasedPlanSelectionConfig)
-async def register_llm_based_plan_selection(config: LLMBasedPlanSelectionConfig, builder: Builder):
+@register_its_strategy(config_type=LLMBasedAgentOutputSelectionConfig)
+async def register_llm_based_agent_output_selector(config: LLMBasedAgentOutputSelectionConfig, builder: Builder):
     """
-    Register the LLMBasedPlanSelector with the provided configuration.
+    Register the LLMBasedAgentOutputSelector with the builder.
     """
-    selector = LLMBasedPlanSelector(config)
-    await selector.build_components(Builder())
+    selector = LLMBasedAgentOutputSelector(config)
+    await selector.build_components(builder)
     yield selector
