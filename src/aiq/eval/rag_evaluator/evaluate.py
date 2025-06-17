@@ -23,6 +23,7 @@ from ragas.llms import LangchainLLMWrapper
 from ragas.metrics import Metric
 from tqdm import tqdm
 
+from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.evaluator.evaluator_model import EvalOutputItem
@@ -33,15 +34,16 @@ logger = logging.getLogger(__name__)
 
 class RAGEvaluator:
 
-    def __init__(self, evaluator_llm: LangchainLLMWrapper, metrics: Sequence[Metric]):
+    def __init__(self, evaluator_llm: LangchainLLMWrapper, metrics: Sequence[Metric], max_concurrency=8):
         self.evaluator_llm = evaluator_llm
         self.metrics = metrics
+        self.max_concurrency = max_concurrency
 
     @staticmethod
     def eval_input_to_ragas(eval_input: EvalInput) -> EvaluationDataset:
         """Converts EvalInput into a Ragas-compatible EvaluationDataset."""
         from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
-
+        event_filter = [IntermediateStepType.TOOL_END, IntermediateStepType.LLM_END, IntermediateStepType.CUSTOM_END]
         samples = []
 
         intermediate_step_adapter = IntermediateStepAdapter()
@@ -55,7 +57,7 @@ class RAGEvaluator:
             reference_contexts = [""]  # Default to empty context
             # implement context extraction from expected_trajectory
 
-            retrieved_contexts = intermediate_step_adapter.get_context(item.trajectory)
+            retrieved_contexts = intermediate_step_adapter.get_context(item.trajectory, event_filter)
             # implement context extraction from expected_trajectory
 
             # Create a SingleTurnSample
@@ -116,6 +118,7 @@ class RAGEvaluator:
     async def evaluate(self, eval_input: EvalInput) -> EvalOutput:
         """Run Ragas metrics evaluation on the provided EvalInput"""
         from ragas import evaluate as ragas_evaluate
+        from ragas.run_config import RunConfig
 
         ragas_dataset = self.eval_input_to_ragas(eval_input)
         tqdm_position = TqdmPositionRegistry.claim()
@@ -126,6 +129,7 @@ class RAGEvaluator:
                                              metrics=self.metrics,
                                              show_progress=True,
                                              llm=self.evaluator_llm,
+                                             run_config=RunConfig(max_workers=self.max_concurrency),
                                              _pbar=pbar)
         except Exception as e:
             # On exception we still continue with other evaluators. Log and return an avg_score of 0.0

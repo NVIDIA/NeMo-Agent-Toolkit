@@ -51,9 +51,9 @@ class StepAdaptor:
             # default existing behavior: show LLM events + TOOL_END + FUNCTION events
             if step.event_category == IntermediateStepCategory.LLM:
                 return True
-            if step.event_type == IntermediateStepType.TOOL_END:
+            if step.event_category == IntermediateStepCategory.TOOL:
                 return True
-            if step.event_type in [IntermediateStepType.FUNCTION_START, IntermediateStepType.FUNCTION_END]:
+            if step.event_category == IntermediateStepCategory.FUNCTION:
                 return True
             return False
 
@@ -120,39 +120,57 @@ class StepAdaptor:
 
         return event
 
-    def _handle_tool_end(self, payload: IntermediateStepPayload,
-                         ancestry: InvocationNode) -> AIQResponseSerializable | None:
+    def _handle_tool(self, step: IntermediateStepPayload, ancestry: InvocationNode) -> AIQResponseSerializable | None:
         """
-        Handles the TOOL_END event
+        Handles both TOOL_START and TOOL_END events
         """
-        escaped_tool_input = html.escape(str(payload.data.input), quote=False)
-        escaped_tool_output = html.escape(str(payload.data.output), quote=False)
+        input_str: str | None = None
+        output_str: str | None = None
 
-        escaped_tool_input = escaped_tool_input.replace("\n", "")
-        escaped_tool_output = escaped_tool_output.replace("\n", "")
+        # Find the start in the history with matching run_id
+        start_step = next(
+            (x for x in self._history if x.event_type == IntermediateStepType.TOOL_START and x.UUID == step.UUID), None)
 
-        # Determine the format
-        format_input_type = "json" if is_valid_json(escaped_tool_input) else "python"
-        format_output_type = "json" if is_valid_json(escaped_tool_output) else "python"
+        if not start_step:
+            # If we don't have a start step, we can't do anything
+            return None
+
+        input_str = str(start_step.data.input)
+
+        if step.event_type == IntermediateStepType.TOOL_END:
+            output_str = str(step.data.output)
+
+        if not input_str and not output_str:
+            return None
+
+        escaped_input = html.escape(input_str, quote=False)
+        format_input_type = "json" if is_valid_json(escaped_input) else "python"
 
         # Dont use f-strings here because the payload is markdown and screws up the dedent
-        payload_str = dedent("""
+        payload = dedent("""
         **Input:**
         ```{format_input_type}
         {input_value}
         ```
-        **Output:**
-        ```{format_output_type}
-        {output_value}
-        ```
-        """).strip("\n").format(input_value=escaped_tool_input,
-                                output_value=escaped_tool_output,
-                                format_input_type=format_input_type,
-                                format_output_type=format_output_type)
+        """).strip("\n").format(input_value=escaped_input, format_input_type=format_input_type)
 
-        event = AIQResponseIntermediateStep(id=payload.UUID,
-                                            name=f"Tool: {payload.name}",
-                                            payload=payload_str,
+        if output_str:
+            escaped_output = html.escape(output_str, quote=False)
+            format_output_type = "json" if is_valid_json(escaped_output) else "python"
+
+            # Dont use f-strings here because the payload is markdown and screws up the dedent
+            payload = dedent("""
+            {payload}
+
+            **Output:**
+            ```{format_output_type}
+            {output_value}
+            ```
+            """).strip("\n").format(payload=payload, output_value=escaped_output, format_output_type=format_output_type)
+
+        event = AIQResponseIntermediateStep(id=step.UUID,
+                                            name=f"Tool: {step.name}",
+                                            payload=payload,
                                             parent_id=ancestry.function_id)
 
         return event
@@ -284,29 +302,16 @@ class StepAdaptor:
 
         try:
 
-            if self.config.mode == StepAdaptorMode.DEFAULT:
+            if step.event_category == IntermediateStepCategory.LLM:
+                return self._handle_llm(payload, ancestry)
 
-                if step.event_category == IntermediateStepCategory.LLM:
-                    return self._handle_llm(payload, ancestry)
+            if step.event_category == IntermediateStepCategory.TOOL:
+                return self._handle_tool(payload, ancestry)
 
-                if step.event_type == IntermediateStepType.TOOL_END:
-                    return self._handle_tool_end(payload, ancestry)
+            if step.event_category == IntermediateStepCategory.FUNCTION:
+                return self._handle_function(payload, ancestry)
 
-                if step.event_type in [IntermediateStepType.FUNCTION_START, IntermediateStepType.FUNCTION_END]:
-                    return self._handle_function(payload, ancestry)
-
-            if self.config.mode == StepAdaptorMode.CUSTOM:
-                # Now we're processing user defined custom types
-
-                if step.event_category == IntermediateStepCategory.LLM:
-                    return self._handle_llm(payload, ancestry)
-
-                if step.event_type == IntermediateStepType.TOOL_END:
-                    return self._handle_tool_end(payload, ancestry)
-
-                if step.event_type in [IntermediateStepType.FUNCTION_START, IntermediateStepType.FUNCTION_END]:
-                    return self._handle_function(payload, ancestry)
-
+            if step.event_category == IntermediateStepCategory.CUSTOM:
                 return self._handle_custom(payload, ancestry)
 
         except Exception as e:

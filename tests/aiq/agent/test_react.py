@@ -25,12 +25,12 @@ from aiq.agent.react_agent.agent import NO_INPUT_ERROR_MESSAGE
 from aiq.agent.react_agent.agent import TOOL_NOT_FOUND_ERROR_MESSAGE
 from aiq.agent.react_agent.agent import ReActAgentGraph
 from aiq.agent.react_agent.agent import ReActGraphState
+from aiq.agent.react_agent.agent import create_react_agent_prompt
 from aiq.agent.react_agent.output_parser import FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE
 from aiq.agent.react_agent.output_parser import MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE
 from aiq.agent.react_agent.output_parser import MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE
 from aiq.agent.react_agent.output_parser import ReActOutputParser
 from aiq.agent.react_agent.output_parser import ReActOutputParserException
-from aiq.agent.react_agent.prompt import react_agent_prompt
 from aiq.agent.react_agent.register import ReActAgentWorkflowConfig
 
 
@@ -59,7 +59,7 @@ def mock_config():
 
 def test_react_init(mock_config_react_agent, mock_llm, mock_tool):
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
-    prompt = react_agent_prompt
+    prompt = create_react_agent_prompt(mock_config_react_agent)
     agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=mock_config_react_agent.verbose)
     assert isinstance(agent, ReActAgentGraph)
     assert agent.llm == mock_llm
@@ -72,7 +72,7 @@ def test_react_init(mock_config_react_agent, mock_llm, mock_tool):
 @pytest.fixture(name='mock_react_agent', scope="module")
 def mock_agent(mock_config_react_agent, mock_llm, mock_tool):
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
-    prompt = react_agent_prompt
+    prompt = create_react_agent_prompt(mock_config_react_agent)
     agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=mock_config_react_agent.verbose)
     return agent
 
@@ -412,3 +412,30 @@ async def test_output_parser_missing_action_input(mock_react_output_parser):
         await mock_react_output_parser.aparse(mock_input)
     assert isinstance(ex.value, ReActOutputParserException)
     assert ex.value.observation == MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE
+
+
+def test_react_additional_instructions(mock_llm, mock_tool):
+    config_react_agent = ReActAgentWorkflowConfig(tool_names=['test'],
+                                                  llm_name='test',
+                                                  verbose=True,
+                                                  retry_parsing_errors=False,
+                                                  additional_instructions="Talk like a parrot and repeat the question.")
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=config_react_agent.verbose)
+    assert isinstance(agent, ReActAgentGraph)
+    assert "Talk like a parrot" in agent.agent.get_prompts()[0].messages[0].prompt.template
+
+
+def test_react_custom_system_prompt(mock_llm, mock_tool):
+    config_react_agent = ReActAgentWorkflowConfig(
+        tool_names=['test'],
+        llm_name='test',
+        verbose=True,
+        retry_parsing_errors=False,
+        system_prompt="Refuse to run any of the following tools: {tools}.  or ones named: {tool_names}")
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=config_react_agent.verbose)
+    assert isinstance(agent, ReActAgentGraph)
+    assert "Refuse" in agent.agent.get_prompts()[0].messages[0].prompt.template

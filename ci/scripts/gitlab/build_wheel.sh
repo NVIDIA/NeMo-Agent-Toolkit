@@ -27,7 +27,11 @@ rapids-logger "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
 if [[ "${CI_CRON_NIGHTLY}" == "1" || ( ${IS_TAGGED} == "1" && "${CI_COMMIT_BRANCH}" != "main" ) ]]; then
     export SETUPTOOLS_SCM_PRETEND_VERSION="${GIT_TAG}"
     export USE_FULL_VERSION="1"
+fi
+
+if [[ "${CI_CRON_NIGHTLY}" == "1" ]]; then
     create_env group:dev
+    export SKIP_MD_UPDATE=1
     ${PROJECT_ROOT}/ci/release/update-version.sh "${GIT_TAG}"
 fi
 

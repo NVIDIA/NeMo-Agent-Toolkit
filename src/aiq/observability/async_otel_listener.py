@@ -13,8 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import re
+import warnings
 from contextlib import asynccontextmanager
 from contextlib import contextmanager
 from typing import Any
@@ -30,10 +32,20 @@ from aiq.utils.optional_imports import TelemetryOptionalImportError
 from aiq.utils.optional_imports import try_import_opentelemetry
 
 try:
-    from weave.trace.context import weave_client_context
-    from weave.trace.context.call_context import get_current_call
-    from weave.trace.context.call_context import set_call_stack
-    from weave.trace.weave_client import Call
+    with warnings.catch_warnings():
+        # Ignore deprecation warnings being triggered by weave. https://github.com/wandb/weave/issues/3666
+        # and https://github.com/wandb/weave/issues/4533
+        warnings.filterwarnings("ignore", category=DeprecationWarning, message=r"^`sentry_sdk\.Hub` is deprecated")
+        warnings.filterwarnings("ignore",
+                                category=DeprecationWarning,
+                                message=r"^Using extra keyword arguments on `Field` is deprecated")
+        warnings.filterwarnings("ignore",
+                                category=DeprecationWarning,
+                                message=r"^`include` is deprecated and does nothing")
+        from weave.trace.context import weave_client_context
+        from weave.trace.context.call_context import get_current_call
+        from weave.trace.context.call_context import set_call_stack
+        from weave.trace.weave_client import Call
     WEAVE_AVAILABLE = True
 except ImportError:
     WEAVE_AVAILABLE = False
@@ -57,10 +69,29 @@ except TelemetryOptionalImportError:
     from aiq.utils.optional_imports import DummyTrace  # pylint: disable=ungrouped-imports
     from aiq.utils.optional_imports import DummyTracerProvider  # pylint: disable=ungrouped-imports
     from aiq.utils.optional_imports import dummy_set_span_in_context  # pylint: disable=ungrouped-imports
-    trace = DummyTrace
+
+    trace = DummyTrace  # pylint: disable=invalid-name
     TracerProvider = DummyTracerProvider
     Span = DummySpan
     set_span_in_context = dummy_set_span_in_context
+
+
+def merge_dicts(dict1: dict, dict2: dict) -> dict:
+    """
+    Merge two dictionaries, prioritizing non-null values from the first dictionary.
+
+    Args:
+        dict1 (dict): First dictionary (higher priority)
+        dict2 (dict): Second dictionary (lower priority)
+
+    Returns:
+        dict: Merged dictionary with non-null values from dict1 taking precedence
+    """
+    result = dict2.copy()  # Start with a copy of the second dictionary
+    for key, value in dict1.items():
+        if value is not None:  # Only update if value is not None
+            result[key] = value
+    return result
 
 
 def _ns_timestamp(seconds_float: float) -> int:
@@ -191,11 +222,6 @@ class AsyncOtelSpanListener:
 
         self._outstanding_spans.clear()
 
-        if len(self._span_stack) > 0:
-            logger.error(
-                "Not all spans were closed. Ensure all start events have a corresponding end event. Remaining: %s",
-                self._span_stack)
-
         self._span_stack.clear()
 
         # Clean up any lingering Weave calls if Weave is available and initialized
@@ -278,6 +304,10 @@ class AsyncOtelSpanListener:
                 sub_span.set_attribute(SpanAttributes.INPUT_VALUE, serialized_input)
                 sub_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE, "application/json" if is_json else "text/plain")
 
+        # Optional: add metadata to the span from TraceMetadata
+        if step.payload.metadata:
+            sub_span.set_attribute("aiq.metadata", step.payload.metadata.model_dump_json())
+
         self._span_stack[step.UUID] = sub_span
 
         self._outstanding_spans[step.UUID] = sub_span
@@ -316,6 +346,13 @@ class AsyncOtelSpanListener:
             sub_span.set_attribute(SpanAttributes.OUTPUT_VALUE, serialized_output)
             sub_span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE, "application/json" if is_json else "text/plain")
 
+        # # Optional: add metadata to the span from TraceMetadata
+        if step.payload.metadata:
+            start_event_metadata = json.loads(sub_span.attributes.get("aiq.metadata", {}))
+            end_event_metadata = json.loads(step.payload.metadata.model_dump_json())
+            merged_event_metadata = merge_dicts(start_event_metadata, end_event_metadata)
+            sub_span.set_attribute("aiq.metadata", json.dumps(merged_event_metadata))
+
         end_ns = _ns_timestamp(step.payload.event_timestamp)
 
         # End the subspan
@@ -323,7 +360,7 @@ class AsyncOtelSpanListener:
 
         # Finish corresponding Weave call if Weave is available and initialized
         if self.gc is not None:
-            self._finish_weave_call(step, sub_span)
+            self._finish_weave_call(step)
 
     @contextmanager
     def parent_call(self, trace_id: str, parent_call_id: str):
@@ -349,13 +386,13 @@ class AsyncOtelSpanListener:
         # use it as the parent
         if existing_call is not None:
             parent_call = existing_call
-            logger.debug(f"Found existing Weave call: {existing_call.id} from trace: {existing_call.trace_id}")
+            logger.debug("Found existing Weave call: %s from trace: %s", existing_call.id, existing_call.trace_id)
         # Otherwise, check our internal stack for parent relationships
         elif len(self._weave_calls) > 0 and len(self._span_stack) > 1:
             # Get the parent span using stack position (one level up)
             parent_span_id = self._span_stack[-2].get_span_context().span_id
             # Find the corresponding weave call for this parent span
-            for uuid, call in self._weave_calls.items():
+            for call in self._weave_calls.values():
                 if getattr(call, "span_id", None) == parent_span_id:
                     parent_call = call
                     break
@@ -394,7 +431,7 @@ class AsyncOtelSpanListener:
 
         return call
 
-    def _finish_weave_call(self, step: IntermediateStep, span: Span) -> None:
+    def _finish_weave_call(self, step: IntermediateStep) -> None:
         """
         Finish a previously created Weave call
         """

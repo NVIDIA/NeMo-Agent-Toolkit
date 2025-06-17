@@ -1,0 +1,189 @@
+---
+description: Follow these rules when the user's request involves adding, integrating, implementing, or configuring tools for AIQ workflows
+globs: 
+alwaysApply: false
+---
+# Adding Tools to AIQ Workflows
+
+## Overview
+
+Adding tools to workflows requires copying and modifying the workflow configuration file to include new tool definitions and update the tool names list.
+
+## Step-by-Step Process
+
+### 1. Identify Available Tools
+```bash
+# Query all available function types
+aiq info components -t function
+
+# Query specific function details
+aiq info components -t function -q webpage_query
+```
+
+### 2. Update Configuration File
+
+#### Adding Multiple Instances of Same Tool Type
+When adding multiple instances of the same tool type, rename existing tools to be more specific:
+
+```yaml
+# Before - single tool
+functions:
+  webpage_query:
+    _type: webpage_query
+    webpage_url: https://docs.smith.langchain.com
+    description: "Search for information about LangSmith..."
+    embedder_name: nv-embedqa-e5-v5
+    chunk_size: 512
+
+# After - multiple tools
+functions:
+  langsmith_query:  # Renamed for clarity
+    _type: webpage_query
+    webpage_url: https://docs.smith.langchain.com
+    description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
+    embedder_name: nv-embedqa-e5-v5
+    chunk_size: 512
+  langgraph_query:  # New tool
+    _type: webpage_query
+    webpage_url: https://langchain-ai.github.io/langgraph/tutorials/introduction
+    description: "Search for information about LangGraph. For any questions about LangGraph, you must use this tool!"
+    embedder_name: nv-embedqa-e5-v5
+    chunk_size: 512
+```
+
+#### Update Workflow Tool Names
+Always update the `workflow.tool_names` section to include new tools:
+
+```yaml
+# Before
+workflow:
+  _type: react_agent
+  tool_names: [webpage_query, current_datetime]
+
+# After
+workflow:
+  _type: react_agent
+  tool_names: [langsmith_query, langgraph_query, current_datetime]
+```
+
+## Alternative: Using Web Search Tools
+
+### Installing Web Search Dependencies
+```bash
+# Install LangChain integration for web search tools
+uv pip install -e '.[langchain]'
+```
+
+### Using Tavily Internet Search
+```yaml
+functions:
+  internet_search:
+    _type: tavily_internet_search
+  current_datetime:
+    _type: current_datetime
+
+workflow:
+  _type: react_agent
+  tool_names: [internet_search, current_datetime]
+```
+
+### Required Environment Variables
+```bash
+# Set up Tavily API key
+export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
+```
+
+## Common Tool Types and Patterns
+
+### 1. Webpage Query Tools
+```yaml
+tool_name:
+  _type: webpage_query
+  webpage_url: https://example.com
+  description: "Descriptive text for when to use this tool"
+  embedder_name: nv-embedqa-e5-v5
+  chunk_size: 512
+```
+
+### 2. Internet Search Tools
+```yaml
+search_tool:
+  _type: tavily_internet_search
+  # No additional parameters needed
+```
+
+### 3. Utility Tools
+```yaml
+datetime_tool:
+  _type: current_datetime
+  # No additional parameters needed
+```
+
+## Best Practices
+
+1. **Tool Naming**:
+   - Use descriptive names that indicate the tool's purpose
+   - Avoid generic names when you have multiple similar tools
+   - Example: `langsmith_query` vs `webpage_query`
+
+2. **Descriptions**:
+   - Be specific about when the tool should be used
+   - Include the domain or type of information the tool provides
+   - Use imperative language: "For any questions about X, you must use this tool!"
+
+3. **Configuration Consistency**:
+   - Use consistent `embedder_name` across similar tools
+   - Set appropriate `chunk_size` based on content type
+   - Maintain consistent parameter formatting
+
+4. **Testing**:
+   ```bash
+   # Test the updated workflow
+   aiq run --config_file path/to/updated_config.yml --input "Test question"
+   ```
+
+## Common Issues and Solutions
+
+1. **Tool Not Found**: Ensure the tool name in `workflow.tool_names` matches the key in `functions`
+2. **Missing Dependencies**: Install required packages for specific tool types
+3. **API Key Issues**: Set required environment variables before running
+4. **Configuration Syntax**: Validate YAML syntax and indentation
+
+## Example Complete Configuration
+
+```yaml
+functions:
+  langsmith_docs:
+    _type: webpage_query
+    webpage_url: https://docs.smith.langchain.com
+    description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
+    embedder_name: nv-embedqa-e5-v5
+    chunk_size: 512
+  langgraph_docs:
+    _type: webpage_query
+    webpage_url: https://langchain-ai.github.io/langgraph/tutorials/introduction
+    description: "Search for information about LangGraph. For any questions about LangGraph, you must use this tool!"
+    embedder_name: nv-embedqa-e5-v5
+    chunk_size: 512
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+
+embedders:
+  nv-embedqa-e5-v5:
+    _type: nim
+    model_name: nvidia/nv-embedqa-e5-v5
+
+workflow:
+  _type: react_agent
+  tool_names: [langsmith_docs, langgraph_docs, current_datetime]
+  llm_name: nim_llm
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3
+```

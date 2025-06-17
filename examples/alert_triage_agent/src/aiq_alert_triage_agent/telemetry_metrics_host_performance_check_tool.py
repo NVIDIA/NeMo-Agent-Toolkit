@@ -29,16 +29,17 @@ from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
 
 from . import utils
-from .prompts import TelemetryMetricsAnalysisPrompts
+from .prompts import TelemetryMetricsHostPerformanceCheckPrompts
 
 
 class TelemetryMetricsHostPerformanceCheckToolConfig(FunctionBaseConfig,
                                                      name="telemetry_metrics_host_performance_check"):
-    description: str = Field(default=("This tool checks the performance of the host by analyzing the CPU "
-                                      "usage timeseries. Args: host_id: str"),
-                             description="Description of the tool for the agent.")
+    description: str = Field(default=TelemetryMetricsHostPerformanceCheckPrompts.TOOL_DESCRIPTION,
+                             description="Description of the tool.")
     llm_name: LLMRef
-    test_mode: bool = Field(default=True, description="Whether to run in test mode")
+    prompt: str = Field(default=TelemetryMetricsHostPerformanceCheckPrompts.PROMPT,
+                        description="Main prompt for the telemetry metrics host performance check task.")
+    offline_mode: bool = Field(default=True, description="Whether to run in offline model")
     metrics_url: str = Field(default="", description="URL of the monitoring system")
 
 
@@ -51,6 +52,9 @@ def _timeseries_stats(ts):
     Returns:
         str: Markdown formatted string containing summary statistics
     """
+    if len(ts) == 0:
+        return "No data points"
+
     count = len(ts)
     max_val = max(ts)
     min_val = min(ts)
@@ -89,7 +93,11 @@ def _get_llm_analysis_input(timestamp_value_list):
         str: Formatted string containing:
             - JSON array of [datetime_str, value] pairs with human readable timestamps
             - Summary statistics of the metric values
+            - "No data points" if input list is empty
     """
+    if len(timestamp_value_list) == 0:
+        return "No data points"
+
     # Convert Unix timestamps to ISO format datetime strings and preserve values
     # Example: "2022-01-17 12:00:00" for timestamp 1642435200
     data = [[datetime.fromtimestamp(entry[0]).strftime("%Y-%m-%d %H:%M:%S"), entry[1]]
@@ -114,13 +122,13 @@ async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetrics
         utils.log_header("Telemetry Metrics CPU Usage Pattern Analysis", dash_length=100)
 
         try:
-            if not config.test_mode:
+            if not config.offline_mode:
                 # Example implementation using a monitoring system's API to check host status
                 monitoring_url = config.metrics_url
 
                 # Customize query based on your monitoring setup and metrics
                 # This example queries the CPU usage percentage by subtracting idle CPU from 100%
-                query = '(100 - cpu_usage_idle{cpu="cpu-total",instance=~"{host_id}:9100"})'
+                query = f'(100 - cpu_usage_idle{{cpu="cpu-total",instance=~"{host_id}:9100"}})'
                 url = f"{monitoring_url}/api/query_range"
 
                 # Example values - users should customize these based on their monitoring requirements
@@ -137,8 +145,8 @@ async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetrics
                 data = response.json()
 
             else:
-                # In test mode, load test data from CSV file
-                df = utils.get_test_data()
+                # In offline model, load offline data from CSV file
+                df = utils.get_offline_data()
                 data_str = utils.load_column_or_static(
                     df=df,
                     host_id=host_id,
@@ -156,7 +164,7 @@ async def telemetry_metrics_host_performance_check_tool(config: TelemetryMetrics
                 config,
                 builder,
                 user_prompt=data_input,
-                system_prompt=TelemetryMetricsAnalysisPrompts.HOST_PERFORMANCE_CHECK,
+                system_prompt=config.prompt,
             )
             utils.logger.debug(conclusion)
             utils.log_footer(dash_length=50)

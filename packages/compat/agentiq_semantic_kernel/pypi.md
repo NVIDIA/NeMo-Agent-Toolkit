@@ -18,4 +18,4 @@ limitations under the License.
 # Transitional Package for `aiqtoolkit-semantic-kernel`
 This is a transitional package for `aiqtoolkit-semantic-kernel` to help ease the migration to `aiqtoolkit-semantic-kernel`, and will be removed in a future release. It is recommended to use `aiqtoolkit-semantic-kernel` directly for new projects.
 
-For more information about AIQ Toolkit, please visit the [AIQ Toolkit package](https://pypi.org/project/aiqtoolkit-semantic-kernel/).
+For more information about AIQ toolkit, please visit the [AIQ toolkit package](https://pypi.org/project/aiqtoolkit-semantic-kernel/).

@@ -58,36 +58,3 @@ async def tavily_internet_search(tool_config: TavilyInternetSearchToolConfig, bu
                             question (str): The question to be answered.
                     """),
     )
-
-
-# Wikipedia Search tool
-class WikiSearchToolConfig(FunctionBaseConfig, name="wiki_search"):
-    """
-    Tool that retrieves relevant contexts from wikipedia search for the given question.
-    """
-    max_results: int = 2
-
-
-# Wiki search
-@register_function(config_type=WikiSearchToolConfig)
-async def wiki_search(tool_config: WikiSearchToolConfig, builder: Builder):
-    from langchain_community.document_loaders import WikipediaLoader
-
-    async def _wiki_search(question: str) -> str:
-        # Search the web and get the requested amount of results
-        search_docs = await WikipediaLoader(query=question, load_max_docs=tool_config.max_results).aload()
-        wiki_search_results = "\n\n---\n\n".join([
-            f'<Document source="{doc.metadata["source"]}" '
-            f'page="{doc.metadata.get("page", "")}"/>\n{doc.page_content}\n</Document>' for doc in search_docs
-        ])
-        return wiki_search_results
-
-    # Create an AIQ Toolkit wiki search tool that can be used with any supported LLM framework
-    yield FunctionInfo.from_fn(
-        _wiki_search,
-        description=("""This tool retrieves relevant contexts from wikipedia search for the given question.
-
-                        Args:
-                            question (str): The question to be answered.
-                    """),
-    )

@@ -16,6 +16,7 @@
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_llm_client
+from aiq.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
 
@@ -47,7 +48,16 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, builder: Builder):
 
     llm = OpenAI(**kwargs)
 
-    # Disable content blocks
-    llm.supports_content_blocks = False
+    yield llm
+
+
+@register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
+async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, builder: Builder):
+
+    from llama_index.llms.bedrock import Bedrock
+
+    kwargs = llm_config.model_dump(exclude={"type", "max_tokens"}, by_alias=True)
+
+    llm = Bedrock(**kwargs)
 
     yield llm

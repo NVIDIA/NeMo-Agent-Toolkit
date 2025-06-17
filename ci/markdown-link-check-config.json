@@ -1,0 +1,10 @@
+{
+    "ignorePatterns": [
+        {"pattern": "^https?://localhost:.*$"},
+        {"pattern": "^https?://$"},
+        {"pattern": "^https://(platform\\.)?openai\\.com"},
+        {
+            "pattern": "^https://code\\.visualstudio\\.com$"
+        }
+    ]
+}

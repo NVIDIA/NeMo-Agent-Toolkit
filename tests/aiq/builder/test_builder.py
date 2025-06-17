@@ -64,19 +64,19 @@ class FunctionReturningDerivedConfig(FunctionBaseConfig, name="fn_return_derived
     pass
 
 
-class TestLLMProviderConfig(LLMBaseConfig, name="test_llm"):
+class TLLMProviderConfig(LLMBaseConfig, name="test_llm"):
     raise_error: bool = False
 
 
-class TestEmbedderProviderConfig(EmbedderBaseConfig, name="test_embedder_provider"):
+class TEmbedderProviderConfig(EmbedderBaseConfig, name="test_embedder_provider"):
     raise_error: bool = False
 
 
-class TestMemoryConfig(MemoryBaseConfig, name="test_memory"):
+class TMemoryConfig(MemoryBaseConfig, name="test_memory"):
     raise_error: bool = False
 
 
-class TestRetrieverProviderConfig(RetrieverBaseConfig, name="test_retriever"):
+class TRetrieverProviderConfig(RetrieverBaseConfig, name="test_retriever"):
     raise_error: bool = False
 
 
@@ -125,24 +125,24 @@ async def _register():
 
         yield DerivedFunction(config)
 
-    @register_llm_provider(config_type=TestLLMProviderConfig)
-    async def register4(config: TestLLMProviderConfig, b: Builder):
+    @register_llm_provider(config_type=TLLMProviderConfig)
+    async def register4(config: TLLMProviderConfig, b: Builder):
 
         if (config.raise_error):
             raise ValueError("Error")
 
         yield LLMProviderInfo(config=config, description="A test client.")
 
-    @register_embedder_provider(config_type=TestEmbedderProviderConfig)
-    async def registe5(config: TestEmbedderProviderConfig, b: Builder):
+    @register_embedder_provider(config_type=TEmbedderProviderConfig)
+    async def registe5(config: TEmbedderProviderConfig, b: Builder):
 
         if (config.raise_error):
             raise ValueError("Error")
 
         yield EmbedderProviderInfo(config=config, description="A test client.")
 
-    @register_memory(config_type=TestMemoryConfig)
-    async def register6(config: TestMemoryConfig, b: Builder):
+    @register_memory(config_type=TMemoryConfig)
+    async def register6(config: TMemoryConfig, b: Builder):
 
         if (config.raise_error):
             raise ValueError("Error")
@@ -161,8 +161,8 @@ async def _register():
         yield TestMemoryEditor()
 
     # Register mock provider
-    @register_retriever_provider(config_type=TestRetrieverProviderConfig)
-    async def register7(config: TestRetrieverProviderConfig, builder: Builder):
+    @register_retriever_provider(config_type=TRetrieverProviderConfig)
+    async def register7(config: TRetrieverProviderConfig, builder: Builder):
 
         if (config.raise_error):
             raise ValueError("Error")
@@ -280,17 +280,22 @@ async def test_set_workflow():
         fn = await builder.set_workflow(FunctionReturningFunctionConfig())
         assert isinstance(fn, Function)
 
-        fn = await builder.set_workflow(FunctionReturningInfoConfig())
+        with pytest.warns(UserWarning, match=r"^Overwriting existing workflow$"):
+            fn = await builder.set_workflow(FunctionReturningInfoConfig())
+
         assert isinstance(fn, Function)
 
-        fn = await builder.set_workflow(FunctionReturningDerivedConfig())
+        with pytest.warns(UserWarning, match=r"^Overwriting existing workflow$"):
+            fn = await builder.set_workflow(FunctionReturningDerivedConfig())
+
         assert isinstance(fn, Function)
 
         with pytest.raises(ValueError):
-            await builder.set_workflow(FunctionReturningBadConfig())
+            with pytest.warns(UserWarning, match=r"^Overwriting existing workflow$"):
+                await builder.set_workflow(FunctionReturningBadConfig())
 
         # Try and add a function with the same name
-        with pytest.warns():
+        with pytest.warns(UserWarning, match=r"^Overwriting existing workflow$"):
             await builder.set_workflow(FunctionReturningFunctionConfig())
 
 
@@ -351,33 +356,33 @@ async def test_add_llm():
 
     async with WorkflowBuilder() as builder:
 
-        await builder.add_llm("llm_name", TestLLMProviderConfig())
+        await builder.add_llm("llm_name", TLLMProviderConfig())
 
         with pytest.raises(ValueError):
-            await builder.add_llm("llm_name2", TestLLMProviderConfig(raise_error=True))
+            await builder.add_llm("llm_name2", TLLMProviderConfig(raise_error=True))
 
         # Try and add a llm with the same name
         with pytest.raises(ValueError):
-            await builder.add_llm("llm_name", TestLLMProviderConfig())
+            await builder.add_llm("llm_name", TLLMProviderConfig())
 
 
 async def test_get_llm():
 
-    @register_llm_client(config_type=TestLLMProviderConfig, wrapper_type="test_framework")
-    async def register(config: TestLLMProviderConfig, b: Builder):
+    @register_llm_client(config_type=TLLMProviderConfig, wrapper_type="test_framework")
+    async def register(config: TLLMProviderConfig, b: Builder):
 
         class TestFrameworkLLM(BaseModel):
 
             model_config = ConfigDict(arbitrary_types_allowed=True)
 
-            config: TestLLMProviderConfig
+            config: TLLMProviderConfig
             builder: Builder
 
         yield TestFrameworkLLM(config=config, builder=b)
 
     async with WorkflowBuilder() as builder:
 
-        config = TestLLMProviderConfig()
+        config = TLLMProviderConfig()
 
         await builder.add_llm("llm_name", config)
 
@@ -393,7 +398,7 @@ async def test_get_llm_config():
 
     async with WorkflowBuilder() as builder:
 
-        config = TestLLMProviderConfig()
+        config = TLLMProviderConfig()
 
         await builder.add_llm("llm_name", config)
 
@@ -407,33 +412,33 @@ async def test_add_embedder():
 
     async with WorkflowBuilder() as builder:
 
-        await builder.add_embedder("embedder_name", TestEmbedderProviderConfig())
+        await builder.add_embedder("embedder_name", TEmbedderProviderConfig())
 
         with pytest.raises(ValueError):
-            await builder.add_embedder("embedder_name2", TestEmbedderProviderConfig(raise_error=True))
+            await builder.add_embedder("embedder_name2", TEmbedderProviderConfig(raise_error=True))
 
         # Try and add the same name
         with pytest.raises(ValueError):
-            await builder.add_embedder("embedder_name", TestEmbedderProviderConfig())
+            await builder.add_embedder("embedder_name", TEmbedderProviderConfig())
 
 
 async def test_get_embedder():
 
-    @register_embedder_client(config_type=TestEmbedderProviderConfig, wrapper_type="test_framework")
-    async def register(config: TestEmbedderProviderConfig, b: Builder):
+    @register_embedder_client(config_type=TEmbedderProviderConfig, wrapper_type="test_framework")
+    async def register(config: TEmbedderProviderConfig, b: Builder):
 
         class TestFrameworkEmbedder(BaseModel):
 
             model_config = ConfigDict(arbitrary_types_allowed=True)
 
-            config: TestEmbedderProviderConfig
+            config: TEmbedderProviderConfig
             builder: Builder
 
         yield TestFrameworkEmbedder(config=config, builder=b)
 
     async with WorkflowBuilder() as builder:
 
-        config = TestEmbedderProviderConfig()
+        config = TEmbedderProviderConfig()
 
         await builder.add_embedder("embedder_name", config)
 
@@ -449,7 +454,7 @@ async def test_get_embedder_config():
 
     async with WorkflowBuilder() as builder:
 
-        config = TestEmbedderProviderConfig()
+        config = TEmbedderProviderConfig()
 
         await builder.add_embedder("embedder_name", config)
 
@@ -463,21 +468,21 @@ async def test_add_memory():
 
     async with WorkflowBuilder() as builder:
 
-        await builder.add_memory_client("memory_name", TestMemoryConfig())
+        await builder.add_memory_client("memory_name", TMemoryConfig())
 
         with pytest.raises(ValueError):
-            await builder.add_memory_client("memory_name2", TestMemoryConfig(raise_error=True))
+            await builder.add_memory_client("memory_name2", TMemoryConfig(raise_error=True))
 
         # Try and add the same name
         with pytest.raises(ValueError):
-            await builder.add_memory_client("memory_name", TestMemoryConfig())
+            await builder.add_memory_client("memory_name", TMemoryConfig())
 
 
 async def test_get_memory():
 
     async with WorkflowBuilder() as builder:
 
-        config = TestMemoryConfig()
+        config = TMemoryConfig()
 
         memory = await builder.add_memory_client("memory_name", config)
 
@@ -491,7 +496,7 @@ async def test_get_memory_config():
 
     async with WorkflowBuilder() as builder:
 
-        config = TestMemoryConfig()
+        config = TMemoryConfig()
 
         await builder.add_memory_client("memory_name", config)
 
@@ -504,31 +509,31 @@ async def test_get_memory_config():
 async def test_add_retriever():
 
     async with WorkflowBuilder() as builder:
-        await builder.add_retriever("retriever_name", TestRetrieverProviderConfig())
+        await builder.add_retriever("retriever_name", TRetrieverProviderConfig())
 
         with pytest.raises(ValueError):
-            await builder.add_retriever("retriever_name2", TestRetrieverProviderConfig(raise_error=True))
+            await builder.add_retriever("retriever_name2", TRetrieverProviderConfig(raise_error=True))
 
         with pytest.raises(ValueError):
-            await builder.add_retriever("retriever_name", TestRetrieverProviderConfig())
+            await builder.add_retriever("retriever_name", TRetrieverProviderConfig())
 
 
 async def get_retriever():
 
-    @register_retriever_client(config_type=TestRetrieverProviderConfig, wrapper_type="test_framework")
-    async def register(config: TestRetrieverProviderConfig, b: Builder):
+    @register_retriever_client(config_type=TRetrieverProviderConfig, wrapper_type="test_framework")
+    async def register(config: TRetrieverProviderConfig, b: Builder):
 
         class TestFrameworkRetriever(BaseModel):
 
             model_config = ConfigDict(arbitrary_types_allowed=True)
 
-            config: TestRetrieverProviderConfig
+            config: TRetrieverProviderConfig
             builder: Builder
 
         yield TestFrameworkRetriever(config=config, builder=b)
 
-    @register_retriever_client(config_type=TestRetrieverProviderConfig, wrapper_type=None)
-    async def register_no_framework(config: TestRetrieverProviderConfig, builder: Builder):
+    @register_retriever_client(config_type=TRetrieverProviderConfig, wrapper_type=None)
+    async def register_no_framework(config: TRetrieverProviderConfig, builder: Builder):
 
         class TestRetriever(AIQRetriever):
 
@@ -548,7 +553,7 @@ async def get_retriever():
 
     async with WorkflowBuilder() as builder:
 
-        config = TestRetrieverProviderConfig()
+        config = TRetrieverProviderConfig()
 
         await builder.add_retriever("retriever_name", config)
 
@@ -568,7 +573,7 @@ async def get_retriever_config():
 
     async with WorkflowBuilder() as builder:
 
-        config = TestRetrieverProviderConfig()
+        config = TRetrieverProviderConfig()
 
         await builder.add_retriever("retriever_name", config)
 
@@ -632,10 +637,10 @@ async def test_built_config():
     general_config = GeneralConfig(cache_dir="Something else")
     function_config = FunctionReturningFunctionConfig()
     workflow_config = FunctionReturningFunctionConfig()
-    llm_config = TestLLMProviderConfig()
-    embedder_config = TestEmbedderProviderConfig()
-    memory_config = TestMemoryConfig()
-    retriever_config = TestRetrieverProviderConfig()
+    llm_config = TLLMProviderConfig()
+    embedder_config = TEmbedderProviderConfig()
+    memory_config = TMemoryConfig()
+    retriever_config = TRetrieverProviderConfig()
     its_config = TestITSStrategyConfig()
 
     async with WorkflowBuilder(general_config=general_config) as builder:

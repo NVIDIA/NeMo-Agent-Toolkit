@@ -48,7 +48,8 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
                  input_schema: type[BaseModel] | None = None,
                  streaming_output_schema: type[BaseModel] | type[None] | None = None,
                  single_output_schema: type[BaseModel] | type[None] | None = None,
-                 converters: list[Callable[[typing.Any], typing.Any]] | None = None):
+                 converters: list[Callable[[typing.Any], typing.Any]] | None = None,
+                 instance_name: str | None = None):
 
         super().__init__(input_schema=input_schema,
                          streaming_output_schema=streaming_output_schema,
@@ -57,6 +58,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
 
         self.config = config
         self.description = description
+        self.instance_name = instance_name or config.type
         self._context = AIQContext.get()
 
     def convert(self, value: typing.Any, to_type: type[_T]) -> _T:
@@ -110,7 +112,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
             The output of the function optionally converted to the specified type.
         """
 
-        with self._context.push_active_function(self.config.type,
+        with self._context.push_active_function(self.instance_name,
                                                 input_data=value) as manager:  # Set the current invocation context
             try:
                 converted_input: InputT = self._convert_input(value)  # type: ignore
@@ -254,17 +256,17 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
 
 class LambdaFunction(Function[InputT, StreamingOutputT, SingleOutputT]):
 
-    def __init__(self, *, config: FunctionBaseConfig, info: FunctionInfo):
+    def __init__(self, *, config: FunctionBaseConfig, info: FunctionInfo, instance_name: str | None = None):
 
         super().__init__(config=config,
                          description=info.description,
                          input_schema=info.input_schema,
                          streaming_output_schema=info.stream_output_schema,
                          single_output_schema=info.single_output_schema,
-                         converters=info.converters)
+                         converters=info.converters,
+                         instance_name=instance_name)
 
         self._info = info
-
         self._ainvoke_fn: _InvokeFnT = info.single_fn
         self._astream_fn: _StreamFnT = info.stream_fn
 
@@ -284,8 +286,10 @@ class LambdaFunction(Function[InputT, StreamingOutputT, SingleOutputT]):
             yield x
 
     @staticmethod
-    def from_info(*, config: FunctionBaseConfig,
-                  info: FunctionInfo) -> 'LambdaFunction[InputT, StreamingOutputT, SingleOutputT]':
+    def from_info(*,
+                  config: FunctionBaseConfig,
+                  info: FunctionInfo,
+                  instance_name: str | None = None) -> 'LambdaFunction[InputT, StreamingOutputT, SingleOutputT]':
 
         input_type: type = info.input_type
         streaming_output_type = info.stream_output_type
@@ -294,4 +298,4 @@ class LambdaFunction(Function[InputT, StreamingOutputT, SingleOutputT]):
         class FunctionImpl(LambdaFunction[input_type, streaming_output_type, single_output_type]):
             pass
 
-        return FunctionImpl(config=config, info=info)
+        return FunctionImpl(config=config, info=info, instance_name=instance_name)

@@ -25,7 +25,16 @@ from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
 
 from . import utils
-from .prompts import ToolReasoningLayerPrompts
+from .prompts import NetworkConnectivityCheckPrompts
+
+
+class NetworkConnectivityCheckToolConfig(FunctionBaseConfig, name="network_connectivity_check"):
+    description: str = Field(default=NetworkConnectivityCheckPrompts.TOOL_DESCRIPTION,
+                             description="Description of the tool.")
+    llm_name: LLMRef
+    prompt: str = Field(default=NetworkConnectivityCheckPrompts.PROMPT,
+                        description="Main prompt for the network connectivity check task.")
+    offline_mode: bool = Field(default=True, description="Whether to run in offline model")
 
 
 def _check_service_banner(host: str, port: int = 80, connect_timeout: float = 10, read_timeout: float = 10) -> str:
@@ -56,15 +65,6 @@ def _check_service_banner(host: str, port: int = 80, connect_timeout: float = 10
         return ''
 
 
-class NetworkConnectivityCheckToolConfig(FunctionBaseConfig, name="network_connectivity_check"):
-    description: str = Field(
-        default=("This tool checks network connectivity of a host by running ping and socket connection tests. "
-                 "Args: host_id: str"),
-        description="Description of the tool for the agent.")
-    llm_name: LLMRef
-    test_mode: bool = Field(default=True, description="Whether to run in test mode")
-
-
 @register_function(config_type=NetworkConnectivityCheckToolConfig)
 async def network_connectivity_check_tool(config: NetworkConnectivityCheckToolConfig, builder: Builder):
 
@@ -72,7 +72,7 @@ async def network_connectivity_check_tool(config: NetworkConnectivityCheckToolCo
         utils.log_header("Network Connectivity Tester")
 
         try:
-            if not config.test_mode:
+            if not config.offline_mode:
                 # NOTE: The ping and telnet commands below are example implementations of network connectivity checking.
                 # Users should implement their own network connectivity check logic specific to their environment
                 # and infrastructure setup.
@@ -91,7 +91,7 @@ async def network_connectivity_check_tool(config: NetworkConnectivityCheckToolCo
 
             else:
                 # Load test data
-                df = utils.get_test_data()
+                df = utils.get_offline_data()
 
                 # Get ping data from test data, falling back to static data if needed
                 ping_data = utils.load_column_or_static(df=df,
@@ -106,8 +106,7 @@ async def network_connectivity_check_tool(config: NetworkConnectivityCheckToolCo
             # Additional LLM reasoning layer on playbook output to provide a summary of the results
             utils.log_header("LLM Reasoning", dash_length=50)
 
-            prompt = ToolReasoningLayerPrompts.NETWORK_CONNECTIVITY_CHECK.format(ping_data=ping_data,
-                                                                                 telnet_data=telnet_data)
+            prompt = config.prompt.format(ping_data=ping_data, telnet_data=telnet_data)
             conclusion = await utils.llm_ainvoke(config, builder, prompt)
 
             utils.logger.debug(conclusion)
