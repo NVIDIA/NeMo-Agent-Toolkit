@@ -263,7 +263,7 @@ Users can define custom routes that are dynamically added to the API server, and
 as the method, URL path, URL scheme, headers, query parameters, path parameters, host, port, and cookies.
 
 ### Add custom route
-Associate your endpoint with a function by updating the `front_end` section  in the configuration file.
+Associate your endpoint with a function by updating the `front_end` section in the configuration file.
 A full configuration file example is available at `examples/simple_calculator/configs/config-metadata.yml.`
 ```yaml
 general:
