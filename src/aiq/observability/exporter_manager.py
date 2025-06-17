@@ -36,9 +36,8 @@ class ExporterManager:
     Each workflow execution gets its own ExporterManager instance to manage the lifecycle of exporters
     during that workflow's execution.
 
-    Limitations:
-        - Exporter factories added after `start()` is called will not be started automatically. They will only be
-        started on the next lifecycle (i.e., after a stop and subsequent start).
+    Exporter factories added after `start()` is called will not be started automatically. They will only be
+    started on the next lifecycle (i.e., after a stop and subsequent start).
 
     Args:
         shutdown_timeout (int, optional): Maximum time in seconds to wait for exporters to shut down gracefully.
