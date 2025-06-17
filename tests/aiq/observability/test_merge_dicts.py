@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.observability.async_otel_listener import merge_dicts
+from aiq.observability.utils import merge_dicts
 
 
 def test_merge_dicts_basic():
