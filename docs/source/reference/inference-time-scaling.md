@@ -1,7 +1,4 @@
 ## 1. Inference‑time scaling at a glance
-
-Large‑language‑model research shows that *reasoning* improves if we sample, refine, and judge multiple candidate answers instead of relying on a single forward pass ([sebastianraschka.com][1], [arxiv.org][2]).  Doing so costs extra GPU time but *no retraining* ([redhat.com][3], [research.ibm.com][4]).  Industry papers now distinguish **training‑time scaling** (bigger models) from **inference‑time scaling** (smarter use of existing models) ([dominguezdaniel.medium.com][5], [ve3.global][6]), and even cloud vendors highlight the business value of “pay‑more‑for‑the‑right‑answer” modes ([youtube.com][7], [reuters.com][8]).  AgentIQ’s ITS module brings these ideas to everyday application code.
-
 Inference‑time scaling reallocates compute *after* a model has been trained, trading extra inference cycles for markedly better reasoning, factuality and robustness often without any additional training data. The new **`aiq.experimental.inference_time_scaling`** package codifies this idea as four pluggable *strategy* types (Search ▶ Editing ▶ Scoring ▶ Selection) that operate on a lightweight `ITSItem` record.  Developers can compose these strategies manually or use several **pre‑built ITS functions** that wire everything up automatically.  Adding your own strategy is as simple as (1) writing a config subclass, (2) implementing a `StrategyBase` child and (3) registering it with the `@register_its_strategy` decorator.  The remainder of this document explains each step in detail.
 
 ---
