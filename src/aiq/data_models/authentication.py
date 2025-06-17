@@ -113,7 +113,7 @@ class OAuth2Config(AuthenticationBaseConfig):
         default=ConsentPromptMode.BROWSER,
         description="Specifies how the application handles the OAuth 2.0 consent prompt. "
         "Options are 'browser' to open the system's default browser for login, "
-        "or 'polling' to store the login url retrievable via GET /auth/prompt-uri")
+        "or 'frontend' to store the login url retrievable via POST /auth/prompt-uri")
     consent_prompt_key: str = Field(description="The key used to retrieve the consent prompt location header, "
                                     " triggering the browser to complete the OAuth process from the front end.",
                                     frozen=True)
