@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import re
-from typing import list
+
 
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum

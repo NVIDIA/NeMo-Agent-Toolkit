@@ -1,5 +1,5 @@
 import logging
-from typing import list
+
 
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_its_strategy
