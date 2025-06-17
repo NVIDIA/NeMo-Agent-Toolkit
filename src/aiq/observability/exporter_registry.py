@@ -97,8 +97,7 @@ class ExporterRegistry:
 
         Args:
             name (str): The name of the exporter.
-            exporter_factory (Callable[[], Awaitable[AbstractExporter]]):
-                Factory function that creates a new exporter instance.
+            exporter_factory (ExporterFactory): Factory function that creates a new exporter instance.
 
         Raises:
             ValueError: If an exporter with the given name already exists.
