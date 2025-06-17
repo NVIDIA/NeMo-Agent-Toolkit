@@ -1,6 +1,5 @@
 import logging
 
-
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_its_strategy
 from aiq.experimental.inference_time_scaling.models.its_item import ITSItem
