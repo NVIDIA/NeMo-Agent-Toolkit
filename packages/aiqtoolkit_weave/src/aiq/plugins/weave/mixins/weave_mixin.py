@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+from collections.abc import Generator
 from contextlib import contextmanager
 
 from weave.trace.context import weave_client_context
@@ -21,22 +22,44 @@ from weave.trace.context.call_context import get_current_call
 from weave.trace.context.call_context import set_call_stack
 from weave.trace.weave_client import Call
 
-from aiq.observability.span.span import Span
-from aiq.observability.span.span import SpanAttributes
+from aiq.data_models.span import Span
+from aiq.data_models.span import SpanAttributes
 
 logger = logging.getLogger(__name__)
 
 
 class WeaveMixin:
+    """Mixin for Weave exporters.
+
+    This mixin provides a default implementation of the export method for Weave exporters.
+    It uses the weave_client_context to create and finish Weave calls.
+
+    Args:
+        *args: Variable length argument list to pass to the superclass.
+        project (str): The project name to group the telemetry traces.
+        entity (str | None): The entity name to group the telemetry traces.
+        **kwargs: Additional keyword arguments to pass to the superclass.
+
+    Attributes:
+        _gc (WeaveClient): The Weave client.
+        _project (str): The project name to group the telemetry traces.
+        _entity (str | None): The entity name to group the telemetry traces.
+    """
 
     def __init__(self, *args, project: str, entity: str | None = None, **kwargs):
+        """Initialize the Weave exporter with the specified project and entity."""
         super().__init__(*args, **kwargs)
         self._gc = weave_client_context.require_weave_client()
         self._project = project
         self._entity = entity
+        self._weave_calls = {}
 
     async def export(self, span: Span) -> None:
-        """Export a batch of spans."""
+        """Export a batch of spans.
+
+        Args:
+            span (Span): The span to export.
+        """
 
         try:
             call = self._create_weave_call(span)
@@ -45,15 +68,29 @@ class WeaveMixin:
             logger.error("Error exporting spans: %s", e, exc_info=True)
 
     @contextmanager
-    def parent_call(self, trace_id: str, parent_call_id: str):
+    def parent_call(self, trace_id: str, parent_call_id: str) -> Generator[None]:
+        """Create a dummy Weave call for the parent span.
+
+        Args:
+            trace_id (str): The trace ID of the parent span.
+            parent_call_id (str): The ID of the parent call.
+
+        Yields:
+            None: The dummy Weave call.
+        """
         dummy_call = Call(trace_id=trace_id, id=parent_call_id, _op_name="", project_id="", parent_id=None, inputs={})
         with set_call_stack([dummy_call]):
             yield
 
-    def _create_weave_call(self, span: Span):
+    def _create_weave_call(self, span: Span) -> Call:
         """
-        Create a Weave call directly from the span and step data,
-        connecting to existing framework traces if available.
+        Create a Weave call directly from the span and step data, connecting to existing framework traces if available.
+
+        Args:
+            span (Span): The span to create a Weave call for.
+
+        Returns:
+            Call: The Weave call.
         """
         # Check for existing Weave trace/call
         existing_call = get_current_call()
@@ -67,9 +104,9 @@ class WeaveMixin:
             parent_call = existing_call
             logger.debug("Found existing Weave call: %s from trace: %s", existing_call.id, existing_call.trace_id)
         # Otherwise, check our internal stack for parent relationships
-        elif len(self._weave_calls) > 0 and len(self._span_stack) > 1:
+        elif len(self._weave_calls) > 0:
             # Get the parent span using stack position (one level up)
-            parent_span_id = span.context.parent.span_id
+            parent_span_id = span.parent.context.span_id  # type: ignore
             # Find the corresponding weave call for this parent span
             for call in self._weave_calls.values():
                 if getattr(call, "span_id", None) == parent_span_id:
@@ -77,7 +114,8 @@ class WeaveMixin:
                     break
 
         # Generate a meaningful operation name based on event type
-        event_type = span.attributes.get("aiq.event_type").split(".")[-1]
+        span_event_type = span.attributes.get(SpanAttributes.AIQ_EVENT_TYPE.value, "unknown")
+        event_type = span_event_type.split(".")[-1]
         if span.name:
             op_name = f"aiq.{event_type}.{span.name}"
         else:
@@ -103,14 +141,20 @@ class WeaveMixin:
             display_name=op_name,
         )
 
+        # Store the call with span span ID as key
+        self._weave_calls[span.context.span_id] = call  # type: ignore
+
         # Store span ID for parent reference
-        setattr(call, "span_id", span.context.span_id)
+        setattr(call, "span_id", span.context.span_id)  # type: ignore
 
         return call
 
     def _finish_weave_call(self, call: Call, span: Span):
-        """
-        Finish a previously created Weave call
+        """Finish a previously created Weave call.
+
+        Args:
+            call (Call): The Weave call to finish.
+            span (Span): The span to finish the call for.
         """
 
         if call is None:

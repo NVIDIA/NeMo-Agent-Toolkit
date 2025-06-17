@@ -17,13 +17,21 @@ import logging
 from abc import abstractmethod
 
 from aiq.builder.context import AIQContextState
+from aiq.data_models.span import Span
 from aiq.observability.base_exporter import AbstractExporter
-from aiq.observability.span.span import Span
 
 logger = logging.getLogger(__name__)
 
 
 class AbstractSpanExporter(AbstractExporter):
+    """Abstract base class for span exporters.
+
+    This class provides a base implementation for span exporters.
+    It is responsible for processing span events and exporting them to a backend.
+
+    Args:
+        context_state (AIQContextState | None): The context state to use for the exporter.
+    """
 
     def __init__(self, context_state: AIQContextState | None = None):
         super().__init__(context_state)
@@ -35,8 +43,12 @@ class AbstractSpanExporter(AbstractExporter):
     def _process_end_event(self, event: Span) -> None:
         pass
 
-    def _on_next(self, event: Span | list[Span]) -> None:
+    def _on_next(self, event: Span) -> None:
+        """Submit a Span to the exporter.
 
+        Args:
+            event (Span): The span to submit.
+        """
         if not isinstance(event, Span):
             logger.debug("Received unexpected event type: %s", type(event))
             return
@@ -45,11 +57,15 @@ class AbstractSpanExporter(AbstractExporter):
 
     @abstractmethod
     async def export(self, trace: Span) -> None:
-        """Export a batch of spans."""
+        """Export a Span.
+
+        Args:
+            trace (Span): The span to export.
+        """
         pass
 
     async def _pre_start(self):
-        """Called before the listener starts."""
+        """Called before the exporter starts."""
         self._is_shutdown = False
 
     async def _cleanup(self):

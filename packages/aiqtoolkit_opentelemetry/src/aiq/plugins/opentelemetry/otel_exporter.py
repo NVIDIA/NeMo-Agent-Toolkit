@@ -25,8 +25,17 @@ logger = logging.getLogger(__name__)
 
 
 class AbstractOtelExporter(AbstractExporter):
+    """Abstract base class for OTLP exporters.
+
+    This class provides a base implementation for OTLP exporters.
+    It handles the registration and cleanup of the OTLP span publisher.
+
+    Args:
+        context_state (AIQContextState | None): The context state to use for the exporter.
+    """
 
     def __init__(self, context_state: AIQContextState | None = None):
+        """Initialize the OTLP exporter with the specified context state."""
         super().__init__(context_state)
         self._is_shutdown = False
 
@@ -36,7 +45,12 @@ class AbstractOtelExporter(AbstractExporter):
     def _process_end_event(self, event: OtelSpan) -> None:
         pass
 
-    def _on_next(self, event: OtelSpan | list[OtelSpan]) -> None:
+    def _on_next(self, event: OtelSpan) -> None:
+        """Submit an OtelSpan to the exporter.
+
+        Args:
+            event (OtelSpan): The OtelSpan to submit.
+        """
 
         if not isinstance(event, OtelSpan):
             logger.debug("Received unexpected event type: %s", type(event))
@@ -46,18 +60,26 @@ class AbstractOtelExporter(AbstractExporter):
 
     @abstractmethod
     async def export(self, trace: OtelSpan) -> None:
-        """Export a batch of otel spans."""
+        """Export an OtelSpan.
+
+        Args:
+            trace (OtelSpan): The OtelSpan to export.
+        """
         pass
 
     async def _pre_start(self):
-        """Called before the listener starts."""
+        """Called before the exporter starts to ensure the exporter is registered and OTLP span publisher is started."""
         self._is_shutdown = False
         # Register exporter and start the otel span publisher
         await SpanPublisherManager.register_exporter(self._context_state)
         await SpanPublisherManager.start_publisher(self._context_state)
 
     async def _cleanup(self):
-        """Clean up any resources."""
+        """Clean up any resources.
+
+        This method is called when the exporter is shutting down.
+        It ensures that the OTLP span publisher is cleaned up and any resources are released.
+        """
         if self._is_shutdown:
             return
 

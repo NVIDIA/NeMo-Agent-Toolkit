@@ -16,42 +16,53 @@
 import logging
 import re
 import uuid
-
-from pydantic import BaseModel
-from pydantic import TypeAdapter
+from typing import Any
 
 from aiq.builder.context import AIQContextState
 from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.observability.span.span import MimeTypes
-from aiq.observability.span.span import Span
-from aiq.observability.span.span import SpanAttributes
-from aiq.observability.span.span import SpanContext
-from aiq.observability.span.span import event_type_to_span_kind
+from aiq.data_models.intermediate_step import TraceMetadata
+from aiq.data_models.span import MimeTypes
+from aiq.data_models.span import Span
+from aiq.data_models.span import SpanAttributes
+from aiq.data_models.span import SpanContext
+from aiq.data_models.span import event_type_to_span_kind
 from aiq.observability.span_publisher import AbstractSpanPublisher
-from aiq.observability.utils import _ns_timestamp
+from aiq.observability.utils import merge_dicts
+from aiq.observability.utils import ns_timestamp
 
 logger = logging.getLogger(__name__)
 
 
 class SpanPublisher(AbstractSpanPublisher):
+    """Publisher for spans.
+
+    This class is responsible for publishing spans into the unified event stream.
+
+    Args:
+        context_state (AIQContextState | None): The context state to use for the publisher.
+    """
 
     def __init__(self, context_state: AIQContextState | None = None):
         super().__init__(context_state)
         self._outstanding_spans: dict[str, Span] = {}
         self._span_stack: dict[str, Span] = {}
+        self._metadata_stack: dict[str, dict[str, Any]] = {}
 
-    def _serialize_payload(self, input_value: BaseModel) -> tuple[str, bool]:
+    @property
+    def name(self) -> str:
+        """Get the name of the publisher.
+
+        Returns:
+            str: The unique name identifying this span publisher instance..
         """
-        Serialize the input value to a string. Returns a tuple with the serialized value and a boolean indicating if the
-        serialization is JSON or a string
-        """
-        try:
-            return TypeAdapter(type(input_value)).dump_json(input_value).decode('utf-8'), True
-        except Exception:
-            # Fallback to string representation if we can't serialize using pydantic
-            return str(input_value), False
+        return "span_publisher"
 
     def _process_start_event(self, event: IntermediateStep):
+        """Process the start event of an intermediate step.
+
+        Args:
+            event (IntermediateStep): The event to process.
+        """
 
         parent_span = None
         span_ctx = None
@@ -73,7 +84,7 @@ class SpanPublisher(AbstractSpanPublisher):
         # By convention, `span_event_timestamp` is the time we started, `event_timestamp` is the time we ended.
         # If span_event_timestamp is missing, we default to event_timestamp (meaning zero-length).
         s_ts = event.payload.span_event_timestamp or event.payload.event_timestamp
-        start_ns = _ns_timestamp(s_ts)
+        start_ns = ns_timestamp(s_ts)
 
         # Optional: embed the LLM/tool name if present
         if event.payload.name:
@@ -109,6 +120,17 @@ class SpanPublisher(AbstractSpanPublisher):
                 sub_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE.value,
                                        MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
 
+        # Add metadata to the metadata stack
+        start_metadata = event.payload.metadata or {}
+
+        if isinstance(start_metadata, dict):
+            self._metadata_stack[event.UUID] = start_metadata
+        elif isinstance(start_metadata, TraceMetadata):
+            self._metadata_stack[event.UUID] = start_metadata.model_dump()
+        else:
+            logger.warning("Invalid metadata type for step %s", event.UUID)
+            return
+
         self._span_stack[event.UUID] = sub_span
         self._outstanding_spans[event.UUID] = sub_span
 
@@ -118,6 +140,11 @@ class SpanPublisher(AbstractSpanPublisher):
                      event.UUID)
 
     def _process_end_event(self, event: IntermediateStep):
+        """Process the end event of an intermediate step.
+
+        Args:
+            event (IntermediateStep): The event to process.
+        """
 
         # Find the subspan that was created in the start event
         sub_span = self._outstanding_spans.pop(event.UUID, None)
@@ -148,7 +175,28 @@ class SpanPublisher(AbstractSpanPublisher):
             sub_span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE.value,
                                    MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
 
-        end_ns = _ns_timestamp(event.payload.event_timestamp)
+        # Merge metadata from start event with end event metadata
+        start_metadata = self._metadata_stack.pop(event.UUID)
+
+        if start_metadata is None:
+            logger.warning("No metadata found for step %s", event.UUID)
+            return
+
+        end_metadata = event.payload.metadata or {}
+
+        if not isinstance(end_metadata, (dict, TraceMetadata)):
+            logger.warning("Invalid metadata type for step %s", event.UUID)
+            return
+
+        if isinstance(end_metadata, TraceMetadata):
+            end_metadata = end_metadata.model_dump()
+
+        merged_metadata = merge_dicts(start_metadata, end_metadata)
+        serialized_metadata, is_json = self._serialize_payload(merged_metadata)
+        sub_span.set_attribute("aiq.metadata", serialized_metadata)
+        sub_span.set_attribute("aiq.metadata.mime_type", MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
+
+        end_ns = ns_timestamp(event.payload.event_timestamp)
 
         # End the subspan
         sub_span.end(end_time=end_ns)

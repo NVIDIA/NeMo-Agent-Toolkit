@@ -8,7 +8,7 @@ from weakref import WeakKeyDictionary
 logger = logging.getLogger(__name__)
 
 
-def _ns_timestamp(seconds_float: float) -> int:
+def ns_timestamp(seconds_float: float) -> int:
     """
     Convert a float timestamp in seconds to an integer nanosecond timestamp.
 
@@ -27,6 +27,9 @@ class KeyedLock:
 
     This allows for fine-grained locking based on arbitrary keys, so that
     concurrent operations on different keys do not block each other.
+
+    Attributes:
+        _locks (AsyncDictionary): A dictionary to store locks per key.
     """
 
     def __init__(self):
@@ -75,6 +78,10 @@ class AsyncDictionary:
 
     This class wraps a regular dictionary with an asyncio.Lock to ensure
     thread safety for concurrent async operations.
+
+    Attributes:
+        _dict (dict): A dictionary to store the key-value pairs.
+        _lock (asyncio.Lock): A lock to synchronize access to the dictionary.
     """
 
     def __init__(self):
@@ -194,6 +201,10 @@ class AsyncSafeWeakKeyDictionary(AsyncDictionary):
 
     This class wraps a WeakKeyDictionary with an asyncio.Lock to ensure
     thread safety for concurrent async operations.
+
+    Attributes:
+        _dict (WeakKeyDictionary): A dictionary to store the key-value pairs.
+        _lock (asyncio.Lock): A lock to synchronize access to the dictionary.
     """
 
     def __init__(self):
@@ -216,3 +227,21 @@ def log_task_exception(task):
         task.result()
     except Exception as e:
         logger.error("Exception in cleanup task: %s", e, exc_info=True)
+
+
+def merge_dicts(dict1: dict, dict2: dict) -> dict:
+    """
+    Merge two dictionaries, prioritizing non-null values from the first dictionary.
+
+    Args:
+        dict1 (dict): First dictionary (higher priority)
+        dict2 (dict): Second dictionary (lower priority)
+
+    Returns:
+        dict: Merged dictionary with non-null values from dict1 taking precedence
+    """
+    result = dict2.copy()  # Start with a copy of the second dictionary
+    for key, value in dict1.items():
+        if value is not None:  # Only update if value is not None
+            result[key] = value
+    return result

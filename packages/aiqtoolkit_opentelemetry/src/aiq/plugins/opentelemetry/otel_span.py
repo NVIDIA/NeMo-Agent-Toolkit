@@ -2,6 +2,7 @@ import logging
 import time
 import traceback
 import uuid
+from enum import Enum
 from typing import Any
 
 from openinference.semconv.trace import OpenInferenceSpanKindValues
@@ -29,12 +30,37 @@ EVENT_TYPE_TO_SPAN_KIND_MAP = {
 }
 
 
+class MimeTypes(Enum):
+    """Mime types for the span."""
+    TEXT = "text/plain"
+    JSON = "application/json"
+
+
 def event_type_to_span_kind(event_type: str) -> OpenInferenceSpanKindValues:
+    """Convert an event type to a span kind."""
     return EVENT_TYPE_TO_SPAN_KIND_MAP.get(event_type, OpenInferenceSpanKindValues.UNKNOWN)
 
 
 class OtelSpan(Span):  # pylint: disable=too-many-public-methods
-    """A manually created OpenTelemetry span."""
+    """A manually created OpenTelemetry span.
+
+    This class is a wrapper around the OpenTelemetry Span class.
+    It provides a more convenient interface for creating and manipulating spans.
+
+    Args:
+        name (str): The name of the span.
+        context (Context | SpanContext | None): The context of the span.
+        parent (Span | None): The parent span.
+        attributes (dict[str, Any] | None): The attributes of the span.
+        events (list | None): The events of the span.
+        links (list | None): The links of the span.
+        kind (int | None): The kind of the span.
+        start_time (int | None): The start time of the span in nanoseconds.
+        end_time (int | None): The end time of the span in nanoseconds.
+        status (Status | None): The status of the span.
+        resource (Resource | None): The resource of the span.
+        instrumentation_scope (InstrumentationScope | None): The instrumentation scope of the span.
+    """
 
     def __init__(
         self,
@@ -44,13 +70,14 @@ class OtelSpan(Span):  # pylint: disable=too-many-public-methods
         attributes: dict[str, Any] | None = None,
         events: list | None = None,
         links: list | None = None,
-        kind: int | None = None,
+        kind: int | SpanKind | None = None,
         start_time: int | None = None,
         end_time: int | None = None,
         status: Status | None = None,
         resource: Resource | None = None,
         instrumentation_scope: InstrumentationScope | None = None,
     ):
+        """Initialize the OtelSpan with the specified values."""
         self._name = name
         # Create a new SpanContext if none provided or if Context is provided
         if context is None or isinstance(context, Context):
@@ -96,144 +123,268 @@ class OtelSpan(Span):  # pylint: disable=too-many-public-methods
 
     @property
     def resource(self) -> Resource:
-        """Get the resource associated with this span."""
+        """Get the resource associated with this span.
+
+        Returns:
+            Resource: The resource.
+        """
         return self._resource
 
     def set_resource(self, resource: Resource) -> None:
-        """Set the resource associated with this span."""
+        """Set the resource associated with this span.
+
+        Args:
+            resource (Resource): The resource to set.
+        """
         self._resource = resource
 
     @property
     def instrumentation_scope(self) -> InstrumentationScope:
-        """Get the instrumentation scope associated with this span."""
+        """Get the instrumentation scope associated with this span.
+
+        Returns:
+            InstrumentationScope: The instrumentation scope.
+        """
         return self._instrumentation_scope
 
     @property
     def parent(self) -> Span | None:
-        """Get the parent span."""
+        """Get the parent span.
+
+        Returns:
+            Span | None: The parent span.
+        """
         return self._parent
 
     @property
     def name(self) -> str:
-        """Get the name of the span."""
+        """Get the name of the span.
+
+        Returns:
+            str: The name of the span.
+        """
         return self._name
 
     @property
-    def kind(self) -> int:
-        """Get the kind of the span."""
+    def kind(self) -> int | SpanKind:
+        """Get the kind of the span.
+
+        Returns:
+            int | SpanKind: The kind of the span.
+        """
         return self._kind
 
     @property
     def start_time(self) -> int:
-        """Get the start time of the span in nanoseconds."""
+        """Get the start time of the span in nanoseconds.
+
+        Returns:
+            int: The start time of the span in nanoseconds.
+        """
         return self._start_time
 
     @property
     def end_time(self) -> int | None:
-        """Get the end time of the span in nanoseconds."""
+        """Get the end time of the span in nanoseconds.
+
+        Returns:
+            int | None: The end time of the span in nanoseconds.
+        """
         return self._end_time
 
     @property
     def attributes(self) -> dict[str, Any]:
-        """Get all attributes of the span."""
+        """Get all attributes of the span.
+
+        Returns:
+            dict[str, Any]: The attributes of the span.
+        """
         return self._attributes
 
     @property
     def events(self) -> list:
-        """Get all events of the span."""
+        """Get all events of the span.
+
+        Returns:
+            list: The events of the span.
+        """
         return self._events
 
     @property
     def links(self) -> list:
-        """Get all links of the span."""
+        """Get all links of the span.
+
+        Returns:
+            list: The links of the span.
+        """
         return self._links
 
     @property
     def status(self) -> Status:
-        """Get the status of the span."""
+        """Get the status of the span.
+
+        Returns:
+            Status: The status of the span.
+        """
         return self._status
 
     @property
     def dropped_attributes(self) -> int:
-        """Get the number of dropped attributes."""
+        """Get the number of dropped attributes.
+
+        Returns:
+            int: The number of dropped attributes.
+        """
         return self._dropped_attributes
 
     @property
     def dropped_events(self) -> int:
-        """Get the number of dropped events."""
+        """Get the number of dropped events.
+
+        Returns:
+            int: The number of dropped events.
+        """
         return self._dropped_events
 
     @property
     def dropped_links(self) -> int:
-        """Get the number of dropped links."""
+        """Get the number of dropped links.
+
+        Returns:
+            int: The number of dropped links.
+        """
         return self._dropped_links
 
     @property
     def span_id(self) -> int:
-        """Get the span ID."""
+        """Get the span ID.
+
+        Returns:
+            int: The span ID.
+        """
         return self._context.span_id
 
     @property
     def trace_id(self) -> int:
-        """Get the trace ID."""
+        """Get the trace ID.
+
+        Returns:
+            int: The trace ID.
+        """
         return self._context.trace_id
 
     @property
     def is_remote(self) -> bool:
-        """Get whether this span is remote."""
+        """Get whether this span is remote.
+
+        Returns:
+            bool: True if the span is remote, False otherwise.
+        """
         return self._context.is_remote
 
     def end(self, end_time: int | None = None) -> None:
-        """End the span."""
+        """End the span.
+
+        Args:
+            end_time (int | None): The end time of the span in nanoseconds.
+        """
         if not self._ended:
             self._ended = True
             self._end_time = end_time or int(time.time() * 1e9)
 
     def is_recording(self) -> bool:
-        """Check if the span is recording."""
+        """Check if the span is recording.
+
+        Returns:
+            bool: True if the span is recording, False otherwise.
+        """
         return not self._ended
 
     def get_span_context(self) -> SpanContext:
-        """Get the span context."""
+        """Get the span context.
+
+        Returns:
+            SpanContext: The span context.
+        """
         return self._context
 
     def set_attribute(self, key: str, value: Any) -> None:
-        """Set an attribute on the span."""
+        """Set an attribute on the span.
+
+        Args:
+            key (str): The key of the attribute.
+            value (Any): The value of the attribute.
+        """
         self._attributes[key] = value
 
     def set_attributes(self, attributes: dict[str, Any]) -> None:
-        """Set multiple attributes on the span."""
+        """Set multiple attributes on the span.
+
+        Args:
+            attributes (dict[str, Any]): The attributes to set.
+        """
         self._attributes.update(attributes)
 
     def add_event(self, name: str, attributes: dict[str, Any] | None = None, timestamp: int | None = None) -> None:
-        """Add an event to the span."""
+        """Add an event to the span.
+
+        Args:
+            name (str): The name of the event.
+            attributes (dict[str, Any] | None): The attributes of the event.
+            timestamp (int | None): The timestamp of the event in nanoseconds.
+        """
         if timestamp is None:
             timestamp = int(time.time() * 1e9)
         self._events.append({"name": name, "attributes": attributes or {}, "timestamp": timestamp})
 
     def update_name(self, name: str) -> None:
-        """Update the span name."""
+        """Update the span name.
+
+        Args:
+            name (str): The name to set.
+        """
         self._name = name
 
     def set_status(self, status: Status, description: str | None = None) -> None:
-        """Set the span status."""
+        """Set the span status.
+
+        Args:
+            status (Status): The status to set.
+            description (str | None): The description of the status.
+        """
         self._status = status
         self._status_description = description
 
     def get_links(self) -> list:
-        """Get all links of the span."""
+        """Get all links of the span.
+
+        Returns:
+            list: The links of the span.
+        """
         return self._links
 
     def get_end_time(self) -> int | None:
-        """Get the end time of the span."""
+        """Get the end time of the span.
+
+        Returns:
+            int | None: The end time of the span in nanoseconds.
+        """
         return self._end_time
 
     def get_status(self) -> Status:
-        """Get the status of the span."""
+        """Get the status of the span.
+
+        Returns:
+            Status: The status of the span.
+        """
         return self._status
 
     def get_parent(self) -> Span | None:
-        """Get the parent span."""
+        """Get the parent span.
+
+        Returns:
+            Span | None: The parent span.
+        """
         return self._parent
 
     def record_exception(self,

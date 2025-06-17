@@ -17,8 +17,6 @@ import dataclasses
 import inspect
 import logging
 import warnings
-from collections.abc import Awaitable
-from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
@@ -54,8 +52,8 @@ from aiq.data_models.memory import MemoryBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.memory.interfaces import MemoryEditor
-from aiq.observability.base_exporter import AbstractExporter
 from aiq.observability.exporter_manager import ExporterManager
+from aiq.observability.exporter_registry import ExporterFactory
 from aiq.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
 from aiq.profiler.utils import detect_llm_frameworks_in_build_fn
 from aiq.utils.type_utils import override
@@ -66,7 +64,7 @@ logger = logging.getLogger(__name__)
 @dataclasses.dataclass
 class ConfiguredExporter:
     config: TelemetryExporterBaseConfig
-    factory: Callable[[], Awaitable[AbstractExporter]]
+    factory: ExporterFactory
 
 
 @dataclasses.dataclass

@@ -23,13 +23,35 @@ logger = logging.getLogger(__name__)
 
 
 class OTLPSpanExporterMixin:
+    """Mixin for OTLP span exporters.
+
+    This mixin provides a default implementation of the export method for OTLP span exporters.
+    It uses the OTLPSpanExporter from the opentelemetry.exporter.otlp.proto.http.trace_exporter module.
+
+    Args:
+        *args: Variable length argument list to pass to the superclass.
+        endpoint (str): The endpoint of the OTLP service.
+        headers (dict[str, str]): The headers to send with the request.
+        **kwargs: Additional keyword arguments to pass to the superclass.
+
+    Attributes:
+        _exporter (OTLPSpanExporter): The OTLP span exporter.
+    """
 
     def __init__(self, *args, endpoint: str, headers: dict[str, str], **kwargs):
+        """Initialize the OTLP span exporter with the specified endpoint and headers."""
         super().__init__(*args, **kwargs)
         self._exporter = OTLPSpanExporter(endpoint=endpoint, headers=headers)
 
     async def export(self, span: OtelSpan) -> None:
-        """Export a batch of spans."""
+        """Export an OtelSpan.
+
+        Args:
+            span (OtelSpan): The OtelSpan to export.
+
+        Raises:
+            Exception: If there's an error during span export (logged but not re-raised).
+        """
 
         try:
             self._exporter.export([span])  # type: ignore

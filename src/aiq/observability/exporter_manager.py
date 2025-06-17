@@ -18,6 +18,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from aiq.observability.base_exporter import AbstractExporter
+from aiq.observability.exporter_registry import ExporterFactory
 from aiq.observability.exporter_registry import ExporterRegistry
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ class ExporterManager:
     """
     Manages the lifecycle of asynchronous exporters.
 
-    ExporterManager maintains a registry of exporters, allowing for dynamic addition and removal. It provides
+    ExporterManager maintains a registry of exporter factories, allowing for dynamic addition and removal. It provides
     methods to start and stop all registered exporters concurrently, ensuring proper synchronization and
     lifecycle management. The manager is designed to prevent race conditions during exporter operations and to
     handle exporter tasks in an asyncio event loop.
@@ -36,17 +37,16 @@ class ExporterManager:
     during that workflow's execution.
 
     Limitations:
-        - Exporters added after `start()` is called will not be started automatically. They will only be started
-          on the next lifecycle (i.e., after a stop and subsequent start).
+        - Exporter factories added after `start()` is called will not be started automatically. They will only be
+        started on the next lifecycle (i.e., after a stop and subsequent start).
+
+    Args:
+        shutdown_timeout (int, optional): Maximum time in seconds to wait for exporters to shut down gracefully.
+        Defaults to 120 seconds.
     """
 
     def __init__(self, shutdown_timeout: int = 120):
-        """
-        Initialize the ExporterManager.
-
-        Args:
-            shutdown_timeout (int): Maximum time in seconds to wait for exporters to shut down gracefully.
-        """
+        """Initialize the ExporterManager."""
         self._tasks: dict[str, asyncio.Task] = {}
         self._running = False
         self._exporter_registry = ExporterRegistry.get_instance()
@@ -54,19 +54,19 @@ class ExporterManager:
         self._shutdown_event = asyncio.Event()
         self._shutdown_timeout = shutdown_timeout
 
-    async def add_exporter(self, name: str, exporter: AbstractExporter) -> None:
+    async def add_exporter(self, name: str, exporter_factory: ExporterFactory) -> None:
         """
-        Add an exporter to the manager.
+        Add an exporter factory to the manager.
 
         Args:
             name (str): The unique name for the exporter.
-            exporter (AbstractExporter): The exporter instance to add.
+            exporter_factory (ExporterFacotry): The exporter instance to add.
         """
-        await self._exporter_registry.add(name, exporter)
+        await self._exporter_registry.add(name, exporter_factory)
 
     async def remove_exporter(self, name: str) -> None:
         """
-        Remove an exporter from the manager.
+        Remove an exporter factory from the manager.
 
         Args:
             name (str): The name of the exporter to remove.
@@ -75,7 +75,7 @@ class ExporterManager:
 
     async def get_exporter(self, name: str) -> AbstractExporter | None:
         """
-        Get an exporter by name.
+        Get an exporter instance by name.
 
         Args:
             name (str): The name of the exporter to retrieve.
@@ -87,7 +87,7 @@ class ExporterManager:
 
     async def get_all_exporters(self) -> dict[str, AbstractExporter]:
         """
-        Get all registered exporters.
+        Get all registered exporters instances.
 
         Returns:
             dict[str, AbstractExporter]: A dictionary mapping exporter names to exporter instances.

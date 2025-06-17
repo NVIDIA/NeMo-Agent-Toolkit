@@ -28,12 +28,16 @@ class SpanPublisherManager:
     """
     Manager for the lifecycle of OtelSpanPublisher instances.
 
-    Ensures that each context has at most one active OtelSpanPublisher, handles
+    Ensures that each context subject has at most one active OtelSpanPublisher, handles
     registration, startup, and cleanup of publishers and their associated tasks.
+
+    Attributes:
+        _instance_registry (AsyncSafeWeakKeyDictionary): A dictionary to store the state of the manager.
+        _exporter_counts (AsyncSafeWeakKeyDictionary): A dictionary to store the count of exporters for each context.
+        _tasks (AsyncSafeWeakKeyDictionary): A dictionary to store the tasks for each context.
+        _locks (KeyedLock): A lock to synchronize access to the manager.
     """
 
-    # AsyncSafeWeakKeyDictionary are used to store the state of the manager to ensure one to many publisher
-    # to exporter per context
     _instance_registry: AsyncSafeWeakKeyDictionary = AsyncSafeWeakKeyDictionary()
     _exporter_counts: AsyncSafeWeakKeyDictionary = AsyncSafeWeakKeyDictionary()
     _tasks: AsyncSafeWeakKeyDictionary = AsyncSafeWeakKeyDictionary()
@@ -56,6 +60,7 @@ class SpanPublisherManager:
 
         # Update the current count of exporters for this request
         exporter_counts = await cls._exporter_counts.get(context_subject, 0)
+        exporter_counts = exporter_counts or 0  # Convert None to 0
         await cls._exporter_counts.set(context_subject, exporter_counts + 1)
         _ = await cls.get_publisher(context_state)
 
@@ -92,7 +97,7 @@ class SpanPublisherManager:
         """
         Start the OtelSpanPublisher for the given context if there are registered exporters.
 
-        Ensures only one publisher is running per context. If a publisher is already running,
+        Ensures only one publisher is running per subject. If a publisher is already running,
         it is not started again.
 
         Args:

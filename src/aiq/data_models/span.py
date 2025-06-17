@@ -62,6 +62,7 @@ class SpanAttributes(Enum):
     AIQ_USAGE_TOKEN_COUNT_PROMPT = "aiq.usage.token_count.prompt"
     AIQ_USAGE_TOKEN_COUNT_COMPLETION = "aiq.usage.token_count.completion"
     AIQ_USAGE_TOKEN_COUNT_TOTAL = "aiq.usage.token_count.total"
+    AIQ_EVENT_TYPE = "aiq.event_type"
 
 
 class MimeTypes(Enum):

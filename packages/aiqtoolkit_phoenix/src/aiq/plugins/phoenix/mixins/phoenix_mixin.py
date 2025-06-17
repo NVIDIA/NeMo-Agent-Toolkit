@@ -25,8 +25,25 @@ logger = logging.getLogger(__name__)
 
 
 class PhoenixMixin:
+    """Mixin for Phoenix exporters.
+
+    This mixin provides a default implementation of the export method for Phoenix exporters.
+    It uses the HTTPSpanExporter from the phoenix.otel module.
+
+    Args:
+        *args: Variable length argument list to pass to the superclass.
+        endpoint (str): The endpoint of the Phoenix service.
+        project (str): The project name to group the telemetry traces.
+        **kwargs: Additional keyword arguments to pass to the superclass.
+
+    Attributes:
+        _exporter (HTTPSpanExporter): The Phoenix span exporter.
+        _project (str): The project name to group the telemetry traces.
+        _resource (Resource): The resource to add to the span.
+    """
 
     def __init__(self, *args, endpoint: str, project: str, **kwargs):
+        """Initialize the Phoenix exporter with the specified endpoint and project."""
         super().__init__(*args, **kwargs)
         self._exporter = HTTPSpanExporter(endpoint=endpoint)
         self._project = project
@@ -35,7 +52,11 @@ class PhoenixMixin:
         })
 
     async def export(self, span: OtelSpan) -> None:
-        """Export a batch of spans."""
+        """Export an OtelSpan.
+
+        Args:
+            span (OtelSpan): The OtelSpan to export.
+        """
 
         try:
             with using_project(self._project):

@@ -20,8 +20,6 @@ from abc import abstractmethod
 from contextlib import asynccontextmanager
 from typing import Any
 
-from pydantic import BaseModel
-
 from aiq.builder.context import AIQContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.utils.reactive.subject import Subject
@@ -30,7 +28,14 @@ logger = logging.getLogger(__name__)
 
 
 class AbstractExporter(ABC):
-    """A base class for all telemetry exporters."""
+    """A base class for all telemetry exporters.
+
+    This class provides a base implementation for telemetry exporters.
+    It is responsible for processing events and exporting them to a backend.
+
+    Args:
+        context_state (AIQContextState, optional): The context state to use for the exporter. Defaults to None.
+    """
 
     def __init__(self, context_state: AIQContextState | None = None):
         self._context_state = context_state or AIQContextState.get()
@@ -43,9 +48,19 @@ class AbstractExporter(ABC):
 
     @property
     def name(self) -> str:
+        """Get the name of the exporter.
+
+        Returns:
+            str: The unique name of the exporter.
+        """
         return self.__class__.__name__
 
     def _create_export_task(self, event: Any):
+        """Create an export task for the given event.
+
+        Args:
+            event (Any): The event to export.
+        """
         if not self._running:
             logger.warning("%s: Attempted to create export task while not running", self.name)
             return
@@ -62,32 +77,62 @@ class AbstractExporter(ABC):
             raise
 
     @abstractmethod
-    async def export(self, trace: BaseModel) -> None:
-        """Export an event."""
+    async def export(self, trace: Any) -> None:
+        """Export an event.
+
+        Args:
+            trace (Any): The event to export.
+        """
         pass
 
     @abstractmethod
     def _process_start_event(self, event: Any) -> None:
-        """Process the start event."""
+        """Process the start event.
+
+        Args:
+            event (Any): The event to process.
+        """
         pass
 
     @abstractmethod
     def _process_end_event(self, event: Any) -> None:
-        """Process the end event."""
+        """Process the end event.
+
+        Args:
+            event (Any): The event to process.
+        """
         pass
 
     @abstractmethod
     def _on_next(self, event: Any) -> None:
-        """The main logic that reacts to each event."""
+        """The main logic that reacts to each event.
+
+        Args:
+            event (Any): The event to process.
+        """
         pass
 
     def _on_error(self, exc: Exception) -> None:
+        """Handle an error in the event subscription.
+
+        Args:
+            exc (Exception): The error to handle.
+        """
         logger.error("Error in event subscription: %s", exc, exc_info=True)
 
     def _on_complete(self) -> None:
+        """Handle the completion of the event stream.
+
+        This method is called when the event stream is complete.
+        """
         logger.info("Event stream completed. No more events will arrive.")
 
     def _start(self) -> Subject | None:
+        """Start the exporter.
+
+        Returns:
+            Subject | None: The subject to subscribe to.
+        """
         subject = self._context_state.event_stream.get()
         if subject is None:
             return None
@@ -110,12 +155,12 @@ class AbstractExporter(ABC):
         return subject
 
     async def _pre_start(self):
-        """Called before the listener starts."""
+        """Called before the exporter starts."""
         pass
 
     @asynccontextmanager
     async def start(self):
-        """Start the listener and yield control to the caller."""
+        """Start the exporter and yield control to the caller."""
         try:
             await self._pre_start()
 
@@ -140,7 +185,11 @@ class AbstractExporter(ABC):
         pass
 
     async def _wait_for_tasks(self, timeout: float = 5.0):
-        """Wait for all tracked tasks to complete with a timeout."""
+        """Wait for all tracked tasks to complete with a timeout.
+
+        Args:
+            timeout (float, optional): The timeout in seconds. Defaults to 5.0.
+        """
         if not self._tasks:
             return
 
@@ -153,7 +202,10 @@ class AbstractExporter(ABC):
             logger.error("%s: Error while waiting for tasks: %s", self.name, e, exc_info=True)
 
     async def stop(self):
-        """Stop the listener."""
+        """Stop the exporter.
+
+        This method is called when the exporter is no longer needed.
+        """
         if not self._running:
             return
 
@@ -185,5 +237,8 @@ class AbstractExporter(ABC):
         await self._wait_for_tasks()
 
     async def wait_ready(self):
-        """Wait for the exporter to be ready."""
+        """Wait for the exporter to be ready.
+
+        This method is called when the exporter is ready to export events.
+        """
         await self._ready_event.wait()

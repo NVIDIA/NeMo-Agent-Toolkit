@@ -36,6 +36,13 @@ class ExporterRegistry:
 
     The registry stores exporter factories instead of instances, allowing for
     creation of new exporter instances for each request.
+
+    Attributes:
+        _instance (ExporterRegistry | None): The singleton instance of ExporterRegistry.
+        _instance_lock (threading.Lock): A lock to synchronize access to the singleton instance.
+        _exporter_factories (dict[str, ExporterFactory]): A dictionary mapping exporter names to their factories.
+        _lock (asyncio.Lock): A lock to synchronize access to the exporter factories.
+        _initialized (bool): A flag to indicate if the registry has been initialized.
     """
     _instance = None
     _instance_lock = threading.Lock()

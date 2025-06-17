@@ -16,14 +16,18 @@
 import logging
 import re
 import uuid
+from typing import Any
 
 from openinference.semconv.trace import SpanAttributes
 from opentelemetry.trace import SpanContext
 
 from aiq.builder.context import AIQContextState
 from aiq.data_models.intermediate_step import IntermediateStep
+from aiq.data_models.intermediate_step import TraceMetadata
 from aiq.observability.span_publisher import AbstractSpanPublisher
-from aiq.observability.utils import _ns_timestamp
+from aiq.observability.utils import merge_dicts
+from aiq.observability.utils import ns_timestamp
+from aiq.plugins.opentelemetry.otel_span import MimeTypes
 from aiq.plugins.opentelemetry.otel_span import OtelSpan
 from aiq.plugins.opentelemetry.otel_span import event_type_to_span_kind
 
@@ -31,17 +35,33 @@ logger = logging.getLogger(__name__)
 
 
 class OtelSpanPublisher(AbstractSpanPublisher):
+    """Publisher for OtelSpan instances.
+
+    This class is responsible for processing intermediate steps and creating OtelSpan instances and publishing them to
+    the unified event stream.
+
+    Args:
+        context_state (AIQContextState | None): The context state to use for the publisher.
+    """
 
     def __init__(self, context_state: AIQContextState | None = None):
+        """Initialize the OtelSpanPublisher with the specified context state."""
         super().__init__(context_state)
         self._outstanding_spans: dict[str, OtelSpan] = {}
         self._span_stack: dict[str, OtelSpan] = {}
+        self._metadata_stack: dict[str, dict[str, Any]] = {}
 
     @property
     def name(self) -> str:
+        """The name of the publisher."""
         return "otel_span_publisher"
 
     def _process_start_event(self, event: IntermediateStep):
+        """Process the start event of an intermediate step.
+
+        Args:
+            event (IntermediateStep): The intermediate step to process.
+        """
 
         parent_span = None
         span_ctx = None
@@ -65,7 +85,7 @@ class OtelSpanPublisher(AbstractSpanPublisher):
         # By convention, `span_event_timestamp` is the time we started, `event_timestamp` is the time we ended.
         # If span_event_timestamp is missing, we default to event_timestamp (meaning zero-length).
         s_ts = event.payload.span_event_timestamp or event.payload.event_timestamp
-        start_ns = _ns_timestamp(s_ts)
+        start_ns = ns_timestamp(s_ts)
 
         # Optional: embed the LLM/tool name if present
         if event.payload.name:
@@ -99,7 +119,19 @@ class OtelSpanPublisher(AbstractSpanPublisher):
             else:
                 serialized_input, is_json = self._serialize_payload(event.payload.data.input)
                 sub_span.set_attribute(SpanAttributes.INPUT_VALUE, serialized_input)
-                sub_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE, "application/json" if is_json else "text/plain")
+                sub_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE,
+                                       MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
+
+        # Add metadata to the metadata stack
+        start_metadata = event.payload.metadata or {}
+
+        if isinstance(start_metadata, dict):
+            self._metadata_stack[event.UUID] = start_metadata
+        elif isinstance(start_metadata, TraceMetadata):
+            self._metadata_stack[event.UUID] = start_metadata.model_dump()
+        else:
+            logger.warning("Invalid metadata type for step %s", event.UUID)
+            return
 
         # Store the span in both stacks
         self._span_stack[event.UUID] = sub_span
@@ -111,6 +143,12 @@ class OtelSpanPublisher(AbstractSpanPublisher):
                      sub_span.trace_id)
 
     def _process_end_event(self, event: IntermediateStep):
+        """Process the end event of an intermediate step.
+
+        Args:
+            event (IntermediateStep): The intermediate step to process.
+        """
+
         # Find the subspan that was created in the start event
         sub_span = self._outstanding_spans.pop(event.UUID, None)
 
@@ -141,9 +179,31 @@ class OtelSpanPublisher(AbstractSpanPublisher):
         if event.payload.data and event.payload.data.output is not None:
             serialized_output, is_json = self._serialize_payload(event.payload.data.output)
             sub_span.set_attribute(SpanAttributes.OUTPUT_VALUE, serialized_output)
-            sub_span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE, "application/json" if is_json else "text/plain")
+            sub_span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE,
+                                   MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
 
-        end_ns = _ns_timestamp(event.payload.event_timestamp)
+        # Merge metadata from start event with end event metadata
+        start_metadata = self._metadata_stack.pop(event.UUID)
+
+        if start_metadata is None:
+            logger.warning("No metadata found for step %s", event.UUID)
+            return
+
+        end_metadata = event.payload.metadata or {}
+
+        if not isinstance(end_metadata, (dict, TraceMetadata)):
+            logger.warning("Invalid metadata type for step %s", event.UUID)
+            return
+
+        if isinstance(end_metadata, TraceMetadata):
+            end_metadata = end_metadata.model_dump()
+
+        merged_metadata = merge_dicts(start_metadata, end_metadata)
+        serialized_metadata, is_json = self._serialize_payload(merged_metadata)
+        sub_span.set_attribute("aiq.metadata", serialized_metadata)
+        sub_span.set_attribute("aiq.metadata.mime_type", MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
+
+        end_ns = ns_timestamp(event.payload.event_timestamp)
 
         # End the subspan
         sub_span.end(end_time=end_ns)

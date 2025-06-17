@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class OTLPSpanExporter(OTLPSpanExporterMixin, AbstractOtelExporter):
-    """A opentelemetry otlp span exporter that exports telemetry traces to externally hosted otlp service."""
+    """A opentelemetry OTLP span exporter that exports telemetry traces to externally hosted OTLP service."""
 
     def __init__(self, context_state=None, **otlp_kwargs):
         OTLPSpanExporterMixin.__init__(self, **otlp_kwargs)

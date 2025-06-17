@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import json
 import logging
 from abc import abstractmethod
 from typing import Any
@@ -30,17 +31,52 @@ logger = logging.getLogger(__name__)
 
 
 class AbstractSpanPublisher(AbstractExporter):
+    """Abstract base class for span publishers.
+
+    This class provides a base implementation for span publishers.
+    It is responsible for publishing spans into the unified event stream.
+
+    Args:
+        context_state (AIQContextState, optional): The context state to use for the publisher. Defaults to None.
+    """
 
     def __init__(self, context_state: AIQContextState | None = None):
+        """Initialize the AbstractSpanPublisher."""
         super().__init__(context_state)
         self._outstanding_spans: dict[str, Any] = {}
         self._span_stack: dict[str, Any] = {}
         self._stop_event = asyncio.Event()
         self._initialized = True
 
+    def _serialize_payload(self, input_value: Any) -> tuple[str, bool]:
+        """
+        Serialize the input value to a string. Returns a tuple with the serialized value and a boolean indicating if the
+        serialization is JSON or a string.
+
+        Args:
+            input_value (Any): The input value to serialize.
+
+        Returns:
+            tuple[str, bool]: A tuple with the serialized value and a boolean indicating if the serialization is
+                JSON or a string.
+        """
+        try:
+            if isinstance(input_value, BaseModel):
+                return TypeAdapter(type(input_value)).dump_json(input_value).decode('utf-8'), True
+            elif isinstance(input_value, dict):
+                return json.dumps(input_value), True
+            else:
+                return str(input_value), False
+        except Exception:
+            # Fallback to string representation if we can't serialize using pydantic
+            return str(input_value), False
+
     def _on_next(self, event: IntermediateStep) -> None:
         """
         The main logic that reacts to each IntermediateStep.
+
+        Args:
+            event (IntermediateStep): The event to process.
         """
         if not isinstance(event, IntermediateStep):
             return
@@ -49,17 +85,6 @@ class AbstractSpanPublisher(AbstractExporter):
             self._process_start_event(event)
         elif (event.event_state == IntermediateStepState.END):
             self._process_end_event(event)
-
-    def _serialize_payload(self, input_value: BaseModel) -> tuple[str, bool]:
-        """
-        Serialize the input value to a string. Returns a tuple with the serialized value and a boolean indicating if the
-        serialization is JSON or a string
-        """
-        try:
-            return TypeAdapter(type(input_value)).dump_json(input_value).decode('utf-8'), True
-        except Exception:
-            # Fallback to string representation if we can't serialize using pydantic
-            return str(input_value), False
 
     @abstractmethod
     def _process_start_event(self, event: IntermediateStep) -> None:
@@ -70,7 +95,11 @@ class AbstractSpanPublisher(AbstractExporter):
         pass
 
     async def export(self, trace: Any) -> None:
-        """Export spans."""
+        """Export spans.
+
+        Args:
+            trace (Any): The trace to export.
+        """
         # Push the spans into the event stream
         event_stream = self._context_state.event_stream.get()
         if event_stream:
