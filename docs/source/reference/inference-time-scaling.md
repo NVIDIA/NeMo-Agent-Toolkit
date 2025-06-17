@@ -186,26 +186,7 @@ The builder will:
 
 ---
 
-## 9. Further reading
-
-* Conceptual overviews of ITS techniques ([sebastianraschka.com][1], [ve3.global][6], [arxiv.org][2], [research.ibm.com][4])
-* Practical business cases and cost–accuracy trade‑offs ([redhat.com][3], [dominguezdaniel.medium.com][5], [youtube.com][7])
-* Academic analyses of compute vs. quality ([arxiv.org][9])
-* Industry commentary on the shift from *training* to *inference* scaling ([barrons.com][10], [reuters.com][8])
-
-These external resources frame the scientific motivations behind the concrete API you now have at your disposal.
-
 ---
 
 Happy scaling!
-
-[1]: https://sebastianraschka.com/blog/2025/state-of-llm-reasoning-and-inference-scaling.html?utm_source=chatgpt.com "Inference-Time Compute Scaling Methods to Improve Reasoning ..."
-[2]: https://arxiv.org/html/2504.00294v1?utm_source=chatgpt.com "Inference-Time Scaling for Complex Tasks: Where We Stand ... - arXiv"
-[3]: https://www.redhat.com/en/blog/smarter-enterprise-ai-inference-time-scaling?utm_source=chatgpt.com "Unlocking smarter enterprise AI with inference-time scaling - Red Hat"
-[4]: https://research.ibm.com/blog/inference-scaling-reasoning-ai-model?utm_source=chatgpt.com "Reasoning in Granite 3.2 using inference scaling - IBM Research"
-[5]: https://dominguezdaniel.medium.com/understanding-inference-time-compute-c6c6ca2e17a8?utm_source=chatgpt.com "Understanding Inference-Time Compute | by Daniel Dominguez"
-[6]: https://www.ve3.global/inference-time-scaling-the-next-frontier-in-ai-performance/?utm_source=chatgpt.com "Inference-Time Scaling: The Next Frontier in AI Performance - VE3"
-[7]: https://www.youtube.com/watch?v=seKLD3tdj9g&utm_source=chatgpt.com "What is inference-time scaling? - YouTube"
-[8]: https://www.reuters.com/technology/artificial-intelligence/openai-rivals-seek-new-path-smarter-ai-current-methods-hit-limitations-2024-11-11/?utm_source=chatgpt.com "OpenAI and rivals seek new path to smarter AI as current methods hit limitations"
-[9]: https://arxiv.org/abs/2504.02495?utm_source=chatgpt.com "[2504.02495] Inference-Time Scaling for Generalist Reward Modeling"
-[10]: https://www.barrons.com/articles/ai-scaling-laws-chips-nvda-amd-intel-stock-prices-d20e96d8?utm_source=chatgpt.com "The AI Race Is Entering a New Stage. Nvidia Won't Be the Only Winner This Time."
+-nvda-amd-intel-stock-prices-d20e96d8?utm_source=chatgpt.com "The AI Race Is Entering a New Stage. Nvidia Won't Be the Only Winner This Time."
