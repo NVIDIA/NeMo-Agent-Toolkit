@@ -333,7 +333,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         if (isinstance(build_result, FunctionInfo)):
             # Create the function object
-            build_result = LambdaFunction.from_info(config=config, info=build_result)
+            build_result = LambdaFunction.from_info(config=config, info=build_result, instance_name=name)
 
         if (not isinstance(build_result, Function)):
             raise ValueError("Expected a function, FunctionInfo object, or FunctionBase object to be "
