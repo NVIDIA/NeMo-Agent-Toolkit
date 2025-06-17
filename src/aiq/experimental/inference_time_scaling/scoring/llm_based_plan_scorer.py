@@ -37,13 +37,11 @@ class LLMBasedPlanScorer(StrategyBase):
         super().__init__(config)
         self.llm_bound = None
 
-
     async def build_components(self, builder: Builder) -> None:
         """
         Build the components required for the planner.
         """
-        self.llm_bound = await builder.get_llm(self.config.scoring_llm,
-                                                        wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        self.llm_bound = await builder.get_llm(self.config.scoring_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     def supported_pipeline_types(self) -> [PipelineTypeEnum]:
         return [PipelineTypeEnum.PLANNING]

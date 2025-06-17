@@ -33,7 +33,7 @@ class ToolUseInputSchema(BaseModel):
     )
 
 
-class ToolUseList(BaseModel):
+class ToolUselist(BaseModel):
     """
     A list of tools to use.
     """

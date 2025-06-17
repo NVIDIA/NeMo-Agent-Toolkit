@@ -29,7 +29,7 @@ from aiq.experimental.inference_time_scaling.models.its_item import ITSItem
 from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
 from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
 from aiq.experimental.inference_time_scaling.models.tool_use_config import ToolUseInputSchema
-from aiq.experimental.inference_time_scaling.models.tool_use_config import ToolUseList
+from aiq.experimental.inference_time_scaling.models.tool_use_config import ToolUselist
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class ITSToolOrchestrationFunctionConfig(FunctionBaseConfig, name="its_tool_orch
     """
 
     augmented_fns: list[FunctionRef] = Field(
-        description="List of FunctionRefs for the functions to be orchestrated. Must be wrapped in `its_tool_wrapper`.")
+        description="list of FunctionRefs for the functions to be orchestrated. Must be wrapped in `its_tool_wrapper`.")
 
     search_strategy: ITSStrategyRef | None = Field(
         description="The ITS search strategy to use for orchestrating invocation of the functions."
@@ -72,10 +72,10 @@ async def register_its_tool_orchestration_function(
     """
     Registers an ITS-based orchestration function that:
      1. Instantiates all relevant strategies (search, editing, scoring, selection).
-     2. Accepts a ToolUseList, converts each item to an ITSItem, optionally runs search/editing.
+     2. Accepts a ToolUselist, converts each item to an ITSItem, optionally runs search/editing.
      3. Calls the correct augmented_fn per item using name=tool name.
      4. If configured, runs scoring and selection on the result.
-     5. Returns a new ToolUseList with each output set.
+     5. Returns a new ToolUselist with each output set.
     """
 
     # 1) Gather references to all augmented (wrapped) functions
@@ -120,7 +120,7 @@ async def register_its_tool_orchestration_function(
                                 for fn_ref in config.augmented_fns))
 
     # 3) Create the inner function to handle single (non-streaming) calls.
-    async def single_inner(tool_list: ToolUseList) -> ToolUseList:
+    async def single_inner(tool_list: ToolUselist) -> ToolUselist:
         """
         Orchestrates multiple tool usages, optionally using search/editing/scoring/selection steps.
         """
@@ -182,8 +182,8 @@ async def register_its_tool_orchestration_function(
 
         logger.info("ITS orchestration function: %d items after selection", len(its_items))
 
-        # Convert final results from ITSItems back to a ToolUseList
-        final_list = ToolUseList(tools=[])
+        # Convert final results from ITSItems back to a ToolUselist
+        final_list = ToolUselist(tools=[])
         for item in its_items:
             # Compose a new ToolUseInputSchema with final output
             new_tool = ToolUseInputSchema(
@@ -200,6 +200,6 @@ async def register_its_tool_orchestration_function(
     yield FunctionInfo.create(
         single_fn=single_inner,
         stream_fn=None,  # No streaming required
-        input_schema=ToolUseList,
-        single_output_schema=ToolUseList,
+        input_schema=ToolUselist,
+        single_output_schema=ToolUselist,
         description=fn_description)

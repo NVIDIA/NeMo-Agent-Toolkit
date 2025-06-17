@@ -45,7 +45,7 @@ class LLMBasedPlanSelectionConfig(ITSStrategyBaseConfig, name="llm_based_plan_se
         "the plans and select the best one. Ensure it is clear and concise.")
 
     @model_validator(mode="before")
-    def validate_strategies(cls, values: typing.Dict[str, typing.Any]) -> typing.Dict[str, typing.Any]:
+    def validate_strategies(cls, values: dict[str, typing.Any]) -> dict[str, typing.Any]:
         """
         Ensure that the selection_llm is provided when using LLMBasedSelection.
         """
@@ -87,7 +87,7 @@ class LLMBasedAgentOutputSelectionConfig(ITSStrategyBaseConfig, name="llm_based_
         "{input}, and {results} ")
 
     @model_validator(mode="before")
-    def validate_strategies(cls, values: typing.Dict[str, typing.Any]) -> typing.Dict[str, typing.Any]:
+    def validate_strategies(cls, values: dict[str, typing.Any]) -> dict[str, typing.Any]:
         """
         Ensure that the selection_llm is provided when using LLMBasedSelection.
         """
@@ -124,7 +124,7 @@ class LLMBasedOutputMergingConfig(ITSStrategyBaseConfig, name="llm_based_agent_o
         "{input}, and {results} ")
 
     @model_validator(mode="before")
-    def validate_strategies(cls, values: typing.Dict[str, typing.Any]) -> typing.Dict[str, typing.Any]:
+    def validate_strategies(cls, values: dict[str, typing.Any]) -> dict[str, typing.Any]:
         """
         Ensure that the selection_llm is provided when using LLMBasedSelection.
         """

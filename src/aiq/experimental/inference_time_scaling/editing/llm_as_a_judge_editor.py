@@ -47,11 +47,9 @@ class LLMAsAJudgeEditor(StrategyBase):
         Build the components required for the editor.
         """
         # Get the feedback LLM
-        self.feedback_llm = await builder.get_llm(self.config.feedback_llm,
-                                                         wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        self.feedback_llm = await builder.get_llm(self.config.feedback_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
-        self.editing_llm = await builder.get_llm(self.config.editing_llm,
-                                                        wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        self.editing_llm = await builder.get_llm(self.config.editing_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     def supported_pipeline_types(self) -> [PipelineTypeEnum]:
         return [PipelineTypeEnum.PLANNING]
@@ -169,8 +167,6 @@ class LLMAsAJudgeEditor(StrategyBase):
         ]
         # Run the feedback tasks concurrently and gather results
         planning_items_with_feedback = await asyncio.gather(*feedback_tasks)
-
-        # TODO: Format feedback based on trigger words
 
         if not planning_items_with_feedback:
             raise ValueError("No feedback was generated for the planning items. Please check the LLM response.")

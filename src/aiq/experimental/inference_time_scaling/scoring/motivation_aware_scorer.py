@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import re
-from typing import List
+from typing import list
 
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
@@ -28,20 +28,19 @@ class MotivationAwareScorer(StrategyBase):
         self.llm_bound = None
 
     async def build_components(self, builder: Builder) -> None:
-        self.llm_bound = await builder.get_llm(self.config.scoring_llm,
-                                                        wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        self.llm_bound = await builder.get_llm(self.config.scoring_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
-    def supported_pipeline_types(self) -> List[PipelineTypeEnum]:
+    def supported_pipeline_types(self) -> list[PipelineTypeEnum]:
         return [PipelineTypeEnum.TOOL_USE]
 
     def stage_type(self) -> StageTypeEnum:
         return StageTypeEnum.SCORING
 
     async def ainvoke(self,
-                      items: List[ITSItem],
+                      items: list[ITSItem],
                       original_prompt: str | None = None,
                       agent_context: str | None = None,
-                      **kwargs) -> List[ITSItem]:
+                      **kwargs) -> list[ITSItem]:
         """
         Scores each item by combining the original 'task_description' and 'motivation' with the 'output'.
         The resulting score is stored in item.score.

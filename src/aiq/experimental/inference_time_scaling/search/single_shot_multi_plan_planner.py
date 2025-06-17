@@ -42,8 +42,7 @@ class SingleShotMultiPlanPlanner(StrategyBase):
         self.llm_bound = None
 
     async def build_components(self, builder: Builder) -> None:
-        self.llm_bound = await builder.get_llm(self.config.planning_llm,
-                                                         wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        self.llm_bound = await builder.get_llm(self.config.planning_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     def supported_pipeline_types(self) -> [PipelineTypeEnum]:
         return [PipelineTypeEnum.PLANNING]

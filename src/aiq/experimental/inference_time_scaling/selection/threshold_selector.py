@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import list
 
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_its_strategy
@@ -21,17 +21,17 @@ class ThresholdSelector(StrategyBase):
         # No special components needed
         pass
 
-    def supported_pipeline_types(self) -> List[PipelineTypeEnum]:
+    def supported_pipeline_types(self) -> list[PipelineTypeEnum]:
         return [PipelineTypeEnum.TOOL_USE]
 
     def stage_type(self) -> StageTypeEnum:
         return StageTypeEnum.SELECTION
 
     async def ainvoke(self,
-                      items: List[ITSItem],
+                      items: list[ITSItem],
                       original_prompt: str | None = None,
                       agent_context: str | None = None,
-                      **kwargs) -> List[ITSItem]:
+                      **kwargs) -> list[ITSItem]:
         threshold = self.config.threshold
         selected = [itm for itm in items if (itm.score is not None and itm.score >= threshold)]
         logger.info("ThresholdSelector: %d items => %d items (threshold=%.1f)", len(items), len(selected), threshold)

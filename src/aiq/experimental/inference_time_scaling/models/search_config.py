@@ -50,7 +50,7 @@ class SingleShotMultiPlanConfig(ITSStrategyBaseConfig, name="single_shot_multi_p
         description="The template to use for generating plans.")
 
     @model_validator(mode="before")
-    def validate_strategies(cls, values: typing.Dict[str, typing.Any]) -> typing.Dict[str, typing.Any]:
+    def validate_strategies(cls, values: dict[str, typing.Any]) -> dict[str, typing.Any]:
         """
         Ensure that the required LLMs are provided based on the selected strategies.
         """
@@ -65,7 +65,7 @@ class MultiLLMPlanConfig(ITSStrategyBaseConfig, name="multi_llm_plan"):
     """Configuration for a 'multi LLM plan generation' strategy."""
     llms: list[LLMRef] = Field(
         default_factory=list,
-        description="List of LLMs to use for plan generation. Each LLM can generate one or more plans.")
+        description="list of LLMs to use for plan generation. Each LLM can generate one or more plans.")
     plans_per_llm: int = Field(default=2, description="Number of plans each LLM should generate.")
     max_temperature: float = Field(default=1.0,
                                    description="Maximum temperature to use for sampling when generating plans. "
@@ -100,7 +100,7 @@ class MultiQueryRetrievalSearchConfig(ITSStrategyBaseConfig, name="multi_query_r
     each containing a differently phrased or re-focused version of the original task.
     """
     llms: list[LLMRef] = Field(default_factory=list,
-                               description="List of LLM references to use for generating diverse queries.")
+                               description="list of LLM references to use for generating diverse queries.")
 
     query_generation_template: str = Field(
         default=("You are an expert at re-framing a user's query to encourage new solution paths. "

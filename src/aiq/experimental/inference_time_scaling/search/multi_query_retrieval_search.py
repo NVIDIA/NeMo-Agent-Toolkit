@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import list
 
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
@@ -35,17 +35,17 @@ class MultiQueryRetrievalSearch(StrategyBase):
             bound_llm = await builder.get_llm(llm_ref, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
             self.llms_bound.append(bound_llm)
 
-    def supported_pipeline_types(self) -> List[PipelineTypeEnum]:
+    def supported_pipeline_types(self) -> list[PipelineTypeEnum]:
         return [PipelineTypeEnum.TOOL_USE]
 
     def stage_type(self) -> StageTypeEnum:
         return StageTypeEnum.SEARCH
 
     async def ainvoke(self,
-                      items: List[ITSItem],
+                      items: list[ITSItem],
                       original_prompt: str | None = None,
                       agent_context: str | None = None,
-                      **kwargs) -> List[ITSItem]:
+                      **kwargs) -> list[ITSItem]:
         """
         For each ITSItem, rewrite the 'input' using each LLM to create a new perspective.
         The new ITSItems' 'output' field will store the newly generated query.
@@ -56,7 +56,7 @@ class MultiQueryRetrievalSearch(StrategyBase):
             raise ImportError("langchain-core is required for MultiQueryRetrievalSearch. "
                               "Install aiqtoolkit-langchain or similar.")
 
-        new_its_items: List[ITSItem] = []
+        new_its_items: list[ITSItem] = []
 
         # Create a single PromptTemplate object for rewriting the query
         template_vars = ["task", "motivation"]
@@ -67,12 +67,13 @@ class MultiQueryRetrievalSearch(StrategyBase):
         for item in items:
             original_task = str(item.input) or ""
             motivation = str(item.metadata) if item.metadata else ""
-            new_its_items.append(ITSItem(
-                input=item.input,
-                output=item.input,
-                metadata=item.metadata,
-                name=item.name,  # keep the original tool name
-            ))
+            new_its_items.append(
+                ITSItem(
+                    input=item.input,
+                    output=item.input,
+                    metadata=item.metadata,
+                    name=item.name,  # keep the original tool name
+                ))
 
             for llm in self.llms_bound:
                 prompt_str = (await query_template.ainvoke({

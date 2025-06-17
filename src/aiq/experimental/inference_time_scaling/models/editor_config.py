@@ -76,7 +76,7 @@ class LLMAsAJudgeEditorConfig(ITSStrategyBaseConfig, name="llm_as_a_judge_editor
         description="The template to use for generating feedback for each planning item.")
 
     @model_validator(mode="before")
-    def validate_strategies(cls, values: typing.Dict[str, typing.Any]) -> typing.Dict[str, typing.Any]:
+    def validate_strategies(cls, values: dict[str, typing.Any]) -> dict[str, typing.Any]:
 
         if values.get('editing_llm') is None:
             raise ValueError('editing_llm must be provided when editing_strategy is set.')
@@ -108,6 +108,7 @@ class IterativePlanRefinementConfig(ITSStrategyBaseConfig, name="iterative_plan_
             raise ValueError('num_iterations must be >= 1 for iterative plan refinement.')
         return values
 
+
 class MotivationAwareSummarizationConfig(ITSStrategyBaseConfig, name="motivation_aware_editing"):
     """
     Configuration for the MotivationAwareSummarization strategy.
@@ -123,9 +124,9 @@ class MotivationAwareSummarizationConfig(ITSStrategyBaseConfig, name="motivation
                  "Here is the task:\n\n"
                  "{task}\n\n"
                  "Here is the motivation:\n\n"
-                "{motivation}\n\n"
+                 "{motivation}\n\n"
                  "and here are the documents:\n\n"
-                "{output}\n\n"
+                 "{output}\n\n"
                  "Please respond with a concise summary that addresses the task and motivation, in at most one"
                  "or two sentences. Do not include any other output except the summary. "),
         description="The template to use for summarizing documents.")

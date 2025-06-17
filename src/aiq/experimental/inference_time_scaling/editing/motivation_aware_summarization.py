@@ -1,11 +1,11 @@
 import logging
-from typing import List
+from typing import list
 
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_its_strategy
-from aiq.experimental.inference_time_scaling.models.its_item import ITSItem
 from aiq.experimental.inference_time_scaling.models.editor_config import MotivationAwareSummarizationConfig
+from aiq.experimental.inference_time_scaling.models.its_item import ITSItem
 from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
 from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
 from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
@@ -32,17 +32,17 @@ class MotivationAwareSummarization(StrategyBase):
         bound_llm = await builder.get_llm(self.config.editor_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
         self.llm_bound = bound_llm
 
-    def supported_pipeline_types(self) -> List[PipelineTypeEnum]:
+    def supported_pipeline_types(self) -> list[PipelineTypeEnum]:
         return [PipelineTypeEnum.TOOL_USE]
 
     def stage_type(self) -> StageTypeEnum:
         return StageTypeEnum.EDITING
 
     async def ainvoke(self,
-                      items: List[ITSItem],
+                      items: list[ITSItem],
                       original_prompt: str | None = None,
                       agent_context: str | None = None,
-                      **kwargs) -> List[ITSItem]:
+                      **kwargs) -> list[ITSItem]:
         """
         For each ITSItem, rewrite the 'input' using each LLM to create a new perspective.
         The new ITSItems' 'output' field will store the newly generated query.
@@ -53,7 +53,7 @@ class MotivationAwareSummarization(StrategyBase):
             raise ImportError("langchain-core is required for MultiQueryRetrievalSearch. "
                               "Install aiqtoolkit-langchain or similar.")
 
-        new_its_items: List[ITSItem] = []
+        new_its_items: list[ITSItem] = []
 
         # Create a single PromptTemplate object for rewriting the query
         template_vars = ["task", "motivation", "output"]
@@ -67,9 +67,7 @@ class MotivationAwareSummarization(StrategyBase):
             output = str(item.output) if item.output else ""
 
             prompt = await (query_template.ainvoke(input={
-                "task": original_task,
-                "motivation": motivation,
-                "output": output
+                "task": original_task, "motivation": motivation, "output": output
             }))
 
             llm_response = await self.llm_bound.ainvoke(prompt.to_string())
@@ -77,12 +75,13 @@ class MotivationAwareSummarization(StrategyBase):
 
             logger.info("LLM response from summarization: %s", llm_response)
 
-            new_its_items.append(ITSItem(
-                input=item.input,
-                output=remove_r1_think_tags(llm_response),
-                metadata=item.metadata,
-                name=item.name,  # keep the original tool name
-            ))
+            new_its_items.append(
+                ITSItem(
+                    input=item.input,
+                    output=remove_r1_think_tags(llm_response),
+                    metadata=item.metadata,
+                    name=item.name,  # keep the original tool name
+                ))
 
         return new_its_items
 

@@ -40,8 +40,7 @@ class LLMBasedPlanSelector(StrategyBase):
         """
         Build the components required for the selector.
         """
-        self.llm_bound = await builder.get_llm(self.config.selection_llm,
-                                                          wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        self.llm_bound = await builder.get_llm(self.config.selection_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     def supported_pipeline_types(self) -> [PipelineTypeEnum]:
         return [PipelineTypeEnum.PLANNING]

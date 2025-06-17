@@ -42,7 +42,7 @@ class LLMBasedPlanScoringConfig(ITSStrategyBaseConfig, name="llm_based_plan_scor
         description="The template to use for scoring the plans.")
 
     @model_validator(mode="before")
-    def validate_strategies(cls, values: typing.Dict[str, typing.Any]) -> typing.Dict[str, typing.Any]:
+    def validate_strategies(cls, values: dict[str, typing.Any]) -> dict[str, typing.Any]:
         """
         Ensure that the scoring_llm is provided when using LLMBasedScoring.
         """
@@ -74,7 +74,7 @@ class LLMBasedAgentScoringConfig(ITSStrategyBaseConfig, name="llm_based_agent_sc
     )
 
     @model_validator(mode="before")
-    def validate_strategies(cls, values: typing.Dict[str, typing.Any]) -> typing.Dict[str, typing.Any]:
+    def validate_strategies(cls, values: dict[str, typing.Any]) -> dict[str, typing.Any]:
         """
         Ensure that the scoring_llm is provided when using LLMBasedScoring.
         """
