@@ -1,0 +1,195 @@
+---
+description: Follow these rules when the user's request involves implementing, adding, creating, or modifying functions within AIQ workflows
+globs: 
+alwaysApply: false
+---
+# Creating AIQ Toolkit Functions
+
+This document provides rules and guidelines for creating functions (also referred to as tools) in the AIQ Toolkit. Functions are the core building blocks for defining workflow logic.
+
+## Core Concepts
+
+- **Asynchronous**: All functions are asynchronous. Use `async`/`await`.
+- **Type-Safe**: Use Python type hints for inputs and outputs. Pydantic is used for validation.
+- **I/O Modes**: Functions can have a single output (`ainvoke`) and/or a streaming output (`astream`).
+- **Registration**: Functions must be registered using the `@register_function` decorator to be available in the toolkit.
+- **Configuration**: Each function has a Pydantic configuration class inheriting from `FunctionBaseConfig`.
+
+## Step-by-Step Guide to Creating a Function
+
+### 1. Define the Configuration Class
+
+Every function needs a configuration class that inherits from `aiq.data_models.function.FunctionBaseConfig`. This class defines the function's configuration parameters.
+
+- The class must have a `name` attribute, which is the unique identifier for the function.
+- Use Pydantic's `Field` to provide default values, descriptions, and validation for configuration options.
+
+**Example:**
+```python
+from aiq.data_models.function import FunctionBaseConfig
+from pydantic import Field
+
+class MyFunctionConfig(FunctionBaseConfig, name="my_function"):
+    """Configuration for My Function."""
+    greeting: str = Field("Hello", description="The greeting to use.")
+    repeat_count: int = Field(1, description="Number of times to repeat the greeting.", gt=0)
+```
+
+### 2. Write the Function Logic
+
+There are two primary ways to implement a function's logic:
+
+#### A. As a Callable (Recommended for simplicity)
+
+Implement the logic as an `async` Python function.
+
+- The function's description is taken from its docstring.
+- The input and output types are inferred from type annotations.
+- For multiple arguments, a Pydantic model is automatically generated.
+
+**Example (Single Output):**
+```python
+async def _my_simple_function(message: str) -> str:
+    """
+    A simple function that returns a greeting.
+    """
+    return f"Hello, {message}"
+```
+
+**Example (Streaming Output):**
+```python
+from typing import AsyncGenerator
+
+async def _my_streaming_function(message: str) -> AsyncGenerator[str, None]:
+    """
+    A simple streaming function.
+    """
+    for i in range(3):
+        yield f"Stream {i}: {message}"
+```
+
+#### B. As a `Function` Subclass (For complex state or logic)
+
+Inherit from `aiq.builder.function.Function` and implement `_ainvoke` and/or `_astream`.
+
+- Generic parameters `Function[InputType, StreamOutputType, SingleOutputType]`. Use `None` or `NoneType` if an output type is not supported.
+
+**Example:**
+```python
+from aiq.builder.function import Function
+from typing import AsyncGenerator, NoneType
+
+class MyComplexFunction(Function[str, str, str]):
+    async def _ainvoke(self, value: str) -> str:
+        # Single output logic
+        return f"Single output: {value}"
+
+    async def _astream(self, value: str) -> AsyncGenerator[str, None]:
+        # Streaming output logic
+        for i in range(3):
+            yield f"Stream {i}: {value}"
+```
+
+### 3. Register the Function
+
+Use the `@register_function` decorator on an `async` generator function. This registration function `yield`s the actual function logic.
+
+- The `config_type` in the decorator must match your configuration class.
+- The registration function receives the `config` instance and a `builder` object.
+- **IMPORTANT**: To avoid premature loading, define or import the function logic *inside* the registration function.
+
+**Example (Registering a Callable):**
+```python
+from aiq.cli.register_workflow import register_function
+from aiq.builder.builder import Builder
+
+@register_function(config_type=MyFunctionConfig)
+async def register_my_function(config: MyFunctionConfig, builder: Builder):
+    # Initialization logic here (e.g., loading models)
+    print("Initializing my function...")
+
+    async def _my_function(message: str) -> str:
+        """My function implementation."""
+        # Access config: config.greeting, config.repeat_count
+        return f"{config.greeting}, {message}" * config.repeat_count
+
+    yield _my_function
+
+    # Cleanup logic here
+    print("Cleaning up my function...")
+```
+
+**Example (Registering a `Function` subclass):**
+```python
+@register_function(config_type=MyFunctionConfig)
+async def register_my_complex_function(config: MyFunctionConfig, builder: Builder):
+    # Import or define the class inside
+    from .my_complex_function_module import MyComplexFunction
+
+    yield MyComplexFunction(config=config)
+```
+
+### 4. Handling Multiple Arguments
+
+If your callable has multiple arguments, an input schema is automatically created. You invoke it with a dictionary.
+
+```python
+async def multi_arg_fn(text: str, count: int) -> str:
+    return text * count
+
+# When invoking:
+# await function.ainvoke({"text": "a", "count": 3})
+```
+The input schema will be `class MultiArgFnInput(BaseModel): text: str; count: int`.
+
+### 5. Function Composition
+
+To call other functions, use the `builder` object passed to the registration function.
+
+- In the config class, declare references to other functions using `aiq.data_models.component_ref.FunctionRef`.
+- Use `builder.get_function()` inside the registration function to get instances of other functions.
+
+**Example:**
+```python
+from aiq.data_models.component_ref import FunctionRef
+
+class MyCompositeConfig(FunctionBaseConfig, name="my_composite_function"):
+    """Config for a composite function."""
+    first_function: FunctionRef
+    second_function: FunctionRef
+
+@register_function(config_type=MyCompositeConfig)
+async def register_composite_function(config: MyCompositeConfig, builder: Builder):
+    """Registers a function that calls two other functions."""
+    func1 = builder.get_function(config.first_function)
+    func2 = builder.get_function(config.second_function)
+
+    async def _composite_function(data: str) -> str:
+        res1 = await func1.ainvoke(data)
+        res2 = await func2.ainvoke(res1)
+        return res2
+
+    yield _composite_function
+```
+
+## Advanced Topics
+
+### Overriding Schemas
+
+You can provide custom Pydantic schemas for input/output validation and documentation by passing `input_schema` or `output_schema` to `FunctionInfo.from_fn`.
+
+### Custom Type Converters
+
+Provide a list of converter functions to `FunctionInfo.from_fn` via the `converters` argument. A converter is a function with type annotations for its input and output.
+
+```python
+def my_converter(value: int) -> str:
+    return f"Converted from int: {value}"
+
+# When creating FunctionInfo
+yield FunctionInfo.from_fn(
+    _my_function,
+    description="...",
+    converters=[my_converter]
+)
+```

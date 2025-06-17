@@ -28,13 +28,13 @@ from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
 
 from . import utils
-from .prompts import PipelineNodePrompts
+from .prompts import CategorizerPrompts
 
 
 class CategorizerToolConfig(FunctionBaseConfig, name="categorizer"):
-    description: str = Field(default="This is a categorization tool used at the end of the pipeline.",
-                             description="Description of the tool.")
+    description: str = Field(default=CategorizerPrompts.TOOL_DESCRIPTION, description="Description of the tool.")
     llm_name: LLMRef
+    prompt: str = Field(default=CategorizerPrompts.PROMPT, description="Main prompt for the categorization task.")
 
 
 def _extract_markdown_heading_level(report: str) -> str:
@@ -48,8 +48,7 @@ def _extract_markdown_heading_level(report: str) -> str:
 async def categorizer_tool(config: CategorizerToolConfig, builder: Builder):
     # Set up LLM and chain
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-    prompt_template = ChatPromptTemplate([("system", PipelineNodePrompts.CATEGORIZER_PROMPT),
-                                          MessagesPlaceholder("msgs")])
+    prompt_template = ChatPromptTemplate([("system", config.prompt), MessagesPlaceholder("msgs")])
     categorization_chain = prompt_template | llm
 
     async def _arun(report: str) -> str:
