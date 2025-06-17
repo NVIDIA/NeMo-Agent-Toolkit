@@ -32,4 +32,5 @@ MCP Server Front-End <./mcp-server.md>
 Profile a Workflow <./profiler.md>
 Locally and Self-Hosted LLMs <./locally-hosted-llms.md>
 Adding an LLM Provider <./adding-an-llm-provider.md>
+Inference Time Scaling <./inference-time-scaling.md>
 ```
