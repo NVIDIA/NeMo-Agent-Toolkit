@@ -49,7 +49,7 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
         client_host: str | None = aiq_context.metadata.client_host
         client_port: int | None = aiq_context.metadata.client_port
         cookies: dict[str, str] | None = aiq_context.metadata.cookies
-        thread_id: str | None = aiq_context.thread_id  # Unique identifier for the current chat conversation.
+        conversation_id: str | None = aiq_context.conversation_id
 
         return (f"Method: {method}, "
                 f"URL Path: {url_path}, "
@@ -60,7 +60,7 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
                 f"Client Host: {client_host}, "
                 f"Client Port: {client_port}, "
                 f"Cookies: {cookies}, "
-                f"Thread Id: {thread_id}")
+                f"Conversation Id: {conversation_id}")
 
     yield FunctionInfo.from_fn(_get_request_attributes,
                                description="Returns the acquired user defined request attriubutes.")

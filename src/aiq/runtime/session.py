@@ -87,7 +87,7 @@ class AIQSessionManager:
     async def session(self,
                       user_manager=None,
                       request: Request | None = None,
-                      thread_id: str | None = None,
+                      conversation_id: str | None = None,
                       user_input_callback: Callable[[InteractionPrompt], Awaitable[HumanResponse]] = None):
 
         token_user_input = None
@@ -98,8 +98,8 @@ class AIQSessionManager:
         if user_manager is not None:
             token_user_manager = self._context_state.user_manager.set(user_manager)
 
-        if thread_id is not None:
-            self._context.thread_id = thread_id
+        if conversation_id is not None and request is None:
+            self._context_state.conversation_id.set(conversation_id)
 
         self.set_metadata_from_http_request(request)
 
@@ -130,7 +130,7 @@ class AIQSessionManager:
         If request is None, no attributes are set.
         """
         if request is None:
-            return None
+            return
 
         self._context.metadata._request.method = request.method
         self._context.metadata._request.url_path = request.url.path
@@ -143,5 +143,5 @@ class AIQSessionManager:
         self._context.metadata._request.client_port = request.client.port
         self._context.metadata._request.cookies = request.cookies
 
-        if request.headers.get("thread-id"):
-            self._context.thread_id = request.headers["thread-id"]
+        if request.headers.get("conversation-id"):
+            self._context_state.conversation_id.set(request.headers["conversation-id"])

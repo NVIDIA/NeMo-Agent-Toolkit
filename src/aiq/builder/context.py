@@ -61,7 +61,7 @@ class ActiveFunctionContextManager:
 class AIQContextState(metaclass=Singleton):
 
     def __init__(self):
-        self._thread_id: ContextVar[str | None] = ContextVar("thread_id", default=None)
+        self.conversation_id: ContextVar[str | None] = ContextVar("conversation_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
         self.user_manager: ContextVar[typing.Any] = ContextVar("user_manager", default=None)
         self.metadata: ContextVar[RequestAttributes] = ContextVar("request_attributes", default=RequestAttributes())
@@ -150,21 +150,14 @@ class AIQContext:
         return IntermediateStepManager(self._context_state)
 
     @property
-    def thread_id(self) -> str | None:
+    def conversation_id(self) -> str | None:
         """
-        This property retrieves the thread ID which is the unique identifier for the current chat conversation.
+        This property retrieves the conversation ID which is the unique identifier for the current chat conversation.
 
         Returns:
             str | None
         """
-        return self._context_state._thread_id.get()
-
-    @thread_id.setter
-    def thread_id(self, thread_id: str):
-        """
-        This property sets the thread ID which is the unique identifier for the current chat conversation.
-        """
-        self._context_state._thread_id.set(thread_id)
+        return self._context_state.conversation_id.get()
 
     @contextmanager
     def push_active_function(self, function_name: str, input_data: typing.Any | None):

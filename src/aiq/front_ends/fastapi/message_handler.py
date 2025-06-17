@@ -134,13 +134,13 @@ class MessageHandler:
         """
         Process user messages and routes them appropriately.
 
-        :param message_as_validated_type: A WebSocketUserMessage Data Model instance.
+        :param user_message_as_validated_type: A WebSocketUserMessage Data Model instance.
         """
 
         try:
             self._message_parent_id = user_message_as_validated_type.id
             self._workflow_schema_type = user_message_as_validated_type.schema_type
-            thread_id: str = user_message_as_validated_type.thread_id
+            conversation_id: str = user_message_as_validated_type.conversation_id
 
             content: BaseModel | None = await self.process_user_message_content(user_message_as_validated_type)
 
@@ -152,7 +152,7 @@ class MessageHandler:
                 await self._process_response()
                 self._background_task = asyncio.create_task(
                     self._websocket_reference.workflow_schema_type.get(self._workflow_schema_type)(
-                        content.text, thread_id)).add_done_callback(
+                        content.text, conversation_id)).add_done_callback(
                             lambda task: asyncio.create_task(self._on_process_stream_task_done(task)))
 
         except ValueError as e:
