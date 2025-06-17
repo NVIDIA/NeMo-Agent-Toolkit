@@ -70,6 +70,7 @@ weave = ["aiqtoolkit-weave"]
 zep-cloud = ["aiqtoolkit-zep-cloud"]
 
 examples = [
+  "aiq_alert_triage_agent",
   "aiq_email_phishing_analyzer",
   "aiq_multi_frameworks",
   "aiq_plot_charts",
@@ -142,6 +143,7 @@ dev = [
   "python-docx~=1.1.0",
   "setuptools >= 64",
   "setuptools_scm>=8",
+  "tomlkit~=0.13.2",
   "twine~=6.0",
   "yapf==0.43.*",
 ]
