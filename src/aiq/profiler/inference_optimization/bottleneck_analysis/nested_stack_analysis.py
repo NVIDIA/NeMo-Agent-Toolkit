@@ -69,13 +69,20 @@ def build_call_tree_for_example(example_df: pd.DataFrame) -> list[CallNode]:
             return "LLM"
         if evt.startswith("TOOL_"):
             return "TOOL"
+        if evt.startswith("FUNCTION_"):
+            return "FUNCTION"
+        if evt.startswith("SPAN_"):
+            return "FUNCTION"
         return None
 
     def get_op_name(row: pd.Series, op_type: str) -> str:
         if op_type == "LLM":
             return row.get("llm_name") or "unknown_llm"
+        if op_type == "FUNCTION":
+            return row.get("function_name") or "unknown_function"
         if op_type == "TOOL":
             return row.get("tool_name") or "unknown_tool"
+
         return "unknown_op"
 
     for _, row in example_df.iterrows():
@@ -309,6 +316,7 @@ def save_gantt_chart(all_nodes: list[CallNode], output_path: str) -> None:
     color_map = {
         "LLM": "tab:blue",
         "TOOL": "tab:green",
+        "FUNCTION": "tab:orange",
     }
     default_color = "tab:gray"
 

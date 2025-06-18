@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+import time
 from contextlib import asynccontextmanager
 
 import pytest
@@ -202,3 +204,70 @@ async def test_specified_endpoints():
 
         assert response.status_code == 200
         assert response.json() == {"value": "Hello"}
+
+
+@pytest.mark.parametrize("fn_use_openai_api", [True, False])
+async def test_generate_async(fn_use_openai_api: bool):
+    if (fn_use_openai_api):
+        pytest.skip("Async support for OpenAI API is not implemented yet")
+
+    front_end_config = FastApiFrontEndConfig()
+
+    config = AIQConfig(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(use_openai_api=fn_use_openai_api),
+    )
+
+    workflow_path = f"{front_end_config.workflow.path}/async"
+    # oai_path = front_end_config.workflow.openai_api_path
+    async with _build_client(config) as client:
+
+        # Test both the function accepting OAI and also using the OAI API
+        if (fn_use_openai_api):
+            # response = await client.post(
+            #     workflow_path, json=AIQChatRequest(messages=[Message(content="Hello", role="user")]).model_dump())
+
+            # assert response.status_code == 200
+            # assert AIQChatResponse.model_validate(response.json()).choices[0].message.content == "Hello"
+            assert True  # TODO: Implement async support in the EchoFunctionConfig
+
+        else:
+            response = await client.post(workflow_path, json={"message": "Hello", "job_id": "1"})
+
+            assert response.status_code == 202
+            assert response.json() == {"job_id": "1", "status": "submitted"}
+
+        expected_status_values = ("running", "success", "submitted")
+        status_path = f"{workflow_path}/job/1"
+
+        status = None
+        deadline = time.time() + 10  # Wait for up to 10 seconds
+        while status != "success":
+            response = await client.get(status_path)
+
+            assert response.status_code == 200
+            data = response.json()
+            status = data["status"]
+
+            assert status in expected_status_values
+            assert time.time() < deadline, "Job did not complete in time"
+            if status != "success":
+                await asyncio.sleep(0.1)
+
+
+async def test_async_job_status_not_found():
+    front_end_config = FastApiFrontEndConfig()
+
+    config = AIQConfig(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(use_openai_api=False),
+    )
+
+    workflow_path = f"{front_end_config.workflow.path}/async"
+
+    async with _build_client(config) as client:
+        status_path = f"{workflow_path}/job/non_existent_job"
+
+        response = await client.get(status_path)
+
+        assert response.status_code == 404

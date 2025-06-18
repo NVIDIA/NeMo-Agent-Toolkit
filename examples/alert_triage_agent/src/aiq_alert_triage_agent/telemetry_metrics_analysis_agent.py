@@ -30,18 +30,16 @@ from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
 
 from . import utils
-from .prompts import TelemetryMetricsAnalysisPrompts
+from .prompts import TelemetryMetricsAnalysisAgentPrompts
 
 
 class TelemetryMetricsAnalysisAgentConfig(FunctionBaseConfig, name="telemetry_metrics_analysis_agent"):
-    description: str = Field(default=("This is a telemetry metrics tool used to monitor remotely collected "
-                                      "telemetry data. It checks server heartbeat data to determine whether "
-                                      "the server is up and running and analyzes CPU usage patterns over "
-                                      "the past 14 days to identify potential CPU issues. Args: host_id: "
-                                      "str, alert_type: str"),
-                             description="Description of the tool for the agent.")
+    description: str = Field(default=TelemetryMetricsAnalysisAgentPrompts.TOOL_DESCRIPTION,
+                             description="Description of the tool for the triage agent.")
     tool_names: list[str] = []
     llm_name: LLMRef
+    prompt: str = Field(default=TelemetryMetricsAnalysisAgentPrompts.PROMPT,
+                        description="Main prompt for the telemetry metrics analysis agent.")
 
 
 @register_function(config_type=TelemetryMetricsAnalysisAgentConfig)
@@ -67,7 +65,7 @@ async def telemetry_metrics_analysis_agent_tool(config: TelemetryMetricsAnalysis
 
         # Define agent function that processes messages with LLM
         def telemetry_metrics_analysis_agent(state: MessagesState):
-            sys_msg = SystemMessage(content=TelemetryMetricsAnalysisPrompts.AGENT)
+            sys_msg = SystemMessage(content=config.prompt)
             return {"messages": [llm_n_tools.invoke([sys_msg] + state["messages"])]}
 
         # Build the agent execution graph
