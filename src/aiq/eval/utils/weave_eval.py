@@ -1,29 +1,12 @@
-import sys
-from typing import List, Any
-import logging
 import asyncio
+import logging
+from typing import Any
+from typing import List
 
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 
-
-def _unraisable_hook(unraisable):
-    # This is a workaround to avoid some weird concurrency issues
-    # the result of which is that we see ugly tracebacks on program exit.
-    # We are still investigating the root cause of this issue.
-    err = unraisable.exc_value
-    msg = str(err)
-    # drop both GeneratorExit–related and CancelScope–related noise
-    if isinstance(err, RuntimeError) and (
-       "async generator ignored GeneratorExit" in msg
-       or "Attempted to exit cancel scope" in msg
-       or "unknown async library, or not in async context" in msg
-    ):
-        return
-    sys.__unraisablehook__(unraisable)
-
-sys.unraisablehook = _unraisable_hook
 logger = logging.getLogger(__name__)
 
 
@@ -92,10 +75,8 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         if not self.eval_logger:
             return
 
-        pred_logger = self.eval_logger.log_prediction(
-            inputs=item.model_dump(exclude={"output_obj", "trajectory"}),
-            output=output
-        )
+        pred_logger = self.eval_logger.log_prediction(inputs=item.model_dump(exclude={"output_obj", "trajectory"}),
+                                                      output=output)
         self.pred_loggers[item.id] = pred_logger
 
     async def alog_score(self, eval_output: EvalOutput, evaluator_name: str):
