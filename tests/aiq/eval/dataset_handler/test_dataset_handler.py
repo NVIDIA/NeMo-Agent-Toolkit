@@ -79,6 +79,32 @@ def input_entry_two(dataset_id_key, dataset_structure):
 
 
 @pytest.fixture
+def input_entry_with_extras(dataset_id_key, dataset_structure):
+    """Mock input entry with additional fields."""
+    return {
+        dataset_id_key: "3",
+        dataset_structure.question_key: "What is NLP?",
+        dataset_structure.answer_key: "Natural Language Processing",
+        dataset_structure.generated_answer_key: "NLP",
+        dataset_structure.trajectory_key: [],
+        dataset_structure.expected_trajectory_key: [],
+        "additional_field": "additional_value",
+        "additional_field_2": 123,
+        "additional_field_3": True,
+        "additional_field_4": [1, 2, 3],
+        "additional_field_5": {
+            "key": "value"
+        }
+    }
+
+
+@pytest.fixture
+def mock_input_df_with_extras(input_entry_with_extras):
+    """Mock DataFrame with additional fields."""
+    return pd.DataFrame([input_entry_with_extras])
+
+
+@pytest.fixture
 def mock_input_df(input_entry_one, input_entry_two):
     """Mock DataFrame with sample dataset."""
     return pd.DataFrame([input_entry_one, input_entry_two])
@@ -118,6 +144,28 @@ def mock_swe_bench_input_df(dataset_swe_bench_id_key):
     }, {
         dataset_swe_bench_id_key: "bar_2", "problem": "Overflow", "repo": "bar"
     }])
+
+
+def test_get_eval_input_from_df_with_additional_fields(mock_input_df_with_extras,
+                                                       input_entry_with_extras,
+                                                       dataset_id_key,
+                                                       dataset_structure):
+    """
+    Test that additional fields are always passed to the evaluator as full_dataset_entry.
+    """
+    dataset_config = EvalDatasetJsonConfig()
+    dataset_handler = DatasetHandler(dataset_config, reps=1)
+    eval_input = dataset_handler.get_eval_input_from_df(mock_input_df_with_extras)
+
+    # check core fields
+    assert eval_input.eval_input_items[0].id == input_entry_with_extras[dataset_id_key]
+    assert eval_input.eval_input_items[0].input_obj == input_entry_with_extras[dataset_structure.question_key]
+    assert eval_input.eval_input_items[0].expected_output_obj == input_entry_with_extras[dataset_structure.answer_key]
+    assert eval_input.eval_input_items[0].expected_trajectory == input_entry_with_extras[
+        dataset_structure.expected_trajectory_key]
+
+    # full_dataset_entry should always be provided
+    assert eval_input.eval_input_items[0].full_dataset_entry == input_entry_with_extras
 
 
 def test_get_eval_input_from_df(dataset_handler,

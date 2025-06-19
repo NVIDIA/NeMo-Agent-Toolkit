@@ -87,6 +87,9 @@ eval:
         disable: true
 ```
 
+### Accessing Additional Dataset Fields in Evaluators
+In some evaluation scenarios, you may have additional fields in your dataset that are not consumed by the workflow but are required by the evaluator. These fields are automatically available during evaluation via the `full_dataset_entry` field in the `EvalInputItem` object. The entire dataset entry is passed as a dictionary to the evaluator, making all dataset fields available for custom evaluators that require access to fields like `labels` or `metadata` which are not part of the workflow's inputs but are relevant for scoring or analysis.
+
 ### Filtering Datasets
 While evaluating large datasets, you can filter the dataset to a
 smaller subset by allowing or denying entries with the `eval.general.dataset.filter`
@@ -232,6 +235,13 @@ eval:
     tuneable_eval:
       _type: tunable_rag_evaluator
       llm_name: nim_rag_eval_llm
+      # (optional) retry control params for handling rate limiting
+      llm_retry_control_params:
+        stop_after_attempt: 3
+        # set initial backoff (seconds)
+        initial_backoff_delay_seconds: 1
+        # Add jitter to exponential backoff
+        has_exponential_jitter: true
       default_scoring: false
       default_score_weights:
         coverage: 0.5
@@ -425,6 +435,25 @@ eval:
 ```
 The `remote_file_path` is the path to the dataset in the remote storage. The `file_path` is the local path where the dataset will be downloaded. The `s3` section contains the information needed to access the remote storage.
 
+### Preserving outputs across multiple runs
+By default, evaluation outputs are written to the same directory specified in `eval.general.output.dir`. This means that running the evaluation multiple times will overwrite previous results. To keep the outputs from each run separate, enable the `append_job_id_to_output_dir` option in the `job_management` section:
+
+```yaml
+eval:
+  general:
+    output:
+      dir: ./.tmp/aiq/examples/simple_output/
+      job_management:
+        append_job_id_to_output_dir: true
+      cleanup: false
+```
+
+When `append_job_id_to_output_dir` is set to `true`, a unique job ID (`job_{UUID}`) is automatically generated for each evaluation run and appended to the output directory path. This results in:
+- Local output path: `./.tmp/aiq/examples/simple/jobs/job_{unique-job-id}/`
+- Remote output path (if S3 is configured): `output/jobs/job_{unique-job-id}/`
+
+The `cleanup` option is used to control the cleanup of the output directory. If `cleanup` is set to `true`, the entire output directory and all job `sub-directories` are deleted at the beginning of the evaluation. So `cleanup` must be set to `false` if you want to preserve the output directory and job `sub-directories`.
+
 ### Uploading output directory to remote storage
 You can upload the contents of the entire output directory to remote storage by providing the information needed to upload the output directory in the `eval.general.output` section of the `config.yml` file. The following is an example configuration to upload the output directory to remote storage.
 ```yaml
@@ -439,6 +468,7 @@ eval:
         access_key: fake-access-key
         secret_key: fake-secret-key
 ```
+
 ### Cleanup output directory
 The contents of the output directory can be deleted before running the evaluation pipeline by specifying the `eval.general.output.cleanup` section in the `config.yml` file. The following is an example configuration to clean up the output directory before running the evaluation pipeline.
 ```yaml
@@ -449,6 +479,24 @@ eval:
       cleanup: true
 ```
 Output directory cleanup is disabled by default for easy troubleshooting.
+
+### Job eviction from output directory
+When running multiple evaluations, especially with `append_job_id_to_output_dir` enabled, the output directory can accumulate a large number of job folders over time. You can control this growth using a job eviction policy.
+Configure job eviction with the following options in the `config.yml` file:
+```yaml
+eval:
+  general:
+    output:
+      dir: ./.tmp/aiq/examples/simple_output/
+      cleanup: false
+      job_management:
+        append_job_id_to_output_dir: true
+        max_jobs: 5
+        eviction_policy: TIME_CREATED
+```
+Configuration notes:
+- `max_jobs` sets the maximum number of job directories to keep. The oldest ones will be evicted based on the selected policy. Default is 0, which means no limit.
+- `eviction_policy` controls how "oldest" is determined—either by creation time (TIME_CREATED) or last modification time (TIME_MODIFIED). Default is TIME_CREATED.
 
 ## Profiling and Performance Monitoring of AIQ Toolkit Workflows
 You can profile workflows using the AIQ toolkit evaluation system. For more information, see the [Profiler](../workflows/profiler.md) documentation.

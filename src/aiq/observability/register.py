@@ -24,7 +24,6 @@ from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.utils.optional_imports import telemetry_optional_import
-from aiq.utils.optional_imports import try_import_opentelemetry
 from aiq.utils.optional_imports import try_import_phoenix
 
 logger = logging.getLogger(__name__)
@@ -103,7 +102,7 @@ async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, build
     if not api_key:
         raise ValueError("API key is required for langsmith")
 
-    headers = {"x-api-key": api_key, "LANGSMITH_PROJECT": config.project}
+    headers = {"x-api-key": api_key, "Langsmith-Project": config.project}
     yield trace_exporter.OTLPSpanExporter(endpoint=config.endpoint, headers=headers)
 
 
@@ -117,9 +116,9 @@ class OtelCollectorTelemetryExporter(TelemetryExporterBaseConfig, name="otelcoll
 @register_telemetry_exporter(config_type=OtelCollectorTelemetryExporter)
 async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder):
     """Create an OpenTelemetry telemetry exporter."""
-    # If the dependencies are not installed, a TelemetryOptionalImportError will be raised
-    opentelemetry = try_import_opentelemetry()
-    yield opentelemetry.sdk.trace.export.OTLPSpanExporter(config.endpoint)
+
+    trace_exporter = telemetry_optional_import("opentelemetry.exporter.otlp.proto.http.trace_exporter")
+    yield trace_exporter.OTLPSpanExporter(endpoint=config.endpoint)
 
 
 class ConsoleLoggingMethod(LoggingBaseConfig, name="console"):
@@ -155,3 +154,27 @@ async def file_logging_method(config: FileLoggingMethod, builder: Builder):
     handler = logging.FileHandler(filename=config.path, mode="a", encoding="utf-8")
     handler.setLevel(level)
     yield handler
+
+
+class PatronusTelemetryExporter(TelemetryExporterBaseConfig, name="patronus"):
+    """A telemetry exporter to transmit traces to Patronus service."""
+
+    endpoint: str = Field(description="The Patronus OTEL endpoint")
+    api_key: str = Field(description="The Patronus API key", default="")
+    project: str = Field(description="The project name to group the telemetry traces.")
+
+
+@register_telemetry_exporter(config_type=PatronusTelemetryExporter)
+async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder: Builder):
+    """Create a Patronus telemetry exporter."""
+    trace_exporter = telemetry_optional_import("opentelemetry.exporter.otlp.proto.grpc.trace_exporter")
+
+    api_key = config.api_key or os.environ.get("PATRONUS_API_KEY")
+    if not api_key:
+        raise ValueError("API key is required for Patronus")
+
+    headers = {
+        "x-api-key": api_key,
+        "pat-project-name": config.project,
+    }
+    yield trace_exporter.OTLPSpanExporter(endpoint=config.endpoint, headers=headers)
