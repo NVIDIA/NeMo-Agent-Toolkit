@@ -12,6 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# This file is a part of the Nvidia AIQ Toolkit project, Mem0 Plugin
+# as a way of integrating lcoal Mem0 with local Ollama, and vector db instances.
 
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_memory
