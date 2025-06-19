@@ -33,11 +33,11 @@ class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
 
 class NoOpSpanExporter:
     """A no-op span exporter that properly implements the SpanExporter interface."""
-    
+
     def export(self, spans):
         """Export method that doesn't actually export spans."""
         return None
-        
+
     def shutdown(self):
         """Shutdown method that cleans up any resources."""
         try:
