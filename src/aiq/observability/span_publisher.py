@@ -48,6 +48,16 @@ class AbstractSpanPublisher(AbstractExporter):
         self._stop_event = asyncio.Event()
         self._initialized = True
 
+    def _process_streaming_output(self, input_value: Any) -> Any:
+        """
+        Serialize a list of values to a JSON string.
+        """
+        if isinstance(input_value, BaseModel):
+            return json.loads(TypeAdapter(type(input_value)).dump_json(input_value).decode('utf-8'))
+        if isinstance(input_value, dict):
+            return input_value
+        return input_value
+
     def _serialize_payload(self, input_value: Any) -> tuple[str, bool]:
         """
         Serialize the input value to a string. Returns a tuple with the serialized value and a boolean indicating if the
@@ -65,6 +75,12 @@ class AbstractSpanPublisher(AbstractExporter):
                 return TypeAdapter(type(input_value)).dump_json(input_value).decode('utf-8'), True
             elif isinstance(input_value, dict):
                 return json.dumps(input_value), True
+            elif isinstance(input_value, list):
+                serialized_list = []
+                for value in input_value:
+                    serialized_value = self._process_streaming_output(value)
+                    serialized_list.append(serialized_value)
+                return self._serialize_payload(serialized_list)
             else:
                 return str(input_value), False
         except Exception:
