@@ -32,6 +32,7 @@ from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.utils.output_uploader import OutputUploader
+from aiq.eval.utils.weave_eval import WeaveEvaluationIntegration
 from aiq.runtime.session import AIQSessionManager
 
 logger = logging.getLogger(__name__)
@@ -54,7 +55,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         # Helpers
         self.intermediate_step_adapter: IntermediateStepAdapter = IntermediateStepAdapter()
-
+        self.weave_eval: WeaveEvaluationIntegration = WeaveEvaluationIntegration()
         # Metadata
         self.eval_input: EvalInput | None = None
         self.workflow_interrupted: bool = False
@@ -137,6 +138,8 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
                 item.output_obj = output
                 item.trajectory = self.intermediate_step_adapter.validate_intermediate_steps(intermediate_steps)
+
+                self.weave_eval.log_prediction(item, output)
 
         async def wrapped_run(item: EvalInputItem) -> None:
             await run_one(item)
@@ -268,11 +271,15 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                    "`eval` with the --skip_completed_entries flag.")
             logger.warning(msg)
 
+        self.weave_eval.log_summary(self.evaluation_results)
+
     async def run_single_evaluator(self, evaluator_name: str, evaluator: Any):
         """Run a single evaluator and store its results."""
         try:
             eval_output = await evaluator.evaluate_fn(self.eval_input)
             self.evaluation_results.append((evaluator_name, eval_output))
+
+            await self.weave_eval.alog_score(eval_output, evaluator_name)
         except Exception as e:
             logger.exception("An error occurred while running evaluator %s: %s", evaluator_name, e, exc_info=True)
 
@@ -289,6 +296,9 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         except Exception as e:
             logger.exception("An error occurred while running evaluators: %s", e, exc_info=True)
             raise
+        finally:
+            # Finish prediction loggers in Weave
+            await self.weave_eval.afinish_loggers()
 
     def apply_overrides(self):
         from aiq.cli.cli_utils.config_override import load_and_override_config
@@ -362,6 +372,11 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         # Run workflow and evaluate
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:
+            # Initialize Weave integration
+            self.weave_eval.initialize_client()
+            if self.weave_eval.client:
+                self.weave_eval.initialize_logger(self.eval_input, config)
+
             if self.config.endpoint:
                 await self.run_workflow_remote()
             else:
