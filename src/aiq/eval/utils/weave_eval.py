@@ -123,13 +123,5 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         """Log summary statistics to Weave."""
         if not self.eval_logger:
             return
-
-        summary = {}
-        for evaluator_name, eval_output in evaluation_results:
-            # Calculate average score for this evaluator
-            scores = [item.score for item in eval_output.eval_output_items if item.score is not None]
-            if scores:
-                summary[f"{evaluator_name}_avg"] = sum(scores) / len(scores)
-
         # Log the summary to finish the evaluation
-        self.eval_logger.log_summary(summary)
+        self.eval_logger.log_summary()
