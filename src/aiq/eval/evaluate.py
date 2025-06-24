@@ -314,6 +314,16 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         config = validate_schema(config_dict, AIQConfig)
         return config
 
+    def _get_workflow_alias(self, workflow_type: str | None = None):
+        """Get the workflow alias for displaying in evaluation UI."""
+        if self.eval_config.general.workflow_alias:
+            return self.eval_config.general.workflow_alias
+
+        if not workflow_type or workflow_type == "EmptyFunctionConfig":
+            return "aiqtoolkit-eval"
+
+        return workflow_type
+
     async def run_and_evaluate(self,
                                session_manager: AIQSessionManager | None = None,
                                job_id: str | None = None) -> EvaluationRunOutput:
@@ -331,7 +341,8 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         else:
             config = load_config(self.config.config_file)
         self.eval_config = config.eval
-        logger.debug("Loaded evaluation configuration: %s", self.eval_config)
+        workflow_alias = self._get_workflow_alias(config.workflow.type)
+        logger.debug("Loaded %s evaluation configuration: %s", workflow_alias, self.eval_config)
 
         # Cleanup the output directory
         if self.eval_config.general.output:
@@ -373,10 +384,9 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         # Run workflow and evaluate
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:
             # Initialize Weave integration
-            self.weave_eval.initialize_client()
-            if self.weave_eval.client:
-                self.weave_eval.initialize_logger(self.eval_input, config)
+            self.weave_eval.initialize_logger(workflow_alias, self.eval_input, config)
 
+            # Run workflow
             if self.config.endpoint:
                 await self.run_workflow_remote()
             else:

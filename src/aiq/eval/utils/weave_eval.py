@@ -16,7 +16,6 @@
 import asyncio
 import logging
 from typing import Any
-from typing import List
 
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
@@ -61,18 +60,34 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             self.client = None
             return False
 
-    def initialize_logger(self, eval_input: EvalInput, config: Any):
+    def _get_prediction_inputs(self, item: EvalInputItem):
+        """Get the inputs for displaying in the UI.
+        The following fields are excluded as they are too large to display in the UI:
+        - full_dataset_entry
+        - expected_trajectory
+        - trajectory
+
+        output_obj is excluded because it is displayed separately.
+        """
+        include = {"id", "input_obj", "expected_output_obj"}
+        return item.model_dump(include=include)
+
+    def _get_weave_dataset(self, eval_input: EvalInput):
+        """Get the full dataset for Weave."""
+        return [item.full_dataset_entry for item in eval_input.eval_input_items]
+
+    def initialize_logger(self, workflow_alias: str, eval_input: EvalInput, config: Any):
         """Initialize the Weave evaluation logger."""
         if not self.client:
+            # lazy init the client
+            if not self.initialize_client():
+                return False
             return False
 
         try:
-            weave_dataset = [
-                item.model_dump(exclude={"output_obj", "trajectory"}) for item in eval_input.eval_input_items
-            ]
+            weave_dataset = self._get_weave_dataset(eval_input)
             config_dict = config.model_dump(mode="json")
-            # TODO: make this configurable
-            config_dict["name"] = "aiqtoolkit-eval"
+            config_dict["name"] = workflow_alias
             self.eval_logger = self.EvaluationLogger(model=config_dict, dataset=weave_dataset)
             self.pred_loggers = {}
 
@@ -90,8 +105,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         if not self.eval_logger:
             return
 
-        pred_logger = self.eval_logger.log_prediction(inputs=item.model_dump(exclude={"output_obj", "trajectory"}),
-                                                      output=output)
+        pred_logger = self.eval_logger.log_prediction(inputs=self._get_prediction_inputs(item), output=output)
         self.pred_loggers[item.id] = pred_logger
 
     async def alog_score(self, eval_output: EvalOutput, evaluator_name: str):
@@ -119,7 +133,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
 
         await asyncio.gather(*[_finish_one(pl) for pl in self.pred_loggers.values()])
 
-    def log_summary(self, evaluation_results: List[tuple[str, EvalOutput]]):
+    def log_summary(self, evaluation_results: list[tuple[str, EvalOutput]]):
         """Log summary statistics to Weave."""
         if not self.eval_logger:
             return
