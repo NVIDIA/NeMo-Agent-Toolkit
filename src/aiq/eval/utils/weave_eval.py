@@ -132,17 +132,26 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
 
     def _log_profiler_metrics(self, profiler_results: ProfilerResults) -> dict[str, Any]:
         """Log profile metrics to Weave."""
-        return {
-            "workflow_p95_latency": profiler_results.workflow_runtime_metrics.p95,
-        }
+        profile_metrics = {}
+        if profiler_results.workflow_runtime_metrics:
+            profile_metrics["workflow_p95_latency"] = profiler_results.workflow_runtime_metrics.p95
+        for llm_name, tokens in profiler_results.tokens_per_llm.items():
+            profile_metrics[f"tokens_per_{llm_name}"] = tokens
+        return profile_metrics
 
     def log_summary(self, evaluation_results: list[tuple[str, EvalOutput]], profiler_results: ProfilerResults):
         """Log summary statistics to Weave."""
         if not self.eval_logger:
             return
 
+        summary = {}
+        # add evaluation results to the summary
+        for evaluator_name, eval_output in evaluation_results:
+            summary[evaluator_name] = eval_output.average_score
+
         # add profile metrics to the summary
         profile_metrics = self._log_profiler_metrics(profiler_results)
+        summary.update(profile_metrics)
 
         # Log the summary to finish the evaluation
-        self.eval_logger.log_summary(profile_metrics)
+        self.eval_logger.log_summary(summary, auto_summarize=False)

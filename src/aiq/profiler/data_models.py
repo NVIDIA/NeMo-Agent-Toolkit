@@ -20,3 +20,4 @@ from aiq.profiler.inference_optimization.data_models import WorkflowRuntimeMetri
 
 class ProfilerResults(BaseModel):
     workflow_runtime_metrics: WorkflowRuntimeMetrics | None = None
+    tokens_per_llm: dict[str, int] = {}

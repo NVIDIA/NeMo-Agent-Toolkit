@@ -276,7 +276,7 @@ class ProfilerRunner:
                 logger.info("Fitted model for forecasting.")
             except Exception as e:
                 logger.exception("Fitting model failed. %s", e, exc_info=True)
-                return
+                return ProfilerResults()
 
             os.makedirs(self.output_dir, exist_ok=True)
 
