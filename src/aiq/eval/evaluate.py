@@ -33,6 +33,7 @@ from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.utils.output_uploader import OutputUploader
 from aiq.eval.utils.weave_eval import WeaveEvaluationIntegration
+from aiq.profiler.inference_metrics_model import SimpleMetricsHolder
 from aiq.runtime.session import AIQSessionManager
 
 logger = logging.getLogger(__name__)
@@ -162,7 +163,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         handler = EvaluationRemoteWorkflowHandler(self.config, self.eval_config.general.max_concurrency)
         await handler.run_workflow_remote(self.eval_input)
 
-    async def profile_workflow(self):
+    async def profile_workflow(self) -> SimpleMetricsHolder:
         """
         Profile a dataset
         """
@@ -179,7 +180,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         profiler_runner = ProfilerRunner(self.eval_config.general.profiler, self.eval_config.general.output_dir)
 
-        await profiler_runner.run(all_stats)
+        return await profiler_runner.run(all_stats)
 
     def cleanup_output_directory(self):
         '''Remove contents of the output directory if it exists'''
@@ -238,12 +239,11 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             except Exception as e:
                 logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e, exc_info=True)
 
-    def write_output(self, dataset_handler: DatasetHandler):
+    def write_output(self, dataset_handler: DatasetHandler, simple_metrics: SimpleMetricsHolder):
         workflow_output_file = self.eval_config.general.output_dir / "workflow_output.json"
         workflow_output_file.parent.mkdir(parents=True, exist_ok=True)
 
         # Write the workflow output to a file (this can be used for re-running the evaluation)
-
         step_filter = self.eval_config.general.output.workflow_output_step_filter \
             if self.eval_config.general.output else None
         workflow_output = dataset_handler.publish_eval_input(self.eval_input, step_filter)
@@ -271,7 +271,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                    "`eval` with the --skip_completed_entries flag.")
             logger.warning(msg)
 
-        self.weave_eval.log_summary(self.evaluation_results)
+        self.weave_eval.log_summary(self.evaluation_results, simple_metrics)
 
     async def run_single_evaluator(self, evaluator_name: str, evaluator: Any):
         """Run a single evaluator and store its results."""
@@ -401,10 +401,10 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             await self.run_evaluators(evaluators)
 
         # Profile the workflow
-        await self.profile_workflow()
+        simple_metrics = await self.profile_workflow()
 
         # Write the results to the output directory
-        self.write_output(dataset_handler)
+        self.write_output(dataset_handler, simple_metrics)
 
         # Run custom scripts and upload evaluation outputs to S3
         if self.eval_config.general.output:
