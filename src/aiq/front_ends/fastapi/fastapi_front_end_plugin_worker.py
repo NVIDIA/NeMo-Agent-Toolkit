@@ -933,7 +933,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             await _CredentialsManager().set_oauth_credentials()
 
-            return JSONResponse({"message": "Access token successfully retrieved."})
+            return JSONResponse({"message": "Access token successfully retrieved. Please close this window."})
 
         async def prompt_redirect_uri(request: Request, prompt_request_schema: PromptRedirectRequest):
 
