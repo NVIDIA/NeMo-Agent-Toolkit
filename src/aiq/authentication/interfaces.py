@@ -16,6 +16,8 @@
 from abc import ABC
 from abc import abstractmethod
 
+import httpx
+
 
 class RequestManagerBase:
     """
@@ -33,16 +35,20 @@ class ResponseManagerBase:
     pass
 
 
-class AuthenticationBase(ABC):
+class AuthenticationManagerBase(ABC):
     """
     Base class for authenticating to API services.
     This class provides an interface for authenticating to API services.
     """
 
     @abstractmethod
-    async def _validate_credentials(self) -> bool:
+    async def validate_authentication_credentials(self) -> bool:
         pass
 
     @abstractmethod
-    async def _get_credentials(self) -> bool:
+    async def get_authentication_header(self) -> httpx.Headers | None:
+        pass
+
+    @abstractmethod
+    async def construct_authentication_header(self) -> httpx.Headers | None:
         pass

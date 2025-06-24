@@ -21,6 +21,7 @@ from contextlib import AbstractAsyncContextManager
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 
+from aiq.builder.authentication import AuthenticationProviderInfo  # TODO EE: Update
 from aiq.builder.builder import Builder
 from aiq.builder.builder import UserManagerHolder
 from aiq.builder.component_utils import build_dependency_sequence
@@ -36,7 +37,9 @@ from aiq.builder.retriever import RetrieverProviderInfo
 from aiq.builder.workflow import Workflow
 from aiq.cli.type_registry import GlobalTypeRegistry
 from aiq.cli.type_registry import TypeRegistry
+from aiq.data_models.authentication import AuthenticationBaseConfig  # TODO EE: Update
 from aiq.data_models.component import ComponentGroup
+from aiq.data_models.component_ref import AuthenticationRef  # TODO EE: Update
 from aiq.data_models.component_ref import EmbedderRef
 from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.component_ref import LLMRef
@@ -105,6 +108,12 @@ class ConfiguredRetriever:
     instance: RetrieverProviderInfo
 
 
+@dataclasses.dataclass  # TODO EE: Update
+class ConfiguredAuthentication:
+    config: AuthenticationBaseConfig
+    instance: AuthenticationProviderInfo
+
+
 # pylint: disable=too-many-public-methods
 class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
@@ -127,6 +136,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._workflow: ConfiguredFunction | None = None
 
         self._llms: dict[str, ConfiguredLLM] = {}
+        self._authentications: dict[str, ConfiguredAuthentication] = {}  # TODO EE: Update
         self._embedders: dict[str, ConfiguredEmbedder] = {}
         self._memory_clients: dict[str, ConfiguredMemory] = {}
         self._retrievers: dict[str, ConfiguredRetriever] = {}
@@ -434,6 +444,23 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise e
 
     @override
+    async def add_authentication(self, name: str | AuthenticationRef,
+                                 config: AuthenticationBaseConfig):  # TODO EE: Update
+
+        if (name in self._authentications):
+            raise ValueError(f"Authentication `{name}` already exists in the list of Authentication Providers")
+
+        try:
+            authentication_info = self._registry.get_authentication_provider(type(config))
+
+            info_obj = await self._get_exit_stack().enter_async_context(authentication_info.build_fn(config, self))
+
+            self._authentications[name] = ConfiguredAuthentication(config=config, instance=info_obj)
+        except Exception as e:
+            logger.error("Error adding authentication `%s` with config `%s`", name, config, exc_info=True)
+            raise e
+
+    @override
     async def get_llm(self, llm_name: str | LLMRef, wrapper_type: LLMFrameworkEnum | str):
 
         if (llm_name not in self._llms):
@@ -599,7 +626,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     def get_user_manager(self):
         return UserManagerHolder(context=AIQContext(self._context_state))
 
-    async def populate_builder(self, config: AIQConfig, skip_workflow: bool = False):
+    async def populate_builder(self, config: AIQConfig, skip_workflow: bool = False):  # TODO EE: Update
         """
         Populate the builder with components and optionally set up the workflow.
 
@@ -613,19 +640,22 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         # Loop over all objects and add to the workflow builder
         for component_instance in build_sequence:
-            # Instantiate a the llm
+            # Instantiate a llm component
             if component_instance.component_group == ComponentGroup.LLMS:
                 await self.add_llm(component_instance.name, component_instance.config)
-            # Instantiate a the embedder
+            # Instantiate an authentication component
+            elif component_instance.component_group == ComponentGroup.AUTHENTICATION:
+                await self.add_authentication(component_instance.name, component_instance.config)
+            # Instantiate an embedder component
             elif component_instance.component_group == ComponentGroup.EMBEDDERS:
                 await self.add_embedder(component_instance.name, component_instance.config)
-            # Instantiate a memory client
+            # Instantiate a memory client component
             elif component_instance.component_group == ComponentGroup.MEMORY:
                 await self.add_memory_client(component_instance.name, component_instance.config)
-            # Instantiate a retriever client
+            # Instantiate a retriever client component
             elif component_instance.component_group == ComponentGroup.RETRIEVERS:
                 await self.add_retriever(component_instance.name, component_instance.config)
-            # Instantiate a function
+            # Instantiate a function component
             elif component_instance.component_group == ComponentGroup.FUNCTIONS:
                 # If the function is the root, set it as the workflow later
                 if (not component_instance.is_root):
@@ -699,6 +729,10 @@ class ChildBuilder(Builder):
     @override
     async def add_llm(self, name: str, config: LLMBaseConfig):
         return await self._workflow_builder.add_llm(name, config)
+
+    @override
+    async def add_authentication(self, name: str, config: AuthenticationBaseConfig):  # TODO EE: Update
+        return await self._workflow_builder.add_authentication(name, config)
 
     @override
     async def get_llm(self, llm_name: str, wrapper_type: LLMFrameworkEnum | str):

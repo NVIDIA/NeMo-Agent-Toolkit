@@ -53,6 +53,17 @@ class AIQUserInteractionManager:
         """
         raise NotImplementedError("No human prompt callback was registered. Unable to handle requested prompt.")
 
+    @staticmethod
+    async def execute_api_request_default(request: AuthenticatedRequest) -> None:
+        """
+        Default callback handler for user requests. This no-op function raises a NotImplementedError error, to indicate
+        that a valid request callback was not registered.
+
+        Args:
+            request (AuthenticatedRequest): The authenticated request to be executed.
+        """
+        raise NotImplementedError("No request callback was registered. Unable to handle request.")
+
     async def prompt_user_input(self, content: HumanPrompt) -> InteractionResponse:
         """
         Ask the user a question and wait for input. This calls out to
@@ -79,20 +90,20 @@ class AIQUserInteractionManager:
     async def make_api_request(self,
                                url: str,
                                http_method: str,
-                               authentication_provider: str | None = None,
+                               authentication_config_name: str | None = None,
                                headers: dict | None = None,
                                query_params: dict | None = None,
                                body_data: dict | None = None) -> httpx.Response | None:
         """
         Constructs and sends an API request, authenticating the user using OAuth 2.0 or API keys based on the
-        credentials specified in the YAML configuration file. If no authentication provider is specified, the request
+        credentials specified in the YAML configuration file. If no authentication config is specified, the request
         is sent without authentication. The user is responsible for handling all responses, which are propagated back
         to the user on both successful and unsuccessful requests.
 
         Args:
             url (str): The base URL to which the request will be sent.
             http_method (str): The HTTP method to use for the request (e.g., "GET", "POST", etc..).
-            authentication_provider (str | None): The name of the registered authentication provider to use for
+            authentication_config (str | None): The name of the registered authentication config to use for
             making an authenticated request. If None, no authentication will be applied.
             headers (dict | None): Optional dictionary of HTTP headers.
             query_params (dict | None): Optional dictionary of query parameters.
@@ -102,11 +113,14 @@ class AIQUserInteractionManager:
             httpx.Response | None: The successful or unsuccessful response from the API request, or None if an error
             occurs during the authentication process or sending the request.
         """
+        from aiq.authentication.credentials_manager import _CredentialsManager
+
         try:
             authenticated_request: AuthenticatedRequest = AuthenticatedRequest(
                 url_path=url,
                 method=http_method,
-                authentication_provider=authentication_provider,
+                authentication_config_name=authentication_config_name,
+                authentication_config=_CredentialsManager()._get_authentication_config(authentication_config_name),
                 headers=headers,
                 query_params=query_params,
                 body_data=body_data)

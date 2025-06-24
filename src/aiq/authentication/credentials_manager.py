@@ -18,9 +18,9 @@ import logging
 import typing
 from copy import deepcopy
 
+from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
 from aiq.builder.context import Singleton
-from aiq.data_models.authentication import AuthenticationProvider
-from aiq.data_models.authentication import OAuth2Config
+from aiq.data_models.authentication import AuthenticationBaseConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FrontEndBaseConfig
 
@@ -37,69 +37,68 @@ class _CredentialsManager(metaclass=Singleton):
         Credentials Manager to store AIQ Authorization configurations.
         """
         super().__init__()
-        self._authentication_providers: dict[str, AuthenticationProvider] = {}
+        self._authentication_configs: dict[str, AuthenticationBaseConfig] = {}
         self._swap_flag: bool = True
         self._full_config: "AIQConfig" = None
         self._oauth_credentials_flag: asyncio.Event = asyncio.Event()
         self._consent_prompt_flag: asyncio.Event = asyncio.Event()
 
-    def _swap_authorization_providers(self, authentication_providers: dict[str, AuthenticationProvider]) -> None:
+    def _swap_authentication_configs(self, authentication_configs: dict[str, AuthenticationBaseConfig]) -> None:
         """
         Transfer ownership of the sensitive AIQ Authorization configuration attributes to the
         CredentialsManager.
 
         Args:
             http_method (str): The HTTP method to validate (e.g., 'GET', 'POST').
-            authentication_providers (dict[str, AuthenticationProvider]): Dictionary of registered authentication
-            providers.
+            authentication_configs (dict[str, AuthenticationBaseConfig]): Dictionary of registered authentication
+            configs.
         """
         if self._swap_flag:
-            self._authentication_providers = deepcopy(authentication_providers)
-            authentication_providers.clear()
+            self._authentication_configs = deepcopy(authentication_configs)
+            authentication_configs.clear()
             self._swap_flag = False
 
-    def _get_authentication_provider(self, authentication_provider: str) -> AuthenticationProvider | None:
-        """Retrieve the stored authentication provider by registered name."""
+    def _get_authentication_config(self, authentication_config_name: str | None) -> AuthenticationBaseConfig | None:
+        """Retrieve the stored authentication config by registered name."""
 
-        if authentication_provider not in self._authentication_providers:
-            logger.error("Authentication provider not found: %s", authentication_provider)
+        if authentication_config_name not in self._authentication_configs:
+            logger.error("Authentication config not found: %s", authentication_config_name)
             return None
 
-        return self._authentication_providers.get(authentication_provider)
+        return self._authentication_configs.get(authentication_config_name)
 
-    def _get_authentication_provider_by_state(self, state: str) -> OAuth2Config | None:
-        """Retrieve the stored authentication provider by state."""
+    def _get_authentication_config_by_state(self, state: str) -> AuthCodeGrantConfig | None:
+        """Retrieve the stored authentication config by state."""
 
-        for _, authentication_provider in self._authentication_providers.items():
-            if isinstance(authentication_provider, OAuth2Config):
-                if authentication_provider.state == state:
-                    return authentication_provider
+        for _, authentication_config in self._authentication_configs.items():
+            if isinstance(authentication_config, AuthCodeGrantConfig):
+                if authentication_config.state == state:
+                    return authentication_config
 
-        logger.error("Authentication provider not found by the provided state.")
+        logger.error("Authentication config not found by the provided state.")
         return None
 
-    def _get_registered_authentication_provider_name(self,
-                                                     authentication_provider: AuthenticationProvider) -> str | None:
-        """Retrieve the stored authentication provider name."""
+    def _get_registered_authentication_config_name(self, authentication_config: AuthenticationBaseConfig) -> str | None:
+        """Retrieve the stored authentication config name."""
 
-        for registered_provider_name, registered_provider in self._authentication_providers.items():
-            if (authentication_provider == registered_provider):
-                return registered_provider_name
+        for registered_config_name, registered_config in self._authentication_configs.items():
+            if (authentication_config == registered_config):
+                return registered_config_name
 
-        logger.error("Authentication provider name not found by the provided authentication provider.")
+        logger.error("Authentication config name not found by the provided authentication config model.")
         return None
 
-    def _get_authentication_provider_by_consent_prompt_key(self, consent_prompt_key: str) -> OAuth2Config | None:
-        """Retrieve the stored authentication provider by consent prompt key."""
-        for _, authentication_provider in self._authentication_providers.items():
-            if isinstance(authentication_provider, OAuth2Config):
-                if authentication_provider.consent_prompt_key == consent_prompt_key:
-                    return authentication_provider
+    def _get_authentication_config_by_consent_prompt_key(self, consent_prompt_key: str) -> AuthCodeGrantConfig | None:
+        """Retrieve the stored authentication config by consent prompt key."""
+        for _, authentication_config in self._authentication_configs.items():
+            if isinstance(authentication_config, AuthCodeGrantConfig):
+                if authentication_config.consent_prompt_key == consent_prompt_key:
+                    return authentication_config
         return None
 
     def _validate_and_set_cors_config(self, front_end_config: FrontEndBaseConfig) -> None:
         """
-        Validate and set the CORS configuration for the authentication providers.
+        Validate and set the CORS authentication configuration for the frontend.
         """
 
         default_allow_origins: list[str] = ["http://localhost:3000"]

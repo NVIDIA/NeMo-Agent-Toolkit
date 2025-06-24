@@ -16,6 +16,8 @@
 from contextlib import asynccontextmanager
 
 from aiq.builder.framework_enum import LLMFrameworkEnum
+from aiq.cli.type_registry import AuthenticationProviderBuildCallableT
+from aiq.cli.type_registry import AuthenticationProviderRegisteredCallableT
 from aiq.cli.type_registry import EmbedderClientBuildCallableT
 from aiq.cli.type_registry import EmbedderClientRegisteredCallableT
 from aiq.cli.type_registry import EmbedderProviderBuildCallableT
@@ -47,6 +49,7 @@ from aiq.cli.type_registry import TeleExporterRegisteredCallableT
 from aiq.cli.type_registry import TelemetryExporterBuildCallableT
 from aiq.cli.type_registry import TelemetryExporterConfigT
 from aiq.cli.type_registry import ToolWrapperBuildCallableT
+from aiq.data_models.authentication import AuthenticationBaseConfigT
 from aiq.data_models.component import AIQComponentEnum
 from aiq.data_models.discovery_metadata import DiscoveryMetadata
 from aiq.data_models.embedder import EmbedderBaseConfigT
@@ -406,3 +409,27 @@ def register_registry_handler(config_type: type[RegistryHandlerBaseConfigT]):
         return context_manager_fn
 
     return register_registry_handler_inner
+
+
+def register_authentication_provider(config_type: type[AuthenticationBaseConfigT]):  # TODO EE: Update Auth Provider
+
+    def register_authentication_provider_inner(
+        fn: AuthenticationProviderBuildCallableT[AuthenticationBaseConfigT]
+    ) -> AuthenticationProviderRegisteredCallableT[AuthenticationBaseConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredAuthenticationProviderInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=AIQComponentEnum.AUTHENTICATION_PROVIDER)
+
+        GlobalTypeRegistry.get().register_authentication_provider(
+            RegisteredAuthenticationProviderInfo(full_type=config_type.full_type,
+                                                 config_type=config_type,
+                                                 build_fn=context_manager_fn,
+                                                 discovery_metadata=discovery_metadata))
+
+        return context_manager_fn
+
+    return register_authentication_provider_inner

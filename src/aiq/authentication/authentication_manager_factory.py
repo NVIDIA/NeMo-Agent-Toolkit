@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import logging
+
+from aiq.authentication.api_key.api_key_config import APIKeyConfig
+from aiq.authentication.api_key.api_key_manager import APIKeyManager
+from aiq.authentication.interfaces import AuthenticationManagerBase
+from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
+from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantManager
+from aiq.data_models.authentication import AuthenticationManagerConfig
+
+logger = logging.getLogger(__name__)
+
+
+class AuthenticationManagerFactory:
+
+    def __init__(self) -> None:
+        pass
+
+    async def create(self, authentication_manager: AuthenticationManagerConfig) -> AuthenticationManagerBase | None:
+        """_summary_
+
+        Args:
+            authentication_manager (AuthenticationManagerConfig | None): _description_
+
+        Returns:
+            AuthenticationManagerBase | None: _description_
+        """
+
+        if isinstance(authentication_manager.config, AuthCodeGrantConfig):
+            return AuthCodeGrantManager(config_name=authentication_manager.config_name,
+                                        config=authentication_manager.config,
+                                        execution_mode=authentication_manager.execution_mode)
+
+        if isinstance(authentication_manager.config, APIKeyConfig):
+            return APIKeyManager(config_name=authentication_manager.config_name, config=authentication_manager.config)
+
+        return None

@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class AIQComponentEnum(StrEnum):
+    AUTHENTICATION_PROVIDER = "authentication_provider"  # TODO EE: Update
     FRONT_END = "front_end"
     FUNCTION = "function"
     TOOL_WRAPPER = "tool_wrapper"
@@ -44,3 +45,4 @@ class ComponentGroup(StrEnum):
     LLMS = "llms"
     MEMORY = "memory"
     RETRIEVERS = "retrievers"
+    AUTHENTICATION = "authentication"  # TODO EE: Update

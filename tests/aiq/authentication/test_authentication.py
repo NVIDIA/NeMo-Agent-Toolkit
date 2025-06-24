@@ -26,17 +26,18 @@ import httpx
 import pytest
 
 from aiq.authentication.credentials_manager import _CredentialsManager
+from aiq.authentication.exceptions import AuthCodeGrantError
 from aiq.authentication.exceptions import BaseUrlValidationError
 from aiq.authentication.exceptions import HTTPHeaderValidationError
 from aiq.authentication.exceptions import HTTPMethodValidationError
-from aiq.authentication.exceptions import OAuthCodeFlowError
 from aiq.authentication.exceptions import QueryParameterValidationError
-from aiq.authentication.oauth2_authenticator import OAuth2Authenticator
+from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
+from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantManager
 from aiq.authentication.request_manager import RequestManager
 from aiq.authentication.response_manager import ResponseManager
 from aiq.cli.cli_utils.config_override import load_and_override_config
 from aiq.data_models.authentication import ConsentPromptMode
-from aiq.data_models.authentication import OAuth2Config
+from aiq.data_models.authentication import ExecutionMode
 from aiq.data_models.config import AIQConfig
 from aiq.utils.data_models.schema_validator import validate_schema
 
@@ -58,14 +59,14 @@ async def test_credential_persistence():
     config = validate_schema(config_dict, AIQConfig)
 
     # Swap credentials and ensure they are not the same.
-    assert _CredentialsManager()._get_authentication_provider("jira") != config.authentication.get("jira")
+    assert _CredentialsManager()._get_authentication_config("jira") != config.authentication.get("jira")
     assert not config.authentication
 
     # Ensure credentials can only be swapped once.
-    assert _CredentialsManager()._get_authentication_provider("jira") != config.authentication.get("jira")
+    assert _CredentialsManager()._get_authentication_config("jira") != config.authentication.get("jira")
 
     # Ensure None is returned if the provider does not exist.
-    test = _CredentialsManager()._get_authentication_provider("invalid_provider")
+    test = _CredentialsManager()._get_authentication_config("invalid_provider")
     assert test is None
 
 
@@ -80,7 +81,7 @@ async def test_oauth_pydantic_model_state_field():
     if not jira_config:
         pytest.skip("Jira configuration not found in test config")
 
-    model = OAuth2Config(**jira_config)
+    model = AuthCodeGrantConfig(**jira_config)
 
     # Throw error is state field is being modified.
     with pytest.raises(ValidationError):
@@ -103,7 +104,7 @@ async def test_validate_base_url_valid(request_manager: RequestManager):
     ]
     for url in valid_urls:
         try:
-            request_manager._validate_base_url(url)
+            request_manager.validate_base_url(url)
         except BaseUrlValidationError as e:
             pytest.fail(f"Valid URL '{url}' incorrectly raised BaseUrlValidationError: {e}")
 
@@ -115,7 +116,7 @@ async def test_validate_base_url_invalid(request_manager: RequestManager):
 
     for url in invalid_urls:
         with pytest.raises(BaseUrlValidationError):
-            request_manager._validate_base_url(url)
+            request_manager.validate_base_url(url)
 
 
 async def test_validate_http_method_valid(request_manager: RequestManager):
@@ -124,7 +125,7 @@ async def test_validate_http_method_valid(request_manager: RequestManager):
     valid_methods = ["GET", "POST", "PoSt", "PUT", "DELETE", "get", "post", "put", "delete"]
 
     for method in valid_methods:
-        request_manager._validate_http_method(method)
+        request_manager.validate_http_method(method)
 
 
 async def test_validate_http_method_invalid(request_manager: RequestManager):
@@ -134,7 +135,7 @@ async def test_validate_http_method_invalid(request_manager: RequestManager):
 
     for method in invalid_methods:
         with pytest.raises(HTTPMethodValidationError):
-            request_manager._validate_http_method(method)
+            request_manager.validate_http_method(method)
 
 
 async def test_validate_headers_valid(request_manager: RequestManager):
@@ -146,7 +147,7 @@ async def test_validate_headers_valid(request_manager: RequestManager):
         "X-Custom-Header": "value",
         "AuthorizationTest": "Basic token"
     }
-    request_manager._validate_headers(valid_headers)
+    request_manager.validate_headers(valid_headers)
 
 
 async def test_validate_headers_invalid(request_manager: RequestManager):
@@ -210,7 +211,7 @@ async def test_validate_headers_invalid(request_manager: RequestManager):
     ]
     for headers in invalid_headers:
         with pytest.raises((HTTPHeaderValidationError, ValueError, TypeError)):
-            request_manager._validate_headers(headers)
+            request_manager.validate_headers(headers)
 
 
 async def test_validate_query_parameters_valid(request_manager: RequestManager):
@@ -218,7 +219,7 @@ async def test_validate_query_parameters_valid(request_manager: RequestManager):
 
     valid_query_params = {"key1": "value1", "key2": "value2", "special": "!@#$%^&*()"}
 
-    request_manager._validate_query_parameters(valid_query_params)
+    request_manager.validate_query_parameters(valid_query_params)
 
 
 async def test_validate_query_parameters_invalid(request_manager: RequestManager):
@@ -265,7 +266,7 @@ async def test_validate_query_parameters_invalid(request_manager: RequestManager
 
     for query_params in invalid_query_params:
         with pytest.raises((QueryParameterValidationError, ValueError)):
-            request_manager._validate_query_parameters(query_params)
+            request_manager.validate_query_parameters(query_params)
 
 
 @pytest.fixture
@@ -279,83 +280,89 @@ def mock_response_manager():
 
 
 @pytest.fixture
-def oauth2_authenticator(mock_request_manager: AsyncMock, mock_response_manager: AsyncMock):
-    return OAuth2Authenticator(mock_request_manager, mock_response_manager)
+def auth_code_grant_manager(mock_request_manager: AsyncMock, mock_response_manager: AsyncMock):
+    return AuthCodeGrantManager(mock_request_manager, mock_response_manager, ExecutionMode.SERVER)
 
 
-async def test_validate_oauth_credentials_valid(oauth2_authenticator: OAuth2Authenticator):
-    """Test OAuth2.0 valid credentials."""
+async def test_auth_code_grant_valid_credentials(auth_code_grant_manager: AuthCodeGrantManager):
+    """Test Auth Code Grant flow valid credentials."""
 
-    oauth2_authenticator.authentication_provider = OAuth2Config(access_token="valid_token",
-                                                                access_token_expires_in=datetime.now(timezone.utc) +
-                                                                timedelta(hours=1),
-                                                                client_server_url="https://test.com",
-                                                                authorization_url="https://test.com/auth",
-                                                                authorization_token_url="https://test.com/token",
-                                                                consent_prompt_key="test_key",
-                                                                client_secret="test_secret",
-                                                                client_id="test_client",
-                                                                audience="test_audience",
-                                                                scope=["test_scope"])
+    auth_code_grant_manager._config = AuthCodeGrantConfig(access_token="valid_token",
+                                                          access_token_expires_in=datetime.now(timezone.utc) +
+                                                          timedelta(hours=1),
+                                                          client_server_url="https://test.com",
+                                                          authorization_url="https://test.com/auth",
+                                                          authorization_token_url="https://test.com/token",
+                                                          consent_prompt_key="test_key",
+                                                          client_secret="test_secret",
+                                                          client_id="test_client",
+                                                          audience="test_audience",
+                                                          scope=["test_scope"])
 
     # Return True if access token is present and not expired.
-    result = await oauth2_authenticator._validate_credentials()
+    result = await auth_code_grant_manager.validate_authentication_credentials()
     assert result is True
 
 
-async def test_validate_oauth_credentials_expired(oauth2_authenticator: OAuth2Authenticator):
-    """Test OAuth2.0 valid credentials with expired access token."""
+async def test_auth_code_grant_credentials_expired(auth_code_grant_manager: AuthCodeGrantManager):
+    """Test Auth Code Grant Flow valid credentials with expired access token."""
 
-    oauth2_authenticator.authentication_provider = OAuth2Config(access_token="expired_token",
-                                                                access_token_expires_in=datetime.now(timezone.utc) -
-                                                                timedelta(hours=1),
-                                                                client_server_url="https://test.com",
-                                                                authorization_url="https://test.com/auth",
-                                                                authorization_token_url="https://test.com/token",
-                                                                consent_prompt_key="test_key",
-                                                                client_secret="test_secret",
-                                                                client_id="test_client",
-                                                                audience="test_audience",
-                                                                scope=["test_scope"])
+    auth_code_grant_manager._config = AuthCodeGrantConfig(access_token="expired_token",
+                                                          access_token_expires_in=datetime.now(timezone.utc) -
+                                                          timedelta(hours=1),
+                                                          client_server_url="https://test.com",
+                                                          authorization_url="https://test.com/auth",
+                                                          authorization_token_url="https://test.com/token",
+                                                          consent_prompt_key="test_key",
+                                                          client_secret="test_secret",
+                                                          client_id="test_client",
+                                                          audience="test_audience",
+                                                          scope=["test_scope"])
 
     # Return False if access token is expired.
-    result = await oauth2_authenticator._validate_credentials()
+    result = await auth_code_grant_manager.validate_authentication_credentials()
     assert result is False
 
 
-async def test_validate_oauth_credentials_no_access_token(oauth2_authenticator: OAuth2Authenticator):
-    """Test OAuth2.0 valid credentials without access token."""
+async def test_auth_code_grant_no_access_token(auth_code_grant_manager: AuthCodeGrantManager):
+    """Test Auth Code Grant Flow valid credentials without access token."""
 
-    oauth2_authenticator.authentication_provider = OAuth2Config(client_server_url="https://test.com",
-                                                                authorization_url="https://test.com/auth",
-                                                                authorization_token_url="https://test.com/token",
-                                                                consent_prompt_key="test_key",
-                                                                client_secret="test_secret",
-                                                                client_id="test_client",
-                                                                audience="test_audience",
-                                                                scope=["test_scope"])
+    auth_code_grant_manager._config = AuthCodeGrantConfig(client_server_url="https://test.com",
+                                                          authorization_url="https://test.com/auth",
+                                                          authorization_token_url="https://test.com/token",
+                                                          consent_prompt_key="test_key",
+                                                          client_secret="test_secret",
+                                                          client_id="test_client",
+                                                          audience="test_audience",
+                                                          scope=["test_scope"])
 
     # Return False if access token is missing.
-    result = await oauth2_authenticator._validate_credentials()
+    result = await auth_code_grant_manager.validate_authentication_credentials()
     assert result is False
 
 
-async def test_get_access_token_with_refresh_token_success(oauth2_authenticator: OAuth2Authenticator,
+async def test_get_access_token_with_refresh_token_success(auth_code_grant_manager: AuthCodeGrantManager,
                                                            mock_request_manager: AsyncMock):
     """Test successful refresh token flow."""
-    oauth2_authenticator.authentication_provider = OAuth2Config(access_token="mock_access_token",
-                                                                access_token_expires_in=datetime.now(timezone.utc) -
-                                                                timedelta(hours=1),
-                                                                client_id="test_client",
-                                                                client_secret="test_secret",
-                                                                refresh_token="valid_refresh_token",
-                                                                authorization_token_url="https://test.com/token",
-                                                                client_server_url="https://test.com",
-                                                                authorization_url="https://test.com/auth",
-                                                                consent_prompt_key="test_key",
-                                                                audience="test_audience",
-                                                                scope=["test_scope"])
 
+    # Assign mock request manager to the auth code grant manager
+    auth_code_grant_manager._request_manager = mock_request_manager
+
+    # Set expired access token to force refresh
+    auth_code_grant_manager._config = AuthCodeGrantConfig(
+        access_token="mock_access_token",
+        access_token_expires_in=datetime.now(timezone.utc) - timedelta(hours=1),  # expired
+        client_id="test_client",
+        client_secret="test_secret",
+        refresh_token="valid_refresh_token",
+        authorization_token_url="https://example.com/token",  # use dummy safe URL
+        client_server_url="https://example.com",
+        authorization_url="https://example.com/auth",
+        consent_prompt_key="test_key",
+        audience="test_audience",
+        scope=["test_scope"])
+
+    # Setup mocked HTTP response
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {
@@ -363,13 +370,13 @@ async def test_get_access_token_with_refresh_token_success(oauth2_authenticator:
     }
     mock_request_manager._send_request.return_value = mock_response
 
-    # Execute refresh token flow.
-    await oauth2_authenticator._get_access_token_with_refresh_token()
+    # Attempt to get refresh token.
+    await auth_code_grant_manager._get_access_token_with_refresh_token()
 
-    # Assert that the access token and refresh token are updated.
-    assert oauth2_authenticator.authentication_provider.access_token == "new_access_token"
-    assert oauth2_authenticator.authentication_provider.refresh_token == "new_refresh_token"
-    assert await oauth2_authenticator._validate_credentials() is True
+    # Mock refresh token flow
+    assert auth_code_grant_manager._config.access_token == "new_access_token"
+    assert auth_code_grant_manager._config.refresh_token == "new_refresh_token"
+    assert await auth_code_grant_manager.validate_authentication_credentials() is True
 
 
 @pytest.fixture
@@ -377,87 +384,87 @@ def response_manager():
     return ResponseManager()
 
 
-async def test_handle_oauth_authorization_response_codes_302_no_location(response_manager: ResponseManager):
+async def test_auth_code_grant_redirect_302_without_location(response_manager: ResponseManager):
     """Test handling of 302 redirect response without Location header."""
 
     mock_response = MagicMock(spec=httpx.Response)
     mock_response.status_code = 302
     mock_response.headers = {}
 
-    auth_provider = OAuth2Config(client_server_url="https://test.com",
-                                 authorization_url="https://test.com/auth",
-                                 authorization_token_url="https://test.com/token",
-                                 consent_prompt_key="test_key",
-                                 client_secret="test_secret",
-                                 client_id="test_client",
-                                 audience="test_audience",
-                                 scope=["test_scope"])
+    auth_provider = AuthCodeGrantConfig(client_server_url="https://test.com",
+                                        authorization_url="https://test.com/auth",
+                                        authorization_token_url="https://test.com/token",
+                                        consent_prompt_key="test_key",
+                                        client_secret="test_secret",
+                                        client_id="test_client",
+                                        audience="test_audience",
+                                        scope=["test_scope"])
 
     # Raises OAuthCodeFlowError if Location header is missing.
-    with pytest.raises(OAuthCodeFlowError):
-        await response_manager._handle_oauth_authorization_response_codes(mock_response, auth_provider)
+    with pytest.raises(AuthCodeGrantError):
+        await response_manager._handle_auth_code_grant_response_codes(mock_response, auth_provider)
 
 
-async def test_handle_oauth_authorization_response_codes_400(response_manager: ResponseManager):
+async def test_auth_code_grant_handles_400_response(response_manager: ResponseManager):
     """Test handling of 400 error response."""
     error_codes = [400, 401, 403, 404, 405]
 
     mock_response = MagicMock(spec=httpx.Response)
 
-    auth_provider = OAuth2Config(client_server_url="https://test.com",
-                                 authorization_url="https://test.com/auth",
-                                 authorization_token_url="https://test.com/token",
-                                 consent_prompt_key="test_key",
-                                 client_secret="test_secret",
-                                 client_id="test_client",
-                                 audience="test_audience",
-                                 scope=["test_scope"])
+    auth_provider = AuthCodeGrantConfig(client_server_url="https://test.com",
+                                        authorization_url="https://test.com/auth",
+                                        authorization_token_url="https://test.com/token",
+                                        consent_prompt_key="test_key",
+                                        client_secret="test_secret",
+                                        client_id="test_client",
+                                        audience="test_audience",
+                                        scope=["test_scope"])
 
     # Raises OAuthCodeFlowError if response status code is in the 400 range
     for error_code in error_codes:
         mock_response.status_code = error_code
-        with pytest.raises(OAuthCodeFlowError):
-            await response_manager._handle_oauth_authorization_response_codes(mock_response, auth_provider)
+        with pytest.raises(AuthCodeGrantError):
+            await response_manager._handle_auth_code_grant_response_codes(mock_response, auth_provider)
 
 
-async def test_handle_oauth_authorization_unknown_response_codes(response_manager: ResponseManager):
+async def test_auth_code_grant_handles_unknown_response_codes(response_manager: ResponseManager):
     """Test handling of unknown error code in HTTPresponse."""
     error_codes = [500, 900, 899]
 
     mock_response = MagicMock(spec=httpx.Response)
 
-    auth_provider = OAuth2Config(client_server_url="https://test.com",
-                                 authorization_url="https://test.com/auth",
-                                 authorization_token_url="https://test.com/token",
-                                 consent_prompt_key="test_key",
-                                 client_secret="test_secret",
-                                 client_id="test_client",
-                                 audience="test_audience",
-                                 scope=["test_scope"])
+    auth_provider = AuthCodeGrantConfig(client_server_url="https://test.com",
+                                        authorization_url="https://test.com/auth",
+                                        authorization_token_url="https://test.com/token",
+                                        consent_prompt_key="test_key",
+                                        client_secret="test_secret",
+                                        client_id="test_client",
+                                        audience="test_audience",
+                                        scope=["test_scope"])
 
     # Raises OAuthCodeFlowError if response status code is unknown.
     for error_code in error_codes:
         mock_response.status_code = error_code
-        with pytest.raises(OAuthCodeFlowError):
-            await response_manager._handle_oauth_authorization_response_codes(mock_response, auth_provider)
+        with pytest.raises(AuthCodeGrantError):
+            await response_manager._handle_auth_code_grant_response_codes(mock_response, auth_provider)
 
 
-async def test_handle_oauth_302_consent_browser_browser_error(response_manager: ResponseManager):
+async def test_auth_code_grant_consent_browser_redirect_error_302(response_manager: ResponseManager):
     """Test handling of browser error in 302 consent browser."""
 
     location_header = "https://test.com/consent"
-    auth_provider = OAuth2Config(client_server_url="https://test.com",
-                                 authorization_url="https://test.com/auth",
-                                 authorization_token_url="https://test.com/token",
-                                 consent_prompt_key="test_key",
-                                 client_secret="test_secret",
-                                 client_id="test_client",
-                                 audience="test_audience",
-                                 scope=["test_scope"],
-                                 consent_prompt_mode=ConsentPromptMode.BROWSER)
+    auth_provider = AuthCodeGrantConfig(client_server_url="https://test.com",
+                                        authorization_url="https://test.com/auth",
+                                        authorization_token_url="https://test.com/token",
+                                        consent_prompt_key="test_key",
+                                        client_secret="test_secret",
+                                        client_id="test_client",
+                                        audience="test_audience",
+                                        scope=["test_scope"],
+                                        consent_prompt_mode=ConsentPromptMode.BROWSER)
 
     # Raise OAuthCodeFlowError if browser error occurs.
     with patch('webbrowser.get', side_effect=webbrowser.Error("Browser error")):
 
-        with pytest.raises(OAuthCodeFlowError):
-            await response_manager._handle_oauth_302_consent_browser(location_header, auth_provider)
+        with pytest.raises(AuthCodeGrantError):
+            await response_manager._handle_auth_code_grant_302_consent_browser(location_header, auth_provider)

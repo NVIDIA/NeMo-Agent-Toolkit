@@ -25,8 +25,6 @@ from pydantic import ValidationInfo
 from pydantic import ValidatorFunctionWrapHandler
 from pydantic import field_validator
 
-from aiq.authentication.credentials_manager import _CredentialsManager
-from aiq.data_models.authentication import AuthenticationProvider
 from aiq.data_models.evaluate import EvalConfig
 from aiq.data_models.front_end import FrontEndBaseConfig
 from aiq.data_models.function import EmptyFunctionConfig
@@ -35,6 +33,7 @@ from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 
+from .authentication import AuthenticationBaseConfig
 from .common import HashableBaseModel
 from .common import TypedBaseModel
 from .embedder import EmbedderBaseConfig
@@ -59,6 +58,8 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
 
             if (info.field_name in ('workflow', 'functions')):
                 registered_keys = GlobalTypeRegistry.get().get_registered_functions()
+            elif (info.field_name == "authentication"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_authentication_providers()
             elif (info.field_name == "llms"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_llm_providers()
             elif (info.field_name == "embedders"):
@@ -75,9 +76,6 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
                 registered_keys = GlobalTypeRegistry.get().get_registered_evaluators()
             elif (info.field_name == "front_ends"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_front_ends()
-            elif (info.field_name == "authentication"):
-                registered_keys = GlobalTypeRegistry.get().get_registered_authentication_providers()
-
             else:
                 assert False, f"Unknown field name {info.field_name} in validator"
 
@@ -253,7 +251,8 @@ class AIQConfig(HashableBaseModel):
     workflow: FunctionBaseConfig = EmptyFunctionConfig()
 
     # Authentication Configuration
-    authentication: dict[str, AuthenticationProvider] = {}
+    authentication: dict[str, AuthenticationBaseConfig] = {}  # TODO EE: Update
+    # authentication: dict[str, AuthenticationProvider] = {}
 
     # Evaluation Options
     eval: EvalConfig = EvalConfig()
@@ -271,12 +270,15 @@ class AIQConfig(HashableBaseModel):
         stream.write(f"Number of Embedders: {len(self.embedders)}\n")
         stream.write(f"Number of Memory: {len(self.memory)}\n")
         stream.write(f"Number of Retrievers: {len(self.retrievers)}\n")
-        stream.write(f"Number of Authentication Providers: {len(self.authentication)}\n")
+        stream.write(f"Number of Authentication Providers: {len(self.authentication)}\n"
+                     )  # TODO EE: Check to see why this is not working
 
     def model_post_init(self, context: typing.Any) -> None:
+        from aiq.authentication.credentials_manager import _CredentialsManager
+
         # Persist the authentication credentials after the model is initialized.
         if (self.authentication):
-            _CredentialsManager()._swap_authorization_providers(self.authentication)
+            _CredentialsManager()._swap_authentication_configs(self.authentication)
 
     @field_validator("functions",
                      "llms",
@@ -306,12 +308,17 @@ class AIQConfig(HashableBaseModel):
                               typing.Annotated[type_registry.compute_annotation(LLMBaseConfig),
                                                Discriminator(TypedBaseModel.discriminator)]]
 
+        AuthenticationProviderAnnotation = dict[str,
+                                                typing.Annotated[
+                                                    type_registry.compute_annotation(AuthenticationBaseConfig),
+                                                    Discriminator(TypedBaseModel.discriminator)]]  # TODO EE: Update
+
         EmbeddersAnnotation = dict[str,
                                    typing.Annotated[type_registry.compute_annotation(EmbedderBaseConfig),
                                                     Discriminator(TypedBaseModel.discriminator)]]
 
         FunctionsAnnotation = dict[str,
-                                   typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig, ),
+                                   typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig),
                                                     Discriminator(TypedBaseModel.discriminator)]]
 
         MemoryAnnotation = dict[str,
@@ -326,6 +333,11 @@ class AIQConfig(HashableBaseModel):
                                               Discriminator(TypedBaseModel.discriminator)]
 
         should_rebuild = False
+
+        auth_providers_field = cls.model_fields.get("authentication")  # TODO EE: Update
+        if auth_providers_field is not None and auth_providers_field.annotation != AuthenticationProviderAnnotation:
+            auth_providers_field.annotation = AuthenticationProviderAnnotation
+            should_rebuild = True
 
         llms_field = cls.model_fields.get("llms")
         if llms_field is not None and llms_field.annotation != LLMsAnnotation:

@@ -21,20 +21,19 @@ import urllib.parse
 import httpx
 from pydantic import ValidationError
 
-from aiq.authentication.authentication_manager import AuthenticationManager
 from aiq.authentication.exceptions import APIRequestError
+from aiq.authentication.exceptions import AuthCodeGrantError
 from aiq.authentication.exceptions import BaseUrlValidationError
 from aiq.authentication.exceptions import BodyValidationError
 from aiq.authentication.exceptions import HTTPHeaderValidationError
 from aiq.authentication.exceptions import HTTPMethodValidationError
-from aiq.authentication.exceptions import OAuthCodeFlowError
 from aiq.authentication.exceptions import QueryParameterValidationError
 from aiq.authentication.interfaces import RequestManagerBase
+from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
 from aiq.authentication.response_manager import ResponseManager
+from aiq.data_models.authentication import AuthCodeGrantQueryParams
 from aiq.data_models.authentication import AuthenticationEndpoint
 from aiq.data_models.authentication import HTTPMethod
-from aiq.data_models.authentication import OAuth2AuthQueryParams
-from aiq.data_models.authentication import OAuth2Config
 
 logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -44,17 +43,12 @@ class RequestManager(RequestManagerBase):
 
     def __init__(self) -> None:
         self._response_manager: ResponseManager = ResponseManager()
-        self._authentication_manager: AuthenticationManager = AuthenticationManager(self, self._response_manager)
-
-    @property
-    def authentication_manager(self) -> AuthenticationManager:
-        return self._authentication_manager
 
     @property
     def response_manager(self) -> ResponseManager:
         return self._response_manager
 
-    def _validate_data(self, input_dict: dict) -> None:
+    def validate_data(self, input_dict: dict) -> None:
         """
         Validates that the provided dictionary has valid keys and values.
 
@@ -82,7 +76,7 @@ class RequestManager(RequestManagerBase):
             raise ValueError(f"Empty or invalid values detected in input: {input_dict}. "
                              f"Invalid Values: {', '.join(invalid_values)}")
 
-    def _validate_base_url(self, url: str | httpx.URL) -> None:
+    def validate_base_url(self, url: str | httpx.URL) -> None:
         """Validates URL and Raises BaseUrlError if the URL is not a valid URL."""
 
         if isinstance(url, httpx.URL):
@@ -102,7 +96,7 @@ class RequestManager(RequestManagerBase):
         if not parsed_url.path.startswith("/"):
             raise BaseUrlValidationError("URL path should start with '/'")
 
-    def _validate_http_method(self, http_method: str | HTTPMethod) -> None:
+    def validate_http_method(self, http_method: str | HTTPMethod) -> None:
         """
         Validates that the provided HTTP method is one of the allowed standard methods.
 
@@ -116,7 +110,7 @@ class RequestManager(RequestManagerBase):
             raise HTTPMethodValidationError(
                 f"Invalid HTTP method: '{http_method}'. Must be one of {valid_http_methods}.") from e
 
-    def _validate_headers(self, headers: dict | httpx.Headers | None) -> None:
+    def validate_headers(self, headers: dict | httpx.Headers | None) -> None:
         """
         Validates that the provided headers are valid for an HTTP request.
 
@@ -130,7 +124,7 @@ class RequestManager(RequestManagerBase):
             if isinstance(headers, httpx.Headers):
                 headers = dict(headers)
 
-            self._validate_data(headers)
+            self.validate_data(headers)
 
             for key, value in headers.items():
 
@@ -145,7 +139,7 @@ class RequestManager(RequestManagerBase):
         except ValueError as e:
             raise HTTPHeaderValidationError(f"Invalid header data: {e}") from e
 
-    def _validate_query_parameters(self, query_params: dict | httpx.QueryParams | None) -> None:
+    def validate_query_parameters(self, query_params: dict | httpx.QueryParams | None) -> None:
         """
         Validates that the provided query parameters are valid for an HTTP request.
 
@@ -159,7 +153,7 @@ class RequestManager(RequestManagerBase):
             if isinstance(query_params, httpx.QueryParams):
                 query_params = dict(query_params)
 
-            self._validate_data(query_params)
+            self.validate_data(query_params)
 
             for key, value in query_params.items():
 
@@ -189,7 +183,7 @@ class RequestManager(RequestManagerBase):
         except ValueError as e:
             raise QueryParameterValidationError(f"Invalid query parameter data: {e}") from e
 
-    def _validate_body_data(self, body_data: dict | None) -> None:
+    def validate_body_data(self, body_data: dict | None) -> None:
         """
         Validates that the provided body is valid for HTTP request.
 
@@ -203,15 +197,15 @@ class RequestManager(RequestManagerBase):
         except (TypeError, ValueError) as e:
             raise BodyValidationError(f"Request body is not JSON serializable: {e}") from e
 
-    async def _build_oauth_authorization_url(self,
-                                             authentication_provider: OAuth2Config,
-                                             response_type: str = "code",
-                                             prompt: str = "consent") -> httpx.URL:
+    async def _build_auth_code_grant_url(self,
+                                         authentication_config: AuthCodeGrantConfig,
+                                         response_type: str = "code",
+                                         prompt: str = "consent") -> httpx.URL:
         """
-        Construct an authorization URL to initiate the OAuth2.0 Code Flow.
+        Construct an authorization URL to initiate the Auth Code Grant Flow.
 
         Args:
-            authentication_provider (OAuth2Config): The registered authentication provider.
+            authentication_config (AuthCodeGrantConfig): The registered authentication config.
         """
         from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 
@@ -219,35 +213,35 @@ class RequestManager(RequestManagerBase):
             full_authorization_url: httpx.URL = None
 
             # Validate authorization url.
-            self._validate_base_url(authentication_provider.authorization_url)
+            self.validate_base_url(authentication_config.authorization_url)
 
-            # Construct OAuth2.0 query parameters.
-            query_params: OAuth2AuthQueryParams = OAuth2AuthQueryParams(
-                audience=authentication_provider.audience,
-                client_id=authentication_provider.client_id,
-                state=authentication_provider.state,
-                scope=(" ".join(authentication_provider.scope)),
-                redirect_uri=(f"{authentication_provider.client_server_url}"
+            # Construct Auth Code Grant flow query parameters.
+            query_params: AuthCodeGrantQueryParams = AuthCodeGrantQueryParams(
+                audience=authentication_config.audience,
+                client_id=authentication_config.client_id,
+                state=authentication_config.state,
+                scope=(" ".join(authentication_config.scope)),
+                redirect_uri=(f"{authentication_config.client_server_url}"
                               f"{FastApiFrontEndConfig().authorization.path}"
                               f"{AuthenticationEndpoint.REDIRECT_URI.value}"),
                 response_type=response_type,
                 prompt=prompt)
 
-            self._validate_query_parameters(query_params.model_dump())
+            self.validate_query_parameters(query_params.model_dump())
 
-            full_authorization_url = httpx.URL(authentication_provider.authorization_url).copy_merge_params(
+            full_authorization_url = httpx.URL(authentication_config.authorization_url).copy_merge_params(
                 query_params.model_dump())
 
         except (BaseUrlValidationError, QueryParameterValidationError, ValueError, ValidationError, Exception) as e:
             logger.error("An error occured while building authorization url: %s", str(e), exc_info=True)
-            raise OAuthCodeFlowError("An error occured while building authorization url.") from e
+            raise AuthCodeGrantError("An error occured while building authorization url.") from e
 
         return full_authorization_url
 
     async def _send_request(self,
                             url: str,
                             http_method: str | HTTPMethod,
-                            authentication_provider: str | None = None,
+                            authentication_header: httpx.Headers | None = None,
                             headers: dict | None = None,
                             query_params: dict | None = None,
                             body_data: dict | None = None) -> httpx.Response | None:
@@ -257,6 +251,7 @@ class RequestManager(RequestManagerBase):
         Args:
             url (str | httpx.URL): The base URL to which the request will be sent.
             http_method (str | HTTPMethod): The HTTP method to use for the request (e.g., "GET", "POST").
+            authentication_header: httpx.Headers | None: The optional authentication HTTP header.
             headers (dict | None): Optional dictionary of HTTP headers.
             query_params (dict | None): Optional dictionary of query parameters.
             data (dict | None): Optional dictionary representing the request body.
@@ -266,28 +261,22 @@ class RequestManager(RequestManagerBase):
         """
         try:
             response: httpx.Response | None = None
-            authentication_header: httpx.Headers | None = await self._get_authenticated_header(authentication_provider)
-
-            if (authentication_provider is not None and authentication_header is None):
-                logger.error("Unable to acquire authenticated credentials for provider: %s", authentication_provider)
-                return None
-
             merged_headers: httpx.Headers = httpx.Headers({**(headers or {}), **(authentication_header or {})})
 
             # Validate the incoming base url.
-            self._validate_base_url(url)
+            self.validate_base_url(url)
 
             # Validate the incoming http method.
-            self._validate_http_method(http_method)
+            self.validate_http_method(http_method)
 
             # Validate incoming header parameters.
-            self._validate_headers(merged_headers)
+            self.validate_headers(merged_headers)
 
             # Validate incoming query parameters.
-            self._validate_query_parameters(query_params)
+            self.validate_query_parameters(query_params)
 
             # Validate incoming body
-            self._validate_body_data(body_data)
+            self.validate_body_data(body_data)
 
             async with httpx.AsyncClient() as client:
 
@@ -343,34 +332,3 @@ class RequestManager(RequestManagerBase):
             raise APIRequestError("An unexpected error occured while sending request.") from e
 
         return response
-
-    async def _get_authenticated_header(self, authentication_provider: str | None = None) -> httpx.Headers | None:
-        """
-        Gets the authenticated header for the registered authentication provider.
-
-        Args:
-            authentication_provider (str | None): The name of the registered authentication provider.
-
-        Returns:
-            httpx.Headers | None: Returns the authentication header if the provider is valid and credentials are
-            functional, otherwise returns None.
-        """
-
-        # If no authentication provider is passed, no authentication header is required, return None.
-        if authentication_provider is None:
-            return None
-
-        # Ensure authentication provider credentials are valid and functional.
-        is_validated: bool = await self.authentication_manager._validate_auth_provider_credentials(
-            authentication_provider)
-
-        if not is_validated:
-
-            # If the auth provider credentials are not valid, attempt to set the credentials and construct the header.
-            get_auth_header = await self._authentication_manager._set_auth_provider_credentials(authentication_provider)
-
-            if not get_auth_header:
-                return None
-
-        # Construct the authentication header.
-        return await self.authentication_manager._construct_authentication_header(authentication_provider)

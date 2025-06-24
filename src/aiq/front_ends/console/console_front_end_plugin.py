@@ -18,10 +18,11 @@ import logging
 from io import StringIO
 
 import click
+import httpx
 from colorama import Fore
 
-from aiq.authentication.utils import execute_api_request_console
 from aiq.builder.workflow_builder import WorkflowBuilder
+from aiq.data_models.api_server import AuthenticatedRequest
 from aiq.data_models.interactive import HumanPromptModelType
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import HumanResponseText
@@ -83,7 +84,7 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
             async def run_single_query(query):
 
                 async with session_manager.session(user_input_callback=prompt_for_input_cli,
-                                                   user_request_callback=execute_api_request_console) as session:
+                                                   user_request_callback=self.execute_api_request_console) as session:
                     async with session.run(query) as runner:
                         base_output = await runner.result(to_type=str)
 
@@ -107,3 +108,54 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
 
         # Print result
         logger.info(f"\n{'-' * 50}\n{Fore.GREEN}Workflow Result:\n%s{Fore.RESET}\n{'-' * 50}", runner_outputs)
+
+    async def execute_api_request_console(self, user_request: AuthenticatedRequest) -> httpx.Response | None:
+        """
+        Callback function that executes an API request in console mode using the provided authenticated request.
+
+        Args:
+            user_request (AuthenticatedRequest): The authenticated request to be executed.
+
+        Returns:
+            httpx.Response | None: The response from the API request, or None if an error occurs.
+        """
+        from aiq.authentication.authentication_manager_factory import AuthenticationManagerFactory
+        from aiq.authentication.exceptions import APIRequestError
+        from aiq.authentication.interfaces import AuthenticationManagerBase
+        from aiq.authentication.request_manager import RequestManager
+        from aiq.data_models.authentication import AuthenticationManagerConfig
+        from aiq.data_models.authentication import ExecutionMode
+
+        request_manager: RequestManager = RequestManager()
+        response: httpx.Response | None = None
+        authentication_manager_factory: AuthenticationManagerFactory = AuthenticationManagerFactory()
+
+        auth_manager_config: AuthenticationManagerConfig = AuthenticationManagerConfig(
+            config_name=user_request.authentication_config_name,
+            config=user_request.authentication_config,
+            execution_mode=ExecutionMode.CONSOLE)
+
+        authentication_manager: AuthenticationManagerBase | None = await authentication_manager_factory.create(
+            auth_manager_config)
+
+        authentication_header: httpx.Headers | None = None
+
+        if authentication_manager is not None:
+            authentication_header: httpx.Headers | None = await authentication_manager.get_authentication_header()
+
+        try:
+            response = await request_manager._send_request(url=user_request.url_path,
+                                                           http_method=user_request.method,
+                                                           authentication_header=authentication_header,
+                                                           headers=user_request.headers,
+                                                           query_params=user_request.query_params,
+                                                           body_data=user_request.body_data)
+
+            if response is None:
+                raise APIRequestError("An unexpected error occured while sending request.")
+
+        except APIRequestError as e:
+            logger.error("An error occured during the API request: %s", str(e), exc_info=True)
+            return None
+
+        return response

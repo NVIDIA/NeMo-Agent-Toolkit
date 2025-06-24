@@ -18,9 +18,9 @@ import webbrowser
 
 import httpx
 
-from aiq.authentication.exceptions import OAuthCodeFlowError
+from aiq.authentication.exceptions import AuthCodeGrantError
+from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
 from aiq.data_models.authentication import ConsentPromptMode
-from aiq.data_models.authentication import OAuth2Config
 from aiq.front_ends.fastapi.message_handler import MessageHandler
 
 logger = logging.getLogger(__name__)
@@ -52,91 +52,93 @@ class ResponseManager:
         """
         self._message_handler = message_handler
 
-    async def _handle_oauth_authorization_response_codes(self,
-                                                         response: httpx.Response,
-                                                         authentication_provider: OAuth2Config) -> None:
+    async def _handle_auth_code_grant_response_codes(self,
+                                                     response: httpx.Response,
+                                                     authentication_config: AuthCodeGrantConfig) -> None:
         """
-        Handles various OAuth2.0 authorization responses.
+        Handles various Auth Code Grant Flow flow responses.
 
         Args:
             response (httpx.Response): The HTTP response from the authentication server.
-            authentication_provider (OAuth2Config): The registered OAuth2.0 authentication provider.
+            authentication_config (AuthCodeGrantConfig): The registered Auth Code Grant flow config.
         """
         try:
-            # Handles the 302 redirect status code from OAuth2.0 authorization server.
+            # Handles the 302 redirect status code from Auth Code Grant flow authorization server.
             if response.status_code == 302:
                 redirect_location_header: str | None = response.headers.get("Location")
 
                 if not redirect_location_header:
-                    raise OAuthCodeFlowError(
+                    raise AuthCodeGrantError(
                         "Missing 'Location' header in 302 response to redirect user to consent browser.")
 
-                await self._handle_oauth_302_consent_browser(redirect_location_header, authentication_provider)
+                await self._handle_auth_code_grant_302_consent_browser(redirect_location_header, authentication_config)
 
-            # Handles the 4xx client status codes from OAuth2.0 authorization server.
+            # Handles the 4xx client status codes from Auth Code Grant flow authorization server.
             elif response.status_code >= 400 and response.status_code < 500:
                 await self._oauth_400_status_code_handler(response)
 
             else:
-                raise OAuthCodeFlowError(f"Unknown response code: {response.status_code}. Response: {response.text}")
+                raise AuthCodeGrantError(f"Unknown response code: {response.status_code}. Response: {response.text}")
 
         except Exception as e:
             logger.error("Unexpected error occured while handling authorization request response: %s",
                          str(e),
                          exc_info=True)
-            raise OAuthCodeFlowError(
+            raise AuthCodeGrantError(
                 f"Unexpected error occurred while handling authorization request response: {str(e)}") from e
 
-    async def _handle_oauth_302_consent_browser(self, location_header: str,
-                                                authentication_provider: OAuth2Config) -> None:
+    async def _handle_auth_code_grant_302_consent_browser(self,
+                                                          location_header: str,
+                                                          authentication_config: AuthCodeGrantConfig) -> None:
         """
         Handles the consent prompt redirect for different execution environments.
 
         Args:
             location_header (str) : Location header from authorization server HTTP 302 consent prompt redirect.
-            authentication_provider (OAuth2Config): The registered OAuth2.0 authentication provider.
+            authentication_config (AuthCodeGrantConfig): The registered Auth Code Grant flow config.
         """
         from aiq.authentication.credentials_manager import _CredentialsManager
         from aiq.data_models.interactive import HumanPromptNotification
         try:
-            if authentication_provider.consent_prompt_mode == ConsentPromptMode.BROWSER:
+            if authentication_config.consent_prompt_mode == ConsentPromptMode.BROWSER:
 
                 default_browser = webbrowser.get()
                 default_browser.open(location_header)
 
-            if authentication_provider.consent_prompt_mode == ConsentPromptMode.FRONTEND:
+            if authentication_config.consent_prompt_mode == ConsentPromptMode.FRONTEND:
 
-                authentication_provider_name: str | None = _CredentialsManager(
-                )._get_registered_authentication_provider_name(authentication_provider)
+                authentication_config_name: str | None = _CredentialsManager(
+                )._get_registered_authentication_config_name(authentication_config)
 
                 logger.info(
                     "\n\n******************************************************************\n\n"
-                    "OAuth2.0 consent request needed for Authentication provider: [ %s ] "
+                    "Authorization Code Grant flow consent request needed for Authentication config: [ %s ] "
                     "in headless execution mode.\n"
                     "Please ensure your client sends a POST request with the registered [ consent_prompt_key ] to "
-                    "continue OAuth2.0 code flow.\n\n"
+                    "continue Auth Code Grant flow.\n\n"
                     "******************************************************************",
-                    authentication_provider_name)
+                    authentication_config_name)
 
                 if (self.message_handler):
                     await self.message_handler.create_websocket_message(
-                        HumanPromptNotification(text="OAuth2.0 consent request needed for authentication provider: "
-                                                f"[ {authentication_provider_name} ]. "
-                                                "Navigate to the '/aiq-auth' page to continue OAuth2.0 code flow."))
+                        HumanPromptNotification(
+                            text="Auth Code Grant flow consent request needed for authentication config: "
+                            f"[ {authentication_config_name} ]. "
+                            "Navigate to the '/aiq-auth' page to continue Auth Code Grant flow."))
 
-                authentication_provider.consent_prompt_location_url = location_header
+                authentication_config.consent_prompt_location_url = location_header
 
                 await _CredentialsManager()._wait_for_consent_prompt_url()
 
-                authentication_provider.consent_prompt_location_url = None
+                authentication_config.consent_prompt_location_url = None
 
         except webbrowser.Error as e:
             logger.error("Unable to open defualt browser: %s", str(e), exc_info=True)
-            raise OAuthCodeFlowError("Unable to complete OAuth2.0 process.") from e
+            raise AuthCodeGrantError("Unable to complete Auth Code Grant flow process.") from e
 
         except Exception as e:
             logger.error("Exception occured: %s", str(e), exc_info=True)
-            raise OAuthCodeFlowError("Unable to complete OAuth2.0 process.") from e
+            raise AuthCodeGrantError("Unable to complete Auth Code Grant flow  process.") from e
 
     async def _oauth_400_status_code_handler(self, response: httpx.Response) -> None:
         """
@@ -147,33 +149,33 @@ class ResponseManager:
         insufficient_scope.
 
         Args:
-            response (httpx.Response): The response form the OAuth2.0 authentication server.
+            response (httpx.Response): The response form the Auth Code Grant flow authentication server.
         """
         # 400 Bad Request: Invalid refresh token provided or malformed request.
         if response.status_code == 400:
-            raise OAuthCodeFlowError("Invalid request. Please check the request parameters. "
+            raise AuthCodeGrantError("Invalid request. Please check the request parameters. "
                                      f"Response code: {response.status_code}, Response description: {response.text}")
 
         # 401 Unauthorized: Token is missing, revoked, invlaid or expired.
         elif response.status_code == 401:
-            raise OAuthCodeFlowError("Access token is missing, revoked, or expired. Please re-authenticate. "
+            raise AuthCodeGrantError("Access token is missing, revoked, or expired. Please re-authenticate. "
                                      f"Response code: {response.status_code}, Response Description: {response.text}")
 
         # 403 Forbidden: The client is authenticated but does not have proper permission.
         elif response.status_code == 403:
-            raise OAuthCodeFlowError("Access token is valid, but the client does not have permission to access the "
+            raise AuthCodeGrantError("Access token is valid, but the client does not have permission to access the "
                                      "requested resource. Please check your permissions. "
                                      f"Response code: {response.status_code}, Response Description: {response.text}")
 
         # 404 Not Found: The requested endpoint or resource server does not exist.
         elif response.status_code == 404:
-            raise OAuthCodeFlowError("The requested endpoint does not exist. "
+            raise AuthCodeGrantError("The requested endpoint does not exist. "
                                      f"Response code: {response.status_code}, Response Description: {response.text}")
 
         # 405 Method Not Allowed: HTTP method not allowed to the authorization server.
         elif response.status_code == 405:
-            raise OAuthCodeFlowError("The HTTP method is not allowed. "
+            raise AuthCodeGrantError("The HTTP method is not allowed. "
                                      f"Response code: {response.status_code}, Response Description: {response.text}")
         else:
-            raise OAuthCodeFlowError("Unknown response. "
+            raise AuthCodeGrantError("Unknown response. "
                                      f"Response code: {response.status_code}, Response Description: {response.text}")

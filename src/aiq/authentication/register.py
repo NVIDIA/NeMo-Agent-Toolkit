@@ -13,23 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-authentication:
-  jira:
-    _type: oauth2_authorization_code_grant
-    consent_prompt_mode: "browser"
-    consent_prompt_key: mock_consent_prompt_key
-    client_server_url: "mock_url"
-    authorization_url: mock_authorization_url
-    authorization_token_url: https://mock.token.url.com/oauth/token
-    client_id: mock_client_id
-    client_secret: mock_client_secret
-    audience: mock_audience
-    scope:
-      - report:mock
-      - read:mock
-      - manage:mock
-  jira_api_key:
-    _type: api_key
-    api_key: mock_api_key
-    header_name: Authorization
-    header_prefix: Bearer
+# pylint: disable=unused-import
+# flake8: noqa
+# isort:skip_file
+
+# Import any providers which need to be automatically registered here
+from .oauth2.auth_code_grant_config import oauth2_authorization_code_grant
+from .api_key.api_key_config import api_key

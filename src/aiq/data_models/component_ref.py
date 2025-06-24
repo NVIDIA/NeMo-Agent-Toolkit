@@ -133,3 +133,14 @@ class RetrieverRef(ComponentRef):
     @override
     def component_group(self):
         return ComponentGroup.RETRIEVERS
+
+
+class AuthenticationRef(ComponentRef):  # TODO EE: Update
+    """
+    A reference to an Authentication Provider in an AIQ Toolkit configuration object.
+    """
+
+    @property
+    @override
+    def component_group(self):
+        return ComponentGroup.AUTHENTICATION
