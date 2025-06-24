@@ -53,6 +53,7 @@ from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from aiq.experimental.decorators.experimental_warning_decorator import aiq_experimental
 from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
 from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
 from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
@@ -616,6 +617,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return self._retrievers[retriever_name].config
 
     @override
+    @aiq_experimental
     async def add_its_strategy(self, name: str | str, config: ITSStrategyBaseConfig):
         if (name in self._its_strategies):
             raise ValueError(f"ITS strategy '{name}' already exists in the list of ITS strategies")
@@ -633,6 +635,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise e
 
     @override
+    @aiq_experimental
     async def get_its_strategy(self,
                                strategy_name: str | ITSStrategyRef,
                                pipeline_type: PipelineTypeEnum,
@@ -662,6 +665,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise e
 
     @override
+    @aiq_experimental
     async def get_its_strategy_config(self,
                                       strategy_name: str | ITSStrategyRef,
                                       pipeline_type: PipelineTypeEnum,
