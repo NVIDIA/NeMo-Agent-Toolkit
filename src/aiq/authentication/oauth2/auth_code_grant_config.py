@@ -66,7 +66,7 @@ class AuthCodeGrantConfig(AuthenticationBaseConfig, name="oauth2_authorization_c
         description="302 redirect Location header to which the client will be redirected to the consent prompt.")
 
 
-@register_authentication_provider(config_type=AuthCodeGrantConfig)  # TODO EE: Step 1
+@register_authentication_provider(config_type=AuthCodeGrantConfig)
 async def oauth2_authorization_code_grant(authentication_provider: AuthCodeGrantConfig, builder: Builder):
 
     yield AuthenticationProviderInfo(config=authentication_provider,

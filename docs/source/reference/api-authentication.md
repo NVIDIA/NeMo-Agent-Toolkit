@@ -35,7 +35,7 @@ be found here [Authentication Configuration](#TODO EE ADD link to example file h
 ```yaml
 authentication:
   example_provider_name_oauth:
-    _type: oauth2
+    _type: oauth2_authorization_code_grant
     consent_prompt_mode: browser | frontend
     consent_prompt_key: user_consent_prompt_key
     client_server_url: user_client_server_url
@@ -54,11 +54,11 @@ authentication:
     header_prefix: accepted_api_header_prefix
 ```
 
-## OAuth2.0 Configuration Field Reference
+## OAuth2.0 Auth Code Grant Configuration Field Reference
 | Field Name               | Description                                                 |
 |--------------------------|-------------------------------------------------------------|
 | `example_provider_name_oauth`    | A unique name used to identify the client credentials required to access the API provider.|
-| `_type`                  | Specifies the authentication type. For OAuth 2.0 authentication, set this to `oauth2`.|
+| `_type`                  | Specifies the authentication type. For OAuth 2.0 Authorization Code Grant authentication, set this to `oauth2_authorization_code_grant`.|
 | `consent_prompt_mode`    | Specifies how the OAuth 2.0 client handles the consent prompt redirect.<br>•`browser` – Opens the system's default browser for user login.<br>•`frontend` – Redirects the consent prompt to the browser that initiated the POST request. A corresponding `consent_prompt_key` is required to receive the consent prompt redirect for the intended authentication provider.|
 | `consent_prompt_key`       | A unique key used to retrieve the consent prompt redirect for the provider requesting authentication. Upon successful validation, the consent prompt redirect is returned to continue the OAuth 2.0 flow only if `frontend` is selected as the `consent_prompt_mode`.|
 | `client_server_url`        | URL of the OAuth 2.0 client server. Please see [Client Server Guide](#TODO EE) on how to properly register api server as OAuth2.0 client server.|

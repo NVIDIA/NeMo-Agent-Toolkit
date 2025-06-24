@@ -111,8 +111,7 @@ class Builder(ABC):  # pylint: disable=too-many-public-methods
         pass
 
     @abstractmethod
-    async def add_authentication(self, name: str | AuthenticationRef,
-                                 config: AuthenticationBaseConfig):  # TODO EE: Update
+    async def add_authentication(self, name: str | AuthenticationRef, config: AuthenticationBaseConfig):
         pass
 
     @abstractmethod

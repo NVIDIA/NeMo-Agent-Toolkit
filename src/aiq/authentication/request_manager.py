@@ -48,7 +48,7 @@ class RequestManager(RequestManagerBase):
     def response_manager(self) -> ResponseManager:
         return self._response_manager
 
-    def validate_data(self, input_dict: dict) -> None:
+    def _validate_data(self, input_dict: dict) -> None:
         """
         Validates that the provided dictionary has valid keys and values.
 
@@ -76,7 +76,7 @@ class RequestManager(RequestManagerBase):
             raise ValueError(f"Empty or invalid values detected in input: {input_dict}. "
                              f"Invalid Values: {', '.join(invalid_values)}")
 
-    def validate_base_url(self, url: str | httpx.URL) -> None:
+    def _validate_base_url(self, url: str | httpx.URL) -> None:
         """Validates URL and Raises BaseUrlError if the URL is not a valid URL."""
 
         if isinstance(url, httpx.URL):
@@ -96,7 +96,7 @@ class RequestManager(RequestManagerBase):
         if not parsed_url.path.startswith("/"):
             raise BaseUrlValidationError("URL path should start with '/'")
 
-    def validate_http_method(self, http_method: str | HTTPMethod) -> None:
+    def _validate_http_method(self, http_method: str | HTTPMethod) -> None:
         """
         Validates that the provided HTTP method is one of the allowed standard methods.
 
@@ -110,7 +110,7 @@ class RequestManager(RequestManagerBase):
             raise HTTPMethodValidationError(
                 f"Invalid HTTP method: '{http_method}'. Must be one of {valid_http_methods}.") from e
 
-    def validate_headers(self, headers: dict | httpx.Headers | None) -> None:
+    def _validate_headers(self, headers: dict | httpx.Headers | None) -> None:
         """
         Validates that the provided headers are valid for an HTTP request.
 
@@ -124,7 +124,7 @@ class RequestManager(RequestManagerBase):
             if isinstance(headers, httpx.Headers):
                 headers = dict(headers)
 
-            self.validate_data(headers)
+            self._validate_data(headers)
 
             for key, value in headers.items():
 
@@ -139,7 +139,7 @@ class RequestManager(RequestManagerBase):
         except ValueError as e:
             raise HTTPHeaderValidationError(f"Invalid header data: {e}") from e
 
-    def validate_query_parameters(self, query_params: dict | httpx.QueryParams | None) -> None:
+    def _validate_query_parameters(self, query_params: dict | httpx.QueryParams | None) -> None:
         """
         Validates that the provided query parameters are valid for an HTTP request.
 
@@ -153,7 +153,7 @@ class RequestManager(RequestManagerBase):
             if isinstance(query_params, httpx.QueryParams):
                 query_params = dict(query_params)
 
-            self.validate_data(query_params)
+            self._validate_data(query_params)
 
             for key, value in query_params.items():
 
@@ -183,7 +183,7 @@ class RequestManager(RequestManagerBase):
         except ValueError as e:
             raise QueryParameterValidationError(f"Invalid query parameter data: {e}") from e
 
-    def validate_body_data(self, body_data: dict | None) -> None:
+    def _validate_body_data(self, body_data: dict | None) -> None:
         """
         Validates that the provided body is valid for HTTP request.
 
@@ -197,10 +197,10 @@ class RequestManager(RequestManagerBase):
         except (TypeError, ValueError) as e:
             raise BodyValidationError(f"Request body is not JSON serializable: {e}") from e
 
-    async def _build_auth_code_grant_url(self,
-                                         authentication_config: AuthCodeGrantConfig,
-                                         response_type: str = "code",
-                                         prompt: str = "consent") -> httpx.URL:
+    async def build_auth_code_grant_url(self,
+                                        authentication_config: AuthCodeGrantConfig,
+                                        response_type: str = "code",
+                                        prompt: str = "consent") -> httpx.URL:
         """
         Construct an authorization URL to initiate the Auth Code Grant Flow.
 
@@ -213,7 +213,7 @@ class RequestManager(RequestManagerBase):
             full_authorization_url: httpx.URL = None
 
             # Validate authorization url.
-            self.validate_base_url(authentication_config.authorization_url)
+            self._validate_base_url(authentication_config.authorization_url)
 
             # Construct Auth Code Grant flow query parameters.
             query_params: AuthCodeGrantQueryParams = AuthCodeGrantQueryParams(
@@ -227,7 +227,7 @@ class RequestManager(RequestManagerBase):
                 response_type=response_type,
                 prompt=prompt)
 
-            self.validate_query_parameters(query_params.model_dump())
+            self._validate_query_parameters(query_params.model_dump())
 
             full_authorization_url = httpx.URL(authentication_config.authorization_url).copy_merge_params(
                 query_params.model_dump())
@@ -238,13 +238,13 @@ class RequestManager(RequestManagerBase):
 
         return full_authorization_url
 
-    async def _send_request(self,
-                            url: str,
-                            http_method: str | HTTPMethod,
-                            authentication_header: httpx.Headers | None = None,
-                            headers: dict | None = None,
-                            query_params: dict | None = None,
-                            body_data: dict | None = None) -> httpx.Response | None:
+    async def send_request(self,
+                           url: str,
+                           http_method: str | HTTPMethod,
+                           authentication_header: httpx.Headers | None = None,
+                           headers: dict | None = None,
+                           query_params: dict | None = None,
+                           body_data: dict | None = None) -> httpx.Response | None:
         """
         Makes an arbitrary HTTP request.
 
@@ -264,19 +264,19 @@ class RequestManager(RequestManagerBase):
             merged_headers: httpx.Headers = httpx.Headers({**(headers or {}), **(authentication_header or {})})
 
             # Validate the incoming base url.
-            self.validate_base_url(url)
+            self._validate_base_url(url)
 
             # Validate the incoming http method.
-            self.validate_http_method(http_method)
+            self._validate_http_method(http_method)
 
             # Validate incoming header parameters.
-            self.validate_headers(merged_headers)
+            self._validate_headers(merged_headers)
 
             # Validate incoming query parameters.
-            self.validate_query_parameters(query_params)
+            self._validate_query_parameters(query_params)
 
             # Validate incoming body
-            self.validate_body_data(body_data)
+            self._validate_body_data(body_data)
 
             async with httpx.AsyncClient() as client:
 

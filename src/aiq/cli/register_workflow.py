@@ -411,7 +411,7 @@ def register_registry_handler(config_type: type[RegistryHandlerBaseConfigT]):
     return register_registry_handler_inner
 
 
-def register_authentication_provider(config_type: type[AuthenticationBaseConfigT]):  # TODO EE: Update Auth Provider
+def register_authentication_provider(config_type: type[AuthenticationBaseConfigT]):
 
     def register_authentication_provider_inner(
         fn: AuthenticationProviderBuildCallableT[AuthenticationBaseConfigT]

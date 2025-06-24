@@ -50,16 +50,16 @@ class PluginTypes(IntFlag):
     """
     AUTHENTICATION = auto()
     """
-    A plugin that is an authentication provider for the workflow. This includes Oauth2, API Key, etc.
+    A plugin that is an API authentication provider for the workflow. This includes Oauth2, API Key, etc.
     """
     REGISTRY_HANDLER = auto()
 
     # Convenience flag for groups of plugin types
-    CONFIG_OBJECT = COMPONENT | FRONT_END | EVALUATOR
+    CONFIG_OBJECT = COMPONENT | FRONT_END | EVALUATOR | AUTHENTICATION
     """
     Any plugin that can be specified in the AIQ Toolkit configuration file.
     """
-    ALL = COMPONENT | FRONT_END | EVALUATOR | REGISTRY_HANDLER
+    ALL = COMPONENT | FRONT_END | EVALUATOR | REGISTRY_HANDLER | AUTHENTICATION
     """
     All plugin types
     """
@@ -134,7 +134,7 @@ def discover_entrypoints(plugin_type: PluginTypes):
         plugin_groups.append("aiq.registry_handlers")
     if (plugin_type & PluginTypes.EVALUATOR):
         plugin_groups.append("aiq.evaluators")
-    if (plugin_type & PluginTypes.AUTHENTICATION):  # TODO EE: Update.
+    if (plugin_type & PluginTypes.AUTHENTICATION):
         plugin_groups.append("aiq.authentication_providers")
 
     # Get the entry points for the specified groups

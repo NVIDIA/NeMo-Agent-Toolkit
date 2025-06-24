@@ -120,7 +120,7 @@ class AIQUserInteractionManager:
                 url_path=url,
                 method=http_method,
                 authentication_config_name=authentication_config_name,
-                authentication_config=_CredentialsManager()._get_authentication_config(authentication_config_name),
+                authentication_config=_CredentialsManager().get_authentication_config(authentication_config_name),
                 headers=headers,
                 query_params=query_params,
                 body_data=body_data)

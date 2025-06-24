@@ -188,12 +188,12 @@ class AIQWebSocket(WebSocketEndpoint):
             authentication_header: httpx.Headers | None = await authentication_manager.get_authentication_header()
 
         try:
-            response = await request_manager._send_request(url=user_request.url_path,
-                                                           http_method=user_request.method,
-                                                           authentication_header=authentication_header,
-                                                           headers=user_request.headers,
-                                                           query_params=user_request.query_params,
-                                                           body_data=user_request.body_data)
+            response = await request_manager.send_request(url=user_request.url_path,
+                                                          http_method=user_request.method,
+                                                          authentication_header=authentication_header,
+                                                          headers=user_request.headers,
+                                                          query_params=user_request.query_params,
+                                                          body_data=user_request.body_data)
 
             if response is None:
                 raise APIRequestError("An unexpected error occured while sending request.")

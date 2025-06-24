@@ -135,9 +135,9 @@ class RetrieverRef(ComponentRef):
         return ComponentGroup.RETRIEVERS
 
 
-class AuthenticationRef(ComponentRef):  # TODO EE: Update
+class AuthenticationRef(ComponentRef):
     """
-    A reference to an Authentication Provider in an AIQ Toolkit configuration object.
+    A reference to an API Authentication Provider in an AIQ Toolkit configuration object.
     """
 
     @property

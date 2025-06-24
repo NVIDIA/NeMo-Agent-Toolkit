@@ -52,9 +52,9 @@ class ResponseManager:
         """
         self._message_handler = message_handler
 
-    async def _handle_auth_code_grant_response_codes(self,
-                                                     response: httpx.Response,
-                                                     authentication_config: AuthCodeGrantConfig) -> None:
+    async def handle_auth_code_grant_response_codes(self,
+                                                    response: httpx.Response,
+                                                    authentication_config: AuthCodeGrantConfig) -> None:
         """
         Handles various Auth Code Grant Flow flow responses.
 
@@ -108,7 +108,7 @@ class ResponseManager:
             if authentication_config.consent_prompt_mode == ConsentPromptMode.FRONTEND:
 
                 authentication_config_name: str | None = _CredentialsManager(
-                )._get_registered_authentication_config_name(authentication_config)
+                ).get_registered_authentication_config_name(authentication_config)
 
                 logger.info(
                     "\n\n******************************************************************\n\n"
@@ -128,7 +128,7 @@ class ResponseManager:
 
                 authentication_config.consent_prompt_location_url = location_header
 
-                await _CredentialsManager()._wait_for_consent_prompt_url()
+                await _CredentialsManager().wait_for_consent_prompt_url()
 
                 authentication_config.consent_prompt_location_url = None
 

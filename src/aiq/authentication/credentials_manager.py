@@ -43,13 +43,12 @@ class _CredentialsManager(metaclass=Singleton):
         self._oauth_credentials_flag: asyncio.Event = asyncio.Event()
         self._consent_prompt_flag: asyncio.Event = asyncio.Event()
 
-    def _swap_authentication_configs(self, authentication_configs: dict[str, AuthenticationBaseConfig]) -> None:
+    def swap_authentication_configs(self, authentication_configs: dict[str, AuthenticationBaseConfig]) -> None:
         """
         Transfer ownership of the sensitive AIQ Authorization configuration attributes to the
         CredentialsManager.
 
         Args:
-            http_method (str): The HTTP method to validate (e.g., 'GET', 'POST').
             authentication_configs (dict[str, AuthenticationBaseConfig]): Dictionary of registered authentication
             configs.
         """
@@ -58,7 +57,7 @@ class _CredentialsManager(metaclass=Singleton):
             authentication_configs.clear()
             self._swap_flag = False
 
-    def _get_authentication_config(self, authentication_config_name: str | None) -> AuthenticationBaseConfig | None:
+    def get_authentication_config(self, authentication_config_name: str | None) -> AuthenticationBaseConfig | None:
         """Retrieve the stored authentication config by registered name."""
 
         if authentication_config_name not in self._authentication_configs:
@@ -67,7 +66,7 @@ class _CredentialsManager(metaclass=Singleton):
 
         return self._authentication_configs.get(authentication_config_name)
 
-    def _get_authentication_config_by_state(self, state: str) -> AuthCodeGrantConfig | None:
+    def get_authentication_config_by_state(self, state: str) -> AuthCodeGrantConfig | None:
         """Retrieve the stored authentication config by state."""
 
         for _, authentication_config in self._authentication_configs.items():
@@ -78,7 +77,7 @@ class _CredentialsManager(metaclass=Singleton):
         logger.error("Authentication config not found by the provided state.")
         return None
 
-    def _get_registered_authentication_config_name(self, authentication_config: AuthenticationBaseConfig) -> str | None:
+    def get_registered_authentication_config_name(self, authentication_config: AuthenticationBaseConfig) -> str | None:
         """Retrieve the stored authentication config name."""
 
         for registered_config_name, registered_config in self._authentication_configs.items():
@@ -88,7 +87,7 @@ class _CredentialsManager(metaclass=Singleton):
         logger.error("Authentication config name not found by the provided authentication config model.")
         return None
 
-    def _get_authentication_config_by_consent_prompt_key(self, consent_prompt_key: str) -> AuthCodeGrantConfig | None:
+    def get_authentication_config_by_consent_prompt_key(self, consent_prompt_key: str) -> AuthCodeGrantConfig | None:
         """Retrieve the stored authentication config by consent prompt key."""
         for _, authentication_config in self._authentication_configs.items():
             if isinstance(authentication_config, AuthCodeGrantConfig):
@@ -96,7 +95,7 @@ class _CredentialsManager(metaclass=Singleton):
                     return authentication_config
         return None
 
-    def _validate_and_set_cors_config(self, front_end_config: FrontEndBaseConfig) -> None:
+    def validate_and_set_cors_config(self, front_end_config: FrontEndBaseConfig) -> None:
         """
         Validate and set the CORS authentication configuration for the frontend.
         """
@@ -143,25 +142,31 @@ class _CredentialsManager(metaclass=Singleton):
                     allow_methods=default_allow_methods,
                 ))
 
-    async def _wait_for_oauth_credentials(self) -> None:
+    def get_registered_authentication_count(self) -> int:
+        """
+        Get the number of registered authentication configs.
+        """
+        return len(self._authentication_configs)
+
+    async def wait_for_oauth_credentials(self) -> None:
         """
         Block until the oauth credentials are set in the redirect uri.
         """
         await self._oauth_credentials_flag.wait()
 
-    async def _set_oauth_credentials(self):
+    async def set_oauth_credentials(self):
         """
         Unblock until the oauth credentials are set in the redirect uri.
         """
         self._oauth_credentials_flag.set()
 
-    async def _wait_for_consent_prompt_url(self):
+    async def wait_for_consent_prompt_url(self):
         """
         Block until the consent prompt location header has been retrieved.
         """
         await self._consent_prompt_flag.wait()
 
-    async def _set_consent_prompt_url(self):
+    async def set_consent_prompt_url(self):
         """
         Unblock until the consent prompt location header has been retrieved.
         """

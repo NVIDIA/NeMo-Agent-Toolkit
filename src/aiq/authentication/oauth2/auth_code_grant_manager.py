@@ -161,7 +161,7 @@ class AuthCodeGrantManager(AuthenticationManagerBase):
             # Initiate oauth code flow by sending authorization request.
             await self._send_oauth_authorization_request()
 
-            await _CredentialsManager()._wait_for_oauth_credentials()
+            await _CredentialsManager().wait_for_oauth_credentials()
 
             await self._oauth2_client_server.stop_server()
 
@@ -183,7 +183,7 @@ class AuthCodeGrantManager(AuthenticationManagerBase):
             # Initiate oauth code flow by sending authorization request.
             await self._send_oauth_authorization_request()
 
-            await _CredentialsManager()._wait_for_oauth_credentials()
+            await _CredentialsManager().wait_for_oauth_credentials()
 
         except AuthCodeGrantError as e:
             logger.error("Failed to complete Authorization Code Grant Flow for: %s Error: %s",
@@ -198,15 +198,15 @@ class AuthCodeGrantManager(AuthenticationManagerBase):
         Constructs Auth Code Grant flow authoriation URL and sends request to authentication server.
         """
         try:
-            authorization_url: httpx.URL = await self._request_manager._build_auth_code_grant_url(self._config)
+            authorization_url: httpx.URL = await self._request_manager.build_auth_code_grant_url(self._config)
 
-            response: httpx.Response | None = await self._request_manager._send_request(url=str(authorization_url),
-                                                                                        http_method="GET")
+            response: httpx.Response | None = await self._request_manager.send_request(url=str(authorization_url),
+                                                                                       http_method="GET")
             if response is None:
                 raise AuthCodeGrantError("Unexpected error occured while sending authorization request.")
 
             if not response.status_code == 200:
-                await self._response_manager._handle_auth_code_grant_response_codes(response, self._config)
+                await self._response_manager.handle_auth_code_grant_response_codes(response, self._config)
 
         except Exception as e:
             logger.error("Unexpected error occured during authorization request process: %s", str(e), exc_info=True)
@@ -232,7 +232,7 @@ class AuthCodeGrantManager(AuthenticationManagerBase):
                                                                  refresh_token=self._config.refresh_token)
 
             # Send Refresh Token Request
-            response: httpx.Response | None = await self._request_manager._send_request(
+            response: httpx.Response | None = await self._request_manager.send_request(
                 url=self._config.authorization_token_url,
                 http_method="POST",
                 authentication_header=None,
@@ -243,7 +243,7 @@ class AuthCodeGrantManager(AuthenticationManagerBase):
                 raise AuthCodeGrantRefreshTokenError("Invalid response received while making refresh token request.")
 
             if not response.status_code == 200:
-                await self._response_manager._handle_auth_code_grant_response_codes(response, self._config)
+                await self._response_manager.handle_auth_code_grant_response_codes(response, self._config)
 
             if response.json().get("access_token") is None:
                 raise AuthCodeGrantRefreshTokenError("Access token not in successful token request response payload.")
@@ -294,8 +294,8 @@ class AuthCodeGrantManager(AuthenticationManagerBase):
         """
         from aiq.authentication.credentials_manager import _CredentialsManager
 
-        await _CredentialsManager()._set_consent_prompt_url()
-        await _CredentialsManager()._set_oauth_credentials()
+        await _CredentialsManager().set_consent_prompt_url()
+        await _CredentialsManager().set_oauth_credentials()
         await self._oauth2_client_server.stop_server()
 
     async def _shut_down_code_flow_server(self) -> None:
@@ -305,5 +305,5 @@ class AuthCodeGrantManager(AuthenticationManagerBase):
         """
         from aiq.authentication.credentials_manager import _CredentialsManager
 
-        await _CredentialsManager()._set_consent_prompt_url()
-        await _CredentialsManager()._set_oauth_credentials()
+        await _CredentialsManager().set_consent_prompt_url()
+        await _CredentialsManager().set_oauth_credentials()

@@ -16,7 +16,6 @@
 from aiq.data_models.authentication import AuthenticationBaseConfig
 
 
-# TODO EE: Update
 class AuthenticationProviderInfo:
 
     def __init__(self, *, config: AuthenticationBaseConfig, description: str):

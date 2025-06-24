@@ -21,7 +21,7 @@ from contextlib import AbstractAsyncContextManager
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 
-from aiq.builder.authentication import AuthenticationProviderInfo  # TODO EE: Update
+from aiq.builder.authentication import AuthenticationProviderInfo
 from aiq.builder.builder import Builder
 from aiq.builder.builder import UserManagerHolder
 from aiq.builder.component_utils import build_dependency_sequence
@@ -37,9 +37,9 @@ from aiq.builder.retriever import RetrieverProviderInfo
 from aiq.builder.workflow import Workflow
 from aiq.cli.type_registry import GlobalTypeRegistry
 from aiq.cli.type_registry import TypeRegistry
-from aiq.data_models.authentication import AuthenticationBaseConfig  # TODO EE: Update
+from aiq.data_models.authentication import AuthenticationBaseConfig
 from aiq.data_models.component import ComponentGroup
-from aiq.data_models.component_ref import AuthenticationRef  # TODO EE: Update
+from aiq.data_models.component_ref import AuthenticationRef
 from aiq.data_models.component_ref import EmbedderRef
 from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.component_ref import LLMRef
@@ -108,7 +108,7 @@ class ConfiguredRetriever:
     instance: RetrieverProviderInfo
 
 
-@dataclasses.dataclass  # TODO EE: Update
+@dataclasses.dataclass
 class ConfiguredAuthentication:
     config: AuthenticationBaseConfig
     instance: AuthenticationProviderInfo
@@ -136,7 +136,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._workflow: ConfiguredFunction | None = None
 
         self._llms: dict[str, ConfiguredLLM] = {}
-        self._authentications: dict[str, ConfiguredAuthentication] = {}  # TODO EE: Update
+        self._authentications: dict[str, ConfiguredAuthentication] = {}
         self._embedders: dict[str, ConfiguredEmbedder] = {}
         self._memory_clients: dict[str, ConfiguredMemory] = {}
         self._retrievers: dict[str, ConfiguredRetriever] = {}
@@ -444,8 +444,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise e
 
     @override
-    async def add_authentication(self, name: str | AuthenticationRef,
-                                 config: AuthenticationBaseConfig):  # TODO EE: Update
+    async def add_authentication(self, name: str | AuthenticationRef, config: AuthenticationBaseConfig):
 
         if (name in self._authentications):
             raise ValueError(f"Authentication `{name}` already exists in the list of Authentication Providers")
@@ -626,7 +625,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     def get_user_manager(self):
         return UserManagerHolder(context=AIQContext(self._context_state))
 
-    async def populate_builder(self, config: AIQConfig, skip_workflow: bool = False):  # TODO EE: Update
+    async def populate_builder(self, config: AIQConfig, skip_workflow: bool = False):
         """
         Populate the builder with components and optionally set up the workflow.
 
@@ -731,7 +730,7 @@ class ChildBuilder(Builder):
         return await self._workflow_builder.add_llm(name, config)
 
     @override
-    async def add_authentication(self, name: str, config: AuthenticationBaseConfig):  # TODO EE: Update
+    async def add_authentication(self, name: str, config: AuthenticationBaseConfig):
         return await self._workflow_builder.add_authentication(name, config)
 
     @override

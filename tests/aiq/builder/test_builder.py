@@ -17,6 +17,7 @@ import pytest
 from openai import BaseModel
 from pydantic import ConfigDict
 
+from aiq.builder.authentication import AuthenticationProviderInfo
 from aiq.builder.builder import Builder
 from aiq.builder.embedder import EmbedderProviderInfo
 from aiq.builder.function import Function
@@ -25,6 +26,7 @@ from aiq.builder.llm import LLMProviderInfo
 from aiq.builder.retriever import RetrieverProviderInfo
 from aiq.builder.workflow import Workflow
 from aiq.builder.workflow_builder import WorkflowBuilder
+from aiq.cli.register_workflow import register_authentication_provider
 from aiq.cli.register_workflow import register_embedder_client
 from aiq.cli.register_workflow import register_embedder_provider
 from aiq.cli.register_workflow import register_function
@@ -34,6 +36,7 @@ from aiq.cli.register_workflow import register_memory
 from aiq.cli.register_workflow import register_retriever_client
 from aiq.cli.register_workflow import register_retriever_provider
 from aiq.cli.register_workflow import register_tool_wrapper
+from aiq.data_models.authentication import AuthenticationBaseConfig
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
@@ -72,6 +75,10 @@ class TMemoryConfig(MemoryBaseConfig, name="test_memory"):
 
 
 class TRetrieverProviderConfig(RetrieverBaseConfig, name="test_retriever"):
+    raise_error: bool = False
+
+
+class TAuthenticationProviderConfig(AuthenticationBaseConfig, name="test_authentication"):
     raise_error: bool = False
 
 
@@ -159,6 +166,14 @@ async def _register():
             raise ValueError("Error")
 
         yield RetrieverProviderInfo(config=config, description="Mock retriever to test the registration process")
+
+    @register_authentication_provider(config_type=TAuthenticationProviderConfig)
+    async def register8(config: TAuthenticationProviderConfig, builder: Builder):
+
+        if (config.raise_error):
+            raise ValueError("Error")
+
+        yield AuthenticationProviderInfo(config=config, description="An API authentication test provider.")
 
 
 async def test_build():

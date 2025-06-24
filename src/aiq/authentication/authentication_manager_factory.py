@@ -31,13 +31,14 @@ class AuthenticationManagerFactory:
         pass
 
     async def create(self, authentication_manager: AuthenticationManagerConfig) -> AuthenticationManagerBase | None:
-        """_summary_
+        """
+        Create an instance of the appropriate authentication manager based on the configuration provided.
 
         Args:
-            authentication_manager (AuthenticationManagerConfig | None): _description_
+            authentication_manager (AuthenticationManagerConfig | None): Authentication manager configuration model.
 
         Returns:
-            AuthenticationManagerBase | None: _description_
+            AuthenticationManagerBase | None: Authentication manager instance or None if the config is not recognized.
         """
 
         if isinstance(authentication_manager.config, AuthCodeGrantConfig):

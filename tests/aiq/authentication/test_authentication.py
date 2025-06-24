@@ -59,14 +59,14 @@ async def test_credential_persistence():
     config = validate_schema(config_dict, AIQConfig)
 
     # Swap credentials and ensure they are not the same.
-    assert _CredentialsManager()._get_authentication_config("jira") != config.authentication.get("jira")
+    assert _CredentialsManager().get_authentication_config("jira") != config.authentication.get("jira")
     assert not config.authentication
 
     # Ensure credentials can only be swapped once.
-    assert _CredentialsManager()._get_authentication_config("jira") != config.authentication.get("jira")
+    assert _CredentialsManager().get_authentication_config("jira") != config.authentication.get("jira")
 
     # Ensure None is returned if the provider does not exist.
-    test = _CredentialsManager()._get_authentication_config("invalid_provider")
+    test = _CredentialsManager().get_authentication_config("invalid_provider")
     assert test is None
 
 
@@ -104,7 +104,7 @@ async def test_validate_base_url_valid(request_manager: RequestManager):
     ]
     for url in valid_urls:
         try:
-            request_manager.validate_base_url(url)
+            request_manager._validate_base_url(url)
         except BaseUrlValidationError as e:
             pytest.fail(f"Valid URL '{url}' incorrectly raised BaseUrlValidationError: {e}")
 
@@ -116,7 +116,7 @@ async def test_validate_base_url_invalid(request_manager: RequestManager):
 
     for url in invalid_urls:
         with pytest.raises(BaseUrlValidationError):
-            request_manager.validate_base_url(url)
+            request_manager._validate_base_url(url)
 
 
 async def test_validate_http_method_valid(request_manager: RequestManager):
@@ -125,7 +125,7 @@ async def test_validate_http_method_valid(request_manager: RequestManager):
     valid_methods = ["GET", "POST", "PoSt", "PUT", "DELETE", "get", "post", "put", "delete"]
 
     for method in valid_methods:
-        request_manager.validate_http_method(method)
+        request_manager._validate_http_method(method)
 
 
 async def test_validate_http_method_invalid(request_manager: RequestManager):
@@ -135,7 +135,7 @@ async def test_validate_http_method_invalid(request_manager: RequestManager):
 
     for method in invalid_methods:
         with pytest.raises(HTTPMethodValidationError):
-            request_manager.validate_http_method(method)
+            request_manager._validate_http_method(method)
 
 
 async def test_validate_headers_valid(request_manager: RequestManager):
@@ -147,7 +147,7 @@ async def test_validate_headers_valid(request_manager: RequestManager):
         "X-Custom-Header": "value",
         "AuthorizationTest": "Basic token"
     }
-    request_manager.validate_headers(valid_headers)
+    request_manager._validate_headers(valid_headers)
 
 
 async def test_validate_headers_invalid(request_manager: RequestManager):
@@ -211,7 +211,7 @@ async def test_validate_headers_invalid(request_manager: RequestManager):
     ]
     for headers in invalid_headers:
         with pytest.raises((HTTPHeaderValidationError, ValueError, TypeError)):
-            request_manager.validate_headers(headers)
+            request_manager._validate_headers(headers)
 
 
 async def test_validate_query_parameters_valid(request_manager: RequestManager):
@@ -219,7 +219,7 @@ async def test_validate_query_parameters_valid(request_manager: RequestManager):
 
     valid_query_params = {"key1": "value1", "key2": "value2", "special": "!@#$%^&*()"}
 
-    request_manager.validate_query_parameters(valid_query_params)
+    request_manager._validate_query_parameters(valid_query_params)
 
 
 async def test_validate_query_parameters_invalid(request_manager: RequestManager):
@@ -266,7 +266,7 @@ async def test_validate_query_parameters_invalid(request_manager: RequestManager
 
     for query_params in invalid_query_params:
         with pytest.raises((QueryParameterValidationError, ValueError)):
-            request_manager.validate_query_parameters(query_params)
+            request_manager._validate_query_parameters(query_params)
 
 
 @pytest.fixture
@@ -402,7 +402,7 @@ async def test_auth_code_grant_redirect_302_without_location(response_manager: R
 
     # Raises OAuthCodeFlowError if Location header is missing.
     with pytest.raises(AuthCodeGrantError):
-        await response_manager._handle_auth_code_grant_response_codes(mock_response, auth_provider)
+        await response_manager.handle_auth_code_grant_response_codes(mock_response, auth_provider)
 
 
 async def test_auth_code_grant_handles_400_response(response_manager: ResponseManager):
@@ -424,7 +424,7 @@ async def test_auth_code_grant_handles_400_response(response_manager: ResponseMa
     for error_code in error_codes:
         mock_response.status_code = error_code
         with pytest.raises(AuthCodeGrantError):
-            await response_manager._handle_auth_code_grant_response_codes(mock_response, auth_provider)
+            await response_manager.handle_auth_code_grant_response_codes(mock_response, auth_provider)
 
 
 async def test_auth_code_grant_handles_unknown_response_codes(response_manager: ResponseManager):
@@ -446,7 +446,7 @@ async def test_auth_code_grant_handles_unknown_response_codes(response_manager: 
     for error_code in error_codes:
         mock_response.status_code = error_code
         with pytest.raises(AuthCodeGrantError):
-            await response_manager._handle_auth_code_grant_response_codes(mock_response, auth_provider)
+            await response_manager.handle_auth_code_grant_response_codes(mock_response, auth_provider)
 
 
 async def test_auth_code_grant_consent_browser_redirect_error_302(response_manager: ResponseManager):

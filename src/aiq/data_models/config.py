@@ -251,14 +251,14 @@ class AIQConfig(HashableBaseModel):
     workflow: FunctionBaseConfig = EmptyFunctionConfig()
 
     # Authentication Configuration
-    authentication: dict[str, AuthenticationBaseConfig] = {}  # TODO EE: Update
-    # authentication: dict[str, AuthenticationProvider] = {}
+    authentication: dict[str, AuthenticationBaseConfig] = {}
 
     # Evaluation Options
     eval: EvalConfig = EvalConfig()
 
     def print_summary(self, stream: typing.TextIO = sys.stdout):
         """Print a summary of the configuration"""
+        from aiq.authentication.credentials_manager import _CredentialsManager
 
         stream.write("\nConfiguration Summary:\n")
         stream.write("-" * 20 + "\n")
@@ -270,15 +270,15 @@ class AIQConfig(HashableBaseModel):
         stream.write(f"Number of Embedders: {len(self.embedders)}\n")
         stream.write(f"Number of Memory: {len(self.memory)}\n")
         stream.write(f"Number of Retrievers: {len(self.retrievers)}\n")
-        stream.write(f"Number of Authentication Providers: {len(self.authentication)}\n"
-                     )  # TODO EE: Check to see why this is not working
+        stream.write(
+            f"Number of Authentication Providers: {_CredentialsManager().get_registered_authentication_count()}\n")
 
     def model_post_init(self, context: typing.Any) -> None:
         from aiq.authentication.credentials_manager import _CredentialsManager
 
         # Persist the authentication credentials after the model is initialized.
         if (self.authentication):
-            _CredentialsManager()._swap_authentication_configs(self.authentication)
+            _CredentialsManager().swap_authentication_configs(self.authentication)
 
     @field_validator("functions",
                      "llms",
@@ -311,7 +311,7 @@ class AIQConfig(HashableBaseModel):
         AuthenticationProviderAnnotation = dict[str,
                                                 typing.Annotated[
                                                     type_registry.compute_annotation(AuthenticationBaseConfig),
-                                                    Discriminator(TypedBaseModel.discriminator)]]  # TODO EE: Update
+                                                    Discriminator(TypedBaseModel.discriminator)]]
 
         EmbeddersAnnotation = dict[str,
                                    typing.Annotated[type_registry.compute_annotation(EmbedderBaseConfig),
@@ -334,7 +334,7 @@ class AIQConfig(HashableBaseModel):
 
         should_rebuild = False
 
-        auth_providers_field = cls.model_fields.get("authentication")  # TODO EE: Update
+        auth_providers_field = cls.model_fields.get("authentication")
         if auth_providers_field is not None and auth_providers_field.annotation != AuthenticationProviderAnnotation:
             auth_providers_field.annotation = AuthenticationProviderAnnotation
             should_rebuild = True

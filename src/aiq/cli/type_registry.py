@@ -41,7 +41,7 @@ from aiq.builder.function_base import FunctionBase
 from aiq.builder.function_info import FunctionInfo
 from aiq.builder.llm import LLMProviderInfo
 from aiq.builder.retriever import RetrieverProviderInfo
-from aiq.data_models.authentication import AuthenticationBaseConfig  # TODO EE: Update
+from aiq.data_models.authentication import AuthenticationBaseConfig
 from aiq.data_models.authentication import AuthenticationBaseConfigT
 from aiq.data_models.common import TypedBaseModelT
 from aiq.data_models.component import AIQComponentEnum
@@ -83,6 +83,10 @@ except TelemetryOptionalImportError:
 
 logger = logging.getLogger(__name__)
 
+AuthenticationProviderBuildCallableT = Callable[[AuthenticationBaseConfigT, Builder],
+                                                AsyncIterator[AuthenticationProviderInfo]]
+AuthenticationProviderRegisteredCallableT = Callable[[AuthenticationBaseConfigT, Builder],
+                                                     AbstractAsyncContextManager[AuthenticationProviderInfo]]
 FrontEndBuildCallableT = Callable[[FrontEndConfigT, AIQConfig], AsyncIterator[FrontEndBase]]
 TelemetryExporterBuildCallableT = Callable[[TelemetryExporterConfigT, Builder], AsyncIterator[SpanExporter]]
 LoggingMethodBuildCallableT = Callable[[LoggingMethodConfigT, Builder], AsyncIterator[Handler]]
@@ -97,7 +101,6 @@ RetrieverProviderBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], Asyn
 RetrieverClientBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], AsyncIterator[typing.Any]]
 RegistryHandlerBuildCallableT = Callable[[RegistryHandlerBaseConfigT], AsyncIterator[AbstractRegistryHandler]]
 ToolWrapperBuildCallableT = Callable[[str, Function, Builder], typing.Any]
-
 TeleExporterRegisteredCallableT = Callable[[TelemetryExporterConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 LoggingMethodRegisteredCallableT = Callable[[LoggingMethodConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 FrontEndRegisteredCallableT = Callable[[FrontEndConfigT, AIQConfig], AbstractAsyncContextManager[FrontEndBase]]
@@ -115,12 +118,6 @@ RetrieverProviderRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder],
 RetrieverClientRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 RegistryHandlerRegisteredCallableT = Callable[[RegistryHandlerBaseConfigT],
                                               AbstractAsyncContextManager[AbstractRegistryHandler]]
-# TODO EE: Update
-
-AuthenticationProviderBuildCallableT = Callable[[AuthenticationBaseConfigT, Builder],
-                                                AsyncIterator[AuthenticationProviderInfo]]
-AuthenticationProviderRegisteredCallableT = Callable[[AuthenticationBaseConfigT, Builder],
-                                                     AbstractAsyncContextManager[AuthenticationProviderInfo]]
 
 
 class RegisteredInfo(BaseModel, typing.Generic[TypedBaseModelT]):
@@ -192,9 +189,9 @@ class RegisteredLLMProviderInfo(RegisteredInfo[LLMBaseConfig]):
 
 class RegisteredAuthenticationProviderInfo(RegisteredInfo[AuthenticationBaseConfig]):
     """
-    Represents a registered Authentication provider e.g. OAuth2, API Key, etc.
+    Represents a registered API Authentication provider e.g. OAuth2, API Key, etc.
     """
-    build_fn: AuthenticationProviderRegisteredCallableT = Field(repr=False)  # TODO EE: Update
+    build_fn: AuthenticationProviderRegisteredCallableT = Field(repr=False)
 
 
 class RegisteredLLMClientInfo(RegisteredInfo[LLMBaseConfig]):
@@ -304,6 +301,10 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         self._llm_client_provider_to_framework: dict[type[LLMBaseConfig], dict[str, RegisteredLLMClientInfo]] = {}
         self._llm_client_framework_to_provider: dict[str, dict[type[LLMBaseConfig], RegisteredLLMClientInfo]] = {}
 
+        # Authentication Providers
+        self._registered_authentication_provider_infos: dict[type[AuthenticationBaseConfig],
+                                                             RegisteredAuthenticationProviderInfo] = {}
+
         # Embedders
         self._registered_embedder_provider_infos: dict[type[EmbedderBaseConfig], RegisteredEmbedderProviderInfo] = {}
         self._embedder_client_provider_to_framework: dict[type[EmbedderBaseConfig],
@@ -314,11 +315,6 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         # Evaluators
         self._registered_evaluator_infos: dict[type[EvaluatorBaseConfig], RegisteredEvaluatorInfo] = {}
-
-        # Authentication Providers
-        self._registered_authentication_provider_infos: dict[type[AuthenticationBaseConfig],
-                                                             RegisteredAuthenticationProviderInfo] = {
-                                                             }  # TODO EE: Update
 
         # Memory
         self._registered_memory_infos: dict[type[MemoryBaseConfig], RegisteredMemoryInfo] = {}
@@ -470,7 +466,7 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         self._registration_changed()
 
-    def register_authentication_provider(self, info: RegisteredAuthenticationProviderInfo):  # TODO EE: Step 2
+    def register_authentication_provider(self, info: RegisteredAuthenticationProviderInfo):
 
         if (info.config_type in self._registered_authentication_provider_infos):
             raise ValueError(
@@ -490,19 +486,17 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
                            f"Registered configs: {set(self._registered_llm_provider_infos.keys())}") from err
 
     def get_authentication_provider(
-            self,
-            config_type: type[AuthenticationBaseConfig]) -> RegisteredAuthenticationProviderInfo:  # TODO EE: Update
+            self, config_type: type[AuthenticationBaseConfig]) -> RegisteredAuthenticationProviderInfo:
         try:
             return self._registered_authentication_provider_infos[config_type]
         except KeyError as err:
-            raise KeyError(f"Could not find a registered Authentication provider for config `{config_type}`. "
+            raise KeyError(f"Could not find a registered API Authentication provider for config `{config_type}`. "
                            f"Registered configs: {set(self._registered_authentication_provider_infos.keys())}") from err
 
     def get_registered_llm_providers(self) -> list[RegisteredInfo[LLMBaseConfig]]:
         return list(self._registered_llm_provider_infos.values())
 
-    def get_registered_authentication_providers(
-            self) -> list[RegisteredInfo[AuthenticationBaseConfig]]:  # TODO EE: Update
+    def get_registered_authentication_providers(self) -> list[RegisteredInfo[AuthenticationBaseConfig]]:
         return list(self._registered_authentication_provider_infos.values())
 
     def register_llm_client(self, info: RegisteredLLMClientInfo):
@@ -862,6 +856,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
     def compute_annotation(self, cls: type[TypedBaseModelT]):
 
+        if issubclass(cls, AuthenticationBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_authentication_providers())
+
         if issubclass(cls, EmbedderBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_embedder_providers())
 
@@ -891,9 +888,6 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         if issubclass(cls, LoggingBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_logging_method())
-
-        if issubclass(cls, AuthenticationBaseConfig):  # TODO EE: Update
-            return self._do_compute_annotation(cls, self.get_registered_authentication_providers())
 
         raise ValueError(f"Supplied an unsupported component type {cls}")
 
