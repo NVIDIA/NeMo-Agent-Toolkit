@@ -79,10 +79,8 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
 
     def initialize_logger(self, workflow_alias: str, eval_input: EvalInput, config: Any):
         """Initialize the Weave evaluation logger."""
-        if not self.client:
+        if not self.client and not self.initialize_client():
             # lazy init the client
-            if not self.initialize_client():
-                return False
             return False
 
         try:
