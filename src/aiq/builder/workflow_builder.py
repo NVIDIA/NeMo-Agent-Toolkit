@@ -159,7 +159,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         # Register the exporter factories
         for key, trace_exporter_config in telemetry_config.tracing.items():
-            await self._register_exporter(key, trace_exporter_config)
+            await self.add_exporter(key, trace_exporter_config)
 
         return self
 
@@ -561,7 +561,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     def get_user_manager(self):
         return UserManagerHolder(context=AIQContext(self._context_state))
 
-    async def _register_exporter(self, name: str, config: TelemetryExporterBaseConfig) -> None:
+    async def add_exporter(self, name: str, config: TelemetryExporterBaseConfig) -> None:
         """Register an exporter factory with the exporter manager.
 
         Args:
@@ -571,7 +571,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         exporter_info = self._registry.get_telemetry_exporter(type(config))
 
         async def create_exporter():
-            return await self._exit_stack.enter_async_context(exporter_info.build_fn(config, self))
+            return await self._get_exit_stack().enter_async_context(exporter_info.build_fn(config, self))
 
         await self._exporter_manager.add_exporter(name, create_exporter)
         self._exporter_registrations[name] = ConfiguredExporter(config=config, factory=create_exporter)
