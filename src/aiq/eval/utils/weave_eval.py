@@ -91,8 +91,6 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             self.eval_logger = self.EvaluationLogger(model=config_dict, dataset=weave_dataset)
             self.pred_loggers = {}
 
-            del weave_dataset
-            del config_dict
             return True
         except Exception as e:
             self.eval_logger = None
@@ -128,7 +126,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         async def _finish_one(pred_logger):
             if hasattr(pred_logger, '_has_finished') and not pred_logger._has_finished:
                 return
-            # run the *blocking* finish() in a thread so we don’t nest loops
+            # run the *blocking* finish() in a thread so we don't nest loops
             await asyncio.to_thread(pred_logger.finish)
 
         await asyncio.gather(*[_finish_one(pl) for pl in self.pred_loggers.values()])
