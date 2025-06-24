@@ -23,9 +23,3 @@ class InferenceMetricsModel(BaseModel):
     ninetieth_interval: tuple[float, float] = Field(default=(0, 0), description="90% confidence interval")
     ninety_fifth_interval: tuple[float, float] = Field(default=(0, 0), description="95% confidence interval")
     ninety_ninth_interval: tuple[float, float] = Field(default=(0, 0), description="99% confidence interval")
-
-
-class SimpleMetricsHolder(BaseModel):
-    workflow_run_time_confidence_intervals: InferenceMetricsModel
-    llm_latency_confidence_intervals: InferenceMetricsModel
-    throughput_estimate_confidence_interval: InferenceMetricsModel

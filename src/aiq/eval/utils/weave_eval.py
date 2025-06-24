@@ -20,7 +20,6 @@ from typing import Any
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
-from aiq.profiler.inference_metrics_model import SimpleMetricsHolder
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +30,6 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
     """
 
     def __init__(self):
-        """Check if Weave dependencies are available"""
         self.available = False
         self.client = None
         self.eval_logger = None
@@ -51,11 +49,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             pass
 
     def initialize_client(self):
-        """
-        Check if the Weave client is available.
-        Weave client is initialized via the general.telemetry.tracing.weave section in the config
-        file.
-        """
+        """Initialize the Weave client if available."""
         if not self.available:
             return False
 
@@ -66,7 +60,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             self.client = None
             return False
 
-    def _get_prediction_input(self, item: EvalInputItem):
+    def _get_prediction_inputs(self, item: EvalInputItem):
         """Get the inputs for displaying in the UI.
         The following fields are excluded as they are too large to display in the UI:
         - full_dataset_entry
@@ -84,8 +78,10 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
 
     def initialize_logger(self, workflow_alias: str, eval_input: EvalInput, config: Any):
         """Initialize the Weave evaluation logger."""
-        # lazy init the client
-        if not self.client and not self.initialize_client():
+        if not self.client:
+            # lazy init the client
+            if not self.initialize_client():
+                return False
             return False
 
         try:
@@ -107,7 +103,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         if not self.eval_logger:
             return
 
-        pred_logger = self.eval_logger.log_prediction(inputs=self._get_prediction_input(item), output=output)
+        pred_logger = self.eval_logger.log_prediction(inputs=self._get_prediction_inputs(item), output=output)
         self.pred_loggers[item.id] = pred_logger
 
     async def alog_score(self, eval_output: EvalOutput, evaluator_name: str):
@@ -135,19 +131,9 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
 
         await asyncio.gather(*[_finish_one(pl) for pl in self.pred_loggers.values()])
 
-    def _log_profiler_metrics(self, simple_metrics: SimpleMetricsHolder) -> dict[str, Any]:
-        """Log profile metrics to Weave."""
-        return {
-            "workflow_p95_latency": simple_metrics.workflow_run_time_confidence_intervals.ninety_fifth_interval,
-            "llm_p95_latency": simple_metrics.llm_latency_confidence_intervals.ninety_fifth_interval,
-            "throughput_estimate": simple_metrics.throughput_estimate_confidence_interval.mean,
-        }
-
-    def log_summary(self, evaluation_results: list[tuple[str, EvalOutput]], simple_metrics: SimpleMetricsHolder):
+    def log_summary(self, evaluation_results: list[tuple[str, EvalOutput]]):
         """Log summary statistics to Weave."""
         if not self.eval_logger:
             return
-        # add profile metrics to the summary
-        profile_metrics = self._log_profiler_metrics(simple_metrics)
         # Log the summary to finish the evaluation
-        self.eval_logger.log_summary(summary=profile_metrics)
+        self.eval_logger.log_summary()
