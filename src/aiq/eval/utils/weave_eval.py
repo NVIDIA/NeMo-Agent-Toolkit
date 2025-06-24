@@ -20,6 +20,7 @@ from typing import Any
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
+from aiq.profiler.data_models import ProfilerResults
 
 logger = logging.getLogger(__name__)
 
@@ -131,9 +132,19 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
 
         await asyncio.gather(*[_finish_one(pl) for pl in self.pred_loggers.values()])
 
-    def log_summary(self, evaluation_results: list[tuple[str, EvalOutput]]):
+    def _log_profiler_metrics(self, profiler_results: ProfilerResults) -> dict[str, Any]:
+        """Log profile metrics to Weave."""
+        return {
+            "workflow_p95_latency": profiler_results.workflow_runtime_metrics.p95,
+        }
+
+    def log_summary(self, evaluation_results: list[tuple[str, EvalOutput]], profiler_results: ProfilerResults):
         """Log summary statistics to Weave."""
         if not self.eval_logger:
             return
+
+        # add profile metrics to the summary
+        profile_metrics = self._log_profiler_metrics(profiler_results)
+
         # Log the summary to finish the evaluation
-        self.eval_logger.log_summary()
+        self.eval_logger.log_summary(profile_metrics)

@@ -33,6 +33,7 @@ from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.utils.output_uploader import OutputUploader
 from aiq.eval.utils.weave_eval import WeaveEvaluationIntegration
+from aiq.profiler.data_models import ProfilerResults
 from aiq.runtime.session import AIQSessionManager
 
 logger = logging.getLogger(__name__)
@@ -162,7 +163,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         handler = EvaluationRemoteWorkflowHandler(self.config, self.eval_config.general.max_concurrency)
         await handler.run_workflow_remote(self.eval_input)
 
-    async def profile_workflow(self):
+    async def profile_workflow(self) -> ProfilerResults:
         """
         Profile a dataset
         """
@@ -238,7 +239,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             except Exception as e:
                 logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e, exc_info=True)
 
-    def write_output(self, dataset_handler: DatasetHandler):
+    def write_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):
         workflow_output_file = self.eval_config.general.output_dir / "workflow_output.json"
         workflow_output_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -271,7 +272,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                    "`eval` with the --skip_completed_entries flag.")
             logger.warning(msg)
 
-        self.weave_eval.log_summary(self.evaluation_results)
+        self.weave_eval.log_summary(self.evaluation_results, profiler_results)
 
     async def run_single_evaluator(self, evaluator_name: str, evaluator: Any):
         """Run a single evaluator and store its results."""
@@ -401,10 +402,10 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             await self.run_evaluators(evaluators)
 
         # Profile the workflow
-        await self.profile_workflow()
+        profiler_results = await self.profile_workflow()
 
         # Write the results to the output directory
-        self.write_output(dataset_handler)
+        self.write_output(dataset_handler, profiler_results)
 
         # Run custom scripts and upload evaluation outputs to S3
         if self.eval_config.general.output:
