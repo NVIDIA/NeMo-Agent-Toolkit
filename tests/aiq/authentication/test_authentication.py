@@ -368,7 +368,7 @@ async def test_get_access_token_with_refresh_token_success(auth_code_grant_manag
     mock_response.json.return_value = {
         "access_token": "new_access_token", "expires_in": 3600, "refresh_token": "new_refresh_token"
     }
-    mock_request_manager._send_request.return_value = mock_response
+    mock_request_manager.send_request.return_value = mock_response
 
     # Attempt to get refresh token.
     await auth_code_grant_manager._get_access_token_with_refresh_token()

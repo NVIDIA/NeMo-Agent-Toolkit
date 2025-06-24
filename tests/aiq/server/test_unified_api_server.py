@@ -91,7 +91,7 @@ user_message = {
     "type": "user_message",
     "schema_type": "chat",
     "id": "string",
-    "thread_id": "string",
+    "conversation_id": "string",
     "content": {
         "messages": [{
             "role": "user", "content": [{
