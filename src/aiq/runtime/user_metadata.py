@@ -21,9 +21,8 @@ from aiq.data_models.api_server import Request
 
 class RequestAttributes:
     """
-    The RequestAttributes class is responsible for managing user-defined
-    metadata and attributes. It provides a way to store and
-    expose user-defined attributes to workflow tools.
+    The RequestAttributes class is responsible for managing user http and webscoket session
+    metadata. It provides a way to store and expose session attributes to workflow tools.
     """
 
     def __init__(self) -> None:
