@@ -15,8 +15,9 @@
 
 import logging
 import os
-
 from pydantic import Field
+from ragaai_catalyst import RagaAICatalyst
+from ragaai_catalyst.tracers.exporters import DynamicTraceExporter
 
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_logging_method
@@ -178,3 +179,29 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
         "pat-project-name": config.project,
     }
     yield trace_exporter.OTLPSpanExporter(endpoint=config.endpoint, headers=headers)
+
+
+class CatalystTelemetryExporter(TelemetryExporterBaseConfig, name="catalyst"):
+    """A telemetry exporter to transmit traces to RagaAI catalyst."""
+    endpoint: str = Field(description="The RagaAI Catalyst endpoint", default="")
+    access_key: str = Field(description="The RagaAI Catalyst API access key", default="")
+    secret_key: str = Field(description="The RagaAI Catalyst API secret key", default="")
+    project: str = Field(description="The RagaAI Catalyst project name")
+    dataset: str = Field(description="The RagaAI Catalyst dataset name")
+
+
+
+@register_telemetry_exporter(config_type=CatalystTelemetryExporter)
+async def catalyst_telemetry_exporter(config: CatalystTelemetryExporter, builder: Builder):
+    """Create a Catalyst telemetry exporter."""
+
+    access_key = config.access_key or os.environ.get("CATALYST_ACCESS_KEY")
+    secret_key = config.secret_key or os.environ.get("CATALYST_SECRET_KEY")
+    endpoint = config.endpoint or os.environ.get("CATALYST_ENDPOINT")
+    project = config.project
+    dataset = config.dataset
+
+    RagaAICatalyst(access_key = access_key, secret_key = secret_key, base_url = endpoint)
+    yield DynamicTraceExporter(project, dataset, endpoint, "agentic/nemo-framework")
+
+
