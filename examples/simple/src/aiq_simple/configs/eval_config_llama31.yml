@@ -20,7 +20,7 @@ general:
     tracing:
       weave:
         _type: weave
-        project: "simple-eval"
+        project: "nat-simple"
 
 functions:
   webpage_query:
@@ -38,11 +38,11 @@ llms:
     temperature: 0.0
   nim_rag_eval_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: meta/llama-3.1-70b-instruct
     max_tokens: 8
   nim_trajectory_eval_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
     max_tokens: 1024
 
@@ -61,7 +61,7 @@ workflow:
 
 eval:
   general:
-    workflow_alias: simple-eval-llama-31-8b
+    workflow_alias: nat-simple-llama-31-8b
     output:
       dir: ./.tmp/aiq/examples/simple/
       cleanup: true
@@ -69,24 +69,7 @@ eval:
       _type: json
       file_path: examples/simple/data/langsmith.json
     profiler:
-      # Compute inter query token uniqueness
-      token_uniqueness_forecast: true
-      # Compute expected workflow runtime
-      workflow_runtime_forecast: true
-      # Compute inference optimization metrics
-      compute_llm_metrics: true
-      # Avoid dumping large text into the output CSV (helpful to not break structure)
-      csv_exclude_io_text: true
-      # Idenitfy common prompt prefixes
-      prompt_caching_prefixes:
-        enable: true
-        min_frequency: 0.1
-      bottleneck_analysis:
-        # Can also be simple_stack
-        enable_nested_stack: true
-      concurrency_spike_analysis:
-        enable: true
-        spike_threshold: 7
+      base_metrics: true
 
   evaluators:
     rag_accuracy:

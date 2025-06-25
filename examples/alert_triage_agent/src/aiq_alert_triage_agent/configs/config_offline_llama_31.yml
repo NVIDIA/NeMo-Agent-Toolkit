@@ -19,7 +19,7 @@ general:
     tracing:
       weave:
         _type: weave
-        project: "nat-ata-eval"
+        project: "nat-ata"
 
 functions:
   hardware_check:
