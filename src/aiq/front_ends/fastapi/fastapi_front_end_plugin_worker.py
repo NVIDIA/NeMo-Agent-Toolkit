@@ -870,7 +870,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         from datetime import timezone
 
         import httpx
-        from fastapi.responses import JSONResponse
+        from fastapi.responses import HTMLResponse
 
         from aiq.authentication.credentials_manager import _CredentialsManager
         from aiq.authentication.exceptions import AuthCodeGrantError
@@ -878,6 +878,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         from aiq.data_models.authentication import AccessCodeTokenRequest
         from aiq.data_models.authentication import HTTPMethod
         from aiq.data_models.authentication import PromptRedirectRequest
+        from aiq.front_ends.fastapi.html_snippets.auth_code_grant_success import AUTH_REDIRECT_SUCCESS_HTML
 
         async def redirect_uri(request: Request):
 
@@ -933,21 +934,25 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             await _CredentialsManager().set_oauth_credentials()
 
-            return JSONResponse({"message": "Access token successfully retrieved. Please close this window."})
+            return HTMLResponse(content=AUTH_REDIRECT_SUCCESS_HTML, status_code=200)
 
         async def prompt_redirect_uri(request: Request, prompt_request_schema: PromptRedirectRequest):
+            from fastapi.responses import JSONResponse
 
             authentication_config: AuthCodeGrantConfig | None = _CredentialsManager(
             ).get_authentication_config_by_consent_prompt_key(prompt_request_schema.consent_prompt_key)
 
             if (authentication_config is None):
-                raise HTTPException(status_code=403, detail="Invalid Consent Prompt Key.")
+                raise HTTPException(status_code=403, detail="Consent prompt key not found.")
 
             location_url: str = authentication_config.consent_prompt_location_url
 
             await _CredentialsManager().set_consent_prompt_url()
 
-            return JSONResponse(content={"redirect_url": location_url})
+            auth_provider_name: str | None = _CredentialsManager().get_registered_authentication_config_name(
+                authentication_config)
+
+            return JSONResponse(content={"auth_provider_name": auth_provider_name, "redirect_url": location_url})
 
         if self.front_end_config.authorization.path:
             app.add_api_route(
