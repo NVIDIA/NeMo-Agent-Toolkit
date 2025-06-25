@@ -13,9 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
 from pathlib import Path
 
 from pydantic import BaseModel
+
+from aiq.eval.evaluator.evaluator_model import EvalInput
+from aiq.eval.evaluator.evaluator_model import EvalOutput
 
 
 class EvaluationRunConfig(BaseModel):
@@ -31,6 +35,7 @@ class EvaluationRunConfig(BaseModel):
     endpoint_timeout: int = 300
     reps: int = 1
     override: tuple[tuple[str, str], ...] = ()
+    write_output: bool = True  # If false, the output will not be written to the output directory
 
 
 class EvaluationRunOutput(BaseModel):
@@ -40,3 +45,26 @@ class EvaluationRunOutput(BaseModel):
     workflow_output_file: Path | None
     evaluator_output_files: list[Path]
     workflow_interrupted: bool
+
+    eval_input: EvalInput
+    evaluation_results: list[tuple[str, EvalOutput]]
+
+
+class MultiEvalutionRunConfig(BaseModel):
+    """
+    Parameters used for a multi-evaluation run.
+    This includes a base config and a dict of overrides. The key is an id of
+    any type.
+    Each pass loads the base config and runs to completion before the next pass
+    starts.
+    """
+    base_config: EvaluationRunConfig
+    overrides: dict[typing.Any, str]
+
+
+class MultiEvaluationRunOutput(BaseModel):
+    """
+    Output of a multi-evaluation run.
+    The results per-pass are accumulated in the evaluation_runs dict.
+    """
+    evaluation_runs: dict[typing.Any, EvaluationRunOutput]
