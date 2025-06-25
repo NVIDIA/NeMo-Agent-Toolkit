@@ -375,32 +375,6 @@ class ToolTestRunner:
             return result
 
 
-# Convenience functions for simpler usage
-async def test_tool(
-    config_type: type[FunctionBaseConfig],
-    config_params: dict[str, typing.Any] | None = None,
-    input_data: typing.Any = None,
-    expected_output: typing.Any = None,
-) -> typing.Any:
-    """
-    Convenience function to test a tool without creating a ToolTestRunner instance.
-
-    Args:
-        config_type: The tool configuration class
-        config_params: Parameters to pass to the config constructor
-        input_data: Input data to pass to the tool
-        expected_output: Expected output for assertion (optional)
-
-    Returns:
-        The tool's output
-    """
-    runner = ToolTestRunner()
-    return await runner.test_tool(config_type=config_type,
-                                  config_params=config_params,
-                                  input_data=input_data,
-                                  expected_output=expected_output)
-
-
 @asynccontextmanager
 async def with_mocked_dependencies():
     """

@@ -15,11 +15,9 @@
 
 # Tool testing utilities
 from .tool_test_runner import ToolTestRunner
-from .tool_test_runner import test_tool
 from .tool_test_runner import with_mocked_dependencies
 
 __all__ = [
     "ToolTestRunner",
-    "test_tool",
     "with_mocked_dependencies",
 ]
