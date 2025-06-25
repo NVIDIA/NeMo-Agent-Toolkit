@@ -617,7 +617,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return self._retrievers[retriever_name].config
 
     @override
-    @aiq_experimental
     async def add_its_strategy(self, name: str | str, config: ITSStrategyBaseConfig):
         if (name in self._its_strategies):
             raise ValueError(f"ITS strategy '{name}' already exists in the list of ITS strategies")
