@@ -121,7 +121,7 @@ llms:
 eval:
   general:
     output_dir: .tmp/aiq/examples/alert_triage_agent/output/llama_33/
-    workflow_alias: alert_triage_agent_llama_33
+    workflow_alias: alert_triage_agent_llama_33_70b
     dataset:
       _type: json
       # JSON representation of the offline CSV data (including just the alerts, the expected output, and the label)

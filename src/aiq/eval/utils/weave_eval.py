@@ -134,9 +134,14 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         """Log profiler metrics to Weave."""
         profile_metrics = {}
         if profiler_results.workflow_runtime_metrics:
-            profile_metrics["workflow_p95_latency"] = profiler_results.workflow_runtime_metrics.p95
-        for llm_name, tokens in profiler_results.tokens_per_llm.items():
-            profile_metrics[f"tokens_{llm_name}"] = tokens
+            profile_metrics["wf_p95_latency"] = profiler_results.workflow_runtime_metrics.p95
+        # if only one llm is present set the name to "wf_tokens" for easy comparison
+        # across different models
+        if len(profiler_results.tokens_per_llm) == 1:
+            profile_metrics["wf_tokens"] = next(iter(profiler_results.tokens_per_llm.values()))
+        else:
+            for llm_name, tokens in profiler_results.tokens_per_llm.items():
+                profile_metrics[f"wf_tokens_{llm_name}"] = tokens
         return profile_metrics
 
     def log_summary(self, evaluation_results: list[tuple[str, EvalOutput]], profiler_results: ProfilerResults):
