@@ -13,10 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
+
 from pydantic import BaseModel
 
-from aiq.profiler.inference_optimization.data_models import WorkflowRuntimeMetrics
+
+class UsageStatsPerLLM(BaseModel):
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
 
 
-class ProfilerResults(BaseModel):
-    workflow_runtime_metrics: WorkflowRuntimeMetrics | None = None
+class UsageStatsItem(BaseModel):
+    usage_stats_per_llm: dict[str, UsageStatsPerLLM]
+    runtime: float = 0.0
+
+
+class UsageStats(BaseModel):
+    # key is the id or input_obj from EvalInputItem
+    usage_stats_items: dict[typing.Any, UsageStatsItem] = {}

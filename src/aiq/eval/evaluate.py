@@ -27,13 +27,13 @@ from aiq.data_models.evaluate import EvalConfig
 from aiq.data_models.evaluate import JobEvictionPolicy
 from aiq.eval.config import EvaluationRunConfig
 from aiq.eval.config import EvaluationRunOutput
-from aiq.eval.config import UsageStats
-from aiq.eval.config import UsageStatsItem
-from aiq.eval.config import UsageStatsPerLLM
 from aiq.eval.dataset_handler.dataset_handler import DatasetHandler
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
+from aiq.eval.usage_stats import UsageStats
+from aiq.eval.usage_stats import UsageStatsItem
+from aiq.eval.usage_stats import UsageStatsPerLLM
 from aiq.eval.utils.output_uploader import OutputUploader
 from aiq.eval.utils.weave_eval import WeaveEvaluationIntegration
 from aiq.profiler.data_models import ProfilerResults
@@ -308,7 +308,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                    "`eval` with the --skip_completed_entries flag.")
             logger.warning(msg)
 
-        self.weave_eval.log_summary(self.evaluation_results, profiler_results)
+        self.weave_eval.log_summary(self.usage_stats, self.evaluation_results, profiler_results)
 
     async def run_single_evaluator(self, evaluator_name: str, evaluator: Any):
         """Run a single evaluator and store its results."""

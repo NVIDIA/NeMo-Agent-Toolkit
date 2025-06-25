@@ -286,21 +286,7 @@ class ProfilerRunner:
 
             logger.info("Saved fitted model to disk.")
 
-        # Initialize tokens_per_llm outside the conditional block
-        tokens_per_llm = {}
-
-        if self.profile_config.base_metrics:
-            # Get the prompt and completion tokens each LLM type
-            for req_data in self.all_steps:
-                for step in req_data:
-                    if step.event_type == "LLM_START" or step.event_type == "LLM_END":
-                        llm_name = step.llm_name
-                        if llm_name not in tokens_per_llm:
-                            tokens_per_llm[llm_name] = 0
-                        tokens_per_llm[llm_name] += step.token_usage.prompt_tokens
-                        tokens_per_llm[llm_name] += step.token_usage.completion_tokens
-
-        return ProfilerResults(workflow_runtime_metrics=workflow_runtimes_results, tokens_per_llm=tokens_per_llm)
+        return ProfilerResults(workflow_runtime_metrics=workflow_runtimes_results)
 
     # -------------------------------------------------------------------
     # Confidence Intervals / Metrics

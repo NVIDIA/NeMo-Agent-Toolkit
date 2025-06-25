@@ -17,10 +17,11 @@ import asyncio
 import logging
 from typing import Any
 
-from aiq.eval.config import UsageStatsItem
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
+from aiq.eval.usage_stats import UsageStats
+from aiq.eval.usage_stats import UsageStatsItem
 from aiq.profiler.data_models import ProfilerResults
 
 logger = logging.getLogger(__name__)
@@ -114,6 +115,22 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         # log each usage stat as a score
         await self.pred_loggers[item.id].alog_score(scorer="wf_runtime", score=usage_stats_item.runtime)
 
+        # log the number of tokens per LLM provider in parallel
+        token_coros = []
+        llm_count = len(usage_stats_item.usage_stats_per_llm)
+        for llm_name, llm_stats in usage_stats_item.usage_stats_per_llm.items():
+            if llm_count == 1:
+                scorer_name = "wf_tokens"
+            else:
+                scorer_name = f"wf_tokens_{llm_name}"
+
+            token_coros.append(self.pred_loggers[item.id].alog_score(scorer=scorer_name,
+                                                                     score=llm_stats.prompt_tokens +
+                                                                     llm_stats.completion_tokens))
+
+        if token_coros:
+            await asyncio.gather(*token_coros)
+
     async def alog_score(self, eval_output: EvalOutput, evaluator_name: str):
         """Log scores for evaluation outputs."""
         if not self.eval_logger:
@@ -139,21 +156,30 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
 
         await asyncio.gather(*[_finish_one(pl) for pl in self.pred_loggers.values()])
 
-    def _log_profiler_metrics(self, profiler_results: ProfilerResults) -> dict[str, Any]:
+    def _log_profiler_metrics(self, profiler_results: ProfilerResults, usage_stats: UsageStats) -> dict[str, Any]:
         """Log profiler metrics to Weave."""
         profile_metrics = {}
         if profiler_results.workflow_runtime_metrics:
-            profile_metrics["wf_p95_latency"] = profiler_results.workflow_runtime_metrics.p95
-        # if only one llm is present set the name to "wf_tokens" for easy comparison
-        # across different models
-        if len(profiler_results.tokens_per_llm) == 1:
-            profile_metrics["wf_tokens"] = next(iter(profiler_results.tokens_per_llm.values()))
-        else:
-            for llm_name, tokens in profiler_results.tokens_per_llm.items():
-                profile_metrics[f"wf_tokens_{llm_name}"] = tokens
+            profile_metrics["wf_p95_runtime"] = profiler_results.workflow_runtime_metrics.p95
+
+        # get the LLM tokens from the usage stats
+        if usage_stats.usage_stats_items:
+            for item_id, usage_stats_item in usage_stats.usage_stats_items.items():
+                # Log tokens per individual LLM provider
+                llm_count = len(usage_stats_item.usage_stats_per_llm)
+                for llm_name, llm_stats in usage_stats_item.usage_stats_per_llm.items():
+                    llm_tokens = llm_stats.prompt_tokens + llm_stats.completion_tokens
+                    if llm_count == 1:
+                        profile_metrics["wf_tokens"] = llm_tokens
+                    else:
+                        profile_metrics[f"wf_tokens_{llm_name}"] = llm_tokens
+
         return profile_metrics
 
-    def log_summary(self, evaluation_results: list[tuple[str, EvalOutput]], profiler_results: ProfilerResults):
+    def log_summary(self,
+                    usage_stats: UsageStats,
+                    evaluation_results: list[tuple[str, EvalOutput]],
+                    profiler_results: ProfilerResults):
         """Log summary statistics to Weave."""
         if not self.eval_logger:
             return
@@ -164,7 +190,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             summary[evaluator_name] = eval_output.average_score
 
         # add profiler metrics to the summary
-        profile_metrics = self._log_profiler_metrics(profiler_results)
+        profile_metrics = self._log_profiler_metrics(profiler_results, usage_stats)
         summary.update(profile_metrics)
 
         # Log the summary to finish the evaluation, disable auto-summarize
