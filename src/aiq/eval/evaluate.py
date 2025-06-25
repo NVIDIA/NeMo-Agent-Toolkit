@@ -83,7 +83,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         steps = [IntermediatePropertyAdaptor.from_intermediate_step(step) for step in item.trajectory]
         usage_stats_per_llm = {}
         for step in steps:
-            if step.event_type == "LLM_START" or step.event_type == "LLM_END":
+            if step.event_type == "LLM_END":
                 llm_name = step.llm_name
                 if llm_name not in usage_stats_per_llm:
                     usage_stats_per_llm[llm_name] = UsageStatsPerLLM()
@@ -91,9 +91,12 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                 usage_stats_per_llm[llm_name].completion_tokens += step.token_usage.completion_tokens
 
         # find min and max event timestamps
-        min_timestamp = min(step.event_timestamp for step in item.trajectory)
-        max_timestamp = max(step.event_timestamp for step in item.trajectory)
-        runtime = max_timestamp - min_timestamp
+        if item.trajectory:
+            min_timestamp = min(step.event_timestamp for step in item.trajectory)
+            max_timestamp = max(step.event_timestamp for step in item.trajectory)
+            runtime = max_timestamp - min_timestamp
+        else:
+            runtime = 0.0
 
         # add the usage stats to the usage stats dict
         self.usage_stats.usage_stats_items[item.id] = UsageStatsItem(usage_stats_per_llm=usage_stats_per_llm,
