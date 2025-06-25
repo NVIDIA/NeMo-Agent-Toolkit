@@ -170,7 +170,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         if not self.eval_config.general.profiler:
             logger.info("Profiler is not enabled. Skipping profiling.")
-            return
+            return ProfilerResults()
 
         from aiq.profiler.profile_runner import ProfilerRunner
 

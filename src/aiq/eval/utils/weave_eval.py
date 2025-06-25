@@ -131,12 +131,12 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         await asyncio.gather(*[_finish_one(pl) for pl in self.pred_loggers.values()])
 
     def _log_profiler_metrics(self, profiler_results: ProfilerResults) -> dict[str, Any]:
-        """Log profile metrics to Weave."""
+        """Log profiler metrics to Weave."""
         profile_metrics = {}
         if profiler_results.workflow_runtime_metrics:
             profile_metrics["workflow_p95_latency"] = profiler_results.workflow_runtime_metrics.p95
         for llm_name, tokens in profiler_results.tokens_per_llm.items():
-            profile_metrics[f"tokens_per_{llm_name}"] = tokens
+            profile_metrics[f"tokens_{llm_name}"] = tokens
         return profile_metrics
 
     def log_summary(self, evaluation_results: list[tuple[str, EvalOutput]], profiler_results: ProfilerResults):
@@ -149,9 +149,10 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         for evaluator_name, eval_output in evaluation_results:
             summary[evaluator_name] = eval_output.average_score
 
-        # add profile metrics to the summary
+        # add profiler metrics to the summary
         profile_metrics = self._log_profiler_metrics(profiler_results)
         summary.update(profile_metrics)
 
-        # Log the summary to finish the evaluation
+        # Log the summary to finish the evaluation, disable auto-summarize
+        # as we will be adding profiler metrics to the summary
         self.eval_logger.log_summary(summary, auto_summarize=False)

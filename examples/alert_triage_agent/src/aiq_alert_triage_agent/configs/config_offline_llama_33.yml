@@ -127,17 +127,12 @@ eval:
       # JSON representation of the offline CSV data (including just the alerts, the expected output, and the label)
       file_path: examples/alert_triage_agent/data/offline_data.json
     profiler:
-      token_uniqueness_forecast: true
-      workflow_runtime_forecast: true
-      compute_llm_metrics: true
+      base_metrics: true
 
   evaluators:
     rag_accuracy:
       _type: ragas
       metric: AnswerAccuracy
       llm_name: nim_rag_eval_llm
-    trajectory_accuracy:
-      _type: trajectory
-      llm_name: nim_trajectory_eval_llm
     classification_accuracy:
       _type: classification_accuracy

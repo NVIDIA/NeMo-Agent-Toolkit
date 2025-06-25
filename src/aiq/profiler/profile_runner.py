@@ -172,7 +172,7 @@ class ProfilerRunner:
             uniqueness = compute_inter_query_token_uniqueness_by_llm(all_steps)
             token_uniqueness_results = uniqueness
 
-        if self.profile_config.workflow_runtime_forecast:
+        if self.profile_config.workflow_runtime_forecast or self.profile_config.base_metrics:
             # ------------------------------------------------------------
             # Compute and save workflow runtime metrics
             # ------------------------------------------------------------
@@ -286,7 +286,19 @@ class ProfilerRunner:
 
             logger.info("Saved fitted model to disk.")
 
-        return ProfilerResults(workflow_runtime_metrics=workflow_runtimes_results)
+        if self.profile_config.base_metrics:
+            # Get the prompt and completion tokens each LLM type
+            tokens_per_llm = {}
+            for req_data in self.all_steps:
+                for step in req_data:
+                    if step.event_type == "LLM_START" or step.event_type == "LLM_END":
+                        llm_name = step.llm_name
+                        if llm_name not in tokens_per_llm:
+                            tokens_per_llm[llm_name] = 0
+                        tokens_per_llm[llm_name] += step.token_usage.prompt_tokens
+                        tokens_per_llm[llm_name] += step.token_usage.completion_tokens
+
+        return ProfilerResults(workflow_runtime_metrics=workflow_runtimes_results, tokens_per_llm=tokens_per_llm)
 
     # -------------------------------------------------------------------
     # Confidence Intervals / Metrics
