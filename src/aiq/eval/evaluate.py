@@ -27,6 +27,9 @@ from aiq.data_models.evaluate import EvalConfig
 from aiq.data_models.evaluate import JobEvictionPolicy
 from aiq.eval.config import EvaluationRunConfig
 from aiq.eval.config import EvaluationRunOutput
+from aiq.eval.config import UsageStats
+from aiq.eval.config import UsageStatsItem
+from aiq.eval.config import UsageStatsPerLLM
 from aiq.eval.dataset_handler.dataset_handler import DatasetHandler
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
@@ -64,11 +67,38 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         # evaluation_results is list of tuples (evaluator_name, EvalOutput)
         self.evaluation_results: list[tuple[str, EvalOutput]] = []
 
+        # usage stats
+        self.usage_stats: UsageStats = UsageStats()
+
         # workflow output file
         self.workflow_output_file: Path | None = None
 
         # evaluation output files
         self.evaluator_output_files: list[Path] = []
+
+    def _compute_usage_stats(self, item: EvalInputItem):
+        """Compute usage stats for a single item using the intermediate steps"""
+        # get the prompt and completion tokens from the intermediate steps
+        from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+        steps = [IntermediatePropertyAdaptor.from_intermediate_step(step) for step in item.trajectory]
+        usage_stats_per_llm = {}
+        for step in steps:
+            if step.event_type == "LLM_START" or step.event_type == "LLM_END":
+                llm_name = step.llm_name
+                if llm_name not in usage_stats_per_llm:
+                    usage_stats_per_llm[llm_name] = UsageStatsPerLLM()
+                usage_stats_per_llm[llm_name].prompt_tokens += step.token_usage.prompt_tokens
+                usage_stats_per_llm[llm_name].completion_tokens += step.token_usage.completion_tokens
+
+        # find min and max event timestamps
+        min_timestamp = min(step.event_timestamp for step in item.trajectory)
+        max_timestamp = max(step.event_timestamp for step in item.trajectory)
+        runtime = max_timestamp - min_timestamp
+
+        # add the usage stats to the usage stats dict
+        self.usage_stats.usage_stats_items[item.id] = UsageStatsItem(usage_stats_per_llm=usage_stats_per_llm,
+                                                                     runtime=runtime)
+        return self.usage_stats.usage_stats_items[item.id]
 
     async def run_workflow_local(self, session_manager: AIQSessionManager):
         '''
@@ -139,8 +169,10 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
                 item.output_obj = output
                 item.trajectory = self.intermediate_step_adapter.validate_intermediate_steps(intermediate_steps)
+                usage_stats_item = self._compute_usage_stats(item)
 
                 self.weave_eval.log_prediction(item, output)
+                await self.weave_eval.log_usage_stats(item, usage_stats_item)
 
         async def wrapped_run(item: EvalInputItem) -> None:
             await run_one(item)
@@ -162,6 +194,10 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         from aiq.eval.remote_workflow import EvaluationRemoteWorkflowHandler
         handler = EvaluationRemoteWorkflowHandler(self.config, self.eval_config.general.max_concurrency)
         await handler.run_workflow_remote(self.eval_input)
+        for item in self.eval_input.eval_input_items:
+            usage_stats_item = self._compute_usage_stats(item)
+            self.weave_eval.log_prediction(item, item.output_obj)
+            await self.weave_eval.log_usage_stats(item, usage_stats_item)
 
     async def profile_workflow(self) -> ProfilerResults:
         """

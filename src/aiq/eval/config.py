@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -40,3 +41,19 @@ class EvaluationRunOutput(BaseModel):
     workflow_output_file: Path | None
     evaluator_output_files: list[Path]
     workflow_interrupted: bool
+
+
+# Temporary, find another place for this
+class UsageStatsPerLLM(BaseModel):
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+
+
+class UsageStatsItem(BaseModel):
+    usage_stats_per_llm: dict[str, UsageStatsPerLLM]
+    runtime: float = 0.0
+
+
+class UsageStats(BaseModel):
+    # key is the id or input_obj from EvalInputItem
+    usage_stats_items: dict[typing.Any, UsageStatsItem] = {}

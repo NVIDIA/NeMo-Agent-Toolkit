@@ -17,6 +17,7 @@ import asyncio
 import logging
 from typing import Any
 
+from aiq.eval.config import UsageStatsItem
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
@@ -104,6 +105,14 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
 
         pred_logger = self.eval_logger.log_prediction(inputs=self._get_prediction_inputs(item), output=output)
         self.pred_loggers[item.id] = pred_logger
+
+    async def log_usage_stats(self, item: EvalInputItem, usage_stats_item: UsageStatsItem):
+        """Log usage stats to Weave."""
+        if not self.eval_logger:
+            return
+
+        # log each usage stat as a score
+        await self.pred_loggers[item.id].alog_score(scorer="wf_runtime", score=usage_stats_item.runtime)
 
     async def alog_score(self, eval_output: EvalOutput, evaluator_name: str):
         """Log scores for evaluation outputs."""
