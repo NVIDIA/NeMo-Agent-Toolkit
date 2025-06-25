@@ -129,7 +129,17 @@ The `tracing` section contains one or more tracing providers. Each provider has 
         _type: langsmith
         project: default
     ```
-- **Custom providers**
+- [**Catalyst**](https://catalyst.raga.ai/)
+  - Example configuration:
+    ```yaml
+    tracing:
+      catalyst:
+        _type: catalyst
+        project: "aiqtoolkit-demo"
+        dataset: "aiqtoolkit-dataset"
+    ```
+  - See [Observing with Phoenix](./observe-workflow-with-catalyst.md) for more information
+- **Custom providers** 
   - See [Registering a New Telemetry Provider as a Plugin](#registering-a-new-telemetry-provider-as-a-plugin) for more information
 
 
