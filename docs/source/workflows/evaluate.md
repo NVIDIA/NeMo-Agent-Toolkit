@@ -266,6 +266,7 @@ To compare multiple runs, select the desired runs and click the `Compare` button
 
 To inspect results for individual dataset entries, go to the Dataset Results tab. You can select any available metric to compare per-metric scores.
 ![Weave Eval Dataset Results](../_static/weave_eval_dataset_results.png)
+Note: Plotting metrics for individual dataset entries is only available across two runs.
 
 
 ## Evaluating Remote Workflows
