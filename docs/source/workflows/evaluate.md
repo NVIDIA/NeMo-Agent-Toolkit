@@ -252,8 +252,16 @@ general:
         _type: weave
         project: "nat-simple"
 ```
+
+You can optionally specify a workflow alias to easily identify evaluation runs within a project in the Weave dashboard.
+```yaml
+eval:
+  general:
+    workflow_alias: "nat-simple-llama-31"
+```
+
 ### Step 3: Run evaluation using the configuration file
-You can run multiple evaluations with different configurations for comparison.
+You can run multiple evaluations with different configurations for comparison. The project name, specified in the `general.telemetry.tracing.weave.project` key, should be the same to allow for comparison of runs within the same project. The `eval.general.workflow_alias` can be configured to differentiate between runs with different configurations.
 ```bash
 aiq eval --config_file examples/simple/configs/eval_config_llama31.yml
 aiq eval --config_file examples/simple/configs/eval_config_llama33.yml
@@ -264,7 +272,7 @@ As the workflow runs, you will find a Weave URL (starting with a 🍩 emoji). Cl
 To compare multiple runs, select the desired runs and click the `Compare` button. This will show a summary of evaluation metrics across those runs.
 ![Weave Eval Summary](../_static/weave_eval_summary.png)
 
-To inspect results for individual dataset entries, go to the Dataset Results tab. You can select any available metric to compare per-metric scores.
+To inspect results for individual dataset entries, go to the `Dataset Results` tab. You can select any available metric to compare per-metric scores.
 ![Weave Eval Dataset Results](../_static/weave_eval_dataset_results.png)
 Note: Plotting metrics for individual dataset entries is only available across two runs.
 
