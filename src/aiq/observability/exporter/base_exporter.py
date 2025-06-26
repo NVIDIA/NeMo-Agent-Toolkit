@@ -16,6 +16,7 @@
 import asyncio
 import copy
 import logging
+import weakref
 from abc import abstractmethod
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
@@ -66,11 +67,11 @@ class IsolatedAttribute(Generic[IsolatedAttributeT]):
     def __init__(self, factory: Callable[[], IsolatedAttributeT]):
         self.factory = factory
         self.name: str | None = None
-        self.private_name: str
+        self._private_name: str
 
     def __set_name__(self, owner, name):
         self.name = name
-        self.private_name = f'__{name}_isolated'
+        self._private_name = f"__{name}_isolated"
 
     @overload
     def __get__(self, obj: None, objtype: type[Any] | None = None) -> "IsolatedAttribute[IsolatedAttributeT]":
@@ -84,18 +85,18 @@ class IsolatedAttribute(Generic[IsolatedAttributeT]):
         if obj is None:
             return self
 
-        if not hasattr(obj, self.private_name):
-            setattr(obj, self.private_name, self.factory())
+        if not hasattr(obj, self._private_name):
+            setattr(obj, self._private_name, self.factory())
 
-        return getattr(obj, self.private_name)
+        return getattr(obj, self._private_name)
 
     def __set__(self, obj, value: IsolatedAttributeT):
-        setattr(obj, self.private_name, value)
+        setattr(obj, self._private_name, value)
 
     def reset_for_copy(self, obj):
         """Reset the attribute for a copied object."""
-        if hasattr(obj, self.private_name):
-            delattr(obj, self.private_name)
+        if hasattr(obj, self._private_name):
+            delattr(obj, self._private_name)
 
 
 class BaseExporter(Exporter):
@@ -112,8 +113,13 @@ class BaseExporter(Exporter):
         context_state (AIQContextState, optional): The context state to use for the exporter. Defaults to None.
     """
 
+    # Class-level tracking for debugging and monitoring
+    _instance_count: int = 0
+    _active_instances: set[weakref.ref] = set()
+    _isolated_instances: set[weakref.ref] = set()
+
     # Use descriptors for automatic isolation with proper generic typing
-    _tasks: IsolatedAttribute[set] = IsolatedAttribute(set)
+    _tasks: IsolatedAttribute[set[asyncio.Task]] = IsolatedAttribute(set)
     _ready_event: IsolatedAttribute[asyncio.Event] = IsolatedAttribute(asyncio.Event)
     _shutdown_event: IsolatedAttribute[asyncio.Event] = IsolatedAttribute(asyncio.Event)
 
@@ -126,7 +132,61 @@ class BaseExporter(Exporter):
         self._subscription = None
         self._running = False
         self._loop = asyncio.get_event_loop()
+        self._is_isolated_instance = False
+
+        # Track instance creation
+        BaseExporter._instance_count += 1
+        BaseExporter._active_instances.add(weakref.ref(self, self._cleanup_instance_tracking))
+
         # Note: _tasks, _ready_event, _shutdown_event are descriptors
+
+    @classmethod
+    def _cleanup_instance_tracking(cls, ref):
+        """Cleanup callback for weakref when instance is garbage collected."""
+        cls._active_instances.discard(ref)
+        cls._isolated_instances.discard(ref)
+
+    @classmethod
+    def get_active_instance_count(cls) -> int:
+        """Get the number of active BaseExporter instances.
+
+        Returns:
+            int: Number of active instances (cleaned up automatically via weakref)
+        """
+        # Clean up dead references automatically via weakref callback
+        return len(cls._active_instances)
+
+    @classmethod
+    def get_isolated_instance_count(cls) -> int:
+        """Get the number of active isolated BaseExporter instances.
+
+        Returns:
+            int: Number of active isolated instances
+        """
+        return len(cls._isolated_instances)
+
+    @classmethod
+    def log_instance_stats(cls) -> None:
+        """Log current instance statistics for debugging."""
+        total = cls.get_active_instance_count()
+        isolated = cls.get_isolated_instance_count()
+        original = total - isolated
+
+        logger.info("BaseExporter instances - Total: %d, Original: %d, Isolated: %d", total, original, isolated)
+
+        if isolated > 50:  # Warn if we have many isolated instances
+            warning_msg = (f"High number of isolated BaseExporter instances ({isolated}). "
+                           "Check for potential memory leaks.")
+            logger.warning(warning_msg)
+
+    def __del__(self):
+        """Destructor with memory leak warnings."""
+        if self._running or (hasattr(self, '__tasks_isolated') and self._tasks):
+            warning_msg = (
+                f"{self.name}: Exporter being garbage collected with active resources. "
+                f"Running: {self._running}, Tasks: {len(self._tasks) if hasattr(self, '__tasks_isolated') else 0}. "
+                "Call stop() explicitly to avoid memory leaks.")
+            logger.warning(warning_msg)
 
     @property
     def name(self) -> str:
@@ -135,7 +195,17 @@ class BaseExporter(Exporter):
         Returns:
             str: The unique name of the exporter.
         """
-        return self.__class__.__name__
+        suffix = " (isolated)" if self._is_isolated_instance else ""
+        return f"{self.__class__.__name__}{suffix}"
+
+    @property
+    def is_isolated_instance(self) -> bool:
+        """Check if this is an isolated instance.
+
+        Returns:
+            bool: True if this is an isolated instance, False otherwise
+        """
+        return self._is_isolated_instance
 
     @abstractmethod
     def export(self, event: IntermediateStep) -> None:
@@ -307,6 +377,10 @@ class BaseExporter(Exporter):
 
         # Reset context state
         isolated_instance._context_state = context_state
+
+        # Mark as isolated instance and track it
+        isolated_instance._is_isolated_instance = True
+        BaseExporter._isolated_instances.add(weakref.ref(isolated_instance, self._cleanup_instance_tracking))
 
         # Reset IsolatedAttribute descriptors automatically
         for attr_name in dir(type(self)):

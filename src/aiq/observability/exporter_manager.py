@@ -52,6 +52,8 @@ class ExporterManager:
         self._lock = asyncio.Lock()
         self._shutdown_event = asyncio.Event()
         self._shutdown_timeout = shutdown_timeout
+        # Track isolated exporters for proper cleanup
+        self._active_isolated_exporters: dict[str, BaseExporter] = {}
 
     @classmethod
     def _create_with_shared_registry(cls, shutdown_timeout: int,
@@ -65,6 +67,7 @@ class ExporterManager:
         instance._lock = asyncio.Lock()
         instance._shutdown_event = asyncio.Event()
         instance._shutdown_timeout = shutdown_timeout
+        instance._active_isolated_exporters = {}
         return instance
 
     def _ensure_registry_owned(self):
@@ -158,6 +161,42 @@ class ExporterManager:
                 isolated_exporters[name] = exporter
         return isolated_exporters
 
+    async def _cleanup_isolated_exporters(self):
+        """Explicitly clean up isolated exporter instances."""
+        if not self._active_isolated_exporters:
+            return
+
+        logger.debug("Cleaning up %d isolated exporters", len(self._active_isolated_exporters))
+
+        cleanup_tasks = []
+        for name, exporter in self._active_isolated_exporters.items():
+            try:
+                # Only clean up isolated instances that have a stop method
+                if hasattr(exporter, 'stop') and exporter.is_isolated_instance:
+                    cleanup_tasks.append(self._cleanup_single_exporter(name, exporter))
+                else:
+                    logger.debug("Skipping cleanup for non-isolated exporter '%s'", name)
+            except Exception as e:
+                logger.error("Error preparing cleanup for isolated exporter '%s': %s", name, e)
+
+        if cleanup_tasks:
+            # Run cleanup tasks concurrently with timeout
+            try:
+                await asyncio.wait_for(asyncio.gather(*cleanup_tasks, return_exceptions=True),
+                                       timeout=self._shutdown_timeout)
+            except asyncio.TimeoutError:
+                logger.warning("Some isolated exporters did not clean up within timeout")
+
+        self._active_isolated_exporters.clear()
+
+    async def _cleanup_single_exporter(self, name: str, exporter: BaseExporter):
+        """Clean up a single isolated exporter."""
+        try:
+            logger.debug("Stopping isolated exporter '%s'", name)
+            await exporter.stop()
+        except Exception as e:
+            logger.error("Error stopping isolated exporter '%s': %s", name, e)
+
     @asynccontextmanager
     async def start(self, context_state: AIQContextState | None = None):
         """
@@ -185,8 +224,13 @@ class ExporterManager:
             # Create isolated exporters if context_state provided, otherwise use originals
             if context_state:
                 exporters_to_start = self.create_isolated_exporters(context_state)
+                # Store isolated exporters for cleanup
+                self._active_isolated_exporters = exporters_to_start
+                logger.debug("Created %d isolated exporters", len(exporters_to_start))
             else:
                 exporters_to_start = self._exporter_registry
+                # Clear isolated exporters since we're using originals
+                self._active_isolated_exporters = {}
 
             # Start all exporters concurrently
             exporters = []
@@ -203,6 +247,13 @@ class ExporterManager:
         try:
             yield self
         finally:
+            # Clean up isolated exporters BEFORE stopping tasks
+            try:
+                await self._cleanup_isolated_exporters()
+            except Exception as e:
+                logger.error("Error during isolated exporter cleanup: %s", e)
+
+            # Then stop the manager tasks
             await self.stop()
 
     async def _run_exporter(self, name: str, exporter: BaseExporter):

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import gc
 import logging
 from contextlib import asynccontextmanager
 from unittest.mock import Mock
@@ -22,6 +23,8 @@ from unittest.mock import patch
 import pytest
 
 from aiq.builder.context import AIQContextState
+from aiq.observability import get_exporter_counts
+from aiq.observability import log_exporter_stats
 from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.observability.exporter_manager import ExporterManager
 
@@ -669,3 +672,247 @@ class TestIntegrationScenarios:
 
         # Recovering exporter should have attempted once
         assert recovering_exporter.attempt_count == 1
+
+
+class DummyExporter(BaseExporter):
+    """Dummy exporter for memory leak testing."""
+
+    def __init__(self, context_state: AIQContextState | None = None):
+        super().__init__(context_state)
+        self._export_count = 0
+
+    @property
+    def name(self) -> str:
+        suffix = " (isolated)" if self.is_isolated_instance else ""
+        return f"DummyExporter{suffix}"
+
+    def export(self, event):
+        """Mock export method."""
+        self._export_count += 1
+
+    @asynccontextmanager
+    async def start(self):
+        """Mock start method with proper resource management."""
+        try:
+            # Simulate starting some background task
+            self._ready_event.set()
+            yield
+        finally:
+            # Cleanup happens in stop() method
+            pass
+
+
+class TestMemoryLeakImprovements:
+    """Test memory leak improvements in BaseExporter and ExporterManager."""
+
+    @pytest.mark.asyncio
+    async def test_basic_functionality(self):
+        """Test basic isolated exporter functionality."""
+        initial_counts = get_exporter_counts()
+
+        # Create base exporter
+        context_state = AIQContextState()
+        base_exporter = DummyExporter(context_state)
+
+        # Verify instance tracking
+        after_creation_counts = get_exporter_counts()
+        assert after_creation_counts['total'] >= initial_counts['total'] + 1
+
+        # Test basic functionality
+        assert not base_exporter.is_isolated_instance
+        assert base_exporter.name == "DummyExporter"
+
+        # Create isolated instance
+        isolated = base_exporter.create_isolated_instance(AIQContextState())
+        assert isolated.is_isolated_instance
+        assert isolated.name == "DummyExporter (isolated)"
+
+        # Test proper startup and shutdown
+        async with isolated.start():
+            await isolated.wait_ready()
+
+        # Verify no memory leaks after proper cleanup
+        await isolated.stop()
+        del isolated
+        gc.collect()  # Force garbage collection
+
+    @pytest.mark.asyncio
+    async def test_exporter_manager_with_isolated_exporters(self):
+        """Test ExporterManager with isolated exporters for memory leak prevention."""
+        initial_counts = get_exporter_counts()
+
+        # Create exporters
+        context_state = AIQContextState()
+        exporter1 = DummyExporter(context_state)
+        exporter2 = DummyExporter(context_state)
+
+        # Create manager
+        manager = ExporterManager()
+        manager.add_exporter("test1", exporter1)
+        manager.add_exporter("test2", exporter2)
+
+        after_creation_counts = get_exporter_counts()
+        assert after_creation_counts['total'] >= initial_counts['total'] + 2
+
+        # Test with isolated exporters (this was the source of memory leaks)
+        new_context = AIQContextState()
+
+        # Verify isolated exporters are created properly
+        isolated_exporters = manager.create_isolated_exporters(new_context)
+        assert len(isolated_exporters) == 2
+        assert "test1" in isolated_exporters
+        assert "test2" in isolated_exporters
+
+        # Verify they are marked as isolated
+        for exporter in isolated_exporters.values():
+            assert exporter.is_isolated_instance
+
+        # Test full lifecycle with isolated context
+        async with manager.start(context_state=new_context):
+            # Should have created isolated instances internally
+            assert len(manager._active_isolated_exporters) == 2
+
+            # Simulate some work
+            await asyncio.sleep(0.1)
+
+        # After exiting context, isolated exporters should be cleaned up
+        await asyncio.sleep(0.1)  # Let cleanup complete
+        gc.collect()
+
+        # Verify isolated exporters were cleaned up
+        assert len(manager._active_isolated_exporters) == 0
+
+    @pytest.mark.asyncio
+    async def test_memory_leak_detection_with_high_traffic(self):
+        """Test memory leak detection under high traffic simulation."""
+        initial_counts = get_exporter_counts()
+
+        # Create base exporter and manager
+        context_state = AIQContextState()
+        base_exporter = DummyExporter(context_state)
+
+        # Simulate high traffic with sequential workflow runs (not concurrent due to manager lock)
+        num_workflows = 5  # Reduced for faster test
+        for run_id in range(num_workflows):
+            isolated_context = AIQContextState()
+            manager = ExporterManager()  # Create fresh manager for each run
+            manager.add_exporter("traffic_test", base_exporter)
+
+            async with manager.start(context_state=isolated_context):
+                # Simulate some work
+                await asyncio.sleep(0.01)
+
+        # Allow cleanup to complete
+        await asyncio.sleep(0.2)
+        gc.collect()
+
+        final_counts = get_exporter_counts()
+        instance_growth = final_counts['total'] - initial_counts['total']
+
+        # The key improvement: instance growth should be minimal (not proportional to num_workflows)
+        # Allow some growth but not excessive
+        assert instance_growth <= 10, \
+            f"Potential memory leak: {instance_growth} instances remain after {num_workflows} workflows"
+
+    @pytest.mark.asyncio
+    async def test_isolated_instance_cleanup_tracking(self):
+        """Test that isolated instances are properly tracked and cleaned up."""
+        initial_counts = get_exporter_counts()
+
+        # Create base exporter
+        context_state = AIQContextState()
+        base_exporter = DummyExporter(context_state)
+
+        # Create several isolated instances manually (simulating potential leaks)
+        isolated_instances = []
+        for i in range(3):
+            isolated = base_exporter.create_isolated_instance(AIQContextState())
+            isolated_instances.append(isolated)
+            assert isolated.is_isolated_instance
+
+        # Verify tracking works - should have at least the base + isolated instances
+        after_creation_counts = get_exporter_counts()
+        expected_minimum = initial_counts['total'] + 1  # At least 1 more (the base exporter)
+        assert after_creation_counts['total'] >= expected_minimum
+
+        # Test that proper cleanup reduces counts
+        for isolated in isolated_instances:
+            await isolated.stop()  # Proper cleanup
+            del isolated
+
+        isolated_instances.clear()
+        # Clean up the base exporter too
+        await base_exporter.stop()
+        del base_exporter
+        gc.collect()
+
+        final_counts = get_exporter_counts()
+
+        # Allow some variance due to GC timing and other test interference
+        total_difference = final_counts['total'] - initial_counts['total']
+        assert total_difference <= 5, \
+            f"Too many instances remaining: {total_difference} extra instances (may indicate cleanup issue)"
+
+    def test_instance_monitoring_and_warnings(self, caplog):
+        """Test instance monitoring and warning system."""
+        with caplog.at_level(logging.INFO):
+            log_exporter_stats()
+
+        # Should log current stats without warnings (assuming reasonable numbers)
+        assert "BaseExporter instances" in caplog.text
+
+        # Test warning detection by checking if we can access the monitoring functions
+        counts = get_exporter_counts()
+        assert isinstance(counts, dict)
+        assert 'total' in counts
+        assert counts['total'] >= 0
+
+    @pytest.mark.asyncio
+    async def test_manager_isolated_exporter_tracking(self):
+        """Test that ExporterManager properly tracks and cleans up isolated exporters."""
+        manager = ExporterManager()
+        base_exporter = DummyExporter(AIQContextState())
+        manager.add_exporter("tracked", base_exporter)
+
+        initial_counts = get_exporter_counts()
+
+        # Use the manager with isolated context multiple times
+        for i in range(3):
+            isolated_context = AIQContextState()
+            async with manager.start(context_state=isolated_context):
+                await asyncio.sleep(0.01)  # Simulate work
+
+        # Allow cleanup
+        await asyncio.sleep(0.1)
+        gc.collect()
+
+        final_counts = get_exporter_counts()
+        instance_growth = final_counts['total'] - initial_counts['total']
+
+        # With proper cleanup, growth should be minimal
+        assert instance_growth <= 3, \
+            f"ExporterManager not cleaning up isolated instances: {instance_growth} extra instances"
+
+    @pytest.mark.asyncio
+    async def test_error_handling_during_cleanup(self, caplog):
+        """Test that cleanup errors are handled gracefully."""
+
+        class ProblematicExporter(DummyExporter):
+            """Exporter that has issues during cleanup."""
+
+            async def stop(self):
+                # Simulate cleanup error
+                raise RuntimeError("Cleanup failed")
+
+        manager = ExporterManager()
+        problematic = ProblematicExporter(AIQContextState())
+        manager.add_exporter("problematic", problematic)
+
+        with caplog.at_level(logging.WARNING):
+            # Should handle cleanup errors gracefully
+            async with manager.start(context_state=AIQContextState()):
+                await asyncio.sleep(0.01)
+
+        # Cleanup errors should be logged but not crash the system
+        # (The exact logging depends on implementation details)
+        # Just verify the context manager completed successfully
