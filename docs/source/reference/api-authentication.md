@@ -104,7 +104,7 @@ configurations are
 [OAuth 2.0 Authorization Code Grant Flow Configuration](../../../src/aiq/authentication/api_key/api_key_config.py) and
 [API Key Configuration](../../../src/aiq/authentication/oauth2/auth_code_grant_config.py).
 
-### Authentication YAML Configuration Exmaple
+### Authentication YAML Configuration Example
 ```yaml
 authentication:
   example_provider_name_oauth:
@@ -190,7 +190,7 @@ API key authentication is supported uniformly across all application configurati
 requiring special handling. In contrast, OAuth2.0 authentication, particularly the authorization redirect that initiates
 the `consent flow` varies depending on how the application is deployed and which components are present. In some
 configurations, the browser directly handles the redirect, while in others, the front-end UI is responsible for
-retreiving and managing the consent flow.
+retrieving and managing the consent flow.
 
 The sections below detail how OAuth2.0 authentication is handled in each supported configuration.
 
