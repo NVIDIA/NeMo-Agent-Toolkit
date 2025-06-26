@@ -241,6 +241,7 @@ To install the Weave plugin, run:
 ```bash
 uv pip install -e '.[weave]'
 ```
+
 ### Step 2: Enable logging to Weave in the configuration file
 Edit your evaluation config, for example:
 `examples/simple/configs/eval_config_llama31.yml`:
@@ -253,15 +254,22 @@ general:
         project: "nat-simple"
 ```
 
-You can optionally specify a workflow alias to easily identify evaluation runs within a project in the Weave dashboard.
+When running experiments with different configurations, the `project` name should be the same to allow for comparison of runs. The `workflow_alias` can be configured to differentiate between runs with different configurations. For example to run two evaluations with different LLM models, you can configure the `workflow_alias` as follows:
+`examples/simple/configs/eval_config_llama31.yml`:
 ```yaml
 eval:
   general:
     workflow_alias: "nat-simple-llama-31"
 ```
+`examples/simple/configs/eval_config_llama33.yml`:
+```yaml
+eval:
+  general:
+    workflow_alias: "nat-simple-llama-33"
+```
 
 ### Step 3: Run evaluation using the configuration file
-You can run multiple evaluations with different configurations for comparison. The project name, specified in the `general.telemetry.tracing.weave.project` key, should be the same to allow for comparison of runs within the same project. The `eval.general.workflow_alias` can be configured to differentiate between runs with different configurations.
+Run evaluation with the different configuration files:
 ```bash
 aiq eval --config_file examples/simple/configs/eval_config_llama31.yml
 aiq eval --config_file examples/simple/configs/eval_config_llama33.yml
