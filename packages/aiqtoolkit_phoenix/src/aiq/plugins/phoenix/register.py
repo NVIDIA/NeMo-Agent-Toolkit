@@ -27,7 +27,8 @@ logger = logging.getLogger(__name__)
 class PhoenixTelemetryExporter(TelemetryExporterBaseConfig, name="phoenix"):
     """A telemetry exporter to transmit traces to externally hosted phoenix service."""
 
-    endpoint: str = Field(description="The phoenix endpoint to export telemetry traces.")
+    endpoint: str = Field(
+        description="Phoenix server endpoint for trace export (e.g., 'http://localhost:6006/v1/traces'")
     project: str = Field(description="The project name to group the telemetry traces.")
 
 

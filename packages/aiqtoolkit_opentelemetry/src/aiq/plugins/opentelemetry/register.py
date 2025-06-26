@@ -38,7 +38,7 @@ async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder
 
     import base64
 
-    from aiq.plugins.opentelemetry.otlp_span_exporter import OTLPSpanExporter
+    from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
     secret_key = config.secret_key or os.environ.get("LANGFUSE_SECRET_KEY")
     public_key = config.public_key or os.environ.get("LANGFUSE_PUBLIC_KEY")
@@ -49,7 +49,7 @@ async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder
     auth_header = base64.b64encode(credentials).decode("utf-8")
     headers = {"Authorization": f"Basic {auth_header}"}
 
-    yield OTLPSpanExporter(endpoint=config.endpoint, headers=headers)
+    yield OTLPSpanAdapterExporter(endpoint=config.endpoint, headers=headers)
 
 
 class LangsmithTelemetryExporter(TelemetryExporterBaseConfig, name="langsmith"):
@@ -67,14 +67,14 @@ class LangsmithTelemetryExporter(TelemetryExporterBaseConfig, name="langsmith"):
 async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, builder: Builder):  # pylint: disable=W0613
     """Create a Langsmith telemetry exporter."""
 
-    from aiq.plugins.opentelemetry.otlp_span_exporter import OTLPSpanExporter
+    from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
     api_key = config.api_key or os.environ.get("LANGSMITH_API_KEY")
     if not api_key:
         raise ValueError("API key is required for langsmith")
 
     headers = {"x-api-key": api_key, "Langsmith-Project": config.project}
-    yield OTLPSpanExporter(endpoint=config.endpoint, headers=headers)
+    yield OTLPSpanAdapterExporter(endpoint=config.endpoint, headers=headers)
 
 
 class OtelCollectorTelemetryExporter(TelemetryExporterBaseConfig, name="otelcollector"):
@@ -88,9 +88,9 @@ class OtelCollectorTelemetryExporter(TelemetryExporterBaseConfig, name="otelcoll
 async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder):  # pylint: disable=W0613
     """Create an OpenTelemetry telemetry exporter."""
 
-    from aiq.plugins.opentelemetry.otlp_span_exporter import OTLPSpanExporter
+    from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
-    yield OTLPSpanExporter(endpoint=config.endpoint)
+    yield OTLPSpanAdapterExporter(endpoint=config.endpoint)
 
 
 class PatronusTelemetryExporter(TelemetryExporterBaseConfig, name="patronus"):

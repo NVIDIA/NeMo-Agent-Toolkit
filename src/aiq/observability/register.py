@@ -19,9 +19,29 @@ from pydantic import Field
 
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_logging_method
+from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.logging import LoggingBaseConfig
+from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 
 logger = logging.getLogger(__name__)
+
+
+class FileTelemetryExporter(TelemetryExporterBaseConfig, name="file"):
+    """A logger to write runtime logs to the console."""
+
+    filepath: str = Field(description="The file path to log traces.")
+    project: str = Field(description="Name to affilite with this application.")
+
+
+@register_telemetry_exporter(config_type=FileTelemetryExporter)
+async def file_telemetry_exporter(config: FileTelemetryExporter, builder: Builder):
+    """
+    Build and return a StreamHandler for console-based logging.
+    """
+
+    from aiq.observability.exporter.file_exporter import FileExporter
+
+    yield FileExporter(filepath=config.filepath, project=config.project)
 
 
 class ConsoleLoggingMethod(LoggingBaseConfig, name="console"):

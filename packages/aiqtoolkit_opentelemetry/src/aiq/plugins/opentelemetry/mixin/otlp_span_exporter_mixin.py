@@ -15,52 +15,45 @@
 
 import logging
 
-from phoenix.otel import HTTPSpanExporter
-from phoenix.otel import Resource
-from phoenix.trace.projects import using_project
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
 from aiq.plugins.opentelemetry.otel_span import OtelSpan
 
 logger = logging.getLogger(__name__)
 
 
-class PhoenixMixin:
-    """Mixin for Phoenix exporters.
+class OTLPSpanExporterMixin:
+    """Mixin for OTLP span exporters.
 
-    This mixin provides a default implementation of the export method for Phoenix exporters.
-    It uses the HTTPSpanExporter from the phoenix.otel module.
+    This mixin provides a default implementation of the export method for OTLP span exporters.
+    It uses the OTLPSpanExporter from the opentelemetry.exporter.otlp.proto.http.trace_exporter module.
 
     Args:
         *args: Variable length argument list to pass to the superclass.
-        endpoint (str): The endpoint of the Phoenix service.
-        project (str): The project name to group the telemetry traces.
+        endpoint (str): The endpoint of the OTLP service.
+        headers (dict[str, str]): The headers to send with the request.
         **kwargs: Additional keyword arguments to pass to the superclass.
 
     Attributes:
-        _exporter (HTTPSpanExporter): The Phoenix span exporter.
-        _project (str): The project name to group the telemetry traces.
-        _resource (Resource): The resource to add to the span.
+        _exporter (OTLPSpanExporter): The OTLP span exporter.
     """
 
-    def __init__(self, *args, endpoint: str, project: str, **kwargs):
-        """Initialize the Phoenix exporter with the specified endpoint and project."""
+    def __init__(self, *args, endpoint: str, headers: dict[str, str], **kwargs):
+        """Initialize the OTLP span exporter with the specified endpoint and headers."""
+        self._exporter = OTLPSpanExporter(endpoint=endpoint, headers=headers)
         super().__init__(*args, **kwargs)
-        self._exporter = HTTPSpanExporter(endpoint=endpoint)
-        self._project = project
-        self._resource = Resource(attributes={
-            "openinference.project.name": project,
-        })
 
-    async def export(self, span: OtelSpan) -> None:
+    async def export_processed(self, span: OtelSpan) -> None:
         """Export an OtelSpan.
 
         Args:
             span (OtelSpan): The OtelSpan to export.
+
+        Raises:
+            Exception: If there's an error during span export (logged but not re-raised).
         """
 
         try:
-            with using_project(self._project):
-                span.set_resource(self._resource)
-                self._exporter.export([span])  # type: ignore
+            self._exporter.export([span])  # type: ignore
         except Exception as e:
             logger.error("Error exporting spans: %s", e, exc_info=True)

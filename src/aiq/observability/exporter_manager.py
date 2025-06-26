@@ -17,9 +17,8 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from aiq.observability.base_exporter import AbstractExporter
-from aiq.observability.exporter_registry import ExporterFactory
-from aiq.observability.exporter_registry import ExporterRegistry
+from aiq.builder.context import AIQContextState
+from aiq.observability.exporter.base_exporter import BaseExporter
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,7 @@ class ExporterManager:
     """
     Manages the lifecycle of asynchronous exporters.
 
-    ExporterManager maintains a registry of exporter factories, allowing for dynamic addition and removal. It provides
+    ExporterManager maintains a registry of exporters, allowing for dynamic addition and removal. It provides
     methods to start and stop all registered exporters concurrently, ensuring proper synchronization and
     lifecycle management. The manager is designed to prevent race conditions during exporter operations and to
     handle exporter tasks in an asyncio event loop.
@@ -36,7 +35,7 @@ class ExporterManager:
     Each workflow execution gets its own ExporterManager instance to manage the lifecycle of exporters
     during that workflow's execution.
 
-    Exporter factories added after `start()` is called will not be started automatically. They will only be
+    Exporters added after `start()` is called will not be started automatically. They will only be
     started on the next lifecycle (i.e., after a stop and subsequent start).
 
     Args:
@@ -48,31 +47,61 @@ class ExporterManager:
         """Initialize the ExporterManager."""
         self._tasks: dict[str, asyncio.Task] = {}
         self._running = False
-        self._exporter_registry = ExporterRegistry.get_instance()
+        self._exporter_registry: dict[str, BaseExporter] = {}
+        self._is_registry_shared = False
         self._lock = asyncio.Lock()
         self._shutdown_event = asyncio.Event()
         self._shutdown_timeout = shutdown_timeout
 
-    async def add_exporter(self, name: str, exporter_factory: ExporterFactory) -> None:
+    @classmethod
+    def _create_with_shared_registry(cls, shutdown_timeout: int,
+                                     shared_registry: dict[str, BaseExporter]) -> "ExporterManager":
+        """Internal factory method for creating instances with shared registry."""
+        instance = cls.__new__(cls)
+        instance._tasks = {}
+        instance._running = False
+        instance._exporter_registry = shared_registry
+        instance._is_registry_shared = True
+        instance._lock = asyncio.Lock()
+        instance._shutdown_event = asyncio.Event()
+        instance._shutdown_timeout = shutdown_timeout
+        return instance
+
+    def _ensure_registry_owned(self):
+        """Ensure we own the registry (copy-on-write)."""
+        if self._is_registry_shared:
+            self._exporter_registry = self._exporter_registry.copy()
+            self._is_registry_shared = False
+
+    def add_exporter(self, name: str, exporter: BaseExporter) -> None:
         """
-        Add an exporter factory to the manager.
+        Add an exporter to the manager.
 
         Args:
             name (str): The unique name for the exporter.
-            exporter_factory (ExporterFacotry): The exporter instance to add.
+            exporter (BaseExporter): The exporter instance to add.
         """
-        await self._exporter_registry.add(name, exporter_factory)
+        self._ensure_registry_owned()
 
-    async def remove_exporter(self, name: str) -> None:
+        if name in self._exporter_registry:
+            logger.warning("Exporter '%s' already registered. Overwriting.", name)
+
+        self._exporter_registry[name] = exporter
+
+    def remove_exporter(self, name: str) -> None:
         """
-        Remove an exporter factory from the manager.
+        Remove an exporter from the manager.
 
         Args:
             name (str): The name of the exporter to remove.
         """
-        await self._exporter_registry.remove(name)
+        self._ensure_registry_owned()
+        if name in self._exporter_registry:
+            del self._exporter_registry[name]
+        else:
+            raise ValueError(f"Cannot remove exporter '{name}' because it is not registered.")
 
-    async def get_exporter(self, name: str) -> AbstractExporter | None:
+    def get_exporter(self, name: str) -> BaseExporter:
         """
         Get an exporter instance by name.
 
@@ -80,27 +109,66 @@ class ExporterManager:
             name (str): The name of the exporter to retrieve.
 
         Returns:
-            AbstractExporter | None: The exporter instance if found, otherwise None.
-        """
-        return await self._exporter_registry.get(name)
+            BaseExporter: The exporter instance if found, otherwise raises a ValueError.
 
-    async def get_all_exporters(self) -> dict[str, AbstractExporter]:
+        Raises:
+            ValueError: If the exporter is not found.
+        """
+        exporter = self._exporter_registry.get(name, None)
+
+        if exporter is not None:
+            return exporter
+
+        raise ValueError(f"Cannot get exporter '{name}' because it is not registered.")
+
+    async def get_all_exporters(self) -> dict[str, BaseExporter]:
         """
         Get all registered exporters instances.
 
         Returns:
-            dict[str, AbstractExporter]: A dictionary mapping exporter names to exporter instances.
+            dict[str, BaseExporter]: A dictionary mapping exporter names to exporter instances.
         """
-        return await self._exporter_registry.get_all()
+        return self._exporter_registry
+
+    def create_isolated_exporters(self, context_state: AIQContextState | None = None) -> dict[str, BaseExporter]:
+        """
+        Create isolated copies of all exporters for concurrent execution.
+
+        This uses copy-on-write to efficiently create isolated instances that share
+        expensive resources but have separate mutable state.
+
+        Args:
+            context_state (AIQContextState | None, optional): The isolated context state for the new exporter instances.
+                If not provided, a new context state will be created.
+
+        Returns:
+            dict[str, BaseExporter]: Dictionary of isolated exporter instances
+        """
+        # Provide default context state if None
+        if context_state is None:
+            context_state = AIQContextState.get()
+
+        isolated_exporters = {}
+        for name, exporter in self._exporter_registry.items():
+            if hasattr(exporter, 'create_isolated_instance'):
+                isolated_exporters[name] = exporter.create_isolated_instance(context_state)
+            else:
+                # Fallback for exporters that don't support isolation
+                logger.warning("Exporter '%s' doesn't support isolation, using shared instance", name)
+                isolated_exporters[name] = exporter
+        return isolated_exporters
 
     @asynccontextmanager
-    async def start(self):
+    async def start(self, context_state: AIQContextState | None = None):
         """
         Start all registered exporters concurrently.
 
         This method acquires a lock to ensure only one start/stop cycle is active at a time. It starts all
         currently registered exporters in their own asyncio tasks. Exporters added after this call will not be
         started until the next lifecycle.
+
+        Args:
+            context_state: Optional context state for creating isolated exporters
 
         Yields:
             ExporterManager: The manager instance for use within the context.
@@ -114,29 +182,36 @@ class ExporterManager:
             self._shutdown_event.clear()
             self._running = True
 
+            # Create isolated exporters if context_state provided, otherwise use originals
+            if context_state:
+                exporters_to_start = self.create_isolated_exporters(context_state)
+            else:
+                exporters_to_start = self._exporter_registry
+
             # Start all exporters concurrently
-            exporters = await self.get_all_exporters()
+            exporters = []
             tasks = []
-            for name, exporter in exporters.items():
+            for name, exporter in exporters_to_start.items():
                 task = asyncio.create_task(self._run_exporter(name, exporter))
+                exporters.append(exporter)
                 self._tasks[name] = task
                 tasks.append(task)
 
             # Wait for all exporters to be ready
-            await asyncio.gather(*[exporter.wait_ready() for exporter in exporters.values()])
+            await asyncio.gather(*[exporter.wait_ready() for exporter in exporters])
 
         try:
             yield self
         finally:
             await self.stop()
 
-    async def _run_exporter(self, name: str, exporter: AbstractExporter):
+    async def _run_exporter(self, name: str, exporter: BaseExporter):
         """
         Run an exporter in its own task.
 
         Args:
             name (str): The name of the exporter.
-            exporter (AbstractExporter): The exporter instance to run.
+            exporter (BaseExporter): The exporter instance to run.
         """
         try:
             async with exporter.start():
@@ -183,3 +258,25 @@ class ExporterManager:
 
         if stuck_tasks:
             logger.warning("Exporters did not shut down in time: %s", ", ".join(stuck_tasks))
+
+    @staticmethod
+    def from_exporters(exporters: dict[str, BaseExporter], shutdown_timeout: int = 120) -> "ExporterManager":
+        """
+        Create an ExporterManager from a dictionary of exporters.
+        """
+        exporter_manager = ExporterManager(shutdown_timeout=shutdown_timeout)
+        for name, exporter in exporters.items():
+            exporter_manager.add_exporter(name, exporter)
+
+        return exporter_manager
+
+    def get(self) -> "ExporterManager":
+        """
+        Create a copy of this ExporterManager with the same configuration using copy-on-write.
+
+        This is the most efficient approach - shares the registry until modifications are needed.
+
+        Returns:
+            ExporterManager: A new ExporterManager instance with shared exporters (copy-on-write).
+        """
+        return self._create_with_shared_registry(self._shutdown_timeout, self._exporter_registry)

@@ -77,7 +77,7 @@ class SpanStatusCode(Enum):
 
 
 class SpanEvent(BaseModel):
-    timestamp: float = Field(default_factory=time.time)
+    timestamp: float = Field(default_factory=lambda: int(time.time() * 1e9))
     name: str
     attributes: dict[str, Any] = Field(default_factory=dict)
 
@@ -88,16 +88,16 @@ class SpanStatus(BaseModel):
 
 
 class SpanContext(BaseModel):
-    trace_id: int = uuid.uuid4().int & ((1 << 128) - 1)
-    span_id: int = uuid.uuid4().int & ((1 << 64) - 1)
+    trace_id: int = Field(default_factory=lambda: uuid.uuid4().int & ((1 << 128) - 1))
+    span_id: int = Field(default_factory=lambda: uuid.uuid4().int & ((1 << 64) - 1))
 
 
 class Span(BaseModel):
     name: str
     context: SpanContext | None = None
     parent: "Span | None" = None
-    start_time: float = Field(default_factory=time.time)
-    end_time: float | None = None
+    start_time: int = Field(default_factory=lambda: int(time.time() * 1e9))
+    end_time: int | None = None
     attributes: dict[str, Any] = Field(default_factory=dict)
     events: list[SpanEvent] = Field(default_factory=list)
     status: SpanStatus = Field(default_factory=SpanStatus)
@@ -117,7 +117,7 @@ class Span(BaseModel):
             attributes = {}
         self.events = self.events + [SpanEvent(name=name, attributes=attributes)]
 
-    def end(self, end_time: float | None = None) -> None:
+    def end(self, end_time: int | None = None) -> None:
         if end_time is None:
-            end_time = time.time()
+            end_time = int(time.time() * 1e9)
         self.end_time = end_time

@@ -52,19 +52,23 @@ from aiq.data_models.memory import MemoryBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.memory.interfaces import MemoryEditor
-from aiq.observability.exporter_manager import ExporterManager
-from aiq.observability.exporter_registry import ExporterFactory
+from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
 from aiq.profiler.utils import detect_llm_frameworks_in_build_fn
 from aiq.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
 
+# @dataclasses.dataclass
+# class ConfiguredExporter:
+#     config: TelemetryExporterBaseConfig
+#     instance: BaseExporter
+
 
 @dataclasses.dataclass
 class ConfiguredExporter:
     config: TelemetryExporterBaseConfig
-    factory: ExporterFactory
+    instance: BaseExporter
 
 
 @dataclasses.dataclass
@@ -130,10 +134,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Create a mapping to track function name -> other function names it depends on
         self.function_dependencies: dict[str, FunctionDependencies] = {}
         self.current_function_building: str | None = None
-
-        # Create a mapping to track exporter name -> exporter factory
-        self._exporter_registrations: dict[str, ConfiguredExporter] = {}
-        self._exporter_manager = ExporterManager()
 
     async def __aenter__(self):
 
@@ -562,19 +562,16 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return UserManagerHolder(context=AIQContext(self._context_state))
 
     async def add_exporter(self, name: str, config: TelemetryExporterBaseConfig) -> None:
-        """Register an exporter factory with the exporter manager.
+        """Add an configured exporter to the builder.
 
         Args:
-            name: The name to register the exporter under
+            name: The name of the exporter
             config: The configuration for the exporter
         """
         exporter_info = self._registry.get_telemetry_exporter(type(config))
 
-        async def create_exporter():
-            return await self._get_exit_stack().enter_async_context(exporter_info.build_fn(config, self))
-
-        await self._exporter_manager.add_exporter(name, create_exporter)
-        self._exporter_registrations[name] = ConfiguredExporter(config=config, factory=create_exporter)
+        exporter = await self._get_exit_stack().enter_async_context(exporter_info.build_fn(config, self))
+        self._exporters[name] = ConfiguredExporter(config=config, instance=exporter)
 
     async def populate_builder(self, config: AIQConfig, skip_workflow: bool = False):
         """

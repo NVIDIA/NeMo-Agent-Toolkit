@@ -13,49 +13,136 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import re
 import uuid
+from abc import abstractmethod
 from typing import Any
+from typing import TypeVar
 
-from aiq.builder.context import AIQContextState
+from pydantic import BaseModel
+from pydantic import TypeAdapter
+
 from aiq.data_models.intermediate_step import IntermediateStep
+from aiq.data_models.intermediate_step import IntermediateStepState
 from aiq.data_models.intermediate_step import TraceMetadata
 from aiq.data_models.span import MimeTypes
 from aiq.data_models.span import Span
 from aiq.data_models.span import SpanAttributes
 from aiq.data_models.span import SpanContext
 from aiq.data_models.span import event_type_to_span_kind
-from aiq.observability.span_publisher import AbstractSpanPublisher
+from aiq.observability.exporter.base_exporter import IsolatedAttribute
+from aiq.observability.exporter.processing_exporter import ProcessingExporter
 from aiq.observability.utils import merge_dicts
 from aiq.observability.utils import ns_timestamp
+from aiq.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
 
+InputSpanT = TypeVar("InputSpanT")
+OutputSpanT = TypeVar("OutputSpanT")
 
-class SpanPublisher(AbstractSpanPublisher):
-    """Publisher for spans.
 
-    This class is responsible for publishing spans into the unified event stream.
+class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT]):
+    """Abstract base class for span exporters with processing pipeline support.
+
+    This class specializes ProcessingExporter for span-based telemetry export. It converts
+    IntermediateStep events into Span objects and supports processing pipelines for
+    span transformation before export.
+
+    The generic types work as follows:
+    - InputSpanT: The type of spans that enter the processing pipeline (typically Span)
+    - OutputSpanT: The type of spans after processing through the pipeline (e.g., OtelSpan)
+
+    Key Features:
+    - Automatic span creation from IntermediateStep events
+    - Span lifecycle management (start/end event tracking)
+    - Processing pipeline support via ProcessingExporter
+    - Metadata and attribute handling
+    - Usage information tracking
+    - Automatic isolation of mutable state for concurrent execution using descriptors
+
+    Inheritance Hierarchy:
+    - BaseExporter: Core event subscription and lifecycle management + DescriptorIsolationMixin
+    - ProcessingExporter: Adds processor pipeline functionality
+    - SpanExporter: Specializes for span creation and export
+
+    Event Processing Flow:
+    1. IntermediateStep (START) → Create Span → Add to tracking
+    2. IntermediateStep (END) → Complete Span → Process through pipeline → Export
 
     Args:
-        context_state (AIQContextState | None): The context state to use for the publisher.
+        context_state (AIQContextState, optional): The context state to use for the exporter. Defaults to None.
     """
 
-    def __init__(self, context_state: AIQContextState | None = None):
-        super().__init__(context_state)
-        self._outstanding_spans: dict[str, Span] = {}
-        self._span_stack: dict[str, Span] = {}
-        self._metadata_stack: dict[str, dict[str, Any]] = {}
+    # Use descriptors for automatic isolation of span-specific state
+    _outstanding_spans: IsolatedAttribute[dict] = IsolatedAttribute(dict)
+    _span_stack: IsolatedAttribute[dict] = IsolatedAttribute(dict)
+    _metadata_stack: IsolatedAttribute[dict] = IsolatedAttribute(dict)
 
-    @property
-    def name(self) -> str:
-        """Get the name of the publisher.
+    @abstractmethod
+    async def export_processed(self, item: OutputSpanT) -> None:
+        """Export the processed span.
+
+        Args:
+            item (OutputSpanT): The processed span to export.
+        """
+        pass
+
+    @override
+    def export(self, event: IntermediateStep) -> None:
+        """The main logic that reacts to each IntermediateStep.
+
+        Args:
+            event (IntermediateStep): The event to process.
+        """
+        if not isinstance(event, IntermediateStep):
+            return
+
+        if (event.event_state == IntermediateStepState.START):
+            self._process_start_event(event)
+        elif (event.event_state == IntermediateStepState.END):
+            self._process_end_event(event)
+
+    def _process_streaming_output(self, input_value: Any) -> Any:
+        """
+        Serialize a list of values to a JSON string.
+        """
+        if isinstance(input_value, BaseModel):
+            return json.loads(TypeAdapter(type(input_value)).dump_json(input_value).decode('utf-8'))
+        if isinstance(input_value, dict):
+            return input_value
+        return input_value
+
+    def _serialize_payload(self, input_value: Any) -> tuple[str, bool]:
+        """
+        Serialize the input value to a string. Returns a tuple with the serialized value and a boolean indicating if the
+        serialization is JSON or a string.
+
+        Args:
+            input_value (Any): The input value to serialize.
 
         Returns:
-            str: The unique name identifying this span publisher instance..
+            tuple[str, bool]: A tuple with the serialized value and a boolean indicating if the serialization is
+                JSON or a string.
         """
-        return "span_publisher"
+        try:
+            if isinstance(input_value, BaseModel):
+                return TypeAdapter(type(input_value)).dump_json(input_value).decode('utf-8'), True
+            elif isinstance(input_value, dict):
+                return json.dumps(input_value), True
+            elif isinstance(input_value, list):
+                serialized_list = []
+                for value in input_value:
+                    serialized_value = self._process_streaming_output(value)
+                    serialized_list.append(serialized_value)
+                return self._serialize_payload(serialized_list)
+            else:
+                return str(input_value), False
+        except Exception:
+            # Fallback to string representation if we can't serialize using pydantic
+            return str(input_value), False
 
     def _process_start_event(self, event: IntermediateStep):
         """Process the start event of an intermediate step.
@@ -67,18 +154,19 @@ class SpanPublisher(AbstractSpanPublisher):
         parent_span = None
         span_ctx = None
 
-        if len(self._span_stack) > 0:
+        if len(self._span_stack) > 0 and event.function_ancestry and event.function_ancestry.parent_id:  # type: ignore
 
-            parent_span = self._span_stack.get(event.function_ancestry.parent_id, None)
+            parent_span = self._span_stack.get(event.function_ancestry.parent_id, None)  # type: ignore
             if parent_span is None:
                 logger.warning("No parent span found for step %s", event.UUID)
                 return
 
             parent_span = parent_span.model_copy() if isinstance(parent_span, Span) else None
-            span_ctx = SpanContext(
-                trace_id=parent_span.context.trace_id,
-                span_id=uuid.uuid4().int & ((1 << 64) - 1),
-            )
+            if parent_span and parent_span.context:
+                span_ctx = SpanContext(
+                    trace_id=parent_span.context.trace_id,
+                    span_id=uuid.uuid4().int & ((1 << 64) - 1),
+                )
 
         # Extract start/end times from the step
         # By convention, `span_event_timestamp` is the time we started, `event_timestamp` is the time we ended.
@@ -124,20 +212,21 @@ class SpanPublisher(AbstractSpanPublisher):
         start_metadata = event.payload.metadata or {}
 
         if isinstance(start_metadata, dict):
-            self._metadata_stack[event.UUID] = start_metadata
+            self._metadata_stack[event.UUID] = start_metadata  # type: ignore
         elif isinstance(start_metadata, TraceMetadata):
-            self._metadata_stack[event.UUID] = start_metadata.model_dump()
+            self._metadata_stack[event.UUID] = start_metadata.model_dump()  # type: ignore
         else:
             logger.warning("Invalid metadata type for step %s", event.UUID)
             return
 
-        self._span_stack[event.UUID] = sub_span
-        self._outstanding_spans[event.UUID] = sub_span
+        self._span_stack[event.UUID] = sub_span  # type: ignore
+        self._outstanding_spans[event.UUID] = sub_span  # type: ignore
 
-        logger.debug("Added span to tracking (outstanding: %d, stack: %d, event_id: %s)",
-                     len(self._outstanding_spans),
-                     len(self._span_stack),
-                     event.UUID)
+        logger.debug(
+            "Added span to tracking (outstanding: %d, stack: %d, event_id: %s)",
+            len(self._outstanding_spans),  # type: ignore
+            len(self._span_stack),  # type: ignore
+            event.UUID)
 
     def _process_end_event(self, event: IntermediateStep):
         """Process the end event of an intermediate step.
@@ -147,13 +236,13 @@ class SpanPublisher(AbstractSpanPublisher):
         """
 
         # Find the subspan that was created in the start event
-        sub_span = self._outstanding_spans.pop(event.UUID, None)
+        sub_span: Span | None = self._outstanding_spans.pop(event.UUID, None)  # type: ignore
 
         if sub_span is None:
             logger.warning("No subspan found for step %s", event.UUID)
             return
 
-        self._span_stack.pop(event.UUID, None)
+        self._span_stack.pop(event.UUID, None)  # type: ignore
 
         # Optionally add more attributes from usage_info or data
         usage_info = event.payload.usage_info
@@ -176,7 +265,7 @@ class SpanPublisher(AbstractSpanPublisher):
                                    MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
 
         # Merge metadata from start event with end event metadata
-        start_metadata = self._metadata_stack.pop(event.UUID)
+        start_metadata = self._metadata_stack.pop(event.UUID)  # type: ignore
 
         if start_metadata is None:
             logger.warning("No metadata found for step %s", event.UUID)
@@ -201,5 +290,18 @@ class SpanPublisher(AbstractSpanPublisher):
         # End the subspan
         sub_span.end(end_time=end_ns)
 
-        # Export the span with its parent context
-        self._create_export_task(sub_span)
+        # Export the span with processing pipeline
+        self._create_export_task(self._export_with_processing(sub_span))  # type: ignore
+
+    @override
+    async def _cleanup(self):
+        """Clean up any remaining spans."""
+        if self._outstanding_spans:  # type: ignore
+            logger.warning("Not all spans were closed. Remaining: %s", self._outstanding_spans)  # type: ignore
+
+            for span_info in self._outstanding_spans.values():  # type: ignore
+                span_info.end()
+
+        self._outstanding_spans.clear()  # type: ignore
+        self._span_stack.clear()  # type: ignore
+        self._metadata_stack.clear()  # type: ignore

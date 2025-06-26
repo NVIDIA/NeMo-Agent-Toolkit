@@ -15,15 +15,19 @@
 
 import logging
 
-from aiq.plugins.opentelemetry.mixins.otlp_span_exporter_mixin import OTLPSpanExporterMixin
-from aiq.plugins.opentelemetry.otel_exporter import AbstractOtelExporter
+from aiq.builder.context import AIQContextState
+from aiq.data_models.intermediate_step import IntermediateStep
+from aiq.observability.exporter.raw_exporter import RawExporter
+from aiq.observability.mixin.file_mixin import FileExportMixin
+from aiq.observability.processor.intermediate_step_serializer import IntermediateStepSerializer
 
 logger = logging.getLogger(__name__)
 
 
-class OTLPSpanExporter(OTLPSpanExporterMixin, AbstractOtelExporter):
-    """A opentelemetry OTLP span exporter that exports telemetry traces to externally hosted OTLP service."""
+class FileExporter(FileExportMixin, RawExporter[IntermediateStep, str]):
+    """A File exporter that exports telemetry traces to a local file."""
 
-    def __init__(self, context_state=None, **otlp_kwargs):
-        OTLPSpanExporterMixin.__init__(self, **otlp_kwargs)
-        AbstractOtelExporter.__init__(self, context_state=context_state)
+    def __init__(self, context_state: AIQContextState | None = None, **file_kwargs):
+        super().__init__(context_state=context_state, **file_kwargs)
+        self._processor = IntermediateStepSerializer()
+        self.add_processor(self._processor)

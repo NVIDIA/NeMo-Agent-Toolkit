@@ -16,28 +16,14 @@
 import logging
 
 from aiq.builder.context import AIQContextState
+from aiq.plugins.opentelemetry.mixin.otlp_span_exporter_mixin import OTLPSpanExporterMixin
 from aiq.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
-from aiq.plugins.phoenix.mixin.phoenix_mixin import PhoenixMixin
 
 logger = logging.getLogger(__name__)
 
 
-class PhoenixOtelExporter(PhoenixMixin, OtelSpanExporter):
-    """Phoenix exporter for AI workflow observability.
+class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):
+    """A opentelemetry OTLP span exporter that exports telemetry traces to externally hosted OTLP service."""
 
-    Exports OpenTelemetry-compatible traces to Phoenix for visualization
-    and analysis of AI agent behavior and performance.
-
-    Features:
-    - Automatic span conversion from AIQ events
-    - Phoenix-specific resource tagging
-    - Project-based trace organization
-
-    Args:
-        context_state: Execution context for isolation
-        endpoint: Phoenix server endpoint
-        project: Project name for trace grouping
-    """
-
-    def __init__(self, context_state: AIQContextState | None = None, **phoenix_kwargs):
-        super().__init__(context_state=context_state, **phoenix_kwargs)
+    def __init__(self, context_state: AIQContextState | None = None, **otlp_kwargs):
+        super().__init__(context_state=context_state, **otlp_kwargs)
