@@ -23,19 +23,6 @@ from weakref import WeakKeyDictionary
 logger = logging.getLogger(__name__)
 
 
-def ns_timestamp(seconds_float: float) -> int:
-    """
-    Convert a float timestamp in seconds to an integer nanosecond timestamp.
-
-    Args:
-        seconds_float (float): The timestamp in seconds (as a float).
-
-    Returns:
-        int: The timestamp in nanoseconds (as an integer).
-    """
-    return int(seconds_float * 1e9)
-
-
 class KeyedLock:
     """
     A lock manager that provides an asyncio-compatible lock for each unique key.
@@ -229,19 +216,6 @@ class AsyncSafeWeakKeyDictionary(AsyncDictionary):
         super().__init__()
         self._dict: WeakKeyDictionary = WeakKeyDictionary()
         self._lock = asyncio.Lock()
-
-
-def log_task_exception(task):
-    """
-    Log any exception raised by an asyncio.Task.
-
-    Args:
-        task (asyncio.Task): The task whose exception (if any) should be logged.
-    """
-    try:
-        task.result()
-    except Exception as e:
-        logger.error("Exception in cleanup task: %s", e, exc_info=True)
 
 
 def merge_dicts(dict1: dict, dict2: dict) -> dict:

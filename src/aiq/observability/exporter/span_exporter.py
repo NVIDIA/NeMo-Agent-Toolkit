@@ -34,8 +34,8 @@ from aiq.data_models.span import SpanContext
 from aiq.data_models.span import event_type_to_span_kind
 from aiq.observability.exporter.base_exporter import IsolatedAttribute
 from aiq.observability.exporter.processing_exporter import ProcessingExporter
-from aiq.observability.utils import merge_dicts
-from aiq.observability.utils import ns_timestamp
+from aiq.observability.utils.dict_utils import merge_dicts
+from aiq.observability.utils.time_utils import ns_timestamp
 from aiq.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
