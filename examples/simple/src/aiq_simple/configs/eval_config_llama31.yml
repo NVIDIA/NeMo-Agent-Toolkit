@@ -63,7 +63,7 @@ eval:
   general:
     workflow_alias: nat-simple-llama-31-8b
     output:
-      dir: ./.tmp/aiq/examples/simple/
+      dir: ./.tmp/aiq/examples/simple/llama-31-8b
       cleanup: true
     dataset:
       _type: json

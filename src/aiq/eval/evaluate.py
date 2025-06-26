@@ -33,7 +33,7 @@ from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.usage_stats import UsageStats
 from aiq.eval.usage_stats import UsageStatsItem
-from aiq.eval.usage_stats import UsageStatsPerLLM
+from aiq.eval.usage_stats import UsageStatsLLM
 from aiq.eval.utils.output_uploader import OutputUploader
 from aiq.eval.utils.weave_eval import WeaveEvaluationIntegration
 from aiq.profiler.data_models import ProfilerResults
@@ -82,13 +82,16 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
         steps = [IntermediatePropertyAdaptor.from_intermediate_step(step) for step in item.trajectory]
         usage_stats_per_llm = {}
+        total_tokens = 0
         for step in steps:
             if step.event_type == "LLM_END":
                 llm_name = step.llm_name
                 if llm_name not in usage_stats_per_llm:
-                    usage_stats_per_llm[llm_name] = UsageStatsPerLLM()
+                    usage_stats_per_llm[llm_name] = UsageStatsLLM()
                 usage_stats_per_llm[llm_name].prompt_tokens += step.token_usage.prompt_tokens
                 usage_stats_per_llm[llm_name].completion_tokens += step.token_usage.completion_tokens
+                usage_stats_per_llm[llm_name].total_tokens += step.token_usage.total_tokens
+                total_tokens += step.token_usage.total_tokens
 
         # find min and max event timestamps
         if item.trajectory:
@@ -100,7 +103,8 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         # add the usage stats to the usage stats dict
         self.usage_stats.usage_stats_items[item.id] = UsageStatsItem(usage_stats_per_llm=usage_stats_per_llm,
-                                                                     runtime=runtime)
+                                                                     runtime=runtime,
+                                                                     total_tokens=total_tokens)
         return self.usage_stats.usage_stats_items[item.id]
 
     async def run_workflow_local(self, session_manager: AIQSessionManager):

@@ -18,13 +18,15 @@ import typing
 from pydantic import BaseModel
 
 
-class UsageStatsPerLLM(BaseModel):
+class UsageStatsLLM(BaseModel):
     prompt_tokens: int = 0
     completion_tokens: int = 0
+    total_tokens: int = 0
 
 
 class UsageStatsItem(BaseModel):
-    usage_stats_per_llm: dict[str, UsageStatsPerLLM]
+    usage_stats_per_llm: dict[str, UsageStatsLLM]
+    total_tokens: int | None = None
     runtime: float = 0.0
 
 

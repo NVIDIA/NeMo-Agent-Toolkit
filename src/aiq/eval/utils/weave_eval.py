@@ -115,21 +115,8 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         # log each usage stat as a score
         await self.pred_loggers[item.id].alog_score(scorer="wf_runtime", score=usage_stats_item.runtime)
 
-        # log the number of tokens per LLM provider in parallel
-        token_coros = []
-        llm_count = len(usage_stats_item.usage_stats_per_llm)
-        for llm_name, llm_stats in usage_stats_item.usage_stats_per_llm.items():
-            if llm_count == 1:
-                scorer_name = "wf_tokens"
-            else:
-                scorer_name = f"wf_tokens_{llm_name}"
-
-            token_coros.append(self.pred_loggers[item.id].alog_score(scorer=scorer_name,
-                                                                     score=llm_stats.prompt_tokens +
-                                                                     llm_stats.completion_tokens))
-
-        if token_coros:
-            await asyncio.gather(*token_coros)
+        # log the total tokens for this item, per-llm tokens can be exported later if needed
+        await self.pred_loggers[item.id].alog_score(scorer="wf_tokens", score=usage_stats_item.total_tokens)
 
     async def alog_score(self, eval_output: EvalOutput, evaluator_name: str):
         """Log scores for evaluation outputs."""
@@ -164,15 +151,13 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
 
         # get the LLM tokens from the usage stats
         if usage_stats.usage_stats_items:
+            # Sum total_tokens across all items
+            total_tokens = 0
             for item_id, usage_stats_item in usage_stats.usage_stats_items.items():
-                # Log tokens per individual LLM provider
-                llm_count = len(usage_stats_item.usage_stats_per_llm)
-                for llm_name, llm_stats in usage_stats_item.usage_stats_per_llm.items():
-                    llm_tokens = llm_stats.prompt_tokens + llm_stats.completion_tokens
-                    if llm_count == 1:
-                        profile_metrics["wf_tokens"] = llm_tokens
-                    else:
-                        profile_metrics[f"wf_tokens_{llm_name}"] = llm_tokens
+                total_tokens += usage_stats_item.total_tokens
+
+            # Log total tokens across all items
+            profile_metrics["wf_tokens"] = total_tokens
 
         return profile_metrics
 
