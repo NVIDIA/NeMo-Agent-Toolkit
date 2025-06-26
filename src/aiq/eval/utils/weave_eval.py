@@ -150,12 +150,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         await asyncio.gather(*[_finish_one(pl) for pl in self.pred_loggers.values()])
 
     def _log_profiler_metrics(self, profiler_results: ProfilerResults, usage_stats: UsageStats) -> dict[str, Any]:
-        """Log profiler metrics to Weave.
-        The following metrics are logged:
-        - wf_p95_runtime: The 95th percentile of the workflow runtime
-        - wf_tokens: This is temporarily disabled and will be re-enabled later
-          after the NIM langchain fix for token counting is released.
-        """
+        """Log profiler metrics to Weave."""
         profile_metrics = {}
         if profiler_results.workflow_runtime_metrics:
             profile_metrics["wf_p95_runtime"] = profiler_results.workflow_runtime_metrics.p95
