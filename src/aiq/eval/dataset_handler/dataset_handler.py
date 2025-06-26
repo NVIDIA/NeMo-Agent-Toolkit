@@ -158,6 +158,8 @@ class DatasetHandler:
                     return json.loads(value)
                 except json.JSONDecodeError:
                     return value
+            if hasattr(value, "model_dump"):
+                return value.model_dump()
             return value
 
         indent = 2
