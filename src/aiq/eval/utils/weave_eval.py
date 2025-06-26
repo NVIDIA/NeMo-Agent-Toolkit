@@ -123,12 +123,18 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         if not self.eval_logger:
             return
 
+        # Create coroutines for all score logging operations
+        coros = []
         for eval_output_item in eval_output.eval_output_items:
             if eval_output_item.id in self.pred_loggers:
-                await self.pred_loggers[eval_output_item.id].alog_score(
+                coros.append(self.pred_loggers[eval_output_item.id].alog_score(
                     scorer=evaluator_name,
                     score=eval_output_item.score,
-                )
+                ))
+
+        # Execute all coroutines concurrently
+        if coros:
+            await asyncio.gather(*coros)
 
     async def afinish_loggers(self):
         """Finish all prediction loggers."""
@@ -144,21 +150,17 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         await asyncio.gather(*[_finish_one(pl) for pl in self.pred_loggers.values()])
 
     def _log_profiler_metrics(self, profiler_results: ProfilerResults, usage_stats: UsageStats) -> dict[str, Any]:
-        """Log profiler metrics to Weave."""
+        """Log profiler metrics to Weave.
+        The following metrics are logged:
+        - wf_p95_runtime: The 95th percentile of the workflow runtime
+        - wf_tokens: This is temporarily disabled and will be re-enabled later
+          after the NIM langchain fix for token counting is released.
+        """
         profile_metrics = {}
         if profiler_results.workflow_runtime_metrics:
             profile_metrics["wf_p95_runtime"] = profiler_results.workflow_runtime_metrics.p95
 
-        # get the LLM tokens from the usage stats
-        if usage_stats.usage_stats_items:
-            # Sum total_tokens across all items
-            total_tokens = 0
-            for item_id, usage_stats_item in usage_stats.usage_stats_items.items():
-                total_tokens += usage_stats_item.total_tokens
-
-            # Log total tokens across all items
-            profile_metrics["wf_tokens"] = total_tokens
-
+        # TODO:get the LLM tokens from the usage stats and log them
         return profile_metrics
 
     def log_summary(self,
