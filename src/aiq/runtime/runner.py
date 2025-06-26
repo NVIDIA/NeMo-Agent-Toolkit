@@ -136,9 +136,6 @@ class AIQRunner:
             if (not self._entry_fn.has_single_output):
                 raise ValueError("Workflow does not support single output")
 
-            for exporter in self._exporter_manager._exporter_registry.values():
-                exporter._context_state = self._context_state
-
             async with self._exporter_manager.start(context_state=self._context_state):
                 # Run the workflow
                 result = await self._entry_fn.ainvoke(self._input_message, to_type=to_type)
