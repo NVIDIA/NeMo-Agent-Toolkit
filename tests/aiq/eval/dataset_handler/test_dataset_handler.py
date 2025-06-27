@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+
 import pandas as pd
 import pytest
 
@@ -23,6 +25,8 @@ from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.eval.dataset_handler.dataset_handler import DatasetHandler
 from aiq.eval.evaluator.evaluator_model import EvalInput
+from aiq.eval.evaluator.evaluator_model import EvalInputItem
+from aiq.eval.evaluator.evaluator_model import EvalOutputItem
 
 # pylint: disable=redefined-outer-name
 
@@ -326,3 +330,42 @@ def test_filter_intermediate_steps(dataset_handler, mock_intermediate_steps):
     assert filtered_steps[1]["payload"]["event_type"] == IntermediateStepType.TOOL_START, \
         "Second step should be TOOL_START"
     assert filtered_steps[2]["payload"]["event_type"] == IntermediateStepType.TOOL_END, "Third step should be TOOL_END"
+
+
+def make_eval_input_item(**overrides):
+    defaults = {
+        "id": "default_id",
+        "input_obj": None,
+        "expected_output_obj": None,
+        "output_obj": None,
+        "trajectory": [],
+        "expected_trajectory": [],
+        "full_dataset_entry": {},
+    }
+    defaults.update(overrides)
+    return EvalInputItem(**defaults)
+
+
+def test_publish_eval_input_unstructured_string_and_json():
+    """Test that unstructured input handles plain strings, JSON strings, and Python objects correctly."""
+
+    config = EvalDatasetJsonConfig(id_key="id", structure=EvalDatasetStructureConfig(disable=True))
+    handler = DatasetHandler(config, reps=1)
+
+    items = [
+        make_eval_input_item(id="1", output_obj="plain string output"),
+        make_eval_input_item(id="2", output_obj='{"result": 42, "ok": true}'),
+        make_eval_input_item(id="3", output_obj=EvalOutputItem(id="3", score=42, reasoning="The answer is 42")),
+        make_eval_input_item(id="4", output_obj=42),
+    ]
+    eval_input = EvalInput(eval_input_items=items)
+    output_json = handler.publish_eval_input(eval_input)
+    output = json.loads(output_json)
+
+    assert isinstance(output, list)
+    assert output[0] == "plain string output"
+    assert isinstance(output[1], dict)
+    assert output[1] == {"result": 42, "ok": True}
+    assert isinstance(output[2], dict)
+    assert output[2] == {"id": "3", "score": 42, "reasoning": "The answer is 42"}
+    assert output[3] == 42
