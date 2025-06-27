@@ -1,0 +1,8 @@
+Dockerfile
+.gitignore
+.git
+tests/
+*.md
+.idea
+out/
+k8s

@@ -1,0 +1,161 @@
+AIQ Toolkit-UI Third-Party Licenses
+=================================
+
+This file contains third-party license information for software packages used in this project.
+The licenses below apply to one or more packages included in this project. For each license,
+we list the packages that are distributed under it and include the full license text.
+
+------------------------------------------------------------
+MIT License
+------------------------------------------------------------
+The MIT License is a permissive free software license. Many of the packages used in this
+project are distributed under the MIT License. The full text of the MIT License is provided
+below.
+
+Packages under the MIT License:
+  - @dqbd/tiktoken           @ ^1.0.2
+  - @radix-ui/react-select    @ ^2.1.2
+  - @tabler/icons-react       @ ^2.9.0
+  - @types/jwt-decode         @ ^3.1.0
+  - axios                     @ ^1.6.8
+  - chart.js                  @ ^4.4.1
+  - eventsource-parser        @ ^0.1.0
+  - file-saver                @ ^2.0.5
+  - html-to-image             @ ^1.11.11
+  - i18next                   @ ^22.4.13
+  - jsonwebtoken              @ ^9.0.2
+  - jwt-decode                @ ^4.0.0
+  - lodash                    @ ^4.17.21
+  - lucide-react              @ ^0.454.0
+  - next                      @ 13.5.3
+  - next-auth                 @ ^4.24.7
+  - next-i18next             @ ^13.2.2
+  - pptxgenjs                 @ ^3.12.0
+  - react                     @ 18.2.0
+  - react-bootstrap-modal     @ ^4.2.0
+  - react-chartjs-2           @ ^5.2.0
+  - react-dom                 @ 18.2.0
+  - react-force-graph-2d      @ ^1.25.5
+  - react-hot-toast           @ ^2.4.0
+  - react-i18next             @ ^12.2.0
+  - react-markdown            @ ^8.0.5
+  - react-query               @ ^3.39.3
+  - react-syntax-highlighter  @ ^15.5.0
+  - recharts                 @ ^2.12.7
+  - rehype-mathjax            @ ^4.0.2
+  - rehype-raw                @ ^7.0.0
+  - remark-gfm                @ ^3.0.1
+  - remark-math               @ ^5.1.1
+  - remark-unwrap-images      @ ^4.0.0
+  - uuid                      @ ^9.0.1
+
+  Dev Dependencies under the MIT License:
+  - @tailwindcss/typography           @ ^0.5.9
+  - @trivago/prettier-plugin-sort-imports  @ ^1.4.4
+  - @types/jsdom                      @ ^21.1.1
+  - @types/node                       @ 18.15.0
+  - @types/react                      @ 18.0.28
+  - @types/react-dom                  @ 18.0.11
+  - @types/react-syntax-highlighter     @ ^15.5.6
+  - @types/uuid                       @ ^9.0.1
+  - @vitest/coverage-c8                @ ^0.29.7
+  - autoprefixer                      @ ^10.4.14
+  - endent                            @ ^2.1.0
+  - eslint                            @ 8.36.0
+  - eslint-config-next                @ 13.2.4
+  - gpt-3-encoder                     @ ^1.1.4
+  - jsdom                             @ ^21.1.1
+  - postcss                           @ ^8.4.21
+  - prettier                          @ ^2.8.7
+  - prettier-plugin-tailwindcss         @ ^0.2.5
+  - tailwindcss                       @ ^3.3.3
+  - vitest                            @ ^0.29.7
+
+Full MIT License Text:
+--------------------------------------------------
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
+and associated documentation files (the "Software"), to deal in the Software without restriction, 
+including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, 
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or 
+substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING 
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. 
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
+OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+--------------------------------------------------
+
+------------------------------------------------------------
+Apache License, Version 2.0
+------------------------------------------------------------
+The Apache License, Version 2.0 is a permissive license that also provides an express grant of patent rights. 
+
+Packages under the Apache License, Version 2.0:
+  - @datadog/browser-rum       @ ^5.11.0
+  - @mozilla/readability       @ ^0.4.4
+  - typescript                 @ 4.9.5
+
+Full Apache License, Version 2.0 Text:
+--------------------------------------------------
+                                 Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
+
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+1. Definitions.
+   "License" shall mean the terms and conditions for use, reproduction, and distribution as defined in this document.
+   "Licensor" shall mean the copyright owner or entity 
+   authorized by the copyright owner that is granting the License.
+   "Legal Entity" shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control with that entity.
+   "You" (or "Your") shall mean an individual or Legal Entity exercising permissions granted by this License.
+   "Source" form shall mean the preferred form for making modifications, including but not limited to software source code, documentation source, and configuration files.
+   "Object" form shall mean any form resulting from mechanical transformation or translation of a Source form, including but not limited to compiled object code, generated documentation, and conversions to other media types.
+   "Work" shall mean the work of authorship, whether in Source or Object form, made available under the License, as indicated by a copyright notice that is included in or attached to the work.
+   "Derivative Works" shall mean any work, whether in Source or Object form, that is based on (or derived from) the Work and for which the modifications represent, as a whole, an original work of authorship.
+   "Contribution" shall mean any work of authorship, including the original version of the Work and any modifications or additions to that Work or Derivative Works thereof, that is intentionally submitted to Licensor for inclusion in the Work.
+   "Contributor" shall mean Licensor and any individual or Legal Entity on behalf of whom a Contribution has been received by Licensor and subsequently incorporated within the Work.
+
+2. Grant of Copyright License.
+   Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, 
+   no-charge, royalty-free, irrevocable copyright license to reproduce, prepare Derivative Works of, 
+   publicly display, publicly perform, sublicense, and distribute the Work and such Derivative Works.
+
+3. Grant of Patent License.
+   Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, 
+   no-charge, royalty-free, irrevocable (except as stated in this section) patent license to make, have made, use, offer to sell, 
+   sell, import, and otherwise transfer the Work, where such license applies only to those patent claims licensable by such Contributor 
+   that are necessarily infringed by their Contribution(s) alone or by combination of their Contribution(s) with the Work.
+
+4. Redistribution.
+   You may reproduce and distribute copies of the Work or Derivative Works thereof in any medium, with or without modifications, 
+   and in Source or Object form, provided that You meet the following conditions:
+     (a) You must give any other recipients of the Work or Derivative Works a copy of this License; and
+     (b) You must cause any modified files to carry prominent notices stating that You changed the files; and
+     (c) You must retain, in the Source form of any Derivative Works that You distribute, all copyright, patent, trademark, 
+         and attribution notices from the Source form of the Work; and
+     (d) If the Work includes a "NOTICE" text file as part of its distribution, then any Derivative Works that You distribute 
+         must include a readable copy of the attribution notices contained within such NOTICE file.
+
+5. Submission of Contributions.
+   Unless You explicitly state otherwise, any Contribution submitted for inclusion in the Work shall be under the terms and conditions of this License.
+
+6. Trademarks.
+   This License does not grant permission to use the trade names, trademarks, service marks, or product names of the Licensor.
+
+7. Disclaimer of Warranty.
+   The Work is provided on an "AS IS" basis, without warranties or conditions of any kind, either express or implied.
+
+8. Limitation of Liability.
+   In no event shall any Contributor be liable for any damages arising from the use of the Work.
+
+END OF TERMS AND CONDITIONS
+--------------------------------------------------
+
+END OF THIRD-PARTY LICENSES
