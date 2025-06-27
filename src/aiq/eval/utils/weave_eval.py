@@ -16,11 +16,13 @@
 import asyncio
 import logging
 from typing import Any
-from typing import List
 
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
+from aiq.eval.usage_stats import UsageStats
+from aiq.eval.usage_stats import UsageStatsItem
+from aiq.profiler.data_models import ProfilerResults
 
 logger = logging.getLogger(__name__)
 
@@ -61,23 +63,35 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             self.client = None
             return False
 
-    def initialize_logger(self, eval_input: EvalInput, config: Any):
+    def _get_prediction_inputs(self, item: EvalInputItem):
+        """Get the inputs for displaying in the UI.
+        The following fields are excluded as they are too large to display in the UI:
+        - full_dataset_entry
+        - expected_trajectory
+        - trajectory
+
+        output_obj is excluded because it is displayed separately.
+        """
+        include = {"id", "input_obj", "expected_output_obj"}
+        return item.model_dump(include=include)
+
+    def _get_weave_dataset(self, eval_input: EvalInput):
+        """Get the full dataset for Weave."""
+        return [item.full_dataset_entry for item in eval_input.eval_input_items]
+
+    def initialize_logger(self, workflow_alias: str, eval_input: EvalInput, config: Any):
         """Initialize the Weave evaluation logger."""
-        if not self.client:
+        if not self.client and not self.initialize_client():
+            # lazy init the client
             return False
 
         try:
-            weave_dataset = [
-                item.model_dump(exclude={"output_obj", "trajectory"}) for item in eval_input.eval_input_items
-            ]
+            weave_dataset = self._get_weave_dataset(eval_input)
             config_dict = config.model_dump(mode="json")
-            # TODO: make this configurable
-            config_dict["name"] = "aiqtoolkit-eval"
+            config_dict["name"] = workflow_alias
             self.eval_logger = self.EvaluationLogger(model=config_dict, dataset=weave_dataset)
             self.pred_loggers = {}
 
-            del weave_dataset
-            del config_dict
             return True
         except Exception as e:
             self.eval_logger = None
@@ -90,21 +104,37 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         if not self.eval_logger:
             return
 
-        pred_logger = self.eval_logger.log_prediction(inputs=item.model_dump(exclude={"output_obj", "trajectory"}),
-                                                      output=output)
+        pred_logger = self.eval_logger.log_prediction(inputs=self._get_prediction_inputs(item), output=output)
         self.pred_loggers[item.id] = pred_logger
+
+    async def log_usage_stats(self, item: EvalInputItem, usage_stats_item: UsageStatsItem):
+        """Log usage stats to Weave."""
+        if not self.eval_logger:
+            return
+
+        # log each usage stat as a score
+        await self.pred_loggers[item.id].alog_score(scorer="wf_runtime", score=usage_stats_item.runtime)
+
+        # log the total tokens for this item, per-llm tokens can be exported later if needed
+        await self.pred_loggers[item.id].alog_score(scorer="wf_tokens", score=usage_stats_item.total_tokens)
 
     async def alog_score(self, eval_output: EvalOutput, evaluator_name: str):
         """Log scores for evaluation outputs."""
         if not self.eval_logger:
             return
 
+        # Create coroutines for all score logging operations
+        coros = []
         for eval_output_item in eval_output.eval_output_items:
             if eval_output_item.id in self.pred_loggers:
-                await self.pred_loggers[eval_output_item.id].alog_score(
+                coros.append(self.pred_loggers[eval_output_item.id].alog_score(
                     scorer=evaluator_name,
                     score=eval_output_item.score,
-                )
+                ))
+
+        # Execute all coroutines concurrently
+        if coros:
+            await asyncio.gather(*coros)
 
     async def afinish_loggers(self):
         """Finish all prediction loggers."""
@@ -114,22 +144,37 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         async def _finish_one(pred_logger):
             if hasattr(pred_logger, '_has_finished') and not pred_logger._has_finished:
                 return
-            # run the *blocking* finish() in a thread so we don’t nest loops
+            # run the *blocking* finish() in a thread so we don't nest loops
             await asyncio.to_thread(pred_logger.finish)
 
         await asyncio.gather(*[_finish_one(pl) for pl in self.pred_loggers.values()])
 
-    def log_summary(self, evaluation_results: List[tuple[str, EvalOutput]]):
+    def _log_profiler_metrics(self, profiler_results: ProfilerResults, usage_stats: UsageStats) -> dict[str, Any]:
+        """Log profiler metrics to Weave."""
+        profile_metrics = {}
+        if profiler_results.workflow_runtime_metrics:
+            profile_metrics["wf_p95_runtime"] = profiler_results.workflow_runtime_metrics.p95
+
+        # TODO:get the LLM tokens from the usage stats and log them
+        return profile_metrics
+
+    def log_summary(self,
+                    usage_stats: UsageStats,
+                    evaluation_results: list[tuple[str, EvalOutput]],
+                    profiler_results: ProfilerResults):
         """Log summary statistics to Weave."""
         if not self.eval_logger:
             return
 
         summary = {}
+        # add evaluation results to the summary
         for evaluator_name, eval_output in evaluation_results:
-            # Calculate average score for this evaluator
-            scores = [item.score for item in eval_output.eval_output_items if item.score is not None]
-            if scores:
-                summary[f"{evaluator_name}_avg"] = sum(scores) / len(scores)
+            summary[evaluator_name] = eval_output.average_score
 
-        # Log the summary to finish the evaluation
-        self.eval_logger.log_summary(summary)
+        # add profiler metrics to the summary
+        profile_metrics = self._log_profiler_metrics(profiler_results, usage_stats)
+        summary.update(profile_metrics)
+
+        # Log the summary to finish the evaluation, disable auto-summarize
+        # as we will be adding profiler metrics to the summary
+        self.eval_logger.log_summary(summary, auto_summarize=False)
