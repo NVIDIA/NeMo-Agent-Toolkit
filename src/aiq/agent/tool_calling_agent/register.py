@@ -38,7 +38,7 @@ class ToolCallAgentWorkflowConfig(FunctionBaseConfig, name="tool_calling_agent")
     tool_names: list[FunctionRef] = Field(default_factory=list,
                                           description="The list of tools to provide to the tool calling agent.")
     llm_name: LLMRef = Field(description="The LLM model to use with the tool calling agent.")
-    verbose: bool = Field(default=False, description="Set the verbosity of the react agent's logging.")
+    verbose: bool = Field(default=False, description="Set the verbosity of the tool calling agent's logging.")
     handle_tool_errors: bool = Field(default=True, description="Specify ability to handle tool calling errors.")
     description: str = Field(default="Tool Calling Agent Workflow", description="Description of this functions use.")
     max_iterations: int = Field(default=15, description="Number of tool calls before stoping the tool calling agent.")

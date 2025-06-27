@@ -392,7 +392,7 @@ class WebSocketUserMessage(BaseModel):
     type: typing.Literal[WebSocketMessageType.USER_MESSAGE]
     schema_type: WorkflowSchemaType
     id: str = "default"
-    thread_id: str = "default"
+    conversation_id: str | None = None
     content: UserMessageContent
     user: User = User()
     security: Security = Security()

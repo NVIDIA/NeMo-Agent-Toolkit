@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import json
+import os
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from types import SimpleNamespace
@@ -21,6 +23,8 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import mock_open
 from unittest.mock import patch
+from uuid import UUID
+from uuid import uuid4
 
 import pytest
 
@@ -28,6 +32,8 @@ from aiq.data_models.config import AIQConfig
 from aiq.data_models.dataset_handler import EvalDatasetJsonConfig
 from aiq.data_models.evaluate import EvalConfig
 from aiq.data_models.evaluate import EvalOutputConfig
+from aiq.data_models.evaluate import JobEvictionPolicy
+from aiq.data_models.evaluate import JobManagementConfig
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
@@ -38,6 +44,7 @@ from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.evaluator.evaluator_model import EvalOutputItem
+from aiq.profiler.data_models import ProfilerResults
 from aiq.runtime.session import AIQSessionManager
 
 # pylint: disable=redefined-outer-name
@@ -46,8 +53,8 @@ from aiq.runtime.session import AIQSessionManager
 @pytest.fixture
 def default_eval_run_config():
     """Fixture for default evaluation run configuration."""
-    return EvaluationRunConfig(config_file="config.yml",
-                               dataset=None,
+    return EvaluationRunConfig(config_file=Path("config.yml"),
+                               dataset="dummy_dataset",
                                result_json_path="$",
                                skip_workflow=False,
                                skip_completed_entries=False,
@@ -408,13 +415,16 @@ def test_write_output(evaluation_run, default_eval_config, eval_input, eval_outp
     # Evaluator results must be written to {evaluator_name}_output.json
     evaluator_output_path = output_dir / f"{evaluator_name}_output.json"
 
+    # Create a mock ProfilerResults object
+    mock_profiler_results = ProfilerResults()
+
     # Patch file operations and logging. It is important to keep logs frozen to match user expectations.
     with patch("builtins.open", mock_open()) as mock_file, \
          patch("pathlib.Path.mkdir") as mock_mkdir, \
          patch("aiq.eval.evaluate.logger.info") as mock_logger:
 
         # Run the actual function
-        evaluation_run.write_output(mock_dataset_handler)
+        evaluation_run.write_output(mock_dataset_handler, mock_profiler_results)
 
         # Ensure directories are created
         mock_mkdir.assert_called()
@@ -442,13 +452,15 @@ def test_write_output_handles_none_output(evaluation_run, eval_input):
     # Mock dataset handler
     mock_dataset_handler = MagicMock()
     mock_dataset_handler.publish_eval_input.return_value = "[]"
+    # Create a mock ProfilerResults object
+    mock_profiler_results = ProfilerResults()
     # Patch file operations and logging
     with patch("builtins.open", mock_open()), \
          patch("pathlib.Path.mkdir"), \
          patch("aiq.eval.evaluate.logger.info"):
         # Should not raise AttributeError
         try:
-            evaluation_run.write_output(mock_dataset_handler)
+            evaluation_run.write_output(mock_dataset_handler, mock_profiler_results)
         except AttributeError:
             pytest.fail("write_output should not access .output without a None check")
 
@@ -522,9 +534,117 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
         # Ensure profiling is executed
         mock_profile_workflow.assert_called_once()
 
-        # Ensure output is written
-        mock_write_output.assert_called_once_with(mock_dataset_handler)
+        # Ensure output is written with both dataset_handler and profiler_results
+        mock_write_output.assert_called_once_with(mock_dataset_handler, mock_profile_workflow.return_value)
 
         # Ensure custom scripts are run and directory is uploaded
         mock_uploader.run_custom_scripts.assert_called_once()
         mock_uploader.upload_directory.assert_awaited_once()
+
+
+def test_append_job_id_to_output_dir(default_eval_config):
+    """Test that append_job_id_to_output_dir generates UUID when enabled."""
+    # Test case 1: Feature enabled, no job_id provided
+    default_eval_config.general.output.job_management.append_job_id_to_output_dir = True
+
+    # Simulate the logic from run_and_evaluate
+    job_id = None
+    if (default_eval_config.general.output
+            and default_eval_config.general.output.job_management.append_job_id_to_output_dir and not job_id):
+        job_id = "job_" + str(uuid4())
+
+    # Verify UUID was generated
+    assert job_id is not None
+    assert job_id.startswith("job_")
+    UUID(job_id[4:])
+
+    # Test case 2: Feature disabled
+    default_eval_config.general.output.job_management.append_job_id_to_output_dir = False
+    job_id = None
+    if (default_eval_config.general.output
+            and default_eval_config.general.output.job_management.append_job_id_to_output_dir and not job_id):
+        job_id = "job_" + str(uuid4())
+
+    # Verify no UUID was generated
+    assert job_id is None
+
+    # Test case 3: Job ID already provided
+    default_eval_config.general.output.job_management.append_job_id_to_output_dir = True
+    provided_job_id = "custom-job"
+    job_id = provided_job_id
+    if (default_eval_config.general.output
+            and default_eval_config.general.output.job_management.append_job_id_to_output_dir and not job_id):
+        job_id = "job_" + str(uuid4())
+
+    # Verify provided job_id was kept
+    assert job_id == provided_job_id
+
+
+# Batch-4: Tests for cleaning up output directories
+
+
+@pytest.fixture
+def job_output_dir(tmp_path: Path) -> Path:
+    """Create a temporary output directory structure for job cleanup tests."""
+    jobs_dir = tmp_path / "jobs"
+    jobs_dir.mkdir()
+    return jobs_dir
+
+
+def create_job_dirs(base_dir: Path, count: int) -> list[Path]:
+    """Create mock job directories with staggered timestamps."""
+    job_dirs = []
+    for i in range(count):
+        job_dir = base_dir / f"job_{i}"
+        job_dir.mkdir()
+        time.sleep(0.01)
+        job_dirs.append(job_dir)
+    return job_dirs
+
+
+@pytest.mark.parametrize(
+    "max_jobs, eviction_policy, modify_jobs_fn, expected_remaining_names",
+    [
+        (3, JobEvictionPolicy.TIME_CREATED, None, ["job_3", "job_4", "job_5"]),
+        (
+            2,
+            JobEvictionPolicy.TIME_MODIFIED,
+            lambda dirs: os.utime(dirs[5], (time.time() - 100, time.time() - 100)),
+            ["job_3", "job_4"],
+        ),
+        (6, JobEvictionPolicy.TIME_CREATED, None, ["job_0", "job_1", "job_2", "job_3", "job_4", "job_5"]),
+        (0, JobEvictionPolicy.TIME_CREATED, None, ["job_0", "job_1", "job_2", "job_3", "job_4", "job_5"]),
+    ],
+    ids=["creation_time", "modified_time", "under_limit", "disabled_none"],
+)
+def test_output_directory_cleanup(max_jobs, eviction_policy, modify_jobs_fn, expected_remaining_names, job_output_dir):
+    """Tests the output directory cleanup logic with various eviction policies and limits."""
+    jobs_dir = job_output_dir / "jobs"
+    jobs_dir.mkdir()
+    initial_job_dirs = create_job_dirs(jobs_dir, 5)  # Creates job_0 to job_4 inside jobs/
+    current_job_dir = jobs_dir / "job_5"
+    current_job_dir.mkdir()
+
+    if modify_jobs_fn:
+        all_job_dirs = initial_job_dirs + [current_job_dir]
+        modify_jobs_fn(all_job_dirs)
+
+    eval_config = EvalConfig()
+    eval_config.general.output = EvalOutputConfig(dir=job_output_dir,
+                                                  cleanup=False,
+                                                  job_management=JobManagementConfig(
+                                                      append_job_id_to_output_dir=True,
+                                                      max_jobs=max_jobs,
+                                                      eviction_policy=eviction_policy,
+                                                  ))
+
+    eval_config.general.output_dir = job_output_dir
+
+    run_config = EvaluationRunConfig(config_file=Path("dummy.yaml"), dataset="dummy_dataset")
+    evaluation_run = EvaluationRun(run_config)
+    evaluation_run.eval_config = eval_config
+
+    evaluation_run.cleanup_output_directory()
+
+    remaining_dirs = sorted(p.name for p in jobs_dir.iterdir())
+    assert remaining_dirs == sorted(expected_remaining_names)

@@ -25,6 +25,7 @@ from pydantic import BaseModel
 
 from aiq.data_models.evaluate import ProfilerConfig
 from aiq.data_models.intermediate_step import IntermediateStep
+from aiq.profiler.data_models import ProfilerResults
 from aiq.profiler.forecasting.model_trainer import ModelTrainer
 from aiq.profiler.inference_metrics_model import InferenceMetricsModel
 from aiq.profiler.utils import create_standardized_dataframe
@@ -80,7 +81,7 @@ class ProfilerRunner:
         # Ensure output directory
         os.makedirs(output_dir, exist_ok=True)
 
-    async def run(self, all_steps: list[list[IntermediateStep]]):
+    async def run(self, all_steps: list[list[IntermediateStep]]) -> ProfilerResults:
         """
         Main entrypoint: Works on Input DataFrame generated from eval to fit forecasting model,
         writes out combined requests JSON, then computes and saves additional metrics,
@@ -171,7 +172,7 @@ class ProfilerRunner:
             uniqueness = compute_inter_query_token_uniqueness_by_llm(all_steps)
             token_uniqueness_results = uniqueness
 
-        if self.profile_config.workflow_runtime_forecast:
+        if self.profile_config.workflow_runtime_forecast or self.profile_config.base_metrics:
             # ------------------------------------------------------------
             # Compute and save workflow runtime metrics
             # ------------------------------------------------------------
@@ -275,7 +276,7 @@ class ProfilerRunner:
                 logger.info("Fitted model for forecasting.")
             except Exception as e:
                 logger.exception("Fitting model failed. %s", e, exc_info=True)
-                return
+                return ProfilerResults()
 
             os.makedirs(self.output_dir, exist_ok=True)
 
@@ -284,6 +285,8 @@ class ProfilerRunner:
                 pickle.dump(fitted_model, f)
 
             logger.info("Saved fitted model to disk.")
+
+        return ProfilerResults(workflow_runtime_metrics=workflow_runtimes_results)
 
     # -------------------------------------------------------------------
     # Confidence Intervals / Metrics

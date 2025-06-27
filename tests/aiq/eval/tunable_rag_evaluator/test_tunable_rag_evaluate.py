@@ -72,7 +72,8 @@ def evaluator(mock_llm, default_score_weights):
                                judge_llm_prompt="Please evaluate the answer.",
                                max_concurrency=2,
                                default_scoring=True,
-                               default_score_weights=default_score_weights)
+                               default_score_weights=default_score_weights,
+                               llm_retry_control_params=None)
 
 
 async def test_evaluate_success(evaluator, rag_eval_input):
@@ -132,7 +133,8 @@ async def test_evaluate_custom_scoring():
                                     judge_llm_prompt="Score this answer.",
                                     max_concurrency=1,
                                     default_scoring=False,
-                                    default_score_weights={})
+                                    default_score_weights={},
+                                    llm_retry_control_params=None)
 
     input_data = EvalInput(eval_input_items=[
         EvalInputItem(id="1",

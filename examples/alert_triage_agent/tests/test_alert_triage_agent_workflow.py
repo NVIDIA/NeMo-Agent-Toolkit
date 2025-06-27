@@ -63,6 +63,7 @@ async def test_full_workflow():
     # Deterministic data point: host under maintenance
     assert 'maintenance' in results[3]
 
-    # Check that rows 0-2 (hosts not under maintenance) contain root cause categorization
-    for i in range(3):
-        assert "root cause category" in results[i].lower()
+    # Check that rows with hosts not under maintenance contain root cause categorization
+    for i in range(len(results)):
+        if i != 3:
+            assert "root cause category" in results[i].lower()
