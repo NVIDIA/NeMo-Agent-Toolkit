@@ -79,12 +79,15 @@ class CalcRunnerConfig(BaseModel):
     """
     config_file: Path
     concurrencies: list[int]
+
     target_p95_latency: float
     target_p95_workflow_runtime: float
     target_users: int
 
     test_gpu_count: int
     test_gpu_type: str
+
+    plot_output_dir: Path | None = None
 
 
 class MetricPerConcurrency(BaseModel):
