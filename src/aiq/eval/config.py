@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalOutput
+from aiq.profiler.data_models import ProfilerResults
 
 
 class EvaluationRunConfig(BaseModel):
@@ -48,6 +49,7 @@ class EvaluationRunOutput(BaseModel):
 
     eval_input: EvalInput
     evaluation_results: list[tuple[str, EvalOutput]]
+    profiler_results: ProfilerResults
 
 
 class MultiEvalutionRunConfig(BaseModel):
@@ -60,6 +62,7 @@ class MultiEvalutionRunConfig(BaseModel):
     """
     base_config: EvaluationRunConfig
     overrides: dict[typing.Any, str]
+    write_output: bool = True
 
 
 class MultiEvaluationRunOutput(BaseModel):

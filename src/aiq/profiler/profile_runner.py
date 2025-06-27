@@ -286,7 +286,7 @@ class ProfilerRunner:
 
             logger.info("Saved fitted model to disk.")
 
-        return ProfilerResults(workflow_runtime_metrics=workflow_runtimes_results)
+        return ProfilerResults(workflow_runtime_metrics=workflow_runtimes_results, llm_latency_ci=llm_latency_ci)
 
     # -------------------------------------------------------------------
     # Confidence Intervals / Metrics

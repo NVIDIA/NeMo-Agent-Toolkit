@@ -15,6 +15,7 @@
 
 import typing
 
+from aiq.eval.config import EvaluationRunOutput
 from aiq.eval.config import MultiEvalutionRunConfig
 from aiq.eval.evaluate import EvaluationRun
 
@@ -29,7 +30,7 @@ class MultiEvaluationRunner:
         Initialize a multi-evaluation run.
         """
         self.config = config
-        self.evaluation_runs = {}
+        self.evaluation_run_outputs: dict[typing.Any, EvaluationRunOutput] = {}
 
     async def run_all(self):
         """
@@ -44,11 +45,11 @@ class MultiEvaluationRunner:
         """
         # Update the base config with the override
         self.config.base_config.override = override_value
+        self.config.base_config.write_output = self.config.write_output
 
         # Instantiate the evaluation run
         evaluation_run = EvaluationRun(self.config.base_config)
 
-        evaluation_run.apply_overrides(override_id, override_value)
         # Run the evaluation
-        await evaluation_run.run_all()
-        return evaluation_run
+        evaluation_run_output = await evaluation_run.run_and_evaluate()
+        self.evaluation_run_outputs[override_id] = evaluation_run_output

@@ -456,8 +456,9 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             output_uploader.run_custom_scripts()
             await output_uploader.upload_directory()
 
-        return EvaluationRunOutput(
-            workflow_output_file=self.workflow_output_file,
-            evaluator_output_files=self.evaluator_output_files,
-            workflow_interrupted=self.workflow_interrupted,
-        )
+        return EvaluationRunOutput(workflow_output_file=self.workflow_output_file,
+                                   evaluator_output_files=self.evaluator_output_files,
+                                   workflow_interrupted=self.workflow_interrupted,
+                                   eval_input=self.eval_input,
+                                   evaluation_results=self.evaluation_results,
+                                   profiler_results=profiler_results)
