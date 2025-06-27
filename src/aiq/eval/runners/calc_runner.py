@@ -84,7 +84,7 @@ class CalcRunner:
 
     def calc_gpu_count(self) -> float:
         """
-        Estimate GPU count to meet target latency and/or workflow runtime SLO
+        Estimate GPU count to meet target latency and/or workflow runtime SLA
         for a given target user load.
 
         Formula (if both constraints set):

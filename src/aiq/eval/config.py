@@ -52,7 +52,7 @@ class EvaluationRunOutput(BaseModel):
     profiler_results: ProfilerResults
 
 
-class MultiEvalutionRunConfig(BaseModel):
+class MultiEvaluationRunConfig(BaseModel):
     """
     Parameters used for a multi-evaluation run.
     This includes a base config and a dict of overrides. The key is an id of
