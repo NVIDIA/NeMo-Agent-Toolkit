@@ -145,8 +145,8 @@ class CalcRunner:
         required_gpus = (target_users / best_concurrency) * multiplier * test_gpu_count
 
         logger.info(f"[GPU Estimation] concurrency={best_concurrency}, "
-                    f"obs_latency={observed_latency:.3f}s, target_latency={target_latency}, "
-                    f"obs_runtime={observed_runtime:.3f}s, target_runtime={target_runtime}, "
+                    f"obs_latency={observed_latency:.3f}s, target_latency={target_latency:.3f}s, "
+                    f"obs_runtime={observed_runtime:.3f}s, target_runtime={target_runtime:.3f}s, "
                     f"users={target_users}, test_gpus={test_gpu_count} → "
                     f"required_gpus={required_gpus:.2f}")
 
