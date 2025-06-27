@@ -18,7 +18,6 @@ import logging
 from pathlib import Path
 
 import click
-import yaml
 
 from aiq.eval.config import CalcRunnerConfig
 from aiq.eval.runners.calc_runner import CalcRunner
@@ -37,13 +36,13 @@ logger = logging.getLogger(__name__)
     "--target_llm_latency",
     type=float,
     required=True,
-    help="Target p95 LLM latency (seconds).",
+    help="Target p95 LLM latency (seconds). Can be set to 0 to ignore.",
 )
 @click.option(
     "--target_workflow_runtime",
     type=float,
     required=True,
-    help="Target p95 workflow runtime (seconds).",
+    help="Target p95 workflow runtime (seconds). Can be set to 0 to ignore.",
 )
 @click.option(
     "--target_users",
@@ -64,6 +63,13 @@ logger = logging.getLogger(__name__)
     default=None,
     help="Directory to save plots (optional).",
 )
+@click.option(
+    "--concurrencies",
+    type=str,
+    required=False,
+    default="1,2,4,8,16",
+    help="Comma-separated list of concurrency values to test (e.g., 1,2,4,8,16). Default: 1,2,4,8,16",
+)
 @click.pass_context
 def calc_command(ctx,
                  config,
@@ -71,19 +77,20 @@ def calc_command(ctx,
                  target_workflow_runtime,
                  target_users,
                  test_gpu_count,
-                 plot_output_dir):
+                 plot_output_dir,
+                 concurrencies):
     """Estimate GPU count and plot metrics for a workflow profile."""
-    # Load the config YAML
-    with open(config, "r") as f:
-        config_dict = yaml.safe_load(f)
+    # Enforce that at least one of the targets is non-zero
+    if target_llm_latency == 0 and target_workflow_runtime == 0:
+        raise click.UsageError("At least one of --target_llm_latency or --target_workflow_runtime must be non-zero.")
 
-    # Extract concurrencies from config or set a default
-    concurrencies = config_dict.get("concurrencies", [1, 2, 4, 8, 16])
+    # Only use CLI concurrencies, with default
+    concurrencies_list = [int(x) for x in concurrencies.split(",") if x.strip()]
 
     # Build CalcRunnerConfig
     runner_config = CalcRunnerConfig(
         config_file=config,
-        concurrencies=concurrencies,
+        concurrencies=concurrencies_list,
         target_p95_latency=target_llm_latency,
         target_p95_workflow_runtime=target_workflow_runtime,
         target_users=target_users,
