@@ -49,22 +49,22 @@ class CalcRunner:
         """
         rows = []
 
-        for run_id, output in self.results.items():
+        for concurrency, output in self.results.items():
             profiler_results = output.profiler_results
-            concurrency = int(run_id.split("_")[-1])
+            if not profiler_results or not profiler_results.llm_latency_ci or \
+                    not profiler_results.workflow_runtime_metrics:
+                continue
 
             latency = profiler_results.llm_latency_ci.p95
             workflow_runtime = profiler_results.workflow_runtime_metrics.p95
 
             if latency and workflow_runtime:
                 rows.append({
-                    "concurrency": concurrency,
-                    "p95_latency": latency.p95,
-                    "p95_workflow_runtime": workflow_runtime.p95
+                    "concurrency": concurrency, "p95_latency": latency, "p95_workflow_runtime": workflow_runtime
                 })
 
         if not rows:
-            print("No profile data available to plot.")
+            logger.warning("No profile data available to plot.")
             return
 
         df = pd.DataFrame(rows).sort_values("concurrency")
@@ -84,46 +84,72 @@ class CalcRunner:
 
     def calc_gpu_count(self) -> float:
         """
-        Estimate the number of GPUs required to meet latency SLO for a target number of users.
+        Estimate GPU count to meet target latency and/or workflow runtime SLO
+        for a given target user load.
 
-        This uses the highest concurrency run where the p95 latency is still within the target.
+        Formula (if both constraints set):
+            G_required = (U_target / C_test) * (L_obs / L_target) * (R_obs / R_target) * G_test
 
-        Formula:
+        Formula (if only latency constraint set):
             G_required = (U_target / C_test) * (L_obs / L_target) * G_test
 
-        Where:
-            - U_target: desired number of users to support
-            - C_test: concurrency level used in test
-            - L_obs: observed p95 latency
-            - L_target: target p95 latency
-            - G_test: number of GPUs used during the test
+        Formula (if only runtime constraint set):
+            G_required = (U_target / C_test) * (R_obs / R_target) * G_test
         """
+
+        # Config parameters
         target_latency = self.config.target_p95_latency
+        target_runtime = self.config.target_p95_workflow_runtime
         target_users = self.config.target_users
         test_gpu_count = self.config.test_gpu_count
 
-        if target_latency <= 0:
-            raise ValueError("Target p95 latency must be greater than 0.")
-        if test_gpu_count <= 0:
-            raise ValueError("Test GPU count must be greater than 0.")
-        if target_users <= 0:
-            raise ValueError("Target user count must be greater than 0.")
+        if target_users <= 0 or test_gpu_count <= 0:
+            raise ValueError("Target users and test GPU count must be > 0.")
+        if target_latency <= 0 and target_runtime <= 0:
+            raise ValueError("At least one of target_p95_latency or target_p95_workflow_runtime must be > 0.")
 
-        # Find all datapoints that meet the latency target
-        valid_runs = [(int(concurrency.split("_")[-1]), output) for concurrency, output in self.results.items()
-                      if output.profiler_results.llm_latency_ci.p95 <= target_latency]
+        use_latency = target_latency > 0
+        use_runtime = target_runtime > 0
+
+        # Filter valid runs
+        valid_runs = []
+        for concurrency, output in self.results.items():
+            if not output.profiler_results or not output.profiler_results.llm_latency_ci or\
+                    not output.profiler_results.workflow_runtime_metrics:
+                continue
+
+            latency = output.profiler_results.llm_latency_ci.p95
+            runtime = output.profiler_results.workflow_runtime_metrics.p95
+
+            latency_ok = not use_latency or latency <= target_latency
+            runtime_ok = not use_runtime or runtime <= target_runtime
+
+            if latency_ok and runtime_ok:
+                valid_runs.append((concurrency, output))
 
         if not valid_runs:
-            logger.warning("No valid runs found that meet the latency target.")
+            logger.warning("No valid test run met both latency/runtime targets.")
             return -1
 
-        # Use the highest concurrency that passed
+        # Use highest passing concurrency
         best_concurrency, best_output = max(valid_runs, key=lambda x: x[0])
         observed_latency = best_output.profiler_results.llm_latency_ci.p95
+        observed_runtime = best_output.profiler_results.workflow_runtime_metrics.p95
 
-        required_gpus = ((target_users / best_concurrency) * (observed_latency / target_latency) * test_gpu_count)
+        multiplier = 1.0
+        if use_latency:
+            multiplier *= observed_latency / target_latency
+        if use_runtime:
+            multiplier *= observed_runtime / target_runtime
 
-        # Optional: round up to whole number of GPUs
+        required_gpus = (target_users / best_concurrency) * multiplier * test_gpu_count
+
+        logger.info(f"[GPU Estimation] concurrency={best_concurrency}, "
+                    f"obs_latency={observed_latency:.3f}s, target_latency={target_latency}, "
+                    f"obs_runtime={observed_runtime:.3f}s, target_runtime={target_runtime}, "
+                    f"users={target_users}, test_gpus={test_gpu_count} → "
+                    f"required_gpus={required_gpus:.2f}")
+
         return math.ceil(required_gpus)
 
     async def run(self) -> CalcRunnerOutput:
@@ -142,8 +168,7 @@ class CalcRunner:
         self.results = runner.evaluation_run_outputs
 
         metrics_per_concurrency = {}
-        for run_id, output in self.results.items():
-            concurrency = int(run_id.split("_")[-1])
+        for concurrency, output in self.results.items():
             metrics_per_concurrency[concurrency] = MetricPerConcurrency(
                 p95_latency=output.profiler_results.llm_latency_ci.p95,
                 p95_workflow_runtime=output.profiler_results.workflow_runtime_metrics.p95)
