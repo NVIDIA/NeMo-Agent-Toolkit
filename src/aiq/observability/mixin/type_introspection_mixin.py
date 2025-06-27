@@ -26,6 +26,72 @@ class TypeIntrospectionMixin:
     allowing classes to determine their InputT and OutputT types at runtime.
     """
 
+    def _find_generic_types(self) -> tuple[type[Any], type[Any]] | None:
+        """
+        Recursively search through the inheritance hierarchy to find generic type parameters.
+
+        This method handles cases where a class inherits from a generic parent class,
+        resolving the concrete types through the inheritance chain.
+
+        Returns:
+            tuple[type[Any], type[Any]] | None: (input_type, output_type) if found, None otherwise
+        """
+        # First, try to find types directly in this class's __orig_bases__
+        for base_cls in getattr(self.__class__, '__orig_bases__', []):
+            base_cls_args = get_args(base_cls)
+
+            # Direct case: MyClass[InputT, OutputT]
+            if len(base_cls_args) >= 2:
+                return base_cls_args[0], base_cls_args[1]
+
+            # Indirect case: MyClass[SomeGeneric[ConcreteType]]
+            # Need to resolve the generic parent's types
+            if len(base_cls_args) == 1:
+                base_origin = get_origin(base_cls)
+                if base_origin and hasattr(base_origin, '__orig_bases__'):
+                    # Look at the parent's generic definition
+                    for parent_base in getattr(base_origin, '__orig_bases__', []):
+                        parent_args = get_args(parent_base)
+                        if len(parent_args) >= 2:
+                            # Found the pattern: ParentClass[T, list[T]]
+                            # Substitute T with our concrete type
+                            concrete_type = base_cls_args[0]
+                            input_type = self._substitute_type_var(parent_args[0], concrete_type)
+                            output_type = self._substitute_type_var(parent_args[1], concrete_type)
+                            return input_type, output_type
+
+        return None
+
+    def _substitute_type_var(self, type_expr: Any, concrete_type: type) -> type[Any]:
+        """
+        Substitute TypeVar in a type expression with a concrete type.
+
+        Args:
+            type_expr: The type expression potentially containing TypeVars
+            concrete_type: The concrete type to substitute
+
+        Returns:
+            The type expression with TypeVars substituted
+        """
+        from typing import TypeVar
+
+        # If it's a TypeVar, substitute it
+        if isinstance(type_expr, TypeVar):
+            return concrete_type
+
+        # If it's a generic type like list[T], substitute the args
+        origin = get_origin(type_expr)
+        args = get_args(type_expr)
+
+        if origin and args:
+            # Recursively substitute in the arguments
+            new_args = tuple(self._substitute_type_var(arg, concrete_type) for arg in args)
+            # Reconstruct the generic type
+            return origin[new_args]
+
+        # Otherwise, return as-is
+        return type_expr
+
     @property
     @lru_cache
     def input_type(self) -> type[Any]:
@@ -44,11 +110,9 @@ class TypeIntrospectionMixin:
         ValueError
             If the input type cannot be determined from the class definition
         """
-        for base_cls in self.__class__.__orig_bases__:  # pylint: disable=no-member # type: ignore
-            base_cls_args = get_args(base_cls)
-
-            if len(base_cls_args) >= 2:
-                return base_cls_args[0]
+        types = self._find_generic_types()
+        if types:
+            return types[0]
 
         raise ValueError(f"Could not find input type for {self.__class__.__name__}")
 
@@ -70,11 +134,9 @@ class TypeIntrospectionMixin:
         ValueError
             If the output type cannot be determined from the class definition
         """
-        for base_cls in self.__class__.__orig_bases__:  # pylint: disable=no-member # type: ignore
-            base_cls_args = get_args(base_cls)
-
-            if len(base_cls_args) >= 2:
-                return base_cls_args[1]
+        types = self._find_generic_types()
+        if types:
+            return types[1]
 
         raise ValueError(f"Could not find output type for {self.__class__.__name__}")
 

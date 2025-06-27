@@ -59,11 +59,6 @@ from aiq.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
 
-# @dataclasses.dataclass
-# class ConfiguredExporter:
-#     config: TelemetryExporterBaseConfig
-#     instance: BaseExporter
-
 
 @dataclasses.dataclass
 class ConfiguredExporter:

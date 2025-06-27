@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
 from abc import abstractmethod
 from collections.abc import Coroutine
@@ -72,12 +73,21 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
 
         # Check if the processor is compatible with the last processor in the pipeline
         if len(self._processors) > 0:
-            if not issubclass(processor.input_type, self._processors[-1].output_type):
-                raise ValueError(
-                    f"Processor {processor.__class__.__name__} input type {processor.input_type} is not compatible "
-                    f"with the {self._processors[-1].__class__.__name__} output type {self._processors[-1].output_type}"
-                )
-
+            try:
+                if not issubclass(processor.input_class, self._processors[-1].output_class):
+                    raise ValueError(f"Processor {processor.__class__.__name__} input type {processor.input_type} "
+                                     f"is not compatible with the {self._processors[-1].__class__.__name__} "
+                                     f"output type {self._processors[-1].output_type}")
+            except TypeError:
+                # Handle cases where input_class or output_class are generic types that can't be used with issubclass
+                # Fall back to type comparison for generic types
+                logger.warning(
+                    "Cannot use issubclass() for type compatibility check between "
+                    "%s (%s) and %s (%s). Skipping compatibility check.",
+                    processor.__class__.__name__,
+                    processor.input_type,
+                    self._processors[-1].__class__.__name__,
+                    self._processors[-1].output_type)
         self._processors.append(processor)
 
     def remove_processor(self, processor: Processor) -> None:
@@ -93,22 +103,93 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         """Clear all processors from the pipeline."""
         self._processors.clear()
 
+    def _is_batch_compatible(self, processor_output_type: type, exporter_output_type: type) -> bool:
+        """Check if a processor output type is compatible with exporter input, including batch compatibility.
+
+        This method handles the special case where batch processors (outputting list[T])
+        can be compatible with exporters that expect T but can handle list[T].
+
+        Args:
+            processor_output_type: The output type from the processor
+            exporter_output_type: The expected output type of the exporter
+
+        Returns:
+            bool: True if types are compatible, False otherwise
+        """
+        from typing import get_args
+        from typing import get_origin
+
+        # Direct compatibility check
+        try:
+            if issubclass(processor_output_type, exporter_output_type):
+                return True
+        except TypeError:
+            # Handle generic types that can't use issubclass
+            pass
+
+        # Check if processor outputs list[T] and exporter expects T
+        processor_origin = get_origin(processor_output_type)
+        processor_args = get_args(processor_output_type)
+
+        if processor_origin is list and processor_args:
+            # Processor outputs list[T], check if exporter expects T
+            inner_type = processor_args[0]
+            try:
+                if issubclass(inner_type, exporter_output_type):
+                    logger.info(
+                        "Batch compatibility: Processor outputs %s, exporter expects %s. "
+                        "This is compatible for batch processing.",
+                        processor_output_type,
+                        exporter_output_type)
+                    return True
+            except TypeError:
+                # If we can't use issubclass, check type equality
+                if inner_type == exporter_output_type:
+                    logger.info(
+                        "Batch compatibility: Processor outputs %s, exporter expects %s. "
+                        "This is compatible for batch processing.",
+                        processor_output_type,
+                        exporter_output_type)
+                    return True
+
+        return False
+
     async def _pre_start(self) -> None:
         if len(self._processors) > 0:
             first_processor = self._processors[0]
             last_processor = self._processors[-1]
 
             # validate that the first processor's input type is compatible with the exporter's input type
-            if not issubclass(first_processor.input_type, self.input_type):
-                raise ValueError(f"Processor {first_processor.__class__.__name__} input type "
-                                 f"{first_processor.input_type} is not compatible with the "
-                                 f"{self.input_type} input type")
+            try:
+                if not issubclass(first_processor.input_class, self.input_class):
+                    raise ValueError(f"Processor {first_processor.__class__.__name__} input type "
+                                     f"{first_processor.input_type} is not compatible with the "
+                                     f"{self.input_type} input type")
+            except TypeError as e:
+                # Handle cases where classes are generic types that can't be used with issubclass
+                logger.warning(
+                    "Cannot validate type compatibility between %s (%s) "
+                    "and exporter (%s): %s. Skipping validation.",
+                    first_processor.__class__.__name__,
+                    first_processor.input_type,
+                    self.input_type,
+                    e)
 
             # validate that the last processor's output type is compatible with the exporter's output type
-            if not issubclass(last_processor.output_type, self.output_type):
-                raise ValueError(f"Processor {last_processor.__class__.__name__} output type "
-                                 f"{last_processor.output_type} is not compatible with the "
-                                 f"{self.output_type} output type")
+            try:
+                if not self._is_batch_compatible(last_processor.output_type, self.output_type):
+                    raise ValueError(f"Processor {last_processor.__class__.__name__} output type "
+                                     f"{last_processor.output_type} is not compatible with the "
+                                     f"{self.output_type} output type")
+            except TypeError as e:
+                # Handle cases where classes are generic types that can't be used with issubclass
+                logger.warning(
+                    "Cannot validate type compatibility between %s (%s) "
+                    "and exporter (%s): %s. Skipping validation.",
+                    last_processor.__class__.__name__,
+                    last_processor.output_type,
+                    self.output_type,
+                    e)
 
     async def _process_pipeline(self, item: PipelineInputT) -> PipelineOutputT:
         """Process item through all registered processors.
@@ -138,9 +219,22 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         try:
             # Then, run through the processor pipeline
             final_item: PipelineOutputT = await self._process_pipeline(item)
-            if not isinstance(final_item, self.output_class):
-                raise ValueError(f"Processed item {final_item} is not an instance of {self.output_class}")
-            await self.export_processed(final_item)
+
+            # Handle different output types from batch processors
+            if isinstance(final_item, list):
+                # Empty lists from batch processors should be skipped, not exported
+                if len(final_item) == 0:
+                    logger.debug("Skipping export of empty batch from processor pipeline")
+                    return
+
+                # Non-empty lists should be exported (batch processors)
+                await self.export_processed(final_item)
+            elif isinstance(final_item, self.output_class):
+                # Single items should be exported normally
+                await self.export_processed(final_item)
+            else:
+                raise ValueError(f"Processed item {final_item} is not a valid output type. "
+                                 f"Expected {self.output_class} or list[{self.output_class}]")
 
         except Exception as e:
             logger.error("Failed to export item '%s': %s", item, e, exc_info=True)
@@ -165,7 +259,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             logger.warning("Event %s is not compatible with input type %s", event, self.input_type)
 
     @abstractmethod
-    async def export_processed(self, item: PipelineOutputT) -> None:
+    async def export_processed(self, item: PipelineOutputT | list[PipelineOutputT]) -> None:
         """Export the processed item.
 
         This method must be implemented by concrete exporters to handle
@@ -177,23 +271,54 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         pass
 
     def _create_export_task(self, coro: Coroutine):
-        """Create an export task for the given coroutine.
-
-        Args:
-            coro (Coroutine): The coroutine to run as a task.
-        """
+        """Create task with minimal overhead but proper tracking."""
         if not self._running:
             logger.warning("%s: Attempted to create export task while not running", self.name)
             return
 
-        # Submit the export task to the event loop and track it
         try:
-
+            # Create task without expensive naming
             task = self._loop.create_task(coro)
-            # Add a name to the task for better debugging
-            task.set_name(f"{self.name}_export_task")
+
+            # Still track for proper cleanup (this is important!)
             self._tasks.add(task)
             task.add_done_callback(self._tasks.discard)
+
         except Exception as e:
-            logger.error("%s: Failed to create export task: %s", self.name, e, exc_info=True)
+            logger.error("%s: Failed to create task: %s", self.name, e, exc_info=True)
             raise
+
+    @override
+    async def _cleanup(self):
+        """Enhanced cleanup that shuts down all shutdown-aware processors."""
+        # Shutdown all processors that support it
+        if hasattr(self, '_processors'):
+            shutdown_tasks = []
+            for processor in getattr(self, '_processors', []):
+                if hasattr(processor, 'shutdown'):
+                    logger.debug("Shutting down processor: %s", processor.__class__.__name__)
+                    shutdown_tasks.append(processor.shutdown())
+
+            if shutdown_tasks:
+                try:
+                    await asyncio.gather(*shutdown_tasks, return_exceptions=True)
+                    logger.info("Successfully shut down %d processors", len(shutdown_tasks))
+                except Exception as e:
+                    logger.error("Error shutting down processors: %s", e, exc_info=True)
+
+            # Process final batches from batch processors
+            for processor in getattr(self, '_processors', []):
+                if hasattr(processor, 'has_final_batch') and hasattr(processor, 'get_final_batch'):
+                    if processor.has_final_batch():
+                        final_batch = processor.get_final_batch()
+                        if final_batch:
+                            logger.info("Processing final batch of %d items from %s during cleanup",
+                                        len(final_batch),
+                                        processor.__class__.__name__)
+                            try:
+                                await self.export_processed(final_batch)
+                            except Exception as e:
+                                logger.error("Error processing final batch during cleanup: %s", e, exc_info=True)
+
+        # Call parent cleanup
+        await super()._cleanup()

@@ -15,19 +15,16 @@
 
 import logging
 from abc import abstractmethod
-from typing import TypeVar
 
 from aiq.builder.context import AIQContextState
 from aiq.data_models.span import Span
 from aiq.observability.exporter.span_exporter import SpanExporter
+from aiq.observability.processor.batching_processor import BatchingProcessor
 from aiq.observability.processor.processor import Processor
 from aiq.plugins.opentelemetry.otel_span import OtelSpan
 from aiq.plugins.opentelemetry.span_converter import convert_span_to_otel
 
 logger = logging.getLogger(__name__)
-
-SpanT = TypeVar("SpanT", bound=Span)
-OtelSpanT = TypeVar("OtelSpanT", bound=OtelSpan)
 
 
 class SpanToOtelProcessor(Processor[Span, OtelSpan]):
@@ -35,6 +32,15 @@ class SpanToOtelProcessor(Processor[Span, OtelSpan]):
 
     async def process(self, item: Span) -> OtelSpan:
         return convert_span_to_otel(item)
+
+
+class OtelSpanBatchProcessor(BatchingProcessor[OtelSpan]):
+    """Processor that batches OtelSpans with explicit type information.
+
+    This class provides explicit type information for the TypeIntrospectionMixin
+    by overriding the type properties directly.
+    """
+    pass
 
 
 class OtelSpanExporter(SpanExporter[Span, OtelSpan]):
@@ -51,7 +57,7 @@ class OtelSpanExporter(SpanExporter[Span, OtelSpan]):
     - Automatic span construction from IntermediateStep events (via SpanExporter)
     - Built-in Span to OtelSpan conversion (via SpanToOtelProcessor)
     - Support for additional processing steps if needed
-    - Type-safe processing pipeline
+    - Type-safe processing pipeline with enhanced TypeVar compatibility
 
     Inheritance Hierarchy:
     - BaseExporter: Core functionality + TypeIntrospectionMixin
@@ -70,13 +76,26 @@ class OtelSpanExporter(SpanExporter[Span, OtelSpan]):
     def __init__(self, context_state: AIQContextState | None = None):
         """Initialize the OpenTelemetry exporter with the specified context state."""
         super().__init__(context_state)
+
+        self._batching_processor = OtelSpanBatchProcessor(
+            batch_size=100,
+            flush_interval=5.0,
+            max_queue_size=1000,
+            drop_on_overflow=False,  # Never drop items
+            shutdown_timeout=10.0,
+            done_callback=self.export_processed)
+
         self.add_processor(SpanToOtelProcessor())
+        self.add_processor(self._batching_processor)
+
+        # Set up callback for immediate export of scheduled batches
 
     @abstractmethod
-    async def export_processed(self, item: OtelSpan) -> None:
-        """Export the processed span.
+    async def export_processed(self, item: OtelSpan | list[OtelSpan]) -> None:
+        """Export the processed span(s).
 
         Args:
-            item (OtelSpan): The processed span to export.
+            item (OtelSpan | list[OtelSpan]): The processed span(s) to export.
+                Can be a single span or a batch of spans from BatchingProcessor.
         """
         pass
