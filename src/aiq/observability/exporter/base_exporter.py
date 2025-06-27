@@ -131,7 +131,8 @@ class BaseExporter(Exporter):
         self._context_state = context_state
         self._subscription = None
         self._running = False
-        self._loop = asyncio.get_event_loop()
+        # Get the event loop (set to None if not available, will be set later)
+        self._loop = None
         self._is_isolated_instance = False
 
         # Track instance creation

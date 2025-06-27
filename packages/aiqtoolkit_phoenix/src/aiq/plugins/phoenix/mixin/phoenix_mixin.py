@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import logging
 
 from phoenix.otel import HTTPSpanExporter
@@ -59,27 +58,10 @@ class PhoenixMixin:
             if isinstance(spans, OtelSpan):
                 spans = [spans]
 
-            def _sync_export():
-                with using_project(self._project):
-                    for span in spans:
-                        span.set_resource(self._resource)
-                    self._exporter.export(spans)  # type: ignore
+            with using_project(self._project):
+                for span in spans:
+                    span.set_resource(self._resource)
+                self._exporter.export(spans)  # type: ignore
 
-            # Run the blocking call in a thread pool
-            await asyncio.to_thread(_sync_export)
         except Exception as e:
             logger.error("Error exporting spans: %s", e, exc_info=True)
-
-    # async def export_processed(self, span: OtelSpan) -> None:
-    #     """Export an OtelSpan.
-
-    #     Args:
-    #         span (OtelSpan): The OtelSpan to export.
-    #     """
-
-    #     try:
-    #         with using_project(self._project):
-    #             span.set_resource(self._resource)
-    #             self._exporter.export([span])  # type: ignore
-    #     except Exception as e:
-    #         logger.error("Error exporting spans: %s", e, exc_info=True)

@@ -14,10 +14,12 @@
 # limitations under the License.
 
 import logging
+import time
 
 from openinference.semconv.trace import OpenInferenceSpanKindValues
 from openinference.semconv.trace import SpanAttributes
 from opentelemetry.trace import SpanContext
+from opentelemetry.trace import SpanKind
 from opentelemetry.trace import Status
 from opentelemetry.trace import StatusCode
 from opentelemetry.trace import TraceFlags
@@ -37,6 +39,34 @@ SPAN_EVENT_TYPE_TO_SPAN_KIND_MAP = {
     "FUNCTION_START": OpenInferenceSpanKindValues.CHAIN,
     "FUNCTION_END": OpenInferenceSpanKindValues.CHAIN,
 }
+
+
+# Reuse expensive objects to avoid repeated creation
+class _SharedObjects:
+
+    def __init__(self):
+        self.resource = None  # type: ignore
+        self.instrumentation_scope = None  # type: ignore
+
+
+_shared = _SharedObjects()
+_SAMPLED_TRACE_FLAGS = TraceFlags(1)
+
+
+def _get_shared_resource():
+    """Get shared resource object to avoid repeated creation."""
+    if _shared.resource is None:
+        from opentelemetry.sdk.resources import Resource
+        _shared.resource = Resource.create()  # type: ignore
+    return _shared.resource
+
+
+def _get_shared_instrumentation_scope():
+    """Get shared instrumentation scope to avoid repeated creation."""
+    if _shared.instrumentation_scope is None:
+        from opentelemetry.sdk.trace import InstrumentationScope
+        _shared.instrumentation_scope = InstrumentationScope("aiq", "1.0.0")  # type: ignore
+    return _shared.instrumentation_scope
 
 
 def convert_event_type_to_span_kind(event_type: str) -> OpenInferenceSpanKindValues:
@@ -69,11 +99,7 @@ def convert_span_status_code(aiq_status_code: SpanStatusCode) -> StatusCode:
 
 
 def convert_span_to_otel(aiq_span: Span) -> OtelSpan:
-    """Convert an AIQ Span to an OtelSpan using stateless recursive conversion.
-
-    This is completely stateless - uses parent info directly from Span objects.
-    Each conversion operation is self-contained with only local caching to avoid
-    duplicate work within the same operation.
+    """Convert an AIQ Span to an OtelSpan using ultra-fast conversion.
 
     Args:
         aiq_span (Span): The AIQ span to convert
@@ -81,81 +107,90 @@ def convert_span_to_otel(aiq_span: Span) -> OtelSpan:
     Returns:
         OtelSpan: The converted OtelSpan with proper parent hierarchy.
     """
-    local_cache: dict[int, OtelSpan] = {}  # Local cache just for this operation
-    return _convert_span_with_parents(aiq_span, local_cache)
-
-
-def _convert_span_with_parents(aiq_span: Span, local_cache: dict[int, OtelSpan]) -> OtelSpan:
-    """Convert a span ensuring its parent chain is converted first (stateless).
-
-    This uses only a local cache for this single conversion operation.
-    No state is maintained between different span conversion operations.
-
-    Args:
-        aiq_span (Span): The span to convert along with its parent chain
-        local_cache (dict[int, OtelSpan]): Local cache only for this conversion operation
-
-    Returns:
-        OtelSpan: The converted OtelSpan with proper parent relationships
-    """
+    # Fast path for spans without context
     if not aiq_span.context:
-        # Create a span without context - fallback case
-        return OtelSpan(
-            name=aiq_span.name,
-            context=None,
-            attributes=aiq_span.attributes.copy(),
-            start_time=aiq_span.start_time,
-            end_time=aiq_span.end_time,
-        )
+        # Create minimal OtelSpan bypassing expensive constructor
+        otel_span = object.__new__(OtelSpan)  # Bypass __init__
+        otel_span._name = aiq_span.name
+        otel_span._context = None  # type: ignore
+        otel_span._parent = None
+        otel_span._attributes = aiq_span.attributes.copy()
+        otel_span._events = []
+        otel_span._links = []
+        otel_span._kind = SpanKind.INTERNAL
+        otel_span._start_time = aiq_span.start_time
+        otel_span._end_time = aiq_span.end_time
+        otel_span._status = Status(StatusCode.UNSET)
+        otel_span._ended = False
+        otel_span._resource = _get_shared_resource()  # type: ignore
+        otel_span._instrumentation_scope = _get_shared_instrumentation_scope()  # type: ignore
+        otel_span._dropped_attributes = 0
+        otel_span._dropped_events = 0
+        otel_span._dropped_links = 0
+        otel_span._status_description = None
+        return otel_span
 
-    span_id = aiq_span.context.span_id
-
-    # Check local cache (only for this conversion operation)
-    if span_id in local_cache:
-        return local_cache[span_id]
-
-    # Convert parent first (if exists) using parent info from Span object
+    # Process parent efficiently (if needed)
     parent_otel_span = None
-    if aiq_span.parent:
-        parent_otel_span = _convert_span_with_parents(aiq_span.parent, local_cache)
-
-    # Create OpenTelemetry SpanContext - inherit trace_id from parent if available
     trace_id = aiq_span.context.trace_id
-    if parent_otel_span and parent_otel_span.get_span_context():
-        trace_id = parent_otel_span.get_span_context().trace_id
 
+    if aiq_span.parent:
+        parent_otel_span = convert_span_to_otel(aiq_span.parent)
+        parent_context = parent_otel_span.get_span_context()
+        trace_id = parent_context.trace_id
+
+    # Create SpanContext efficiently
     otel_span_context = SpanContext(
         trace_id=trace_id,
         span_id=aiq_span.context.span_id,
         is_remote=False,
-        trace_flags=TraceFlags(1),  # SAMPLED
+        trace_flags=_SAMPLED_TRACE_FLAGS,  # Reuse flags object
     )
 
-    # Convert status
-    otel_status_code = convert_span_status_code(aiq_span.status.code)
-    otel_status = Status(otel_status_code, aiq_span.status.message)
+    # Create OtelSpan bypassing expensive constructor
+    otel_span = object.__new__(OtelSpan)  # Bypass __init__
+    otel_span._name = aiq_span.name
+    otel_span._context = otel_span_context
+    otel_span._parent = parent_otel_span
+    otel_span._attributes = aiq_span.attributes.copy()
+    otel_span._events = []
+    otel_span._links = []
+    otel_span._kind = SpanKind.INTERNAL
+    otel_span._start_time = aiq_span.start_time
+    otel_span._end_time = aiq_span.end_time
 
-    # Create the OtelSpan with parent reference
-    otel_span = OtelSpan(
-        name=aiq_span.name,
-        context=otel_span_context,
-        parent=parent_otel_span,
-        attributes=aiq_span.attributes.copy(),
-        start_time=aiq_span.start_time,
-        end_time=aiq_span.end_time,
-        status=otel_status,
-    )
-    # Set span kind
-    span_kind = convert_event_type_to_span_kind(aiq_span.attributes.get("aiq.event_type", "UNKNOWN"))
-    otel_span.set_attribute(SpanAttributes.OPENINFERENCE_SPAN_KIND, span_kind.value)
+    # Reuse status conversion
+    status_code = convert_span_status_code(aiq_span.status.code)
+    otel_span._status = Status(status_code, aiq_span.status.message)
 
-    # Convert and add events
-    for aiq_event in aiq_span.events:
-        event_timestamp_ns = int(aiq_event.timestamp) if aiq_event.timestamp else None
-        otel_span.add_event(name=aiq_event.name, attributes=aiq_event.attributes, timestamp=event_timestamp_ns)
+    otel_span._ended = False
+    otel_span._resource = _get_shared_resource()  # type: ignore
+    otel_span._instrumentation_scope = _get_shared_instrumentation_scope()  # type: ignore
+    otel_span._dropped_attributes = 0
+    otel_span._dropped_events = 0
+    otel_span._dropped_links = 0
+    otel_span._status_description = None
 
-    # Store in local cache (only for this operation)
-    local_cache[span_id] = otel_span
+    # Set span kind efficiently (direct attribute modification)
+    event_type = aiq_span.attributes.get("aiq.event_type", "UNKNOWN")
+    span_kind = SPAN_EVENT_TYPE_TO_SPAN_KIND_MAP.get(event_type, OpenInferenceSpanKindValues.UNKNOWN)
+    otel_span._attributes[SpanAttributes.OPENINFERENCE_SPAN_KIND] = span_kind.value
+
+    # Process events (only if they exist)
+    if aiq_span.events:
+        for aiq_event in aiq_span.events:
+            # Optimize timestamp handling
+            if isinstance(aiq_event.timestamp, int):
+                event_timestamp_ns = aiq_event.timestamp
+            elif aiq_event.timestamp:
+                event_timestamp_ns = int(aiq_event.timestamp)
+            else:
+                event_timestamp_ns = int(time.time() * 1e9)
+
+            # Add event directly to internal list (bypass add_event method)
+            otel_span._events.append({
+                "name": aiq_event.name, "attributes": aiq_event.attributes, "timestamp": event_timestamp_ns
+            })
 
     return otel_span
 

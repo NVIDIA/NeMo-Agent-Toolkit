@@ -31,7 +31,7 @@ class SpanToOtelProcessor(Processor[Span, OtelSpan]):
     """Processor that converts a Span to an OtelSpan."""
 
     async def process(self, item: Span) -> OtelSpan:
-        return convert_span_to_otel(item)
+        return convert_span_to_otel(item)  # type: ignore
 
 
 class OtelSpanBatchProcessor(BatchingProcessor[OtelSpan]):
@@ -58,6 +58,7 @@ class OtelSpanExporter(SpanExporter[Span, OtelSpan]):
     - Built-in Span to OtelSpan conversion (via SpanToOtelProcessor)
     - Support for additional processing steps if needed
     - Type-safe processing pipeline with enhanced TypeVar compatibility
+    - Batching support for efficient export
 
     Inheritance Hierarchy:
     - BaseExporter: Core functionality + TypeIntrospectionMixin
@@ -71,24 +72,32 @@ class OtelSpanExporter(SpanExporter[Span, OtelSpan]):
 
     Args:
         context_state (AIQContextState | None): The context state to use for the exporter.
+        batch_size (int): The batch size for exporting.
+        flush_interval (float): The flush interval for exporting.
+        max_queue_size (int): The maximum queue size for exporting.
+        drop_on_overflow (bool): Whether to drop on overflow for exporting.
+        shutdown_timeout (float): The shutdown timeout for exporting.
     """
 
-    def __init__(self, context_state: AIQContextState | None = None):
+    def __init__(self,
+                 context_state: AIQContextState | None = None,
+                 batch_size: int = 100,
+                 flush_interval: float = 5.0,
+                 max_queue_size: int = 1000,
+                 drop_on_overflow: bool = False,
+                 shutdown_timeout: float = 10.0):
         """Initialize the OpenTelemetry exporter with the specified context state."""
         super().__init__(context_state)
 
-        self._batching_processor = OtelSpanBatchProcessor(
-            batch_size=100,
-            flush_interval=5.0,
-            max_queue_size=1000,
-            drop_on_overflow=False,  # Never drop items
-            shutdown_timeout=10.0,
-            done_callback=self.export_processed)
+        self._batching_processor = OtelSpanBatchProcessor(batch_size=batch_size,
+                                                          flush_interval=flush_interval,
+                                                          max_queue_size=max_queue_size,
+                                                          drop_on_overflow=drop_on_overflow,
+                                                          shutdown_timeout=shutdown_timeout,
+                                                          done_callback=self.export_processed)
 
         self.add_processor(SpanToOtelProcessor())
         self.add_processor(self._batching_processor)
-
-        # Set up callback for immediate export of scheduled batches
 
     @abstractmethod
     async def export_processed(self, item: OtelSpan | list[OtelSpan]) -> None:

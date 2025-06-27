@@ -53,10 +53,6 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         context_state (AIQContextState, optional): The context state to use for the exporter. Defaults to None.
     """
 
-    # ProcessingExporter doesn't add any additional attributes that need isolation
-    # The _processors list should be preserved (shared) across copies
-    _isolate_attributes: set = set()
-
     def __init__(self, context_state: AIQContextState | None = None):
         super().__init__(context_state)
         self._processors: list[Processor] = []  # List of processors that implement process(item) -> item
@@ -175,7 +171,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
                     self.input_type,
                     e)
 
-            # validate that the last processor's output type is compatible with the exporter's output type
+            # Validate that the last processor's output type is compatible with the exporter's output type
             try:
                 if not self._is_batch_compatible(last_processor.output_type, self.output_type):
                     raise ValueError(f"Processor {last_processor.__class__.__name__} output type "
@@ -277,10 +273,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             return
 
         try:
-            # Create task without expensive naming
-            task = self._loop.create_task(coro)
-
-            # Still track for proper cleanup (this is important!)
+            task = asyncio.create_task(coro)
             self._tasks.add(task)
             task.add_done_callback(self._tasks.discard)
 

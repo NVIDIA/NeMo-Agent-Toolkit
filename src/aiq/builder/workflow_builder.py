@@ -152,7 +152,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Now attach to AIQ Toolkit's root logger
             logging.getLogger().addHandler(handler)
 
-        # Register the exporter factories
+        # Add the trace exporters
         for key, trace_exporter_config in telemetry_config.tracing.items():
             await self.add_exporter(key, trace_exporter_config)
 

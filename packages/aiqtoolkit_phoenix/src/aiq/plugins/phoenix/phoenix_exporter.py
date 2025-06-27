@@ -37,7 +37,25 @@ class PhoenixOtelExporter(PhoenixMixin, OtelSpanExporter):
         context_state: Execution context for isolation
         endpoint: Phoenix server endpoint
         project: Project name for trace grouping
+        batch_size: Batch size for exporting
+        flush_interval: Flush interval for exporting
+        max_queue_size: Maximum queue size for exporting
+        drop_on_overflow: Drop on overflow for exporting
+        shutdown_timeout: Shutdown timeout for exporting
     """
 
-    def __init__(self, context_state: AIQContextState | None = None, **phoenix_kwargs):
-        super().__init__(context_state=context_state, **phoenix_kwargs)
+    def __init__(self,
+                 context_state: AIQContextState | None = None,
+                 batch_size: int = 100,
+                 flush_interval: float = 5.0,
+                 max_queue_size: int = 1000,
+                 drop_on_overflow: bool = False,
+                 shutdown_timeout: float = 10.0,
+                 **phoenix_kwargs):
+        super().__init__(context_state=context_state,
+                         batch_size=batch_size,
+                         flush_interval=flush_interval,
+                         max_queue_size=max_queue_size,
+                         drop_on_overflow=drop_on_overflow,
+                         shutdown_timeout=shutdown_timeout,
+                         **phoenix_kwargs)

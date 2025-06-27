@@ -15,8 +15,6 @@
 """Unit tests for the Processor abstract base class."""
 
 from typing import Any
-from typing import Dict
-from typing import List
 
 import pytest
 
@@ -61,13 +59,13 @@ class TestProcessorTypeIntrospection:
     def test_generic_type_introspection(self):
         """Test type introspection with generic types."""
 
-        class ListToStringProcessor(Processor[List[int], str]):
+        class ListToStringProcessor(Processor[list[int], str]):
 
-            async def process(self, item: List[int]) -> str:
+            async def process(self, item: list[int]) -> str:
                 return str(item)
 
         processor = ListToStringProcessor()
-        assert processor.input_type == List[int]
+        assert processor.input_type == list[int]
         assert processor.output_type == str
         assert processor.input_class == list  # Generic origin is list
         assert processor.output_class == str
@@ -75,14 +73,14 @@ class TestProcessorTypeIntrospection:
     def test_complex_generic_type_introspection(self):
         """Test type introspection with complex generic types."""
 
-        class DictToListProcessor(Processor[Dict[str, Any], List[str]]):
+        class DictToListProcessor(Processor[dict[str, Any], list[str]]):
 
-            async def process(self, item: Dict[str, Any]) -> List[str]:
+            async def process(self, item: dict[str, Any]) -> list[str]:
                 return list(item.keys())
 
         processor = DictToListProcessor()
-        assert processor.input_type == Dict[str, Any]
-        assert processor.output_type == List[str]
+        assert processor.input_type == dict[str, Any]
+        assert processor.output_type == list[str]
         assert processor.input_class == dict
         assert processor.output_class == list
 
@@ -90,7 +88,7 @@ class TestProcessorTypeIntrospection:
         """Test error handling when type introspection fails."""
         from aiq.observability.mixin.type_introspection_mixin import TypeIntrospectionMixin
 
-        # Create a class with TypeIntrospectionMixin but no __orig_bases__
+        # Create a class with TypeIntrospectionMixin but no generic type parameters
         class BadProcessor(TypeIntrospectionMixin):
 
             async def process(self, item):
@@ -98,10 +96,10 @@ class TestProcessorTypeIntrospection:
 
         processor = BadProcessor()
 
-        with pytest.raises(AttributeError, match="type object 'BadProcessor' has no attribute '__orig_bases__'"):
+        with pytest.raises(ValueError, match="Could not find input type for BadProcessor"):
             _ = processor.input_type
 
-        with pytest.raises(AttributeError, match="type object 'BadProcessor' has no attribute '__orig_bases__'"):
+        with pytest.raises(ValueError, match="Could not find output type for BadProcessor"):
             _ = processor.output_type
 
     def test_type_introspection_caching(self):
@@ -158,9 +156,9 @@ class TestConcreteProcessorImplementations:
     async def test_list_processing_processor(self):
         """Test a processor that works with list types."""
 
-        class ListSumProcessor(Processor[List[int], int]):
+        class ListSumProcessor(Processor[list[int], int]):
 
-            async def process(self, item: List[int]) -> int:
+            async def process(self, item: list[int]) -> int:
                 return sum(item)
 
         processor = ListSumProcessor()
@@ -171,9 +169,9 @@ class TestConcreteProcessorImplementations:
     async def test_dict_processing_processor(self):
         """Test a processor that works with dictionary types."""
 
-        class DictKeyCountProcessor(Processor[Dict[str, Any], int]):
+        class DictKeyCountProcessor(Processor[dict[str, Any], int]):
 
-            async def process(self, item: Dict[str, Any]) -> int:
+            async def process(self, item: dict[str, Any]) -> int:
                 return len(item)
 
         processor = DictKeyCountProcessor()

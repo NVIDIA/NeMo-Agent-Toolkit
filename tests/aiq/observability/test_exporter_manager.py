@@ -23,10 +23,18 @@ from unittest.mock import patch
 import pytest
 
 from aiq.builder.context import AIQContextState
-from aiq.observability import get_exporter_counts
-from aiq.observability import log_exporter_stats
 from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.observability.exporter_manager import ExporterManager
+
+
+def get_exporter_counts():
+    """Helper function to get exporter instance counts."""
+    return {'total': BaseExporter.get_active_instance_count(), 'isolated': BaseExporter.get_isolated_instance_count()}
+
+
+def log_exporter_stats():
+    """Helper function to log exporter statistics."""
+    BaseExporter.log_instance_stats()
 
 
 class MockExporter(BaseExporter):
@@ -501,7 +509,7 @@ class TestExporterManagerLifecycle:
                     # Simulate a stuck exporter that doesn't respond to cancellation
                     await asyncio.sleep(10)  # This will cause timeout
 
-        manager = ExporterManager(shutdown_timeout=0.1)  # Very short timeout
+        manager = ExporterManager(shutdown_timeout=1)  # Very short timeout
         slow_exporter = SlowExporter("slow")
         manager.add_exporter("slow", slow_exporter)
 
