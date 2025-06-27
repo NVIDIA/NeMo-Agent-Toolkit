@@ -456,6 +456,22 @@ The `cleanup` option is used to control the cleanup of the output directory. If 
 
 ### Uploading output directory to remote storage
 You can upload the contents of the entire output directory to remote storage by providing the information needed to upload the output directory in the `eval.general.output` section of the `config.yml` file. The following is an example configuration to upload the output directory to remote storage.
+
+For connecting with S3 using endpoint URL:
+```yaml
+eval:
+  general:
+    output:
+      # Upload contents of output directory to remote storage using custom endpoint url & S3 credentials
+      remote_dir: output
+      s3:
+        endpoint_url: http://10.185.X.X:9000
+        bucket: aiq-simple-bucket
+        access_key: fake-access-key
+        secret_key: fake-secret-key
+```
+
+For connecting with default S3 you can use `region_name` instead of `endpoint_url`:
 ```yaml
 eval:
   general:
@@ -463,7 +479,7 @@ eval:
       # Upload contents of output directory to remote storage using S3 credentials
       remote_dir: output
       s3:
-        endpoint_url: http://10.185.X.X:9000
+        region_name: us-west-2
         bucket: aiq-simple-bucket
         access_key: fake-access-key
         secret_key: fake-secret-key
