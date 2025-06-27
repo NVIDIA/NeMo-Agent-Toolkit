@@ -81,9 +81,11 @@ class OutputUploader:
             if self.s3_config.endpoint_url:
                 region_name = None
                 endpoint_url = self.s3_config.endpoint_url
-            else:
+            elif self.s3_config.region_name:
                 region_name = self.s3_config.region_name
                 endpoint_url = None
+            else:
+                raise ValueError("No endpoint_url or region_name provided in the config: eval.general.output.s3")
             async with session.client(
                     "s3",
                     endpoint_url=endpoint_url,
