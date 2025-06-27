@@ -72,6 +72,10 @@ class EvalOutputConfig(BaseModel):
 class EvalGeneralConfig(BaseModel):
     max_concurrency: int = 8
 
+    # Workflow alias for displaying in evaluation UI, if not provided,
+    # the workflow type will be used
+    workflow_alias: str | None = None
+
     # Output directory for the workflow and evaluation results
     output_dir: Path = Path("/tmp/aiq/examples/default/")
 
