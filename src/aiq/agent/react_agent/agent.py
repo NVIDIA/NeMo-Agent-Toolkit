@@ -124,8 +124,11 @@ class ReActAgentGraph(DualNodeAgent):
                         logger.error("%s No human input passed to the agent.", AGENT_LOG_PREFIX)
                         state.messages += [AIMessage(content=NO_INPUT_ERROR_MESSAGE)]
                         return state
+                    
                     question = state.messages[0].content
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
+                    logger.debug("%s Question received by agent: %s", AGENT_LOG_PREFIX, 
+                                question[:300] + "..." if len(question) > 300 else question)
                     output_message = ""
                     async for event in self.agent.astream({"question": question},
                                                           config=RunnableConfig(callbacks=self.callbacks)):
@@ -146,6 +149,8 @@ class ReActAgentGraph(DualNodeAgent):
                     agent_scratchpad += working_state
                     question = state.messages[0].content
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
+                    logger.debug("%s Question received by agent: %s", AGENT_LOG_PREFIX, 
+                                question[:300] + "..." if len(question) > 300 else question)
                     output_message = ""
                     async for event in self.agent.astream({
                             "question": question, "agent_scratchpad": agent_scratchpad

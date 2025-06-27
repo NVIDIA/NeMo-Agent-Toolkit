@@ -23,13 +23,21 @@ memory:
 retrievers:
   cuda_retriever:
     _type: milvus_retriever
-    uri: http://localhost:19530
+    uri: https://milvus-playground-dgxc-sre-blr-dev.db.nvw.nvidia.com
+    connection_args:
+      user: dgxc_sre_blr_owner
+      password: oc1AMM8RgTyN7FqT
+      db_name: dgxc_sre_blr
     collection_name: "cuda_docs"
     embedding_model: milvus_embedder
     top_k: 10
   mcp_retriever:
     _type: milvus_retriever
-    uri: http://localhost:19530
+    uri: https://milvus-playground-dgxc-sre-blr-dev.db.nvw.nvidia.com
+    connection_args:
+      user: dgxc_sre_blr_owner
+      password: oc1AMM8RgTyN7FqT
+      db_name: dgxc_sre_blr
     collection_name: "mcp_docs"
     embedding_model: milvus_embedder
     top_k: 10

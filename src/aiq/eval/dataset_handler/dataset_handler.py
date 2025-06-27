@@ -81,7 +81,6 @@ class DatasetHandler:
                 output_obj=row.get(self.generated_answer_key, "") if structured else "",
                 trajectory=row.get(self.trajectory_key, []) if structured else [],
                 expected_trajectory=row.get(self.expected_trajectory_key, []) if structured else [],
-                full_dataset_entry=row.to_dict(),
             )
 
         # if input dataframe is empty return an empty list
@@ -152,16 +151,6 @@ class DatasetHandler:
         allow re-running evaluation using the orignal config file and '--skip_workflow' option.
         """
 
-        def parse_if_json_string(value):
-            if isinstance(value, str):
-                try:
-                    return json.loads(value)
-                except json.JSONDecodeError:
-                    return value
-            if hasattr(value, "model_dump"):
-                return value.model_dump()
-            return value
-
         indent = 2
         if self.is_structured_input():
             # Extract structured data from EvalInputItems
@@ -175,6 +164,6 @@ class DatasetHandler:
             } for item in eval_input.eval_input_items]
         else:
             # Unstructured case: return only raw output objects as a JSON array
-            data = [parse_if_json_string(item.output_obj) for item in eval_input.eval_input_items]
+            data = [json.loads(item.output_obj) for item in eval_input.eval_input_items]
 
         return json.dumps(data, indent=indent, ensure_ascii=False, default=str)

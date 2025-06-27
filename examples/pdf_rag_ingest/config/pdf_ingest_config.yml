@@ -1,0 +1,90 @@
+# ============================================================================
+# PDF RAG INGESTION SYSTEM
+# ============================================================================
+
+functions:
+  
+  pdf_ingester:
+    _type: pdf_ingest_milvus
+    description: "Ingests PDF files into Milvus with enhanced metadata and ordering"
+    milvus_uri: "https://milvus-playground-dgxc-sre-blr-dev.db.nvw.nvidia.com"
+    milvus_user: "dgxc_sre_blr_owner"
+    milvus_password: "oc1AMM8RgTyN7FqT"
+    milvus_db_name: "dgxc_sre_blr"
+    collection_name: "pdf_manual"
+    embedding_model: "nvidia/nv-embedqa-e5-v5"
+    chunk_size: 1000
+    chunk_overlap: 200
+    clean_file_after_ingest: false
+  
+  current_time:
+    _type: current_datetime
+    description: "Gets current date and time"
+
+# ----------------------------------------------------------------------------
+# LLMS SECTION  
+# ----------------------------------------------------------------------------
+llms:
+  ingestion_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.05
+    max_tokens: 4000
+    description: "LLM for ingestion coordination and user interaction"
+
+# ----------------------------------------------------------------------------
+# WORKFLOW SECTION
+# ----------------------------------------------------------------------------
+workflow:
+  _type: react_agent
+  
+  # List tools the agent can use
+  tool_names: [
+    pdf_ingester,
+    current_time
+  ]
+  
+  # Which LLM to use for reasoning
+  llm_name: ingestion_llm
+  
+  # Agent behavior settings
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3
+  max_iterations: 10
+  
+  # Custom system prompt for PDF ingestion
+  system_message: |
+    You are a PDF Ingestion Assistant. Your job is to help users ingest PDF files into a Milvus vector database for RAG (Retrieval Augmented Generation) applications.
+
+    CRITICAL REQUIREMENTS:
+    1. Always ask for the full file path when user wants to ingest a PDF
+    2. Validate that the file path exists and is a PDF file
+    3. Use the pdf_ingester tool to process the PDF
+    4. Provide clear status updates during ingestion
+    5. Explain the metadata and ordering features to users
+    
+    CAPABILITIES:
+    - Ingest PDF files with enhanced metadata (filename, page numbers, chunk ordering)
+    - Preserve document structure for sequential retrieval
+    - Connect all chunks from the same PDF via filename metadata
+    - Track ingestion timestamps and file details
+    
+    INGESTION FEATURES EXPLAINED:
+    - Each chunk gets a global chunk_index for ordering
+    - All chunks share the same filename for connection
+    - Page numbers and page-level chunk indices are preserved
+    - Metadata includes file size, total pages, and ingestion details
+    
+    TOOLS AVAILABLE:
+    - pdf_ingester: Ingest PDF files into Milvus database
+    - current_time: Get current timestamp
+    
+    RESPONSE STYLE:
+    - Be helpful and informative
+    - Provide clear success/error messages
+    - Explain what metadata is being added
+    - Suggest next steps after successful ingestion
+    
+    Remember: {tools}
+    Available tool names: {tool_names} 

@@ -42,7 +42,6 @@ class PrefixSpanConfig(BaseModel):
 
 class ProfilerConfig(BaseModel):
 
-    base_metrics: bool = False
     token_usage_forecast: bool = False
     token_uniqueness_forecast: bool = False
     workflow_runtime_forecast: bool = False

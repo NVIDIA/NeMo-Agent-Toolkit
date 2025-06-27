@@ -16,6 +16,7 @@
 import os
 import tempfile
 import typing
+import atexit
 
 from aiq.builder.front_end import FrontEndBase
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
@@ -44,13 +45,27 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
     async def run(self):
 
         # Write the entire config to a temporary file
-        with tempfile.NamedTemporaryFile(mode="w", prefix="aiq_config", suffix=".yml", delete=True) as config_file:
-
+        # Use delete=False to avoid Windows permission issues when uvicorn tries to access the file
+        config_file = tempfile.NamedTemporaryFile(mode="w", prefix="aiq_config", suffix=".yml", delete=False)
+        
+        try:
             # Get as dict
             config_dict = self.full_config.model_dump(mode="json", by_alias=True, round_trip=True)
 
             # Write to YAML file
             yaml_dump(config_dict, config_file)
+            config_file.flush()
+            config_file.close()
+
+            # Register cleanup function to delete the temp file on exit
+            def cleanup_config_file():
+                try:
+                    if os.path.exists(config_file.name):
+                        os.unlink(config_file.name)
+                except Exception:
+                    pass  # Ignore cleanup errors
+            
+            atexit.register(cleanup_config_file)
 
             # Set the config file in the environment
             os.environ["AIQ_CONFIG_FILE"] = str(config_file.name)
@@ -101,3 +116,13 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
                 }
 
                 StandaloneApplication(app, options=options).run()
+                
+        except Exception:
+            # Ensure we close and clean up the temp file if something goes wrong
+            try:
+                config_file.close()
+                if os.path.exists(config_file.name):
+                    os.unlink(config_file.name)
+            except Exception:
+                pass  # Ignore cleanup errors
+            raise

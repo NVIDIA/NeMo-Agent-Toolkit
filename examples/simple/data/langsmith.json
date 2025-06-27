@@ -1,0 +1,27 @@
+[
+{
+"id": "1",
+"question": "What are the main features of LangSmith?",
+"answer": "LangSmith offers three main features: Observability for monitoring and analyzing traces, Evals for evaluating application performance and getting human feedback, and Prompt Engineering for iterating on prompts with version control and collaboration features."
+},
+{
+"id": "2",
+"question": "How does LangSmith help with LLM application observability?",
+"answer": "LangSmith provides LLM-native observability features that help throughout all stages of application development. It allows you to add tracing to your application, create dashboards to view key metrics like RPS, error rates and costs, and get meaningful insights from your application."
+},
+{
+"id": "3",
+"question": "What is the purpose of LangSmith's evaluation features?",
+"answer": "LangSmith's evaluation features help in building and running high-quality evaluations for AI applications. It allows you to quickly assess application performance using off-the-shelf evaluators, analyze evaluation results in the UI, compare results over time, and collect human feedback to improve the application."
+},
+{
+"id": "4",
+"question": "How does LangSmith support prompt engineering?",
+"answer": "LangSmith provides tools for prompt engineering that help you find the perfect prompt for your application. You can create prompts, iterate on models and prompts using the Playground, and manage prompts programmatically in your application."
+},
+{
+"id": "5",
+"question": "Is LangSmith framework-specific or can it be used with any LLM application?",
+"answer": "LangSmith is framework-agnostic and can be used with or without LangChain's open source frameworks. It can be integrated with any LLM application, though it offers specific integration options for LangChain and LangGraph users through environment variables."
+}
+]

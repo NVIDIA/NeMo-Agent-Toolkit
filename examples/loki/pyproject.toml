@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "loki-integration"
+version = "1.0.0"
+description = "Loki Log Analysis Integration for AIQ Toolkit"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+dependencies = [
+    "httpx",
+    "pydantic",
+    "python-dateutil",
+]
+requires-python = ">=3.11"
+
+[project.entry-points."aiq.components"]
+# Register Loki integration tools with AIQ toolkit
+loki_tools = "loki_integration.register"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["loki_integration*"]
+
+[tool.setuptools]
+include-package-data = true 

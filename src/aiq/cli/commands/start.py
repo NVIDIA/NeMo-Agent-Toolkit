@@ -165,22 +165,47 @@ class StartCommandGroup(click.Group):
     def invoke_subcommand(self,
                           ctx: click.Context,
                           cmd_name: str,
-                          config_file: Path,
                           override: tuple[tuple[str, str], ...],
                           **kwargs) -> int | None:
 
         from aiq.runtime.loader import PluginTypes
         from aiq.runtime.loader import discover_and_register_plugins
+        import os
 
-        if (config_file is None):
-            raise click.ClickException("No config file provided.")
+        # Get mode-specific config files from context
+        friday_config_file = ctx.obj.get('friday_config_file') if ctx.obj else None
+        on_call_config_file = ctx.obj.get('on_call_config_file') if ctx.obj else None
+        slack_config_file = ctx.obj.get('slack_config_file') if ctx.obj else None
+        context_override = ctx.obj.get('override', ()) if ctx.obj else ()
+        
+        # Use context override if available, otherwise use the passed override
+        if context_override:
+            override = context_override
+
+        # Validate that we have at least one mode-specific config file
+        if not friday_config_file and not on_call_config_file and not slack_config_file:
+            raise click.ClickException("At least one mode-specific config file (--friday_config_file, --on_call_config_file, or --slack_config_file) must be provided.")
+
+        # Store mode-specific config files in environment variables for FastAPI frontend
+        if friday_config_file:
+            os.environ["AIQ_FRIDAY_CONFIG_FILE"] = str(friday_config_file.absolute())
+            logger.info("FRIDAY mode config file: '%s'", friday_config_file)
+        if on_call_config_file:
+            os.environ["AIQ_ON_CALL_CONFIG_FILE"] = str(on_call_config_file.absolute())
+            logger.info("ON_CALL mode config file: '%s'", on_call_config_file)
+        if slack_config_file:
+            os.environ["AIQ_SLACK_CONFIG_FILE"] = str(slack_config_file.absolute())
+            logger.info("SLACK mode config file: '%s'", slack_config_file)
 
         # Here we need to ensure all objects are loaded before we try to create the config object
         discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
 
-        logger.info("Starting AIQ Toolkit from config file: '%s'", config_file)
+        logger.info("Starting AIQ Toolkit with mode-specific configurations")
 
-        config_dict = load_and_override_config(config_file, override)
+        # Use the first available mode-specific config for frontend setup
+        # This is only needed to initialize the frontend properly, actual mode handling is done in the worker
+        setup_config_file = friday_config_file or on_call_config_file or slack_config_file
+        config_dict = load_and_override_config(setup_config_file, override)
 
         # Get the front end for the command
         front_end: RegisteredFrontEndInfo = self._registered_front_ends[cmd_name]
@@ -244,7 +269,46 @@ class StartCommandGroup(click.Group):
                invoke_without_command=False,
                help="Run an AIQ Toolkit workflow using a front end configuration.",
                cls=StartCommandGroup)
+@click.option("--config_file",
+              type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
+              required=False,
+              help="A JSON/YAML file that sets the parameters for the workflow.")
+@click.option("--friday_config_file",
+              type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
+              required=False,
+              help="A JSON/YAML file that sets the parameters for the FRIDAY mode workflow.")
+@click.option("--on_call_config_file",
+              type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
+              required=False,
+              help="A JSON/YAML file that sets the parameters for the ON_CALL mode workflow.")
+@click.option("--slack_config_file",
+              type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
+              required=False,
+              help="A JSON/YAML file that sets the parameters for the SLACK mode workflow.")
+@click.option("--override",
+              nargs=2,
+              multiple=True,
+              type=str,
+              help="Override config values using dot notation (e.g., --override llms.nim_llm.temperature 0.7)")
 @click.pass_context
-def start_command(ctx: click.Context, **kwargs) -> None:
-    """Run an AIQ Toolkit workflow using a front end configuration."""
-    pass
+def start_command(ctx: click.Context,
+                  config_file: Path | None,
+                  friday_config_file: Path | None,
+                  on_call_config_file: Path | None,
+                  slack_config_file: Path | None,
+                  override: tuple[tuple[str, str], ...],
+                  **kwargs) -> None:
+    """
+    Start AIQ Toolkit with the specified front end.
+    """
+    
+    # Validate that we have at least one mode-specific config file
+    if not friday_config_file and not on_call_config_file and not slack_config_file:
+        raise click.ClickException("At least one mode-specific config file (--friday_config_file, --on_call_config_file, or --slack_config_file) must be provided.")
+    
+    # Store config files in context for subcommands
+    ctx.ensure_object(dict)
+    ctx.obj['friday_config_file'] = friday_config_file
+    ctx.obj['on_call_config_file'] = on_call_config_file
+    ctx.obj['slack_config_file'] = slack_config_file
+    ctx.obj['override'] = override

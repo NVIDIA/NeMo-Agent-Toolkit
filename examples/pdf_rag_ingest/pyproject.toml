@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pdf-rag-ingest"
+version = "1.0.0"
+description = "PDF Ingestion Tools for Milvus RAG using AIQ Toolkit"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+dependencies = [
+    "pypdf",
+    "langchain-community",
+    "langchain-milvus",
+    "langchain-text-splitters",
+    "pydantic",
+    "pathlib",
+]
+requires-python = ">=3.11"
+
+[project.entry-points."aiq.components"]
+# Register PDF ingestion tools with AIQ toolkit
+pdf_ingest_tools = "pdf_rag_ingest.register"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["pdf_rag_ingest*"]
+
+[tool.setuptools]
+include-package-data = true 

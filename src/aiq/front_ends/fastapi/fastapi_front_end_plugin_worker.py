@@ -56,7 +56,7 @@ from aiq.front_ends.fastapi.response_helpers import generate_single_response
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
 from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
-from aiq.front_ends.fastapi.websocket import AIQWebSocket
+from aiq.front_ends.fastapi.websocket import WebSocketHandler
 from aiq.runtime.session import AIQSessionManager
 
 logger = logging.getLogger(__name__)
@@ -217,7 +217,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             await self.add_route(app, endpoint=ep, session_manager=AIQSessionManager(entry_workflow))
 
     async def add_default_route(self, app: FastAPI, session_manager: AIQSessionManager):
-
         await self.add_route(app, self.front_end_config.workflow, session_manager)
 
     async def add_evaluate_route(self, app: FastAPI, session_manager: AIQSessionManager):
@@ -389,8 +388,46 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         workflow = session_manager.workflow
 
         if (endpoint.websocket_path):
-            app.add_websocket_route(endpoint.websocket_path,
-                                    partial(AIQWebSocket, session_manager, self.get_step_adaptor()))
+            async def websocket_endpoint(websocket):
+                handler = WebSocketHandler(session_manager)
+                await handler.handle_websocket(websocket)
+            
+            app.add_websocket_route(endpoint.websocket_path, websocket_endpoint)
+
+        # Add message handler API routes
+        from aiq.front_ends.fastapi.message_handler import MessageHandler
+        from aiq.data_models.api_server import (
+            MessageRequest, MessageResponse, ConversationListResponse,
+            ConversationDeleteRequest, ConversationDeleteResponse,
+            ModeGetResponse, ModeSetRequest, ModeSetResponse
+        )
+        
+        async def send_message_endpoint(request: MessageRequest):
+            handler = MessageHandler(session_manager)
+            return await handler.send_message(request)
+        
+        async def get_conversations_endpoint():
+            handler = MessageHandler(session_manager)
+            return await handler.get_conversations()
+        
+        async def delete_conversation_endpoint(request: ConversationDeleteRequest):
+            handler = MessageHandler(session_manager)
+            return await handler.delete_conversation(request)
+        
+        async def get_mode_endpoint():
+            handler = MessageHandler(session_manager)
+            return await handler.get_mode()
+        
+        async def set_mode_endpoint(request: ModeSetRequest):
+            handler = MessageHandler(session_manager)
+            return await handler.set_mode(request)
+
+        # Add the API routes
+        app.add_api_route("/api/message", send_message_endpoint, methods=["POST"], response_model=MessageResponse)
+        app.add_api_route("/api/conversations", get_conversations_endpoint, methods=["GET"], response_model=ConversationListResponse)
+        app.add_api_route("/api/conversations/delete", delete_conversation_endpoint, methods=["POST"], response_model=ConversationDeleteResponse)
+        app.add_api_route("/api/mode", get_mode_endpoint, methods=["GET"], response_model=ModeGetResponse)
+        app.add_api_route("/api/mode", set_mode_endpoint, methods=["POST"], response_model=ModeSetResponse)
 
         GenerateBodyType = workflow.input_schema  # pylint: disable=invalid-name
         GenerateStreamResponseType = workflow.streaming_output_schema  # pylint: disable=invalid-name
@@ -480,15 +517,22 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             return get_stream
 
+        def get_session_manager_for_payload(payload) -> AIQSessionManager:
+            """Extract mode from payload and return appropriate session manager."""
+            return session_manager
+
         def post_single_endpoint(request_type: type, result_type: type | None):
 
             async def post_single(response: Response, request: Request, payload: request_type):
 
                 response.headers["Content-Type"] = "application/json"
+                
+                # Get the appropriate session manager based on mode
+                mode_session_manager = get_session_manager_for_payload(payload)
 
-                async with session_manager.session(request=request):
+                async with mode_session_manager.session(request=request):
 
-                    return await generate_single_response(payload, session_manager, result_type=result_type)
+                    return await generate_single_response(payload, mode_session_manager, result_type=result_type)
 
             return post_single
 
@@ -499,12 +543,15 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_stream(request: Request, payload: request_type):
 
-                async with session_manager.session(request=request):
+                # Get the appropriate session manager based on mode
+                mode_session_manager = get_session_manager_for_payload(payload)
+
+                async with mode_session_manager.session(request=request):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
                                                  payload,
-                                                 session_manager=session_manager,
+                                                 session_manager=mode_session_manager,
                                                  streaming=streaming,
                                                  step_adaptor=self.get_step_adaptor(),
                                                  result_type=result_type,
@@ -522,10 +569,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_stream(payload: request_type, filter_steps: str | None = None):
 
+                # Get the appropriate session manager based on mode
+                mode_session_manager = get_session_manager_for_payload(payload)
+
                 return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                          content=generate_streaming_response_full_as_str(
                                              payload,
-                                             session_manager=session_manager,
+                                             session_manager=mode_session_manager,
                                              streaming=streaming,
                                              result_type=result_type,
                                              output_type=output_type,
@@ -567,7 +617,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     http_request: Request) -> AIQAsyncGenerateResponse | AIQAsyncGenerationStatusResponse:
                 """Handle async generation requests."""
 
-                async with session_manager.session(request=http_request):
+                # Get the appropriate session manager based on mode
+                mode_session_manager = get_session_manager_for_payload(request)
+
+                async with mode_session_manager.session(request=http_request):
 
                     # if job_id is present and already exists return the job info
                     if request.job_id:
@@ -584,7 +637,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     task = asyncio.create_task(
                         run_generation(job_id=job_id,
                                        payload=request,
-                                       session_manager=session_manager,
+                                       session_manager=mode_session_manager,
                                        result_type=final_result_type))
 
                     async def wrapped_task(t: asyncio.Task):
@@ -613,6 +666,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             """Get the status of an async job."""
             logger.info("Getting status for job %s", job_id)
 
+            # Use default session manager for job status checks (no mode-specific logic needed)
             async with session_manager.session(request=http_request):
 
                 job = job_store.get_job(job_id)

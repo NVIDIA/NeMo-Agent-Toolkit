@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gitlab-github-analyzer"
+version = "1.0.0"
+description = "Repository Analyzer for both GitLab and GitHub using AIQ Toolkit"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+dependencies = [
+    "requests",
+    "pydantic",
+    "httpx",
+]
+requires-python = ">=3.11"
+
+[project.entry-points."aiq.components"]
+# Register GitLab tools with AIQ toolkit
+gitlab_tools = "gitlab_github_analyzer.register"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["gitlab_github_analyzer*"]
+
+[tool.setuptools]
+include-package-data = true 

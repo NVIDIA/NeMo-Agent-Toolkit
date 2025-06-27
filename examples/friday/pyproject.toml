@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "friday-assistant"
+version = "1.0.0"
+description = "Friday AI Assistant - Combining Confluence and Loki tools for comprehensive documentation search and log analysis"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+dependencies = [
+    # Confluence dependencies
+    "requests",
+    "pydantic",
+    "httpx",
+    "python-dotenv",
+    # Loki dependencies  
+    "python-dateutil",
+]
+requires-python = ">=3.11"
+keywords = ["ai", "confluence", "search", "documentation", "loki", "logs", "analysis", "friday"]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+[project.entry-points."aiq.components"]
+# Register Friday tools with AIQ toolkit
+friday_tools = "friday.register"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["friday*"]
+
+[tool.setuptools]
+include-package-data = true 

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "confluence-tool"
+version = "1.0.0"
+description = "Confluence Search Tool using AIQ Toolkit"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+dependencies = [
+    "requests",
+    "pydantic",
+    "httpx",
+    "python-dotenv",
+]
+requires-python = ">=3.11"
+keywords = ["ai", "confluence", "search", "documentation"]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+[project.entry-points."aiq.components"]
+# Register Confluence tools with AIQ toolkit
+confluence_tools = "confluence_tool.register"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["confluence_tool*"]
+
+[tool.setuptools]
+include-package-data = true 

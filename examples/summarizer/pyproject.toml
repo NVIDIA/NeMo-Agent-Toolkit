@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "summarization-tool"
+version = "1.0.0"
+description = "Text File Summarization Tool using AIQ Toolkit"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+dependencies = [
+    "pydantic",
+    "pathlib",
+    "typing-extensions",
+]
+requires-python = ">=3.11"
+keywords = ["ai", "summarization", "text", "nlp"]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+[project.entry-points."aiq.components"]
+# Register Summarization tools with AIQ toolkit
+summarization_tools = "summarization_tool.register"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["summarization_tool*"]
+
+[tool.setuptools]
+include-package-data = true 

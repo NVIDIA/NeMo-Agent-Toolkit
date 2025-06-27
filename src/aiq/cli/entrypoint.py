@@ -34,6 +34,7 @@ from .commands.configure.configure import configure_command
 from .commands.evaluate import eval_command
 from .commands.info.info import info_command
 from .commands.registry.registry import registry_command
+from .commands.serve import serve_command
 from .commands.start import start_command
 from .commands.uninstall import uninstall_command
 from .commands.validate import validate_command
@@ -108,7 +109,7 @@ cli.add_command(workflow_command, name="workflow")
 
 # Aliases
 cli.add_command(start_command.get_command(None, "console"), name="run")  # type: ignore
-cli.add_command(start_command.get_command(None, "fastapi"), name="serve")  # type: ignore
+cli.add_command(serve_command, name="serve")
 cli.add_command(start_command.get_command(None, "mcp"), name="mcp")
 
 

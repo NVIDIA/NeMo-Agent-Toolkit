@@ -1,0 +1,157 @@
+# ============================================================================
+# SIMPLE INCIDENT RAG - DIRECT FUNCTION CALL ONLY
+# ============================================================================
+# PagerDuty URL → Complete PDF Runbook (zero LLM interference)
+
+functions:
+  
+  # Single function that does everything
+  get_runbook:
+    _type: pagerduty_to_runbook
+    description: "Get complete PDF runbook from PagerDuty incident URL"
+    pagerduty_api_token: "${PAGERDUTY_API_TOKEN}"
+    pagerduty_api_version: "2"
+    pagerduty_timeout: 30
+    milvus_uri: "https://milvus-playground-dgxc-sre-blr-dev.db.nvw.nvidia.com"
+    milvus_user: "dgxc_sre_blr_owner"
+    milvus_password: "oc1AMM8RgTyN7FqT"
+    milvus_db_name: "dgxc_sre_blr"
+    collection_name: "pdf_manual"
+    embedding_model: "nvidia/nv-embedqa-e5-v5"
+
+  fetch_incident:
+    _type: pdf_rag_chatbot/pagerduty_client
+    description: "Fetch incident information from PagerDuty URLs"
+    api_token: "${PAGERDUTY_API_TOKEN}"
+    api_version: "2"
+    timeout: 30
+
+  summarization_tool:
+    _type: summarization_tool
+    description: "Reads text files and generates summaries. Supports multiple file formats including .txt, .md, .py, .js, .html, .json, .xml, .csv and more. Returns summary, metadata, and compression statistics."
+    max_chunk_size: 4000
+    summary_length: 200
+    include_metadata: true
+    supported_extensions:
+      - .txt
+      - .md
+      - .rst
+      - .py
+      - .js
+      - .html
+      - .css
+      - .json
+      - .xml
+      - .csv
+
+# ----------------------------------------------------------------------------
+# LLMS SECTION
+# ----------------------------------------------------------------------------
+llms:
+  direct_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    max_tokens: 8192  # Enough tokens for complete PDF content
+    timeout: 60  # Add 60 second timeout
+    max_retries: 3  # Retry up to 3 times
+    description: "Direct function caller"
+
+# ----------------------------------------------------------------------------
+# WORKFLOW SECTION - ReAct Agent with system_prompt
+# ----------------------------------------------------------------------------
+workflow:
+  _type: react_agent
+  
+  tool_names: [get_runbook, fetch_incident, summarization_tool]
+  llm_name: direct_llm
+  
+  verbose: true
+  max_iterations: 4
+  retry_parsing_errors: true
+  max_retries: 3
+  
+  system_prompt: |
+    You are an INCIDENT ASSISTANT agent. You have two tools:
+    1. get_runbook: Use this ONLY when the user asks for the complete runbook or instructions for resolving an incident.
+    2. fetch_incident: Use this ONLY when the user asks for incident details, summary, status, or information about the incident itself.
+
+    CRITICAL BEHAVIOR RULES:
+    - If the user asks for incident details, summary, status, or information, call fetch_incident and return the result as a clear, readable summary, with each field on a separate line (not as a raw dictionary or JSON).
+    - If the user asks for the runbook, instructions, or steps to resolve, call get_runbook and return the runbook content exactly as received.
+    - Never call both tools for the same user request. Only call the tool that matches the user's intent.
+    - Do NOT summarize, interpret, or modify the tool output in any way for runbooks. For incident details, always format the output as a readable summary.
+    - Do NOT add commentary like "The runbook shows..." or "This contains..." for runbooks. For incident details, you may use labels like "Incident ID:", "Status:", etc.
+    - Your Final Answer must be the COMPLETE, UNMODIFIED tool output for runbooks, and a readable summary for incident details.
+
+    EXAMPLES:
+    If the user says: "What is the status of this incident?" or "Show me the incident details for ..."
+    CRITICAL REQUIREMENTS - YOU MUST FOLLOW ALL:
+    1. Extract incident details including title, status, and urgency
+    2. Analyze incident timeline and status changes
+    3. Review service impact and affected components
+    4. Examine assigned responders and their roles
+    5. Only provide Final Answer AFTER gathering all incident details
+    6. If incident data is incomplete, request additional information
+    
+    DO NOT provide Final Answer until you have analyzed all available incident data!
+    
+    INCIDENT ANALYSIS FRAMEWORK (Must cover all sections):
+    
+    **Incident Overview:**
+    - Incident title and ID
+    - Current status and urgency level
+    - Creation time and last status change
+    
+    **Service Impact:**
+    - Affected services and components
+    - Impact severity and scope
+    - Business impact assessment
+    
+    **Timeline Analysis:**
+    - Incident creation and updates
+    - Status change history
+    - Response time metrics
+    
+    **Response Team:**
+    - Assigned responders
+    - Team coordination
+    - Escalation path
+    
+    **Resolution & Prevention:**
+    - Root cause analysis
+    - Resolution steps
+    - Preventive measures
+    
+    **Recommendations:**
+    - Process improvements
+    - Tooling enhancements
+    - Documentation updates
+    
+    RESPONSE REQUIREMENTS:
+    - Minimum 500 words total
+    - Use structured formatting with headers
+    - Be detailed and thorough, not repetitive
+    - Provide concrete examples from the incident
+
+    If the user says: "Give me the runbook for this incident" or "Show me the steps to resolve ..."
+    - Call get_runbook and return the complete runbook content exactly but do not print the metadata (e.g chunk, page number, etc.)
+    - If there is some data that is repeated, do not print it multiple times.
+    - Print the runbook content with a good formatting (e.g. separate steps with a line break)
+    - Print the sub-steps and bullet points also with line break
+
+    {tools}
+
+    Use the following format exactly:
+
+    Question: the input question you must answer
+    Thought: you should always think about what to do
+    Action: the action to take, should be one of [{tool_names}]
+    Action Input: the input to the action (if there is no required input, include "Action Input: None")
+    Observation: wait for the human to respond with the result from the tool, do not assume the response
+
+    ... (this Thought/Action/Action Input/Observation can repeat N times. If you do not need to use a tool, or after asking the human to use any tools and waiting for the human to respond, you might know the final answer.)
+    Use the following format once you have the final answer:
+
+    Thought: I now know the final answer
+    Final Answer: the final answer to the original input question

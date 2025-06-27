@@ -1,0 +1,106 @@
+# ============================================================================
+# LOKI LOG ANALYSIS CONFIGURATION
+# ============================================================================
+# Sample configuration for Loki integration with AIQ Toolkit
+# This demonstrates real-time log analysis using natural language queries
+
+# Functions section - Define the Loki log analyzer tool
+functions:
+  
+  # Main Loki log analyzer function
+  log_analyzer:
+    _type: loki_log_analyzer
+    description: "Analyze logs from Loki using natural language queries with error detection and pattern recognition"
+    
+    # Loki connection settings - Use Grafana proxy with correct UID format
+    # Available datasources (choose one):
+    # - loki-us-east-1: ee0goqc2a64u8b
+    # - loki-us-west-2: ce1n6e6v256v4c  
+    # - loki-eu-north-1: fe1n6e6m54o3ka
+    # - loki-ap-northeast-1: ee1n6e6vtm2o0c
+    loki_url: "https://dashboards.telemetry.dgxc.ngc.nvidia.com/api/datasources/proxy/uid/ee0goqc2a64u8b"
+    timeout: 30
+    
+    # Query settings
+    default_time_range: "1h"           # Default search window: 1h, 30m, 24h, 7d
+    max_log_lines: 1000                # Maximum log entries to retrieve
+    
+    # Authentication for Loki API access
+    # Option 1: API Token (recommended - uses LOKI_API_TOKEN environment variable)
+    api_token: "${LOKI_API_TOKEN}"
+    
+    # Alternative authentication options (uncomment if needed):
+    # Option 2: Basic Authentication
+    # auth_username: "your_loki_username"
+    # auth_password: "your_loki_password"
+    
+    # Option 3: Bearer Token
+    # bearer_token: "${LOKI_BEARER_TOKEN}"
+  
+  
+  current_time:
+    _type: current_datetime
+    description: "Gets current date and time for log analysis context"
+
+# LLMs section - Define the language models for analysis
+llms:
+  
+  # Main LLM for log analysis and reasoning
+  analysis_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0                   # Zero temperature for deterministic analysis
+    max_tokens: 1024                   # Shorter responses to stay focused
+    description: "Primary LLM for log analysis and error interpretation"
+
+# Workflow section - Define the agent orchestration
+workflow:
+  _type: react_agent
+  
+  # Tools available to the agent
+  tool_names: [
+    log_analyzer,                      # Loki log analysis
+    current_time                       # Timestamp utilities
+  ]
+  
+  # Which LLM to use for reasoning
+  llm_name: analysis_llm
+  
+  # Agent behavior settings
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 2
+  max_iterations: 3
+  return_intermediate_steps: true
+  
+  # Custom system prompt for log analysis
+  system_prompt: |
+    You are a Log Analysis AI Assistant. Use the log_analyzer tool to analyze logs from Loki.
+
+    Remember: {tools}
+    Available tool names: {tool_names}
+    
+    WORKFLOW:
+    1. First: Call log_analyzer tool to get data
+    2. Wait for results
+    3. Then: Provide Final Answer based on those results
+    
+    CRITICAL: Never combine tool calls and Final Answer in the same response!
+    
+    FORMAT FOR TOOL CALLS (first response only):
+    Thought: I need to query the logs for the requested information.
+    Action: log_analyzer
+    Action Input: {{"query": "error", "cluster": "gcp-cbf-cs-002", "time_range": "30m"}}
+    
+    FORMAT FOR FINAL ANSWER (after getting tool results):
+    Thought: Based on the log analysis results, I can now provide a summary.
+    Final Answer: [Detailed analysis with error counts, patterns, affected services, and recommendations]
+    
+    Available parameters for log_analyzer:
+    - query (required): What to search for (e.g., "error", "warning", "*")
+    - time_range (optional): "30m", "1h", "2h", "24h", etc.
+    - cluster (optional): "gcp-cbf-cs-002", "kratos-multitenant"
+    - hostname (optional): "a4xl-007", "cpu-small-001"  
+    - log_level (optional): "error", "warn", "info"
+    - namespace (optional): Kubernetes namespace
+    - app_name (optional): "python3", "sshd", "systemd" 

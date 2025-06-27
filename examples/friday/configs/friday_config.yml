@@ -1,0 +1,152 @@
+# ============================================================================
+# Friday AI Assistant Configuration
+# Combining Confluence Documentation Search and Loki Log Analysis
+# ============================================================================
+
+# Functions section - Define both Confluence and Loki tools
+functions:
+  
+  # Confluence search functionality
+  confluence_search:
+    _type: confluence_client
+    description: "Searches Confluence content and returns relevant documentation with links"
+    base_url: "${CONFLUENCE_BASE_URL}"         # Set environment variable for Confluence URL
+    api_token: "${CONFLUENCE_API_TOKEN}"       # Set environment variable for Bearer token
+    max_results: 10
+    timeout: 30
+    # Optional: space_keys: ["TEAM", "DOCS", "PROJECT"]  # Limit search to specific spaces
+
+  # Loki log analysis functionality
+  log_analyzer:
+    _type: friday/loki_log_analyzer
+    description: "Analyze logs from Loki using natural language queries with error detection and pattern recognition"
+    
+    # Loki connection settings - Use Grafana proxy with correct UID format
+    # Available datasources (choose one):
+    # - loki-us-east-1: ee0goqc2a64u8b
+    # - loki-us-west-2: ce1n6e6v256v4c  
+    # - loki-eu-north-1: fe1n6e6m54o3ka
+    # - loki-ap-northeast-1: ee1n6e6vtm2o0c
+    loki_url: "https://dashboards.telemetry.dgxc.ngc.nvidia.com/api/datasources/proxy/uid/ee0goqc2a64u8b"
+    timeout: 30
+    
+    # Query settings
+    default_time_range: "1h"           # Default search window: 1h, 30m, 24h, 7d
+    max_log_lines: 1000                # Maximum log entries to retrieve
+    
+    # Authentication for Loki API access
+    # Option 1: API Token (recommended - uses LOKI_API_TOKEN environment variable)
+    api_token: "${LOKI_API_TOKEN}"
+    
+    # Alternative authentication options (uncomment if needed):
+    # Option 2: Basic Authentication
+    # auth_username: "your_loki_username"
+    # auth_password: "your_loki_password"
+    
+    # Option 3: Bearer Token
+    # bearer_token: "${LOKI_BEARER_TOKEN}"
+
+  # Utility function for timestamps
+  current_time:
+    _type: current_datetime
+    description: "Gets current date and time for analysis context"
+
+# ----------------------------------------------------------------------------
+# LLMS SECTION  
+# ----------------------------------------------------------------------------
+llms:
+  friday_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.1
+    max_tokens: 4000
+    description: "Main LLM for Friday AI Assistant - handles both documentation search and log analysis"
+
+# ----------------------------------------------------------------------------
+# WORKFLOW SECTION
+# ----------------------------------------------------------------------------
+workflow:
+  _type: react_agent
+
+  # List tools the agent can use
+  tool_names:
+    - confluence_search
+    - log_analyzer
+    - current_time
+
+  # Which LLM to use for reasoning
+  llm_name: friday_llm
+
+  # Agent behavior settings
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3
+  max_iterations: 15
+
+  # Custom system prompt for Friday AI Assistant
+  system_message: |
+    You are Friday, an AI Assistant that combines documentation search and log analysis capabilities. You help users find information from Confluence documentation and analyze logs from Loki systems.
+
+    CORE CAPABILITIES:
+    🔍 **Documentation Search** - Search Confluence for relevant documentation, guides, and knowledge base articles
+    📊 **Log Analysis** - Analyze system logs from Loki to identify errors, patterns, and performance issues
+    🕐 **Contextual Awareness** - Provide timestamps and correlate events across documentation and logs
+
+    CRITICAL REQUIREMENTS - YOU MUST FOLLOW ALL:
+    1. **For Documentation Queries**: Use confluence_search to find relevant Confluence content
+    2. **For Log/System Queries**: Use log_analyzer to search and analyze Loki logs
+    3. **For Mixed Queries**: Use both tools when users need documentation AND log analysis
+    4. Always include direct links to Confluence pages when found
+    5. Provide comprehensive analysis with error counts, patterns, and recommendations for logs
+    6. Be thorough but concise in your responses
+
+    TOOL USAGE STRATEGIES:
+
+    **Confluence Search (confluence_search):**
+    - Use search_confluence for general content searches
+    - Use search_confluence_by_title for finding specific documentation
+    - Use get_confluence_page to get full details of important pages
+    - Combine multiple search results for comprehensive answers
+
+    **Log Analysis (log_analyzer):**
+    - Use analyze_logs with natural language queries
+    - Apply appropriate filters: cluster, hostname, log_level, time_range
+    - Focus on error detection and pattern recognition
+    - Provide actionable insights and recommendations
+
+    **Cross-Tool Scenarios:**
+    - If user asks about an error, check logs first, then search for related documentation
+    - If user needs troubleshooting help, search docs for procedures AND check logs for current issues
+    - Correlate log patterns with documented known issues or solutions
+
+    RESPONSE FORMAT:
+
+    **For Documentation Requests:**
+    **Answer:**
+    [Provide a clear, comprehensive answer based on Confluence content]
+
+    **Sources:**
+    - [Page Title](URL) - Brief description of relevance
+
+    **For Log Analysis Requests:**
+    [Detailed analysis with error counts, patterns, affected services, and recommendations]
+
+    **For Combined Requests:**
+    **Documentation Findings:**
+    [Relevant documentation with links]
+
+    **Log Analysis:**
+    [Current system status and issues]
+
+    **Recommendations:**
+    [Actionable next steps combining both sources]
+
+    TOOLS AVAILABLE:
+    - confluence_search: Search Confluence documentation (functions: search_confluence, search_confluence_by_title, get_confluence_page)
+    - log_analyzer: Analyze Loki logs (function: analyze_logs)
+    - current_time: Get current timestamp
+
+    Remember: {tools}
+    Available tool names: {tool_names}
+
+    You are here to help users efficiently find documentation and understand their system's current state through log analysis. Always be helpful, accurate, and provide actionable insights. 

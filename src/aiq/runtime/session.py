@@ -86,8 +86,7 @@ class AIQSessionManager:
     @asynccontextmanager
     async def session(self,
                       user_manager=None,
-                      request: Request | None = None,
-                      conversation_id: str | None = None,
+                      request: Request = None,
                       user_input_callback: Callable[[InteractionPrompt], Awaitable[HumanResponse]] = None):
 
         token_user_input = None
@@ -98,10 +97,7 @@ class AIQSessionManager:
         if user_manager is not None:
             token_user_manager = self._context_state.user_manager.set(user_manager)
 
-        if conversation_id is not None and request is None:
-            self._context_state.conversation_id.set(conversation_id)
-
-        self.set_metadata_from_http_request(request)
+        self.set_request_attributes(request)
 
         try:
             yield self
@@ -124,9 +120,9 @@ class AIQSessionManager:
             async with self._workflow.run(message) as runner:
                 yield runner
 
-    def set_metadata_from_http_request(self, request: Request | None) -> None:
+    def set_request_attributes(self, request: Request) -> None:
         """
-        Extracts and sets user metadata request attributes from a HTTP request.
+        Extracts and sets request attributes from an HTTP request.
         If request is None, no attributes are set.
         """
         if request is None:
@@ -142,6 +138,3 @@ class AIQSessionManager:
         self._context.metadata._request.client_host = request.client.host
         self._context.metadata._request.client_port = request.client.port
         self._context.metadata._request.cookies = request.cookies
-
-        if request.headers.get("conversation-id"):
-            self._context_state.conversation_id.set(request.headers["conversation-id"])

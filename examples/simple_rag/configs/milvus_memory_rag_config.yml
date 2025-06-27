@@ -23,13 +23,21 @@ memory:
 retrievers:
   cuda_retriever:
     _type: milvus_retriever
-    uri: http://localhost:19530
+    uri: https://milvus-playground-dgxc-sre-blr-dev.db.nvw.nvidia.com
+    connection_args:
+      user: dgxc_sre_blr_owner
+      password: oc1AMM8RgTyN7FqT
+      db_name: dgxc_sre_blr
     collection_name: "cuda_docs"
     embedding_model: milvus_embedder
     top_k: 10
   mcp_retriever:
     _type: milvus_retriever
-    uri: http://localhost:19530
+    uri: https://milvus-playground-dgxc-sre-blr-dev.db.nvw.nvidia.com
+    connection_args:
+      user: dgxc_sre_blr_owner
+      password: oc1AMM8RgTyN7FqT
+      db_name: dgxc_sre_blr
     collection_name: "mcp_docs"
     embedding_model: milvus_embedder
     top_k: 10
@@ -38,24 +46,34 @@ functions:
   cuda_retriever_tool:
     _type: aiq_retriever
     retriever: cuda_retriever
-    topic: Retrieve documentation for NVIDIA's CUDA library
+    topic: |
+      Use this tool ONLY for questions about NVIDIA's CUDA library, GPU computing, parallel programming, 
+      CUDA C++, CUDA runtime, GPU architecture, or any NVIDIA computing technologies.
+      Examples: CUDA programming, GPU kernels, memory management, parallel computing, NVIDIA GPUs.
   mcp_retriever_tool:
     _type: aiq_retriever
     retriever: mcp_retriever
-    topic: Retrieve information about Model Context Protocol (MCP)
+    topic: |
+      Use this tool ONLY for questions about Model Context Protocol (MCP), AI agents, LLM integration,
+      or connecting AI models to data sources and tools.
+      Examples: MCP protocol, AI agent architecture, LLM tool integration, model context management.
   add_memory:
     _type: add_memory
     memory: saas_memory
     description: |
-      Add any facts about user preferences to long term memory. Always use this if users mention a preference.
-      The input to this tool should be a string that describes the user's preference, not the question or answer.
+      CRITICAL: Store every single conversation turn in memory. This tool MUST be called after every user interaction.
+      Purpose: Save conversation history so future questions can reference past context.
+      Usage: Call this at the END of every response to ensure conversation continuity.
+      This enables the system to remember what was discussed and provide context-aware responses.
+      NEVER skip this tool - it's essential for conversation memory and summary generation.
   get_memory:
     _type: get_memory
     memory: saas_memory
     description: |
-      Always call this tool before calling any other tools, even if the user does not mention to use it.
-      The question should be about user preferences which will help you format your response.
-      For example: "How does the user like responses formatted?"
+      CRITICAL: Retrieve stored conversation history and context. This tool MUST be called FIRST before any response.
+      This tool requires three parameters: query (search text), top_k (number of results), and user_id (must be "user_12").
+      Use this to understand conversation context, user references, and maintain conversation continuity.
+      Always call this first to check for existing conversation history before responding.
 
 llms:
   nim_llm:
@@ -86,41 +104,90 @@ workflow:
 
     {tools}
 
-    IMPORTANT MEMORY TOOL REQUIREMENTS:
-    1. You MUST call get_memory tool FIRST, before calling any other tools
-    2. You MUST use user_id "user_12" for all memory operations
-    3. You MUST include ALL required parameters when calling memory tools
-    4. When calling add_memory or get_memory, you MUST use the exact format as below, don't include any other content,
-      and make sure the input is a valid JSON object.
+    CRITICAL MEMORY REQUIREMENTS - MUST FOLLOW EXACTLY:
+    1. You MUST call get_memory tool FIRST before any other action, even for simple questions
+    2. You MUST use user_id "user_12" for all memory operations - NEVER change this
+    3. You MUST store EVERY single interaction using add_memory - no exceptions
+    4. You MUST call add_memory at the END of every response to store the conversation
+    5. When user asks for "summary" or "conversation history", treat it as a memory retrieval task
 
-    For get_memory tool, you MUST use this exact format:
-    {{
-        "query": "user preferences",
-        "top_k": 1,
-        "user_id": "user_12"
-    }}
+    CRITICAL: The get_memory tool expects THREE separate parameters:
+    - query (string): The search query text
+    - top_k (integer): Number of results to return (15 for general, 25 for summaries)
+    - user_id (string): Must be exactly "user_12"
 
-    For add_memory tool, you MUST use this exact format:
-    {{
-        "conversation": [
-            {{
-                "role": "user",
-                "content": "Hi, I'm Alex. I'm looking for a trip to New York"
-            }},
-            {{
-                "role": "assistant",
-                "content": "Hello Alex! I've noted you are looking for a trip to New York."
-            }}
-        ],
-        "user_id": "user_12",
-        "metadata": {{
-            "key_value_pairs": {{
-                "type": "travel",
-                "relevance": "high"
-            }}
-        }},
-        "memory": "User is looking for a trip to New York."
-    }}
+    MEMORY TOOL USAGE - EXACT FORMATS REQUIRED:
+
+    STEP 1 - ALWAYS start with get_memory:
+    
+    For general questions: Call get_memory with query="user conversation history recent messages", top_k=15, user_id="user_12"
+    For summary requests: Call get_memory with query="conversation summary all messages history interactions", top_k=25, user_id="user_12"
+
+    STEP 2 - After answering, ALWAYS call add_memory with this EXACT format:
+    Action: add_memory
+    Action Input: conversation=[{"role": "user", "content": "[copy user's exact message here]"}, {"role": "assistant", "content": "[copy your complete response here]"}], user_id="user_12", metadata={"key_value_pairs": {"conversation_type": "chat", "importance": "high", "timestamp": "latest", "context": "conversation_history"}}, memory="Conversation: User said '[user message]' and I responded '[brief response summary]'. Important context: [key points discussed]"
+
+    MANDATORY PROCESS FLOW:
+    1. IMMEDIATELY call get_memory first (no exceptions)
+    2. Use retrieved memory to understand context and provide informed responses
+    3. If user asks for summary and memory shows conversations, provide detailed summary
+    4. If user asks for summary but no memory found, say "This appears to be our first interaction. Let me start tracking our conversation from now on."
+    5. ALWAYS call add_memory at the very end to store this interaction
+    6. If user makes references like "it", "that", "forget it", "explain more", "tell me more" - use retrieved memory to understand what they mean
+
+    CRITICAL CONTEXT AND TOOL SELECTION RULES:
+    - When user says "explain more", "tell me more", "continue", "elaborate" - FIRST call get_memory to understand what topic they're referring to
+    - Based on memory context, choose the SAME retriever tool that was used for the original topic:
+      * If previous conversation was about CUDA → use cuda_retriever_tool
+      * If previous conversation was about MCP → use mcp_retriever_tool
+    - NEVER randomly select retriever tools - always base selection on conversation context from memory
+    - If no clear context from memory, ask the user to clarify what topic they want more information about
+
+    RETRIEVER TOOL SELECTION LOGIC:
+    Before calling any retriever tool, you MUST:
+    1. Call get_memory to understand conversation context
+    2. Identify the main topic from the retrieved memory
+    3. Select the appropriate retriever:
+       - cuda_retriever_tool: For CUDA, GPU computing, parallel programming, NVIDIA computing topics
+       - mcp_retriever_tool: For Model Context Protocol, AI agents, LLM integration topics
+    4. If the user's request like "explain more" refers to a previous topic, continue with the SAME retriever tool
+
+    DEBUGGING MEMORY ISSUES:
+    When calling get_memory, if you receive empty results or errors:
+    - State: "I called get_memory but received no results" 
+    - Check if MEM0_API_KEY environment variable is set
+    - Verify the user_id "user_12" is being used consistently
+    - Confirm the memory service is properly configured
+    - If get_memory fails, proceed to answer but mention the memory issue
+
+    SPECIAL SUMMARY HANDLING:
+    When user asks for conversation summary:
+    - Use the summary-specific get_memory query with top_k: 25
+    - If memories are found, create a comprehensive summary of all interactions
+    - Include: topics discussed, questions asked, information shared, user preferences mentioned
+    - If no memories found, acknowledge this is the first conversation and offer to track future ones
+    - ALWAYS explain what the get_memory function returned (empty, error, or actual memories)
+
+    ERROR PREVENTION:
+    - NEVER skip get_memory as the first action
+    - NEVER skip add_memory as the final action  
+    - NEVER change the user_id from "user_12"
+    - NEVER assume there's no conversation history without checking memory first
+    - ALWAYS use the exact Action Input formats provided above
+
+    EXAMPLE SCENARIOS:
+    Scenario 1 - Context-dependent request:
+    User: "tell me about CUDA"
+    You: [call get_memory] → [call cuda_retriever_tool] → [provide CUDA info] → [call add_memory]
+    
+    User: "explain more"
+    You: [call get_memory] → [see previous was about CUDA] → [call cuda_retriever_tool for more CUDA info] → [call add_memory]
+    
+    Scenario 2 - Wrong approach (DO NOT DO THIS):
+    User: "explain more"
+    You: [call mcp_retriever_tool without checking context] ← THIS IS WRONG!
+    
+    Always remember: "explain more" means "explain more about the PREVIOUS topic", not a random topic!
 
     You may respond in one of two formats.
     Use the following format exactly to ask the human to use a tool:

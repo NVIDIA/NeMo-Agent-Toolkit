@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import typing
-from enum import Enum
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -29,27 +28,11 @@ from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.data_models.profiler import ProfilerConfig
 
 
-class JobEvictionPolicy(str, Enum):
-    """Policy for evicting old jobs when max_jobs is exceeded."""
-    TIME_CREATED = "time_created"
-    TIME_MODIFIED = "time_modified"
-
-
 class EvalCustomScriptConfig(BaseModel):
     # Path to the script to run
     script: Path
     # Keyword arguments to pass to the script
     kwargs: dict[str, str] = {}
-
-
-class JobManagementConfig(BaseModel):
-    # Whether to append a unique job ID to the output directory for each run
-    append_job_id_to_output_dir: bool = False
-    # Maximum number of jobs to keep in the output directory. Oldest jobs will be evicted.
-    # A value of 0 means no limit.
-    max_jobs: int = 0
-    # Policy for evicting old jobs. Defaults to using time_created.
-    eviction_policy: JobEvictionPolicy = JobEvictionPolicy.TIME_CREATED
 
 
 class EvalOutputConfig(BaseModel):
@@ -63,18 +46,12 @@ class EvalOutputConfig(BaseModel):
     s3: EvalS3Config | None = None
     # Whether to cleanup the output directory before running the workflow
     cleanup: bool = True
-    # Job management configuration (job id, eviction, etc.)
-    job_management: JobManagementConfig = JobManagementConfig()
     # Filter for the workflow output steps
     workflow_output_step_filter: list[IntermediateStepType] | None = None
 
 
 class EvalGeneralConfig(BaseModel):
     max_concurrency: int = 8
-
-    # Workflow alias for displaying in evaluation UI, if not provided,
-    # the workflow type will be used
-    workflow_alias: str | None = None
 
     # Output directory for the workflow and evaluation results
     output_dir: Path = Path("/tmp/aiq/examples/default/")

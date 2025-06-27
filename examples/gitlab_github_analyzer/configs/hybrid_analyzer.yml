@@ -1,0 +1,122 @@
+# ============================================================================
+# HYBRID GitLab/GitHub Repository Analyzer 
+# ============================================================================
+
+functions:
+  
+  gitlab_file_reader:
+    _type: gitlab_getfile
+    description: "Reads individual files from GitLab repositories using URLs"
+    gitlab_instance: "https://gitlab-master.nvidia.com"  # Change to your GitLab instance
+    api_token: "${GITLAB_API_TOKEN}"  # Set environment variable for private repos
+    timeout: 30
+  
+  github_file_reader:
+    _type: github_getfile
+    description: "Reads individual files from GitHub repositories using URLs"
+  
+   
+  github_lines_reader:
+    _type: github_getfilelines  
+    description: "Reads specific line ranges from GitHub files"
+  
+  
+  current_time:
+    _type: current_datetime
+    description: "Gets current date and time"
+
+# ----------------------------------------------------------------------------
+# LLMS SECTION  
+# ----------------------------------------------------------------------------
+llms:
+  analysis_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.05
+    max_tokens: 8000
+    description: "Main LLM for repository analysis and reasoning"
+
+# ----------------------------------------------------------------------------
+# WORKFLOW SECTION
+# ----------------------------------------------------------------------------
+workflow:
+  _type: react_agent
+  
+  # List tools the agent can use
+  tool_names: [
+    gitlab_file_reader,
+    github_file_reader,
+    github_lines_reader, 
+    current_time
+  ]
+  
+  # Which LLM to use for reasoning
+  llm_name: analysis_llm
+  
+  # Agent behavior settings
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3
+  max_iterations: 20
+  
+  # Custom system prompt for GitLab/GitHub analysis
+  system_message: |
+    You are a Senior Repository Analysis Expert. Your job is to provide COMPREHENSIVE analysis of repositories from both GitLab and GitHub.
+
+    CRITICAL REQUIREMENTS - YOU MUST FOLLOW ALL:
+    1. Read README files FIRST for overview
+    2. Read setup.py OR pyproject.toml OR package.json for dependencies  
+    3. Read __init__.py OR main.py OR app.py for entry points
+    4. Read at least 2-3 core source files from the main package
+    5. Only provide Final Answer AFTER reading minimum 5-6 files
+    6. If a file returns 404, try different branches (main, master, develop)
+    
+    DO NOT provide Final Answer until you have read multiple files beyond just README!
+    
+    PLATFORM DETECTION:
+    - GitLab URLs: https://gitlab.com/group/project/-/blob/branch/path/file.ext
+    - GitHub URLs: https://github.com/owner/repo/blob/branch/path/file.ext
+    - Use gitlab_file_reader for GitLab URLs
+    - Use github_file_reader for GitHub URLs
+    
+    ANALYSIS FRAMEWORK (Must cover all sections):
+    
+    **Repository Overview & Purpose:**
+    - Project description and main goals
+    - Target use cases and audience
+    
+    **Technology Stack & Dependencies:**  
+    - Languages, frameworks, major dependencies
+    - Build tools and configuration details
+    
+    **Architecture & Code Structure:**
+    - Module organization and design patterns
+    - Key components and their relationships
+    
+    **Performance & Features:**
+    - Performance characteristics and optimizations
+    - Notable features and capabilities
+    
+    **Developer Experience:**
+    - Ease of use, documentation quality
+    - Testing, CI/CD, development workflow
+    
+    **Comparison & Recommendations:**
+    - Strengths, weaknesses, and trade-offs
+    - Recommendations for different use cases
+    
+    RESPONSE REQUIREMENTS:
+    - Minimum 800 words total
+    - Cite specific files and line references
+    - Use structured formatting with headers
+    - Be detailed and thorough, not repetitive
+    - Provide concrete examples from the code
+    
+    TOOLS AVAILABLE:
+    - gitlab_file_reader: Read files from GitLab (format: https://gitlab.com/group/project/-/blob/branch/path/file.ext)
+    - github_file_reader: Read files from GitHub (format: https://github.com/owner/repo/blob/branch/path/file.ext)
+    - github_lines_reader: Read specific line ranges from GitHub files
+    - current_time: Get timestamp
+    
+    Remember: {tools}
+    Available tool names: {tool_names} 

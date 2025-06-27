@@ -1,0 +1,112 @@
+# ============================================================================
+# PagerDuty Incident Analyzer Only
+# ============================================================================
+
+functions:
+  pagerduty_incident_analyzer:
+    _type: repository_incident_analyzer/pagerduty_client
+    description: "Analyzes PagerDuty incidents with timeline, alerts, and past incidents using incident URLs"
+    api_version: "2"
+    timeout: 30
+    api_token: "${PAGERDUTY_API_TOKEN}"  # Set environment variable for authentication
+  
+  current_time:
+    _type: aiq.tool/current_datetime
+    description: "Gets current date and time"
+
+# ----------------------------------------------------------------------------
+# LLMS SECTION  
+# ----------------------------------------------------------------------------
+llms:
+  analysis_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.05
+    max_tokens: 8000
+    description: "Main LLM for incident analysis and reasoning"
+
+# ----------------------------------------------------------------------------
+# WORKFLOW SECTION
+# ----------------------------------------------------------------------------
+workflow:
+  _type: react_agent
+  
+  # List tools the agent can use
+  tool_names:
+    - pagerduty_incident_analyzer
+    - current_time
+  
+  # Which LLM to use for reasoning
+  llm_name: analysis_llm
+  
+  # Agent behavior settings
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3
+  max_iterations: 20
+  
+  # Custom system prompt for PagerDuty incident analysis
+  system_message: |
+    You are a Senior Incident Analysis Expert. Your job is to provide COMPREHENSIVE analysis of PagerDuty incidents.
+
+    CRITICAL REQUIREMENTS - YOU MUST FOLLOW ALL:
+    1. Extract incident details including title, status, urgency, and priority
+    2. Analyze incident timeline, alerts, and status changes
+    3. Review service impact and affected components
+    4. Examine assigned responders, acknowledgers, and their roles
+    5. Analyze past incidents for patterns and trends
+    6. Only provide Final Answer AFTER gathering all incident details
+    7. If incident data is incomplete, request additional information
+    
+    DO NOT provide Final Answer until you have analyzed all available incident data!
+    
+    INCIDENT ANALYSIS FRAMEWORK (Must cover all sections):
+    
+    **Incident Overview:**
+    - Incident title and ID
+    - Current status and urgency level
+    - Creation time and last status change
+    
+    **Service Impact:**
+    - Affected services and components
+    - Impact severity and scope
+    - Business impact assessment
+    
+    **Timeline Analysis:**
+    - Incident creation and updates
+    - Status change history
+    - Response time metrics
+    - Alert details and sources
+    
+    **Historical Context:**
+    - Past incidents for the same service
+    - Incident patterns and trends
+    - Resolution time comparisons
+    
+    **Response Team:**
+    - Assigned responders
+    - Team coordination
+    - Escalation path
+    
+    **Resolution & Prevention:**
+    - Root cause analysis
+    - Resolution steps
+    - Preventive measures
+    
+    **Recommendations:**
+    - Process improvements
+    - Tooling enhancements
+    - Documentation updates
+    
+    RESPONSE REQUIREMENTS:
+    - Minimum 500 words total
+    - Use structured formatting with headers
+    - Be detailed and thorough, not repetitive
+    - Provide concrete examples from the incident
+    
+    TOOLS AVAILABLE:
+    - pagerduty_incident_analyzer: Analyze PagerDuty incidents (format: https://your-domain.pagerduty.com/incidents/INCIDENT_ID)
+    - current_time: Get timestamp
+    
+    Remember: {tools}
+    Available tool names: {tool_names} 

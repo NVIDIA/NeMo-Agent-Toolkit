@@ -392,8 +392,9 @@ class WebSocketUserMessage(BaseModel):
     type: typing.Literal[WebSocketMessageType.USER_MESSAGE]
     schema_type: WorkflowSchemaType
     id: str = "default"
-    conversation_id: str | None = None
+    thread_id: str = "default"
     content: UserMessageContent
+    mode: str = "FRIDAY"  # Default to FRIDAY mode for backward compatibility
     user: User = User()
     security: Security = Security()
     error: Error = Error()
@@ -586,3 +587,80 @@ def _string_to_aiq_chat_response_chunk(data: str) -> AIQChatResponseChunk:
 
 
 GlobalTypeConverter.register_converter(_string_to_aiq_chat_response_chunk)
+
+
+
+
+
+# Message Handler API Data Models
+class MessageRequest(BaseModel):
+    """Request model for sending a message."""
+    model_config = ConfigDict(extra="forbid")
+    
+    message: str = Field(..., description="The message content to send")
+    conversation_id: str | None = Field(default=None, description="Optional conversation ID")
+    timestamp: datetime.datetime | None = Field(default=None, description="Optional timestamp")
+
+
+class MessageResponse(BaseModel):
+    """Response model for message responses."""
+    model_config = ConfigDict(extra="forbid")
+    
+    conversation_id: str = Field(..., description="The conversation ID")
+    response: str = Field(..., description="The response message")
+    mode: str = Field(default="DEFAULT", description="The current mode")
+
+
+class ConversationDeleteRequest(BaseModel):
+    """Request model for deleting a conversation."""
+    model_config = ConfigDict(extra="forbid")
+    
+    conversation_id: str = Field(..., description="The conversation ID to delete")
+
+
+class ConversationDeleteResponse(BaseModel):
+    """Response model for conversation deletion."""
+    model_config = ConfigDict(extra="forbid")
+    
+    success: bool = Field(..., description="Whether the deletion was successful")
+    message: str = Field(..., description="Status message")
+
+
+class ConversationResponse(BaseModel):
+    """Response model for a single conversation."""
+    model_config = ConfigDict(extra="forbid")
+    
+    conversation_id: str = Field(..., description="The conversation ID")
+    messages: list = Field(default_factory=list, description="List of conversation messages")
+    mode: str = Field(default="DEFAULT", description="The conversation mode")
+
+
+class ConversationListResponse(BaseModel):
+    """Response model for listing conversations."""
+    model_config = ConfigDict(extra="forbid")
+    
+    conversations: list[ConversationResponse] = Field(default_factory=list, description="List of conversations")
+
+
+class ModeGetResponse(BaseModel):
+    """Response model for getting current mode."""
+    model_config = ConfigDict(extra="forbid")
+    
+    current_mode: str = Field(..., description="The current mode")
+    available_modes: list[str] = Field(default_factory=list, description="List of available modes")
+
+
+class ModeSetRequest(BaseModel):
+    """Request model for setting mode."""
+    model_config = ConfigDict(extra="forbid")
+    
+    mode: str = Field(..., description="The mode to set")
+
+
+class ModeSetResponse(BaseModel):
+    """Response model for setting mode."""
+    model_config = ConfigDict(extra="forbid")
+    
+    success: bool = Field(..., description="Whether the mode change was successful")
+    message: str = Field(..., description="Status message")
+    current_mode: str = Field(..., description="The current mode after the operation")
