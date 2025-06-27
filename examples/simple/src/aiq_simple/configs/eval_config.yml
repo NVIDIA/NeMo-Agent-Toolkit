@@ -56,6 +56,7 @@ workflow:
 
 eval:
   general:
+    max_concurrency: 8
     output:
       dir: ./.tmp/aiq/examples/simple/
       cleanup: true

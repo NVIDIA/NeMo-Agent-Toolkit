@@ -13,10 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import typing
 
 from aiq.eval.config import EvaluationRunOutput
-from aiq.eval.config import MultiEvalutionRunConfig
+from aiq.eval.config import MultiEvaluationRunConfig
 from aiq.eval.evaluate import EvaluationRun
 
 
@@ -25,7 +26,7 @@ class MultiEvaluationRunner:
     Run a multi-evaluation run.
     """
 
-    def __init__(self, config: MultiEvalutionRunConfig):
+    def __init__(self, config: MultiEvaluationRunConfig):
         """
         Initialize a multi-evaluation run.
         """
@@ -34,22 +35,19 @@ class MultiEvaluationRunner:
 
     async def run_all(self):
         """
-        Run the multi-evaluation run.
+        Run all evaluations defined by the overrides.
         """
         for override_id, override_value in self.config.overrides.items():
-            self.evaluation_runs[override_id] = await self.run_single_evaluation(override_id, override_value)
+            output = await self.run_single_evaluation(override_id, override_value)
+            self.evaluation_run_outputs[override_id] = output
 
-    async def run_single_evaluation(self, override_id: typing.Any, override_value: str):
+    async def run_single_evaluation(self, override_id: typing.Any, override_value: str) -> EvaluationRunOutput:
         """
-        Run a single evaluation.
+        Run a single evaluation and return the output.
         """
-        # Update the base config with the override
-        self.config.base_config.override = override_value
-        self.config.base_config.write_output = self.config.write_output
+        config_copy = copy.deepcopy(self.config.base_config)
+        config_copy.override = override_value
+        config_copy.write_output = self.config.write_output
 
-        # Instantiate the evaluation run
-        evaluation_run = EvaluationRun(self.config.base_config)
-
-        # Run the evaluation
-        evaluation_run_output = await evaluation_run.run_and_evaluate()
-        self.evaluation_run_outputs[override_id] = evaluation_run_output
+        evaluation_run = EvaluationRun(config_copy)
+        return await evaluation_run.run_and_evaluate()

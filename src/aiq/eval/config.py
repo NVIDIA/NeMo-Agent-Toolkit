@@ -61,7 +61,7 @@ class MultiEvalutionRunConfig(BaseModel):
     starts.
     """
     base_config: EvaluationRunConfig
-    overrides: dict[typing.Any, str]
+    overrides: dict[typing.Any, tuple[tuple[str, str], ...]]
     write_output: bool = True
 
 
@@ -71,3 +71,35 @@ class MultiEvaluationRunOutput(BaseModel):
     The results per-pass are accumulated in the evaluation_runs dict.
     """
     evaluation_runs: dict[typing.Any, EvaluationRunOutput]
+
+
+class CalcRunnerConfig(BaseModel):
+    """
+    Parameters used for a calc runner.
+    """
+    config_file: Path
+    concurrencies: list[int]
+    target_p95_latency: float
+    target_p95_workflow_runtime: float
+    target_users: int
+
+    test_gpu_count: int
+    test_gpu_type: str
+
+
+class MetricPerConcurrency(BaseModel):
+    """
+    Metrics per concurrency.
+    """
+    p95_latency: float
+    p95_workflow_runtime: float
+
+
+class CalcRunnerOutput(BaseModel):
+    """
+    Output of the calc runner.
+    """
+    max_tested_concurrency: int
+    estimated_gpu_count: int
+    # metric per tested concurrency
+    metrics_per_concurrency: dict[int, MetricPerConcurrency]
