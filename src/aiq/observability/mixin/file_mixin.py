@@ -32,31 +32,32 @@ class FileExportMixin:
         filepath (str): The path to the output file.
         project (str): The project name for metadata.
         **kwargs: Additional keyword arguments to pass to the superclass.
-
-    Attributes:
-        _filepath (str): The path to the output file.
-        _project (str): The project name for metadata.
-        _lock (asyncio.Lock): Lock for thread-safe file operations.
     """
 
     def __init__(self, *args, filepath, project, **kwargs):
-        """Initialize the Phoenix exporter with the specified endpoint and project."""
+        """Initialize the file exporter with the specified filepath and project."""
         self._filepath = filepath
         self._project = project
         self._lock = asyncio.Lock()
         super().__init__(*args, **kwargs)
 
-    async def export_processed(self, item: str) -> None:
-        """Export a string.
+    async def export_processed(self, item: str | list[str]) -> None:
+        """Export a processed string or list of strings.
 
         Args:
-            item (str): The item to export.
+            item (str | list[str]): The string or list of strings to export.
         """
-
         try:
             async with self._lock:
                 async with aiofiles.open(self._filepath, mode="a") as f:
-                    await f.write(item)
-                    await f.write("\n")
+                    if isinstance(item, list):
+                        # Handle list of strings
+                        for single_item in item:
+                            await f.write(single_item)
+                            await f.write("\n")
+                    else:
+                        # Handle single string
+                        await f.write(item)
+                        await f.write("\n")
         except Exception as e:
             logger.error("Error exporting event: %s", e, exc_info=True)

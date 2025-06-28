@@ -46,12 +46,12 @@ class ExporterManager:
     def __init__(self, shutdown_timeout: int = 120):
         """Initialize the ExporterManager."""
         self._tasks: dict[str, asyncio.Task] = {}
-        self._running = False
+        self._running: bool = False
         self._exporter_registry: dict[str, BaseExporter] = {}
-        self._is_registry_shared = False
-        self._lock = asyncio.Lock()
-        self._shutdown_event = asyncio.Event()
-        self._shutdown_timeout = shutdown_timeout
+        self._is_registry_shared: bool = False
+        self._lock: asyncio.Lock = asyncio.Lock()
+        self._shutdown_event: asyncio.Event = asyncio.Event()
+        self._shutdown_timeout: int = shutdown_timeout
         # Track isolated exporters for proper cleanup
         self._active_isolated_exporters: dict[str, BaseExporter] = {}
 
@@ -269,8 +269,10 @@ class ExporterManager:
                 logger.info("Started exporter '%s'", name)
                 # The context manager will keep the task alive until shutdown is signaled
                 await self._shutdown_event.wait()
+                logger.info("Stopped exporter '%s'", name)
         except asyncio.CancelledError:
             logger.debug("Exporter '%s' task cancelled", name)
+            logger.info("Stopped exporter '%s'", name)
             raise
         except Exception as e:
             logger.error("Failed to run exporter '%s': %s", name, str(e), exc_info=True)

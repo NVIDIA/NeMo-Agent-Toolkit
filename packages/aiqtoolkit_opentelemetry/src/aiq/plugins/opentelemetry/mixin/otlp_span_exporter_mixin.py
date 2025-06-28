@@ -25,35 +25,43 @@ logger = logging.getLogger(__name__)
 class OTLPSpanExporterMixin:
     """Mixin for OTLP span exporters.
 
-    This mixin provides a default implementation of the export method for OTLP span exporters.
-    It uses the OTLPSpanExporter from the opentelemetry.exporter.otlp.proto.http.trace_exporter module.
+    This mixin provides OTLP-specific functionality for OpenTelemetry span exporters.
+    It handles OTLP protocol transmission using the standard OpenTelemetry OTLP HTTP exporter.
 
-    Args:
-        *args: Variable length argument list to pass to the superclass.
-        endpoint (str): The endpoint of the OTLP service.
-        headers (dict[str, str]): The headers to send with the request.
-        **kwargs: Additional keyword arguments to pass to the superclass.
+    Key Features:
+    - Standard OTLP HTTP protocol support for span export
+    - Configurable endpoint and headers for authentication/routing
+    - Integration with OpenTelemetry's OTLPSpanExporter for reliable transmission
+    - Works with any OTLP-compatible collector or service
 
-    Attributes:
-        _exporter (OTLPSpanExporter): The OTLP span exporter.
+    This mixin is designed to be used with OtelSpanExporter as a base class:
+
+    Example:
+        class MyOTLPExporter(OtelSpanExporter, OTLPSpanExporterMixin):
+            def __init__(self, endpoint, headers, **kwargs):
+                super().__init__(endpoint=endpoint, headers=headers, **kwargs)
     """
 
     def __init__(self, *args, endpoint: str, headers: dict[str, str], **kwargs):
-        """Initialize the OTLP span exporter with the specified endpoint and headers."""
+        """Initialize the OTLP span exporter.
+
+        Args:
+            endpoint: OTLP service endpoint URL.
+            headers: HTTP headers for authentication and metadata.
+        """
         self._exporter = OTLPSpanExporter(endpoint=endpoint, headers=headers)
         super().__init__(*args, **kwargs)
 
-    async def export_processed(self, span: OtelSpan) -> None:
-        """Export an OtelSpan.
+    async def export_otel_spans(self, spans: list[OtelSpan]) -> None:
+        """Export a list of OtelSpans using the OTLP exporter.
 
         Args:
-            span (OtelSpan): The OtelSpan to export.
+            spans (list[OtelSpan]): The list of spans to export.
 
         Raises:
             Exception: If there's an error during span export (logged but not re-raised).
         """
-
         try:
-            self._exporter.export([span])  # type: ignore
+            self._exporter.export(spans)  # type: ignore
         except Exception as e:
             logger.error("Error exporting spans: %s", e, exc_info=True)

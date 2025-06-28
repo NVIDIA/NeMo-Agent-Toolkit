@@ -16,7 +16,6 @@
 import logging
 
 from phoenix.otel import HTTPSpanExporter
-from phoenix.otel import Resource
 from phoenix.trace.projects import using_project
 
 from aiq.plugins.opentelemetry.otel_span import OtelSpan
@@ -27,41 +26,49 @@ logger = logging.getLogger(__name__)
 class PhoenixMixin:
     """Mixin for Phoenix exporters.
 
-    This mixin provides a default implementation of the export method for Phoenix exporters.
-    It uses the HTTPSpanExporter from the phoenix.otel module.
+    This mixin provides Phoenix-specific functionality for OpenTelemetry span exporters.
+    It handles Phoenix project scoping and uses the HTTPSpanExporter from the phoenix.otel module.
 
-    Args:
-        *args: Variable length argument list to pass to the superclass.
-        endpoint (str): The endpoint of the Phoenix service.
-        project (str): The project name to group the telemetry traces.
-        **kwargs: Additional keyword arguments to pass to the superclass.
+    Key Features:
+    - Automatic Phoenix project name injection into resource attributes
+    - Phoenix project scoping via using_project() context manager
+    - Integration with Phoenix's HTTPSpanExporter for telemetry transmission
 
-    Attributes:
-        _exporter (HTTPSpanExporter): The Phoenix span exporter.
-        _project (str): The project name to group the telemetry traces.
-        _resource (Resource): The resource to add to the span.
+    This mixin is designed to be used with OtelSpanExporter as a base class:
+
+    Example:
+        class MyPhoenixExporter(OtelSpanExporter, PhoenixMixin):
+            def __init__(self, endpoint, project, **kwargs):
+                super().__init__(endpoint=endpoint, project=project, **kwargs)
     """
 
     def __init__(self, *args, endpoint: str, project: str, **kwargs):
-        """Initialize the Phoenix exporter with the specified endpoint and project."""
+        """Initialize the Phoenix exporter.
+
+        Args:
+            endpoint: Phoenix service endpoint URL.
+            project: Phoenix project name for trace grouping.
+        """
         self._exporter = HTTPSpanExporter(endpoint=endpoint)
         self._project = project
-        self._resource = Resource(attributes={
-            "openinference.project.name": project,
-        })
+
+        # Add Phoenix project name to resource attributes
+        kwargs.setdefault('resource_attributes', {})
+        kwargs['resource_attributes'].update({'openinference.project.name': project})
+
         super().__init__(*args, **kwargs)
 
-    async def export_processed(self, spans: OtelSpan | list[OtelSpan]) -> None:
-        """Export an OtelSpan.
+    async def export_otel_spans(self, spans: list[OtelSpan]) -> None:
+        """Export a list of OtelSpans using the Phoenix exporter.
+
+        Args:
+            spans (list[OtelSpan]): The list of spans to export.
+
+        Raises:
+            Exception: If there's an error during span export (logged but not re-raised).
         """
         try:
-            if isinstance(spans, OtelSpan):
-                spans = [spans]
-
             with using_project(self._project):
-                for span in spans:
-                    span.set_resource(self._resource)
                 self._exporter.export(spans)  # type: ignore
-
         except Exception as e:
             logger.error("Error exporting spans: %s", e, exc_info=True)

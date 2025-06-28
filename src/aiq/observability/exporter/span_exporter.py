@@ -13,16 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import logging
 import re
 import uuid
 from abc import abstractmethod
-from typing import Any
 from typing import TypeVar
-
-from pydantic import BaseModel
-from pydantic import TypeAdapter
 
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepState
@@ -34,6 +29,7 @@ from aiq.data_models.span import SpanContext
 from aiq.data_models.span import event_type_to_span_kind
 from aiq.observability.exporter.base_exporter import IsolatedAttribute
 from aiq.observability.exporter.processing_exporter import ProcessingExporter
+from aiq.observability.mixin.serialize_mixin import SerializeMixin
 from aiq.observability.utils.dict_utils import merge_dicts
 from aiq.observability.utils.time_utils import ns_timestamp
 from aiq.utils.type_utils import override
@@ -44,7 +40,7 @@ InputSpanT = TypeVar("InputSpanT")
 OutputSpanT = TypeVar("OutputSpanT")
 
 
-class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT]):
+class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
     """Abstract base class for span exporters with processing pipeline support.
 
     This class specializes ProcessingExporter for span-based telemetry export. It converts
@@ -104,45 +100,6 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT]):
             self._process_start_event(event)
         elif (event.event_state == IntermediateStepState.END):
             self._process_end_event(event)
-
-    def _process_streaming_output(self, input_value: Any) -> Any:
-        """
-        Serialize a list of values to a JSON string.
-        """
-        if isinstance(input_value, BaseModel):
-            return json.loads(TypeAdapter(type(input_value)).dump_json(input_value).decode('utf-8'))
-        if isinstance(input_value, dict):
-            return input_value
-        return input_value
-
-    def _serialize_payload(self, input_value: Any) -> tuple[str, bool]:
-        """
-        Serialize the input value to a string. Returns a tuple with the serialized value and a boolean indicating if the
-        serialization is JSON or a string.
-
-        Args:
-            input_value (Any): The input value to serialize.
-
-        Returns:
-            tuple[str, bool]: A tuple with the serialized value and a boolean indicating if the serialization is
-                JSON or a string.
-        """
-        try:
-            if isinstance(input_value, BaseModel):
-                return TypeAdapter(type(input_value)).dump_json(input_value).decode('utf-8'), True
-            elif isinstance(input_value, dict):
-                return json.dumps(input_value), True
-            elif isinstance(input_value, list):
-                serialized_list = []
-                for value in input_value:
-                    serialized_value = self._process_streaming_output(value)
-                    serialized_list.append(serialized_value)
-                return self._serialize_payload(serialized_list)
-            else:
-                return str(input_value), False
-        except Exception:
-            # Fallback to string representation if we can't serialize using pydantic
-            return str(input_value), False
 
     def _process_start_event(self, event: IntermediateStep):
         """Process the start event of an intermediate step.

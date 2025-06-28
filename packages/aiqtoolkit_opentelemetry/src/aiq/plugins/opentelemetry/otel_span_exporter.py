@@ -16,6 +16,8 @@
 import logging
 from abc import abstractmethod
 
+from opentelemetry.sdk.resources import Resource
+
 from aiq.builder.context import AIQContextState
 from aiq.data_models.span import Span
 from aiq.observability.exporter.span_exporter import SpanExporter
@@ -69,14 +71,6 @@ class OtelSpanExporter(SpanExporter[Span, OtelSpan]):
     Generic Types:
     - InputSpanT: Always Span (from IntermediateStep conversion)
     - OutputSpanT: Always OtelSpan (for OpenTelemetry compatibility)
-
-    Args:
-        context_state (AIQContextState | None): The context state to use for the exporter.
-        batch_size (int): The batch size for exporting.
-        flush_interval (float): The flush interval for exporting.
-        max_queue_size (int): The maximum queue size for exporting.
-        drop_on_overflow (bool): Whether to drop on overflow for exporting.
-        shutdown_timeout (float): The shutdown timeout for exporting.
     """
 
     def __init__(self,
@@ -85,9 +79,25 @@ class OtelSpanExporter(SpanExporter[Span, OtelSpan]):
                  flush_interval: float = 5.0,
                  max_queue_size: int = 1000,
                  drop_on_overflow: bool = False,
-                 shutdown_timeout: float = 10.0):
-        """Initialize the OpenTelemetry exporter with the specified context state."""
+                 shutdown_timeout: float = 10.0,
+                 resource_attributes: dict[str, str] | None = None):
+        """Initialize the OpenTelemetry exporter.
+
+        Args:
+            context_state: The context state to use for the exporter.
+            batch_size: The batch size for exporting spans.
+            flush_interval: The flush interval in seconds for exporting spans.
+            max_queue_size: The maximum queue size for exporting spans.
+            drop_on_overflow: Whether to drop spans on overflow.
+            shutdown_timeout: The shutdown timeout in seconds.
+            resource_attributes: Additional resource attributes for spans.
+        """
         super().__init__(context_state)
+
+        # Initialize resource for span attribution
+        if resource_attributes is None:
+            resource_attributes = {}
+        self._resource = Resource(attributes=resource_attributes)
 
         self._batching_processor = OtelSpanBatchProcessor(batch_size=batch_size,
                                                           flush_interval=flush_interval,
@@ -99,12 +109,45 @@ class OtelSpanExporter(SpanExporter[Span, OtelSpan]):
         self.add_processor(SpanToOtelProcessor())
         self.add_processor(self._batching_processor)
 
-    @abstractmethod
     async def export_processed(self, item: OtelSpan | list[OtelSpan]) -> None:
         """Export the processed span(s).
+
+        This method handles the common logic for all OTEL exporters:
+        - Normalizes single spans vs. batches
+        - Sets resource attributes on spans
+        - Delegates to the abstract export_otel_spans method
 
         Args:
             item (OtelSpan | list[OtelSpan]): The processed span(s) to export.
                 Can be a single span or a batch of spans from BatchingProcessor.
+        """
+        try:
+            if isinstance(item, OtelSpan):
+                spans = [item]
+            elif isinstance(item, list):
+                spans = item
+            else:
+                logger.warning("Unexpected item type: %s", type(item))
+                return
+
+            # Set resource attributes on all spans
+            for span in spans:
+                span.set_resource(self._resource)
+
+            # Delegate to concrete implementation
+            await self.export_otel_spans(spans)
+
+        except Exception as e:
+            logger.error("Error exporting spans: %s", e, exc_info=True)
+
+    @abstractmethod
+    async def export_otel_spans(self, spans: list[OtelSpan]) -> None:
+        """Export a list of OpenTelemetry spans.
+
+        This method must be implemented by concrete exporters to handle
+        the actual export logic (e.g., HTTP requests, file writes, etc.).
+
+        Args:
+            spans (list[OtelSpan]): The list of spans to export.
         """
         pass

@@ -181,13 +181,43 @@ class BaseExporter(Exporter):
             logger.warning(warning_msg)
 
     def __del__(self):
-        """Destructor with memory leak warnings."""
-        if self._running or (hasattr(self, '__tasks_isolated') and self._tasks):
-            warning_msg = (
-                f"{self.name}: Exporter being garbage collected with active resources. "
-                f"Running: {self._running}, Tasks: {len(self._tasks) if hasattr(self, '__tasks_isolated') else 0}. "
-                "Call stop() explicitly to avoid memory leaks.")
-            logger.warning(warning_msg)
+        """Destructor with memory leak warnings.
+
+        This method is defensive against partial initialization - if the object
+        failed to initialize completely, some attributes may not exist.
+        """
+        try:
+            # Check if object was fully initialized before checking for active resources
+            is_running = getattr(self, '_running', False)
+            has_tasks = hasattr(self, '__tasks_isolated') and bool(getattr(self, '_tasks', None))
+
+            if is_running or has_tasks:
+                # Safely get name and task count
+                try:
+                    name = self.name
+                except (AttributeError, TypeError):
+                    # Fallback if name property fails due to missing attributes
+                    name = f"{self.__class__.__name__} (partially initialized)"
+
+                task_count = len(self._tasks) if has_tasks else 0
+
+                logger.warning(
+                    "%s: Exporter being garbage collected with active resources. "
+                    "Running: %s, Tasks: %s. "
+                    "Call stop() explicitly to avoid memory leaks.",
+                    name,
+                    is_running,
+                    task_count)
+
+        except Exception as e:
+            # Last resort: log that cleanup had issues but don't raise
+            # This prevents exceptions during garbage collection
+            try:
+                class_name = self.__class__.__name__
+                logger.debug("Exception during %s cleanup: %s", class_name, e)
+            except Exception:
+                # If even logging fails, silently ignore to prevent GC issues
+                pass
 
     @property
     def name(self) -> str:
@@ -196,8 +226,12 @@ class BaseExporter(Exporter):
         Returns:
             str: The unique name of the exporter.
         """
-        suffix = " (isolated)" if self._is_isolated_instance else ""
-        return f"{self.__class__.__name__}{suffix}"
+        try:
+            suffix = " (isolated)" if getattr(self, '_is_isolated_instance', False) else ""
+            return f"{self.__class__.__name__}{suffix}"
+        except AttributeError:
+            # Fallback for partially initialized objects
+            return f"{self.__class__.__name__} (partial)"
 
     @property
     def is_isolated_instance(self) -> bool:

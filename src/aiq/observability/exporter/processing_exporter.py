@@ -25,6 +25,7 @@ from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.observability.mixin.type_introspection_mixin import TypeIntrospectionMixin
 from aiq.observability.processor.processor import Processor
+from aiq.utils.type_utils import DecomposedType
 from aiq.utils.type_utils import override
 
 PipelineInputT = TypeVar("PipelineInputT")
@@ -43,17 +44,19 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
     - PipelineInputT: The type of items that enter the processing pipeline (e.g., Span)
     - PipelineOutputT: The type of items after processing through the pipeline (e.g., converted format)
 
-    Features:
+    Key Features:
     - Processor pipeline management (add, remove, clear)
     - Type compatibility validation between processors
     - Pipeline processing with error handling
     - Automatic type validation before export
-
-    Args:
-        context_state (AIQContextState, optional): The context state to use for the exporter. Defaults to None.
     """
 
     def __init__(self, context_state: AIQContextState | None = None):
+        """Initialize the processing exporter.
+
+        Args:
+            context_state: The context state to use for the exporter.
+        """
         super().__init__(context_state)
         self._processors: list[Processor] = []  # List of processors that implement process(item) -> item
 
@@ -99,57 +102,6 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         """Clear all processors from the pipeline."""
         self._processors.clear()
 
-    def _is_batch_compatible(self, processor_output_type: type, exporter_output_type: type) -> bool:
-        """Check if a processor output type is compatible with exporter input, including batch compatibility.
-
-        This method handles the special case where batch processors (outputting list[T])
-        can be compatible with exporters that expect T but can handle list[T].
-
-        Args:
-            processor_output_type: The output type from the processor
-            exporter_output_type: The expected output type of the exporter
-
-        Returns:
-            bool: True if types are compatible, False otherwise
-        """
-        from typing import get_args
-        from typing import get_origin
-
-        # Direct compatibility check
-        try:
-            if issubclass(processor_output_type, exporter_output_type):
-                return True
-        except TypeError:
-            # Handle generic types that can't use issubclass
-            pass
-
-        # Check if processor outputs list[T] and exporter expects T
-        processor_origin = get_origin(processor_output_type)
-        processor_args = get_args(processor_output_type)
-
-        if processor_origin is list and processor_args:
-            # Processor outputs list[T], check if exporter expects T
-            inner_type = processor_args[0]
-            try:
-                if issubclass(inner_type, exporter_output_type):
-                    logger.info(
-                        "Batch compatibility: Processor outputs %s, exporter expects %s. "
-                        "This is compatible for batch processing.",
-                        processor_output_type,
-                        exporter_output_type)
-                    return True
-            except TypeError:
-                # If we can't use issubclass, check type equality
-                if inner_type == exporter_output_type:
-                    logger.info(
-                        "Batch compatibility: Processor outputs %s, exporter expects %s. "
-                        "This is compatible for batch processing.",
-                        processor_output_type,
-                        exporter_output_type)
-                    return True
-
-        return False
-
     async def _pre_start(self) -> None:
         if len(self._processors) > 0:
             first_processor = self._processors[0]
@@ -173,7 +125,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
 
             # Validate that the last processor's output type is compatible with the exporter's output type
             try:
-                if not self._is_batch_compatible(last_processor.output_type, self.output_type):
+                if not DecomposedType.is_type_compatible(last_processor.output_type, self.output_type):
                     raise ValueError(f"Processor {last_processor.__class__.__name__} output type "
                                      f"{last_processor.output_type} is not compatible with the "
                                      f"{self.output_type} output type")

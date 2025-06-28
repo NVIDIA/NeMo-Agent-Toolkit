@@ -57,22 +57,3 @@ async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: 
         logger.warning("Unable to connect to Phoenix at port 6006. Are you sure Phoenix is running?\n %s",
                        ex,
                        exc_info=True)
-
-
-# @register_telemetry_exporter(config_type=PhoenixTelemetryExporter)
-# async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: Builder):  # pylint: disable=W0613
-#     """Create a Phoenix telemetry exporter."""
-
-#     try:
-#         from aiq.plugins.phoenix.corrected_batched_exporter import BatchedPhoenixExporter
-
-#         # Create the exporter
-#         yield BatchedPhoenixExporter(endpoint=config.endpoint,
-#                                      project=config.project,
-#                                      batch_size=100,
-#                                      flush_interval=5.0)
-
-#     except ConnectionError as ex:
-#         logger.warning("Unable to connect to Phoenix at port 6006. Are you sure Phoenix is running?\n %s",
-#                        ex,
-#                        exc_info=True)

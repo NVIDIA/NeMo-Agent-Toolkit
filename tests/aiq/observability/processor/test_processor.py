@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit tests for the Processor abstract base class."""
 
 from typing import Any
 
@@ -126,7 +125,6 @@ class TestProcessorTypeIntrospection:
 class TestConcreteProcessorImplementations:
     """Test concrete implementations of the Processor class."""
 
-    @pytest.mark.asyncio
     async def test_simple_string_processor(self):
         """Test a simple string transformation processor."""
 
@@ -139,7 +137,6 @@ class TestConcreteProcessorImplementations:
         result = await processor.process("hello world")
         assert result == "HELLO WORLD"
 
-    @pytest.mark.asyncio
     async def test_type_conversion_processor(self):
         """Test a processor that converts between different types."""
 
@@ -152,7 +149,6 @@ class TestConcreteProcessorImplementations:
         result = await processor.process("test string")
         assert result == 11
 
-    @pytest.mark.asyncio
     async def test_list_processing_processor(self):
         """Test a processor that works with list types."""
 
@@ -165,7 +161,6 @@ class TestConcreteProcessorImplementations:
         result = await processor.process([1, 2, 3, 4, 5])
         assert result == 15
 
-    @pytest.mark.asyncio
     async def test_dict_processing_processor(self):
         """Test a processor that works with dictionary types."""
 
@@ -178,7 +173,6 @@ class TestConcreteProcessorImplementations:
         result = await processor.process({"a": 1, "b": 2, "c": 3})
         assert result == 3
 
-    @pytest.mark.asyncio
     async def test_processor_with_async_operations(self):
         """Test a processor that performs async operations."""
 
@@ -194,11 +188,41 @@ class TestConcreteProcessorImplementations:
         result = await processor.process("test")
         assert result == "processed: test"
 
+    async def test_docstring_example_processor(self):
+        """Test the processor example from the docstring to ensure it works as documented."""
+
+        # Mock Span and OtelSpan classes for the docstring example
+        class Span:
+
+            def __init__(self, name: str):
+                self.name = name
+
+        class OtelSpan:
+
+            def __init__(self, name: str):
+                self.name = name
+
+        def convert_span_to_otel(span: Span) -> OtelSpan:
+            return OtelSpan(span.name)
+
+        class SpanToOtelProcessor(Processor[Span, OtelSpan]):
+
+            async def process(self, item: Span) -> OtelSpan:
+                return convert_span_to_otel(item)
+
+        processor = SpanToOtelProcessor()
+        assert processor.input_type == Span
+        assert processor.output_type == OtelSpan
+
+        span = Span("test-span")
+        result = await processor.process(span)
+        assert isinstance(result, OtelSpan)
+        assert result.name == "test-span"
+
 
 class TestProcessorErrorHandling:
     """Test error handling in processor implementations."""
 
-    @pytest.mark.asyncio
     async def test_processor_with_exception(self):
         """Test that exceptions in process method are properly raised."""
 
@@ -211,7 +235,6 @@ class TestProcessorErrorHandling:
         with pytest.raises(ValueError, match="Processing failed"):
             await processor.process("test")
 
-    @pytest.mark.asyncio
     async def test_processor_with_type_error(self):
         """Test processor behavior with incorrect input types."""
 
@@ -256,7 +279,6 @@ class TestProcessorInheritance:
         assert processor.input_type == str
         assert processor.output_type == str
 
-    @pytest.mark.asyncio
     async def test_inherited_processor_functionality(self):
         """Test that inherited processors work correctly."""
 
@@ -275,6 +297,30 @@ class TestProcessorInheritance:
         result = await processor.process("  hello world  ")
         assert result == "Hello World"
 
+    def test_diamond_inheritance_pattern(self):
+        """Test processors with diamond inheritance pattern."""
+
+        class ProcessorMixin:
+
+            def get_timestamp(self) -> str:
+                return "2025-01-01T00:00:00Z"
+
+        class BaseProcessor(Processor[str, str]):
+
+            async def process(self, item: str) -> str:
+                return item.upper()
+
+        class TimestampProcessor(BaseProcessor, ProcessorMixin):
+
+            async def process(self, item: str) -> str:
+                processed = await super().process(item)
+                timestamp = self.get_timestamp()
+                return f"{processed} - {timestamp}"
+
+        processor = TimestampProcessor()
+        assert processor.input_type == str
+        assert processor.output_type == str
+
 
 class TestProcessorEdgeCases:
     """Test edge cases and boundary conditions."""
@@ -292,7 +338,6 @@ class TestProcessorEdgeCases:
         assert processor.input_type == Optional[str]
         assert processor.output_type == str
 
-    @pytest.mark.asyncio
     async def test_processor_with_same_input_output_type(self):
         """Test processor where input and output types are the same."""
 
@@ -331,3 +376,47 @@ class TestProcessorEdgeCases:
         assert processor.output_type == CustomOutput
         assert processor.input_class == CustomInput
         assert processor.output_class == CustomOutput
+
+    def test_processor_with_union_types(self):
+        """Test processor with Union types."""
+        from typing import Union
+        from typing import get_origin
+
+        class UnionProcessor(Processor[Union[str, int], str]):
+
+            async def process(self, item: Union[str, int]) -> str:
+                return str(item)
+
+        processor = UnionProcessor()
+        assert processor.input_type == Union[str, int]
+        assert processor.output_type == str
+        # Union types have Union as their origin, not the full Union[str, int]
+        assert processor.input_class == get_origin(Union[str, int])  # This is just Union
+        assert processor.output_class == str
+
+    async def test_processor_with_empty_string(self):
+        """Test processor edge case with empty input."""
+
+        class EmptyStringProcessor(Processor[str, int]):
+
+            async def process(self, item: str) -> int:
+                return len(item)
+
+        processor = EmptyStringProcessor()
+        result = await processor.process("")
+        assert result == 0
+
+    def test_processor_class_name_in_error_messages(self):
+        """Test that processor class names appear correctly in error messages."""
+        from aiq.observability.mixin.type_introspection_mixin import TypeIntrospectionMixin
+
+        class ProcessorWithoutGenerics(TypeIntrospectionMixin):
+            pass
+
+        processor = ProcessorWithoutGenerics()
+
+        with pytest.raises(ValueError, match="Could not find input type for ProcessorWithoutGenerics"):
+            _ = processor.input_type
+
+        with pytest.raises(ValueError, match="Could not find output type for ProcessorWithoutGenerics"):
+            _ = processor.output_type

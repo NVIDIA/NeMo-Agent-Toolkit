@@ -47,16 +47,15 @@ class SerializeMixin:
         try:
             if isinstance(input_value, BaseModel):
                 return TypeAdapter(type(input_value)).dump_json(input_value).decode('utf-8'), True
-            elif isinstance(input_value, dict):
+            if isinstance(input_value, dict):
                 return json.dumps(input_value), True
-            elif isinstance(input_value, list):
+            if isinstance(input_value, list):
                 serialized_list = []
                 for value in input_value:
                     serialized_value = self._process_streaming_output(value)
                     serialized_list.append(serialized_value)
-                return self._serialize_payload(serialized_list)
-            else:
-                return str(input_value), False
+                return json.dumps(serialized_list), True
+            return str(input_value), False
         except Exception:
             # Fallback to string representation if we can't serialize using pydantic
             return str(input_value), False

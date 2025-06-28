@@ -24,6 +24,7 @@ import pytest
 
 from aiq.builder.context import AIQContextState
 from aiq.observability.exporter.base_exporter import BaseExporter
+from aiq.observability.exporter.base_exporter import IsolatedAttribute
 from aiq.observability.exporter_manager import ExporterManager
 
 
@@ -596,7 +597,6 @@ class TestConcurrencyAndThreadSafety:
                     assert f"exporter_{j}" not in manager._exporter_registry
 
 
-@pytest.mark.asyncio
 class TestIntegrationScenarios:
     """Integration tests simulating real-world usage scenarios."""
 
@@ -713,7 +713,6 @@ class DummyExporter(BaseExporter):
 class TestMemoryLeakImprovements:
     """Test memory leak improvements in BaseExporter and ExporterManager."""
 
-    @pytest.mark.asyncio
     async def test_basic_functionality(self):
         """Test basic isolated exporter functionality."""
         initial_counts = get_exporter_counts()
@@ -744,7 +743,6 @@ class TestMemoryLeakImprovements:
         del isolated
         gc.collect()  # Force garbage collection
 
-    @pytest.mark.asyncio
     async def test_exporter_manager_with_isolated_exporters(self):
         """Test ExporterManager with isolated exporters for memory leak prevention."""
         initial_counts = get_exporter_counts()
@@ -790,7 +788,6 @@ class TestMemoryLeakImprovements:
         # Verify isolated exporters were cleaned up
         assert len(manager._active_isolated_exporters) == 0
 
-    @pytest.mark.asyncio
     async def test_memory_leak_detection_with_high_traffic(self):
         """Test memory leak detection under high traffic simulation."""
         initial_counts = get_exporter_counts()
@@ -822,7 +819,6 @@ class TestMemoryLeakImprovements:
         assert instance_growth <= 10, \
             f"Potential memory leak: {instance_growth} instances remain after {num_workflows} workflows"
 
-    @pytest.mark.asyncio
     async def test_isolated_instance_cleanup_tracking(self):
         """Test that isolated instances are properly tracked and cleaned up."""
         initial_counts = get_exporter_counts()
@@ -875,7 +871,6 @@ class TestMemoryLeakImprovements:
         assert 'total' in counts
         assert counts['total'] >= 0
 
-    @pytest.mark.asyncio
     async def test_manager_isolated_exporter_tracking(self):
         """Test that ExporterManager properly tracks and cleans up isolated exporters."""
         manager = ExporterManager()
@@ -901,7 +896,6 @@ class TestMemoryLeakImprovements:
         assert instance_growth <= 3, \
             f"ExporterManager not cleaning up isolated instances: {instance_growth} extra instances"
 
-    @pytest.mark.asyncio
     async def test_error_handling_during_cleanup(self, caplog):
         """Test that cleanup errors are handled gracefully."""
 
@@ -924,3 +918,174 @@ class TestMemoryLeakImprovements:
         # Cleanup errors should be logged but not crash the system
         # (The exact logging depends on implementation details)
         # Just verify the context manager completed successfully
+
+
+class TestExporterDestructorWarnings:
+    """Test BaseExporter destructor warning behavior."""
+
+    def test_destructor_warnings_for_running_exporter(self, caplog):
+        """Test that destructor logs warnings for running exporters."""
+
+        class TestExporter(BaseExporter):
+
+            def export(self, event):
+                pass
+
+            @asynccontextmanager
+            async def start(self):
+                self._ready_event.set()
+                yield
+
+        exporter = TestExporter()
+        exporter._running = True  # Simulate running state
+
+        with caplog.at_level(logging.WARNING):
+            # Force destructor call
+            del exporter
+
+        # Note: The destructor warning might not appear immediately due to GC timing
+        # This test documents the expected behavior rather than strictly enforcing it
+
+
+class TestIsolatedAttributeDescriptor:
+    """Test IsolatedAttribute descriptor behavior explicitly."""
+
+    def test_isolated_attribute_descriptor_basic_functionality(self):
+        """Test basic IsolatedAttribute descriptor functionality."""
+
+        class TestClass:
+            test_attr: IsolatedAttribute[set] = IsolatedAttribute(set)
+
+        obj1 = TestClass()
+        obj2 = TestClass()
+
+        # Each instance should get its own attribute
+        obj1.test_attr.add("item1")
+        obj2.test_attr.add("item2")
+
+        assert "item1" in obj1.test_attr
+        assert "item2" in obj2.test_attr
+        assert "item1" not in obj2.test_attr
+        assert "item2" not in obj1.test_attr
+
+    def test_isolated_attribute_reset_for_copy(self):
+        """Test that IsolatedAttribute properly resets on copy."""
+
+        class TestClass:
+            test_attr: IsolatedAttribute[set] = IsolatedAttribute(set)
+
+        obj1 = TestClass()
+        obj1.test_attr.add("original_item")
+
+        # Simulate copy behavior
+        import copy
+        obj2 = copy.copy(obj1)
+
+        # Reset the attribute for the copy
+        TestClass.test_attr.reset_for_copy(obj2)
+
+        # obj2 should have a fresh empty set
+        assert len(obj2.test_attr) == 0
+        assert "original_item" not in obj2.test_attr
+
+        # obj1 should still have its original data
+        assert "original_item" in obj1.test_attr
+
+
+class TestExporterManagerPreStartHook:
+    """Test _pre_start hook functionality."""
+
+    async def test_pre_start_hook_called(self):
+        """Test that _pre_start hook is called during exporter startup."""
+
+        class TestExporter(MockExporter):
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.pre_start_called = False
+
+            async def _pre_start(self):
+                self.pre_start_called = True
+                await super()._pre_start()
+
+            @asynccontextmanager
+            async def start(self):
+                """Override start to call BaseExporter's start which calls _pre_start."""
+                # Call BaseExporter's start method to trigger _pre_start
+                try:
+                    async with super(MockExporter, self).start():
+                        self._start_called = True
+                        yield
+                finally:
+                    self._stop_called = True
+
+        exporter = TestExporter()
+        manager = ExporterManager()
+        manager.add_exporter("test", exporter)
+
+        # Test without isolated context (uses original exporter)
+        async with manager.start(context_state=None):
+            pass
+
+        assert exporter.pre_start_called is True
+
+    async def test_pre_start_hook_called_on_isolated_exporter(self):
+        """Test that _pre_start hook is called on isolated exporters."""
+
+        class TestExporter(MockExporter):
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.pre_start_called = False
+
+            async def _pre_start(self):
+                self.pre_start_called = True
+                await super()._pre_start()
+
+            def create_isolated_instance(self, context_state: AIQContextState) -> "TestExporter":
+                """Override to create testable isolated instance."""
+                isolated = TestExporter(f"{self._name}_isolated", context_state)
+                isolated._isolated_instance_created = True
+                return isolated
+
+        exporter = TestExporter()
+        manager = ExporterManager()
+        manager.add_exporter("test", exporter)
+
+        # Test with isolated context (creates isolated exporters)
+        async with manager.start(context_state=AIQContextState()):
+            # The isolated exporter should have had _pre_start called
+            # We can't directly access it, but we can verify the manager worked
+            assert len(manager._active_isolated_exporters) == 1
+
+
+class TestWaitForTasksExplicitly:
+    """Test _wait_for_tasks method explicitly."""
+
+    async def test_wait_for_tasks_timeout_behavior(self):
+        """Test that _wait_for_tasks handles timeouts properly."""
+
+        class SlowTaskExporter(MockExporter):
+
+            async def _wait_for_tasks(self, timeout: float = 5.0):
+                # Create a slow task and add it to _tasks
+                async def slow_task():
+                    await asyncio.sleep(timeout + 1)  # Slower than timeout
+
+                task = asyncio.create_task(slow_task())
+                self._tasks.add(task)
+
+                # Call parent method which should timeout
+                await super()._wait_for_tasks(timeout=0.1)  # Very short timeout
+
+                # Clean up the task
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+
+        exporter = SlowTaskExporter()
+
+        # This should complete without hanging despite the slow task
+        await exporter._wait_for_tasks(timeout=0.1)

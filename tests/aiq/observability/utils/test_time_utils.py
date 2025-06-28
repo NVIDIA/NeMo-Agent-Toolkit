@@ -145,3 +145,45 @@ def test_ns_timestamp_parametrized(seconds, expected):
     result = ns_timestamp(seconds)
     assert result == expected
     assert isinstance(result, int)
+
+
+def test_ns_timestamp_extreme_edge_cases():
+    """Test timestamp conversion with extreme edge cases."""
+    # Test with infinity - should raise an exception or handle gracefully
+    with pytest.raises((ValueError, OverflowError)):
+        ns_timestamp(float('inf'))
+
+    with pytest.raises((ValueError, OverflowError)):
+        ns_timestamp(float('-inf'))
+
+    # Test with NaN - should raise an exception or handle gracefully
+    with pytest.raises((ValueError, TypeError)):
+        ns_timestamp(float('nan'))
+
+
+def test_ns_timestamp_very_large_numbers():
+    """Test timestamp conversion with very large numbers that might cause overflow."""
+    # Test with a very large number that should still work
+    large_seconds = 1e15  # 1 quadrillion seconds
+    result = ns_timestamp(large_seconds)
+    expected = int(1e15 * 1e9)  # 1e24
+    assert result == expected
+    assert isinstance(result, int)
+
+
+def test_ns_timestamp_type_validation():
+    """Test that function works with different numeric types."""
+    # Test with int (should work)
+    result = ns_timestamp(5)
+    assert result == 5_000_000_000
+    assert isinstance(result, int)
+
+    # Test with numpy types if available
+    try:
+        import numpy as np
+        result = ns_timestamp(np.float64(1.5))
+        assert result == 1_500_000_000
+        assert isinstance(result, int)
+    except ImportError:
+        # Skip numpy test if not available
+        pass

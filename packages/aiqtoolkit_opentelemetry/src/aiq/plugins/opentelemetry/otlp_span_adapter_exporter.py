@@ -23,7 +23,58 @@ logger = logging.getLogger(__name__)
 
 
 class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):
-    """A opentelemetry OTLP span exporter that exports telemetry traces to externally hosted OTLP service."""
+    """An OpenTelemetry OTLP span exporter for sending traces to OTLP-compatible services.
 
-    def __init__(self, context_state: AIQContextState | None = None, **otlp_kwargs):
-        super().__init__(context_state=context_state, **otlp_kwargs)
+    This class combines the OtelSpanExporter base functionality with OTLP-specific
+    export capabilities to provide a complete solution for sending telemetry traces
+    to any OTLP-compatible collector or service via HTTP.
+
+    Key Features:
+    - Complete span processing pipeline (IntermediateStep → Span → OtelSpan → Export)
+    - Batching support for efficient transmission
+    - OTLP HTTP protocol for maximum compatibility
+    - Configurable authentication via headers
+    - Resource attribute management
+    - Error handling and retry logic
+
+    This exporter is commonly used with services like:
+    - OpenTelemetry Collector
+    - Jaeger (OTLP endpoint)
+    - Grafana Tempo
+    - Custom OTLP-compatible backends
+
+    Example:
+        exporter = OTLPSpanAdapterExporter(
+            endpoint="https://api.service.com/v1/traces",
+            headers={"Authorization": "Bearer your-token"},
+            batch_size=50,
+            flush_interval=10.0
+        )
+    """
+
+    def __init__(self,
+                 context_state: AIQContextState | None = None,
+                 batch_size: int = 100,
+                 flush_interval: float = 5.0,
+                 max_queue_size: int = 1000,
+                 drop_on_overflow: bool = False,
+                 shutdown_timeout: float = 10.0,
+                 **otlp_kwargs):
+        """Initialize the OTLP span exporter.
+
+        Args:
+            context_state: The context state for the exporter.
+            batch_size: Number of spans to batch before exporting.
+            flush_interval: Time in seconds between automatic batch flushes.
+            max_queue_size: Maximum number of spans to queue.
+            drop_on_overflow: Whether to drop spans when queue is full.
+            shutdown_timeout: Maximum time to wait for export completion during shutdown.
+            **otlp_kwargs: OTLP configuration including endpoint, headers, and resource_attributes.
+        """
+        super().__init__(context_state=context_state,
+                         batch_size=batch_size,
+                         flush_interval=flush_interval,
+                         max_queue_size=max_queue_size,
+                         drop_on_overflow=drop_on_overflow,
+                         shutdown_timeout=shutdown_timeout,
+                         **otlp_kwargs)

@@ -32,33 +32,28 @@ class TestAsyncDictionary:
         """Create an AsyncDictionary instance for testing."""
         return AsyncDictionary()
 
-    @pytest.mark.asyncio
     async def test_get_existing_key(self, async_dict):
         """Test getting an existing key from the dictionary."""
         await async_dict.set("key1", "value1")
         result = await async_dict.get("key1")
         assert result == "value1"
 
-    @pytest.mark.asyncio
     async def test_get_nonexistent_key_default_none(self, async_dict):
         """Test getting a nonexistent key returns None by default."""
         result = await async_dict.get("nonexistent")
         assert result is None
 
-    @pytest.mark.asyncio
     async def test_get_nonexistent_key_custom_default(self, async_dict):
         """Test getting a nonexistent key with custom default value."""
         result = await async_dict.get("nonexistent", "default_value")
         assert result == "default_value"
 
-    @pytest.mark.asyncio
     async def test_set_and_get(self, async_dict):
         """Test setting and getting values."""
         await async_dict.set("test_key", 42)
         result = await async_dict.get("test_key")
         assert result == 42
 
-    @pytest.mark.asyncio
     async def test_set_overwrite(self, async_dict):
         """Test overwriting an existing key."""
         await async_dict.set("key", "original")
@@ -66,21 +61,18 @@ class TestAsyncDictionary:
         result = await async_dict.get("key")
         assert result == "updated"
 
-    @pytest.mark.asyncio
     async def test_set_strict_new_key(self, async_dict):
         """Test set_strict with a new key."""
         await async_dict.set_strict("new_key", "value")
         result = await async_dict.get("new_key")
         assert result == "value"
 
-    @pytest.mark.asyncio
     async def test_set_strict_existing_key_raises_error(self, async_dict):
         """Test set_strict raises ValueError for existing key."""
         await async_dict.set("existing_key", "value")
         with pytest.raises(ValueError, match="Key 'existing_key' already exists"):
             await async_dict.set_strict("existing_key", "new_value")
 
-    @pytest.mark.asyncio
     async def test_delete_existing_key(self, async_dict):
         """Test deleting an existing key."""
         await async_dict.set("key", "value")
@@ -88,13 +80,11 @@ class TestAsyncDictionary:
         result = await async_dict.get("key")
         assert result is None
 
-    @pytest.mark.asyncio
     async def test_delete_nonexistent_key(self, async_dict):
         """Test deleting a nonexistent key (should not raise error)."""
         await async_dict.delete("nonexistent_key")
         # Should not raise an exception
 
-    @pytest.mark.asyncio
     async def test_delete_strict_existing_key(self, async_dict):
         """Test delete_strict with an existing key."""
         await async_dict.set("key", "value")
@@ -102,13 +92,11 @@ class TestAsyncDictionary:
         result = await async_dict.get("key")
         assert result is None
 
-    @pytest.mark.asyncio
     async def test_delete_strict_nonexistent_key_raises_error(self, async_dict):
         """Test delete_strict raises ValueError for nonexistent key."""
         with pytest.raises(ValueError, match="Key 'nonexistent' does not exist"):
             await async_dict.delete_strict("nonexistent")
 
-    @pytest.mark.asyncio
     async def test_keys(self, async_dict):
         """Test getting all keys from the dictionary."""
         await async_dict.set("key1", "value1")
@@ -116,13 +104,11 @@ class TestAsyncDictionary:
         keys = await async_dict.keys()
         assert set(keys) == {"key1", "key2"}
 
-    @pytest.mark.asyncio
     async def test_keys_empty(self, async_dict):
         """Test getting keys from empty dictionary."""
         keys = await async_dict.keys()
         assert keys == []
 
-    @pytest.mark.asyncio
     async def test_values(self, async_dict):
         """Test getting all values from the dictionary."""
         await async_dict.set("key1", "value1")
@@ -130,13 +116,11 @@ class TestAsyncDictionary:
         values = await async_dict.values()
         assert set(values) == {"value1", "value2"}
 
-    @pytest.mark.asyncio
     async def test_values_empty(self, async_dict):
         """Test getting values from empty dictionary."""
         values = await async_dict.values()
         assert values == []
 
-    @pytest.mark.asyncio
     async def test_items(self, async_dict):
         """Test getting all items from the dictionary."""
         await async_dict.set("key1", "value1")
@@ -144,7 +128,6 @@ class TestAsyncDictionary:
         items = await async_dict.items()
         assert items == {"key1": "value1", "key2": "value2"}
 
-    @pytest.mark.asyncio
     async def test_items_returns_copy(self, async_dict):
         """Test that items() returns a copy to prevent external modification."""
         await async_dict.set("key", "value")
@@ -156,7 +139,6 @@ class TestAsyncDictionary:
         result = await async_dict.get(modified_key)
         assert result is None
 
-    @pytest.mark.asyncio
     async def test_clear(self, async_dict):
         """Test clearing all items from the dictionary."""
         await async_dict.set("key1", "value1")
@@ -166,7 +148,6 @@ class TestAsyncDictionary:
         keys = await async_dict.keys()
         assert keys == []
 
-    @pytest.mark.asyncio
     async def test_concurrent_operations(self, async_dict):
         """Test concurrent operations are properly synchronized."""
 
@@ -198,7 +179,6 @@ class TestAsyncSafeWeakKeyDictionary:
         """Create an AsyncSafeWeakKeyDictionary instance for testing."""
         return AsyncSafeWeakKeyDictionary()
 
-    @pytest.mark.asyncio
     async def test_inherits_async_dictionary_behavior(self, weak_dict):
         """Test that AsyncSafeWeakKeyDictionary inherits AsyncDictionary behavior."""
 
@@ -211,12 +191,10 @@ class TestAsyncSafeWeakKeyDictionary:
         result = await weak_dict.get(key)
         assert result == "value"
 
-    @pytest.mark.asyncio
     async def test_uses_weak_key_dictionary(self, weak_dict):
         """Test that it uses WeakKeyDictionary internally."""
         assert isinstance(weak_dict._dict, WeakKeyDictionary)
 
-    @pytest.mark.asyncio
     async def test_weak_reference_behavior(self, weak_dict):
         """Test weak reference behavior when key is garbage collected."""
 
@@ -247,7 +225,6 @@ class TestKeyedLock:
         """Create a KeyedLock instance for testing."""
         return KeyedLock()
 
-    @pytest.mark.asyncio
     async def test_get_lock_same_key_sequential(self, keyed_lock):
         """Test that the same key uses the same lock sequentially."""
         async with keyed_lock.get_lock("test_key"):
@@ -258,7 +235,6 @@ class TestKeyedLock:
             # Second acquisition (should reuse the same lock)
             pass
 
-    @pytest.mark.asyncio
     async def test_get_lock_different_keys_concurrent(self, keyed_lock):
         """Test that different keys can be locked concurrently."""
         results = []
@@ -277,7 +253,6 @@ class TestKeyedLock:
         # key2 should finish first due to shorter delay
         assert results == ["key2", "key1"]
 
-    @pytest.mark.asyncio
     async def test_get_lock_same_key_blocks(self, keyed_lock):
         """Test that the same key blocks concurrent access."""
         results = []
@@ -300,7 +275,6 @@ class TestKeyedLock:
         # Second task should start after first task completes
         assert results[1][1] > results[0][1] + 0.05
 
-    @pytest.mark.asyncio
     async def test_delete_lock(self, keyed_lock):
         """Test deleting a lock for a specific key."""
         # Create a lock by using it
@@ -313,7 +287,6 @@ class TestKeyedLock:
         # The lock should be removed (this is more of an internal state test)
         # We can't easily verify this without accessing private members
 
-    @pytest.mark.asyncio
     async def test_clear_all_locks(self, keyed_lock):
         """Test clearing all locks."""
         # Create multiple locks by using them
@@ -327,7 +300,6 @@ class TestKeyedLock:
 
         # All locks should be removed (internal state test)
 
-    @pytest.mark.asyncio
     async def test_lock_with_different_key_types(self, keyed_lock):
         """Test locks with different key types."""
         keys = ["string_key", 123, ("tuple", "key"), object()]
@@ -346,7 +318,6 @@ class TestKeyedLock:
 class TestIntegration:
     """Integration tests for multiple components working together."""
 
-    @pytest.mark.asyncio
     async def test_keyed_lock_with_async_dictionary(self):
         """Test using KeyedLock with AsyncDictionary operations."""
         keyed_lock = KeyedLock()
@@ -367,7 +338,6 @@ class TestIntegration:
         result = await async_dict.get("counter")
         assert result == 10  # All increments should be properly synchronized
 
-    @pytest.mark.asyncio
     async def test_multiple_async_dictionaries_with_shared_lock(self):
         """Test multiple AsyncDictionary instances with shared KeyedLock."""
         keyed_lock = KeyedLock()
