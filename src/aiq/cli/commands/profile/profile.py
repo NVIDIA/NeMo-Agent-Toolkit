@@ -18,7 +18,7 @@ import click
 from .calc import calc_command
 
 
-@click.group()
+@click.group(help="Profile a workflow with the specified options.")
 def profile():
     """Profile-related commands."""
     pass

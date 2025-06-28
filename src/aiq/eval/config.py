@@ -28,10 +28,10 @@ class EvaluationRunConfig(BaseModel):
     Parameters used for a single evaluation run.
     """
     config_file: Path
-    dataset: str | None  # dataset file path can be specified in the config file
+    dataset: str | None = None  # dataset file path can be specified in the config file
     result_json_path: str = "$"
     skip_workflow: bool = False
-    skip_completed_entries: bool = False
+    skip_completed_entries: bool = True
     endpoint: str | None = None  # only used when running the workflow remotely
     endpoint_timeout: int = 300
     reps: int = 1
@@ -85,7 +85,7 @@ class CalcRunnerConfig(BaseModel):
     target_users: int
 
     test_gpu_count: int
-    test_gpu_type: str
+    test_gpu_type: str | None = None
 
     plot_output_dir: Path | None = None
 
@@ -104,13 +104,13 @@ class GPUEstimation(BaseModel):
     """
     min_required_gpus: float
     p95_required_gpus: float
+    gpu_estimates: dict[int, float]
 
 
 class CalcRunnerOutput(BaseModel):
     """
     Output of the calc runner.
     """
-    max_tested_concurrency: int
     gpu_estimation: GPUEstimation
     # metric per tested concurrency
     metrics_per_concurrency: dict[int, MetricPerConcurrency]

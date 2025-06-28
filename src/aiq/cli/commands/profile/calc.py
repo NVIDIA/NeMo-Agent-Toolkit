@@ -25,9 +25,9 @@ from aiq.eval.runners.calc_runner import CalcRunner
 logger = logging.getLogger(__name__)
 
 
-@click.command("calc", help="Estimate GPU count and plot metrics for a workflow profile.")
+@click.command("calc", help="Estimate GPU count and plot metrics for a workflow")
 @click.option(
-    "--config",
+    "--config_file",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
     required=True,
     help="A YAML config file for the workflow and evaluation.",
@@ -67,12 +67,12 @@ logger = logging.getLogger(__name__)
     "--concurrencies",
     type=str,
     required=False,
-    default="1,2,4,8,16,32,64",
-    help="Comma-separated list of concurrency values to test (e.g., 1,2,4,8,16,32,64). Default: 1,2,4,8,16,32,64",
+    default="1,2,4,8",
+    help="Comma-separated list of concurrency values to test (e.g., 1,2,4,8). Default: 1,2,4,8",
 )
 @click.pass_context
 def calc_command(ctx,
-                 config,
+                 config_file,
                  target_llm_latency,
                  target_workflow_runtime,
                  target_users,
@@ -89,7 +89,7 @@ def calc_command(ctx,
 
     # Build CalcRunnerConfig
     runner_config = CalcRunnerConfig(
-        config_file=config,
+        config_file=config_file,
         concurrencies=concurrencies_list,
         target_p95_latency=target_llm_latency,
         target_p95_workflow_runtime=target_workflow_runtime,
@@ -101,11 +101,27 @@ def calc_command(ctx,
     async def run_calc():
         runner = CalcRunner(runner_config)
         result = await runner.run()
-        logger.info(f"Max tested concurrency: {result.max_tested_concurrency}")
-        logger.info(f"Estimated GPU count: {result.estimated_gpu_count}")
-        logger.info(f"Metrics per concurrency: {result.metrics_per_concurrency}")
-        click.echo(f"Max tested concurrency: {result.max_tested_concurrency}")
-        click.echo(f"Estimated GPU count: {result.estimated_gpu_count}")
-        click.echo(f"Metrics per concurrency: {result.metrics_per_concurrency}")
+
+        click.echo(f"Estimated GPU count: {result.gpu_estimation.min_required_gpus}")
+        click.echo(f"Estimated GPU count (95th percentile): {result.gpu_estimation.p95_required_gpus}")
+
+        # Print results as a table
+        try:
+            from tabulate import tabulate
+            table = []
+            for concurrency, metrics in result.metrics_per_concurrency.items():
+                gpu_estimate = metrics.gpu_estimate if hasattr(metrics, 'gpu_estimate') else None
+                table.append([concurrency, metrics.p95_latency, metrics.p95_workflow_runtime, gpu_estimate])
+            headers = ["Concurrency", "p95 Latency", "p95 Workflow Runtime", "GPU Estimate"]
+            click.echo(tabulate(table, headers=headers, tablefmt="github"))
+        except ImportError:
+            # Fallback to manual formatting
+            click.echo(
+                f"{'Concurrency':>12} | {'p95 Latency':>12} | {'p95 Workflow Runtime':>20} | {'GPU Estimate':>12}")
+            click.echo("-" * 65)
+            for concurrency, metrics in result.metrics_per_concurrency.items():
+                gpu_estimate = metrics.gpu_estimate if hasattr(metrics, 'gpu_estimate') else None
+                click.echo(f"{concurrency:12} | {metrics.p95_latency:12} | "
+                           f"{metrics.p95_workflow_runtime:20} | {gpu_estimate:12}")
 
     asyncio.run(run_calc())
