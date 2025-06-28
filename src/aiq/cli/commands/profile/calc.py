@@ -67,8 +67,8 @@ logger = logging.getLogger(__name__)
     "--concurrencies",
     type=str,
     required=False,
-    default="1,2,4,8,16",
-    help="Comma-separated list of concurrency values to test (e.g., 1,2,4,8,16). Default: 1,2,4,8,16",
+    default="1,2,4,8,16,32,64",
+    help="Comma-separated list of concurrency values to test (e.g., 1,2,4,8,16,32,64). Default: 1,2,4,8,16,32,64",
 )
 @click.pass_context
 def calc_command(ctx,

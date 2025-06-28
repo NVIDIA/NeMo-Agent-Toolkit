@@ -18,14 +18,17 @@ import math
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 from aiq.eval.config import CalcRunnerConfig
 from aiq.eval.config import CalcRunnerOutput
 from aiq.eval.config import EvaluationRunOutput
+from aiq.eval.config import GPUEstimation
 from aiq.eval.config import MetricPerConcurrency
 from aiq.eval.config import MultiEvaluationRunConfig
 from aiq.eval.runners.multi_eval_runner import MultiEvaluationRunner
+from aiq.profiler.data_models import ProfilerResults
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +43,24 @@ class CalcRunner:
         Initialize CalcRunner with a config file and a list of concurrencies.
         """
         self.config = config
-        # results per-concurrency
-        self.results: dict[int, EvaluationRunOutput] = {}
+        # only store profiler results per-concurrency
+        self.profiler_results: dict[int, ProfilerResults] = {}
+
+    @property
+    def target_latency(self) -> float:
+        return self.config.target_p95_latency
+
+    @property
+    def target_runtime(self) -> float:
+        return self.config.target_p95_workflow_runtime
+
+    @property
+    def target_users(self) -> int:
+        return self.config.target_users
+
+    @property
+    def test_gpu_count(self) -> int:
+        return self.config.test_gpu_count
 
     def plot_concurrency_vs_p95_metrics(self, output_dir: Path):
         """
@@ -49,8 +68,7 @@ class CalcRunner:
         """
         rows = []
 
-        for concurrency, output in self.results.items():
-            profiler_results = output.profiler_results
+        for concurrency, profiler_results in self.profiler_results.items():
             if not profiler_results or not profiler_results.llm_latency_ci or \
                     not profiler_results.workflow_runtime_metrics:
                 continue
@@ -82,19 +100,89 @@ class CalcRunner:
         plt.savefig(output_dir / "concurrency_vs_p95_metrics.png")
         plt.close()
 
-    def calc_gpu_count(self) -> float:
+    def calc_min_required_gpus(self,
+                               valid_runs: list[tuple[int, EvaluationRunOutput]],
+                               use_latency: bool,
+                               use_runtime: bool) -> float:
+        """
+        Estimate the minimum number of GPUs required to meet the target latency and/or workflow runtime SLA
+        for a given target user load.
+        """
+        best_concurrency = max(valid_runs, key=lambda x: x[0])[0]
+        best_output = next(output for concurrency, output in valid_runs if concurrency == best_concurrency)
+        observed_latency = best_output.profiler_results.llm_latency_ci.p95
+        observed_runtime = best_output.profiler_results.workflow_runtime_metrics.p95
+
+        multiplier = 1.0
+        if use_latency:
+            multiplier *= observed_latency / self.target_latency
+        if use_runtime:
+            multiplier *= observed_runtime / self.target_runtime
+        return (self.target_users / best_concurrency) * multiplier * self.test_gpu_count
+
+    def calc_p95_required_gpus(self,
+                               valid_runs: list[tuple[int, EvaluationRunOutput]],
+                               use_latency: bool,
+                               use_runtime: bool) -> float:
+        """
+        Get a gpu estimate based on every valid run and return the 95th percentile.
+         """
+        gpu_estimates = []
+
+        for concurrency, output in valid_runs:
+            observed_latency = output.profiler_results.llm_latency_ci.p95
+            observed_runtime = output.profiler_results.workflow_runtime_metrics.p95
+
+            multiplier = 1.0
+            if use_latency:
+                multiplier *= observed_latency / self.target_latency
+            if use_runtime:
+                multiplier *= observed_runtime / self.target_runtime
+
+            required = (self.target_users / concurrency) * multiplier * self.test_gpu_count
+            logger.info("[GPU Estimation] Concurrency=%s, Latency=%.3fs, Runtime=%.3fs GPUs required=%.2f",
+                        concurrency,
+                        observed_latency,
+                        observed_runtime,
+                        required)
+            gpu_estimates.append(required)
+
+        if not gpu_estimates:
+            logger.warning("No valid GPU estimates available.")
+            return -1
+
+        # Use 95th percentile
+        p95_gpu_estimate = np.percentile(gpu_estimates, 95)
+
+        return math.ceil(p95_gpu_estimate)
+
+    def calc_gpu_count(self) -> GPUEstimation:
         """
         Estimate GPU count to meet target latency and/or workflow runtime SLA
         for a given target user load.
+        This formula is derived from the following assumptions:
+        - The workflow runtime increases linearly with the number of users.
+        - The LLM latency increases linearly with the number of users.
+        - The number of GPUs required increases linearly with the number of users.
 
-        Formula (if both constraints set):
+        The formula if both constraints are set:
             G_required = (U_target / C_test) * (L_obs / L_target) * (R_obs / R_target) * G_test
-
-        Formula (if only latency constraint set):
+        The formula if only latency constraint is set:
             G_required = (U_target / C_test) * (L_obs / L_target) * G_test
-
-        Formula (if only runtime constraint set):
+        The formula if only runtime constraint is set:
             G_required = (U_target / C_test) * (R_obs / R_target) * G_test
+
+        where:
+            - U_target: Target number of users
+            - C_test: Test concurrency
+            - L_obs: Observed LLM latency
+            - L_target: Target LLM latency
+            - R_obs: Observed workflow runtime
+            - R_target: Target workflow runtime
+            - G_test: Test GPU count
+
+        Runs that don't meet the SLA are ignored for e.g. if the target runtime is 2mins,
+        but the observed runtime is 3mins, the run is ignored.
         """
 
         # Config parameters
@@ -111,46 +199,38 @@ class CalcRunner:
         use_latency = target_latency > 0
         use_runtime = target_runtime > 0
 
-        # Filter valid runs
+        # Filter valid runs that meet the SLA
         valid_runs = []
-        for concurrency, output in self.results.items():
-            if not output.profiler_results or not output.profiler_results.llm_latency_ci or\
-                    not output.profiler_results.workflow_runtime_metrics:
+        for concurrency, profiler_results in self.profiler_results.items():
+            if not profiler_results or not profiler_results.llm_latency_ci or\
+                    not profiler_results.workflow_runtime_metrics:
                 continue
 
-            latency = output.profiler_results.llm_latency_ci.p95
-            runtime = output.profiler_results.workflow_runtime_metrics.p95
+            latency = profiler_results.llm_latency_ci.p95
+            runtime = profiler_results.workflow_runtime_metrics.p95
 
             latency_ok = not use_latency or latency <= target_latency
             runtime_ok = not use_runtime or runtime <= target_runtime
 
             if latency_ok and runtime_ok:
-                valid_runs.append((concurrency, output))
+                valid_runs.append((concurrency, profiler_results))
 
         if not valid_runs:
             logger.warning("No valid test run met both latency/runtime targets.")
             return -1
 
-        # Use highest passing concurrency
-        best_concurrency, best_output = max(valid_runs, key=lambda x: x[0])
-        observed_latency = best_output.profiler_results.llm_latency_ci.p95
-        observed_runtime = best_output.profiler_results.workflow_runtime_metrics.p95
+        # Use highest passing concurrency to get the minimum number of GPUs required
+        min_required_gpus = self.calc_min_required_gpus(valid_runs, use_latency, use_runtime)
 
-        multiplier = 1.0
-        if use_latency:
-            multiplier *= observed_latency / target_latency
-        if use_runtime:
-            multiplier *= observed_runtime / target_runtime
+        # If the best run is noisy we may end up under-estimating the number of GPUs required.
+        # We will also calculate p95_required_gpus to account for variablility across runs
+        p95_required_gpus = self.calc_p95_required_gpus(valid_runs, use_latency, use_runtime)
 
-        required_gpus = (target_users / best_concurrency) * multiplier * test_gpu_count
+        logger.info("[GPU Estimation] min_required_gpus=%.2f, p95_required_gpus=%.2f",
+                    min_required_gpus,
+                    p95_required_gpus)
 
-        logger.info(f"[GPU Estimation] concurrency={best_concurrency}, "
-                    f"obs_latency={observed_latency:.3f}s, target_latency={target_latency:.3f}s, "
-                    f"obs_runtime={observed_runtime:.3f}s, target_runtime={target_runtime:.3f}s, "
-                    f"users={target_users}, test_gpus={test_gpu_count} → "
-                    f"required_gpus={required_gpus:.2f}")
-
-        return math.ceil(required_gpus)
+        return GPUEstimation(min_required_gpus=min_required_gpus, p95_required_gpus=p95_required_gpus)
 
     async def run(self) -> CalcRunnerOutput:
         """
@@ -165,18 +245,21 @@ class CalcRunner:
         config = MultiEvaluationRunConfig(base_config=self.config.config_file, overrides=overrides)
         runner = MultiEvaluationRunner(config)
         await runner.run_all()
-        self.results = runner.evaluation_run_outputs
+        self.profiler_results = {
+            concurrency: output.profiler_results
+            for concurrency, output in runner.evaluation_run_outputs.items()
+        }
 
         metrics_per_concurrency = {}
-        for concurrency, output in self.results.items():
+        for concurrency, profiler_results in self.profiler_results.items():
             metrics_per_concurrency[concurrency] = MetricPerConcurrency(
-                p95_latency=output.profiler_results.llm_latency_ci.p95,
-                p95_workflow_runtime=output.profiler_results.workflow_runtime_metrics.p95)
+                p95_latency=profiler_results.llm_latency_ci.p95,
+                p95_workflow_runtime=profiler_results.workflow_runtime_metrics.p95)
 
         # plot the metrics
         if self.config.plot_output_dir:
             self.plot_concurrency_vs_p95_metrics(self.config.plot_output_dir)
 
         return CalcRunnerOutput(max_tested_concurrency=max(self.config.concurrencies),
-                                estimated_gpu_count=self.calc_gpu_count(),
+                                gpu_estimation=self.calc_gpu_count(),
                                 metrics_per_concurrency=metrics_per_concurrency)

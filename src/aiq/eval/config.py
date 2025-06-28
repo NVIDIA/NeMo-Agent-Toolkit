@@ -98,11 +98,19 @@ class MetricPerConcurrency(BaseModel):
     p95_workflow_runtime: float
 
 
+class GPUEstimation(BaseModel):
+    """
+    GPU estimation.
+    """
+    min_required_gpus: float
+    p95_required_gpus: float
+
+
 class CalcRunnerOutput(BaseModel):
     """
     Output of the calc runner.
     """
     max_tested_concurrency: int
-    estimated_gpu_count: int
+    gpu_estimation: GPUEstimation
     # metric per tested concurrency
     metrics_per_concurrency: dict[int, MetricPerConcurrency]
