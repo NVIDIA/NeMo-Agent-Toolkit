@@ -37,25 +37,29 @@ logger = logging.getLogger(__name__)
 @click.option(
     "--target_llm_latency",
     type=float,
-    required=True,
+    required=False,
+    default=0,
     help="Target p95 LLM latency (seconds). Can be set to 0 to ignore.",
 )
 @click.option(
     "--target_workflow_runtime",
     type=float,
-    required=True,
+    required=False,
+    default=0,
     help="Target p95 workflow runtime (seconds). Can be set to 0 to ignore.",
 )
 @click.option(
     "--target_users",
     type=int,
-    required=True,
+    required=False,
+    default=0,
     help="Target number of users to support.",
 )
 @click.option(
     "--test_gpu_count",
     type=int,
-    required=True,
+    required=False,
+    default=0,
     help="Number of GPUs used in the test.",
 )
 @click.option(
@@ -99,6 +103,16 @@ def calc_command(ctx,
         test_gpu_count=test_gpu_count,
         plot_output_dir=plot_output_dir,
     )
+
+    if runner_config.target_p95_latency == 0 and runner_config.target_p95_workflow_runtime == 0:
+        click.echo("Both --target_llm_latency and --target_workflow_runtime are 0. "
+                   "No SLA will be enforced.")
+
+    if runner_config.test_gpu_count <= 0:
+        click.echo("Test GPU count is 0. Tests will be run but the GPU count will not be estimated.")
+
+    if runner_config.target_users <= 0:
+        click.echo("Target users is 0. Tests will be run but the GPU count will not be estimated.")
 
     async def run_calc() -> CalcRunnerOutput:
         runner = CalcRunner(runner_config)

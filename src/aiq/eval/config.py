@@ -102,10 +102,10 @@ class GPUEstimation(BaseModel):
     """
     GPU estimation.
     """
-    min_required_gpus: float
-    p95_required_gpus: float
+    min_required_gpus: float = -1
+    p95_required_gpus: float = -1
     # gpu estimates per concurrency
-    gpu_estimates: dict[int, float]
+    gpu_estimates: dict[int, float] = {}
 
 
 class CalcRunnerOutput(BaseModel):

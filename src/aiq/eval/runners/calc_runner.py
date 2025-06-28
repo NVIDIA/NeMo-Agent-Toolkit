@@ -100,30 +100,10 @@ class CalcRunner:
         plt.savefig(output_dir / "concurrency_vs_p95_metrics.png")
         plt.close()
 
-    def calc_min_required_gpus(self,
-                               valid_runs: list[tuple[int, ProfilerResults]],
-                               use_latency: bool,
-                               use_runtime: bool) -> float:
-        """
-        Estimate the minimum number of GPUs required to meet the target latency and/or workflow runtime SLA
-        for a given target user load.
-        """
-        best_concurrency, best_profiler_results = max(valid_runs, key=lambda x: x[0])
-        observed_latency = best_profiler_results.llm_latency_ci.p95
-        observed_runtime = best_profiler_results.workflow_runtime_metrics.p95
-
-        multiplier = 1.0
-        if use_latency:
-            multiplier *= observed_latency / self.target_latency
-        if use_runtime:
-            multiplier *= observed_runtime / self.target_runtime
-        min_required_gpus = (self.target_users / best_concurrency) * multiplier * self.test_gpu_count
-        return math.ceil(min_required_gpus)
-
     def calc_p95_required_gpus(self,
                                valid_runs: list[tuple[int, ProfilerResults]],
                                use_latency: bool,
-                               use_runtime: bool) -> float:
+                               use_runtime: bool) -> GPUEstimation:
         """
         Get a gpu estimate based on every valid run and return the 95th percentile.
         """
@@ -150,12 +130,21 @@ class CalcRunner:
 
         if not gpu_estimates:
             logger.warning("No valid GPU estimates available.")
-            return -1
+            return GPUEstimation()
 
         # Use 95th percentile
-        p95_gpu_estimate = np.percentile(list(gpu_estimates.values()), 95)
+        p95_required_gpus = np.percentile(list(gpu_estimates.values()), 95)
 
-        return math.ceil(p95_gpu_estimate), gpu_estimates
+        # Return the estimate corresponding to the highest concurrency that passed the SLA as min_required_gpus
+        min_required_gpus = gpu_estimates[max(gpu_estimates.keys())]
+
+        logger.info("[GPU Estimation] min_required_gpus=%.2f, p95_required_gpus=%.2f",
+                    min_required_gpus,
+                    p95_required_gpus)
+
+        return GPUEstimation(p95_required_gpus=math.ceil(p95_required_gpus),
+                             min_required_gpus=math.ceil(min_required_gpus),
+                             gpu_estimates=gpu_estimates)
 
     def calc_gpu_count(self) -> GPUEstimation:
         """
@@ -186,10 +175,9 @@ class CalcRunner:
         but the observed runtime is 3mins, the run is ignored.
         """
 
-        if self.target_users <= 0 or self.test_gpu_count <= 0:
-            raise ValueError("Target users and test GPU count must be > 0.")
-        if self.target_latency <= 0 and self.target_runtime <= 0:
-            raise ValueError("At least one of target_p95_latency or target_p95_workflow_runtime must be > 0.")
+        if self.target_users <= 0 or self.test_gpu_count <= 0 or \
+                (self.target_latency <= 0 and self.target_runtime <= 0):
+            return GPUEstimation()
 
         use_latency = self.target_latency > 0
         use_runtime = self.target_runtime > 0
@@ -212,22 +200,10 @@ class CalcRunner:
 
         if not valid_runs:
             logger.warning("No valid test run met both latency/runtime targets.")
-            return GPUEstimation(min_required_gpus=-1, p95_required_gpus=-1)
+            return GPUEstimation()
 
-        # Use highest passing concurrency to get the minimum number of GPUs required
-        min_required_gpus = self.calc_min_required_gpus(valid_runs, use_latency, use_runtime)
-
-        # If the best run is noisy we may end up under-estimating the number of GPUs required.
-        # We will also calculate p95_required_gpus to account for variablility across runs
-        p95_required_gpus, gpu_estimates = self.calc_p95_required_gpus(valid_runs, use_latency, use_runtime)
-
-        logger.info("[GPU Estimation] min_required_gpus=%.2f, p95_required_gpus=%.2f",
-                    min_required_gpus,
-                    p95_required_gpus)
-
-        return GPUEstimation(min_required_gpus=min_required_gpus,
-                             p95_required_gpus=p95_required_gpus,
-                             gpu_estimates=gpu_estimates)
+        # Calculate gpu estimates for each concurrency that passed the SLA
+        return self.calc_p95_required_gpus(valid_runs, use_latency, use_runtime)
 
     async def run(self) -> CalcRunnerOutput:
         """
