@@ -46,11 +46,11 @@ class Processor(Generic[InputT, OutputT], TypeIntrospectionMixin, ABC):
     - Abstract base class requiring implementation of process()
 
     Example:
-        ```python
-        class SpanToOtelProcessor(Processor[Span, OtelSpan]):
-            async def process(self, item: Span) -> OtelSpan:
-                return convert_span_to_otel(item)
-        ```
+        .. code-block:: python
+
+            class SpanToOtelProcessor(Processor[Span, OtelSpan]):
+                async def process(self, item: Span) -> OtelSpan:
+                    return convert_span_to_otel(item)
 
     Note:
         Processors are typically added to ProcessingExporter instances to create
