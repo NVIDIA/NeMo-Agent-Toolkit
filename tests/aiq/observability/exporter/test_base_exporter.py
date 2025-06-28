@@ -391,27 +391,26 @@ class TestBaseExporter:
         # Should complete without error
 
     async def test_stop_running(self, exporter):
-        """Test stop when running."""
+        """Test stop when running - new behavior: no task waiting."""
         mock_subscription = Mock()
         exporter._subscription = mock_subscription
         exporter._running = True
-        exporter._wait_for_tasks = AsyncMock()
         exporter._cleanup = AsyncMock()
 
         await exporter.stop()
 
         assert exporter._running is False
         assert exporter._shutdown_event.is_set()
-        exporter._wait_for_tasks.assert_called()
         exporter._cleanup.assert_called_once()
         mock_subscription.unsubscribe.assert_called_once()
         assert exporter._subscription is None
+        assert len(exporter._tasks) == 0  # Task tracking cleared
 
     async def test_stop_with_tasks(self, exporter):
-        """Test stop with active tasks."""
+        """Test stop with active tasks - new behavior: tasks continue running, tracking cleared."""
 
         async def test_task():
-            await asyncio.sleep(10)  # Long sleep so it gets cancelled
+            await asyncio.sleep(10)  # Long task continues running
 
         task = asyncio.create_task(test_task())
         exporter._tasks.add(task)
@@ -419,23 +418,25 @@ class TestBaseExporter:
 
         await exporter.stop()
 
-        assert task.cancelled()
-        assert len(exporter._tasks) == 0
+        # New behavior: tasks continue running but tracking is cleared
+        assert not task.cancelled()  # Task continues in event loop
+        assert len(exporter._tasks) == 0  # Tracking set is cleared
+
+        # Clean up the task for test completion
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
     async def test_stop_task_cancellation_error(self, exporter, caplog):
-        """Test stop with task that has cancellation issues."""
+        """Test stop with task - no cancellation errors since tasks aren't cancelled."""
 
-        # Create a task that will raise an error when cancelled
+        # Create a task that would have caused cancellation issues in the old approach
         task = Mock()
         task.done.return_value = False
         task.cancel.return_value = None
-        task.get_name.return_value = "problematic_task"
-
-        # Set up the task to raise an exception when awaited after cancellation
-        async def mock_await():
-            raise ValueError("cleanup error")
-
-        task.__await__ = lambda: mock_await().__await__()
+        task.get_name.return_value = "test_task"
 
         exporter._tasks.add(task)
         exporter._running = True
@@ -444,8 +445,9 @@ class TestBaseExporter:
         with caplog.at_level(logging.WARNING, logger="aiq.observability.exporter.base_exporter"):
             await exporter.stop()
 
-        # Check that the warning was logged during task cancellation
-        assert "Error while canceling task" in caplog.text
+        # New behavior: no cancellation warnings since tasks aren't cancelled
+        assert "Error while canceling task" not in caplog.text
+        assert len(exporter._tasks) == 0  # Tracking cleared
 
     async def test_wait_ready(self, exporter):
         """Test wait_ready method."""

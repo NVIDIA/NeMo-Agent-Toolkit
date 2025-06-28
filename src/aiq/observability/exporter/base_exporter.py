@@ -46,7 +46,8 @@ class IsolatedAttribute(Generic[IsolatedAttributeT]):
 
     Performance Note: This pattern shares expensive resources (HTTP clients,
     auth headers) while isolating cheap mutable state (task sets, events).
-    Critical for high-throughput concurrent execution.
+    Tasks are tracked for monitoring but don't block shutdown - they complete
+    asynchronously in the event loop. Critical for high-throughput concurrent execution.
 
     Implementation Note: Uses Python descriptor protocol (__get__, __set__, __set_name__)
     for automatic attribute isolation on object copying.
@@ -108,6 +109,12 @@ class BaseExporter(Exporter):
 
     The class supports isolation for concurrent execution by automatically resetting
     mutable state when creating isolated copies using descriptors.
+
+    Performance Design:
+        - Export tasks run asynchronously in the event loop background
+        - stop() method does not wait for background tasks to complete
+        - Tasks are tracked for monitoring but cleaned up automatically
+        - This keeps observability "off the hot path" for optimal performance
 
     Args:
         context_state (AIQContextState, optional): The context state to use for the exporter. Defaults to None.
@@ -182,6 +189,10 @@ class BaseExporter(Exporter):
 
     def __del__(self):
         """Destructor with memory leak warnings.
+
+        Warns if the exporter is being garbage collected while still running,
+        which indicates stop() was never called. Task tracking is used for
+        diagnostics but stop() doesn't wait for tasks to complete.
 
         This method is defensive against partial initialization - if the object
         failed to initialize completely, some attributes may not exist.
@@ -329,8 +340,28 @@ class BaseExporter(Exporter):
         """Clean up any resources."""
         pass
 
+    async def _cancel_tasks(self):
+        """Cancel all scheduled tasks.
+
+        Note: This method is NOT called during normal stop() operation for performance.
+        It's available for special cases where explicit task completion is needed.
+        """
+        tasks_to_cancel = set(self._tasks)
+        for task in tasks_to_cancel:
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+                except Exception as e:
+                    logger.warning("Error while canceling task %s: %s", task.get_name(), e)
+
     async def _wait_for_tasks(self, timeout: float = 5.0):
         """Wait for all tracked tasks to complete with a timeout.
+
+        Note: This method is NOT called during normal stop() operation for performance.
+        It's available for special cases where explicit task completion is needed.
 
         Args:
             timeout (float, optional): The timeout in seconds. Defaults to 5.0.
@@ -348,42 +379,32 @@ class BaseExporter(Exporter):
 
     @override
     async def stop(self):
-        """Stop the exporter.
+        """Stop the exporter immediately without waiting for background tasks.
 
-        This method is called when the exporter is no longer needed.
+        This method performs fast shutdown by:
+        1. Setting running=False to prevent new export tasks
+        2. Signaling shutdown to waiting code
+        3. Cleaning up subscriptions and resources
+        4. Clearing task tracking (tasks continue in event loop)
+
+        Performance: Does not block waiting for background export tasks to complete.
+        Background tasks will finish asynchronously and clean themselves up.
+
+        Note: This method is called when the exporter is no longer needed.
         """
         if not self._running:
             return
-
-        # Wait for tasks to complete
-        await self._wait_for_tasks()
 
         self._running = False
         self._shutdown_event.set()
 
         await self._cleanup()
+
         if self._subscription:
             self._subscription.unsubscribe()
         self._subscription = None
 
-        # Create a copy of tasks to prevent modification during iteration
-        tasks_to_cancel = set(self._tasks)
-
         self._tasks.clear()
-
-        # Cancel only our tasks and wait for them to complete
-        for task in tasks_to_cancel:
-            if not task.done():
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
-                except Exception as e:
-                    logger.warning("Error while canceling task %s: %s", task.get_name(), e)
-
-        # Final check to ensure all tasks are cleaned up
-        await self._wait_for_tasks()
 
     async def wait_ready(self):
         """Wait for the exporter to be ready.
