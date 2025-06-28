@@ -35,20 +35,16 @@ class WeaveMixin:
     It uses the weave_client_context to create and finish Weave calls.
 
     Args:
-        *args: Variable length argument list to pass to the superclass.
         project (str): The project name to group the telemetry traces.
         entity (str | None): The entity name to group the telemetry traces.
-        **kwargs: Additional keyword arguments to pass to the superclass.
     """
 
     def __init__(self, *args, project: str, entity: str | None = None, **kwargs):
         """Initialize the Weave exporter with the specified project and entity.
 
         Args:
-            *args: Variable length argument list to pass to the superclass.
             project (str): The project name to group the telemetry traces.
             entity (str | None): The entity name to group the telemetry traces.
-            **kwargs: Additional keyword arguments to pass to the superclass.
         """
         self._gc = weave_client_context.require_weave_client()
         self._project = project

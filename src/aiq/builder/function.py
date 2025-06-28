@@ -191,6 +191,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         to_type : type | None, optional
             The type to convert the output to using the function's converter. When not specified, the
             output will match `streaming_output_type`.
+
         Yields
         ------
         typing.Any

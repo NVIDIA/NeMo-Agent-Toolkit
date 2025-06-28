@@ -28,16 +28,21 @@ class Exporter(ABC):
     @abstractmethod
     async def start(self) -> AsyncGenerator[None, None]:
         """Subscribes to event stream and starts the exporter.
+
         This is an async context manager that should be used with 'async with'.
+        The exporter is automatically stopped when exiting the context.
 
-        Usage:
-            async with exporter.start():
-                # Exporter is now running and subscribed to events
-                # Your workflow code here
-                pass
-            # Exporter is automatically stopped when exiting the context
+        Usage::
 
-        Note: Implementations should use the @asynccontextmanager decorator.
+            .. code-block:: python
+
+                async with exporter.start():
+                    # Exporter is now running and subscribed to events
+                    # Your workflow code here
+                    pass
+
+        Note:
+            Implementations should use the @asynccontextmanager decorator.
         """
         pass
 

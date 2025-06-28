@@ -26,16 +26,15 @@ class FileExportMixin:
 
     This mixin provides file I/O functionality for exporters that need to write
     serialized data to local files.
-
-    Args:
-        *args: Variable length argument list to pass to the superclass.
-        filepath (str): The path to the output file.
-        project (str): The project name for metadata.
-        **kwargs: Additional keyword arguments to pass to the superclass.
     """
 
     def __init__(self, *args, filepath, project, **kwargs):
-        """Initialize the file exporter with the specified filepath and project."""
+        """Initialize the file exporter with the specified filepath and project.
+
+        Args:
+            filepath (str): The path to the output file.
+            project (str): The project name for metadata.
+        """
         self._filepath = filepath
         self._project = project
         self._lock = asyncio.Lock()

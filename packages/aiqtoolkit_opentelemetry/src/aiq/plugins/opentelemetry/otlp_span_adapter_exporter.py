@@ -69,7 +69,6 @@ class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):
             max_queue_size: Maximum number of spans to queue.
             drop_on_overflow: Whether to drop spans when queue is full.
             shutdown_timeout: Maximum time to wait for export completion during shutdown.
-            **otlp_kwargs: OTLP configuration including endpoint, headers, and resource_attributes.
         """
         super().__init__(context_state=context_state,
                          batch_size=batch_size,
