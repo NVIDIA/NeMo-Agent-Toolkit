@@ -39,28 +39,43 @@ class WeaveMixin:
         project (str): The project name to group the telemetry traces.
         entity (str | None): The entity name to group the telemetry traces.
         **kwargs: Additional keyword arguments to pass to the superclass.
-
-    Attributes:
-        _gc (WeaveClient): The Weave client.
-        _project (str): The project name to group the telemetry traces.
-        _entity (str | None): The entity name to group the telemetry traces.
     """
 
     def __init__(self, *args, project: str, entity: str | None = None, **kwargs):
-        """Initialize the Weave exporter with the specified project and entity."""
-        super().__init__(*args, **kwargs)
+        """Initialize the Weave exporter with the specified project and entity.
+
+        Args:
+            *args: Variable length argument list to pass to the superclass.
+            project (str): The project name to group the telemetry traces.
+            entity (str | None): The entity name to group the telemetry traces.
+            **kwargs: Additional keyword arguments to pass to the superclass.
+        """
         self._gc = weave_client_context.require_weave_client()
         self._project = project
         self._entity = entity
         self._weave_calls = {}
+        super().__init__(*args, **kwargs)
 
-    async def export(self, span: Span) -> None:
+    async def export_processed(self, item: Span | list[Span]) -> None:
         """Export a batch of spans.
+
+        Args:
+            item (Span | list[Span]): The span or list of spans to export.
+        """
+        if not isinstance(item, list):
+            spans = [item]
+        else:
+            spans = item
+
+        for span in spans:
+            self._export_processed(span)
+
+    def _export_processed(self, span: Span) -> None:
+        """Export a single span.
 
         Args:
             span (Span): The span to export.
         """
-
         try:
             call = self._create_weave_call(span)
             self._finish_weave_call(call, span)
