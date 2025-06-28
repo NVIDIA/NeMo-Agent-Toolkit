@@ -308,6 +308,11 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             self.evaluator_output_files.append(output_file)
             logger.info("Evaluation results written to %s", output_file)
 
+    def publish_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):
+        """Publish the output"""
+        if self.config.write_output:
+            self.write_output(dataset_handler, profiler_results)
+
         if self.workflow_interrupted:
             # Issue a warning if the workflow was not completed on all datasets
             msg = ("Workflow execution was interrupted due to an error. The results may be incomplete. "
@@ -447,8 +452,8 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         # Profile the workflow
         profiler_results = await self.profile_workflow()
 
-        # Write the results to the output directory
-        self.write_output(dataset_handler, profiler_results)
+        # Publish the results
+        self.publish_output(dataset_handler, profiler_results)
 
         # Run custom scripts and upload evaluation outputs to S3
         if self.eval_config.general.output:

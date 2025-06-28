@@ -238,9 +238,12 @@ class CalcRunner:
         """
         concurrency_key = "eval.general.max_concurrency"
         alias_key = "eval.general.workflow_alias"
-        overrides = {c: ((concurrency_key, str(c)), (alias_key, str(c))) for c in self.config.concurrencies}
+        overrides = {
+            c: ((concurrency_key, str(c)), (alias_key, "workflow_" + str(c)))
+            for c in self.config.concurrencies
+        }
 
-        eval_run_config = EvaluationRunConfig(config_file=self.config.config_file)
+        eval_run_config = EvaluationRunConfig(config_file=self.config.config_file, write_output=False)
         config = MultiEvaluationRunConfig(base_config=eval_run_config, overrides=overrides)
         runner = MultiEvaluationRunner(config)
         await runner.run_all()
