@@ -152,6 +152,16 @@ class DatasetHandler:
         allow re-running evaluation using the orignal config file and '--skip_workflow' option.
         """
 
+        def parse_if_json_string(value):
+            if isinstance(value, str):
+                try:
+                    return json.loads(value)
+                except json.JSONDecodeError:
+                    return value
+            if hasattr(value, "model_dump"):
+                return value.model_dump()
+            return value
+
         indent = 2
         if self.is_structured_input():
             # Extract structured data from EvalInputItems
@@ -165,6 +175,6 @@ class DatasetHandler:
             } for item in eval_input.eval_input_items]
         else:
             # Unstructured case: return only raw output objects as a JSON array
-            data = [json.loads(item.output_obj) for item in eval_input.eval_input_items]
+            data = [parse_if_json_string(item.output_obj) for item in eval_input.eval_input_items]
 
         return json.dumps(data, indent=indent, ensure_ascii=False, default=str)
