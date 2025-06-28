@@ -223,7 +223,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         profiler_runner = ProfilerRunner(self.eval_config.general.profiler, self.eval_config.general.output_dir)
 
-        return await profiler_runner.run(all_stats)
+        return await profiler_runner.run(all_stats, write_output=self.config.write_output)
 
     def cleanup_output_directory(self):
         '''Remove contents of the output directory if it exists'''

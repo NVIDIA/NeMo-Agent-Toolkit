@@ -81,7 +81,7 @@ class ProfilerRunner:
         # Ensure output directory
         os.makedirs(output_dir, exist_ok=True)
 
-    async def run(self, all_steps: list[list[IntermediateStep]]) -> ProfilerResults:
+    async def run(self, all_steps: list[list[IntermediateStep]], write_output: bool) -> ProfilerResults:
         """
         Main entrypoint: Works on Input DataFrame generated from eval to fit forecasting model,
         writes out combined requests JSON, then computes and saves additional metrics,
@@ -114,10 +114,11 @@ class ProfilerRunner:
             self.all_requests_data.append({"request_number": i, "intermediate_steps": request_data})
 
         # Write the final big JSON (all requests)
-        final_path = os.path.join(self.output_dir, "all_requests_profiler_traces.json")
-        with open(final_path, 'w', encoding='utf-8') as f:
-            json.dump(self.all_requests_data, f, indent=2, default=str)
-        logger.info("Wrote combined data to: %s", final_path)
+        if write_output:
+            final_path = os.path.join(self.output_dir, "all_requests_profiler_traces.json")
+            with open(final_path, 'w', encoding='utf-8') as f:
+                json.dump(self.all_requests_data, f, indent=2, default=str)
+            logger.info("Wrote combined data to: %s", final_path)
 
         # ------------------------------------------------------------
         # Generate one standardized dataframe for all usage stats
@@ -185,7 +186,7 @@ class ProfilerRunner:
                                                                      token_uniqueness=token_uniqueness_results,
                                                                      workflow_runtimes=workflow_runtimes_results)
 
-        if inference_optimization_results:
+        if write_output and inference_optimization_results:
             # Save to JSON
             optimization_results_path = os.path.join(self.output_dir, "inference_optimization.json")
             with open(optimization_results_path, 'w', encoding='utf-8') as f:
@@ -249,14 +250,14 @@ class ProfilerRunner:
                 exclude=["textual_report"])
             logger.info("Prefix span analysis complete")
 
-        if workflow_profiling_reports:
+        if write_output and workflow_profiling_reports:
             # Save to text file
             profiling_report_path = os.path.join(self.output_dir, "workflow_profiling_report.txt")
             with open(profiling_report_path, 'w', encoding='utf-8') as f:
                 f.write(workflow_profiling_reports)
             logger.info("Wrote workflow profiling report to: %s", profiling_report_path)
 
-        if workflow_profiling_metrics:
+        if write_output and workflow_profiling_metrics:
             # Save to JSON
             profiling_metrics_path = os.path.join(self.output_dir, "workflow_profiling_metrics.json")
             with open(profiling_metrics_path, 'w', encoding='utf-8') as f:
@@ -278,11 +279,12 @@ class ProfilerRunner:
                 logger.exception("Fitting model failed. %s", e, exc_info=True)
                 return ProfilerResults()
 
-            os.makedirs(self.output_dir, exist_ok=True)
+            if write_output:
+                os.makedirs(self.output_dir, exist_ok=True)
 
-            import pickle
-            with open(os.path.join(self.output_dir, "fitted_model.pkl"), 'wb') as f:
-                pickle.dump(fitted_model, f)
+                import pickle
+                with open(os.path.join(self.output_dir, "fitted_model.pkl"), 'wb') as f:
+                    pickle.dump(fitted_model, f)
 
             logger.info("Saved fitted model to disk.")
 
