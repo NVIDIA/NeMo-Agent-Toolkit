@@ -120,23 +120,18 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
             httpx.Response | None: The response from the API request, or None if an error occurs.
         """
         from aiq.authentication.authentication_manager_factory import AuthenticationManagerFactory
-        from aiq.authentication.exceptions import APIRequestError
+        from aiq.authentication.exceptions.exceptions import APIRequestError
         from aiq.authentication.interfaces import AuthenticationManagerBase
         from aiq.authentication.request_manager import RequestManager
-        from aiq.data_models.authentication import AuthenticationManagerConfig
         from aiq.data_models.authentication import ExecutionMode
 
         request_manager: RequestManager = RequestManager()
         response: httpx.Response | None = None
-        authentication_manager_factory: AuthenticationManagerFactory = AuthenticationManagerFactory()
-
-        auth_manager_config: AuthenticationManagerConfig = AuthenticationManagerConfig(
-            config_name=user_request.authentication_config_name,
-            config=user_request.authentication_config,
-            execution_mode=ExecutionMode.CONSOLE)
+        authentication_manager_factory: AuthenticationManagerFactory = AuthenticationManagerFactory(
+            ExecutionMode.CONSOLE)
 
         authentication_manager: AuthenticationManagerBase | None = await authentication_manager_factory.create(
-            auth_manager_config)
+            user_request)
 
         authentication_header: httpx.Headers | None = None
 
@@ -152,10 +147,12 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
                                                           body_data=user_request.body_data)
 
             if response is None:
-                raise APIRequestError("An unexpected error occured while sending request.")
+                error_message = "An unexpected error occurred while sending request - no response received"
+                raise APIRequestError('console_api_request_failed', error_message)
 
         except APIRequestError as e:
-            logger.error("An error occured during the API request: %s", str(e), exc_info=True)
+            error_message = f"An error occurred during the API request: {str(e)}"
+            logger.error(error_message, exc_info=True)
             return None
 
         return response

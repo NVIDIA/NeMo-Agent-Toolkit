@@ -42,17 +42,19 @@ class _FastApiFrontEndController:
 
     async def start_server(self) -> None:
         "Starts the API server."
-        from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantError
+        from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantFlowError
         try:
             self._server_background_task = asyncio.create_task(self._server.serve())
 
         except asyncio.CancelledError as e:
-            logger.error("Task error occured while starting OAuth2.0 server: %s", str(e), exc_info=True)
-            raise AuthCodeGrantError("Task error occured while starting OAuth2.0 server:") from e
+            error_message = f"Task error occurred while starting OAuth2.0 server: {str(e)}"
+            logger.error(error_message, exc_info=True)
+            raise AuthCodeGrantFlowError('server_start_cancelled', error_message) from e
 
         except Exception as e:
-            logger.error("Unexpected error occured while starting OAuth2.0 server: %s", str(e), exc_info=True)
-            raise AuthCodeGrantError("Unexpected error occured while starting OAuth2.0 server:") from e
+            error_message = f"Unexpected error occurred while starting OAuth2.0 server: {str(e)}"
+            logger.error(error_message, exc_info=True)
+            raise AuthCodeGrantFlowError('server_start_failed', error_message) from e
 
     async def stop_server(self) -> None:
         "Stops the API server."

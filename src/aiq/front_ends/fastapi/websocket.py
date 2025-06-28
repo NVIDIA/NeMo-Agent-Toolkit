@@ -26,7 +26,7 @@ from fastapi import WebSocketException
 from starlette.endpoints import WebSocketEndpoint
 from starlette.websockets import WebSocketDisconnect
 
-from aiq.authentication.exceptions import APIRequestError
+from aiq.authentication.exceptions.exceptions import APIRequestError
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.api_server import AIQChatResponseChunk
@@ -169,20 +169,15 @@ class AIQWebSocket(WebSocketEndpoint):
         from aiq.authentication.interfaces import AuthenticationManagerBase
         from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantManager
         from aiq.authentication.request_manager import RequestManager
-        from aiq.data_models.authentication import AuthenticationManagerConfig
         from aiq.data_models.authentication import ExecutionMode
 
         request_manager: RequestManager = RequestManager()
         response: httpx.Response | None = None
-        authentication_manager_factory: AuthenticationManagerFactory = AuthenticationManagerFactory()
-
-        auth_manager_config: AuthenticationManagerConfig = AuthenticationManagerConfig(
-            config_name=user_request.authentication_config_name,
-            config=user_request.authentication_config,
-            execution_mode=ExecutionMode.SERVER)
+        authentication_manager_factory: AuthenticationManagerFactory = AuthenticationManagerFactory(
+            ExecutionMode.SERVER)
 
         authentication_manager: AuthenticationManagerBase | None = await authentication_manager_factory.create(
-            auth_manager_config)
+            user_request)
 
         if isinstance(authentication_manager, AuthCodeGrantManager):
             authentication_manager._response_manager.message_handler = self._message_handler
@@ -201,10 +196,13 @@ class AIQWebSocket(WebSocketEndpoint):
                                                           body_data=user_request.body_data)
 
             if response is None:
-                raise APIRequestError("An unexpected error occured while sending request.")
+                error_message = (
+                    "An unexpected error occurred while sending request - no response received in websocket mode")
+                raise APIRequestError('websocket_api_request_failed', error_message)
 
         except APIRequestError as e:
-            logger.error("An error occured during the API request: %s", str(e), exc_info=True)
+            error_message = f"An error occurred during the API request: {str(e)}"
+            logger.error(error_message, exc_info=True)
             return None
 
         return response

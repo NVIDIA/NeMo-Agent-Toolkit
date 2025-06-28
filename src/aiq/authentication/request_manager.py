@@ -21,13 +21,13 @@ import urllib.parse
 import httpx
 from pydantic import ValidationError
 
-from aiq.authentication.exceptions import APIRequestError
-from aiq.authentication.exceptions import AuthCodeGrantError
-from aiq.authentication.exceptions import BaseUrlValidationError
-from aiq.authentication.exceptions import BodyValidationError
-from aiq.authentication.exceptions import HTTPHeaderValidationError
-from aiq.authentication.exceptions import HTTPMethodValidationError
-from aiq.authentication.exceptions import QueryParameterValidationError
+from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
+from aiq.authentication.exceptions.exceptions import APIRequestError
+from aiq.authentication.exceptions.request_exceptions import BaseUrlValidationError
+from aiq.authentication.exceptions.request_exceptions import BodyValidationError
+from aiq.authentication.exceptions.request_exceptions import HTTPHeaderValidationError
+from aiq.authentication.exceptions.request_exceptions import HTTPMethodValidationError
+from aiq.authentication.exceptions.request_exceptions import QueryParameterValidationError
 from aiq.authentication.interfaces import RequestManagerBase
 from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
 from aiq.authentication.response_manager import ResponseManager
@@ -86,15 +86,21 @@ class RequestManager(RequestManagerBase):
 
         # Ensure URL has both scheme and network location
         if not parsed_url.scheme or not parsed_url.netloc:
-            raise BaseUrlValidationError("URL must have both scheme and network location.")
+            error_message = "URL must have both scheme and network location"
+            logger.error(error_message, exc_info=True)
+            raise BaseUrlValidationError('invalid_url_format', error_message)
 
         # Ensure URL scheme is (http or https)
         if parsed_url.scheme not in ['http', 'https']:
-            raise BaseUrlValidationError(f"Unsupported URL scheme: {parsed_url.scheme}. Must be http or https.")
+            error_message = f"Unsupported URL scheme: {parsed_url.scheme}. Must be http or https"
+            logger.error(error_message, exc_info=True)
+            raise BaseUrlValidationError('unsupported_url_scheme', error_message)
 
         # Ensure URL starts with a '/'
         if not parsed_url.path.startswith("/"):
-            raise BaseUrlValidationError("URL path should start with '/'")
+            error_message = "URL path should start with '/'"
+            logger.error(error_message, exc_info=True)
+            raise BaseUrlValidationError('invalid_url_path', error_message)
 
     def _validate_http_method(self, http_method: str | HTTPMethod) -> None:
         """
@@ -107,8 +113,9 @@ class RequestManager(RequestManagerBase):
             HTTPMethod(http_method.upper())
         except ValueError as e:
             valid_http_methods = ', '.join([method.value for method in HTTPMethod])
-            raise HTTPMethodValidationError(
-                f"Invalid HTTP method: '{http_method}'. Must be one of {valid_http_methods}.") from e
+            error_message = f"Invalid HTTP method: '{http_method}'. Must be one of {valid_http_methods}"
+            logger.error(error_message, exc_info=True)
+            raise HTTPMethodValidationError('invalid_http_method', error_message) from e
 
     def _validate_headers(self, headers: dict | httpx.Headers | None) -> None:
         """
@@ -130,14 +137,20 @@ class RequestManager(RequestManagerBase):
 
                 # Checking for valid ASCII characters in the header name
                 if not re.fullmatch(r"[A-Za-z0-9-]+", key):
-                    raise HTTPHeaderValidationError(f"Invalid header name: {key}")
+                    error_message = f"Invalid header name: {key}"
+                    logger.error(error_message, exc_info=True)
+                    raise HTTPHeaderValidationError('invalid_header_name', error_message)
 
                 # Checking for disallowed control characters
                 if any(ord(char) < 32 and char != '\t' or ord(char) == 127 for char in value):
-                    raise HTTPHeaderValidationError(f"Invalid control character in header value: {key}: {value}")
+                    error_message = f"Invalid control character in header value: {key}: {value}"
+                    logger.error(error_message, exc_info=True)
+                    raise HTTPHeaderValidationError('invalid_header_value', error_message)
 
         except ValueError as e:
-            raise HTTPHeaderValidationError(f"Invalid header data: {e}") from e
+            error_message = f"Invalid header data: {str(e)}"
+            logger.error(error_message, exc_info=True)
+            raise HTTPHeaderValidationError('invalid_header_data', error_message) from e
 
     def _validate_query_parameters(self, query_params: dict | httpx.QueryParams | None) -> None:
         """
@@ -159,16 +172,21 @@ class RequestManager(RequestManagerBase):
 
                 # Catch keys with leading/trailing whitespace to prevent ambiguous parsing or bypassing
                 if key.strip() != key:
-                    raise QueryParameterValidationError(f"Key has leading or trailing whitespace: '{key}'")
+                    error_message = f"Key has leading or trailing whitespace: '{key}'"
+                    logger.error(error_message, exc_info=True)
+                    raise QueryParameterValidationError('invalid_query_param_key_whitespace', error_message)
 
                 # Catch newlines in keys to prevent header injection and log splitting vulnerabilities
                 if isinstance(key, str) and ('\n' in key or '\r' in key):
-                    raise QueryParameterValidationError(f"Key contains newline or control character: '{key}'")
+                    error_message = f"Key contains newline or control character: '{key}'"
+                    logger.error(error_message, exc_info=True)
+                    raise QueryParameterValidationError('invalid_query_param_key_newline', error_message)
 
                 # Catch newlines in values to avoid header injection and log splitting vulnerabilities
                 if isinstance(value, str) and ('\n' in value or '\r' in value):
-                    raise QueryParameterValidationError(
-                        f"Value contains newline or control character for key '{key}': '{value}'")
+                    error_message = f"Value contains newline or control character for key '{key}': '{value}'"
+                    logger.error(error_message, exc_info=True)
+                    raise QueryParameterValidationError('invalid_query_param_value_newline', error_message)
 
                 # Try to URL-encode the key and value to ensure they are safe
                 try:
@@ -177,11 +195,14 @@ class RequestManager(RequestManagerBase):
                     urllib.parse.quote(str(value), safe='')
 
                 except Exception as e:
-                    raise QueryParameterValidationError(
-                        f"Unable to safely encode query parameter: ({key}: {value})") from e
+                    error_message = f"Unable to safely encode query parameter: ({key}: {value})"
+                    logger.error(error_message, exc_info=True)
+                    raise QueryParameterValidationError('query_param_encoding_failed', error_message) from e
 
         except ValueError as e:
-            raise QueryParameterValidationError(f"Invalid query parameter data: {e}") from e
+            error_message = f"Invalid query parameter data: {str(e)}"
+            logger.error(error_message, exc_info=True)
+            raise QueryParameterValidationError('invalid_query_param_data', error_message) from e
 
     def _validate_body_data(self, body_data: dict | None) -> None:
         """
@@ -195,46 +216,55 @@ class RequestManager(RequestManagerBase):
         try:
             json.dumps(body_data)
         except (TypeError, ValueError) as e:
-            raise BodyValidationError(f"Request body is not JSON serializable: {e}") from e
+            error_message = f"Request body is not JSON serializable: {str(e)}"
+            logger.error(error_message, exc_info=True)
+            raise BodyValidationError('invalid_request_body', error_message) from e
 
     async def build_auth_code_grant_url(self,
-                                        authentication_config: AuthCodeGrantConfig,
+                                        encrypted_authentication_config: AuthCodeGrantConfig,
                                         response_type: str = "code",
                                         prompt: str = "consent") -> httpx.URL:
         """
         Construct an authorization URL to initiate the Auth Code Grant Flow.
 
         Args:
-            authentication_config (AuthCodeGrantConfig): The registered authentication config.
+            encrypted_authentication_config (AuthCodeGrantConfig): The registered authentication config.
+            response_type (str): The response type to use for the authorization request.
+            prompt (str): The prompt to use for the authorization request.
         """
+        from aiq.authentication.credentials_manager import _CredentialsManager
         from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 
         try:
             full_authorization_url: httpx.URL = None
 
             # Validate authorization url.
-            self._validate_base_url(authentication_config.authorization_url)
+
+            self._validate_base_url(_CredentialsManager().decrypt_value(
+                encrypted_authentication_config.authorization_url))
 
             # Construct Auth Code Grant flow query parameters.
             query_params: AuthCodeGrantQueryParams = AuthCodeGrantQueryParams(
-                audience=authentication_config.audience,
-                client_id=authentication_config.client_id,
-                state=authentication_config.state,
-                scope=(" ".join(authentication_config.scope)),
-                redirect_uri=(f"{authentication_config.client_server_url}"
-                              f"{FastApiFrontEndConfig().authorization.path}"
-                              f"{AuthenticationEndpoint.REDIRECT_URI.value}"),
+                audience=_CredentialsManager().decrypt_value(encrypted_authentication_config.audience),
+                client_id=_CredentialsManager().decrypt_value(encrypted_authentication_config.client_id),
+                state=_CredentialsManager().decrypt_value(encrypted_authentication_config.state),
+                scope=(" ".join(encrypted_authentication_config.scope)),
+                redirect_uri=(
+                    f"{_CredentialsManager().decrypt_value(encrypted_authentication_config.client_server_url)}"
+                    f"{FastApiFrontEndConfig().authorization.path}"
+                    f"{AuthenticationEndpoint.REDIRECT_URI.value}"),
                 response_type=response_type,
                 prompt=prompt)
 
             self._validate_query_parameters(query_params.model_dump())
 
-            full_authorization_url = httpx.URL(authentication_config.authorization_url).copy_merge_params(
-                query_params.model_dump())
+            full_authorization_url = httpx.URL(_CredentialsManager().decrypt_value(
+                encrypted_authentication_config.authorization_url)).copy_merge_params(query_params.model_dump())
 
         except (BaseUrlValidationError, QueryParameterValidationError, ValueError, ValidationError, Exception) as e:
-            logger.error("An error occured while building authorization url: %s", str(e), exc_info=True)
-            raise AuthCodeGrantError("An error occured while building authorization url.") from e
+            error_message = f"An error occurred while building authorization url: {str(e)}"
+            logger.error(error_message, exc_info=True)
+            raise AuthCodeGrantFlowError('auth_url_build_failed', error_message) from e
 
         return full_authorization_url
 
@@ -320,15 +350,18 @@ class RequestManager(RequestManagerBase):
                 QueryParameterValidationError,
                 BodyValidationError) as e:
 
-            logger.error("An error occured while building request url: %s", str(e), exc_info=True)
-            raise APIRequestError("An error occured while building request url.") from e
+            error_message = f"An error occurred while building request url: {str(e)}"
+            logger.error(error_message, exc_info=True)
+            raise APIRequestError('request_validation_failed', error_message) from e
 
         except (httpx.RequestError, httpx.TimeoutException, httpx.HTTPStatusError, httpx.NetworkError) as e:
-            logger.error("An error occured while sending request: %s", str(e), exc_info=True)
-            raise APIRequestError("An error occured while sending request.") from e
+            error_message = f"An error occurred while sending request: {str(e)}"
+            logger.error(error_message, exc_info=True)
+            raise APIRequestError('http_request_failed', error_message) from e
 
         except Exception as e:
-            logger.error("Unexpected eror occured sending request %s", str(e), exc_info=True)
-            raise APIRequestError("An unexpected error occured while sending request.") from e
+            error_message = f"An unexpected error occurred while sending request: {str(e)}"
+            logger.error(error_message, exc_info=True)
+            raise APIRequestError('unexpected_request_error', error_message) from e
 
         return response

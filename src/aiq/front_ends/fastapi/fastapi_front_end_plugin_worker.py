@@ -214,22 +214,17 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             httpx.Response | None: The response from the API request, or None if an error occurs.
         """
         from aiq.authentication.authentication_manager_factory import AuthenticationManagerFactory
-        from aiq.authentication.exceptions import APIRequestError
+        from aiq.authentication.exceptions.exceptions import APIRequestError
         from aiq.authentication.interfaces import AuthenticationManagerBase
-        from aiq.data_models.authentication import AuthenticationManagerConfig
         from aiq.data_models.authentication import ExecutionMode
 
         request_manager: RequestManager = RequestManager()
         response: httpx.Response | None = None
-        authentication_manager_factory: AuthenticationManagerFactory = AuthenticationManagerFactory()
-
-        auth_manager_config: AuthenticationManagerConfig = AuthenticationManagerConfig(
-            config_name=user_request.authentication_config_name,
-            config=user_request.authentication_config,
-            execution_mode=ExecutionMode.SERVER)
+        authentication_manager_factory: AuthenticationManagerFactory = AuthenticationManagerFactory(
+            ExecutionMode.SERVER)
 
         authentication_manager: AuthenticationManagerBase | None = await authentication_manager_factory.create(
-            auth_manager_config)
+            user_request)
 
         authentication_header: httpx.Headers | None = None
 
@@ -245,10 +240,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                           body_data=user_request.body_data)
 
             if response is None:
-                raise APIRequestError("An unexpected error occured while sending request.")
+                error_message = "An unexpected error occurred while sending request - no response received"
+                raise APIRequestError('server_api_request_failed', error_message)
 
         except APIRequestError as e:
-            logger.error("An error occured during the API request: %s", str(e), exc_info=True)
+            error_message = f"An error occurred during the API request: {str(e)}"
+            logger.error(error_message, exc_info=True)
             return None
 
         return response
@@ -541,7 +538,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 async with session_manager.session(
                         request=request,
-                        user_request_callback=self.execute_api_request_server_http):  # TODO EE: Investigate Bug.
+                        # TODO EE: Investigate Bug.
+                        user_request_callback=self.execute_api_request_server_http):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
@@ -592,7 +590,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 async with session_manager.session(
                         request=request,
-                        user_request_callback=self.execute_api_request_server_http):  # TODO EE: Investigate Bug.
+                        # TODO EE: Investigate Bug.
+                        user_request_callback=self.execute_api_request_server_http):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
@@ -613,7 +612,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             Stream raw intermediate steps without any step adaptor translations.
             """
 
-            async def post_stream(payload: request_type, filter_steps: str | None = None):  # TODO EE: Add callbacks?
+            # TODO EE: Add callbacks?
+            async def post_stream(payload: request_type, filter_steps: str | None = None):
 
                 return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                          content=generate_streaming_response_full_as_str(
@@ -873,7 +873,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         from fastapi.responses import HTMLResponse
 
         from aiq.authentication.credentials_manager import _CredentialsManager
-        from aiq.authentication.exceptions import AuthCodeGrantError
+        from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
         from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
         from aiq.data_models.authentication import AccessCodeTokenRequest
         from aiq.data_models.authentication import HTTPMethod
@@ -886,24 +886,30 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             state: str | None = request.query_params.get("state")
 
             if not (authorization_code and state):
-                raise AuthCodeGrantError("Authorization code and state not provided by authorization config.")
+                error_message = "Authorization code and state not provided by authorization config"
+                raise AuthCodeGrantFlowError('auth_code_state_missing', error_message)
 
-            authentication_config: AuthCodeGrantConfig | None = _CredentialsManager(
+            encrypted_authentication_config: AuthCodeGrantConfig | None = _CredentialsManager(
             ).get_authentication_config_by_state(state)
 
-            if authentication_config is None:
-                raise AuthCodeGrantError("Authorization config not found by Authorization Code Grant state.")
+            if encrypted_authentication_config is None:
+                error_message = "Authorization config not found by Authorization Code Grant state"
+                raise AuthCodeGrantFlowError('auth_config_not_found', error_message)
 
             # Build Token HTTP Request
-            redirect_uri: str = (f"{authentication_config.client_server_url}"
-                                 f"{FastApiFrontEndConfig().authorization.path}"
-                                 f"{AuthenticationEndpoint.REDIRECT_URI.value}")
+            redirect_uri: str = (
+                f"{_CredentialsManager().decrypt_value(encrypted_authentication_config.client_server_url)}"
+                f"{FastApiFrontEndConfig().authorization.path}"
+                f"{AuthenticationEndpoint.REDIRECT_URI.value}")
 
-            data = AccessCodeTokenRequest(client_id=authentication_config.client_id,
-                                          client_secret=authentication_config.client_secret,
-                                          code=authorization_code,
-                                          redirect_uri=redirect_uri)
-            token_url: str = authentication_config.authorization_token_url
+            data = AccessCodeTokenRequest(
+                client_id=_CredentialsManager().decrypt_value(encrypted_authentication_config.client_id),
+                client_secret=_CredentialsManager().decrypt_value(encrypted_authentication_config.client_secret),
+                code=authorization_code,
+                redirect_uri=redirect_uri)
+
+            token_url: str = _CredentialsManager().decrypt_value(
+                encrypted_authentication_config.authorization_token_url)
 
             headers: httpx.Headers = httpx.Headers({"Content-Type": "application/json"})
 
@@ -911,26 +917,31 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             response: httpx.Response | None = await self._request_manager.send_request(
                 url=token_url, http_method=HTTPMethod.POST.value, headers=headers, body_data=data.model_dump())
             if response is None:
-                raise AuthCodeGrantError(
-                    "Invalid response received while exchanging authorization code for access token.")
+                error_message = "Invalid response received while exchanging authorization code for access token"
+                raise AuthCodeGrantFlowError('token_response_null', error_message)
 
             if not response.status_code == 200:
-                await self._response_manager.handle_auth_code_grant_response_codes(response, authentication_config)
+                await self._response_manager.handle_auth_code_grant_response_codes(response,
+                                                                                   encrypted_authentication_config)
 
             if response.json().get("access_token") is None:
-                raise AuthCodeGrantError("No access token provided.")
+                error_message = "No access token provided"
+                raise AuthCodeGrantFlowError('access_token_missing', error_message)
 
             if response.json().get("expires_in") is None:
-                raise AuthCodeGrantError("No access token provided.")
+                error_message = "No token expiry provided"
+                raise AuthCodeGrantFlowError('token_expiry_missing', error_message)
 
             # Claim the access token and the expiration time.
-            authentication_config.access_token = response.json().get("access_token")
-            authentication_config.access_token_expires_in = (datetime.now(timezone.utc) +
-                                                             timedelta(seconds=response.json().get("expires_in")))
+            encrypted_authentication_config.access_token = _CredentialsManager().encrypt_value(
+                response.json().get("access_token"))
+            encrypted_authentication_config.access_token_expires_in = (
+                datetime.now(timezone.utc) + timedelta(seconds=response.json().get("expires_in")))
 
             # Claim the refresh token if the refresh token is available.
             if response.json().get("refresh_token"):
-                authentication_config.refresh_token = response.json().get("refresh_token")
+                encrypted_authentication_config.refresh_token = _CredentialsManager().encrypt_value(
+                    response.json().get("refresh_token"))
 
             await _CredentialsManager().set_oauth_credentials()
 
@@ -939,18 +950,21 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         async def prompt_redirect_uri(request: Request, prompt_request_schema: PromptRedirectRequest):
             from fastapi.responses import JSONResponse
 
-            authentication_config: AuthCodeGrantConfig | None = _CredentialsManager(
+            encrypted_authentication_config: AuthCodeGrantConfig | None = _CredentialsManager(
             ).get_authentication_config_by_consent_prompt_key(prompt_request_schema.consent_prompt_key)
 
-            if (authentication_config is None):
+            if (encrypted_authentication_config is None):
                 raise HTTPException(status_code=403, detail="Consent prompt key not found.")
 
-            location_url: str = authentication_config.consent_prompt_location_url
+            location_url: str | None = None
+            if encrypted_authentication_config.consent_prompt_location_url is not None:
+                location_url = _CredentialsManager().decrypt_value(
+                    encrypted_authentication_config.consent_prompt_location_url)
 
             await _CredentialsManager().set_consent_prompt_url()
 
-            auth_provider_name: str | None = _CredentialsManager().get_registered_authentication_config_name(
-                authentication_config)
+            auth_provider_name: str | None = _CredentialsManager().get_authentication_config_name(
+                encrypted_authentication_config)
 
             return JSONResponse(content={"auth_provider_name": auth_provider_name, "redirect_url": location_url})
 

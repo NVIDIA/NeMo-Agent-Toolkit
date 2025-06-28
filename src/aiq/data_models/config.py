@@ -276,9 +276,12 @@ class AIQConfig(HashableBaseModel):
     def model_post_init(self, context: typing.Any) -> None:
         from aiq.authentication.credentials_manager import _CredentialsManager
 
-        # Persist the authentication credentials after the model is initialized.
+        # Persist and encrypt the authentication credentials after the model is initialized.
         if (self.authentication):
             _CredentialsManager().swap_authentication_configs(self.authentication)
+            _CredentialsManager().validate_unique_consent_prompt_keys()
+            _CredentialsManager().generate_credentials_encryption_key()
+            _CredentialsManager().encrypt_authentication_configs()
 
     @field_validator("functions",
                      "llms",

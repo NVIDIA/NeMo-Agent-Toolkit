@@ -14,41 +14,41 @@
 # limitations under the License.
 
 
-class AuthCodeGrantError(Exception):
-    """Raised when Auth Code Grant flow fails unexpectedly."""
-    pass
-
-
-class AuthCodeGrantRefreshTokenError(Exception):
-    """Raised when Auth Code Grant flow requesting access token using refresh flow fails unexpectedly. """
-    pass
-
-
 class BaseUrlValidationError(Exception):
     """Raised when HTTP Base URL validation fails unexpectedly."""
-    pass
+
+    def __init__(self, error_code: str, message: str, *args):
+        self.error_code = error_code
+        super().__init__(f"[{error_code}] {message}", *args)
 
 
 class HTTPMethodValidationError(Exception):
     """Raised when HTTP Method validation fails unexpectedly."""
-    pass
+
+    def __init__(self, error_code: str, message: str, *args):
+        self.error_code = error_code
+        super().__init__(f"[{error_code}] {message}", *args)
 
 
 class QueryParameterValidationError(Exception):
     """Raised when HTTP Query Parameter validation fails unexpectedly."""
-    pass
+
+    def __init__(self, error_code: str, message: str, *args):
+        self.error_code = error_code
+        super().__init__(f"[{error_code}] {message}", *args)
 
 
 class HTTPHeaderValidationError(Exception):
     """Raised when HTTP Header validation fails unexpectedly."""
-    pass
+
+    def __init__(self, error_code: str, message: str, *args):
+        self.error_code = error_code
+        super().__init__(f"[{error_code}] {message}", *args)
 
 
 class BodyValidationError(Exception):
     """Raised when HTTP Body validation fails unexpectedly."""
-    pass
 
-
-class APIRequestError(Exception):
-    """Raised when making an API request fails unexpectedly."""
-    pass
+    def __init__(self, error_code: str, message: str, *args):
+        self.error_code = error_code
+        super().__init__(f"[{error_code}] {message}", *args)

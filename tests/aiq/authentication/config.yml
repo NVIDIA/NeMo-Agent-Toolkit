@@ -17,12 +17,12 @@ authentication:
   jira:
     _type: oauth2_authorization_code_grant
     consent_prompt_mode: "browser"
-    consent_prompt_key: mock_consent_prompt_key
-    client_server_url: "mock_url"
-    authorization_url: mock_authorization_url
+    consent_prompt_key: mock_consent_prompt_key_secure
+    client_server_url: "https://mock.server.com"
+    authorization_url: https://mock.auth.com/oauth/authorize
     authorization_token_url: https://mock.token.url.com/oauth/token
     client_id: mock_client_id
-    client_secret: mock_client_secret
+    client_secret: mock_client_secret_16_chars_minimum
     audience: mock_audience
     scope:
       - report:mock
@@ -30,6 +30,6 @@ authentication:
       - manage:mock
   jira_api_key:
     _type: api_key
-    api_key: mock_api_key
+    api_key: mock_api_key_123456
     header_name: Authorization
     header_prefix: Bearer

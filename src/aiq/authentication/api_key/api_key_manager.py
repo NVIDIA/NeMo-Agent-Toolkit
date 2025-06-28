@@ -25,9 +25,9 @@ logger = logging.getLogger(__name__)
 
 class APIKeyManager(AuthenticationManagerBase):
 
-    def __init__(self, config_name: str, config: APIKeyConfig) -> None:
+    def __init__(self, config_name: str, encrypted_config: APIKeyConfig) -> None:
         self._config_name: str = config_name
-        self._config: APIKeyConfig = config
+        self._encrypted_config: APIKeyConfig = encrypted_config
         super().__init__()
 
     async def validate_authentication_credentials(self) -> bool:
@@ -37,13 +37,19 @@ class APIKeyManager(AuthenticationManagerBase):
         Returns:
             bool: True if the API key credentials are valid, False otherwise.
         """
+        from aiq.authentication.credentials_manager import _CredentialsManager
+
         # Ensure there is an API key set.
-        if self._config.api_key is None or self._config.api_key == "":
+        if _CredentialsManager().decrypt_value(
+                self._encrypted_config.api_key) is None or _CredentialsManager().decrypt_value(
+                    self._encrypted_config.api_key) == "":
             logger.error("API key is not set or is empty for config: %s", self._config_name)
             return False
 
         # Ensure the header name is set.
-        if self._config.header_name is None or self._config.header_name == "":
+        if _CredentialsManager().decrypt_value(
+                self._encrypted_config.header_name) is None or _CredentialsManager().decrypt_value(
+                    self._encrypted_config.header_name) == "":
             logger.error("API key config header name is not set or is empty for config: %s", self._config_name)
             return False
 
@@ -73,4 +79,8 @@ class APIKeyManager(AuthenticationManagerBase):
         Returns:
             httpx.Headers | None: Returns the constructed HTTP header if the API key is valid, otherwise returns None.
         """
-        return httpx.Headers({f"{self._config.header_name}": f"{self._config.header_prefix} {self._config.api_key}"})
+        from aiq.authentication.credentials_manager import _CredentialsManager
+        return httpx.Headers({
+            f"{_CredentialsManager().decrypt_value(self._encrypted_config.header_name)}":
+                f"{_CredentialsManager().decrypt_value(self._encrypted_config.header_prefix)} {_CredentialsManager().decrypt_value(self._encrypted_config.api_key)}"  # noqa: E501
+        })

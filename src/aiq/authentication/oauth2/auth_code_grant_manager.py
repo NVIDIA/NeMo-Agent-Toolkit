@@ -22,8 +22,8 @@ from datetime import timezone
 
 import httpx
 
-from aiq.authentication.exceptions import AuthCodeGrantError
-from aiq.authentication.exceptions import AuthCodeGrantRefreshTokenError
+from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
+from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowRefreshTokenError
 from aiq.authentication.interfaces import AuthenticationManagerBase
 from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
 from aiq.authentication.request_manager import RequestManager
@@ -37,10 +37,10 @@ logger = logging.getLogger(__name__)
 
 class AuthCodeGrantManager(AuthenticationManagerBase):
 
-    def __init__(self, config_name: str, config: AuthCodeGrantConfig, execution_mode: ExecutionMode) -> None:
+    def __init__(self, config_name: str, encrypted_config: AuthCodeGrantConfig, execution_mode: ExecutionMode) -> None:
 
         self._config_name: str = config_name
-        self._config: AuthCodeGrantConfig = config
+        self._encrypted_config: AuthCodeGrantConfig = encrypted_config
         self._request_manager: RequestManager = RequestManager()
         self._response_manager: ResponseManager = ResponseManager()
         self._execution_mode: ExecutionMode = execution_mode
@@ -67,8 +67,9 @@ class AuthCodeGrantManager(AuthenticationManagerBase):
         Returns:
             bool: True if the credentials are valid and False if they are not.
         """
-        if (self._config.access_token and (self._config.access_token_expires_in is not None)
-                and (datetime.now(timezone.utc) <= self._config.access_token_expires_in)):
+
+        if (self._encrypted_config.access_token and (self._encrypted_config.access_token_expires_in is not None)
+                and (datetime.now(timezone.utc) <= self._encrypted_config.access_token_expires_in)):
             return True
         else:
             return False
@@ -86,21 +87,21 @@ class AuthCodeGrantManager(AuthenticationManagerBase):
         """
         try:
             # Initiate code flow is there is no access token.
-            if (self._config.access_token is None):
+            if (self._encrypted_config.access_token is None):
                 await self._initiate_code_flow_dispatch[self._execution_mode]()
 
             # Initiate refresh token request if the access token is expired or revoked.
-            if (self._config.refresh_token and (self._config.access_token_expires_in is not None)
-                    and (datetime.now(timezone.utc) >= self._config.access_token_expires_in)):
+            if (self._encrypted_config.refresh_token and (self._encrypted_config.access_token_expires_in is not None)
+                    and (datetime.now(timezone.utc) >= self._encrypted_config.access_token_expires_in)):
                 await self._get_access_token_with_refresh_token()
 
             return await self.validate_authentication_credentials()
 
-        except AuthCodeGrantError as e:
+        except AuthCodeGrantFlowError as e:
             logger.error("Failed to get Auth Code Grant flow credentials: %s", str(e), exc_info=True)
             return False
 
-        except AuthCodeGrantRefreshTokenError as e:
+        except AuthCodeGrantFlowRefreshTokenError as e:
             logger.error("Failed to get Auth Code Grant flow credentials using refresh token: %s",
                          str(e),
                          exc_info=True)
@@ -119,7 +120,15 @@ class AuthCodeGrantManager(AuthenticationManagerBase):
         Returns:
             httpx.Headers | None: Returns the constructed HTTP header if the API key is valid, otherwise returns None.
         """
-        return httpx.Headers({"Authorization": f"Bearer {self._config.access_token}"})
+        from aiq.authentication.credentials_manager import _CredentialsManager
+
+        if self._encrypted_config.access_token is None:
+            logger.error("Access token is not set for config: %s authentication header can not be retreived.",
+                         self._config_name)
+            return None
+
+        return httpx.Headers(
+            {"Authorization": f"Bearer {_CredentialsManager().decrypt_value(self._encrypted_config.access_token)}"})
 
     async def get_authentication_header(self) -> httpx.Headers | None:
         """
@@ -165,7 +174,7 @@ class AuthCodeGrantManager(AuthenticationManagerBase):
 
             await self._oauth2_client_server.stop_server()
 
-        except AuthCodeGrantError as e:
+        except AuthCodeGrantFlowError as e:
             logger.error("Failed to complete Authorization Code Grant Flow for: %s Error: %s",
                          self._config_name,
                          str(e),
@@ -185,7 +194,7 @@ class AuthCodeGrantManager(AuthenticationManagerBase):
 
             await _CredentialsManager().wait_for_oauth_credentials()
 
-        except AuthCodeGrantError as e:
+        except AuthCodeGrantFlowError as e:
             logger.error("Failed to complete Authorization Code Grant Flow for: %s Error: %s",
                          self._config_name,
                          str(e),
@@ -198,77 +207,87 @@ class AuthCodeGrantManager(AuthenticationManagerBase):
         Constructs Auth Code Grant flow authoriation URL and sends request to authentication server.
         """
         try:
-            authorization_url: httpx.URL = await self._request_manager.build_auth_code_grant_url(self._config)
+            authorization_url: httpx.URL = await self._request_manager.build_auth_code_grant_url(self._encrypted_config)
 
             response: httpx.Response | None = await self._request_manager.send_request(url=str(authorization_url),
                                                                                        http_method="GET")
             if response is None:
-                raise AuthCodeGrantError("Unexpected error occured while sending authorization request.")
+                error_message = "Unexpected error occurred while sending authorization request - no response received"
+                raise AuthCodeGrantFlowError('auth_response_null', error_message)
 
             if not response.status_code == 200:
-                await self._response_manager.handle_auth_code_grant_response_codes(response, self._config)
+                await self._response_manager.handle_auth_code_grant_response_codes(response, self._encrypted_config)
 
         except Exception as e:
-            logger.error("Unexpected error occured during authorization request process: %s", str(e), exc_info=True)
-            raise AuthCodeGrantError("Unexpected error occured during authorization request process:") from e
+            error_message = f"Unexpected error occurred during authorization request process: {str(e)}"
+            logger.error(error_message, exc_info=True)
+            raise AuthCodeGrantFlowError('auth_request_failed', error_message) from e
 
     async def _get_access_token_with_refresh_token(self) -> None:
         """
         Performs the Auth Code Grant token refresh flow by sending a POST request
         to the token endpoint with the required client credentials and refresh token.
         """
+        from aiq.authentication.credentials_manager import _CredentialsManager
         try:
-            if not self._config.refresh_token:
-                raise AuthCodeGrantRefreshTokenError("Refresh token is missing during the refresh token request.")
+            if not self._encrypted_config.refresh_token:
+                error_message = "Refresh token is missing during the refresh token request"
+                raise AuthCodeGrantFlowRefreshTokenError('refresh_token_missing', error_message)
 
-            if not self._config.client_id:
-                raise AuthCodeGrantRefreshTokenError("Client ID is missing during the refresh token request.")
+            if not self._encrypted_config.client_id:
+                error_message = "Client ID is missing during the refresh token request"
+                raise AuthCodeGrantFlowRefreshTokenError('client_id_missing', error_message)
 
-            if not self._config.client_secret:
-                raise AuthCodeGrantRefreshTokenError("Client secret is missing during the refresh token request.")
+            if not self._encrypted_config.client_secret:
+                error_message = "Client secret is missing during the refresh token request"
+                raise AuthCodeGrantFlowRefreshTokenError('client_secret_missing', error_message)
 
-            body_data: RefreshTokenRequest = RefreshTokenRequest(client_id=self._config.client_id,
-                                                                 client_secret=self._config.client_secret,
-                                                                 refresh_token=self._config.refresh_token)
+            body_data: RefreshTokenRequest = RefreshTokenRequest(
+                client_id=_CredentialsManager().decrypt_value(self._encrypted_config.client_id),
+                client_secret=_CredentialsManager().decrypt_value(self._encrypted_config.client_secret),
+                refresh_token=_CredentialsManager().decrypt_value(self._encrypted_config.refresh_token))
 
             # Send Refresh Token Request
             response: httpx.Response | None = await self._request_manager.send_request(
-                url=self._config.authorization_token_url,
+                url=_CredentialsManager().decrypt_value(self._encrypted_config.authorization_token_url),
                 http_method="POST",
                 authentication_header=None,
                 headers={"Content-Type": "application/json"},
                 body_data=body_data.model_dump())
 
             if response is None:
-                raise AuthCodeGrantRefreshTokenError("Invalid response received while making refresh token request.")
+                error_message = "Invalid response received while making refresh token request"
+                raise AuthCodeGrantFlowRefreshTokenError('refresh_response_null', error_message)
 
             if not response.status_code == 200:
-                await self._response_manager.handle_auth_code_grant_response_codes(response, self._config)
+                await self._response_manager.handle_auth_code_grant_response_codes(response, self._encrypted_config)
 
             if response.json().get("access_token") is None:
-                raise AuthCodeGrantRefreshTokenError("Access token not in successful token request response payload.")
+                error_message = "Access token not in successful token request response payload"
+                raise AuthCodeGrantFlowRefreshTokenError('access_token_missing', error_message)
 
             if response.json().get("expires_in") is None:
-                raise AuthCodeGrantRefreshTokenError(
-                    "Access token expiration time not in successful token request response payload.")
+                error_message = "Access token expiration time not in successful token request response payload"
+                raise AuthCodeGrantFlowRefreshTokenError('token_expiry_missing', error_message)
 
             if response.json().get("refresh_token") is None:
-                raise AuthCodeGrantRefreshTokenError("Refresh token not in successful token request response payload.")
+                error_message = "Refresh token not in successful token request response payload"
+                raise AuthCodeGrantFlowRefreshTokenError('refresh_token_response_missing', error_message)
 
-            self._config.access_token = response.json().get("access_token")
+            self._encrypted_config.access_token = _CredentialsManager().encrypt_value(
+                response.json().get("access_token"))
 
-            self._config.access_token_expires_in = (datetime.now(timezone.utc) +
-                                                    timedelta(seconds=response.json().get("expires_in")))
+            self._encrypted_config.access_token_expires_in = (datetime.now(timezone.utc) +
+                                                              timedelta(seconds=response.json().get("expires_in")))
 
-            self._config.refresh_token = response.json().get("refresh_token")
+            self._encrypted_config.refresh_token = _CredentialsManager().encrypt_value(
+                response.json().get("refresh_token"))
 
         except Exception as e:
-            logger.error("Failed to complete Authorization Code Grant Flow for: %s Error: %s",
-                         self._config_name,
-                         str(e),
-                         exc_info=True)
-            raise AuthCodeGrantRefreshTokenError(
-                "Failed to get Auth Code Grant flow credentials using refresh token.") from e
+            error_message = (f"Failed to get Auth Code Grant flow credentials using refresh token "
+                             f"for config {self._config_name}: {str(e)}")
+            logger.error(error_message, exc_info=True)
+            raise AuthCodeGrantFlowRefreshTokenError('refresh_token_flow_failed', error_message) from e
 
     async def _spawn_oauth_client_server(self) -> None:
         """

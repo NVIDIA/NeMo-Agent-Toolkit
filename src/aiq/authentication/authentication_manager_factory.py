@@ -20,33 +20,37 @@ from aiq.authentication.api_key.api_key_manager import APIKeyManager
 from aiq.authentication.interfaces import AuthenticationManagerBase
 from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
 from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantManager
-from aiq.data_models.authentication import AuthenticationManagerConfig
+from aiq.data_models.api_server import AuthenticatedRequest
+from aiq.data_models.authentication import ExecutionMode
 
 logger = logging.getLogger(__name__)
 
 
 class AuthenticationManagerFactory:
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, execution_mode: ExecutionMode) -> None:
+        self._execution_mode: ExecutionMode = execution_mode
 
-    async def create(self, authentication_manager: AuthenticationManagerConfig) -> AuthenticationManagerBase | None:
+    async def create(self, user_request: AuthenticatedRequest) -> AuthenticationManagerBase | None:
         """
         Create an instance of the appropriate authentication manager based on the configuration provided.
 
         Args:
-            authentication_manager (AuthenticationManagerConfig | None): Authentication manager configuration model.
+            user_request (AuthenticatedRequest | None): Authentication manager configuration model.
 
         Returns:
             AuthenticationManagerBase | None: Authentication manager instance or None if the config is not recognized.
         """
+        if user_request.authentication_config_name is None or user_request.authentication_config is None:
+            return None
 
-        if isinstance(authentication_manager.config, AuthCodeGrantConfig):
-            return AuthCodeGrantManager(config_name=authentication_manager.config_name,
-                                        config=authentication_manager.config,
-                                        execution_mode=authentication_manager.execution_mode)
+        if isinstance(user_request.authentication_config, AuthCodeGrantConfig):
+            return AuthCodeGrantManager(config_name=user_request.authentication_config_name,
+                                        encrypted_config=user_request.authentication_config,
+                                        execution_mode=self._execution_mode)
 
-        if isinstance(authentication_manager.config, APIKeyConfig):
-            return APIKeyManager(config_name=authentication_manager.config_name, config=authentication_manager.config)
+        if isinstance(user_request.authentication_config, APIKeyConfig):
+            return APIKeyManager(config_name=user_request.authentication_config_name,
+                                 encrypted_config=user_request.authentication_config)
 
         return None

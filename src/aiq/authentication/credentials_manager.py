@@ -14,9 +14,14 @@
 # limitations under the License.
 
 import asyncio
+import base64
+import enum
 import logging
+import os
 import typing
 from copy import deepcopy
+
+from cryptography.fernet import Fernet
 
 from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
 from aiq.builder.context import Singleton
@@ -39,9 +44,12 @@ class _CredentialsManager(metaclass=Singleton):
         super().__init__()
         self._authentication_configs: dict[str, AuthenticationBaseConfig] = {}
         self._swap_flag: bool = True
+        self._encrypt_flag: bool = True
+        self._get_encrypt_key_flag = True
         self._full_config: "AIQConfig" = None
         self._oauth_credentials_flag: asyncio.Event = asyncio.Event()
         self._consent_prompt_flag: asyncio.Event = asyncio.Event()
+        self._credentials_encryption_key: Fernet | None = None
 
     def swap_authentication_configs(self, authentication_configs: dict[str, AuthenticationBaseConfig]) -> None:
         """
@@ -57,6 +65,92 @@ class _CredentialsManager(metaclass=Singleton):
             authentication_configs.clear()
             self._swap_flag = False
 
+    def validate_unique_consent_prompt_keys(self) -> None:
+        """
+        Validate that all AuthCodeGrantConfig instances have unique consent_prompt_key values.
+
+        Raises:
+            RuntimeError: If duplicate consent prompt keys are found.
+        """
+        consent_prompt_keys: list[str] = []
+
+        # Collect all consent prompt keys and their associated config names
+        for _, auth_config in self._authentication_configs.items():
+            if isinstance(auth_config, AuthCodeGrantConfig):
+
+                if auth_config.consent_prompt_key in consent_prompt_keys:
+                    error_message = (f"Duplicate consent_prompt_key found: {auth_config.consent_prompt_key}. "
+                                     "Please ensure consent_prompt_key is unique across Authentication configs.")
+                    logger.critical(error_message)
+                    raise RuntimeError('duplicate_consent_prompt_key', error_message)
+                else:
+                    consent_prompt_keys.append(auth_config.consent_prompt_key)
+
+    def encrypt_authentication_configs(self) -> None:
+        """
+        Encrypts Authentication Configurations.
+        """
+        if self._encrypt_flag:
+            for model in self._authentication_configs.values():
+                for field in model.model_fields:
+                    field_value = getattr(model, field)
+
+                    # Only encrypt string values, because they are the only ones that are sensitive currently.
+                    if isinstance(field_value, str) and field != "type" and not isinstance(field_value, enum.Enum):
+                        encrypted_value = self.encrypt_value(field_value)
+                        setattr(model, field, encrypted_value)
+
+            self._encrypt_flag = False
+
+    def generate_credentials_encryption_key(self) -> None:
+        """
+        Generate an encryption key for the Authentication Credentials.
+        """
+        if self._get_encrypt_key_flag:
+            os.environ["CREDENTIALS_ENCRYPTION_KEY"] = Fernet.generate_key().decode()
+            self._credentials_encryption_key = Fernet(os.environ["CREDENTIALS_ENCRYPTION_KEY"].encode())
+            self._get_encrypt_key_flag = False
+
+    def encrypt_value(self, un_encrypted_value: str) -> str:
+        """
+        Encrypts a sensitive string value and returns a Base64-encoded string.
+
+        Args:
+            un_encrypted_value: Sensitive string value to be encrypted.
+
+        Returns:
+            str: Base64-encoded encrypted string.
+        """
+
+        if self._credentials_encryption_key is None:
+            raise RuntimeError("Encryption key not set. Initialize with a valid Fernet key.")
+
+        # Encrypt the value.
+        encrypted_bytes: bytes = self._credentials_encryption_key.encrypt(un_encrypted_value.encode())
+
+        # Return the encrypted value as a Base64-encoded string.
+        return base64.urlsafe_b64encode(encrypted_bytes).decode()
+
+    def decrypt_value(self, encrypted_value: str) -> str:
+        """
+        Decrypts a Base64-encoded encrypted string.
+
+        Args:
+            encrypted_value: Base64-encoded string to decrypt.
+
+        Returns:
+            str: Decrypted original string.
+        """
+
+        if self._credentials_encryption_key is None:
+            raise RuntimeError("Encryption key not set. Initialize with a valid Fernet key.")
+
+        # Decrypt the value.
+        encrypted_bytes: bytes = base64.urlsafe_b64decode(encrypted_value.encode())
+
+        # Return the decrypted value as a string.
+        return self._credentials_encryption_key.decrypt(encrypted_bytes).decode()
+
     def get_authentication_config(self, authentication_config_name: str | None) -> AuthenticationBaseConfig | None:
         """Retrieve the stored authentication config by registered name."""
 
@@ -71,13 +165,13 @@ class _CredentialsManager(metaclass=Singleton):
 
         for _, authentication_config in self._authentication_configs.items():
             if isinstance(authentication_config, AuthCodeGrantConfig):
-                if authentication_config.state == state:
+                if self.decrypt_value(authentication_config.state) == state:
                     return authentication_config
 
         logger.error("Authentication config not found by the provided state.")
         return None
 
-    def get_registered_authentication_config_name(self, authentication_config: AuthenticationBaseConfig) -> str | None:
+    def get_authentication_config_name(self, authentication_config: AuthenticationBaseConfig) -> str | None:
         """Retrieve the stored authentication config name."""
 
         for registered_config_name, registered_config in self._authentication_configs.items():
@@ -91,7 +185,7 @@ class _CredentialsManager(metaclass=Singleton):
         """Retrieve the stored authentication config by consent prompt key."""
         for _, authentication_config in self._authentication_configs.items():
             if isinstance(authentication_config, AuthCodeGrantConfig):
-                if authentication_config.consent_prompt_key == consent_prompt_key:
+                if self.decrypt_value(authentication_config.consent_prompt_key) == consent_prompt_key:
                     return authentication_config
         return None
 

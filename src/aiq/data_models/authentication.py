@@ -96,12 +96,3 @@ class RefreshTokenRequest(BaseModel):
     client_secret: str = Field(description="The client secret for OAuth 2.0 authentication.")
     refresh_token: str = Field(
         description="The refresh token for OAuth 2.0 authentication used to obtain a new access token.")
-
-
-class AuthenticationManagerConfig(BaseModel):
-    """
-    Authentication Manager config for Authentication Manager Factory.
-    """
-    config_name: str | None = Field(description="Name of the authentication configuration.")
-    config: AuthenticationBaseConfig | None = Field(description="Authentication configuration.")
-    execution_mode: ExecutionMode | None = Field(description="Execution mode of the authentication manager.")
