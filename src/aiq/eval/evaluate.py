@@ -31,8 +31,12 @@ from aiq.eval.dataset_handler.dataset_handler import DatasetHandler
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
+from aiq.eval.usage_stats import UsageStats
+from aiq.eval.usage_stats import UsageStatsItem
+from aiq.eval.usage_stats import UsageStatsLLM
 from aiq.eval.utils.output_uploader import OutputUploader
 from aiq.eval.utils.weave_eval import WeaveEvaluationIntegration
+from aiq.profiler.data_models import ProfilerResults
 from aiq.runtime.session import AIQSessionManager
 
 logger = logging.getLogger(__name__)
@@ -63,11 +67,45 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         # evaluation_results is list of tuples (evaluator_name, EvalOutput)
         self.evaluation_results: list[tuple[str, EvalOutput]] = []
 
+        # usage stats
+        self.usage_stats: UsageStats = UsageStats()
+
         # workflow output file
         self.workflow_output_file: Path | None = None
 
         # evaluation output files
         self.evaluator_output_files: list[Path] = []
+
+    def _compute_usage_stats(self, item: EvalInputItem):
+        """Compute usage stats for a single item using the intermediate steps"""
+        # get the prompt and completion tokens from the intermediate steps
+        from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+        steps = [IntermediatePropertyAdaptor.from_intermediate_step(step) for step in item.trajectory]
+        usage_stats_per_llm = {}
+        total_tokens = 0
+        for step in steps:
+            if step.event_type == "LLM_END":
+                llm_name = step.llm_name
+                if llm_name not in usage_stats_per_llm:
+                    usage_stats_per_llm[llm_name] = UsageStatsLLM()
+                usage_stats_per_llm[llm_name].prompt_tokens += step.token_usage.prompt_tokens
+                usage_stats_per_llm[llm_name].completion_tokens += step.token_usage.completion_tokens
+                usage_stats_per_llm[llm_name].total_tokens += step.token_usage.total_tokens
+                total_tokens += step.token_usage.total_tokens
+
+        # find min and max event timestamps
+        if item.trajectory:
+            min_timestamp = min(step.event_timestamp for step in item.trajectory)
+            max_timestamp = max(step.event_timestamp for step in item.trajectory)
+            runtime = max_timestamp - min_timestamp
+        else:
+            runtime = 0.0
+
+        # add the usage stats to the usage stats dict
+        self.usage_stats.usage_stats_items[item.id] = UsageStatsItem(usage_stats_per_llm=usage_stats_per_llm,
+                                                                     runtime=runtime,
+                                                                     total_tokens=total_tokens)
+        return self.usage_stats.usage_stats_items[item.id]
 
     async def run_workflow_local(self, session_manager: AIQSessionManager):
         '''
@@ -138,8 +176,10 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
                 item.output_obj = output
                 item.trajectory = self.intermediate_step_adapter.validate_intermediate_steps(intermediate_steps)
+                usage_stats_item = self._compute_usage_stats(item)
 
                 self.weave_eval.log_prediction(item, output)
+                await self.weave_eval.log_usage_stats(item, usage_stats_item)
 
         async def wrapped_run(item: EvalInputItem) -> None:
             await run_one(item)
@@ -161,15 +201,19 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         from aiq.eval.remote_workflow import EvaluationRemoteWorkflowHandler
         handler = EvaluationRemoteWorkflowHandler(self.config, self.eval_config.general.max_concurrency)
         await handler.run_workflow_remote(self.eval_input)
+        for item in self.eval_input.eval_input_items:
+            usage_stats_item = self._compute_usage_stats(item)
+            self.weave_eval.log_prediction(item, item.output_obj)
+            await self.weave_eval.log_usage_stats(item, usage_stats_item)
 
-    async def profile_workflow(self):
+    async def profile_workflow(self) -> ProfilerResults:
         """
         Profile a dataset
         """
 
         if not self.eval_config.general.profiler:
             logger.info("Profiler is not enabled. Skipping profiling.")
-            return
+            return ProfilerResults()
 
         from aiq.profiler.profile_runner import ProfilerRunner
 
@@ -179,7 +223,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
         profiler_runner = ProfilerRunner(self.eval_config.general.profiler, self.eval_config.general.output_dir)
 
-        await profiler_runner.run(all_stats)
+        return await profiler_runner.run(all_stats)
 
     def cleanup_output_directory(self):
         '''Remove contents of the output directory if it exists'''
@@ -238,7 +282,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             except Exception as e:
                 logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e, exc_info=True)
 
-    def write_output(self, dataset_handler: DatasetHandler):
+    def write_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):
         workflow_output_file = self.eval_config.general.output_dir / "workflow_output.json"
         workflow_output_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -271,7 +315,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                    "`eval` with the --skip_completed_entries flag.")
             logger.warning(msg)
 
-        self.weave_eval.log_summary(self.evaluation_results)
+        self.weave_eval.log_summary(self.usage_stats, self.evaluation_results, profiler_results)
 
     async def run_single_evaluator(self, evaluator_name: str, evaluator: Any):
         """Run a single evaluator and store its results."""
@@ -314,6 +358,16 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         config = validate_schema(config_dict, AIQConfig)
         return config
 
+    def _get_workflow_alias(self, workflow_type: str | None = None):
+        """Get the workflow alias for displaying in evaluation UI."""
+        if self.eval_config.general.workflow_alias:
+            return self.eval_config.general.workflow_alias
+
+        if not workflow_type or workflow_type == "EmptyFunctionConfig":
+            return "aiqtoolkit-eval"
+
+        return workflow_type
+
     async def run_and_evaluate(self,
                                session_manager: AIQSessionManager | None = None,
                                job_id: str | None = None) -> EvaluationRunOutput:
@@ -331,7 +385,8 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         else:
             config = load_config(self.config.config_file)
         self.eval_config = config.eval
-        logger.debug("Loaded evaluation configuration: %s", self.eval_config)
+        workflow_alias = self._get_workflow_alias(config.workflow.type)
+        logger.debug("Loaded %s evaluation configuration: %s", workflow_alias, self.eval_config)
 
         # Cleanup the output directory
         if self.eval_config.general.output:
@@ -373,10 +428,9 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         # Run workflow and evaluate
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:
             # Initialize Weave integration
-            self.weave_eval.initialize_client()
-            if self.weave_eval.client:
-                self.weave_eval.initialize_logger(self.eval_input, config)
+            self.weave_eval.initialize_logger(workflow_alias, self.eval_input, config)
 
+            # Run workflow
             if self.config.endpoint:
                 await self.run_workflow_remote()
             else:
@@ -391,10 +445,10 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             await self.run_evaluators(evaluators)
 
         # Profile the workflow
-        await self.profile_workflow()
+        profiler_results = await self.profile_workflow()
 
         # Write the results to the output directory
-        self.write_output(dataset_handler)
+        self.write_output(dataset_handler, profiler_results)
 
         # Run custom scripts and upload evaluation outputs to S3
         if self.eval_config.general.output:

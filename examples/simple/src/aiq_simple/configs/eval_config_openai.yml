@@ -20,7 +20,7 @@ general:
     tracing:
       weave:
         _type: weave
-        project: "aiqtoolkit-eval"
+        project: "nat-simple"
 
 functions:
   webpage_query:
@@ -61,6 +61,7 @@ workflow:
 
 eval:
   general:
+    workflow_alias: nat-simple-gpt-4o-mini
     output:
       dir: ./.tmp/aiq/examples/simple/
       cleanup: true
