@@ -420,8 +420,6 @@ class BaseExporter(Exporter):
         (HTTP clients, auth headers) while isolating mutable state through
         the IsolatedAttribute descriptor pattern.
 
-        Performance: ~100x faster than factory pattern for concurrent execution.
-
         Args:
             context_state: The isolated context state for the new instance
 
