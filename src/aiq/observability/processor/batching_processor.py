@@ -21,7 +21,6 @@ from collections.abc import Awaitable
 from collections.abc import Callable
 from typing import Any
 from typing import Generic
-from typing import Optional
 from typing import TypeVar
 
 from aiq.observability.processor.processor import Processor
@@ -90,13 +89,14 @@ class BatchingProcessor(Processor[T, list[T]], Generic[T]):
         # Batching state
         self._batch_queue: deque[T] = deque()
         self._last_flush_time = time.time()
-        self._flush_task: Optional[asyncio.Task] = None
+        self._flush_task: asyncio.Task | None = None
         self._batch_lock = asyncio.Lock()
         self._shutdown_requested = False
         self._shutdown_complete = False
+        self._shutdown_complete_event: asyncio.Event | None = None
 
         # Final batch handling for cleanup
-        self._final_batch: Optional[list[T]] = None
+        self._final_batch: list[T] | None = None
         self._final_batch_processed = False
 
         # Callback for immediate export of scheduled batches
@@ -233,11 +233,12 @@ class BatchingProcessor(Processor[T, list[T]], Generic[T]):
         """
         if self._shutdown_requested:
             logger.debug("Shutdown already requested, waiting for completion")
-            # Wait for shutdown to complete
-            timeout_remaining = self._shutdown_timeout
-            while not self._shutdown_complete and timeout_remaining > 0:
-                await asyncio.sleep(0.1)
-                timeout_remaining -= 0.1
+            # Wait for shutdown to complete using event instead of polling
+            try:
+                await asyncio.wait_for(self._shutdown_complete_event.wait(), timeout=self._shutdown_timeout)
+                logger.debug("Shutdown completion detected via event")
+            except asyncio.TimeoutError:
+                logger.warning("Shutdown completion timeout exceeded (%s seconds)", self._shutdown_timeout)
             return
 
         logger.info("Starting shutdown of BatchingProcessor (queue size: %d)", len(self._batch_queue))
@@ -262,11 +263,13 @@ class BatchingProcessor(Processor[T, list[T]], Generic[T]):
                     logger.info("No items remaining during shutdown")
 
             self._shutdown_complete = True
+            self._shutdown_complete_event.set()
             logger.info("BatchingProcessor shutdown completed successfully")
 
         except Exception as e:
             logger.error("Error during BatchingProcessor shutdown: %s", e, exc_info=True)
             self._shutdown_complete = True
+            self._shutdown_complete_event.set()
 
     def get_final_batch(self) -> list[T]:
         """Get the final batch created during shutdown.
