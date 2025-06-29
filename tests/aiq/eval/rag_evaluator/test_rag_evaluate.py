@@ -27,8 +27,6 @@ from ragas.evaluation import SingleTurnSample
 from ragas.llms import LangchainLLMWrapper
 from ragas.metrics import Metric
 
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.rag_evaluator.evaluate import RAGEvaluator
 
