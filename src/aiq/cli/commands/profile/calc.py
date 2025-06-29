@@ -86,12 +86,18 @@ def calc_command(ctx,
                  plot_output_dir,
                  concurrencies):
     """Estimate GPU count and plot metrics for a workflow profile."""
-    # Enforce that at least one of the targets is non-zero
-    if target_llm_latency == 0 and target_workflow_runtime == 0:
-        raise click.UsageError("At least one of --target_llm_latency or --target_workflow_runtime must be non-zero.")
-
     # Only use CLI concurrencies, with default
     concurrencies_list = [int(x) for x in concurrencies.split(",") if x.strip()]
+
+    if target_llm_latency == 0 and target_workflow_runtime == 0:
+        click.echo("Both --target_llm_latency and --target_workflow_runtime are 0. "
+                   "No SLA will be enforced.")
+
+    if test_gpu_count <= 0:
+        click.echo("Test GPU count is 0. Tests will be run but the GPU count will not be estimated.")
+
+    if target_users <= 0:
+        click.echo("Target users is 0. Tests will be run but the GPU count will not be estimated.")
 
     # Build CalcRunnerConfig
     runner_config = CalcRunnerConfig(
@@ -103,16 +109,6 @@ def calc_command(ctx,
         test_gpu_count=test_gpu_count,
         plot_output_dir=plot_output_dir,
     )
-
-    if runner_config.target_p95_latency == 0 and runner_config.target_p95_workflow_runtime == 0:
-        click.echo("Both --target_llm_latency and --target_workflow_runtime are 0. "
-                   "No SLA will be enforced.")
-
-    if runner_config.test_gpu_count <= 0:
-        click.echo("Test GPU count is 0. Tests will be run but the GPU count will not be estimated.")
-
-    if runner_config.target_users <= 0:
-        click.echo("Target users is 0. Tests will be run but the GPU count will not be estimated.")
 
     async def run_calc() -> CalcRunnerOutput:
         runner = CalcRunner(runner_config)
@@ -133,8 +129,9 @@ def calc_command(ctx,
         table = []
         for concurrency, metrics in result.metrics_per_concurrency.items():
             gpu_estimate = result.gpu_estimation.gpu_estimates.get(concurrency, None)
-            table.append([concurrency, metrics.p95_latency, metrics.p95_workflow_runtime, gpu_estimate])
-        headers = ["Concurrency", "p95 Latency", "p95 Workflow Runtime", "GPU Estimate"]
+            table.append(
+                [concurrency, metrics.p95_latency, metrics.p95_workflow_runtime, metrics.total_runtime, gpu_estimate])
+        headers = ["Concurrency", "p95 Latency", "p95 Workflow Runtime", "Total Runtime", "GPU Estimate"]
         click.echo(tabulate(table, headers=headers, tablefmt="github"))
 
     result = asyncio.run(run_calc())

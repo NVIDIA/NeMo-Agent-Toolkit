@@ -157,6 +157,9 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             profile_metrics["llm_latency_p95"] = profiler_results.llm_latency_ci.p95
 
         # TODO:get the LLM tokens from the usage stats and log them
+
+        profile_metrics["total_runtime"] = usage_stats.total_runtime
+
         return profile_metrics
 
     def log_summary(self,

@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalOutput
+from aiq.eval.usage_stats import UsageStats
 from aiq.profiler.data_models import ProfilerResults
 
 
@@ -49,6 +50,7 @@ class EvaluationRunOutput(BaseModel):
 
     eval_input: EvalInput
     evaluation_results: list[tuple[str, EvalOutput]]
+    usage_stats: UsageStats | None = None
     profiler_results: ProfilerResults
 
 
@@ -96,6 +98,7 @@ class MetricPerConcurrency(BaseModel):
     """
     p95_latency: float
     p95_workflow_runtime: float
+    total_runtime: float
 
 
 class GPUEstimation(BaseModel):

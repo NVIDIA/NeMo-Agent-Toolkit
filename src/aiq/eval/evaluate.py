@@ -99,12 +99,16 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             max_timestamp = max(step.event_timestamp for step in item.trajectory)
             runtime = max_timestamp - min_timestamp
         else:
+            min_timestamp = 0.0
+            max_timestamp = 0.0
             runtime = 0.0
 
         # add the usage stats to the usage stats dict
         self.usage_stats.usage_stats_items[item.id] = UsageStatsItem(usage_stats_per_llm=usage_stats_per_llm,
                                                                      runtime=runtime,
-                                                                     total_tokens=total_tokens)
+                                                                     total_tokens=total_tokens,
+                                                                     min_timestamp=min_timestamp,
+                                                                     max_timestamp=max_timestamp)
         return self.usage_stats.usage_stats_items[item.id]
 
     async def run_workflow_local(self, session_manager: AIQSessionManager):
@@ -452,6 +456,11 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         # Profile the workflow
         profiler_results = await self.profile_workflow()
 
+        # compute total runtime
+        self.usage_stats.total_runtime = max(self.usage_stats.usage_stats_items.values(),
+                                             key=lambda x: x.max_timestamp).max_timestamp - \
+            min(self.usage_stats.usage_stats_items.values(), key=lambda x: x.min_timestamp).min_timestamp
+
         # Publish the results
         self.publish_output(dataset_handler, profiler_results)
 
@@ -466,4 +475,5 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                                    workflow_interrupted=self.workflow_interrupted,
                                    eval_input=self.eval_input,
                                    evaluation_results=self.evaluation_results,
+                                   usage_stats=self.usage_stats,
                                    profiler_results=profiler_results)

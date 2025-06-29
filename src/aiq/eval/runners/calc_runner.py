@@ -28,6 +28,7 @@ from aiq.eval.config import GPUEstimation
 from aiq.eval.config import MetricPerConcurrency
 from aiq.eval.config import MultiEvaluationRunConfig
 from aiq.eval.runners.multi_eval_runner import MultiEvaluationRunner
+from aiq.eval.usage_stats import UsageStats
 from aiq.profiler.data_models import ProfilerResults
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ class CalcRunner:
         self.config = config
         # only store profiler results per-concurrency
         self.profiler_results: dict[int, ProfilerResults] = {}
+        self.usage_stats: UsageStats = UsageStats()
 
     @property
     def target_latency(self) -> float:
@@ -228,11 +230,18 @@ class CalcRunner:
             for concurrency, output in runner.evaluation_run_outputs.items()
         }
 
+        # collect usage stats
+        self.usage_stats = {
+            concurrency: output.usage_stats
+            for concurrency, output in runner.evaluation_run_outputs.items()
+        }
+
         metrics_per_concurrency = {}
         for concurrency, profiler_results in self.profiler_results.items():
             metrics_per_concurrency[concurrency] = MetricPerConcurrency(
                 p95_latency=profiler_results.llm_latency_ci.p95,
-                p95_workflow_runtime=profiler_results.workflow_runtime_metrics.p95)
+                p95_workflow_runtime=profiler_results.workflow_runtime_metrics.p95,
+                total_runtime=self.usage_stats[concurrency].total_runtime)
 
         # plot the metrics
         if self.config.plot_output_dir:
