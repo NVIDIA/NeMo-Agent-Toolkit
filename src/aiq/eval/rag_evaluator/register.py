@@ -47,6 +47,8 @@ class RagasEvaluatorConfig(EvaluatorBaseConfig, name="ragas"):
     # Ragas metric
     metric: str | dict[str, RagasMetricConfig] = Field(default="AnswerAccuracy",
                                                        description="RAGAS metric callable with optional 'kwargs:'")
+    input_obj_field: str | None = Field(
+        default=None, description="The field in the input object that contains the content to evaluate.")
 
     @model_validator(mode="before")
     @classmethod
