@@ -15,6 +15,11 @@
 
 general:
   use_uvloop: true
+  telemetry:
+    tracing:
+      weave:
+        _type: weave
+        project: "nat-simple-calculator"
 
 functions:
   calculator_multiply:
