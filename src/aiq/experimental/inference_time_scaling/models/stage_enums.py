@@ -16,6 +16,7 @@ class PipelineTypeEnum(str, Enum):
     PLANNING = "planning"
     TOOL_USE = "tool_use"
     AGENT_EXECUTION = "agent_execution"
+    CUSTOM = "custom"
 
     def __str__(self) -> str:
         return self.value
@@ -29,6 +30,7 @@ class StageTypeEnum(str, Enum):
     EDITING = "editing"
     SCORING = "scoring"
     SELECTION = "selection"
+    CUSTOM = "custom"
 
     def __str__(self) -> str:
         return self.value

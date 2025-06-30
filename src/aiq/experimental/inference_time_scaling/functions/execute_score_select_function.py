@@ -90,9 +90,13 @@ async def execute_score_select_function(config: ExecuteScoreSelectFunctionConfig
 
         # Find the index of selected item in its_items by matching the output
         selected_output = selected_item.output
-        selected_index = next(i for i, item in enumerate(its_items) if item.output == selected_output)
+        selected_index = -1
+        for i, item in enumerate(its_items):
+            if item.output == selected_output:
+                selected_index = i
+                break
 
-        return results[selected_index]
+        return results[selected_index] if selected_index != -1 else selected_output
 
     yield FunctionInfo.from_fn(
         fn=execute_fn,
