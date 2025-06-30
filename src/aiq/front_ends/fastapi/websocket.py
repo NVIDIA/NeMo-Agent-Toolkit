@@ -167,7 +167,7 @@ class AIQWebSocket(WebSocketEndpoint):
         """
         from aiq.authentication.authentication_manager_factory import AuthenticationManagerFactory
         from aiq.authentication.interfaces import AuthenticationManagerBase
-        from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantManager
+        from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantClientManager
         from aiq.authentication.request_manager import RequestManager
         from aiq.data_models.authentication import ExecutionMode
 
@@ -179,7 +179,7 @@ class AIQWebSocket(WebSocketEndpoint):
         authentication_manager: AuthenticationManagerBase | None = await authentication_manager_factory.create(
             user_request)
 
-        if isinstance(authentication_manager, AuthCodeGrantManager):
+        if isinstance(authentication_manager, AuthCodeGrantClientManager):
             authentication_manager._response_manager.message_handler = self._message_handler
 
         authentication_header: httpx.Headers | None = None

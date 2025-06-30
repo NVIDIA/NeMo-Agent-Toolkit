@@ -27,7 +27,7 @@ import pytest
 from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
 from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
 from aiq.authentication.oauth2.auth_code_grant_config import ConsentPromptMode
-from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantManager
+from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantClientManager
 from aiq.authentication.request_manager import RequestManager
 from aiq.authentication.response_manager import ResponseManager
 from aiq.data_models.authentication import ExecutionMode
@@ -45,13 +45,13 @@ def mock_response_manager():
 
 @pytest.fixture
 def auth_code_grant_manager(mock_request_manager: AsyncMock, mock_response_manager: AsyncMock):
-    return AuthCodeGrantManager(mock_request_manager, mock_response_manager, ExecutionMode.SERVER)
+    return AuthCodeGrantClientManager(mock_request_manager, mock_response_manager, ExecutionMode.SERVER)
 
 
 # OAuth Auth Code Grant Validation Tests
 
 
-async def test_auth_code_grant_valid_credentials(auth_code_grant_manager: AuthCodeGrantManager):
+async def test_auth_code_grant_valid_credentials(auth_code_grant_manager: AuthCodeGrantClientManager):
     """Test Auth Code Grant Flow credentials."""
 
     auth_code_grant_manager._encrypted_config = AuthCodeGrantConfig(access_token="valid_token",
@@ -71,7 +71,7 @@ async def test_auth_code_grant_valid_credentials(auth_code_grant_manager: AuthCo
     assert result is True
 
 
-async def test_auth_code_grant_credentials_expired(auth_code_grant_manager: AuthCodeGrantManager):
+async def test_auth_code_grant_credentials_expired(auth_code_grant_manager: AuthCodeGrantClientManager):
     """Test Auth Code Grant Flow credentials with expired access token."""
 
     auth_code_grant_manager._encrypted_config = AuthCodeGrantConfig(access_token="expired_token",
@@ -91,7 +91,7 @@ async def test_auth_code_grant_credentials_expired(auth_code_grant_manager: Auth
     assert result is False
 
 
-async def test_auth_code_grant_no_access_token(auth_code_grant_manager: AuthCodeGrantManager):
+async def test_auth_code_grant_no_access_token(auth_code_grant_manager: AuthCodeGrantClientManager):
     """Test Auth Code Grant Flow credentials without access token."""
 
     auth_code_grant_manager._encrypted_config = AuthCodeGrantConfig(client_server_url="https://test.com",
@@ -108,7 +108,7 @@ async def test_auth_code_grant_no_access_token(auth_code_grant_manager: AuthCode
     assert result is False
 
 
-async def test_get_access_token_with_refresh_token_success(auth_code_grant_manager: AuthCodeGrantManager,
+async def test_get_access_token_with_refresh_token_success(auth_code_grant_manager: AuthCodeGrantClientManager,
                                                            mock_request_manager: AsyncMock):
     """Test successful refresh token flow."""
     from aiq.authentication.credentials_manager import _CredentialsManager

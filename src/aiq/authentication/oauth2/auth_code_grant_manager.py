@@ -25,6 +25,7 @@ import httpx
 from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
 from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowRefreshTokenError
 from aiq.authentication.interfaces import AuthenticationManagerBase
+from aiq.authentication.interfaces import OAuthClientBase
 from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
 from aiq.authentication.request_manager import RequestManager
 from aiq.authentication.response_manager import ResponseManager
@@ -35,7 +36,7 @@ from aiq.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEnd
 logger = logging.getLogger(__name__)
 
 
-class AuthCodeGrantManager(AuthenticationManagerBase):
+class AuthCodeGrantClientManager(AuthenticationManagerBase, OAuthClientBase):
 
     def __init__(self, config_name: str, encrypted_config: AuthCodeGrantConfig, execution_mode: ExecutionMode) -> None:
 
@@ -168,7 +169,7 @@ class AuthCodeGrantManager(AuthenticationManagerBase):
             await self._spawn_oauth_client_server()
 
             # Initiate oauth code flow by sending authorization request.
-            await self._send_oauth_authorization_request()
+            await self._send_authorization_request()
 
             await _CredentialsManager().wait_for_oauth_credentials()
 
@@ -190,7 +191,7 @@ class AuthCodeGrantManager(AuthenticationManagerBase):
 
         try:
             # Initiate oauth code flow by sending authorization request.
-            await self._send_oauth_authorization_request()
+            await self._send_authorization_request()
 
             await _CredentialsManager().wait_for_oauth_credentials()
 
@@ -202,13 +203,12 @@ class AuthCodeGrantManager(AuthenticationManagerBase):
             await self._shutdown_code_flow_dispatch[self._execution_mode]()
             raise e
 
-    async def _send_oauth_authorization_request(self) -> None:
+    async def _send_authorization_request(self) -> None:
         """
         Constructs Auth Code Grant flow authoriation URL and sends request to authentication server.
         """
         try:
             authorization_url: httpx.URL = await self._request_manager.build_auth_code_grant_url(self._encrypted_config)
-
             response: httpx.Response | None = await self._request_manager.send_request(url=str(authorization_url),
                                                                                        http_method="GET")
             if response is None:

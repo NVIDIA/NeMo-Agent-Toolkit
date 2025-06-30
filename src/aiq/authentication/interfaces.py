@@ -52,3 +52,22 @@ class AuthenticationManagerBase(ABC):
     @abstractmethod
     async def construct_authentication_header(self) -> httpx.Headers | None:
         pass
+
+
+class OAuthClientBase(ABC):
+    """
+    Base class for managing OAuth clients.
+    This class provides an interface for managing OAuth clients.
+    """
+
+    @abstractmethod
+    async def _send_authorization_request(self) -> httpx.URL:
+        pass
+
+    @abstractmethod
+    async def _initiate_authorization_code_flow_console(self) -> None:
+        pass
+
+    @abstractmethod
+    async def _initiate_authorization_code_flow_server(self) -> None:
+        pass

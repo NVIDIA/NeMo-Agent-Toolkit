@@ -19,7 +19,7 @@ from aiq.authentication.api_key.api_key_config import APIKeyConfig
 from aiq.authentication.api_key.api_key_manager import APIKeyManager
 from aiq.authentication.interfaces import AuthenticationManagerBase
 from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
-from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantManager
+from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantClientManager
 from aiq.data_models.api_server import AuthenticatedRequest
 from aiq.data_models.authentication import ExecutionMode
 
@@ -45,9 +45,9 @@ class AuthenticationManagerFactory:
             return None
 
         if isinstance(user_request.authentication_config, AuthCodeGrantConfig):
-            return AuthCodeGrantManager(config_name=user_request.authentication_config_name,
-                                        encrypted_config=user_request.authentication_config,
-                                        execution_mode=self._execution_mode)
+            return AuthCodeGrantClientManager(config_name=user_request.authentication_config_name,
+                                              encrypted_config=user_request.authentication_config,
+                                              execution_mode=self._execution_mode)
 
         if isinstance(user_request.authentication_config, APIKeyConfig):
             return APIKeyManager(config_name=user_request.authentication_config_name,
