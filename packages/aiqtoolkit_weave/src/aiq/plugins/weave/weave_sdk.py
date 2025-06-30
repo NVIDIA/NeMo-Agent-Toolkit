@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from typing import Optional
 
 from pydantic import Field
@@ -21,11 +22,32 @@ from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 
+logger = logging.getLogger(__name__)
+
 
 class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
     """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
     project: str = Field(description="The W&B project name.")
     entity: Optional[str] = Field(default=None, description="The W&B username or team name.")
+
+
+class NoOpSpanExporter:
+    """A no-op span exporter that properly implements the SpanExporter interface."""
+
+    def export(self, spans):
+        """Export method that doesn't actually export spans."""
+        return None
+
+    def shutdown(self):
+        """Shutdown method that cleans up any resources."""
+        try:
+            # Try to clean up weave client if it exists
+            import weave
+            if hasattr(weave, 'finish'):
+                weave.finish()
+        except Exception as e:
+            logger.debug("Error shutting down weave client: %s", e)
+        return None
 
 
 @register_telemetry_exporter(config_type=WeaveTelemetryExporter)
@@ -37,13 +59,4 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
     else:
         _ = weave.init(project_name=config.project)
 
-    class NoOpSpanExporter:
-
-        def export(self, spans):
-            return None
-
-        def shutdown(self):
-            return None
-
-    # just yielding None errors with 'NoneType' object has no attribute 'export'
     yield NoOpSpanExporter()
