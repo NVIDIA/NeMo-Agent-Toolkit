@@ -73,11 +73,40 @@ uv pip install -e examples/friday
 
 ## Starting the Servers
 
-### Option 1: Using Batch Files (Windows)
+### Option 1: Using Scripts
+
+**Windows:**
 
 **Start Backend Servers:**
 ```bash
 ./start_servers.bat
+```
+
+**Start UI:**
+```bash
+./start_ui.bat
+```
+
+**Mac/Linux:**
+
+First, make the scripts executable:
+```bash
+chmod +x start_servers.sh start_ui.sh stop_servers.sh
+```
+
+**Start Backend Servers:**
+```bash
+./start_servers.sh
+```
+
+**Start UI:**
+```bash
+./start_ui.sh
+```
+
+**Stop All Servers:**
+```bash
+./stop_servers.sh
 ```
 
 This starts:
@@ -85,10 +114,9 @@ This starts:
 - FRIDAY backend: http://localhost:8001  
 - SLACK backend: http://localhost:8002
 
-**Start UI:**
-```bash
-./start_ui.bat
-```
+**Note:** 
+- **Windows**: Servers run in separate command windows that you can close individually
+- **Mac/Linux**: Servers run in background. Use `./stop_servers.sh` to stop all servers. Logs are saved to `logs/` directory
 
 ### Option 2: Manual Startup
 
