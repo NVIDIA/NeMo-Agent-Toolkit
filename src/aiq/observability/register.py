@@ -83,7 +83,7 @@ async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: 
         yield HTTPSpanExporter(config.endpoint, headers=headers)
     except ConnectionError as ex:
         logger.warning(
-            "Unable to connect to Phoenix at port 6006. Are you sure Phoenix is running?\n %s",
+            f"Unable to connect to Galileo. Are you sure {config.endpoint} is correct?\n %s",
             ex,
             exc_info=True,
         )
