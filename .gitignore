@@ -14,9 +14,6 @@ docs/source/_modules
 # Ignore autoapi intermediate files
 docs/source/api
 
-# Ignore public folder for artifact (required path for Gitlab Pages)
-public/
-
 # Ignore specific hidden folders
 .benchmarks/
 .tmp/
