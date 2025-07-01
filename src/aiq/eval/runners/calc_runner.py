@@ -102,19 +102,21 @@ class CalcRunner:
         plt.savefig(output_dir / "concurrency_vs_p95_metrics.png")
         plt.close()
 
-    def write_output(self, output_dir: Path):
+    def write_output(self, output_dir: Path, calc_runner_output: CalcRunnerOutput):
         """
         Write the output to the output directory.
         """
         output_dir.mkdir(parents=True, exist_ok=True)
         with open(output_dir / "calc_runner_output.json", "w") as f:
-            f.write(self.model_dump_json(indent=2))
+            f.write(calc_runner_output.model_dump_json(indent=2))
 
         # write the profiler results and usage stats
         for concurrency, profiler_results in self.profiler_results.items():
-            profiler_results.to_json(output_dir / f"profiler_results_{concurrency}.json")
+            with open(output_dir / f"profiler_results_{concurrency}.json", "w") as f:
+                f.write(profiler_results.model_dump_json(indent=2))
         for concurrency, usage_stats in self.usage_stats.items():
-            usage_stats.to_json(output_dir / f"usage_stats_{concurrency}.json")
+            with open(output_dir / f"usage_stats_{concurrency}.json", "w") as f:
+                f.write(usage_stats.model_dump_json(indent=2))
 
         self.plot_concurrency_vs_p95_metrics(output_dir)
 
@@ -223,6 +225,42 @@ class CalcRunner:
         # Calculate gpu estimates for each concurrency that passed the SLA
         return self.calc_p95_required_gpus(valid_runs, use_latency, use_runtime)
 
+    def offline_mode_run(self) -> CalcRunnerOutput:
+        """
+        Run in offline mode.
+        """
+        if not self.config.output_dir:
+            raise ValueError("Output directory is not set in offline mode.")
+
+        # read the metrics from the output directory
+
+        self.profiler_results = {
+            concurrency:
+                ProfilerResults.model_validate_json(
+                    (self.config.output_dir / f"profiler_results_{concurrency}.json").read_text())
+            for concurrency in self.config.concurrencies
+        }
+        self.usage_stats = {
+            concurrency:
+                UsageStats.model_validate_json((self.config.output_dir / f"usage_stats_{concurrency}.json").read_text())
+            for concurrency in self.config.concurrencies
+        }
+
+        # calculate gpu estimation
+        gpu_estimation = self.calc_gpu_count()
+
+        # Build metrics_per_concurrency as in online mode
+        metrics_per_concurrency = {}
+        for concurrency in self.config.concurrencies:
+            profiler_results = self.profiler_results[concurrency]
+            usage_stats = self.usage_stats[concurrency]
+            metrics_per_concurrency[concurrency] = MetricPerConcurrency(
+                p95_latency=profiler_results.llm_latency_ci.p95,
+                p95_workflow_runtime=profiler_results.workflow_runtime_metrics.p95,
+                total_runtime=usage_stats.total_runtime)
+
+        return CalcRunnerOutput(gpu_estimation=gpu_estimation, metrics_per_concurrency=metrics_per_concurrency)
+
     async def run(self) -> CalcRunnerOutput:
         """
         Create a MultiEvaluationRunner with concurrency overrides.
@@ -232,16 +270,7 @@ class CalcRunner:
         """
 
         if self.config.offline_mode:
-            # read the metrics from the output directory and return the gpu estimation
-            self.profiler_results = {
-                concurrency: ProfilerResults.from_json(self.config.output_dir / "profiler_results.json")
-                for concurrency in self.config.concurrencies
-            }
-            self.usage_stats = {
-                concurrency: UsageStats.from_json(self.config.output_dir / "usage_stats.json")
-                for concurrency in self.config.concurrencies
-            }
-            return CalcRunnerOutput(gpu_estimation=self.calc_gpu_count(), metrics_per_concurrency=self.usage_stats)
+            return self.offline_mode_run()
 
         concurrency_key = "eval.general.max_concurrency"
         alias_key = "eval.general.workflow_alias"
@@ -277,11 +306,13 @@ class CalcRunner:
                 p95_workflow_runtime=profiler_results.workflow_runtime_metrics.p95,
                 total_runtime=self.usage_stats[concurrency].total_runtime)
 
-        # plot the metrics and write the output
-        if self.config.output_dir:
-            self.write_output(self.config.output_dir)
-
         # calculate gpu estimation
         gpu_estimation = self.calc_gpu_count()
 
-        return CalcRunnerOutput(gpu_estimation=gpu_estimation, metrics_per_concurrency=metrics_per_concurrency)
+        calc_runner_output = CalcRunnerOutput(gpu_estimation=gpu_estimation,
+                                              metrics_per_concurrency=metrics_per_concurrency)
+
+        # plot the metrics and write the output
+        if self.config.output_dir:
+            self.write_output(self.config.output_dir, calc_runner_output)
+        return calc_runner_output
