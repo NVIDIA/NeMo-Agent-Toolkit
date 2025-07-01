@@ -221,7 +221,9 @@ class CalcRunner:
             for c in self.config.concurrencies
         }
 
-        eval_run_config = EvaluationRunConfig(config_file=self.config.config_file, write_output=False)
+        eval_run_config = EvaluationRunConfig(config_file=self.config.config_file,
+                                              write_output=False,
+                                              reps=self.config.reps)
         config = MultiEvaluationRunConfig(base_config=eval_run_config, overrides=overrides)
         runner = MultiEvaluationRunner(config)
         await runner.run_all()

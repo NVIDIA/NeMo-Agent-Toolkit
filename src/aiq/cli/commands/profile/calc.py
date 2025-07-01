@@ -76,6 +76,13 @@ logger = logging.getLogger(__name__)
     default="1,2,4,8",
     help="Comma-separated list of concurrency values to test (e.g., 1,2,4,8). Default: 1,2,4,8",
 )
+@click.option(
+    "--reps",
+    type=int,
+    required=False,
+    default=1,
+    help="Number of repetitions for the evaluation. Default: 1",
+)
 @click.pass_context
 def calc_command(ctx,
                  config_file,
@@ -84,7 +91,8 @@ def calc_command(ctx,
                  target_users,
                  test_gpu_count,
                  plot_output_dir,
-                 concurrencies):
+                 concurrencies,
+                 reps):
     """Estimate GPU count and plot metrics for a workflow profile."""
     # Only use CLI concurrencies, with default
     concurrencies_list = [int(x) for x in concurrencies.split(",") if x.strip()]
@@ -108,6 +116,7 @@ def calc_command(ctx,
         target_users=target_users,
         test_gpu_count=test_gpu_count,
         plot_output_dir=plot_output_dir,
+        reps=reps,
     )
 
     async def run_calc() -> CalcRunnerOutput:

@@ -80,6 +80,7 @@ class CalcRunnerConfig(BaseModel):
     Parameters used for a calc runner.
     """
     config_file: Path
+    reps: int = 1
     concurrencies: list[int]
 
     target_p95_latency: float
