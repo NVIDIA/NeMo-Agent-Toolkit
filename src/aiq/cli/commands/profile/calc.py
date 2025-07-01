@@ -31,9 +31,16 @@ logger = logging.getLogger(__name__)
 @click.option(
     "--config_file",
     type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
-    required=True,
-    help="A YAML config file for the workflow and evaluation.",
+    required=False,
+    default=None,
+    help="A YAML config file for the workflow and evaluation. This is not needed in offline mode.",
 )
+@click.option(
+    "--offline_mode",
+    is_flag=True,
+    required=False,
+    default=False,
+    help="Run in offline mode. This is used to estimate the GPU count for a workflow without running the workflow. ")
 @click.option(
     "--target_llm_latency",
     type=float,
@@ -86,6 +93,7 @@ logger = logging.getLogger(__name__)
 @click.pass_context
 def calc_command(ctx,
                  config_file,
+                 offline_mode,
                  target_llm_latency,
                  target_workflow_runtime,
                  target_users,
@@ -107,6 +115,11 @@ def calc_command(ctx,
     if target_users <= 0:
         click.echo("Target users is 0. Tests will be run but the GPU count will not be estimated.")
 
+    if not offline_mode:
+        if config_file is None:
+            click.echo("Config file is required in online mode.")
+            return
+
     # Build CalcRunnerConfig
     runner_config = CalcRunnerConfig(
         config_file=config_file,
@@ -117,6 +130,7 @@ def calc_command(ctx,
         test_gpu_count=test_gpu_count,
         output_dir=output_dir,
         reps=reps,
+        offline_mode=offline_mode,
     )
 
     async def run_calc() -> CalcRunnerOutput:

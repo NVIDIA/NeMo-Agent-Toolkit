@@ -110,6 +110,12 @@ class CalcRunner:
         with open(output_dir / "calc_runner_output.json", "w") as f:
             f.write(self.model_dump_json(indent=2))
 
+        # write the profiler results and usage stats
+        for concurrency, profiler_results in self.profiler_results.items():
+            profiler_results.to_json(output_dir / f"profiler_results_{concurrency}.json")
+        for concurrency, usage_stats in self.usage_stats.items():
+            usage_stats.to_json(output_dir / f"usage_stats_{concurrency}.json")
+
         self.plot_concurrency_vs_p95_metrics(output_dir)
 
     def calc_p95_required_gpus(self,
@@ -224,6 +230,19 @@ class CalcRunner:
         Each concurrency value is used to override the `eval.general.max_concurrency`
         key in the config.
         """
+
+        if self.config.offline_mode:
+            # read the metrics from the output directory and return the gpu estimation
+            self.profiler_results = {
+                concurrency: ProfilerResults.from_json(self.config.output_dir / "profiler_results.json")
+                for concurrency in self.config.concurrencies
+            }
+            self.usage_stats = {
+                concurrency: UsageStats.from_json(self.config.output_dir / "usage_stats.json")
+                for concurrency in self.config.concurrencies
+            }
+            return CalcRunnerOutput(gpu_estimation=self.calc_gpu_count(), metrics_per_concurrency=self.usage_stats)
+
         concurrency_key = "eval.general.max_concurrency"
         alias_key = "eval.general.workflow_alias"
         overrides = {

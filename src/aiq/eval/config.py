@@ -93,6 +93,7 @@ class CalcRunnerConfig(BaseModel):
     test_gpu_type: str | None = None
 
     output_dir: Path | None = None
+    offline_mode: bool = False
 
 
 class MetricPerConcurrency(BaseModel):
