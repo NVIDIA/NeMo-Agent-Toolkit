@@ -94,6 +94,7 @@ class CalcRunnerConfig(BaseModel):
 
     output_dir: Path | None = None
     offline_mode: bool = False
+    append_job: bool = False
 
 
 class MetricPerConcurrency(BaseModel):

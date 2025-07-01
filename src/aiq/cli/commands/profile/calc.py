@@ -91,7 +91,7 @@ logger = logging.getLogger(__name__)
     help="Number of repetitions for the evaluation. Default: 1",
 )
 @click.option(
-    "--append_job_id",
+    "--append_job",
     is_flag=True,
     required=False,
     default=False,
@@ -108,7 +108,7 @@ def calc_command(ctx,
                  output_dir,
                  concurrencies,
                  reps,
-                 append_job_id):
+                 append_job):
     """Estimate GPU count and plot metrics for a workflow profile."""
     # Only use CLI concurrencies, with default
     concurrencies_list = [int(x) for x in concurrencies.split(",") if x.strip()]
@@ -128,8 +128,8 @@ def calc_command(ctx,
             click.echo("Config file is required in online mode.")
             return
 
-    if append_job_id:
-        click.echo("Append job id support is WIP.")
+    if offline_mode and append_job:
+        click.echo("Appending jobs is not supported in offline mode.")
         return
 
     # Build CalcRunnerConfig
@@ -143,6 +143,7 @@ def calc_command(ctx,
         output_dir=output_dir,
         reps=reps,
         offline_mode=offline_mode,
+        append_job=append_job,
     )
 
     async def run_calc() -> CalcRunnerOutput:

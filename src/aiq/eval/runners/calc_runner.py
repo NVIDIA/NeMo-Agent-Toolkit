@@ -15,6 +15,7 @@
 
 import logging
 import math
+import shutil
 import uuid
 from pathlib import Path
 
@@ -40,7 +41,7 @@ class CalcRunner:
     Runs MultiEvaluationRunner for a list of concurrencies.
     """
 
-    def __init__(self, config: CalcRunnerConfig, append_job_id: bool = False):
+    def __init__(self, config: CalcRunnerConfig, append_job: bool = False):
         """
         Initialize CalcRunner with a config file and a list of concurrencies.
         """
@@ -48,7 +49,7 @@ class CalcRunner:
         # store profiler results and usage stats per-concurrency
         self.profiler_results: dict[int, ProfilerResults] = {}
         self.usage_stats: dict[int, UsageStats] = {}
-        self.append_job_id = append_job_id
+        self.append_job = append_job
 
     @property
     def target_latency(self) -> float:
@@ -109,11 +110,20 @@ class CalcRunner:
         Write the output to the output directory.
         """
         # Determine subdir and job id
-        subdir = "offline" if offline else "online"
+        if offline:
+            subdir = output_dir / "offline"
+        else:
+            # if append is not set empty the online directory
+            subdir = output_dir / "online"
+            for job_dir in subdir.iterdir():
+                if job_dir.is_dir() and job_dir.name.startswith("job_"):
+                    shutil.rmtree(job_dir)
+
         job_dir = None
-        if self.append_job_id:
+        if self.append_job:
             job_dir = output_dir / subdir / f"job_{uuid.uuid4()}"
         else:
+
             job_dir = output_dir / subdir / "job_0"
         job_dir.mkdir(parents=True, exist_ok=True)
 
@@ -143,7 +153,8 @@ class CalcRunner:
                 multiplier *= observed_runtime / self.target_runtime
 
             required = (self.target_users / concurrency) * multiplier * self.test_gpu_count
-            logger.info("[GPU Estimation] Concurrency=%s, Latency=%.3fs, Runtime=%.3fs GPUs required=%.2f",
+            logger.info("[GPU Estimation %s] Concurrency=%s, Latency=%.3fs, Runtime=%.3fs GPUs required=%.2f",
+                        "offline" if self.config.offline_mode else "online",
                         concurrency,
                         observed_latency,
                         observed_runtime,
@@ -160,7 +171,8 @@ class CalcRunner:
         # Return the estimate corresponding to the highest concurrency that passed the SLA as min_required_gpus
         min_required_gpus = gpu_estimates[max(gpu_estimates.keys())]
 
-        logger.info("[GPU Estimation] min_required_gpus=%.2f, p95_required_gpus=%.2f",
+        logger.info("[GPU Estimation %s] min_required_gpus=%.2f, p95_required_gpus=%.2f",
+                    "offline" if self.config.offline_mode else "online",
                     min_required_gpus,
                     p95_required_gpus)
 
@@ -234,23 +246,38 @@ class CalcRunner:
         if not self.config.output_dir:
             raise ValueError("Output directory is not set in offline mode.")
 
-        # Always read from the 'online' subdir, job_0
-        online_dir = Path(self.config.output_dir) / "online" / "job_0"
-        calc_runner_output_path = online_dir / "calc_runner_output.json"
-        if not calc_runner_output_path.exists():
-            raise FileNotFoundError(f"{calc_runner_output_path} not found. Run in online mode first.")
-        calc_runner_output = CalcRunnerOutput.model_validate_json(calc_runner_output_path.read_text())
+        # Read all jobs in online mode and only append unique concurrency values to metrics_per_concurrency
+        metrics_per_concurrency = {}
+        online_dir = Path(self.config.output_dir) / "online"
+        calc_runner_outputs = []
+        for job_dir in online_dir.iterdir():
+            if job_dir.is_dir() and job_dir.name.startswith("job_"):
+                calc_runner_output_path = job_dir / "calc_runner_output.json"
+                calc_runner_outputs.append(CalcRunnerOutput.model_validate_json(calc_runner_output_path.read_text()))
+                for concurrency, metrics in calc_runner_outputs[-1].metrics_per_concurrency.items():
+                    if concurrency not in metrics_per_concurrency:
+                        logger.info("Adding concurrency %s from job %s.", concurrency, job_dir.name)
+                        metrics_per_concurrency[concurrency] = metrics
+                    else:
+                        # log a warning and skip
+                        logger.warning("Concurrency %s already exists in offline mode. Skipping job %s.",
+                                       concurrency,
+                                       job_dir.name)
+                        continue
+
+        if not metrics_per_concurrency:
+            logger.warning("No valid metrics_per_concurrency found in offline mode.")
+            return CalcRunnerOutput(gpu_estimation=GPUEstimation(), metrics_per_concurrency={})
 
         # calculate gpu estimation
-        gpu_estimation = self.calc_gpu_count(calc_runner_output.metrics_per_concurrency)
+        gpu_estimation = self.calc_gpu_count(metrics_per_concurrency)
 
         # Optionally, write the offline output as well
         self.write_output(self.config.output_dir,
                           CalcRunnerOutput(gpu_estimation=gpu_estimation,
-                                           metrics_per_concurrency=calc_runner_output.metrics_per_concurrency),
+                                           metrics_per_concurrency=metrics_per_concurrency),
                           offline=True)
-        return CalcRunnerOutput(gpu_estimation=gpu_estimation,
-                                metrics_per_concurrency=calc_runner_output.metrics_per_concurrency)
+        return CalcRunnerOutput(gpu_estimation=gpu_estimation, metrics_per_concurrency=metrics_per_concurrency)
 
     async def run(self) -> CalcRunnerOutput:
         """
