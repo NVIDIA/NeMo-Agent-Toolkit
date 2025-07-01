@@ -105,12 +105,12 @@ class CalcRunner:
         plt.savefig(output_dir / "concurrency_vs_p95_metrics.png")
         plt.close()
 
-    def write_output(self, output_dir: Path, calc_runner_output: CalcRunnerOutput, offline: bool = False):
+    def write_output(self, output_dir: Path, calc_runner_output: CalcRunnerOutput):
         """
         Write the output to the output directory.
         """
         # Determine subdir and job id
-        if offline:
+        if self.config.offline_mode:
             subdir = output_dir / "offline"
         else:
             # if append is not set empty the online directory
@@ -131,6 +131,8 @@ class CalcRunner:
             f.write(calc_runner_output.model_dump_json(indent=2))
 
         self.plot_concurrency_vs_p95_metrics(job_dir)
+
+        self.logger.info("Wrote output to %s", job_dir)
 
     def calc_p95_required_gpus(self,
                                valid_runs: list[tuple[int, MetricPerConcurrency]],
@@ -272,12 +274,11 @@ class CalcRunner:
         # calculate gpu estimation
         gpu_estimation = self.calc_gpu_count(metrics_per_concurrency)
 
+        calc_runner_output = CalcRunnerOutput(gpu_estimation=gpu_estimation,
+                                              metrics_per_concurrency=metrics_per_concurrency)
         # Optionally, write the offline output as well
-        self.write_output(self.config.output_dir,
-                          CalcRunnerOutput(gpu_estimation=gpu_estimation,
-                                           metrics_per_concurrency=metrics_per_concurrency),
-                          offline=True)
-        return CalcRunnerOutput(gpu_estimation=gpu_estimation, metrics_per_concurrency=metrics_per_concurrency)
+        self.write_output(self.config.output_dir, calc_runner_output)
+        return calc_runner_output
 
     async def run(self) -> CalcRunnerOutput:
         """
@@ -332,5 +333,5 @@ class CalcRunner:
 
         # plot the metrics and write the output
         if self.config.output_dir:
-            self.write_output(self.config.output_dir, calc_runner_output, offline=False)
+            self.write_output(self.config.output_dir, calc_runner_output)
         return calc_runner_output

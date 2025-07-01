@@ -95,7 +95,8 @@ logger = logging.getLogger(__name__)
     is_flag=True,
     required=False,
     default=False,
-    help="Append a job id to the output directory.",
+    help="Append a job to the output directory. "
+    "By default append is set to False and the content of the online directory is overwritten.",
 )
 @click.pass_context
 def calc_command(ctx,
@@ -113,24 +114,32 @@ def calc_command(ctx,
     # Only use CLI concurrencies, with default
     concurrencies_list = [int(x) for x in concurrencies.split(",") if x.strip()]
 
-    if target_llm_latency == 0 and target_workflow_runtime == 0:
-        click.echo("Both --target_llm_latency and --target_workflow_runtime are 0. "
-                   "No SLA will be enforced.")
-
-    if test_gpu_count <= 0:
-        click.echo("Test GPU count is 0. Tests will be run but the GPU count will not be estimated.")
-
-    if target_users <= 0:
-        click.echo("Target users is 0. Tests will be run but the GPU count will not be estimated.")
-
-    if not offline_mode:
-        if config_file is None:
+    if offline_mode:
+        # In offline mode target and test parameters are needed to estimate the GPU count
+        if target_llm_latency == 0 and target_workflow_runtime == 0:
+            click.echo("Both --target_llm_latency and --target_workflow_runtime are 0. "
+                       "Cannot estimate the GPU count.")
+            return
+        if test_gpu_count <= 0:
+            click.echo("Test GPU count is 0. Cannot estimate the GPU count.")
+            return
+        if target_users <= 0:
+            click.echo("Target users is 0. Cannot estimate the GPU count.")
+            return
+        if append_job:
+            click.echo("Appending jobs is not supported in offline mode.")
+            return
+    else:
+        if not config_file:
             click.echo("Config file is required in online mode.")
             return
-
-    if offline_mode and append_job:
-        click.echo("Appending jobs is not supported in offline mode.")
-        return
+        if target_llm_latency == 0 and target_workflow_runtime == 0:
+            click.echo("Both --target_llm_latency and --target_workflow_runtime are 0. "
+                       "No SLA will be enforced.")
+        if test_gpu_count <= 0:
+            click.echo("Test GPU count is 0. Tests will be run but the GPU count will not be estimated.")
+        if target_users <= 0:
+            click.echo("Target users is 0. Tests will be run but the GPU count will not be estimated.")
 
     # Build CalcRunnerConfig
     runner_config = CalcRunnerConfig(
