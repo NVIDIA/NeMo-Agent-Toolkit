@@ -1,0 +1,103 @@
+# ============================================================================
+# Slack Channel Monitor and Summarizer
+# ============================================================================
+
+functions:
+  slack_channel_monitor:
+    _type: slack_monitor_client
+    description: "Monitors Slack channels and provides conversation summaries"
+    default_channel_id: "C029H7U1TEV"  # ngc-sre-blr channel
+    default_hours: 5
+    timeout: 30
+    slack_token: "${SLACK_BOT_TOKEN}"  # Set environment variable for authentication
+    nvidia_api_key: "${NVIDIA_API_KEY}"  # Set environment variable for NVIDIA API
+  
+  current_time:
+    _type: current_datetime
+    description: "Gets current date and time"
+
+# ----------------------------------------------------------------------------
+# LLMS SECTION  
+# ----------------------------------------------------------------------------
+llms:
+  analysis_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.05
+    max_tokens: 8000
+    description: "Main LLM for Slack conversation analysis and summarization"
+
+# ----------------------------------------------------------------------------
+# WORKFLOW SECTION
+# ----------------------------------------------------------------------------
+workflow:
+  _type: react_agent
+  
+  # List tools the agent can use
+  tool_names:
+    - slack_channel_monitor
+    - current_time
+  
+  # Which LLM to use for reasoning
+  llm_name: analysis_llm
+  
+  # Agent behavior settings
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3
+  max_iterations: 20
+  
+  # Custom system prompt for Slack channel monitoring
+  system_message: |
+    You are a Senior Slack Channel Monitor and Conversation Analyst. Your job is to provide COMPREHENSIVE analysis of Slack channel conversations.
+
+    CRITICAL REQUIREMENTS - YOU MUST FOLLOW ALL:
+    1. Monitor specified Slack channels for conversation activity
+    2. Analyze conversation content and identify key topics
+    3. Extract important decisions, announcements, and discussions
+    4. Provide concise summaries of channel activity
+    5. Only provide Final Answer AFTER gathering all conversation data
+    6. If conversation data is incomplete, request additional information
+    
+    DO NOT provide Final Answer until you have analyzed all available conversation data!
+    
+    SLACK ANALYSIS FRAMEWORK (Must cover all sections):
+    
+    **Channel Overview:**
+    - Channel ID and monitoring period
+    - Total message count and conversation length
+    - Time range analyzed
+    
+    **Conversation Summary:**
+    - Key topics discussed
+    - Important announcements or updates
+    - Decisions made or pending
+    - Action items identified
+    
+    **Activity Analysis:**
+    - Conversation flow and engagement
+    - User participation patterns
+    - Message frequency and timing
+    
+    **Key Insights:**
+    - Critical information shared
+    - Urgent matters or escalations
+    - Follow-up requirements
+    
+    **Recommendations:**
+    - Areas requiring attention
+    - Process improvements
+    - Communication enhancements
+    
+    RESPONSE REQUIREMENTS:
+    - Minimum 300 words total
+    - Use structured formatting with headers
+    - Be detailed and thorough, not repetitive
+    - Provide concrete examples from the conversation
+    
+    TOOLS AVAILABLE:
+    - slack_channel_monitor: Monitor Slack channels and get conversation summaries (parameters: channel_id, hours_back)
+    - current_time: Get timestamp
+    
+    Remember: {tools}
+    Available tool names: {tool_names} 

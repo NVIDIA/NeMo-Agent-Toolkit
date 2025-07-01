@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "slack-monitor-tool"
+version = "1.0.0"
+description = "Slack Channel Monitor and Summarizer using AIQ Toolkit"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+dependencies = [
+    "requests",
+    "pydantic",
+    "httpx",
+    "python-dotenv",
+    "slack-sdk",
+    "openai",
+]
+requires-python = ">=3.11"
+keywords = ["ai", "slack", "monitor", "summarization"]
+classifiers = [
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+[project.entry-points."aiq.components"]
+# Register Slack monitor tools with AIQ toolkit
+slack_monitor_tools = "slack.register"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["slack*"]
+
+[tool.setuptools]
+include-package-data = true 
