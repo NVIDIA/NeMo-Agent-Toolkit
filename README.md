@@ -65,7 +65,9 @@ $env:LOKI_API_TOKEN="your_loki_token"
 ```bash
 # Install PDF RAG examples
 uv pip install -e examples/pdf_rag_chatbot
-uv pip install -e examples/pdf_rag_ingest
+
+#Install slack assistant
+uv pip install -e examples/slack
 
 # Install Friday assistant
 uv pip install -e examples/friday
