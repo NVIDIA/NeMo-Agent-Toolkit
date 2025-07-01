@@ -44,9 +44,9 @@ class CalcRunner:
         Initialize CalcRunner with a config file and a list of concurrencies.
         """
         self.config = config
-        # only store profiler results per-concurrency
+        # store profiler results and usage stats per-concurrency
         self.profiler_results: dict[int, ProfilerResults] = {}
-        self.usage_stats: UsageStats = UsageStats()
+        self.usage_stats: dict[int, UsageStats] = {}
 
     @property
     def target_latency(self) -> float:
@@ -110,14 +110,6 @@ class CalcRunner:
         with open(output_dir / "calc_runner_output.json", "w") as f:
             f.write(calc_runner_output.model_dump_json(indent=2))
 
-        # write the profiler results and usage stats
-        for concurrency, profiler_results in self.profiler_results.items():
-            with open(output_dir / f"profiler_results_{concurrency}.json", "w") as f:
-                f.write(profiler_results.model_dump_json(indent=2))
-        for concurrency, usage_stats in self.usage_stats.items():
-            with open(output_dir / f"usage_stats_{concurrency}.json", "w") as f:
-                f.write(usage_stats.model_dump_json(indent=2))
-
         self.plot_concurrency_vs_p95_metrics(output_dir)
 
     def calc_p95_required_gpus(self,
@@ -166,7 +158,7 @@ class CalcRunner:
                              min_required_gpus=math.ceil(min_required_gpus),
                              gpu_estimates=gpu_estimates)
 
-    def calc_gpu_count(self) -> GPUEstimation:
+    def calc_gpu_count(self, metrics_per_concurrency: dict[int, MetricPerConcurrency]) -> GPUEstimation:
         """
         Estimate GPU count to meet target latency and/or workflow runtime SLA
         for a given target user load.
@@ -204,19 +196,19 @@ class CalcRunner:
 
         # Filter valid runs that meet the SLA
         valid_runs = []
-        for concurrency, profiler_results in self.profiler_results.items():
-            if not profiler_results or not profiler_results.llm_latency_ci or\
-                    not profiler_results.workflow_runtime_metrics:
+        for concurrency, metrics_per_concurrency in metrics_per_concurrency.items():
+            if not metrics_per_concurrency or not metrics_per_concurrency.p95_latency or\
+                    not metrics_per_concurrency.p95_workflow_runtime:
                 continue
 
-            latency = profiler_results.llm_latency_ci.p95
-            runtime = profiler_results.workflow_runtime_metrics.p95
+            latency = metrics_per_concurrency.p95_latency
+            runtime = metrics_per_concurrency.p95_workflow_runtime
 
             latency_ok = not use_latency or latency <= self.target_latency
             runtime_ok = not use_runtime or runtime <= self.target_runtime
 
             if latency_ok and runtime_ok:
-                valid_runs.append((concurrency, profiler_results))
+                valid_runs.append((concurrency, metrics_per_concurrency))
 
         if not valid_runs:
             logger.warning("No valid test run met both latency/runtime targets.")
@@ -232,34 +224,15 @@ class CalcRunner:
         if not self.config.output_dir:
             raise ValueError("Output directory is not set in offline mode.")
 
-        # read the metrics from the output directory
-
-        self.profiler_results = {
-            concurrency:
-                ProfilerResults.model_validate_json(
-                    (self.config.output_dir / f"profiler_results_{concurrency}.json").read_text())
-            for concurrency in self.config.concurrencies
-        }
-        self.usage_stats = {
-            concurrency:
-                UsageStats.model_validate_json((self.config.output_dir / f"usage_stats_{concurrency}.json").read_text())
-            for concurrency in self.config.concurrencies
-        }
+        # read the calc runner output from the output directory
+        calc_runner_output = CalcRunnerOutput.model_validate_json(
+            (self.config.output_dir / "calc_runner_output.json").read_text())
 
         # calculate gpu estimation
-        gpu_estimation = self.calc_gpu_count()
+        gpu_estimation = self.calc_gpu_count(calc_runner_output.metrics_per_concurrency)
 
-        # Build metrics_per_concurrency as in online mode
-        metrics_per_concurrency = {}
-        for concurrency in self.config.concurrencies:
-            profiler_results = self.profiler_results[concurrency]
-            usage_stats = self.usage_stats[concurrency]
-            metrics_per_concurrency[concurrency] = MetricPerConcurrency(
-                p95_latency=profiler_results.llm_latency_ci.p95,
-                p95_workflow_runtime=profiler_results.workflow_runtime_metrics.p95,
-                total_runtime=usage_stats.total_runtime)
-
-        return CalcRunnerOutput(gpu_estimation=gpu_estimation, metrics_per_concurrency=metrics_per_concurrency)
+        return CalcRunnerOutput(gpu_estimation=gpu_estimation,
+                                metrics_per_concurrency=calc_runner_output.metrics_per_concurrency)
 
     async def run(self) -> CalcRunnerOutput:
         """
@@ -307,7 +280,7 @@ class CalcRunner:
                 total_runtime=self.usage_stats[concurrency].total_runtime)
 
         # calculate gpu estimation
-        gpu_estimation = self.calc_gpu_count()
+        gpu_estimation = self.calc_gpu_count(metrics_per_concurrency)
 
         calc_runner_output = CalcRunnerOutput(gpu_estimation=gpu_estimation,
                                               metrics_per_concurrency=metrics_per_concurrency)
