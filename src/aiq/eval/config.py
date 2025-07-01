@@ -92,7 +92,7 @@ class CalcRunnerConfig(BaseModel):
     test_gpu_count: int
     test_gpu_type: str | None = None
 
-    plot_output_dir: Path | None = None
+    output_dir: Path | None = None
 
 
 class MetricPerConcurrency(BaseModel):

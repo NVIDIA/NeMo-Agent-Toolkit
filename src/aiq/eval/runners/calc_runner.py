@@ -102,6 +102,16 @@ class CalcRunner:
         plt.savefig(output_dir / "concurrency_vs_p95_metrics.png")
         plt.close()
 
+    def write_output(self, output_dir: Path):
+        """
+        Write the output to the output directory.
+        """
+        output_dir.mkdir(parents=True, exist_ok=True)
+        with open(output_dir / "calc_runner_output.json", "w") as f:
+            f.write(self.model_dump_json(indent=2))
+
+        self.plot_concurrency_vs_p95_metrics(output_dir)
+
     def calc_p95_required_gpus(self,
                                valid_runs: list[tuple[int, ProfilerResults]],
                                use_latency: bool,
@@ -248,9 +258,9 @@ class CalcRunner:
                 p95_workflow_runtime=profiler_results.workflow_runtime_metrics.p95,
                 total_runtime=self.usage_stats[concurrency].total_runtime)
 
-        # plot the metrics
-        if self.config.plot_output_dir:
-            self.plot_concurrency_vs_p95_metrics(self.config.plot_output_dir)
+        # plot the metrics and write the output
+        if self.config.output_dir:
+            self.write_output(self.config.output_dir)
 
         # calculate gpu estimation
         gpu_estimation = self.calc_gpu_count()

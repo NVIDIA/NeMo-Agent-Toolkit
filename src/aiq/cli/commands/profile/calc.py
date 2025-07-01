@@ -63,11 +63,11 @@ logger = logging.getLogger(__name__)
     help="Number of GPUs used in the test.",
 )
 @click.option(
-    "--plot_output_dir",
+    "--output_dir",
     type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
     required=False,
     default=None,
-    help="Directory to save plots (optional).",
+    help="Directory to save plots and results (optional).",
 )
 @click.option(
     "--concurrencies",
@@ -90,7 +90,7 @@ def calc_command(ctx,
                  target_workflow_runtime,
                  target_users,
                  test_gpu_count,
-                 plot_output_dir,
+                 output_dir,
                  concurrencies,
                  reps):
     """Estimate GPU count and plot metrics for a workflow profile."""
@@ -115,7 +115,7 @@ def calc_command(ctx,
         target_p95_workflow_runtime=target_workflow_runtime,
         target_users=target_users,
         test_gpu_count=test_gpu_count,
-        plot_output_dir=plot_output_dir,
+        output_dir=output_dir,
         reps=reps,
     )
 
