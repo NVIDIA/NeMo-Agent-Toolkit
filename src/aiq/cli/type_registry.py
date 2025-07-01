@@ -30,6 +30,7 @@ from pydantic import Tag
 from pydantic import computed_field
 from pydantic import field_validator
 
+from aiq.authentication.interfaces import AuthenticationManagerBase
 from aiq.builder.authentication import AuthenticationProviderInfo
 from aiq.builder.builder import Builder
 from aiq.builder.builder import EvalBuilder
@@ -87,6 +88,10 @@ AuthenticationProviderBuildCallableT = Callable[[AuthenticationBaseConfigT, Buil
                                                 AsyncIterator[AuthenticationProviderInfo]]
 AuthenticationProviderRegisteredCallableT = Callable[[AuthenticationBaseConfigT, Builder],
                                                      AbstractAsyncContextManager[AuthenticationProviderInfo]]
+AuthenticationManagerBuildCallableT = Callable[[AuthenticationBaseConfigT, Builder],
+                                               AsyncIterator[AuthenticationManagerBase]]
+AuthenticationManagerRegisteredCallableT = Callable[[AuthenticationBaseConfigT, Builder],
+                                                    AbstractAsyncContextManager[AuthenticationManagerBase]]
 FrontEndBuildCallableT = Callable[[FrontEndConfigT, AIQConfig], AsyncIterator[FrontEndBase]]
 TelemetryExporterBuildCallableT = Callable[[TelemetryExporterConfigT, Builder], AsyncIterator[SpanExporter]]
 LoggingMethodBuildCallableT = Callable[[LoggingMethodConfigT, Builder], AsyncIterator[Handler]]
@@ -192,6 +197,15 @@ class RegisteredAuthenticationProviderInfo(RegisteredInfo[AuthenticationBaseConf
     Represents a registered API Authentication provider e.g. OAuth2, API Key, etc.
     """
     build_fn: AuthenticationProviderRegisteredCallableT = Field(repr=False)
+
+
+class RegisteredAuthenticationManagerInfo(RegisteredInfo[AuthenticationBaseConfig]):
+    """
+    Represents a registered Authentication Manager. Authentication Managers are the actual implementations
+    that handle authentication flow and HTTP header construction.
+    """
+
+    build_fn: AuthenticationManagerRegisteredCallableT = Field(repr=False)
 
 
 class RegisteredLLMClientInfo(RegisteredInfo[LLMBaseConfig]):
@@ -301,9 +315,11 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         self._llm_client_provider_to_framework: dict[type[LLMBaseConfig], dict[str, RegisteredLLMClientInfo]] = {}
         self._llm_client_framework_to_provider: dict[str, dict[type[LLMBaseConfig], RegisteredLLMClientInfo]] = {}
 
-        # Authentication Providers
+        # Authentication
         self._registered_authentication_provider_infos: dict[type[AuthenticationBaseConfig],
                                                              RegisteredAuthenticationProviderInfo] = {}
+        self._registered_authentication_manager_infos: dict[type[AuthenticationBaseConfig],
+                                                            RegisteredAuthenticationManagerInfo] = {}
 
         # Embedders
         self._registered_embedder_provider_infos: dict[type[EmbedderBaseConfig], RegisteredEmbedderProviderInfo] = {}
@@ -466,6 +482,14 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         self._registration_changed()
 
+    def get_llm_provider(self, config_type: type[LLMBaseConfig]) -> RegisteredLLMProviderInfo:
+
+        try:
+            return self._registered_llm_provider_infos[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered LLM provider for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_llm_provider_infos.keys())}") from err
+
     def register_authentication_provider(self, info: RegisteredAuthenticationProviderInfo):
 
         if (info.config_type in self._registered_authentication_provider_infos):
@@ -477,14 +501,6 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         self._registration_changed()
 
-    def get_llm_provider(self, config_type: type[LLMBaseConfig]) -> RegisteredLLMProviderInfo:
-
-        try:
-            return self._registered_llm_provider_infos[config_type]
-        except KeyError as err:
-            raise KeyError(f"Could not find a registered LLM provider for config `{config_type}`. "
-                           f"Registered configs: {set(self._registered_llm_provider_infos.keys())}") from err
-
     def get_authentication_provider(
             self, config_type: type[AuthenticationBaseConfig]) -> RegisteredAuthenticationProviderInfo:
         try:
@@ -493,11 +509,33 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
             raise KeyError(f"Could not find a registered API Authentication provider for config `{config_type}`. "
                            f"Registered configs: {set(self._registered_authentication_provider_infos.keys())}") from err
 
-    def get_registered_llm_providers(self) -> list[RegisteredInfo[LLMBaseConfig]]:
-        return list(self._registered_llm_provider_infos.values())
+    def get_authentication_manager(self,
+                                   config_type: type[AuthenticationBaseConfig]) -> RegisteredAuthenticationManagerInfo:
+        try:
+            return self._registered_authentication_manager_infos[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered Authentication Manager for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_authentication_manager_infos.keys())}") from err
 
     def get_registered_authentication_providers(self) -> list[RegisteredInfo[AuthenticationBaseConfig]]:
         return list(self._registered_authentication_provider_infos.values())
+
+    def register_authentication_manager(self, info: RegisteredAuthenticationManagerInfo):
+
+        if (info.config_type in self._registered_authentication_manager_infos):
+            raise ValueError(
+                f"An Authentication Manager with the same config type `{info.config_type}` has already been "
+                "registered.")
+
+        self._registered_authentication_manager_infos[info.config_type] = info
+
+        self._registration_changed()
+
+    def get_registered_authentication_managers(self) -> list[RegisteredInfo[AuthenticationBaseConfig]]:
+        return list(self._registered_authentication_manager_infos.values())
+
+    def get_registered_llm_providers(self) -> list[RegisteredInfo[LLMBaseConfig]]:
+        return list(self._registered_llm_provider_infos.values())
 
     def register_llm_client(self, info: RegisteredLLMClientInfo):
 

@@ -14,8 +14,7 @@
 # limitations under the License.
 
 import logging
-from collections.abc import Awaitable
-from collections.abc import Callable
+import typing
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
@@ -24,40 +23,100 @@ import httpx
 
 from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
 from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowRefreshTokenError
-from aiq.authentication.interfaces import AuthenticationManagerBase
 from aiq.authentication.interfaces import OAuthClientBase
-from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
+from aiq.authentication.oauth2.oauth_user_consent_base_config import ConsentPromptMode
 from aiq.authentication.request_manager import RequestManager
 from aiq.authentication.response_manager import ResponseManager
-from aiq.data_models.authentication import ExecutionMode
+from aiq.data_models.authentication import HTTPAuthScheme
 from aiq.data_models.authentication import RefreshTokenRequest
 from aiq.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEndController
 
 logger = logging.getLogger(__name__)
 
+if (typing.TYPE_CHECKING):
+    from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
 
-class AuthCodeGrantClientManager(AuthenticationManagerBase, OAuthClientBase):
 
-    def __init__(self, config_name: str, encrypted_config: AuthCodeGrantConfig, execution_mode: ExecutionMode) -> None:
+class AuthCodeGrantClientManager(OAuthClientBase):
 
-        self._config_name: str = config_name
-        self._encrypted_config: AuthCodeGrantConfig = encrypted_config
+    def __init__(self, config: "AuthCodeGrantConfig", config_name: str | None = None) -> None:
+
+        self._config_name: str | None = config_name
+        self._config: "AuthCodeGrantConfig" = config
         self._request_manager: RequestManager = RequestManager()
         self._response_manager: ResponseManager = ResponseManager()
-        self._execution_mode: ExecutionMode = execution_mode
-
-        self._initiate_code_flow_dispatch: dict[ExecutionMode, Callable[..., Awaitable[None]]] = {
-            ExecutionMode.CONSOLE: self._initiate_authorization_code_flow_console,
-            ExecutionMode.SERVER: self._initiate_authorization_code_flow_server
-        }
-        self._shutdown_code_flow_dispatch: dict[ExecutionMode, Callable[..., Awaitable[None]]] = {
-            ExecutionMode.CONSOLE: self._shut_down_code_flow_console,
-            ExecutionMode.SERVER: self._shut_down_code_flow_server
-        }
-        self._oauth2_client_server: _FastApiFrontEndController = None
+        self._consent_prompt_mode: ConsentPromptMode | None = None
+        self._oauth2_client_server: _FastApiFrontEndController | None = None
         super().__init__()
 
-    async def validate_authentication_credentials(self) -> bool:
+    @property
+    def config_name(self) -> str | None:
+        """
+        Get the name of the authentication configuration.
+
+        Returns:
+            str | None: The name of the authentication configuration, or None if not set.
+        """
+        return self._config_name
+
+    @config_name.setter
+    def config_name(self, config_name: str | None) -> None:
+        """
+        Set the name of the authentication configuration.
+
+        Args:
+            config_name (str | None): The name of the authentication configuration.
+        """
+        self._config_name = config_name
+
+    @property
+    def config(self) -> "AuthCodeGrantConfig | None":
+        """
+        Get the authentication configuration.
+
+        Returns:
+            AuthCodeGrantConfig | None: The authentication configuration, or None if not set.
+        """
+        return self._config
+
+    @property
+    def consent_prompt_mode(self) -> ConsentPromptMode | None:
+        """
+        Get the consent prompt mode for the OAuth client.
+
+        Returns:
+            ConsentPromptMode: The consent prompt mode (BROWSER or FRONTEND).
+        """
+        return self._consent_prompt_mode
+
+    @consent_prompt_mode.setter
+    def consent_prompt_mode(self, consent_prompt_mode: ConsentPromptMode) -> None:
+        """
+        Set the consent prompt mode for the OAuth client.
+
+        Args:
+            consent_prompt_mode (ConsentPromptMode): The consent prompt mode to set.
+        """
+        self._consent_prompt_mode = consent_prompt_mode
+
+    @property
+    def response_manager(self) -> "ResponseManager | None":
+        """
+        Get the response manager for the authentication manager.
+
+        Returns:
+            ResponseManager | None: The response manager or None if not set.
+        """
+        return self._response_manager
+
+    @response_manager.setter
+    def response_manager(self, response_manager: "ResponseManager") -> None:
+        """
+        Set the response manager for the authentication manager.
+        """
+        self._response_manager = response_manager
+
+    async def validate_credentials(self) -> bool:
         """
         Validates the Auth Code Grant grant flow authentication credentials and returns True if the credentials are
         valid and False if they are not. To reliably validate Auth Code Grant flow credentials, a request should be sent
@@ -69,146 +128,145 @@ class AuthCodeGrantClientManager(AuthenticationManagerBase, OAuthClientBase):
             bool: True if the credentials are valid and False if they are not.
         """
 
-        if (self._encrypted_config.access_token and (self._encrypted_config.access_token_expires_in is not None)
-                and (datetime.now(timezone.utc) <= self._encrypted_config.access_token_expires_in)):
+        if (self._config.access_token and (self._config.access_token_expires_in is not None)
+                and (datetime.now(timezone.utc) <= self._config.access_token_expires_in)):
             return True
         else:
             return False
 
-    async def _get_credentials(self) -> bool:
+    # async def _get_credentials(self) -> None:
+    #     """
+    #     Acquires an access token if the token is absent, expired, or revoked,
+    #     by the options listed below.
+
+    #     1. Initiate the authorization flow to obtain a new access token and optional request token.
+    #     2. Use a refresh token to get another access token and refresh token pair if refresh token is available.
+
+    #     Returns:
+    #         bool: True if the credentials are valid and false if they are not after acquiring credentials.
+    #     """
+    #     try:
+    #         # Initiate code flow is there is no access token.
+    #         if (self._config.access_token is None):
+    #             if self._execution_mode is None:
+    #                 raise AuthCodeGrantFlowError('execution_mode_null',
+    #                                              'Execution mode is required for authorization code flow')
+    #             await self._initiate_code_flow_dispatch[self._execution_mode]()
+
+    #         # Initiate refresh token request if the access token is expired or revoked.
+    #         if (self._config.refresh_token and (self._config.access_token_expires_in is not None)
+    #                 and (datetime.now(timezone.utc) >= self._config.access_token_expires_in)):
+    #             await self._get_access_token_with_refresh_token()
+
+    #         return
+
+    #     except AuthCodeGrantFlowError as e:
+    #         logger.error("Failed to get Auth Code Grant flow credentials: %s", str(e), exc_info=True)
+
+    #     except AuthCodeGrantFlowRefreshTokenError as e:
+    #         logger.error("Failed to get Auth Code Grant flow credentials using refresh token: %s",
+    #                      str(e),
+    #                      exc_info=True)
+
+    #     except Exception as e:
+    #         logger.error("Failed to get Auth Code Grant flow credentials due to unexpected error: %s",
+    #                      str(e),
+    #                      exc_info=True)
+
+    async def initiate_authorization_flow_console(self) -> None:
         """
         Acquires an access token if the token is absent, expired, or revoked,
         by the options listed below.
 
         1. Initiate the authorization flow to obtain a new access token and optional request token.
         2. Use a refresh token to get another access token and refresh token pair if refresh token is available.
-
-        Returns:
-            bool: True if the credentials are valid and false if they are not after acquiring credentials.
         """
+        from aiq.authentication.credentials_manager import _CredentialsManager
+        from aiq.authentication.exceptions.call_back_exceptions import OAuthClientConsoleError
+
         try:
             # Initiate code flow is there is no access token.
-            if (self._encrypted_config.access_token is None):
-                await self._initiate_code_flow_dispatch[self._execution_mode]()
+            if (self._config.access_token is None):
+
+                # Spawn an authentication client server to handle oauth code flow.
+                await self._spawn_oauth_client_server()
+
+                # Initiate oauth code flow by sending authorization request.
+                await self._send_authorization_request()
+
+                await _CredentialsManager().wait_for_oauth_credentials()
+
+                if self._oauth2_client_server is not None:
+                    await self._oauth2_client_server.stop_server()
 
             # Initiate refresh token request if the access token is expired or revoked.
-            if (self._encrypted_config.refresh_token and (self._encrypted_config.access_token_expires_in is not None)
-                    and (datetime.now(timezone.utc) >= self._encrypted_config.access_token_expires_in)):
+            if (self._config.refresh_token and (self._config.access_token_expires_in is not None)
+                    and (datetime.now(timezone.utc) >= self._config.access_token_expires_in)):
                 await self._get_access_token_with_refresh_token()
 
-            return await self.validate_authentication_credentials()
+            return
 
         except AuthCodeGrantFlowError as e:
-            logger.error("Failed to get Auth Code Grant flow credentials: %s", str(e), exc_info=True)
-            return False
+            error_message = (
+                f"Failed to complete Authorization Code Grant Flow for: {self._config_name} Error: {str(e)}")
+            logger.error(error_message, exc_info=True)
+            raise OAuthClientConsoleError(error_code='auth_code_grant_flow_error', message=error_message) from e
 
         except AuthCodeGrantFlowRefreshTokenError as e:
             logger.error("Failed to get Auth Code Grant flow credentials using refresh token: %s",
                          str(e),
                          exc_info=True)
-            return False
 
         except Exception as e:
             logger.error("Failed to get Auth Code Grant flow credentials due to unexpected error: %s",
                          str(e),
                          exc_info=True)
-            return False
 
-    async def construct_authentication_header(self) -> httpx.Headers | None:
-        """
-        Constructs the authenticated API key HTTP header.
-
-        Returns:
-            httpx.Headers | None: Returns the constructed HTTP header if the API key is valid, otherwise returns None.
-        """
-        from aiq.authentication.credentials_manager import _CredentialsManager
-
-        if self._encrypted_config.access_token is None:
-            logger.error("Access token is not set for config: %s authentication header can not be retreived.",
-                         self._config_name)
-            return None
-
-        return httpx.Headers(
-            {"Authorization": f"Bearer {_CredentialsManager().decrypt_value(self._encrypted_config.access_token)}"})
-
-    async def get_authentication_header(self) -> httpx.Headers | None:
-        """
-        Gets the authenticated header for the registered authentication config.
-
-        Returns:
-            httpx.Headers | None: Returns the authentication header if the config is valid and credentials are
-            functional, otherwise returns None.
-        """
-        construct_authenticated_header: bool = False
-
-        # Ensure authentication credentials are valid and functional.
-        credentials_validated: bool = await self.validate_authentication_credentials()
-
-        if credentials_validated:
-            construct_authenticated_header = True
-        else:
-            # If the authentication credentials are invalid, attempt to retrieve and set the new credentials.
-            construct_authenticated_header = await self._get_credentials()
-
-        if construct_authenticated_header:
-            return await self.construct_authentication_header()
-        else:
-            logger.error(
-                "Auth Code Grant credentials are not valid for config: %s authentication header can not be retreived.",
-                self._config_name)
-            return None
-
-    async def _initiate_authorization_code_flow_console(self) -> None:
+    async def initiate_authorization_flow_server(self) -> None:
         """
         Initiate Auth Code Grant flow to receive access token, and optional refresh token.
         """
         from aiq.authentication.credentials_manager import _CredentialsManager
+        from aiq.authentication.exceptions.call_back_exceptions import OAuthClientServerError
 
         try:
-            # Spawn an authentication client server to handle oauth code flow.
-            await self._spawn_oauth_client_server()
+            # Initiate code flow is there is no access token.
+            if (self._config.access_token is None):
 
-            # Initiate oauth code flow by sending authorization request.
-            await self._send_authorization_request()
+                # Initiate oauth code flow by sending authorization request.
+                await self._send_authorization_request()
 
-            await _CredentialsManager().wait_for_oauth_credentials()
+                await _CredentialsManager().wait_for_oauth_credentials()
 
-            await self._oauth2_client_server.stop_server()
+            # Initiate refresh token request if the access token is expired or revoked.
+            if (self._config.refresh_token and (self._config.access_token_expires_in is not None)
+                    and (datetime.now(timezone.utc) >= self._config.access_token_expires_in)):
+                await self._get_access_token_with_refresh_token()
 
-        except AuthCodeGrantFlowError as e:
-            logger.error("Failed to complete Authorization Code Grant Flow for: %s Error: %s",
-                         self._config_name,
-                         str(e),
-                         exc_info=True)
-            await self._shutdown_code_flow_dispatch[self._execution_mode]()
-            raise e
-
-    async def _initiate_authorization_code_flow_server(self) -> None:
-        """
-        Initiate Auth Code Grant flow to receive access token, and optional refresh token.
-        """
-        from aiq.authentication.credentials_manager import _CredentialsManager
-
-        try:
-            # Initiate oauth code flow by sending authorization request.
-            await self._send_authorization_request()
-
-            await _CredentialsManager().wait_for_oauth_credentials()
+            return
 
         except AuthCodeGrantFlowError as e:
-            logger.error("Failed to complete Authorization Code Grant Flow for: %s Error: %s",
-                         self._config_name,
+            error_message = (
+                f"Failed to complete Authorization Code Grant Flow for: {self._config_name} Error: {str(e)}")
+            logger.error(error_message, exc_info=True)
+            raise OAuthClientServerError(error_code='auth_code_grant_flow_error', message=error_message) from e
+
+        except AuthCodeGrantFlowRefreshTokenError as e:
+            logger.error("Failed to get Auth Code Grant flow credentials using refresh token: %s",
                          str(e),
                          exc_info=True)
-            await self._shutdown_code_flow_dispatch[self._execution_mode]()
-            raise e
+
+        except Exception as e:
+            logger.error("Failed to get Auth Code Grant flow credentials due to unexpected error: %s",
+                         str(e),
+                         exc_info=True)
 
     async def _send_authorization_request(self) -> None:
         """
         Constructs Auth Code Grant flow authoriation URL and sends request to authentication server.
         """
         try:
-            authorization_url: httpx.URL = await self._request_manager.build_auth_code_grant_url(self._encrypted_config)
+            authorization_url: httpx.URL = await self._request_manager.build_auth_code_grant_url(self._config)
             response: httpx.Response | None = await self._request_manager.send_request(url=str(authorization_url),
                                                                                        http_method="GET")
             if response is None:
@@ -216,7 +274,7 @@ class AuthCodeGrantClientManager(AuthenticationManagerBase, OAuthClientBase):
                 raise AuthCodeGrantFlowError('auth_response_null', error_message)
 
             if not response.status_code == 200:
-                await self._response_manager.handle_auth_code_grant_response_codes(response, self._encrypted_config)
+                await self._response_manager.handle_auth_code_grant_response_codes(response, self)
 
         except Exception as e:
             error_message = f"Unexpected error occurred during authorization request process: {str(e)}"
@@ -228,28 +286,27 @@ class AuthCodeGrantClientManager(AuthenticationManagerBase, OAuthClientBase):
         Performs the Auth Code Grant token refresh flow by sending a POST request
         to the token endpoint with the required client credentials and refresh token.
         """
-        from aiq.authentication.credentials_manager import _CredentialsManager
+
         try:
-            if not self._encrypted_config.refresh_token:
+            if not self._config.refresh_token:
                 error_message = "Refresh token is missing during the refresh token request"
                 raise AuthCodeGrantFlowRefreshTokenError('refresh_token_missing', error_message)
 
-            if not self._encrypted_config.client_id:
+            if not self._config.client_id:
                 error_message = "Client ID is missing during the refresh token request"
                 raise AuthCodeGrantFlowRefreshTokenError('client_id_missing', error_message)
 
-            if not self._encrypted_config.client_secret:
+            if not self._config.client_secret:
                 error_message = "Client secret is missing during the refresh token request"
                 raise AuthCodeGrantFlowRefreshTokenError('client_secret_missing', error_message)
 
-            body_data: RefreshTokenRequest = RefreshTokenRequest(
-                client_id=_CredentialsManager().decrypt_value(self._encrypted_config.client_id),
-                client_secret=_CredentialsManager().decrypt_value(self._encrypted_config.client_secret),
-                refresh_token=_CredentialsManager().decrypt_value(self._encrypted_config.refresh_token))
+            body_data: RefreshTokenRequest = RefreshTokenRequest(client_id=self._config.client_id,
+                                                                 client_secret=self._config.client_secret,
+                                                                 refresh_token=self._config.refresh_token)
 
             # Send Refresh Token Request
             response: httpx.Response | None = await self._request_manager.send_request(
-                url=_CredentialsManager().decrypt_value(self._encrypted_config.authorization_token_url),
+                url=self._config.authorization_token_url,
                 http_method="POST",
                 authentication_header=None,
                 headers={"Content-Type": "application/json"},
@@ -260,7 +317,7 @@ class AuthCodeGrantClientManager(AuthenticationManagerBase, OAuthClientBase):
                 raise AuthCodeGrantFlowRefreshTokenError('refresh_response_null', error_message)
 
             if not response.status_code == 200:
-                await self._response_manager.handle_auth_code_grant_response_codes(response, self._encrypted_config)
+                await self._response_manager.handle_auth_code_grant_response_codes(response, self)
 
             if response.json().get("access_token") is None:
                 error_message = "Access token not in successful token request response payload"
@@ -274,14 +331,12 @@ class AuthCodeGrantClientManager(AuthenticationManagerBase, OAuthClientBase):
                 error_message = "Refresh token not in successful token request response payload"
                 raise AuthCodeGrantFlowRefreshTokenError('refresh_token_response_missing', error_message)
 
-            self._encrypted_config.access_token = _CredentialsManager().encrypt_value(
-                response.json().get("access_token"))
+            self._config.access_token = response.json().get("access_token")
 
-            self._encrypted_config.access_token_expires_in = (datetime.now(timezone.utc) +
-                                                              timedelta(seconds=response.json().get("expires_in")))
+            self._config.access_token_expires_in = (datetime.now(timezone.utc) +
+                                                    timedelta(seconds=response.json().get("expires_in")))
 
-            self._encrypted_config.refresh_token = _CredentialsManager().encrypt_value(
-                response.json().get("refresh_token"))
+            self._config.refresh_token = response.json().get("refresh_token")
 
         except Exception as e:
             error_message = (f"Failed to get Auth Code Grant flow credentials using refresh token "
@@ -306,7 +361,7 @@ class AuthCodeGrantClientManager(AuthenticationManagerBase, OAuthClientBase):
 
         await self._oauth2_client_server.start_server()
 
-    async def _shut_down_code_flow_console(self) -> None:
+    async def shut_down_code_flow_console(self) -> None:
         """
         Shuts down the Auth Code Grant flow in CONSOLE execution mode if a any unrecoverable errors occur during the
         authentication process.
@@ -315,9 +370,10 @@ class AuthCodeGrantClientManager(AuthenticationManagerBase, OAuthClientBase):
 
         await _CredentialsManager().set_consent_prompt_url()
         await _CredentialsManager().set_oauth_credentials()
-        await self._oauth2_client_server.stop_server()
+        if self._oauth2_client_server is not None:
+            await self._oauth2_client_server.stop_server()
 
-    async def _shut_down_code_flow_server(self) -> None:
+    async def shut_down_code_flow_server(self) -> None:
         """
         Shuts down the Auth Code Grant flow in SERVER execution mode if a any unrecoverable errors occur during the
         authentication process.
@@ -326,3 +382,37 @@ class AuthCodeGrantClientManager(AuthenticationManagerBase, OAuthClientBase):
 
         await _CredentialsManager().set_consent_prompt_url()
         await _CredentialsManager().set_oauth_credentials()
+
+    async def construct_authentication_header(self, http_auth_scheme: HTTPAuthScheme) -> httpx.Headers | None:
+        """
+        Constructs the authenticated HTTP header based on the authentication scheme.
+
+        Args:
+            http_auth_scheme (HTTPAuthScheme): The HTTP authentication scheme to use. (i.e. BEARER or OAUTH2)
+
+        Returns:
+            httpx.Headers | None: The constructed HTTP header if successful, otherwise returns None.
+        """
+        autheticated_header: httpx.Headers | None = None
+
+        if http_auth_scheme not in [HTTPAuthScheme.BEARER, HTTPAuthScheme.OAUTH2]:
+            logger.error(f'Header authentication scheme not supported for provider: {self._config_name}')
+            return autheticated_header
+
+        return httpx.Headers({"Authorization": f"Bearer {self._config.access_token}"})
+
+    async def construct_authentication_query(self, http_auth_scheme: HTTPAuthScheme) -> httpx.QueryParams | None:
+        logger.error(f'Query Authentication is not supported for provider: {self._config_name}')
+        return None
+
+    async def construct_authentication_cookie(self, http_auth_scheme: HTTPAuthScheme) -> httpx.Cookies | None:
+        logger.error(f'Cookie Authentication is not supported for provider: {self._config_name}')
+        return None
+
+    async def construct_authentication_body(self, http_auth_scheme: HTTPAuthScheme) -> dict[str, typing.Any] | None:
+        logger.error(f'Body Authentication is not supported for provider: {self._config_name}')
+        return None
+
+    async def construct_authentication_custom(self, http_auth_scheme: HTTPAuthScheme) -> typing.Any | None:
+        logger.error(f'Custom Authentication is not supported for provider: {self._config_name}')
+        return None

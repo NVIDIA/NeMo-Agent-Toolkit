@@ -31,9 +31,14 @@ class AuthenticationBaseConfig(TypedBaseModel, BaseModelRegistryTag):
 AuthenticationBaseConfigT = typing.TypeVar("AuthenticationBaseConfigT", bound=AuthenticationBaseConfig)
 
 
-class ExecutionMode(str, Enum):
-    CONSOLE = "console"
-    SERVER = "server"
+class HTTPAuthScheme(str, Enum):
+    BASIC = "basic"
+    BEARER = "bearer"
+    DIGEST = "digest"
+    COOKIE = "cookie"
+    OAUTH2 = "oauth2"
+    OPENIDCONNECT = "openidconnect"
+    CUSTOM = "custom"
 
 
 class HTTPMethod(str, Enum):

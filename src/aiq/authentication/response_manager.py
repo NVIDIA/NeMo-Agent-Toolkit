@@ -19,7 +19,7 @@ import webbrowser
 import httpx
 
 from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
-from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
+from aiq.authentication.interfaces import OAuthClientBase
 from aiq.data_models.authentication import ConsentPromptMode
 from aiq.front_ends.fastapi.message_handler import MessageHandler
 
@@ -54,13 +54,13 @@ class ResponseManager:
 
     async def handle_auth_code_grant_response_codes(self,
                                                     response: httpx.Response,
-                                                    encrypted_authentication_config: AuthCodeGrantConfig) -> None:
+                                                    oauth_client_manager: OAuthClientBase) -> None:
         """
         Handles various Auth Code Grant Flow flow responses.
 
         Args:
             response (httpx.Response): The HTTP response from the authentication server.
-            encrypted_authentication_config (AuthCodeGrantConfig): The registered Auth Code Grant flow config.
+            encrypted_authentication_config (OAuthClientBase): The registered Auth Code Grant flow config.
         """
         try:
             # Handles the 302 redirect status code from Auth Code Grant flow authorization server.
@@ -71,8 +71,7 @@ class ResponseManager:
                     error_message = "Missing 'Location' header in 302 response to redirect user to consent browser"
                     raise AuthCodeGrantFlowError('location_header_missing', error_message)
 
-                await self._handle_auth_code_grant_302_consent_browser(redirect_location_header,
-                                                                       encrypted_authentication_config)
+                await self._handle_auth_code_grant_302_consent_browser(redirect_location_header, oauth_client_manager)
 
             # Handles the 4xx client status codes from Auth Code Grant flow authorization server.
             elif response.status_code >= 400 and response.status_code < 500:
@@ -92,26 +91,28 @@ class ResponseManager:
 
     async def _handle_auth_code_grant_302_consent_browser(self,
                                                           location_header: str,
-                                                          encrypted_authentication_config: AuthCodeGrantConfig) -> None:
+                                                          oauth_client_manager: OAuthClientBase) -> None:
         """
         Handles the consent prompt redirect for different execution environments.
 
         Args:
             location_header (str) : Location header from authorization server HTTP 302 consent prompt redirect.
-            encrypted_authentication_config (AuthCodeGrantConfig): The registered Auth Code Grant flow config.
+            encrypted_authentication_config (OAuthClientBase): The registered Auth Code Grant flow config.
         """
         from aiq.authentication.credentials_manager import _CredentialsManager
+        from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
         from aiq.data_models.interactive import HumanPromptNotification
+
+        oauth_config: OAuthUserConsentConfigBase | None = oauth_client_manager.config
         try:
-            if encrypted_authentication_config.consent_prompt_mode == ConsentPromptMode.BROWSER:
+            if oauth_client_manager.consent_prompt_mode == ConsentPromptMode.BROWSER:
 
                 default_browser = webbrowser.get()
                 default_browser.open(location_header)
 
-            if encrypted_authentication_config.consent_prompt_mode == ConsentPromptMode.FRONTEND:
+            if oauth_client_manager.consent_prompt_mode == ConsentPromptMode.FRONTEND:
 
-                authentication_config_name: str | None = _CredentialsManager().get_authentication_config_name(
-                    encrypted_authentication_config)
+                authentication_config_name: str | None = oauth_client_manager.config_name
 
                 logger.info(
                     "\n\n******************************************************************\n\n"
@@ -129,12 +130,12 @@ class ResponseManager:
                             f"[ {authentication_config_name} ]. "
                             "Navigate to the '/aiq-auth' page to continue Auth Code Grant flow."))
 
-                encrypted_authentication_config.consent_prompt_location_url = _CredentialsManager().encrypt_value(
-                    location_header)
+                if oauth_config:
+                    oauth_config.consent_prompt_location_url = location_header
 
-                await _CredentialsManager().wait_for_consent_prompt_url()
+                    await _CredentialsManager().wait_for_consent_prompt_url()
 
-                encrypted_authentication_config.consent_prompt_location_url = None
+                    oauth_config.consent_prompt_location_url = None
 
         except webbrowser.Error as e:
             error_message = f"Unable to complete Auth Code Grant flow process - browser open failed: {str(e)}"

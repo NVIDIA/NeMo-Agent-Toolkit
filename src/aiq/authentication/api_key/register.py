@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,10 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from aiq.authentication.api_key.api_key_config import APIKeyConfig
+from aiq.authentication.api_key.api_key_manager import APIKeyManager
+from aiq.builder.builder import Builder
+from aiq.cli.register_workflow import register_authentication_manager
 
-class APIRequestError(Exception):
-    """Raised when an API request fails unexpectedly."""
 
-    def __init__(self, error_code: str, message: str, *args):
-        self.error_code = error_code
-        super().__init__(f"[{error_code}] {message}", *args)
+@register_authentication_manager(config_type=APIKeyConfig)
+async def api_key_manager(authentication_provider: APIKeyConfig, builder: Builder):
+
+    yield APIKeyManager(config=authentication_provider)

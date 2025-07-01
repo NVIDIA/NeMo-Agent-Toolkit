@@ -460,6 +460,32 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise e
 
     @override
+    async def get_authentication(self, authentication_config_name: str):
+
+        if authentication_config_name not in self._authentications:
+            raise ValueError(f"Authentication `{authentication_config_name}` not found")
+
+        try:
+            # Get authentication config info
+            authentication_config_info = self._authentications[authentication_config_name]
+
+            authentication_manager_info = self._registry.get_authentication_manager(
+                config_type=type(authentication_config_info.config))
+
+            authentication_manager = await self._get_exit_stack().enter_async_context(
+                authentication_manager_info.build_fn(authentication_config_info.config, self))
+
+            # Set the config name
+            authentication_manager.config_name = authentication_config_name
+
+            # Return the authentication manager
+            return authentication_manager
+
+        except Exception as e:
+            logger.error("Error getting authentication manager `%s`", authentication_config_name, exc_info=True)
+            raise e
+
+    @override
     async def get_llm(self, llm_name: str | LLMRef, wrapper_type: LLMFrameworkEnum | str):
 
         if (llm_name not in self._llms):
@@ -662,6 +688,12 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             else:
                 raise ValueError(f"Unknown component group {component_instance.component_group}")
 
+        # Update credentials manager with config objects used by the workflow builder
+        from aiq.authentication.credentials_manager import _CredentialsManager
+        if self._authentications:
+            actual_auth_configs = {name: auth_info.config for name, auth_info in self._authentications.items()}
+            _CredentialsManager().copy_authentication_configs(actual_auth_configs)
+
         # Instantiate the workflow
         if not skip_workflow:
             await self.set_workflow(config.workflow)
@@ -732,6 +764,10 @@ class ChildBuilder(Builder):
     @override
     async def add_authentication(self, name: str, config: AuthenticationBaseConfig):
         return await self._workflow_builder.add_authentication(name, config)
+
+    @override
+    async def get_authentication(self, authentication_config_name: str):
+        return await self._workflow_builder.get_authentication(authentication_config_name)
 
     @override
     async def get_llm(self, llm_name: str, wrapper_type: LLMFrameworkEnum | str):

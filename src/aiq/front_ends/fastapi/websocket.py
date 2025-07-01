@@ -20,21 +20,21 @@ from collections.abc import Awaitable
 from collections.abc import Callable
 from typing import Any
 
-import httpx
 from fastapi import WebSocket
 from fastapi import WebSocketException
 from starlette.endpoints import WebSocketEndpoint
 from starlette.websockets import WebSocketDisconnect
 
-from aiq.authentication.exceptions.exceptions import APIRequestError
+from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
+from aiq.authentication.interfaces import OAuthClientBase
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.api_server import AIQChatResponseChunk
 from aiq.data_models.api_server import AIQResponsePayloadOutput
 from aiq.data_models.api_server import AIQResponseSerializable
-from aiq.data_models.api_server import AuthenticatedRequest
 from aiq.data_models.api_server import WebSocketMessageStatus
 from aiq.data_models.api_server import WorkflowSchemaType
+from aiq.data_models.authentication import ConsentPromptMode
 from aiq.front_ends.fastapi.message_handler import MessageHandler
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response
 from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
@@ -117,9 +117,10 @@ class AIQWebSocket(WebSocketEndpoint):
                                result_type: type | None = None,
                                output_type: type | None = None) -> None:
 
-        async with self._session_manager.session(conversation_id=conversation_id,
-                                                 user_input_callback=self._message_handler.human_interaction,
-                                                 user_request_callback=self.execute_api_request_websocket) as session:
+        async with self._session_manager.session(
+                conversation_id=conversation_id,
+                user_input_callback=self._message_handler.human_interaction,
+                user_authentication_callback=self.user_auth_callback_websocket) as session:
 
             async for value in generate_streaming_response(payload,
                                                            session_manager=session,
@@ -155,54 +156,39 @@ class AIQWebSocket(WebSocketEndpoint):
 
         return await self._process_message(payload, result_type=AIQChatResponse)
 
-    async def execute_api_request_websocket(self, user_request: AuthenticatedRequest) -> httpx.Response | None:
+    async def user_auth_callback_websocket(self, oauth_client: OAuthClientBase,
+                                           consent_prompt_mode: ConsentPromptMode) -> AuthenticationError | None:
         """
-        Callback function that executes an API request in websocket mode using the provided authenticated request.
+        Callback handler for user authentication in server websocket environment.
 
         Args:
-            user_request (AuthenticatedRequest): The authenticated request to be executed.
+            oauth_client (OAuthClientBase): The OAuth client to authenticate.
+            consent_prompt_mode (ConsentPromptMode): The consent prompt mode to use.
 
         Returns:
-            httpx.Response | None: The response from the API request, or None if an error occurs.
+            AuthenticationError | None: The authentication error if the authentication fails, otherwise None.
         """
-        from aiq.authentication.authentication_manager_factory import AuthenticationManagerFactory
-        from aiq.authentication.interfaces import AuthenticationManagerBase
-        from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantClientManager
-        from aiq.authentication.request_manager import RequestManager
-        from aiq.data_models.authentication import ExecutionMode
 
-        request_manager: RequestManager = RequestManager()
-        response: httpx.Response | None = None
-        authentication_manager_factory: AuthenticationManagerFactory = AuthenticationManagerFactory(
-            ExecutionMode.SERVER)
+        from aiq.authentication.exceptions.call_back_exceptions import OAuthClientServerError
 
-        authentication_manager: AuthenticationManagerBase | None = await authentication_manager_factory.create(
-            user_request)
+        oauth_client.consent_prompt_mode = consent_prompt_mode
 
-        if isinstance(authentication_manager, AuthCodeGrantClientManager):
-            authentication_manager._response_manager.message_handler = self._message_handler
-
-        authentication_header: httpx.Headers | None = None
-
-        if authentication_manager is not None:
-            authentication_header: httpx.Headers | None = await authentication_manager.get_authentication_header()
+        if oauth_client.response_manager is not None:
+            oauth_client.response_manager.message_handler = self._message_handler
 
         try:
-            response = await request_manager.send_request(url=user_request.url_path,
-                                                          http_method=user_request.method,
-                                                          authentication_header=authentication_header,
-                                                          headers=user_request.headers,
-                                                          query_params=user_request.query_params,
-                                                          body_data=user_request.body_data)
+            # Initiate the authorization flow and persist the oauth credentials.
+            await oauth_client.initiate_authorization_flow_server()
 
-            if response is None:
-                error_message = (
-                    "An unexpected error occurred while sending request - no response received in websocket mode")
-                raise APIRequestError('websocket_api_request_failed', error_message)
+            # If credentials were not persisted, raise an error.
+            if not await oauth_client.validate_credentials():
+                raise AuthenticationError(error_code="server_websocket_auth_error",
+                                          message="Failed to validate credentials")
 
-        except APIRequestError as e:
-            error_message = f"An error occurred during the API request: {str(e)}"
+        except OAuthClientServerError as e:
+            error_message = f"Failed to complete Authorization Flow for: {oauth_client.config_name} Error: {str(e)}"
             logger.error(error_message, exc_info=True)
-            return None
+            await oauth_client.shut_down_code_flow_server()
+            raise AuthenticationError(error_code="server_websocket_auth_error", message=error_message) from e
 
-        return response
+        return

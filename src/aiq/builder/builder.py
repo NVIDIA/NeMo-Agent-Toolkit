@@ -115,6 +115,10 @@ class Builder(ABC):  # pylint: disable=too-many-public-methods
         pass
 
     @abstractmethod
+    async def get_authentication(self, authentication_config_name: str) -> typing.Any:
+        pass
+
+    @abstractmethod
     async def add_embedder(self, name: str | EmbedderRef, config: EmbedderBaseConfig):
         pass
 

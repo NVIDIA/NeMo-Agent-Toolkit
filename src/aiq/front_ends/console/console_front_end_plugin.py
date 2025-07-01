@@ -18,11 +18,12 @@ import logging
 from io import StringIO
 
 import click
-import httpx
 from colorama import Fore
 
+from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
+from aiq.authentication.interfaces import OAuthClientBase
 from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.data_models.api_server import AuthenticatedRequest
+from aiq.data_models.authentication import ConsentPromptMode
 from aiq.data_models.interactive import HumanPromptModelType
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import HumanResponseText
@@ -83,8 +84,9 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
 
             async def run_single_query(query):
 
-                async with session_manager.session(user_input_callback=prompt_for_input_cli,
-                                                   user_request_callback=self.execute_api_request_console) as session:
+                async with session_manager.session(
+                        user_input_callback=prompt_for_input_cli,
+                        user_authentication_callback=self.user_auth_callback_console) as session:
                     async with session.run(query) as runner:
                         base_output = await runner.result(to_type=str)
 
@@ -109,50 +111,34 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         # Print result
         logger.info(f"\n{'-' * 50}\n{Fore.GREEN}Workflow Result:\n%s{Fore.RESET}\n{'-' * 50}", runner_outputs)
 
-    async def execute_api_request_console(self, user_request: AuthenticatedRequest) -> httpx.Response | None:
+    async def user_auth_callback_console(self, oauth_client: OAuthClientBase,
+                                         consent_prompt_mode: ConsentPromptMode) -> AuthenticationError | None:
         """
-        Callback function that executes an API request in console mode using the provided authenticated request.
+        Callback handler for user authentication in console environments.
 
         Args:
-            user_request (AuthenticatedRequest): The authenticated request to be executed.
+            oauth_client (OAuthClientBase): The OAuth client to authenticate.
+            consent_prompt_mode (ConsentPromptMode): The consent prompt mode to use.
 
         Returns:
-            httpx.Response | None: The response from the API request, or None if an error occurs.
+            AuthenticationError | None: The authentication error if the authentication fails, otherwise None.
         """
-        from aiq.authentication.authentication_manager_factory import AuthenticationManagerFactory
-        from aiq.authentication.exceptions.exceptions import APIRequestError
-        from aiq.authentication.interfaces import AuthenticationManagerBase
-        from aiq.authentication.request_manager import RequestManager
-        from aiq.data_models.authentication import ExecutionMode
 
-        request_manager: RequestManager = RequestManager()
-        response: httpx.Response | None = None
-        authentication_manager_factory: AuthenticationManagerFactory = AuthenticationManagerFactory(
-            ExecutionMode.CONSOLE)
-
-        authentication_manager: AuthenticationManagerBase | None = await authentication_manager_factory.create(
-            user_request)
-
-        authentication_header: httpx.Headers | None = None
-
-        if authentication_manager is not None:
-            authentication_header: httpx.Headers | None = await authentication_manager.get_authentication_header()
+        from aiq.authentication.exceptions.call_back_exceptions import OAuthClientConsoleError
+        oauth_client.consent_prompt_mode = consent_prompt_mode
 
         try:
-            response = await request_manager.send_request(url=user_request.url_path,
-                                                          http_method=user_request.method,
-                                                          authentication_header=authentication_header,
-                                                          headers=user_request.headers,
-                                                          query_params=user_request.query_params,
-                                                          body_data=user_request.body_data)
+            # Initiate the authorization flow and persist the oauth credentials.
+            await oauth_client.initiate_authorization_flow_console()
 
-            if response is None:
-                error_message = "An unexpected error occurred while sending request - no response received"
-                raise APIRequestError('console_api_request_failed', error_message)
+            # If credentials were not persisted, raise an error.
+            if not await oauth_client.validate_credentials():
+                raise AuthenticationError(error_code="console_auth_error", message="Failed to validate credentials")
 
-        except APIRequestError as e:
-            error_message = f"An error occurred during the API request: {str(e)}"
+        except OAuthClientConsoleError as e:
+            error_message = f"Failed to complete Authorization Flow for: {oauth_client.config_name} Error: {str(e)}"
             logger.error(error_message, exc_info=True)
-            return None
+            await oauth_client.shut_down_code_flow_console()
+            raise AuthenticationError(error_code="console_auth_error", message=error_message) from e
 
-        return response
+        return

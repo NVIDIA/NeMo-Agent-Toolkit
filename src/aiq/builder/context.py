@@ -20,11 +20,11 @@ from collections.abc import Callable
 from contextlib import contextmanager
 from contextvars import ContextVar
 
-import httpx
-
+from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
+from aiq.authentication.interfaces import OAuthClientBase
 from aiq.builder.intermediate_step_manager import IntermediateStepManager
 from aiq.builder.user_interaction_manager import AIQUserInteractionManager
-from aiq.data_models.api_server import AuthenticatedRequest
+from aiq.data_models.authentication import ConsentPromptMode
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
 from aiq.data_models.intermediate_step import IntermediateStep
@@ -80,10 +80,11 @@ class AIQContextState(metaclass=Singleton):
                                                  "user_input_callback",
                                                  default=AIQUserInteractionManager.default_callback_handler)
 
-        self.user_request_callback: ContextVar[Callable[[AuthenticatedRequest], Awaitable[httpx.Response | None]]
-                                               | None] = ContextVar(
-                                                   "user_request_callback",
-                                                   default=AIQUserInteractionManager.execute_api_request_default)
+        self.user_auth_callback: ContextVar[Callable[[OAuthClientBase, ConsentPromptMode],
+                                                     Awaitable[AuthenticationError | None]]
+                                            | None] = ContextVar(
+                                                "user_auth_callback",
+                                                default=AIQUserInteractionManager.user_auth_callback_default)
 
     @staticmethod
     def get() -> "AIQContextState":

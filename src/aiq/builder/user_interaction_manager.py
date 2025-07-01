@@ -17,9 +17,9 @@ import logging
 import time
 import uuid
 
-import httpx
-
-from aiq.data_models.api_server import AuthenticatedRequest
+from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
+from aiq.authentication.interfaces import OAuthClientBase
+from aiq.data_models.authentication import ConsentPromptMode
 from aiq.data_models.interactive import HumanPrompt
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
@@ -54,15 +54,18 @@ class AIQUserInteractionManager:
         raise NotImplementedError("No human prompt callback was registered. Unable to handle requested prompt.")
 
     @staticmethod
-    async def execute_api_request_default(request: AuthenticatedRequest) -> None:
+    async def user_auth_callback_default(oauth_client: OAuthClientBase,
+                                         consent_prompt_mode: ConsentPromptMode) -> AuthenticationError | None:
         """
-        Default callback handler for user requests. This no-op function raises a NotImplementedError error, to indicate
-        that a valid request callback was not registered.
+        Default callback handler for user authentication strategy. This no-op function raises a NotImplementedError
+        error, to indicate that a valid authentication callback was not registered.
 
         Args:
-            request (AuthenticatedRequest): The authenticated request to be executed.
+            oauth_client (OAuthClientBase): The OAuth client to be used for authentication.
+            consent_prompt_mode (ConsentPromptMode): The consent prompt mode to be used for browser handling..
         """
-        raise NotImplementedError("No request callback was registered. Unable to handle request.")
+        raise NotImplementedError(
+            "No authentication callback was registered. Unable to execute authentication strategy.")
 
     async def prompt_user_input(self, content: HumanPrompt) -> InteractionResponse:
         """
@@ -87,49 +90,19 @@ class AIQUserInteractionManager:
 
         return sys_human_interaction
 
-    async def make_api_request(self,
-                               url: str,
-                               http_method: str,
-                               authentication_config_name: str | None = None,
-                               headers: dict | None = None,
-                               query_params: dict | None = None,
-                               body_data: dict | None = None) -> httpx.Response | None:
-        """
-        Constructs and sends an API request, authenticating the user using OAuth 2.0 or API keys based on the
-        credentials specified in the YAML configuration file. If no authentication config is specified, the request
-        is sent without authentication. The user is responsible for handling all responses, which are propagated back
-        to the user on both successful and unsuccessful requests.
+    async def authenticate_oauth_client(self, oauth_client: OAuthClientBase,
+                                        consent_prompt_handle: ConsentPromptMode) -> AuthenticationError | None:
 
-        Args:
-            url (str): The base URL to which the request will be sent.
-            http_method (str): The HTTP method to use for the request (e.g., "GET", "POST", etc..).
-            authentication_config (str | None): The name of the registered authentication config to use for
-            making an authenticated request. If None, no authentication will be applied.
-            headers (dict | None): Optional dictionary of HTTP headers.
-            query_params (dict | None): Optional dictionary of query parameters.
-            body_data (dict | None): Optional dictionary representing the request body.
-
-        Returns:
-            httpx.Response | None: The successful or unsuccessful response from the API request, or None if an error
-            occurs during the authentication process or sending the request.
-        """
-        from aiq.authentication.credentials_manager import _CredentialsManager
+        # TODOD EE: Add doc string
 
         try:
-            authenticated_request: AuthenticatedRequest = AuthenticatedRequest(
-                url_path=url,
-                method=http_method,
-                authentication_config_name=authentication_config_name,
-                authentication_config=_CredentialsManager().get_authentication_config(authentication_config_name),
-                headers=headers,
-                query_params=query_params,
-                body_data=body_data)
 
-            response: httpx.Response | None = await self._context_state.user_request_callback.get()(
-                authenticated_request)
+            await self._context_state.user_auth_callback.get()(oauth_client, consent_prompt_handle)
 
-        except Exception as e:
-            logger.error("Error while making API request: %s", str(e), exc_info=True)
-            return None
+        except AuthenticationError as e:
+            logger.error("Authentication failed while trying to authenticate provider: %s",
+                         oauth_client.config_name,
+                         exc_info=True)
+            return AuthenticationError(error_code="oauth_client_auth_error", message=e)
 
-        return response
+        return

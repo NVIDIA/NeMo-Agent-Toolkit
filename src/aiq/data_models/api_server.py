@@ -29,7 +29,6 @@ from pydantic import conlist
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 
-from aiq.data_models.authentication import AuthenticationBaseConfig
 from aiq.data_models.interactive import HumanPrompt
 from aiq.utils.type_converter import GlobalTypeConverter
 
@@ -53,17 +52,6 @@ class Request(BaseModel):
     client_port: int | None = Field(default=None, description="Client port number from which the request originated.")
     cookies: dict[str, str] | None = Field(
         default=None, description="Cookies sent with the request, stored in a dictionary-like object.")
-
-
-class AuthenticatedRequest(Request):
-    """
-    AuthenticatedRequest is a data model that represents HTTP request attributes with optional authentication.
-    """
-    authentication_config_name: str | None = Field(
-        description="The authentication config name specified in the YAML configuration file.")
-    authentication_config: AuthenticationBaseConfig | None = Field(
-        description="The authentication config specified in the YAML configuration file.")
-    body_data: dict | None = Field(default=None, description="HTTP request body data.")
 
 
 class ChatContentType(str, Enum):

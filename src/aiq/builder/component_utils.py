@@ -21,6 +21,7 @@ from collections.abc import Iterable
 import networkx as nx
 from pydantic import BaseModel
 
+from aiq.data_models.authentication import AuthenticationBaseConfig
 from aiq.data_models.common import TypedBaseModel
 from aiq.data_models.component import ComponentGroup
 from aiq.data_models.component_ref import ComponentRef
@@ -38,6 +39,7 @@ logger = logging.getLogger(__name__)
 
 # Order in which we want to process the component groups
 _component_group_order = [
+    ComponentGroup.AUTHENTICATION,
     ComponentGroup.EMBEDDERS,
     ComponentGroup.LLMS,
     ComponentGroup.MEMORY,
@@ -95,6 +97,8 @@ def group_from_component(component: TypedBaseModel) -> ComponentGroup | None:
             component is not a valid runtime instance, None is returned.
     """
 
+    if (isinstance(component, AuthenticationBaseConfig)):
+        return ComponentGroup.AUTHENTICATION
     if (isinstance(component, EmbedderBaseConfig)):
         return ComponentGroup.EMBEDDERS
     if (isinstance(component, FunctionBaseConfig)):
@@ -241,9 +245,8 @@ def build_dependency_sequence(config: "AIQConfig") -> list[ComponentInstanceData
         list[ComponentInstanceData]: A list representing the instatiation sequence to ensure all valid
             runtime instance references.
     """
-
-    total_node_count = len(config.embedders) + len(config.functions) + len(config.llms) + len(config.memory) + len(
-        config.retrievers) + 1  # +1 for the workflow
+    total_node_count = len(config.authentication) + len(config.embedders) + len(config.functions) + len(
+        config.llms) + len(config.memory) + len(config.retrievers) + 1  # +1 for the workflow
 
     dependency_map: dict
     dependency_graph: nx.DiGraph

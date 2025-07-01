@@ -14,73 +14,71 @@
 # limitations under the License.
 
 import logging
+import typing
 
 import httpx
 
-from aiq.authentication.api_key.api_key_config import APIKeyConfig
 from aiq.authentication.interfaces import AuthenticationManagerBase
+from aiq.data_models.authentication import HTTPAuthScheme
 
 logger = logging.getLogger(__name__)
+
+if (typing.TYPE_CHECKING):
+    from aiq.authentication.api_key.api_key_config import APIKeyConfig
 
 
 class APIKeyManager(AuthenticationManagerBase):
 
-    def __init__(self, config_name: str, encrypted_config: APIKeyConfig) -> None:
-        self._config_name: str = config_name
-        self._encrypted_config: APIKeyConfig = encrypted_config
+    def __init__(self, config: "APIKeyConfig", config_name: str | None = None) -> None:
+        self._config_name: str | None = config_name
+        self._config: "APIKeyConfig" = config
         super().__init__()
 
-    async def validate_authentication_credentials(self) -> bool:
+    @property
+    def config_name(self) -> str | None:
+        """
+        Get the name of the authentication configuration.
+
+        Returns:
+            str | None: The name of the authentication configuration, or None if not set.
+        """
+        return self._config_name
+
+    @config_name.setter
+    def config_name(self, config_name: str | None) -> None:
+        """
+        Set the name of the authentication configuration.
+
+        Args:
+            config_name (str | None): The name of the authentication configuration.
+        """
+        self._config_name = config_name
+
+    async def validate_credentials(self) -> bool:
         """
         Ensure that the API key credentials are valid for the given API key configuration.
 
         Returns:
             bool: True if the API key credentials are valid, False otherwise.
         """
-        from aiq.authentication.credentials_manager import _CredentialsManager
-
-        # Ensure there is an API key set.
-        if _CredentialsManager().decrypt_value(
-                self._encrypted_config.api_key) is None or _CredentialsManager().decrypt_value(
-                    self._encrypted_config.api_key) == "":
-            logger.error("API key is not set or is empty for config: %s", self._config_name)
-            return False
-
-        # Ensure the header name is set.
-        if _CredentialsManager().decrypt_value(
-                self._encrypted_config.header_name) is None or _CredentialsManager().decrypt_value(
-                    self._encrypted_config.header_name) == "":
-            logger.error("API key config header name is not set or is empty for config: %s", self._config_name)
+        # Validate the API key credentials are set.
+        if not self._config.raw_key or self._config.raw_key == "":  # TODO EE: Update
             return False
 
         return True
 
-    async def get_authentication_header(self) -> httpx.Headers | None:
-        """
-        Gets the authenticated header for the registered authentication config.
+    async def construct_authentication_header(self, http_auth_scheme: HTTPAuthScheme) -> httpx.Headers | None:
+        if http_auth_scheme == HTTPAuthScheme.BEARER:
+            return httpx.Headers({"Authorization": f"Bearer {self._config.raw_key}"})  # TODO EE: Update
 
-        Returns:
-            httpx.Headers | None: Returns the authentication header if the config is valid and credentials are
-            functional, otherwise returns None.
-        """
-        credentials_validated: bool = await self.validate_authentication_credentials()
+    async def construct_authentication_query(self, http_auth_scheme: HTTPAuthScheme) -> httpx.QueryParams | None:
+        return None  # TODO EE: Update
 
-        if credentials_validated:
-            return await self.construct_authentication_header()
-        else:
-            logger.error("API key credentials are not valid for config: %s authentication header can not be retreived.",
-                         self._config_name)
-            return None
+    async def construct_authentication_cookie(self, http_auth_scheme: HTTPAuthScheme) -> httpx.Cookies | None:
+        return None  # TODO EE: Update
 
-    async def construct_authentication_header(self) -> httpx.Headers | None:
-        """
-        Constructs the authenticated API key HTTP header.
+    async def construct_authentication_body(self, http_auth_scheme: HTTPAuthScheme) -> dict[str, typing.Any] | None:
+        return None  # TODO EE: Update
 
-        Returns:
-            httpx.Headers | None: Returns the constructed HTTP header if the API key is valid, otherwise returns None.
-        """
-        from aiq.authentication.credentials_manager import _CredentialsManager
-        return httpx.Headers({
-            f"{_CredentialsManager().decrypt_value(self._encrypted_config.header_name)}":
-                f"{_CredentialsManager().decrypt_value(self._encrypted_config.header_prefix)} {_CredentialsManager().decrypt_value(self._encrypted_config.api_key)}"  # noqa: E501
-        })
+    async def construct_authentication_custom(self, http_auth_scheme: HTTPAuthScheme) -> typing.Any | None:
+        return None  # TODO EE: Update

@@ -16,20 +16,20 @@
 import json
 import logging
 import re
+import typing
 import urllib.parse
 
 import httpx
 from pydantic import ValidationError
 
 from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
-from aiq.authentication.exceptions.exceptions import APIRequestError
+from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
 from aiq.authentication.exceptions.request_exceptions import BaseUrlValidationError
 from aiq.authentication.exceptions.request_exceptions import BodyValidationError
 from aiq.authentication.exceptions.request_exceptions import HTTPHeaderValidationError
 from aiq.authentication.exceptions.request_exceptions import HTTPMethodValidationError
 from aiq.authentication.exceptions.request_exceptions import QueryParameterValidationError
 from aiq.authentication.interfaces import RequestManagerBase
-from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
 from aiq.authentication.response_manager import ResponseManager
 from aiq.data_models.authentication import AuthCodeGrantQueryParams
 from aiq.data_models.authentication import AuthenticationEndpoint
@@ -37,6 +37,9 @@ from aiq.data_models.authentication import HTTPMethod
 
 logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
+
+if (typing.TYPE_CHECKING):
+    from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
 
 
 class RequestManager(RequestManagerBase):
@@ -221,7 +224,7 @@ class RequestManager(RequestManagerBase):
             raise BodyValidationError('invalid_request_body', error_message) from e
 
     async def build_auth_code_grant_url(self,
-                                        encrypted_authentication_config: AuthCodeGrantConfig,
+                                        config: "AuthCodeGrantConfig",
                                         response_type: str = "code",
                                         prompt: str = "consent") -> httpx.URL:
         """
@@ -232,7 +235,6 @@ class RequestManager(RequestManagerBase):
             response_type (str): The response type to use for the authorization request.
             prompt (str): The prompt to use for the authorization request.
         """
-        from aiq.authentication.credentials_manager import _CredentialsManager
         from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 
         try:
@@ -240,26 +242,23 @@ class RequestManager(RequestManagerBase):
 
             # Validate authorization url.
 
-            self._validate_base_url(_CredentialsManager().decrypt_value(
-                encrypted_authentication_config.authorization_url))
+            self._validate_base_url(config.authorization_url)
 
             # Construct Auth Code Grant flow query parameters.
             query_params: AuthCodeGrantQueryParams = AuthCodeGrantQueryParams(
-                audience=_CredentialsManager().decrypt_value(encrypted_authentication_config.audience),
-                client_id=_CredentialsManager().decrypt_value(encrypted_authentication_config.client_id),
-                state=_CredentialsManager().decrypt_value(encrypted_authentication_config.state),
-                scope=(" ".join(encrypted_authentication_config.scope)),
-                redirect_uri=(
-                    f"{_CredentialsManager().decrypt_value(encrypted_authentication_config.client_server_url)}"
-                    f"{FastApiFrontEndConfig().authorization.path}"
-                    f"{AuthenticationEndpoint.REDIRECT_URI.value}"),
+                audience=config.audience,
+                client_id=config.client_id,
+                state=config.state,
+                scope=(" ".join(config.scope)),
+                redirect_uri=(f"{config.client_server_url}"
+                              f"{FastApiFrontEndConfig().authorization.path}"
+                              f"{AuthenticationEndpoint.REDIRECT_URI.value}"),
                 response_type=response_type,
                 prompt=prompt)
 
             self._validate_query_parameters(query_params.model_dump())
 
-            full_authorization_url = httpx.URL(_CredentialsManager().decrypt_value(
-                encrypted_authentication_config.authorization_url)).copy_merge_params(query_params.model_dump())
+            full_authorization_url = httpx.URL(config.authorization_url).copy_merge_params(query_params.model_dump())
 
         except (BaseUrlValidationError, QueryParameterValidationError, ValueError, ValidationError, Exception) as e:
             error_message = f"An error occurred while building authorization url: {str(e)}"
@@ -352,16 +351,16 @@ class RequestManager(RequestManagerBase):
 
             error_message = f"An error occurred while building request url: {str(e)}"
             logger.error(error_message, exc_info=True)
-            raise APIRequestError('request_validation_failed', error_message) from e
+            raise AuthenticationError('request_validation_failed', error_message) from e
 
         except (httpx.RequestError, httpx.TimeoutException, httpx.HTTPStatusError, httpx.NetworkError) as e:
             error_message = f"An error occurred while sending request: {str(e)}"
             logger.error(error_message, exc_info=True)
-            raise APIRequestError('http_request_failed', error_message) from e
+            raise AuthenticationError('http_request_failed', error_message) from e
 
         except Exception as e:
             error_message = f"An unexpected error occurred while sending request: {str(e)}"
             logger.error(error_message, exc_info=True)
-            raise APIRequestError('unexpected_request_error', error_message) from e
+            raise AuthenticationError('unexpected_request_error', error_message) from e
 
         return response

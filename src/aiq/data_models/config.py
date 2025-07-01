@@ -258,7 +258,6 @@ class AIQConfig(HashableBaseModel):
 
     def print_summary(self, stream: typing.TextIO = sys.stdout):
         """Print a summary of the configuration"""
-        from aiq.authentication.credentials_manager import _CredentialsManager
 
         stream.write("\nConfiguration Summary:\n")
         stream.write("-" * 20 + "\n")
@@ -270,18 +269,13 @@ class AIQConfig(HashableBaseModel):
         stream.write(f"Number of Embedders: {len(self.embedders)}\n")
         stream.write(f"Number of Memory: {len(self.memory)}\n")
         stream.write(f"Number of Retrievers: {len(self.retrievers)}\n")
-        stream.write(
-            f"Number of Authentication Providers: {_CredentialsManager().get_registered_authentication_count()}\n")
+        stream.write(f"Number of Authentication Providers: {len(self.authentication)}\n")
 
     def model_post_init(self, context: typing.Any) -> None:
-        from aiq.authentication.credentials_manager import _CredentialsManager
-
-        # Persist and encrypt the authentication credentials after the model is initialized.
-        if (self.authentication):
-            _CredentialsManager().swap_authentication_configs(self.authentication)
-            _CredentialsManager().validate_unique_consent_prompt_keys()
-            _CredentialsManager().generate_credentials_encryption_key()
-            _CredentialsManager().encrypt_authentication_configs()
+        # from aiq.authentication.credentials_manager import _CredentialsManager
+        pass
+        # if (self.authentication):
+        #     _CredentialsManager().validate_unique_consent_prompt_keys()  # TODO EE: Update
 
     @field_validator("functions",
                      "llms",

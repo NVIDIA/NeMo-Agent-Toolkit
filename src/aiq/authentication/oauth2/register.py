@@ -13,13 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=unused-import
-# flake8: noqa
-# isort:skip_file
+from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
+from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantClientManager
+from aiq.builder.builder import Builder
+from aiq.cli.register_workflow import register_authentication_manager
 
-# Import any providers which need to be automatically registered here
-from .oauth2.auth_code_grant_config import oauth2_authorization_code_grant
-from .api_key.api_key_config import api_key
 
-from aiq.authentication.oauth2.register import oauth2_authorization_code_grant_manager
-from aiq.authentication.api_key.register import api_key_manager
+@register_authentication_manager(config_type=AuthCodeGrantConfig)
+async def oauth2_authorization_code_grant_manager(authentication_provider: AuthCodeGrantConfig, builder: Builder):
+
+    yield AuthCodeGrantClientManager(config=authentication_provider)

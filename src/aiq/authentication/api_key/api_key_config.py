@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
+
 from pydantic import Field
 from pydantic import field_validator
 
@@ -25,17 +27,56 @@ from aiq.cli.register_workflow import register_authentication_provider
 from aiq.data_models.authentication import AuthenticationBaseConfig
 
 
-class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
+class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):  # TODO EE: Investigate.
     """
     API Key authentication configuration model.
+
+    Supports all standard OpenAPI 3.0 authentication schemes via builder logic,
+    based on the combination of HTTPAuthScheme.
+
+    HTTPAuthScheme:
+        - basic
+        - bearer
+        - digest
+        - cookie
+        - oauth2
+        - openidconnect
+        - custom
+
+    CredentialLocation:
+        - header
+        - query
+        - cookie
+        - body
+        - custom
+
+    Mappings:
+        - Basic (header): uses `email` and `password`
+        - Bearer (header): uses `raw_key` (token) with optional prefix
+        - API Key (header): uses `raw_key`
+        - API Key (query): uses `raw_key`
+        - API Key (cookie): uses `raw_key`
+        - Cookie (cookie): uses `raw_key` or `custom`
+        - OAuth2 (header): uses `raw_key` (access token)
+        - OpenID Connect (header): uses `raw_key` (ID token)
+        - Custom (any location): uses `custom`
     """
-    api_key: str = Field(description="The API key for authentication.")
+
+    raw_key: str = Field(
+        description=("Raw API token or credential to be injected into the request. Used for 'bearer', "
+                     "'apikey', 'oauth2', and other schemes depending on the configured credential location."))
+
     header_name: str = Field(
         description="The HTTP header corresponding to the API provider. i.e. 'Authorization', X-API-Key.")
     header_prefix: str = Field(
         description="The HTTP header prefix corresponding to the API provider. i.e 'Bearer', 'JWT'.")
 
-    @field_validator('api_key')
+    custom: typing.Any | None = Field(
+        description=("Custom authentication configuration for non-standard configuration."
+                     "Used when the HTTP scheme is 'custom' or the credential source is 'custom'."),
+        default=None)
+
+    @field_validator('raw_key')
     @classmethod
     def validate_api_key(cls, value: str) -> str:
         """

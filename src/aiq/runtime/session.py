@@ -21,13 +21,14 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from contextlib import nullcontext
 
-import httpx
 from fastapi import Request
 
+from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
+from aiq.authentication.interfaces import OAuthClientBase
 from aiq.builder.context import AIQContext
 from aiq.builder.context import AIQContextState
 from aiq.builder.workflow import Workflow
-from aiq.data_models.api_server import AuthenticatedRequest
+from aiq.data_models.authentication import ConsentPromptMode
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
@@ -91,7 +92,8 @@ class AIQSessionManager:
                       request: Request | None = None,
                       conversation_id: str | None = None,
                       user_input_callback: Callable[[InteractionPrompt], Awaitable[HumanResponse]] = None,
-                      user_request_callback: Callable[[AuthenticatedRequest], Awaitable[httpx.Response | None]] = None):
+                      user_authentication_callback: Callable[[OAuthClientBase, ConsentPromptMode],
+                                                             Awaitable[AuthenticationError | None]] = None):
 
         token_user_input = None
         if user_input_callback is not None:
@@ -101,9 +103,9 @@ class AIQSessionManager:
         if user_manager is not None:
             token_user_manager = self._context_state.user_manager.set(user_manager)
 
-        token_user_request = None
-        if user_request_callback is not None:
-            token_user_request = self._context_state.user_request_callback.set(user_request_callback)
+        token_user_authentication = None
+        if user_authentication_callback is not None:
+            token_user_authentication = self._context_state.user_auth_callback.set(user_authentication_callback)
 
         if conversation_id is not None and request is None:
             self._context_state.conversation_id.set(conversation_id)
@@ -117,8 +119,8 @@ class AIQSessionManager:
                 self._context_state.user_manager.reset(token_user_manager)
             if token_user_input is not None:
                 self._context_state.user_input_callback.reset(token_user_input)
-            if token_user_request is not None:
-                self._context_state.user_request_callback.reset(token_user_request)
+            if token_user_authentication is not None:
+                self._context_state.user_auth_callback.reset(token_user_authentication)
 
     @asynccontextmanager
     async def run(self, message):
