@@ -48,7 +48,7 @@ llms:
   # Main LLM for log analysis and reasoning
   analysis_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0                   # Zero temperature for deterministic analysis
     max_tokens: 1024                   # Shorter responses to stay focused
     description: "Primary LLM for log analysis and error interpretation"
