@@ -64,6 +64,8 @@ class MultiEvaluationRunConfig(BaseModel):
     """
     base_config: EvaluationRunConfig
     overrides: dict[typing.Any, tuple[tuple[str, str], ...]]
+    # todo: make this independent of the parameter
+    reps_per_run: dict[typing.Any, int]
     write_output: bool = True
 
 

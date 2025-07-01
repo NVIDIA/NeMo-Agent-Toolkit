@@ -220,11 +220,14 @@ class CalcRunner:
             c: ((concurrency_key, str(c)), (alias_key, "workflow_" + str(c)))
             for c in self.config.concurrencies
         }
+        reps_per_concurrency = {c: self.config.reps * c for c in self.config.concurrencies}
 
-        eval_run_config = EvaluationRunConfig(config_file=self.config.config_file,
-                                              write_output=False,
-                                              reps=self.config.reps)
-        config = MultiEvaluationRunConfig(base_config=eval_run_config, overrides=overrides)
+        # Treat the reps as the the number of times to run at the specific concurrency
+        eval_run_config = EvaluationRunConfig(config_file=self.config.config_file, write_output=False)
+
+        config = MultiEvaluationRunConfig(base_config=eval_run_config,
+                                          overrides=overrides,
+                                          reps_per_run=reps_per_concurrency)
         runner = MultiEvaluationRunner(config)
         await runner.run_all()
         self.profiler_results = {

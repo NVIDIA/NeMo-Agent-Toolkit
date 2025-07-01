@@ -48,6 +48,7 @@ class MultiEvaluationRunner:
         config_copy = copy.deepcopy(self.config.base_config)
         config_copy.override = override_value
         config_copy.write_output = self.config.write_output
+        config_copy.reps = self.config.reps_per_run[override_id]
 
         evaluation_run = EvaluationRun(config_copy)
         return await evaluation_run.run_and_evaluate()
