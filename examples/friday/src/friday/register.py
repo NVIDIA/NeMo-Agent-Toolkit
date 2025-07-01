@@ -6,7 +6,8 @@ Registration module for Friday AI Assistant tools.
 Exports all Confluence and Loki functions to be available in AIQ toolkit.
 """
 
-from .confluence_tools import confluence_client
+from .confluence_page import confluence_page_reader
+from .confluence_search import confluence_client
 from .loki_tools import loki_log_analyzer
 
 # Export all functions

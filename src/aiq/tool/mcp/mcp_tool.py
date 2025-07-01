@@ -75,7 +75,8 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=
                 return await tool.acall(args)
 
             _ = tool.input_schema.model_validate(kwargs)
-            return await tool.acall(kwargs)
+            filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None}
+            return await tool.acall(filtered_kwargs)
         except Exception as e:
             if config.return_exception:
                 if tool_input:

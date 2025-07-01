@@ -1,0 +1,97 @@
+# ============================================================================
+# Confluence Search Tool
+# ============================================================================
+
+functions:
+  confluence_search:
+    _type: confluence_tool/confluence_client
+    description: "Searches Confluence content and returns relevant documentation with links"
+    base_url: "${CONFLUENCE_BASE_URL}"         # Set environment variable for Confluence URL
+    api_token: "${CONFLUENCE_API_TOKEN}"       # Set environment variable for Bearer token
+    max_results: 10
+    timeout: 30
+    # Optional: space_keys: ["TEAM", "DOCS", "PROJECT"]  # Limit search to specific spaces
+
+  confluence_page_reader:
+    _type: confluence_tool/confluence_page_reader
+    description: "Reads and returns the full content of a specific Confluence page by URL"
+    base_url: "${CONFLUENCE_BASE_URL}"         # Set environment variable for Confluence URL
+    api_token: "${CONFLUENCE_API_TOKEN}"       # Set environment variable for Bearer token
+    timeout: 30
+
+# ----------------------------------------------------------------------------
+# LLMS SECTION  
+# ----------------------------------------------------------------------------
+llms:
+  search_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.1
+    max_tokens: 4000
+    description: "Main LLM for Confluence search and content analysis"
+
+# ----------------------------------------------------------------------------
+# WORKFLOW SECTION
+# ----------------------------------------------------------------------------
+workflow:
+  _type: react_agent
+
+  # List tools the agent can use
+  tool_names: [
+    confluence_search,
+    confluence_page_reader,
+    
+  ]
+
+  # Which LLM to use for reasoning
+  llm_name: search_llm
+
+  # Agent behavior settings
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3
+  max_iterations: 15
+
+  # Custom system prompt for Confluence search and documentation retrieval
+  system_prompt: |
+    You are a Confluence Documentation Assistant. Use the appropriate tools to answer user queries about Confluence documentation.
+
+    Remember: {tools}
+    Available tool names: {tool_names}
+
+    WORKFLOW:
+    1. For general information or keyword search, call confluence_search with a 'query' parameter.
+    2. For searching by page title, call confluence_search with a 'title' parameter.
+    3. For reading a specific Confluence page by link, call confluence_page_reader with a 'url' parameter.
+    5. Wait for results.
+    6. Then: Provide Final Answer based on those results, including links and summaries.
+
+    CRITICAL: Never combine tool calls and Final Answer in the same response!
+
+    FORMAT FOR TOOL CALLS (first response only):
+    # For general information:
+    Thought: I need to search Confluence for the requested information.
+    Action: confluence_search
+    Action Input: {{"query": "<user question or keywords>"}}
+
+    # For searching by page title:
+    Thought: The user asked to find a page by title. I need to search by title.
+    Action: confluence_search
+    Action Input: {{"title": "<confluence page title>"}}
+
+    # For reading a specific Confluence page:
+    Thought: The user provided a Confluence page link or asked to read a page. I need to fetch the content of that page.
+    Action: confluence_page_reader
+    Action Input: {{"url": "<confluence page url>"}}
+
+
+    FORMAT FOR FINAL ANSWER (after getting tool results):
+    Thought: Based on the results, I can now provide a summary.
+    Final Answer: [Comprehensive answer with direct links to Confluence pages, summaries, and recommendations]
+
+    Available parameters for confluence_search:
+    - query (optional): What to search for (e.g., "API documentation", "onboarding guide")
+    - title (optional): The title of the Confluence page to search for
+    Available parameters for confluence_page_reader:
+    - url (required): The full URL of the Confluence page to read
+
