@@ -15,6 +15,7 @@
 
 import logging
 import math
+import uuid
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -39,7 +40,7 @@ class CalcRunner:
     Runs MultiEvaluationRunner for a list of concurrencies.
     """
 
-    def __init__(self, config: CalcRunnerConfig):
+    def __init__(self, config: CalcRunnerConfig, append_job_id: bool = False):
         """
         Initialize CalcRunner with a config file and a list of concurrencies.
         """
@@ -47,6 +48,7 @@ class CalcRunner:
         # store profiler results and usage stats per-concurrency
         self.profiler_results: dict[int, ProfilerResults] = {}
         self.usage_stats: dict[int, UsageStats] = {}
+        self.append_job_id = append_job_id
 
     @property
     def target_latency(self) -> float:
@@ -102,18 +104,26 @@ class CalcRunner:
         plt.savefig(output_dir / "concurrency_vs_p95_metrics.png")
         plt.close()
 
-    def write_output(self, output_dir: Path, calc_runner_output: CalcRunnerOutput):
+    def write_output(self, output_dir: Path, calc_runner_output: CalcRunnerOutput, offline: bool = False):
         """
         Write the output to the output directory.
         """
-        output_dir.mkdir(parents=True, exist_ok=True)
-        with open(output_dir / "calc_runner_output.json", "w") as f:
+        # Determine subdir and job id
+        subdir = "offline" if offline else "online"
+        job_dir = None
+        if self.append_job_id:
+            job_dir = output_dir / subdir / f"job_{uuid.uuid4()}"
+        else:
+            job_dir = output_dir / subdir / "job_0"
+        job_dir.mkdir(parents=True, exist_ok=True)
+
+        with open(job_dir / "calc_runner_output.json", "w") as f:
             f.write(calc_runner_output.model_dump_json(indent=2))
 
-        self.plot_concurrency_vs_p95_metrics(output_dir)
+        self.plot_concurrency_vs_p95_metrics(job_dir)
 
     def calc_p95_required_gpus(self,
-                               valid_runs: list[tuple[int, ProfilerResults]],
+                               valid_runs: list[tuple[int, MetricPerConcurrency]],
                                use_latency: bool,
                                use_runtime: bool) -> GPUEstimation:
         """
@@ -122,9 +132,9 @@ class CalcRunner:
         # maintain the gpu estimation for each concurrency
         gpu_estimates = {}
 
-        for concurrency, profiler_results in valid_runs:
-            observed_latency = profiler_results.llm_latency_ci.p95
-            observed_runtime = profiler_results.workflow_runtime_metrics.p95
+        for concurrency, metrics in valid_runs:
+            observed_latency = metrics.p95_latency
+            observed_runtime = metrics.p95_workflow_runtime
 
             multiplier = 1.0
             if use_latency:
@@ -224,13 +234,21 @@ class CalcRunner:
         if not self.config.output_dir:
             raise ValueError("Output directory is not set in offline mode.")
 
-        # read the calc runner output from the output directory
-        calc_runner_output = CalcRunnerOutput.model_validate_json(
-            (self.config.output_dir / "calc_runner_output.json").read_text())
+        # Always read from the 'online' subdir, job_0
+        online_dir = Path(self.config.output_dir) / "online" / "job_0"
+        calc_runner_output_path = online_dir / "calc_runner_output.json"
+        if not calc_runner_output_path.exists():
+            raise FileNotFoundError(f"{calc_runner_output_path} not found. Run in online mode first.")
+        calc_runner_output = CalcRunnerOutput.model_validate_json(calc_runner_output_path.read_text())
 
         # calculate gpu estimation
         gpu_estimation = self.calc_gpu_count(calc_runner_output.metrics_per_concurrency)
 
+        # Optionally, write the offline output as well
+        self.write_output(self.config.output_dir,
+                          CalcRunnerOutput(gpu_estimation=gpu_estimation,
+                                           metrics_per_concurrency=calc_runner_output.metrics_per_concurrency),
+                          offline=True)
         return CalcRunnerOutput(gpu_estimation=gpu_estimation,
                                 metrics_per_concurrency=calc_runner_output.metrics_per_concurrency)
 
@@ -287,5 +305,5 @@ class CalcRunner:
 
         # plot the metrics and write the output
         if self.config.output_dir:
-            self.write_output(self.config.output_dir, calc_runner_output)
+            self.write_output(self.config.output_dir, calc_runner_output, offline=False)
         return calc_runner_output
