@@ -103,14 +103,20 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             max_timestamp = 0.0
             runtime = 0.0
 
-        # find llm latency by adding all llm calls
-        llm_latency = 0.0
+        # find llm latency by calculating average of all llm calls (to match profiler approach)
+        llm_latencies = []
         previous_llm_start_time = None
         for step in steps:
             if step.event_type == "LLM_START":
                 previous_llm_start_time = step.event_timestamp
             elif step.event_type == "LLM_END" and previous_llm_start_time is not None:
-                llm_latency += step.event_timestamp - previous_llm_start_time
+                llm_latencies.append(step.event_timestamp - previous_llm_start_time)
+                previous_llm_start_time = None
+
+        # Calculate average LLM latency (or 0 if no LLM calls)
+        # This matches the profiler approach which calculates individual LLM latencies
+        # and then computes percentiles across all individual calls
+        llm_latency = sum(llm_latencies) / len(llm_latencies) if llm_latencies else 0.0
 
         # add the usage stats to the usage stats dict
         self.usage_stats.usage_stats_items[item.id] = UsageStatsItem(usage_stats_per_llm=usage_stats_per_llm,
