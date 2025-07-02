@@ -1,0 +1,108 @@
+# Use Ubuntu latest stable as base image
+FROM ubuntu:22.04
+
+# Set build arguments
+ARG REPO_URL
+ARG BRANCH_NAME=develop
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Install system dependencies and Python 3.12 from deadsnakes PPA
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update \
+    && apt-get install -y \
+    python3.12 \
+    python3.12-venv \
+    python3.12-dev \
+    python3-pip \
+    git \
+    git-lfs \
+    curl \
+    wget \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install UV using the official standalone installer
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Add UV to PATH (modern versions install to ~/.local/bin)
+ENV PATH="/root/.local/bin:$PATH"
+
+# Verify UV installation
+RUN uv --version
+
+# Set working directory
+WORKDIR /app
+
+# Clone the repository
+RUN git clone --branch ${BRANCH_NAME} ${REPO_URL} .
+
+# Initialize Git LFS and fetch LFS files
+RUN git lfs install && \
+    git submodule update --init --recursive && \
+    git lfs fetch && \
+    git lfs pull
+
+# Create virtual environment with Python 3.12
+RUN uv venv --seed .venv --python python3.12
+
+# Activate virtual environment and install dependencies
+RUN . .venv/bin/activate && \
+    uv sync --all-groups --all-extras
+
+# Install specific examples
+RUN . .venv/bin/activate && \
+    uv pip install -e examples/pdf_rag_chatbot && \
+    uv pip install -e examples/slack && \
+    uv pip install -e examples/friday
+
+# Create logs directory
+RUN mkdir -p /app/logs
+
+# Copy startup script
+COPY <<EOF /app/start_all_servers.sh
+#!/bin/bash
+set -e
+
+# Activate virtual environment
+source .venv/bin/activate
+
+# Function to start a server in the background
+start_server() {
+    local config_file=\$1
+    local port=\$2
+    local log_file=\$3
+    
+    echo "Starting server on port \$port with config \$config_file"
+    aiq serve --config_file=\$config_file --host 0.0.0.0 --port \$port > logs/\$log_file 2>&1 &
+    echo \$! > logs/\${log_file%.log}.pid
+}
+
+# Start all servers
+start_server "examples/simple/configs/config.yml" 8000 "oncall_backend.log"
+start_server "examples/friday/configs/config.yml" 8001 "friday_backend.log" 
+start_server "examples/slack/configs/config.yml" 8002 "slack_backend.log"
+
+echo "All servers started. Logs available in /app/logs/"
+
+# Wait for all background processes
+wait
+EOF
+
+# Make the startup script executable
+RUN chmod +x /app/start_all_servers.sh
+
+# Expose ports
+EXPOSE 8000 8001 8002
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/docs || exit 1
+
+# Start all servers
+CMD ["/app/start_all_servers.sh"] 
