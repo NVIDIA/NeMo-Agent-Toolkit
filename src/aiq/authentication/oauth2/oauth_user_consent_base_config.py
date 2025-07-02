@@ -15,7 +15,6 @@
 
 import logging
 import secrets
-from enum import Enum
 
 from pydantic import Field
 from pydantic import field_validator
@@ -24,11 +23,6 @@ from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGra
 from aiq.authentication.oauth2.oauth_base_config import OAuthBaseConfig
 
 logger = logging.getLogger(__name__)
-
-
-class ConsentPromptMode(str, Enum):
-    BROWSER = "browser"
-    FRONTEND = "frontend"
 
 
 class OAuthUserConsentConfigBase(OAuthBaseConfig):

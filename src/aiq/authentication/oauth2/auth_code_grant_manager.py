@@ -24,10 +24,13 @@ import httpx
 from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
 from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowRefreshTokenError
 from aiq.authentication.interfaces import OAuthClientBase
-from aiq.authentication.oauth2.oauth_user_consent_base_config import ConsentPromptMode
 from aiq.authentication.request_manager import RequestManager
 from aiq.authentication.response_manager import ResponseManager
-from aiq.data_models.authentication import HTTPAuthScheme
+from aiq.data_models.authentication import ConsentPromptMode
+from aiq.data_models.authentication import HeaderAuthScheme
+from aiq.data_models.authentication import HTTPMethod
+from aiq.data_models.authentication import OAuth2AuthorizationQueryParams
+from aiq.data_models.authentication import OAuth2TokenRequest
 from aiq.data_models.authentication import RefreshTokenRequest
 from aiq.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEndController
 
@@ -44,7 +47,7 @@ class AuthCodeGrantClientManager(OAuthClientBase):
         self._config_name: str | None = config_name
         self._config: "AuthCodeGrantConfig" = config
         self._request_manager: RequestManager = RequestManager()
-        self._response_manager: ResponseManager = ResponseManager()
+        self._response_manager: ResponseManager = ResponseManager(self)
         self._consent_prompt_mode: ConsentPromptMode | None = None
         self._oauth2_client_server: _FastApiFrontEndController | None = None
         super().__init__()
@@ -133,45 +136,6 @@ class AuthCodeGrantClientManager(OAuthClientBase):
             return True
         else:
             return False
-
-    # async def _get_credentials(self) -> None:
-    #     """
-    #     Acquires an access token if the token is absent, expired, or revoked,
-    #     by the options listed below.
-
-    #     1. Initiate the authorization flow to obtain a new access token and optional request token.
-    #     2. Use a refresh token to get another access token and refresh token pair if refresh token is available.
-
-    #     Returns:
-    #         bool: True if the credentials are valid and false if they are not after acquiring credentials.
-    #     """
-    #     try:
-    #         # Initiate code flow is there is no access token.
-    #         if (self._config.access_token is None):
-    #             if self._execution_mode is None:
-    #                 raise AuthCodeGrantFlowError('execution_mode_null',
-    #                                              'Execution mode is required for authorization code flow')
-    #             await self._initiate_code_flow_dispatch[self._execution_mode]()
-
-    #         # Initiate refresh token request if the access token is expired or revoked.
-    #         if (self._config.refresh_token and (self._config.access_token_expires_in is not None)
-    #                 and (datetime.now(timezone.utc) >= self._config.access_token_expires_in)):
-    #             await self._get_access_token_with_refresh_token()
-
-    #         return
-
-    #     except AuthCodeGrantFlowError as e:
-    #         logger.error("Failed to get Auth Code Grant flow credentials: %s", str(e), exc_info=True)
-
-    #     except AuthCodeGrantFlowRefreshTokenError as e:
-    #         logger.error("Failed to get Auth Code Grant flow credentials using refresh token: %s",
-    #                      str(e),
-    #                      exc_info=True)
-
-    #     except Exception as e:
-    #         logger.error("Failed to get Auth Code Grant flow credentials due to unexpected error: %s",
-    #                      str(e),
-    #                      exc_info=True)
 
     async def initiate_authorization_flow_console(self) -> None:
         """
@@ -266,7 +230,9 @@ class AuthCodeGrantClientManager(OAuthClientBase):
         Constructs Auth Code Grant flow authoriation URL and sends request to authentication server.
         """
         try:
-            authorization_url: httpx.URL = await self._request_manager.build_auth_code_grant_url(self._config)
+            authorization_url: httpx.URL = httpx.URL(self._config.authorization_url).copy_merge_params(
+                self._construct_authorization_query_params().model_dump(exclude_none=True))
+
             response: httpx.Response | None = await self._request_manager.send_request(url=str(authorization_url),
                                                                                        http_method="GET")
             if response is None:
@@ -274,7 +240,7 @@ class AuthCodeGrantClientManager(OAuthClientBase):
                 raise AuthCodeGrantFlowError('auth_response_null', error_message)
 
             if not response.status_code == 200:
-                await self._response_manager.handle_auth_code_grant_response_codes(response, self)
+                await self._response_manager.handle_auth_code_grant_response_codes(response)
 
         except Exception as e:
             error_message = f"Unexpected error occurred during authorization request process: {str(e)}"
@@ -308,7 +274,6 @@ class AuthCodeGrantClientManager(OAuthClientBase):
             response: httpx.Response | None = await self._request_manager.send_request(
                 url=self._config.authorization_token_url,
                 http_method="POST",
-                authentication_header=None,
                 headers={"Content-Type": "application/json"},
                 body_data=body_data.model_dump())
 
@@ -317,7 +282,7 @@ class AuthCodeGrantClientManager(OAuthClientBase):
                 raise AuthCodeGrantFlowRefreshTokenError('refresh_response_null', error_message)
 
             if not response.status_code == 200:
-                await self._response_manager.handle_auth_code_grant_response_codes(response, self)
+                await self._response_manager.handle_auth_code_grant_response_codes(response)
 
             if response.json().get("access_token") is None:
                 error_message = "Access token not in successful token request response payload"
@@ -353,8 +318,10 @@ class AuthCodeGrantClientManager(OAuthClientBase):
         from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
 
         # Instantiate OAuth2.0 server
-        oauth2_client: FastApiFrontEndPluginWorkerBase = FastApiFrontEndPluginWorker(
-            config=_CredentialsManager().full_config)
+        full_config = _CredentialsManager().full_config
+        if full_config is None:
+            raise RuntimeError("Full configuration is not available for OAuth2 client setup")
+        oauth2_client: FastApiFrontEndPluginWorkerBase = FastApiFrontEndPluginWorker(config=full_config)
 
         # Delegate setup and tear down of server to the controller.
         self._oauth2_client_server = _FastApiFrontEndController(oauth2_client.build_app())
@@ -383,36 +350,143 @@ class AuthCodeGrantClientManager(OAuthClientBase):
         await _CredentialsManager().set_consent_prompt_url()
         await _CredentialsManager().set_oauth_credentials()
 
-    async def construct_authentication_header(self, http_auth_scheme: HTTPAuthScheme) -> httpx.Headers | None:
+    async def construct_authentication_header(self,
+                                              header_auth_scheme: HeaderAuthScheme = HeaderAuthScheme.BEARER
+                                              ) -> httpx.Headers | None:
         """
         Constructs the authenticated HTTP header based on the authentication scheme.
 
         Args:
-            http_auth_scheme (HTTPAuthScheme): The HTTP authentication scheme to use. (i.e. BEARER or OAUTH2)
+            header_auth_scheme (HeaderAuthScheme): The authentication scheme to use. Only BEARER scheme is supported.
 
         Returns:
             httpx.Headers | None: The constructed HTTP header if successful, otherwise returns None.
         """
-        autheticated_header: httpx.Headers | None = None
+        from aiq.authentication.interfaces import AUTHORIZATION_HEADER
 
-        if http_auth_scheme not in [HTTPAuthScheme.BEARER, HTTPAuthScheme.OAUTH2]:
-            logger.error(f'Header authentication scheme not supported for provider: {self._config_name}')
-            return autheticated_header
+        if not await self.validate_credentials():
+            logger.error('Credentials invalid. Please authenticate the provider: %s', self._config_name)
+            return None
 
-        return httpx.Headers({"Authorization": f"Bearer {self._config.access_token}"})
+        if header_auth_scheme == HeaderAuthScheme.BEARER:
+            return httpx.Headers(
+                {f"{AUTHORIZATION_HEADER}": f"{HeaderAuthScheme.BEARER.value} {self._config.access_token}"})
 
-    async def construct_authentication_query(self, http_auth_scheme: HTTPAuthScheme) -> httpx.QueryParams | None:
-        logger.error(f'Query Authentication is not supported for provider: {self._config_name}')
+        logger.error('Header authentication scheme not supported for provider: %s', self._config_name)
         return None
 
-    async def construct_authentication_cookie(self, http_auth_scheme: HTTPAuthScheme) -> httpx.Cookies | None:
-        logger.error(f'Cookie Authentication is not supported for provider: {self._config_name}')
-        return None
+    async def send_token_request(self,
+                                 client_authorization_path: str,
+                                 client_authorization_endpoint: str,
+                                 authorization_code: str) -> httpx.Response | None:
+        """
+        Sends a token request to the authentication server to exchange authorization code for access token.
 
-    async def construct_authentication_body(self, http_auth_scheme: HTTPAuthScheme) -> dict[str, typing.Any] | None:
-        logger.error(f'Body Authentication is not supported for provider: {self._config_name}')
-        return None
+        Args:
+            client_authorization_path (str): The client authorization path for constructing redirect URI
+            client_authorization_endpoint (str): The client authorization endpoint for constructing redirect URI
+            authorization_code (str): The authorization code received from the OAuth provider
 
-    async def construct_authentication_custom(self, http_auth_scheme: HTTPAuthScheme) -> typing.Any | None:
-        logger.error(f'Custom Authentication is not supported for provider: {self._config_name}')
-        return None
+        Returns:
+            httpx.Response | None: The HTTP response from the token request, or None if the request fails
+        """
+
+        # Build Token request body.
+        headers: httpx.Headers = httpx.Headers({"Content-Type": "application/json"})
+
+        redirect_uri: str = self._construct_redirect_uri(client_authorization_path=client_authorization_path,
+                                                         client_authorization_endpoint=client_authorization_endpoint)
+
+        token_request_body: OAuth2TokenRequest = self._construct_token_request_body(
+            redirect_uri=redirect_uri, authorization_code=authorization_code)
+
+        # Send Token HTTP Request
+        return await self.send_request(url=self.config.authorization_token_url,
+                                       http_method=HTTPMethod.POST.value,
+                                       headers=dict(headers),
+                                       body_data=token_request_body.model_dump(exclude_none=True))
+
+    def _construct_authorization_query_params(self,
+                                              response_type: str = "code",
+                                              prompt: str = "consent") -> OAuth2AuthorizationQueryParams:
+        """
+        Constructs the OAuth2 authorization query parameters for the authorization URL.
+
+        Args:
+            response_type (str): The OAuth2 response type
+            prompt (str): The consent prompt behavior
+
+        Returns:
+            OAuth2AuthorizationQueryParams: The constructed query parameters for OAuth2 authorization
+        """
+        from aiq.data_models.authentication import AuthenticationEndpoint
+        from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+
+        return OAuth2AuthorizationQueryParams(client_id=self._config.client_id,
+                                              audience=self._config.audience,
+                                              state=self._config.state,
+                                              scope=(" ".join(self._config.scope)),
+                                              redirect_uri=(f"{self._config.client_server_url}"
+                                                            f"{FastApiFrontEndConfig().authorization.path}"
+                                                            f"{AuthenticationEndpoint.REDIRECT_URI.value}"),
+                                              response_type=response_type,
+                                              prompt=prompt)
+
+    def _construct_token_request_body(self,
+                                      redirect_uri: str,
+                                      authorization_code: str,
+                                      grant_type: str = "authorization_code") -> OAuth2TokenRequest:
+        """
+        Constructs the OAuth2 token request body for exchanging authorization code for access token.
+
+        Args:
+            redirect_uri (str): The redirect URI used in the authorization request
+            authorization_code (str): The authorization code received from the OAuth provider
+            grant_type (str): The OAuth2 grant type (default: "authorization_code")
+
+        Returns:
+            OAuth2TokenRequest: The constructed token request body for OAuth2 token exchange
+        """
+        return OAuth2TokenRequest(client_id=self._config.client_id,
+                                  client_secret=self._config.client_secret,
+                                  redirect_uri=redirect_uri,
+                                  code=authorization_code,
+                                  grant_type=grant_type)
+
+    def _construct_redirect_uri(self, client_authorization_path: str, client_authorization_endpoint: str) -> str:
+        """
+        Constructs the redirect URI for the OAuth client by combining server URL with authorization paths.
+
+        Args:
+            client_authorization_path (str): The base authorization path
+            client_authorization_endpoint (str): The specific authorization endpoint
+
+        Returns:
+            str: The complete redirect URI for OAuth authorization flow
+        """
+        return f"{self._config.client_server_url}{client_authorization_path}{client_authorization_endpoint}"
+
+    async def send_request(self,
+                           url: str,
+                           http_method: str | HTTPMethod,
+                           headers: dict | None = None,
+                           query_params: dict | None = None,
+                           body_data: dict | None = None) -> httpx.Response | None:
+        """
+        Sends an HTTP request to the API using the configured request manager.
+
+        Args:
+            url (str): The URL to send the request to
+            http_method (str | HTTPMethod): The HTTP method to use (GET, POST, etc.)
+            headers (dict | None): Optional dictionary of HTTP headers
+            query_params (dict | None): Optional dictionary of query parameters
+            body_data (dict | None): Optional dictionary representing the request body
+
+        Returns:
+            httpx.Response | None: The HTTP response from the request, or None if the request fails
+        """
+        return await self._request_manager.send_request(url,
+                                                        http_method,
+                                                        headers=headers,
+                                                        query_params=query_params,
+                                                        body_data=body_data)

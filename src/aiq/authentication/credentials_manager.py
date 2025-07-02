@@ -17,6 +17,8 @@ import asyncio
 import logging
 import typing
 
+from aiq.authentication.interfaces import AuthenticationManagerBase
+from aiq.authentication.interfaces import OAuthClientBase
 from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
 from aiq.builder.context import Singleton
 from aiq.data_models.authentication import AuthenticationBaseConfig
@@ -36,29 +38,17 @@ class _CredentialsManager(metaclass=Singleton):
         Credentials Manager to store AIQ Authorization configurations.
         """
         super().__init__()
-        self._authentication_configs: dict[str, AuthenticationBaseConfig] = {}  # TODO EE: Update this
-        self._copy_flag: bool = True
+        self._authentication_managers: dict[str, AuthenticationManagerBase] = {}
         self._full_config: "AIQConfig | None" = None
         self._oauth_credentials_flag: asyncio.Event = asyncio.Event()
         self._consent_prompt_flag: asyncio.Event = asyncio.Event()
 
-    def copy_authentication_configs(self, authentication_configs: dict[str, AuthenticationBaseConfig]) -> None:
-        """
-        Store references to AIQ Authentication configuration objects.
-
-        Note: This stores references to the original config objects, not copies,
-        so that modifications (like setting access tokens) are reflected everywhere.
-
-        Args:
-            authentication_configs: Dictionary of registered authentication configs.
-        """
-        if self._copy_flag:
-            self._authentication_configs = authentication_configs
-            self._copy_flag = False
-
-    def validate_unique_consent_prompt_keys(self) -> None:
+    def validate_unique_consent_prompt_keys(self, authentication_configs: dict[str, AuthenticationBaseConfig]) -> None:
         """
         Validate that all OAuthUserConsentBase instances have unique consent_prompt_key values.
+
+        Args:
+            authentication_configs: Authentication configuration objects from config file.
 
         Raises:
             RuntimeError: If duplicate consent prompt keys are found.
@@ -66,7 +56,7 @@ class _CredentialsManager(metaclass=Singleton):
         consent_prompt_keys: list[str] = []
 
         # Collect all consent prompt keys and their associated config names
-        for _, auth_config in self._authentication_configs.items():
+        for _, auth_config in authentication_configs.items():
             if isinstance(auth_config, OAuthUserConsentConfigBase):
 
                 if auth_config.consent_prompt_key in consent_prompt_keys:
@@ -77,43 +67,48 @@ class _CredentialsManager(metaclass=Singleton):
                 else:
                     consent_prompt_keys.append(auth_config.consent_prompt_key)
 
-    def get_authentication_config(self, authentication_config_name: str | None) -> AuthenticationBaseConfig | None:
-        """Retrieve the stored authentication config by registered name."""
+    def store_authentication_manager(self, name: str, manager: AuthenticationManagerBase) -> None:
+        """
+        Store or update an authentication manager instance.
 
-        if authentication_config_name not in self._authentication_configs:
-            logger.error("Authentication config not found: %s", authentication_config_name)
-            return None
+        Args:
+            name: The name/key for the authentication manager
+            manager: The authentication manager instance to store
+        """
+        self._authentication_managers[name] = manager
 
-        return self._authentication_configs.get(authentication_config_name)
+    def get_authentication_manager_by_state(self, state: str) -> OAuthClientBase | None:
+        """
+        Get authentication manager by the state value.
 
-    def get_authentication_config_by_state(self, state: str) -> OAuthUserConsentConfigBase | None:
-        """Retrieve the stored authentication config by state."""
+        Args:
+            state: The state value to match.
 
-        for _, authentication_config in self._authentication_configs.items():
-            if isinstance(authentication_config, OAuthUserConsentConfigBase):
-                if authentication_config.state == state:
-                    return authentication_config
-
-        logger.error("Authentication config not found by the provided state.")
+        Returns:
+            The OAuth authentication manager if found, None otherwise.
+        """
+        for auth_manager in self._authentication_managers.values():
+            if (isinstance(auth_manager, OAuthClientBase) and auth_manager.config is not None
+                    and hasattr(auth_manager.config, 'state')):
+                if auth_manager.config.state == state:
+                    return auth_manager
         return None
 
-    def get_authentication_config_name(self, authentication_config: AuthenticationBaseConfig) -> str | None:
-        """Retrieve the stored authentication config name."""
+    def get_authentication_manager_by_consent_prompt_key(self, consent_prompt_key: str) -> OAuthClientBase | None:
+        """
+        Get authentication manager by the consent_prompt_key value.
 
-        for registered_config_name, registered_config in self._authentication_configs.items():
-            if (authentication_config == registered_config):
-                return registered_config_name
+        Args:
+            consent_prompt_key: The consent prompt key to match.
 
-        logger.error("Authentication config name not found by the provided authentication config model.")
-        return None
-
-    def get_authentication_config_by_consent_prompt_key(self,
-                                                        consent_prompt_key: str) -> OAuthUserConsentConfigBase | None:
-        """Retrieve the stored authentication config by consent prompt key."""
-        for _, authentication_config in self._authentication_configs.items():
-            if isinstance(authentication_config, OAuthUserConsentConfigBase):
-                if authentication_config.consent_prompt_key == consent_prompt_key:
-                    return authentication_config
+        Returns:
+            The OAuth authentication manager if found, None otherwise.
+        """
+        for auth_manager in self._authentication_managers.values():
+            if (isinstance(auth_manager, OAuthClientBase) and auth_manager.config is not None
+                    and hasattr(auth_manager.config, 'consent_prompt_key')):
+                if auth_manager.config.consent_prompt_key == consent_prompt_key:
+                    return auth_manager
         return None
 
     def validate_and_set_cors_config(self, front_end_config: FrontEndBaseConfig) -> None:
@@ -163,31 +158,25 @@ class _CredentialsManager(metaclass=Singleton):
                     allow_methods=default_allow_methods,
                 ))
 
-    def get_registered_authentication_count(self) -> int:
-        """
-        Get the number of registered authentication configs.
-        """
-        return len(self._authentication_configs)
-
     async def wait_for_oauth_credentials(self) -> None:
         """
         Block until the oauth credentials are set in the redirect uri.
         """
         await self._oauth_credentials_flag.wait()
 
-    async def set_oauth_credentials(self):
+    async def set_oauth_credentials(self) -> None:
         """
         Unblock until the oauth credentials are set in the redirect uri.
         """
         self._oauth_credentials_flag.set()
 
-    async def wait_for_consent_prompt_url(self):
+    async def wait_for_consent_prompt_url(self) -> None:
         """
         Block until the consent prompt location header has been retrieved.
         """
         await self._consent_prompt_flag.wait()
 
-    async def set_consent_prompt_url(self):
+    async def set_consent_prompt_url(self) -> None:
         """
         Unblock until the consent prompt location header has been retrieved.
         """

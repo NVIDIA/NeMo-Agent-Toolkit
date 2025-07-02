@@ -39,8 +39,6 @@ from pydantic import Field
 
 from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
 from aiq.authentication.interfaces import OAuthClientBase
-from aiq.authentication.request_manager import RequestManager
-from aiq.authentication.response_manager import ResponseManager
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
@@ -200,8 +198,6 @@ class RouteInfo(BaseModel):
 class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     def __init__(self, config: AIQConfig):
-        self._request_manager: RequestManager = RequestManager()
-        self._response_manager: ResponseManager = ResponseManager()
         super().__init__(config)
 
     async def user_auth_callback_server_http(self,
@@ -861,9 +857,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         from aiq.authentication.credentials_manager import _CredentialsManager
         from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
-        from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
-        from aiq.data_models.authentication import AccessCodeTokenRequest
-        from aiq.data_models.authentication import HTTPMethod
         from aiq.data_models.authentication import PromptRedirectRequest
         from aiq.front_ends.fastapi.html_snippets.auth_code_grant_success import AUTH_REDIRECT_SUCCESS_HTML
 
@@ -876,37 +869,25 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 error_message = "Authorization code and state not provided by authorization config"
                 raise AuthCodeGrantFlowError('auth_code_state_missing', error_message)
 
-            authentication_config: OAuthUserConsentConfigBase | None = _CredentialsManager(
-            ).get_authentication_config_by_state(state)
+            oauth_client_manager: OAuthClientBase | None = _CredentialsManager().get_authentication_manager_by_state(
+                state)
 
-            if authentication_config is None:
-                error_message = "Authorization config not found by Authorization Code Grant state"
-                raise AuthCodeGrantFlowError('auth_config_not_found', error_message)
-
-            # Build Token HTTP Request
-            redirect_uri: str = (f"{authentication_config.client_server_url}"
-                                 f"{FastApiFrontEndConfig().authorization.path}"
-                                 f"{AuthenticationEndpoint.REDIRECT_URI.value}")
-
-            data = AccessCodeTokenRequest(client_id=authentication_config.client_id,
-                                          client_secret=authentication_config.client_secret,
-                                          code=authorization_code,
-                                          redirect_uri=redirect_uri)
-
-            token_url: str = authentication_config.authorization_token_url
-
-            headers: httpx.Headers = httpx.Headers({"Content-Type": "application/json"})
+            if oauth_client_manager is None:
+                error_message = "Authorization manager not found by Authorization Code Grant state"
+                raise AuthCodeGrantFlowError('auth_manager_not_found', error_message)
 
             # Send Token HTTP Request
-            response: httpx.Response | None = await self._request_manager.send_request(
-                url=token_url, http_method=HTTPMethod.POST.value, headers=headers, body_data=data.model_dump())
+            response: httpx.Response | None = await oauth_client_manager.send_token_request(
+                client_authorization_path=FastApiFrontEndConfig().authorization.path,
+                client_authorization_endpoint=AuthenticationEndpoint.REDIRECT_URI.value,
+                authorization_code=authorization_code)
 
             if response is None:
                 error_message = "Invalid response received while exchanging authorization code for access token"
                 raise AuthCodeGrantFlowError('token_response_null', error_message)
 
             if not response.status_code == 200:
-                await self._response_manager.handle_auth_code_grant_response_codes(response, authentication_config)
+                await oauth_client_manager.response_manager.handle_auth_code_grant_response_codes(response)
 
             if response.json().get("access_token") is None:
                 error_message = "No access token provided"
@@ -916,14 +897,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 error_message = "No token expiry provided"
                 raise AuthCodeGrantFlowError('token_expiry_missing', error_message)
 
-            # Claim the access token and the expiration time.
-            authentication_config.access_token = response.json().get("access_token")
-            authentication_config.access_token_expires_in = (datetime.now(timezone.utc) +
-                                                             timedelta(seconds=response.json().get("expires_in")))
+            oauth_client_manager.config.access_token = response.json().get("access_token")
+            oauth_client_manager.config.access_token_expires_in = (datetime.now(timezone.utc) +
+                                                                   timedelta(seconds=response.json().get("expires_in")))
 
             # Claim the refresh token if the refresh token is available.
             if response.json().get("refresh_token"):
-                authentication_config.refresh_token = response.json().get("refresh_token")
+                oauth_client_manager.config.refresh_token = response.json().get("refresh_token")
 
             await _CredentialsManager().set_oauth_credentials()
 
@@ -936,22 +916,22 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         async def prompt_redirect_uri(request: Request, prompt_request_schema: PromptRedirectRequest):
             from fastapi.responses import JSONResponse
 
-            encrypted_authentication_config: OAuthUserConsentConfigBase | None = _CredentialsManager(
-            ).get_authentication_config_by_consent_prompt_key(prompt_request_schema.consent_prompt_key)
+            oauth_client_manager: OAuthClientBase | None = _CredentialsManager(
+            ).get_authentication_manager_by_consent_prompt_key(prompt_request_schema.consent_prompt_key)
 
-            if (encrypted_authentication_config is None):
+            if (oauth_client_manager is None):
                 raise HTTPException(status_code=403, detail="Consent prompt key not found.")
 
             location_url: str | None = None
-            if encrypted_authentication_config.consent_prompt_location_url is not None:
-                location_url = encrypted_authentication_config.consent_prompt_location_url
+
+            if oauth_client_manager.config.consent_prompt_location_url is not None:
+                location_url = oauth_client_manager.config.consent_prompt_location_url
 
             await _CredentialsManager().set_consent_prompt_url()
 
-            auth_provider_name: str | None = _CredentialsManager().get_authentication_config_name(
-                encrypted_authentication_config)
-
-            return JSONResponse(content={"auth_provider_name": auth_provider_name, "redirect_url": location_url})
+            return JSONResponse(content={
+                "auth_provider_name": oauth_client_manager.config_name, "redirect_url": location_url
+            })
 
         if self.front_end_config.authorization.path:
             app.add_api_route(

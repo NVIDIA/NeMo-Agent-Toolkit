@@ -21,10 +21,15 @@ import httpx
 
 from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
 from aiq.data_models.authentication import ConsentPromptMode
-from aiq.data_models.authentication import HTTPAuthScheme
+from aiq.data_models.authentication import HeaderAuthScheme
+from aiq.data_models.authentication import HTTPMethod
+from aiq.data_models.authentication import OAuth2AuthorizationQueryParams
+from aiq.data_models.authentication import OAuth2TokenRequest
 
 if typing.TYPE_CHECKING:
     from aiq.authentication.response_manager import ResponseManager
+
+AUTHORIZATION_HEADER = "Authorization"
 
 
 class RequestManagerBase:
@@ -72,66 +77,47 @@ class AuthenticationManagerBase(ABC):
         pass
 
     @abstractmethod
+    async def send_request(self,
+                           url: str,
+                           http_method: str | HTTPMethod,
+                           headers: dict | None = None,
+                           query_params: dict | None = None,
+                           body_data: dict | None = None) -> httpx.Response | None:
+        """
+        Makes a generic HTTP request.
+
+        Args:
+            url: The URL to send the request to
+            http_method: The HTTP method to use (GET, POST, etc.)
+            headers: Optional dictionary of HTTP headers
+            query_params: Optional dictionary of query parameters
+            body_data: Optional dictionary representing the request body
+
+        Returns:
+            httpx.Response | None: The response from the HTTP request, or None if an error occurs.
+        """
+        pass
+
+    @abstractmethod
     async def validate_credentials(self) -> bool:
         """
         Validates the credentials for the authentication manager.
+
+        Returns:
+            bool: True if credentials are valid, False otherwise.
         """
         pass
 
     @abstractmethod
-    async def construct_authentication_header(self, http_auth_scheme: HTTPAuthScheme) -> httpx.Headers | None:
+    async def construct_authentication_header(self, header_auth_scheme: HeaderAuthScheme) -> httpx.Headers | None:
         """
         Constructs the authenticated HTTP header based on the authentication scheme.
 
-        Applies to:
-        - Basic
-        - Bearer
-        - Digest
-        - OAuth2
-        - OpenID Connect
-        - Custom (if header-based)
-        """
-        pass
+        Args:
+            header_auth_scheme: The authentication scheme to use (BEARER, BASIC, X_API_KEY, CUSTOM)
 
-    @abstractmethod
-    async def construct_authentication_query(self, http_auth_scheme: HTTPAuthScheme) -> httpx.QueryParams | None:
-        """
-        Constructs the authenticated HTTP query based on the authentication scheme.
-
-        Applies to:
-        - Custom (if using query parameters)
-        - API key (query, if used)
-        """
-        pass
-
-    @abstractmethod
-    async def construct_authentication_cookie(self, http_auth_scheme: HTTPAuthScheme) -> httpx.Cookies | None:
-        """
-        Constructs the authenticated HTTP cookie based on the authentication scheme.
-
-        Applies to:
-        - Cookie
-        - Custom (if using cookies)
-        """
-        pass
-
-    @abstractmethod
-    async def construct_authentication_body(self, http_auth_scheme: HTTPAuthScheme) -> dict[str, typing.Any] | None:
-        """
-        Constructs the authenticated HTTP body based on the authentication scheme.
-
-        Applies to:
-        - Custom (rarely used schemes or special configurations)
-        """
-        pass
-
-    @abstractmethod
-    async def construct_authentication_custom(self, http_auth_scheme: HTTPAuthScheme) -> typing.Any | None:
-        """
-        Constructs the authenticated HTTP custom logic based on the authentication scheme.
-
-        Applies to:
-        - Custom only (fully user-defined logic)
+        Returns:
+            httpx.Headers | None: The constructed authentication header, or None if construction fails.
         """
         pass
 
@@ -142,8 +128,57 @@ class OAuthClientBase(AuthenticationManagerBase, ABC):
     This class provides an interface for managing OAuth clients.
     """
 
+    @property
+    @abstractmethod
+    def config(self) -> OAuthUserConsentConfigBase | None:
+        """
+        Get the OAuth authentication configuration.
+
+        Returns:
+            OAuthUserConsentConfigBase | None: The OAuth authentication configuration, or None if not set.
+        """
+        pass
+
     @abstractmethod
     async def validate_credentials(self) -> bool:
+        """
+        Validates the OAuth credentials.
+
+        Returns:
+            bool: True if credentials are valid, False otherwise.
+        """
+        pass
+
+    @abstractmethod
+    def _construct_authorization_query_params(self, response_type: str, prompt: str) -> OAuth2AuthorizationQueryParams:
+        """
+        Constructs the OAuth2 authorization query parameters for the authorization URL.
+
+        Args:
+            response_type: The OAuth2 response type (typically "code")
+            prompt: The consent prompt behavior
+
+        Returns:
+            OAuth2AuthorizationQueryParams: The constructed query parameters for OAuth2 authorization
+        """
+        pass
+
+    @abstractmethod
+    def _construct_token_request_body(self,
+                                      redirect_uri: str,
+                                      authorization_code: str,
+                                      grant_type: str = "authorization_code") -> OAuth2TokenRequest:
+        """
+        Constructs the OAuth2 token request body for exchanging authorization code for access token.
+
+        Args:
+            redirect_uri: The redirect URI used in the authorization request
+            authorization_code: The authorization code received from the OAuth provider
+            grant_type: The OAuth2 grant type (default: "authorization_code")
+
+        Returns:
+            OAuth2TokenRequest: The constructed token request body for OAuth2 token exchange
+        """
         pass
 
     @property
@@ -154,12 +189,15 @@ class OAuthClientBase(AuthenticationManagerBase, ABC):
         Returns:
             ResponseManager | None: The response manager or None if not set.
         """
-        return self._response_manager
+        return getattr(self, '_response_manager', None)
 
     @response_manager.setter
     def response_manager(self, response_manager: "ResponseManager") -> None:
         """
         Set the response manager for the authentication manager.
+
+        Args:
+            response_manager: The response manager to set
         """
         self._response_manager = response_manager
 
@@ -170,7 +208,7 @@ class OAuthClientBase(AuthenticationManagerBase, ABC):
         Get the consent prompt mode for the OAuth client.
 
         Returns:
-            ConsentPromptMode: The consent prompt mode (BROWSER or FRONTEND).
+            ConsentPromptMode | None: The consent prompt mode (BROWSER or FRONTEND), or None if not set.
         """
         pass
 
@@ -181,18 +219,7 @@ class OAuthClientBase(AuthenticationManagerBase, ABC):
         Set the consent prompt mode for the OAuth client.
 
         Args:
-            consent_prompt_mode (ConsentPromptMode): The consent prompt mode to set.
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def config(self) -> OAuthUserConsentConfigBase | None:
-        """
-        Get the authentication configuration.
-
-        Returns:
-            str | None: The authentication configuration, or None if not set.
+            consent_prompt_mode: The consent prompt mode to set.
         """
         pass
 

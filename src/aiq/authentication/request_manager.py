@@ -16,13 +16,11 @@
 import json
 import logging
 import re
-import typing
 import urllib.parse
 
 import httpx
 from pydantic import ValidationError
 
-from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
 from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
 from aiq.authentication.exceptions.request_exceptions import BaseUrlValidationError
 from aiq.authentication.exceptions.request_exceptions import BodyValidationError
@@ -30,26 +28,16 @@ from aiq.authentication.exceptions.request_exceptions import HTTPHeaderValidatio
 from aiq.authentication.exceptions.request_exceptions import HTTPMethodValidationError
 from aiq.authentication.exceptions.request_exceptions import QueryParameterValidationError
 from aiq.authentication.interfaces import RequestManagerBase
-from aiq.authentication.response_manager import ResponseManager
-from aiq.data_models.authentication import AuthCodeGrantQueryParams
-from aiq.data_models.authentication import AuthenticationEndpoint
 from aiq.data_models.authentication import HTTPMethod
 
 logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-if (typing.TYPE_CHECKING):
-    from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
-
 
 class RequestManager(RequestManagerBase):
 
     def __init__(self) -> None:
-        self._response_manager: ResponseManager = ResponseManager()
-
-    @property
-    def response_manager(self) -> ResponseManager:
-        return self._response_manager
+        pass
 
     def _validate_data(self, input_dict: dict) -> None:
         """
@@ -223,54 +211,9 @@ class RequestManager(RequestManagerBase):
             logger.error(error_message, exc_info=True)
             raise BodyValidationError('invalid_request_body', error_message) from e
 
-    async def build_auth_code_grant_url(self,
-                                        config: "AuthCodeGrantConfig",
-                                        response_type: str = "code",
-                                        prompt: str = "consent") -> httpx.URL:
-        """
-        Construct an authorization URL to initiate the Auth Code Grant Flow.
-
-        Args:
-            encrypted_authentication_config (AuthCodeGrantConfig): The registered authentication config.
-            response_type (str): The response type to use for the authorization request.
-            prompt (str): The prompt to use for the authorization request.
-        """
-        from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
-
-        try:
-            full_authorization_url: httpx.URL = None
-
-            # Validate authorization url.
-
-            self._validate_base_url(config.authorization_url)
-
-            # Construct Auth Code Grant flow query parameters.
-            query_params: AuthCodeGrantQueryParams = AuthCodeGrantQueryParams(
-                audience=config.audience,
-                client_id=config.client_id,
-                state=config.state,
-                scope=(" ".join(config.scope)),
-                redirect_uri=(f"{config.client_server_url}"
-                              f"{FastApiFrontEndConfig().authorization.path}"
-                              f"{AuthenticationEndpoint.REDIRECT_URI.value}"),
-                response_type=response_type,
-                prompt=prompt)
-
-            self._validate_query_parameters(query_params.model_dump())
-
-            full_authorization_url = httpx.URL(config.authorization_url).copy_merge_params(query_params.model_dump())
-
-        except (BaseUrlValidationError, QueryParameterValidationError, ValueError, ValidationError, Exception) as e:
-            error_message = f"An error occurred while building authorization url: {str(e)}"
-            logger.error(error_message, exc_info=True)
-            raise AuthCodeGrantFlowError('auth_url_build_failed', error_message) from e
-
-        return full_authorization_url
-
     async def send_request(self,
                            url: str,
                            http_method: str | HTTPMethod,
-                           authentication_header: httpx.Headers | None = None,
                            headers: dict | None = None,
                            query_params: dict | None = None,
                            body_data: dict | None = None) -> httpx.Response | None:
@@ -290,7 +233,6 @@ class RequestManager(RequestManagerBase):
         """
         try:
             response: httpx.Response | None = None
-            merged_headers: httpx.Headers = httpx.Headers({**(headers or {}), **(authentication_header or {})})
 
             # Validate the incoming base url.
             self._validate_base_url(url)
@@ -299,7 +241,7 @@ class RequestManager(RequestManagerBase):
             self._validate_http_method(http_method)
 
             # Validate incoming header parameters.
-            self._validate_headers(merged_headers)
+            self._validate_headers(headers)
 
             # Validate incoming query parameters.
             self._validate_query_parameters(query_params)
@@ -310,37 +252,33 @@ class RequestManager(RequestManagerBase):
             async with httpx.AsyncClient() as client:
 
                 if http_method.upper() == HTTPMethod.GET.value:
-                    response = await client.get(url, params=query_params, headers=merged_headers, timeout=10.0)
+                    response = await client.get(url, params=query_params, headers=headers, timeout=10.0)
 
                 if http_method.upper() == HTTPMethod.POST.value:
                     response = await client.post(url,
                                                  params=query_params,
-                                                 headers=merged_headers,
+                                                 headers=headers,
                                                  json=body_data,
                                                  timeout=10.0)
 
                 if http_method.upper() == HTTPMethod.PUT.value:
-                    response = await client.put(url,
-                                                params=query_params,
-                                                headers=merged_headers,
-                                                json=body_data,
-                                                timeout=10.0)
+                    response = await client.put(url, params=query_params, headers=headers, json=body_data, timeout=10.0)
 
                 if http_method.upper() == HTTPMethod.DELETE.value:
-                    response = await client.delete(url, params=query_params, headers=merged_headers, timeout=10.0)
+                    response = await client.delete(url, params=query_params, headers=headers, timeout=10.0)
 
                 if http_method.upper() == HTTPMethod.PATCH.value:
                     response = await client.patch(url,
                                                   params=query_params,
-                                                  headers=merged_headers,
+                                                  headers=headers,
                                                   json=body_data,
                                                   timeout=10.0)
 
                 if http_method.upper() == HTTPMethod.HEAD.value:
-                    response = await client.head(url, params=query_params, headers=merged_headers, timeout=10.0)
+                    response = await client.head(url, params=query_params, headers=headers, timeout=10.0)
 
                 if http_method.upper() == HTTPMethod.OPTIONS.value:
-                    response = await client.options(url, params=query_params, headers=merged_headers, timeout=10.0)
+                    response = await client.options(url, params=query_params, headers=headers, timeout=10.0)
 
         except (BaseUrlValidationError,
                 HTTPMethodValidationError,

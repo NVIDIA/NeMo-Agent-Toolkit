@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import typing
+import logging
 
 from pydantic import Field
 from pydantic import field_validator
@@ -26,75 +26,58 @@ from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_authentication_provider
 from aiq.data_models.authentication import AuthenticationBaseConfig
 
+logger = logging.getLogger(__name__)
 
-class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):  # TODO EE: Investigate.
+
+class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
     """
     API Key authentication configuration model.
-
-    Supports all standard OpenAPI 3.0 authentication schemes via builder logic,
-    based on the combination of HTTPAuthScheme.
-
-    HTTPAuthScheme:
-        - basic
-        - bearer
-        - digest
-        - cookie
-        - oauth2
-        - openidconnect
-        - custom
-
-    CredentialLocation:
-        - header
-        - query
-        - cookie
-        - body
-        - custom
-
-    Mappings:
-        - Basic (header): uses `email` and `password`
-        - Bearer (header): uses `raw_key` (token) with optional prefix
-        - API Key (header): uses `raw_key`
-        - API Key (query): uses `raw_key`
-        - API Key (cookie): uses `raw_key`
-        - Cookie (cookie): uses `raw_key` or `custom`
-        - OAuth2 (header): uses `raw_key` (access token)
-        - OpenID Connect (header): uses `raw_key` (ID token)
-        - Custom (any location): uses `custom`
     """
 
-    raw_key: str = Field(
-        description=("Raw API token or credential to be injected into the request. Used for 'bearer', "
-                     "'apikey', 'oauth2', and other schemes depending on the configured credential location."))
+    raw_key: str = Field(description=("Raw API token or credential to be injected into the request parameter. "
+                                      "Used for 'bearer','x-api-key','custom', and other schemes. "))
 
-    header_name: str = Field(
-        description="The HTTP header corresponding to the API provider. i.e. 'Authorization', X-API-Key.")
-    header_prefix: str = Field(
-        description="The HTTP header prefix corresponding to the API provider. i.e 'Bearer', 'JWT'.")
-
-    custom: typing.Any | None = Field(
-        description=("Custom authentication configuration for non-standard configuration."
-                     "Used when the HTTP scheme is 'custom' or the credential source is 'custom'."),
-        default=None)
+    header_name: str | None = Field(description="The HTTP header name that MUST be used in conjunction "
+                                    "with the header_prefix when HeaderAuthScheme is CUSTOM.",
+                                    default=None)
+    header_prefix: str | None = Field(description="The HTTP header prefix that MUST be used in conjunction "
+                                      "with the header_name when HeaderAuthScheme is CUSTOM.",
+                                      default=None)
+    username: str | None = Field(
+        description="The username used for basic authentication according to the OpenAPI 3.0 spec.", default=None)
+    password: str | None = Field(
+        description="The password used for basic authentication according to the OpenAPI 3.0 spec.", default=None)
 
     @field_validator('raw_key')
     @classmethod
-    def validate_api_key(cls, value: str) -> str:
+    def validate_raw_key(cls, value: str) -> str:
         """
-        Validate api_key is non-empty, does not contain whitespace, and is sufficiently long.
+        Validate raw_key field for security requirements.
+
+        Args:
+            value: The raw API key value to validate
+
+        Returns:
+            str: The validated raw key
+
+        Raises:
+            APIKeyFieldError: If validation fails
         """
         if not value:
-            raise APIKeyFieldError('value_missing', 'api_key is required for authentication.')
+            raise APIKeyFieldError('value_missing', 'raw_key field value is required.')
 
+        # Check for whitespace
         if len(value.strip()) != len(value):
-            raise APIKeyFieldError('whitespace_found', 'api_key must not have leading/trailing whitespace.')
+            raise APIKeyFieldError('whitespace_found',
+                                   'raw_key field value cannot have leading or trailing whitespace.')
 
-        if ' ' in value:
-            raise APIKeyFieldError('whitespace_found', 'api_key must not contain whitespace.')
+        # Check for minimum length
+        if len(value) < 8:
+            raise APIKeyFieldError(
+                'value_too_short',
+                'raw_key field value must be at least 8 characters long for security. '
+                'Got: {length} characters', {'length': len(value)})
 
-        if len(value) < 16:
-            raise APIKeyFieldError('too_short',
-                                   'api_key must be at least 16 characters long for sufficient entropy. Got: {length}',
-                                   {'length': len(value)})
         return value
 
     @field_validator('header_name')

@@ -31,19 +31,19 @@ logger = logging.getLogger(__name__)
 class OAuthBaseConfig(AuthenticationBaseConfig):
     """
     Base OAuth 2.0 authentication configuration model.
-    Contains common fields and validation logic shared across OAuth flows.
-    Implements RFC 6819 security validation requirements.
+    Contains common OAuth 2.0 fields used across different OAuth flows.
     """
-
     client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
-    client_secret: str = Field(description="The client secret for OAuth 2.0 authentication.")
-    audience: str = Field(description="The audience for OAuth 2.0 authentication.")
-    scope: list[str] = Field(description="The scope for OAuth 2.0 authentication.")
+    client_secret: str = Field(description="The secret associated with the client_id.")
+    audience: str = Field(description="The resource server the token is intended for.")
+    scope: list[str] = Field(description="List of scopes for OAuth 2.0 authentication.")
+    authorization_url: str = Field(description="The authorization URL for OAuth 2.0 authentication.")
+    authorization_token_url: str = Field(description="The token URL for OAuth 2.0 authentication.")
+
     access_token: str | None = Field(default=None, description="The access token for OAuth 2.0 authentication.")
     access_token_expires_in: datetime | None = Field(default=None,
-                                                     description="Expiry time of the access token in seconds.")
-    refresh_token: str | None = Field(
-        default=None, description="The refresh token for OAuth 2.0 authentication used to obtain a new access token.")
+                                                     description="The expiration time of the access token.")
+    refresh_token: str | None = Field(default=None, description="The refresh token for OAuth 2.0 authentication.")
 
     @field_validator('client_secret')
     @classmethod

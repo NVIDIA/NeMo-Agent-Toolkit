@@ -461,6 +461,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     @override
     async def get_authentication(self, authentication_config_name: str):
+        from aiq.authentication.credentials_manager import _CredentialsManager
 
         if authentication_config_name not in self._authentications:
             raise ValueError(f"Authentication `{authentication_config_name}` not found")
@@ -477,6 +478,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             # Set the config name
             authentication_manager.config_name = authentication_config_name
+
+            # Store the manager instance in the credentials manager
+            _CredentialsManager().store_authentication_manager(authentication_config_name, authentication_manager)
 
             # Return the authentication manager
             return authentication_manager
@@ -687,12 +691,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                     await self.add_function(component_instance.name, component_instance.config)
             else:
                 raise ValueError(f"Unknown component group {component_instance.component_group}")
-
-        # Update credentials manager with config objects used by the workflow builder
-        from aiq.authentication.credentials_manager import _CredentialsManager
-        if self._authentications:
-            actual_auth_configs = {name: auth_info.config for name, auth_info in self._authentications.items()}
-            _CredentialsManager().copy_authentication_configs(actual_auth_configs)
 
         # Instantiate the workflow
         if not skip_workflow:

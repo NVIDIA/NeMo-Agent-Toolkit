@@ -19,7 +19,9 @@ import typing
 import httpx
 
 from aiq.authentication.interfaces import AuthenticationManagerBase
-from aiq.data_models.authentication import HTTPAuthScheme
+from aiq.authentication.request_manager import RequestManager
+from aiq.data_models.authentication import HeaderAuthScheme
+from aiq.data_models.authentication import HTTPMethod
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +34,7 @@ class APIKeyManager(AuthenticationManagerBase):
     def __init__(self, config: "APIKeyConfig", config_name: str | None = None) -> None:
         self._config_name: str | None = config_name
         self._config: "APIKeyConfig" = config
+        self._request_manager: RequestManager = RequestManager()
         super().__init__()
 
     @property
@@ -61,24 +64,79 @@ class APIKeyManager(AuthenticationManagerBase):
         Returns:
             bool: True if the API key credentials are valid, False otherwise.
         """
-        # Validate the API key credentials are set.
-        if not self._config.raw_key or self._config.raw_key == "":  # TODO EE: Update
+        # Validate the API key credentials are set and non-empty.
+        if not self._config.raw_key or self._config.raw_key == "":
             return False
 
         return True
 
-    async def construct_authentication_header(self, http_auth_scheme: HTTPAuthScheme) -> httpx.Headers | None:
-        if http_auth_scheme == HTTPAuthScheme.BEARER:
-            return httpx.Headers({"Authorization": f"Bearer {self._config.raw_key}"})  # TODO EE: Update
+    async def construct_authentication_header(self,
+                                              header_auth_scheme: HeaderAuthScheme = HeaderAuthScheme.BEARER
+                                              ) -> httpx.Headers | None:
+        """
+        Constructs the authenticated HTTP header based on the authentication scheme.
 
-    async def construct_authentication_query(self, http_auth_scheme: HTTPAuthScheme) -> httpx.QueryParams | None:
-        return None  # TODO EE: Update
+        Args:
+            header_auth_scheme (HeaderAuthScheme): The HTTP authentication scheme to use.
+                                             Supported schemes: BEARER, X_API_KEY, BASIC, CUSTOM.
 
-    async def construct_authentication_cookie(self, http_auth_scheme: HTTPAuthScheme) -> httpx.Cookies | None:
-        return None  # TODO EE: Update
+        Returns:
+            httpx.Headers | None: The constructed HTTP header if successful, otherwise returns None.
 
-    async def construct_authentication_body(self, http_auth_scheme: HTTPAuthScheme) -> dict[str, typing.Any] | None:
-        return None  # TODO EE: Update
+        """
+        import base64
 
-    async def construct_authentication_custom(self, http_auth_scheme: HTTPAuthScheme) -> typing.Any | None:
-        return None  # TODO EE: Update
+        from aiq.authentication.interfaces import AUTHORIZATION_HEADER
+
+        if header_auth_scheme == HeaderAuthScheme.BEARER:
+            return httpx.Headers({f"{AUTHORIZATION_HEADER}": f"{HeaderAuthScheme.BEARER.value} {self._config.raw_key}"})
+
+        if header_auth_scheme == HeaderAuthScheme.X_API_KEY:
+            return httpx.Headers({f"{HeaderAuthScheme.X_API_KEY.value}": f"{self._config.raw_key}"})
+
+        if header_auth_scheme == HeaderAuthScheme.BASIC:
+            if not self._config.username or not self._config.password:
+                logger.error('Username or password is missing. Please authenticate the provider: %s', self._config_name)
+                return None
+            token_key: str = f"{self._config.username}:{self._config.password}"
+            encoded_key: str = base64.b64encode(token_key.encode("utf-8")).decode("utf-8")
+            return httpx.Headers({f"{AUTHORIZATION_HEADER}": f"{HeaderAuthScheme.BASIC.value} {encoded_key}"})
+
+        if header_auth_scheme == HeaderAuthScheme.CUSTOM:
+            if not self._config.header_name:
+                logger.error('header_name required when using header_auth_scheme CUSTOM: %s', self._config_name)
+                return None
+
+            if not self._config.header_prefix:
+                logger.error('header_prefix required when using header_auth_scheme CUSTOM: %s', self._config_name)
+                return None
+
+            return httpx.Headers(
+                {f"{self._config.header_name}": f"{self._config.header_prefix} {self._config.raw_key}"})
+
+        return None
+
+    async def send_request(self,
+                           url: str,
+                           http_method: str | HTTPMethod,
+                           headers: dict | None = None,
+                           query_params: dict | None = None,
+                           body_data: dict | None = None) -> httpx.Response | None:
+        """
+        Sends an HTTP request to the specified URL with authentication handling.
+
+        Args:
+            url: The target URL for the HTTP request
+            http_method: The HTTP method to use (GET, POST, etc.)
+            headers: Optional dictionary of HTTP headers to include
+            query_params: Optional dictionary of query parameters to include
+            body_data: Optional dictionary of request body data
+
+        Returns:
+            httpx.Response | None: The HTTP response from the request, or None if the request failed
+        """
+        return await self._request_manager.send_request(url,
+                                                        http_method,
+                                                        headers=headers,
+                                                        query_params=query_params,
+                                                        body_data=body_data)

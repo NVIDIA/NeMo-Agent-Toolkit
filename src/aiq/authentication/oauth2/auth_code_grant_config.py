@@ -39,7 +39,7 @@ class AuthCodeGrantConfig(OAuthUserConsentConfigBase, name="oauth2_authorization
                                    "This is needed to properly construct the redirect uri i.e: http://localhost:8000")
     authorization_url: str = Field(description="The base url to the authorization server in which authorization "
                                    "request are made to receive access codes..")
-    authorization_token_url: str = Field(  # TODO EE: Use pydantic secret string type after all testing is complete.
+    authorization_token_url: str = Field(
         description="The base url to the authorization token server in which access codes "
         "are exchanged for access tokens.")
 

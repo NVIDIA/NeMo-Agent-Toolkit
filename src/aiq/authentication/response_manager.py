@@ -29,8 +29,9 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 class ResponseManager:
 
-    def __init__(self) -> None:
+    def __init__(self, oauth_client_manager: OAuthClientBase) -> None:
         self._message_handler: MessageHandler | None = None
+        self._oauth_client_manager: OAuthClientBase = oauth_client_manager
 
     @property
     def message_handler(self) -> MessageHandler | None:
@@ -52,15 +53,12 @@ class ResponseManager:
         """
         self._message_handler = message_handler
 
-    async def handle_auth_code_grant_response_codes(self,
-                                                    response: httpx.Response,
-                                                    oauth_client_manager: OAuthClientBase) -> None:
+    async def handle_auth_code_grant_response_codes(self, response: httpx.Response) -> None:
         """
         Handles various Auth Code Grant Flow flow responses.
 
         Args:
             response (httpx.Response): The HTTP response from the authentication server.
-            encrypted_authentication_config (OAuthClientBase): The registered Auth Code Grant flow config.
         """
         try:
             # Handles the 302 redirect status code from Auth Code Grant flow authorization server.
@@ -71,7 +69,7 @@ class ResponseManager:
                     error_message = "Missing 'Location' header in 302 response to redirect user to consent browser"
                     raise AuthCodeGrantFlowError('location_header_missing', error_message)
 
-                await self._handle_auth_code_grant_302_consent_browser(redirect_location_header, oauth_client_manager)
+                await self._handle_auth_code_grant_302_consent_browser(redirect_location_header)
 
             # Handles the 4xx client status codes from Auth Code Grant flow authorization server.
             elif response.status_code >= 400 and response.status_code < 500:
@@ -89,9 +87,7 @@ class ResponseManager:
             logger.error(error_message, exc_info=True)
             raise AuthCodeGrantFlowError('auth_response_handler_failed', error_message) from e
 
-    async def _handle_auth_code_grant_302_consent_browser(self,
-                                                          location_header: str,
-                                                          oauth_client_manager: OAuthClientBase) -> None:
+    async def _handle_auth_code_grant_302_consent_browser(self, location_header: str) -> None:
         """
         Handles the consent prompt redirect for different execution environments.
 
@@ -103,16 +99,14 @@ class ResponseManager:
         from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
         from aiq.data_models.interactive import HumanPromptNotification
 
-        oauth_config: OAuthUserConsentConfigBase | None = oauth_client_manager.config
+        oauth_config: OAuthUserConsentConfigBase | None = self._oauth_client_manager.config
         try:
-            if oauth_client_manager.consent_prompt_mode == ConsentPromptMode.BROWSER:
+            if self._oauth_client_manager.consent_prompt_mode == ConsentPromptMode.BROWSER:
 
                 default_browser = webbrowser.get()
                 default_browser.open(location_header)
 
-            if oauth_client_manager.consent_prompt_mode == ConsentPromptMode.FRONTEND:
-
-                authentication_config_name: str | None = oauth_client_manager.config_name
+            if self._oauth_client_manager.consent_prompt_mode == ConsentPromptMode.FRONTEND:
 
                 logger.info(
                     "\n\n******************************************************************\n\n"
@@ -121,13 +115,13 @@ class ResponseManager:
                     "Please ensure your client sends a POST request with the registered [ consent_prompt_key ] to "
                     "continue Auth Code Grant flow.\n\n"
                     "******************************************************************",
-                    authentication_config_name)
+                    self._oauth_client_manager.config_name)
 
                 if (self.message_handler):
                     await self.message_handler.create_websocket_message(
                         HumanPromptNotification(
                             text="Auth Code Grant flow consent request needed for authentication config: "
-                            f"[ {authentication_config_name} ]. "
+                            f"[ {self._oauth_client_manager.config_name} ]. "
                             "Navigate to the '/aiq-auth' page to continue Auth Code Grant flow."))
 
                 if oauth_config:
