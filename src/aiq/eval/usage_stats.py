@@ -30,6 +30,7 @@ class UsageStatsItem(BaseModel):
     runtime: float = 0.0
     min_timestamp: float = 0.0
     max_timestamp: float = 0.0
+    llm_latency: float = 0.0
 
 
 class UsageStats(BaseModel):

@@ -103,12 +103,22 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             max_timestamp = 0.0
             runtime = 0.0
 
+        # find llm latency by adding all llm calls
+        llm_latency = 0.0
+        previous_llm_start_time = None
+        for step in steps:
+            if step.event_type == "LLM_START":
+                previous_llm_start_time = step.event_timestamp
+            elif step.event_type == "LLM_END" and previous_llm_start_time is not None:
+                llm_latency += step.event_timestamp - previous_llm_start_time
+
         # add the usage stats to the usage stats dict
         self.usage_stats.usage_stats_items[item.id] = UsageStatsItem(usage_stats_per_llm=usage_stats_per_llm,
                                                                      runtime=runtime,
                                                                      total_tokens=total_tokens,
                                                                      min_timestamp=min_timestamp,
-                                                                     max_timestamp=max_timestamp)
+                                                                     max_timestamp=max_timestamp,
+                                                                     llm_latency=llm_latency)
         return self.usage_stats.usage_stats_items[item.id]
 
     async def run_workflow_local(self, session_manager: AIQSessionManager):

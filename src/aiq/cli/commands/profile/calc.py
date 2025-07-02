@@ -22,6 +22,8 @@ from tabulate import tabulate
 
 from aiq.eval.config import CalcRunnerConfig
 from aiq.eval.config import CalcRunnerOutput
+from aiq.eval.config import GPUEstimatesPerConcurrency
+from aiq.eval.config import OutOfRangeRunsPerConcurrency
 from aiq.eval.runners.calc_runner import CalcRunner
 
 logger = logging.getLogger(__name__)
@@ -115,8 +117,14 @@ def calc_command(ctx,
     # Only use CLI concurrencies, with default
     concurrencies_list = [int(x) for x in concurrencies.split(",") if x.strip()]
 
+    # Dont allow a concurrency of 0
+    if 0 in concurrencies_list:
+        click.echo("Concurrency of 0 is not allowed.")
+        return
+
+    # Check if the parameters are valid in online and offline mode
     if offline_mode:
-        # In offline mode target and test parameters are needed to estimate the GPU count
+        # In offline mode target test parameters are needed to estimate the GPU count
         if target_llm_latency == 0 and target_workflow_runtime == 0:
             click.echo("Both --target_llm_latency and --target_workflow_runtime are 0. "
                        "Cannot estimate the GPU count.")
@@ -146,8 +154,8 @@ def calc_command(ctx,
     runner_config = CalcRunnerConfig(
         config_file=config_file,
         concurrencies=concurrencies_list,
-        target_p95_latency=target_llm_latency,
-        target_p95_workflow_runtime=target_workflow_runtime,
+        target_llm_latency_p95=target_llm_latency,
+        target_workflow_runtime_p95=target_workflow_runtime,
         target_users=target_users,
         test_gpu_count=test_gpu_count,
         output_dir=output_dir,
@@ -161,39 +169,48 @@ def calc_command(ctx,
         result = await runner.run()
         return result
 
-    def print_results(result: CalcRunnerOutput, runner_config: CalcRunnerConfig):
-        click.echo(f"Estimated GPU count: {result.gpu_estimation.min_required_gpus}")
-        click.echo(f"Estimated GPU count (95th percentile): {result.gpu_estimation.p95_required_gpus}")
+    def print_results(results: CalcRunnerOutput):
 
         # Print header with target numbers
-        click.echo(f"Targets: LLM Latency ≤ {runner_config.target_p95_latency}s, "
-                   f"Workflow Runtime ≤ {runner_config.target_p95_workflow_runtime}s, "
+        click.echo(f"Targets: LLM Latency ≤ {runner_config.target_llm_latency_p95}s, "
+                   f"Workflow Runtime ≤ {runner_config.target_workflow_runtime_p95}s, "
                    f"Users = {runner_config.target_users}")
         click.echo(f"Test parameters: GPUs = {runner_config.test_gpu_count}")
 
-        # Print results as a table
+        click.echo(f"Estimated GPU count: {results.gpu_estimates.gpu_estimate_min}")
+        click.echo(f"Estimated GPU count (95th percentile): {results.gpu_estimates.gpu_estimate_p95}")
+
+        # Print per concurrency results as a table
+        click.echo("Per concurrency results:")
         table = []
-        for concurrency, metrics in result.metrics_per_concurrency.items():
-            gpu_estimate = result.gpu_estimation.gpu_estimates.get(concurrency, None)
+        for concurrency, metrics in results.sizing_metrics_per_concurrency.items():
+            gpu_estimates_per_concurrency = results.gpu_estimates_per_concurrency.get(
+                concurrency, GPUEstimatesPerConcurrency())
+            out_of_range_per_concurrency = results.out_of_range_runs_per_concurrency.get(
+                concurrency, OutOfRangeRunsPerConcurrency())
             table.append([
                 concurrency,
-                metrics.p95_latency,
-                metrics.p95_workflow_runtime,
+                metrics.llm_latency_p95,
+                metrics.workflow_runtime_p95,
                 metrics.total_runtime,
-                gpu_estimate,
-                result.gpu_estimation.gpu_estimates_by_wf_runtime.get(concurrency, None),
-                result.gpu_estimation.gpu_estimates_by_llm_latency.get(concurrency, None)
+                out_of_range_per_concurrency.num_runs_greater_than_target_latency,
+                out_of_range_per_concurrency.num_runs_greater_than_target_runtime,
+                gpu_estimates_per_concurrency.gpu_estimate,
+                gpu_estimates_per_concurrency.gpu_estimate_by_wf_runtime,
+                gpu_estimates_per_concurrency.gpu_estimate_by_llm_latency
             ])
         headers = [
             "Concurrency",
             "p95 Latency",
             "p95 Workflow Runtime",
             "Total Runtime",
+            "Fail Latency",
+            "Fail Runtime",
             "GPU Estimate",
             "WF Runtime Based",
-            "LLM Latency Based"
+            "LLM Latency Based",
         ]
         click.echo(tabulate(table, headers=headers, tablefmt="github"))
 
-    result = asyncio.run(run_calc())
-    print_results(result, runner_config)
+    results = asyncio.run(run_calc())
+    print_results(results)
