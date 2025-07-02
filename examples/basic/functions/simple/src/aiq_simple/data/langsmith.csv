@@ -1,0 +1,3 @@
+id,question,answer
+1,What is the langsmith playground,"The LangSmith Playground is a feature of the LangSmith platform that allows for rapid iteration and experimentation with different prompts and models, providing a user-friendly comparison view for test runs to track and diagnose regressions in test scores across multiple revisions of an application."
+2,How do I capture feedback,"To capture feedback, you can use LangSmith to attach feedback scores to logged traces, filter on traces with specific feedback tags and scores, and drill down into problematic points using the detailed trace view."
