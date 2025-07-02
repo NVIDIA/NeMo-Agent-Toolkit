@@ -64,6 +64,7 @@ async def _test_jira_api_call(oauth_client_manager: OAuthClientBase) -> typing.A
             cloud_id = site.get("id")
 
     if (cloud_id):
+        # Test the authentication with provider-specific API calls
         response = await oauth_client_manager.send_request(
             url=f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/2/project",
             http_method="GET",
@@ -87,8 +88,12 @@ async def oauth2_browser_auth_tool(config: OAuth2BrowserAuthTool, builder: Build
     """
     Authenticates to any registered API provider using OAuth 2.0 authentication code flow.
 
-    Extracts the provider name from user prompts like "authenticate to my registered API provider: jira"
-    and uses that name to authenticate. Opens a browser for OAuth consent and tests the connection.
+    Extracts the provider name from user prompts (e.g., "authenticate to my registered API provider: jira"),
+    and uses that name to retrieve a registered authentication manager. A user authentication callback is then invoked
+    to initiate the OAuth 2.0 authentication flow, opening a browser to complete the consent prompt.
+
+    All authentication credentials are stored and managed internally. The authentication manager then verifies
+    the authenticated connection by making an HTTP request and handling the response.
     """
 
     async def _arun(authentication_provider_name: str) -> str:
@@ -98,17 +103,19 @@ async def oauth2_browser_auth_tool(config: OAuth2BrowserAuthTool, builder: Build
         user_input_manager = aiq_context.user_interaction_manager
 
         try:
-            # Step 1: Get the OAuth registered authentication manager
+            # Get the oauth registered authentication manager
             oauth_client_manager: OAuthClientBase = await builder.get_authentication(authentication_provider_name)
 
-            # Step 2: Authenticate using browser consent flow
+            # Authenticate using oauth2.0 flow with browser consent prompt handling.
             authentication_error: AuthenticationError | None = await user_input_manager.authenticate_oauth_client(
                 oauth_client_manager, ConsentPromptMode.BROWSER)
 
+            # If an authentication error occurs, the authentication flow has failed
             if authentication_error:
                 return (f"Failed to authenticate provider: {authentication_provider_name}: "
                         f"Error: {authentication_error.error_code} ")
 
+            # Make a test API call to the API provider.
             test_api_call_result: typing.Any | None = await _test_jira_api_call(oauth_client_manager)
 
             return (f"Your registered API Provider name: [{authentication_provider_name}] is now authenticated.\n"
@@ -121,6 +128,6 @@ async def oauth2_browser_auth_tool(config: OAuth2BrowserAuthTool, builder: Build
     yield FunctionInfo.from_fn(
         _arun,
         description=(
-            "Authenticates to any registered API provider using OAuth 2.0 authentication code flow. "
+            "Authenticates to any registered API provider using OAuth 2.0 flow. "
             "When user mentions 'registered API provider: <name>', extract the provider name (e.g., 'jira') "
             "and pass it as authentication_provider_name parameter. Opens browser for OAuth consent and tests."))
