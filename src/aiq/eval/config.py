@@ -39,6 +39,12 @@ class EvaluationRunConfig(BaseModel):
     override: tuple[tuple[str, str], ...] = ()
     write_output: bool = True  # If false, the output will not be written to the output directory
 
+    # if true, the dataset is adjusted to a multiple of the concurrency
+    adjust_dataset_size: bool = False
+    # number of passes at each concurrency, if 0 the dataset is adjusted to a multiple of the concurrency
+    # only used if adjust_dataset_size is true
+    num_passes: int = 0
+
 
 class EvaluationRunOutput(BaseModel):
     """
@@ -64,8 +70,8 @@ class MultiEvaluationRunConfig(BaseModel):
     """
     base_config: EvaluationRunConfig
     overrides: dict[typing.Any, tuple[tuple[str, str], ...]]
-    # todo: make this independent of the parameter
-    reps_per_run: dict[typing.Any, int]
+    # number of passes at each concurrency
+    num_passes: int = 0
     write_output: bool = True
 
 
@@ -81,19 +87,28 @@ class CalcRunnerConfig(BaseModel):
     """
     Parameters used for a calc runner.
     """
+    # base config - not needed in offline mode
     config_file: Path
-    reps: int = 1
+    # if true workflow is not run, instead results from previous runs are used to estimate the GPU count
+    offline_mode: bool = False
+
+    # number of passes at each concurrency, if 0 the dataset is adjusted to a multiple of the concurrency
+    num_passes: int = 0
+    # concurrency values to test
     concurrencies: list[int]
 
+    # Targets for GPU estimation
     target_p95_latency: float
     target_p95_workflow_runtime: float
     target_users: int
 
+    # Information on the test setup needed for GPU estimation
     test_gpu_count: int
     test_gpu_type: str | None = None
 
+    # output directory for results
     output_dir: Path | None = None
-    offline_mode: bool = False
+    # if true, the job is stored in a new subdirectory of the output directory
     append_job: bool = False
 
 
@@ -101,8 +116,11 @@ class MetricPerConcurrency(BaseModel):
     """
     Metrics per concurrency.
     """
+    # p95 LLM latency
     p95_latency: float
+    # p95 workflow runtime
     p95_workflow_runtime: float
+    # total workflow runtime
     total_runtime: float
 
 
@@ -110,9 +128,15 @@ class GPUEstimation(BaseModel):
     """
     GPU estimation.
     """
+    # minimum number of GPUs required based on the highest concurrency that passed the SLA
     min_required_gpus: float = -1
+    # 95th percentile of the number of GPUs required based on the highest concurrency that passed the SLA
     p95_required_gpus: float = -1
-    # gpu estimates per concurrency
+    # gpu estimates per concurrency based on the workflow runtime
+    gpu_estimates_by_wf_runtime: dict[int, float] = {}
+    # gpu estimates per concurrency based on the LLM latency
+    gpu_estimates_by_llm_latency: dict[int, float] = {}
+    # gpu estimates per concurrency based on the number of users
     gpu_estimates: dict[int, float] = {}
 
 
@@ -120,6 +144,7 @@ class CalcRunnerOutput(BaseModel):
     """
     Output of the calc runner.
     """
+    # GPU estimation
     gpu_estimation: GPUEstimation
     # metric per tested concurrency
     metrics_per_concurrency: dict[int, MetricPerConcurrency]

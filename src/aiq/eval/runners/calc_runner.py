@@ -132,7 +132,7 @@ class CalcRunner:
 
         self.plot_concurrency_vs_p95_metrics(job_dir)
 
-        self.logger.info("Wrote output to %s", job_dir)
+        logger.info("Wrote output to %s", job_dir)
 
     def calc_p95_required_gpus(self,
                                valid_runs: list[tuple[int, MetricPerConcurrency]],
@@ -143,25 +143,34 @@ class CalcRunner:
         """
         # maintain the gpu estimation for each concurrency
         gpu_estimates = {}
+        gpu_estimates_by_wf_runtime = {}
+        gpu_estimates_by_llm_latency = {}
 
         for concurrency, metrics in valid_runs:
             observed_latency = metrics.p95_latency
             observed_runtime = metrics.p95_workflow_runtime
 
-            multiplier = 1.0
+            wf_runtime_multiplier = 1.0
+            llm_latency_multiplier = 1.0
             if use_latency:
-                multiplier *= observed_latency / self.target_latency
+                llm_latency_multiplier *= observed_latency / self.target_latency
             if use_runtime:
-                multiplier *= observed_runtime / self.target_runtime
+                wf_runtime_multiplier *= observed_runtime / self.target_runtime
 
-            required = (self.target_users / concurrency) * multiplier * self.test_gpu_count
-            logger.info("[GPU Estimation %s] Concurrency=%s, Latency=%.3fs, Runtime=%.3fs GPUs required=%.2f",
-                        "offline" if self.config.offline_mode else "online",
-                        concurrency,
-                        observed_latency,
-                        observed_runtime,
-                        required)
-            gpu_estimates[concurrency] = required
+            gpu_estimates_by_wf_runtime[concurrency] = wf_runtime_multiplier
+            gpu_estimates_by_llm_latency[concurrency] = llm_latency_multiplier
+            gpu_estimates[concurrency] = (
+                self.target_users / concurrency) * wf_runtime_multiplier * llm_latency_multiplier * self.test_gpu_count
+            logger.info(
+                "[GPU Estimation %s] Concurrency=%s, Latency=%.3fs, Runtime=%.3fs"
+                "GPUs required=%.2f (wf_runtime_based=%.2f, llm_latency_based=%.2f)",
+                "offline" if self.config.offline_mode else "online",
+                concurrency,
+                observed_latency,
+                observed_runtime,
+                gpu_estimates[concurrency],
+                gpu_estimates_by_wf_runtime[concurrency],
+                gpu_estimates_by_llm_latency[concurrency])
 
         if not gpu_estimates:
             logger.warning("No valid GPU estimates available.")
@@ -180,7 +189,9 @@ class CalcRunner:
 
         return GPUEstimation(p95_required_gpus=math.ceil(p95_required_gpus),
                              min_required_gpus=math.ceil(min_required_gpus),
-                             gpu_estimates=gpu_estimates)
+                             gpu_estimates=gpu_estimates,
+                             gpu_estimates_by_wf_runtime=gpu_estimates_by_wf_runtime,
+                             gpu_estimates_by_llm_latency=gpu_estimates_by_llm_latency)
 
     def calc_gpu_count(self, metrics_per_concurrency: dict[int, MetricPerConcurrency]) -> GPUEstimation:
         """
@@ -294,13 +305,16 @@ class CalcRunner:
         concurrency_key = "eval.general.max_concurrency"
         alias_key = "eval.general.workflow_alias"
         overrides = {
-            c: ((concurrency_key, str(c)), (alias_key, "workflow_" + str(c)))
+            c: ((concurrency_key, str(c)), (alias_key, "wf_concurrency_" + str(c)))
             for c in self.config.concurrencies
         }
-        reps_per_concurrency = {c: self.config.reps * c for c in self.config.concurrencies}
+        reps_per_concurrency = {c: self.config.num_passes * c for c in self.config.concurrencies}
 
         # Treat the reps as the the number of times to run at the specific concurrency
-        eval_run_config = EvaluationRunConfig(config_file=self.config.config_file, write_output=False)
+        eval_run_config = EvaluationRunConfig(config_file=self.config.config_file,
+                                              write_output=False,
+                                              adjust_dataset_size=True,
+                                              num_passes=self.config.num_passes)
 
         config = MultiEvaluationRunConfig(base_config=eval_run_config,
                                           overrides=overrides,

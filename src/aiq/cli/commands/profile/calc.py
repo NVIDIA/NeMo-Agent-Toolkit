@@ -84,11 +84,12 @@ logger = logging.getLogger(__name__)
     help="Comma-separated list of concurrency values to test (e.g., 1,2,4,8). Default: 1,2,4,8",
 )
 @click.option(
-    "--reps",
+    "--num_passes",
     type=int,
     required=False,
-    default=1,
-    help="Number of repetitions for the evaluation. Default: 1",
+    default=0,
+    help="Number of passes at each concurrency for the evaluation."
+    " If set to 0 the dataset is adjusted to a multiple of the concurrency. Default: 0",
 )
 @click.option(
     "--append_job",
@@ -108,7 +109,7 @@ def calc_command(ctx,
                  test_gpu_count,
                  output_dir,
                  concurrencies,
-                 reps,
+                 num_passes,
                  append_job):
     """Estimate GPU count and plot metrics for a workflow profile."""
     # Only use CLI concurrencies, with default
@@ -150,7 +151,7 @@ def calc_command(ctx,
         target_users=target_users,
         test_gpu_count=test_gpu_count,
         output_dir=output_dir,
-        reps=reps,
+        num_passes=num_passes,
         offline_mode=offline_mode,
         append_job=append_job,
     )
@@ -174,9 +175,24 @@ def calc_command(ctx,
         table = []
         for concurrency, metrics in result.metrics_per_concurrency.items():
             gpu_estimate = result.gpu_estimation.gpu_estimates.get(concurrency, None)
-            table.append(
-                [concurrency, metrics.p95_latency, metrics.p95_workflow_runtime, metrics.total_runtime, gpu_estimate])
-        headers = ["Concurrency", "p95 Latency", "p95 Workflow Runtime", "Total Runtime", "GPU Estimate"]
+            table.append([
+                concurrency,
+                metrics.p95_latency,
+                metrics.p95_workflow_runtime,
+                metrics.total_runtime,
+                gpu_estimate,
+                result.gpu_estimation.gpu_estimates_by_wf_runtime.get(concurrency, None),
+                result.gpu_estimation.gpu_estimates_by_llm_latency.get(concurrency, None)
+            ])
+        headers = [
+            "Concurrency",
+            "p95 Latency",
+            "p95 Workflow Runtime",
+            "Total Runtime",
+            "GPU Estimate",
+            "WF Runtime Based",
+            "LLM Latency Based"
+        ]
         click.echo(tabulate(table, headers=headers, tablefmt="github"))
 
     result = asyncio.run(run_calc())

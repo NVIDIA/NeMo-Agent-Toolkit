@@ -33,12 +33,22 @@ class DatasetHandler:
     One DatasetHandler object is needed for each dataset to be evaluated.
     """
 
-    def __init__(self, dataset_config: EvalDatasetConfig, reps: int):
+    def __init__(self,
+                 dataset_config: EvalDatasetConfig,
+                 reps: int,
+                 concurrency: int,
+                 num_passes: int | None = None,
+                 adjust_dataset_size: bool = False):
         from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
 
         self.dataset_config = dataset_config
         self.dataset_filter = DatasetFilter(dataset_config.filter)
         self.reps = reps
+
+        # number of passes at specific concurrency
+        self.concurrency = concurrency
+        self.num_passes = num_passes
+
         # Helpers
         self.intermediate_step_adapter = IntermediateStepAdapter()
 
@@ -109,6 +119,32 @@ class DatasetHandler:
 
         return input_df
 
+    def adjust_dataset(self, input_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Prepare dataset for evaluation by limiting rows to a multiple of concurrency.
+
+        If num_passes is specified, the dataset is sized to (concurrency * num_passes).
+        Otherwise, it is truncated or expanded to the largest multiple of concurrency ≤ dataset_size.
+        """
+        if not self.adjust_dataset_size:
+            return input_df
+
+        if self.num_passes > 0:
+            adjusted_size = self.concurrency * self.num_passes
+        else:
+            adjusted_size = (self.dataset_size // self.concurrency) * self.concurrency
+
+        if adjusted_size == 0:
+            raise ValueError(
+                f"Requested size ({self.dataset_size}) or num_passes is too small for concurrency ({self.concurrency})."
+            )
+
+        if input_df.shape[0] < adjusted_size:
+            input_df = pd.concat([input_df] * ((adjusted_size // input_df.shape[0]) + 1), ignore_index=True)
+
+        # In both cases, return only the first adjusted_size rows
+        return input_df.head(adjusted_size)
+
     def get_eval_input_from_dataset(self, dataset: str) -> EvalInput:
         # read the dataset and convert it to EvalInput
 
@@ -130,6 +166,9 @@ class DatasetHandler:
         # If more than one repetition is needed, replicate the rows
         if self.reps > 1:
             input_df = self.setup_reps(input_df)
+
+        # Limit the dataset size if needed
+        input_df = self.adjust_dataset(input_df)
 
         # Convert the DataFrame to a list of EvalInput objects
         return self.get_eval_input_from_df(input_df)
