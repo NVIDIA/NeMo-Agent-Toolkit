@@ -21,6 +21,12 @@ from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
 from aiq.data_models.function import FunctionBaseConfig
 
+# Import the standalone read function
+try:
+    from .confluence_page import read_confluence_page, ConfluencePageReaderConfig
+except ImportError:
+    from confluence_page import read_confluence_page, ConfluencePageReaderConfig
+
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -62,80 +68,92 @@ def _get_auth_headers(config: ConfluenceClientConfig) -> Dict[str, str]:
     logger.debug("Using Bearer token authentication")
     return headers
 
+async def search_confluence(query: str, config: ConfluenceClientConfig) -> Dict[str, Any]:
+    """Standalone version of search_confluence that can be imported for testing."""
+    try:
+        base_url = config.base_url or os.getenv('CONFLUENCE_BASE_URL')
+        if not base_url:
+            return {"status": "error", "error": "Missing base_url"}
+
+        headers = _get_auth_headers(config)
+
+        if base_url.endswith('/'):
+            base_url = base_url[:-1]
+
+        search_url = f"{base_url}/rest/api/content/search"
+        params = {
+            "cql": f'text ~ "{query}"',
+            "limit": config.max_results,
+            "expand": "version,space,body.storage"
+        }
+
+        if config.space_keys:
+            space_filter = " OR ".join([f'space = "{space}"' for space in config.space_keys])
+            params["cql"] = f'({params["cql"]}) AND ({space_filter})'
+
+        logger.debug(f"Searching Confluence: {search_url}")
+        async with httpx.AsyncClient(timeout=config.timeout) as client:
+            response = await client.get(search_url, headers=headers, params=params)
+
+            if response.status_code != 200:
+                return {
+                    "status": "error",
+                    "error": f"Search failed: {response.status_code} - {response.text}"
+                }
+
+            data = response.json()
+            results = data.get("results", [])
+
+            formatted_results = []
+            for result in results:
+                content = result.get("body", {}).get("storage", {}).get("value", "")
+                clean_content = re.sub(r'<[^>]+>', ' ', content)
+                clean_content = re.sub(r'\s+', ' ', clean_content).strip()
+
+                page_url = f"{base_url}/pages/viewpage.action?pageId={result.get('id')}"
+
+                formatted_results.append({
+                    "id": result.get("id"),
+                    "title": result.get("title"),
+                    "content": clean_content,
+                    "url": page_url,
+                })
+
+            # Always fetch full content for each page
+            page_reader_config = ConfluencePageReaderConfig(
+                base_url=config.base_url,
+                api_token=config.api_token,
+                timeout=config.timeout
+            )
+            
+            for result in formatted_results:
+                full_page_data = await read_confluence_page(result["url"], page_reader_config)
+                if full_page_data.get("status") == "success":
+                    result["full_content"] = full_page_data.get("content", "")
+                else:
+                    result["full_content_error"] = full_page_data.get("error", "Unknown error")
+
+            return {
+                "status": "success",
+                "query": query,
+                "total_results": len(formatted_results),
+                "results": formatted_results,
+                "summary": f"Found {len(formatted_results)} relevant pages for query: '{query}'"
+            }
+
+    except Exception as e:
+        logger.exception(f"Error searching Confluence: {e}")
+        return {"status": "error", "error": str(e)}
+
 @register_function(config_type=ConfluenceClientConfig)
 async def confluence_client(config: ConfluenceClientConfig, builder: Builder):
     """Register the Confluence API client function."""
 
-    async def search_confluence(query: str) -> Dict[str, Any]:
-        try:
-            base_url = config.base_url or os.getenv('CONFLUENCE_BASE_URL')
-            if not base_url:
-                return {"status": "error", "error": "Missing base_url"}
-
-            headers = _get_auth_headers(config)
-
-            if base_url.endswith('/'):
-                base_url = base_url[:-1]
-
-            search_url = f"{base_url}/rest/api/content/search"
-            params = {
-                "cql": f'text ~ "{query}"',
-                "limit": config.max_results,
-                "expand": "version,space,body.storage"
-            }
-
-            if config.space_keys:
-                space_filter = " OR ".join([f'space = "{space}"' for space in config.space_keys])
-                params["cql"] = f'({params["cql"]}) AND ({space_filter})'
-
-            logger.debug(f"Searching Confluence: {search_url}")
-            async with httpx.AsyncClient(timeout=config.timeout) as client:
-                response = await client.get(search_url, headers=headers, params=params)
-
-                if response.status_code != 200:
-                    return {
-                        "status": "error",
-                        "error": f"Search failed: {response.status_code} - {response.text}"
-                    }
-
-                data = response.json()
-                results = data.get("results", [])
-
-                formatted_results = []
-                for result in results:
-                    content = result.get("body", {}).get("storage", {}).get("value", "")
-                    clean_content = re.sub(r'<[^>]+>', ' ', content)
-                    clean_content = re.sub(r'\s+', ' ', clean_content).strip()
-
-                    if len(clean_content) > 500:
-                        clean_content = clean_content[:500] + "..."
-
-                    page_url = f"{base_url}/pages/viewpage.action?pageId={result.get('id')}"
-
-                    formatted_results.append({
-                        "id": result.get("id"),
-                        "title": result.get("title"),
-                        "content": clean_content,
-                        "url": page_url,
-                        "space": result.get("space", {}).get("name"),
-                        "type": result.get("type"),
-                        "created": result.get("created"),
-                        "last_modified": result.get("version", {}).get("when")
-                    })
-
-                return {
-                    "status": "success",
-                    "query": query,
-                    "total_results": len(formatted_results),
-                    "results": formatted_results,
-                    "summary": f"Found {len(formatted_results)} relevant pages for query: '{query}'"
-                }
-
-        except Exception as e:
-            logger.exception(f"Error searching Confluence: {e}")
-            return {"status": "error", "error": str(e)}
+    async def search_confluence_wrapper(query: str) -> Dict[str, Any]:
+        """Wrapper function for the registered tool."""
+        return await search_confluence(query, config)
 
     yield FunctionInfo.from_fn(
-        search_confluence,
-        description="Searches Confluence for content matching the query. Returns relevant pages with content snippets and links."
+        search_confluence_wrapper,
+        description="Searches Confluence for content matching the query and retrieves full content from all found pages. Returns both individual page details and complete content from each page."
     )
