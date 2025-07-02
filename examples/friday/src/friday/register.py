@@ -11,4 +11,4 @@ from .confluence_search import confluence_client
 from .loki_tools import loki_log_analyzer
 
 # Export all functions
-__all__ = ["confluence_client", "loki_log_analyzer"] 
+__all__ = ["confluence_client", "loki_log_analyzer", "confluence_page_reader"] 

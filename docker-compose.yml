@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # Backend service for all three servers (ON_CALL, FRIDAY, SLACK)
+  nemo-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        - REPO_URL=https://github.com/harshr7451/NeMo-Agent-Toolkit.git
+        - BRANCH_NAME=develop
+    ports:
+      - "8000:8000"  # ON_CALL backend
+      - "8001:8001"  # FRIDAY backend  
+      - "8002:8002"  # SLACK backend
+    environment:
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+      - GITLAB_API_TOKEN=${GITLAB_API_TOKEN:-}
+      - PAGERDUTY_API_TOKEN=${PAGERDUTY_API_TOKEN:-}
+      - PAGERDUTY_API_URL=${PAGERDUTY_API_URL:-https://api.pagerduty.com}
+      - CONFLUENCE_API_TOKEN=${CONFLUENCE_API_TOKEN:-}
+      - CONFLUENCE_BASE_URL=${CONFLUENCE_BASE_URL:-https://confluence.nvidia.com/}
+      - LOKI_API_TOKEN=${LOKI_API_TOKEN:-}
+    volumes:
+      - backend_logs:/app/logs
+    networks:
+      - nemo-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Frontend UI service
+  nemo-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+      args:
+        - REPO_URL=https://github.com/harshr7451/NeMo-Agent-Toolkit.git
+        - BRANCH_NAME=develop
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_BACKEND_URL=http://nemo-backend:8000
+      - NEXT_PUBLIC_FRIDAY_BACKEND_URL=http://nemo-backend:8001
+      - NEXT_PUBLIC_SLACK_BACKEND_URL=http://nemo-backend:8002
+    depends_on:
+      nemo-backend:
+        condition: service_healthy
+    networks:
+      - nemo-network
+
+volumes:
+  backend_logs:
+
+networks:
+  nemo-network:
+    driver: bridge 

@@ -1,0 +1,66 @@
+# Use Ubuntu latest stable as base image
+FROM ubuntu:22.04
+
+# Set build arguments
+ARG REPO_URL
+ARG BRANCH_NAME=develop
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV NODE_ENV=production
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    git-lfs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 18.x
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs
+
+# Set working directory
+WORKDIR /app
+
+# Clone the repository
+RUN git clone --branch ${BRANCH_NAME} ${REPO_URL} .
+
+# Initialize Git LFS (if needed for UI assets)
+RUN git lfs install && \
+    git submodule update --init --recursive && \
+    git lfs fetch && \
+    git lfs pull
+
+# Navigate to UI directory and install dependencies
+WORKDIR /app/external/aiqtoolkit-opensource-ui
+
+# Install npm dependencies
+RUN npm install
+
+# Build the application
+RUN npm run build
+
+# Create startup script
+COPY <<EOF /app/start_ui.sh
+#!/bin/bash
+set -e
+
+cd /app/external/aiqtoolkit-opensource-ui
+
+echo "Starting UI server on port 3000..."
+npm start
+EOF
+
+# Make the startup script executable
+RUN chmod +x /app/start_ui.sh
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3000 || exit 1
+
+# Start the UI
+CMD ["/app/start_ui.sh"] 

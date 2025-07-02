@@ -33,25 +33,27 @@ const getDefaultSettingsForMode = (mode: AppMode): ModeSpecificSettings => {
     intermediateStepOverride: true,
   };
 
-  // Mode-specific URLs - Backend ports: FRIDAY=8001, ON_CALL=8000
-  // Don't use environment variables here - use hardcoded mode-specific ports
+  // Mode-specific URLs - Use environment variables for Docker deployment
   if (mode === 'FRIDAY') {
+    const baseURL = process?.env?.NEXT_PUBLIC_FRIDAY_BACKEND_URL || 'http://127.0.0.1:8001';
     return {
       ...baseSettings,
-      chatCompletionURL: 'http://127.0.0.1:8001/chat/stream',
-      webSocketURL: 'ws://127.0.0.1:8001/websocket',
+      chatCompletionURL: `${baseURL}/chat/stream`,
+      webSocketURL: baseURL.replace('http', 'ws') + '/websocket',
     };
   } else if (mode === 'ON CALL') {
+    const baseURL = process?.env?.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000';
     return {
       ...baseSettings,
-      chatCompletionURL: 'http://127.0.0.1:8000/chat/stream',
-      webSocketURL: 'ws://127.0.0.1:8000/websocket',
+      chatCompletionURL: `${baseURL}/chat/stream`,
+      webSocketURL: baseURL.replace('http', 'ws') + '/websocket',
     };
   } else { // SLACK
+    const baseURL = process?.env?.NEXT_PUBLIC_SLACK_BACKEND_URL || 'http://127.0.0.1:8002';
     return {
       ...baseSettings,
-      chatCompletionURL: 'http://127.0.0.1:8002/chat/stream',
-      webSocketURL: 'ws://127.0.0.1:8002/websocket',
+      chatCompletionURL: `${baseURL}/chat/stream`,
+      webSocketURL: baseURL.replace('http', 'ws') + '/websocket',
     };
   }
 };
