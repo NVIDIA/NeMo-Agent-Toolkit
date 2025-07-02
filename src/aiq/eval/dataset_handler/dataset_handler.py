@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import json
+import math
 
 import pandas as pd
 
@@ -133,15 +134,20 @@ class DatasetHandler:
         if self.concurrency <= 0:
             raise ValueError("Concurrency must be > 0")
 
-        if self.num_passes and self.num_passes > 0:
+        original_size = input_df.shape[0]
+        if self.num_passes > 0:
             adjusted_size = self.concurrency * self.num_passes
         else:
-            adjusted_size = (input_df.shape[0] // self.concurrency) * self.concurrency
+            # Adjusted size should be the largest multiple of concurrency ≥ concurrency and ≤ original_size
+            # If original_size < concurrency, we must replicate to reach one full batch
+            if original_size >= self.concurrency:
+                adjusted_size = (original_size // self.concurrency) * self.concurrency
+            else:
+                adjusted_size = self.concurrency
 
         if adjusted_size == 0:
             raise ValueError("Input dataset too small for even one batch at given concurrency.")
 
-        original_size = input_df.shape[0]
         id_col = self.dataset_config.id_key
 
         if original_size < adjusted_size:
@@ -149,7 +155,7 @@ class DatasetHandler:
             input_df[id_col] = input_df[id_col].astype(str).str.replace(r"_rep\d+$", "", regex=True)
 
             # Replicate rows
-            repeat_count = (adjusted_size // original_size) + 1
+            repeat_count = math.ceil(adjusted_size / original_size)
             input_df = pd.concat([input_df] * repeat_count, ignore_index=True)
 
             # Update IDs to include unique _repN suffix

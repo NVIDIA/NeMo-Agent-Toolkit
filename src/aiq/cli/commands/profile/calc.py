@@ -196,19 +196,19 @@ def calc_command(ctx,
                 out_of_range_per_concurrency.num_runs_greater_than_target_latency,
                 out_of_range_per_concurrency.num_runs_greater_than_target_runtime,
                 gpu_estimates_per_concurrency.gpu_estimate,
+                gpu_estimates_per_concurrency.gpu_estimate_by_llm_latency,
                 gpu_estimates_per_concurrency.gpu_estimate_by_wf_runtime,
-                gpu_estimates_per_concurrency.gpu_estimate_by_llm_latency
             ])
         headers = [
             "Concurrency",
-            "p95 Latency",
-            "p95 Workflow Runtime",
+            "LLM Latency",
+            "WF Runtime",
             "Total Runtime",
-            "Fail Latency",
-            "Fail Runtime",
-            "GPU Estimate",
-            "WF Runtime Based",
-            "LLM Latency Based",
+            "Latency Fails",
+            "Runtime Fails",
+            "GPUs (Overall)",
+            "GPUs (LLM Latency)",
+            "GPUs (WF Runtime)",
         ]
         click.echo(tabulate(table, headers=headers, tablefmt="github"))
 
