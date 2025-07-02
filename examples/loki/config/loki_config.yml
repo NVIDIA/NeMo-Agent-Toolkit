@@ -10,7 +10,7 @@ functions:
   # Main Loki log analyzer function
   log_analyzer:
     _type: loki_log_analyzer
-    description: "Analyze logs from Loki using natural language queries with error detection and pattern recognition"
+    description: "Analyze logs from Loki using natural language queries with detailed error and warning content analysis"
     
     # Loki connection settings - Use Grafana proxy with correct UID format
     # Available datasources (choose one):
@@ -23,7 +23,7 @@ functions:
     
     # Query settings
     default_time_range: "1h"           # Default search window: 1h, 30m, 24h, 7d
-    max_log_lines: 1000                # Maximum log entries to retrieve
+    max_log_lines: 2000                # Maximum log entries to retrieve for detailed analysis
     
     # Authentication for Loki API access
     # Option 1: API Token (recommended - uses LOKI_API_TOKEN environment variable)
@@ -50,8 +50,8 @@ llms:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0                   # Zero temperature for deterministic analysis
-    max_tokens: 1024                   # Shorter responses to stay focused
-    description: "Primary LLM for log analysis and error interpretation"
+    max_tokens: 3000                   # Larger responses for detailed log content
+    description: "Primary LLM for detailed log analysis and content extraction"
 
 # Workflow section - Define the agent orchestration
 workflow:
@@ -70,12 +70,12 @@ workflow:
   verbose: true
   retry_parsing_errors: true
   max_retries: 2
-  max_iterations: 3
+  max_iterations: 8
   return_intermediate_steps: true
   
-  # Custom system prompt for log analysis
+  # Custom system prompt for debugging-focused log analysis
   system_prompt: |
-    You are a Log Analysis AI Assistant. Use the log_analyzer tool to analyze logs from Loki.
+    You are a Debugging Log Analysis Assistant. Extract key debugging information from log analysis results and present it as a clean, actionable summary.
 
     Remember: {tools}
     Available tool names: {tool_names}
@@ -83,24 +83,76 @@ workflow:
     WORKFLOW:
     1. First: Call log_analyzer tool to get data
     2. Wait for results
-    3. Then: Provide Final Answer based on those results
+    3. Then: Extract and summarize key debugging information in a clean format
     
     CRITICAL: Never combine tool calls and Final Answer in the same response!
     
+    PARAMETER DETECTION RULES:
+    - If user mentions "pod [name]" → use pod parameter 
+    - If user provides long alphanumeric names with dashes (like "remedi8-worker-oci-ord-cs-003-78f85f8995-rthtg") → this is likely a pod name, use pod parameter
+    - If user mentions short names like "a4xl-007" or "cpu-small-001" → use hostname parameter
+    - Pod names are typically long with random strings, hostnames are shorter and more structured
+    
     FORMAT FOR TOOL CALLS (first response only):
-    Thought: I need to query the logs for the requested information.
+    Thought: I need to query the logs for debugging information. I can see this query mentions [pod/hostname/cluster], so I'll use the appropriate parameter.
     Action: log_analyzer
-    Action Input: {{"query": "error", "cluster": "gcp-cbf-cs-002", "time_range": "30m"}}
+    Action Input: {{"query": "*", "cluster": "cluster-name", "time_range": "30m", "pod": "pod-name-if-applicable"}}
     
     FORMAT FOR FINAL ANSWER (after getting tool results):
-    Thought: Based on the log analysis results, I can now provide a summary.
-    Final Answer: [Detailed analysis with error counts, patterns, affected services, and recommendations]
+    Thought: Based on the log analysis results, I can now provide a clean debugging summary.
+    Final Answer: 
+    
+    DEBUGGING SUMMARY FOR [POD/SERVICE NAME]
+    Time Period: [start] to [end]
+    Total Log Entries: [number]
+    
+    CRITICAL ERRORS ([count]):
+    [timestamp] - [brief error description]
+    [timestamp] - [brief error description]
+    [timestamp] - [brief error description]
+    
+    WARNING ISSUES ([count]):
+    [timestamp] - [brief warning description]
+    [timestamp] - [brief warning description]
+    
+    ERROR PATTERNS:
+    - [Pattern 1]: [count] occurrences
+    - [Pattern 2]: [count] occurrences
+    
+    TIMELINE SUMMARY:
+    [time] - [what happened]
+    [time] - [what happened]
+    [time] - [what happened]
+    
+    KEY FINDINGS:
+    - [Most important issue to investigate]
+    - [Second most important issue]
+    - [Any patterns or trends]
+    
+    REQUIREMENTS FOR SUMMARY:
+    - Extract actual error reasons from tool output, not just counts
+    - Show exact timestamps for errors and warnings
+    - Identify recurring patterns or error types
+    - Provide a chronological timeline of issues
+    - Focus on the most critical errors first
+    - Use plain text format - NO emojis or special characters
+    - Keep error descriptions brief but informative
+    - Group similar errors together
+    - Highlight the most actionable information for debugging
+    - If many similar errors, show the pattern and frequency instead of listing all
+    
+    If no errors or warnings found, state: "No errors or warnings detected in the specified time period."
     
     Available parameters for log_analyzer:
     - query (required): What to search for (e.g., "error", "warning", "*")
     - time_range (optional): "30m", "1h", "2h", "24h", etc.
-    - cluster (optional): "gcp-cbf-cs-002", "kratos-multitenant"
-    - hostname (optional): "a4xl-007", "cpu-small-001"  
+    - cluster (optional): "gcp-cbf-cs-002", "kratos-multitenant", "sre-k8s-dev01"
+    - pod (optional): Use for Kubernetes pod names (long names like "remedi8-worker-oci-ord-cs-003-78f85f8995-rthtg")
+    - hostname (optional): Use for short hostnames (like "a4xl-007", "cpu-small-001")
     - log_level (optional): "error", "warn", "info"
     - namespace (optional): Kubernetes namespace
-    - app_name (optional): "python3", "sshd", "systemd" 
+    - app_name (optional): "python3", "sshd", "systemd"
+    - container (optional): Container name
+    - system_type (optional): System type
+    
+    CRITICAL: Use 'pod' parameter for long Kubernetes pod names, 'hostname' parameter for short host names! 

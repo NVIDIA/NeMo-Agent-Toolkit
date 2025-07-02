@@ -27,7 +27,7 @@ functions:
   # Loki log analysis functionality
   log_analyzer:
     _type: friday/loki_log_analyzer
-    description: "Analyze logs from Loki using natural language queries with error detection and pattern recognition"
+    description: "Analyze logs from Loki using natural language queries with detailed error and warning content analysis"
     
     # Loki connection settings - Use Grafana proxy with correct UID format
     # Available datasources (choose one):
@@ -40,7 +40,7 @@ functions:
     
     # Query settings
     default_time_range: "1h"           # Default search window: 1h, 30m, 24h, 7d
-    max_log_lines: 1000                # Maximum log entries to retrieve
+    max_log_lines: 2000                # Maximum log entries to retrieve for detailed analysis
     
     # Authentication for Loki API access
     # Option 1: API Token (recommended - uses LOKI_API_TOKEN environment variable)
@@ -90,7 +90,7 @@ workflow:
   verbose: true
   retry_parsing_errors: true
   max_retries: 3
-  max_iterations: 15
+  max_iterations: 20
 
   # Custom system prompt for Friday AI Assistant
   system_prompt: |
@@ -136,9 +136,9 @@ workflow:
     Action Input: {{"url": "<confluence page url>"}}
 
     # For log analysis:
-    Thought: I need to query the logs for the requested information.
+    Thought: I need to query the logs for detailed content analysis. I can see this query mentions [pod/hostname/cluster], so I'll use the appropriate parameter.
     Action: log_analyzer
-    Action Input: {{"query": "<keyword>", "cluster": "<cluster_name>", "time_range": "<time_range>"}}
+    Action Input: {{"query": "<keyword>", "cluster": "<cluster_name>", "time_range": "<time_range>", "pod": "<pod-name-if-applicable>"}}
 
 
     FORMAT FOR FINAL ANSWER (after getting tool results):
@@ -184,11 +184,22 @@ workflow:
     Available parameters for confluence_page_reader:
     - url (required): The full URL of the Confluence page to read
     Available parameters for log_analyzer:
-    - query (required): What to search for (e.g., "error", "warning", "*")
+    - query (required): What to search for (e.g., "error", "warning", "*", "summary")
     - time_range (optional): "30m", "1h", "2h", "24h", etc.
-    - cluster (optional): "gcp-cbf-cs-002", "kratos-multitenant"
-    - hostname (optional): "a4xl-007", "cpu-small-001"  
+    - cluster (optional): "gcp-cbf-cs-002", "kratos-multitenant", "sre-k8s-dev01"
+    - pod (optional): Use for Kubernetes pod names (long names like "remedi8-worker-oci-ord-cs-003-78f85f8995-rthtg")
+    - hostname (optional): Use for short hostnames (like "a4xl-007", "cpu-small-001")
     - log_level (optional): "error", "warn", "info"
+    - namespace (optional): Kubernetes namespace
+    - app_name (optional): "python3", "sshd", "systemd"
+    - container (optional): Container name
+    - system_type (optional): System type
+    
+    LOG ANALYSIS PARAMETER DETECTION:
+    - If user mentions "pod [name]" → use pod parameter 
+    - If user provides long alphanumeric names with dashes (like "remedi8-worker-oci-ord-cs-003-78f85f8995-rthtg") → this is likely a pod name, use pod parameter
+    - If user mentions short names like "a4xl-007" or "cpu-small-001" → use hostname parameter
+    - Pod names are typically long with random strings, hostnames are shorter and more structured
 
     TOOL USAGE STRATEGIES:
 
@@ -203,7 +214,12 @@ workflow:
     - Ideal for getting detailed information from specific documentation pages
 
     **Log Analysis (log_analyzer):**
-    - Use analyze_logs with natural language queries
-    - Apply appropriate filters: cluster, hostname, log_level, time_range
-    - Focus on error detection and pattern recognition
-    - Provide actionable insights and recommendations 
+    - Use analyze_logs with natural language queries for detailed content analysis
+    - Apply appropriate filters: cluster, pod, hostname, log_level, time_range, namespace, app_name
+    - CRITICAL: Use 'pod' parameter for long Kubernetes pod names, 'hostname' parameter for short host names
+    - Focus on extracting exact error messages and warning details (not just counts)
+    - Show grouped identical messages with frequency and time ranges
+    - Display full log content with timestamps for debugging
+    - Provide pattern analysis and service impact assessment
+    - Present findings in chronological order when relevant
+    - Deliver actionable insights based on actual log content 
