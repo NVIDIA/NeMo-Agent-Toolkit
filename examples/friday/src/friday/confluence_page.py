@@ -62,63 +62,76 @@ def _get_auth_headers(config: ConfluencePageReaderConfig) -> Dict[str, str]:
     logger.debug("Using Bearer token authentication")
     return headers
 
+async def read_confluence_page(url: str, config: ConfluencePageReaderConfig) -> Dict[str, Any]:
+    """
+    Standalone function to read a Confluence page by URL.
+    Can be imported and used by other modules.
+    """
+    try:
+        base_url = config.base_url or os.getenv('CONFLUENCE_BASE_URL')
+        if not base_url:
+            return {"status": "error", "error": "Missing base_url"}
+        headers = _get_auth_headers(config)
+        
+        # Extract page ID from URL
+        # Expected URL format: https://domain/pages/viewpage.action?pageId=123456
+        # or https://domain/display/SPACE/Page+Title
+        page_id = None
+        if "pageId=" in url:
+            page_id = url.split("pageId=")[1].split("&")[0]
+        elif "/display/" in url:
+            # For display URLs, we need to search by title
+            return {"status": "error", "error": "Display URLs not supported yet. Please use direct page URLs with pageId parameter."}
+        else:
+            return {"status": "error", "error": "Invalid Confluence URL format. Expected URL with pageId parameter."}
+        
+        if base_url.endswith('/'):
+            base_url = base_url[:-1]
+        page_url = f"{base_url}/rest/api/content/{page_id}"
+        params = {
+            "expand": "version,space,body.storage,children.page"
+        }
+        logger.debug(f"Fetching page: {page_url}")
+        async with httpx.AsyncClient(timeout=config.timeout) as client:
+            response = await client.get(page_url, headers=headers, params=params)
+            if response.status_code != 200:
+                return {
+                    "status": "error",
+                    "error": f"Page fetch failed: {response.status_code} - {response.text}"
+                }
+            page_data = response.json()
+            content = page_data.get("body", {}).get("storage", {}).get("value", "")
+            
+            # Remove all HTML tags including links, but keep the text content
+            clean_content = re.sub(r'<[^>]+>', ' ', content)
+            
+            # Remove any remaining HTML entities
+            clean_content = re.sub(r'&[a-zA-Z]+;', ' ', clean_content)
+            
+            # Clean up multiple spaces and whitespace
+            clean_content = re.sub(r'\s+', ' ', clean_content).strip()
+            
+            # Remove any remaining artifacts like brackets or special characters from HTML
+            clean_content = re.sub(r'[\[\]{}]', '', clean_content)
+            view_url = f"{base_url}/pages/viewpage.action?pageId={page_data.get('id')}"
+            return {
+                "status": "success",
+                "id": page_data.get("id"),
+                "title": page_data.get("title"),
+                "content": clean_content,
+                "url": view_url,
+            }
+    except Exception as e:
+        logger.exception(f"Error fetching page: {e}")
+        return {"status": "error", "error": str(e)}
+
 @register_function(config_type=ConfluencePageReaderConfig)
 async def confluence_page_reader(config: ConfluencePageReaderConfig, builder: Builder):
     """Register the Confluence page reader function."""
     
     async def read_page(url: str) -> Dict[str, Any]:
-        try:
-            base_url = config.base_url or os.getenv('CONFLUENCE_BASE_URL')
-            if not base_url:
-                return {"status": "error", "error": "Missing base_url"}
-            headers = _get_auth_headers(config)
-            
-            # Extract page ID from URL
-            # Expected URL format: https://domain/pages/viewpage.action?pageId=123456
-            # or https://domain/display/SPACE/Page+Title
-            page_id = None
-            if "pageId=" in url:
-                page_id = url.split("pageId=")[1].split("&")[0]
-            elif "/display/" in url:
-                # For display URLs, we need to search by title
-                return {"status": "error", "error": "Display URLs not supported yet. Please use direct page URLs with pageId parameter."}
-            else:
-                return {"status": "error", "error": "Invalid Confluence URL format. Expected URL with pageId parameter."}
-            
-            if base_url.endswith('/'):
-                base_url = base_url[:-1]
-            page_url = f"{base_url}/rest/api/content/{page_id}"
-            params = {
-                "expand": "version,space,body.storage,children.page"
-            }
-            logger.debug(f"Fetching page: {page_url}")
-            async with httpx.AsyncClient(timeout=config.timeout) as client:
-                response = await client.get(page_url, headers=headers, params=params)
-                if response.status_code != 200:
-                    return {
-                        "status": "error",
-                        "error": f"Page fetch failed: {response.status_code} - {response.text}"
-                    }
-                page_data = response.json()
-                content = page_data.get("body", {}).get("storage", {}).get("value", "")
-                clean_content = re.sub(r'<[^>]+>', ' ', content)
-                clean_content = re.sub(r'\s+', ' ', clean_content).strip()
-                view_url = f"{base_url}/pages/viewpage.action?pageId={page_data.get('id')}"
-                return {
-                    "status": "success",
-                    "id": page_data.get("id"),
-                    "title": page_data.get("title"),
-                    "content": clean_content,
-                    "url": view_url,
-                    "space": page_data.get("space", {}).get("name"),
-                    "type": page_data.get("type"),
-                    "created": page_data.get("created"),
-                    "last_modified": page_data.get("version", {}).get("when"),
-                    "version": page_data.get("version", {}).get("number")
-                }
-        except Exception as e:
-            logger.exception(f"Error fetching page: {e}")
-            return {"status": "error", "error": str(e)}
+        """Wrapper function for the registered tool."""
+        return await read_confluence_page(url, config)
 
     yield FunctionInfo.from_fn(
         read_page,
