@@ -66,8 +66,8 @@ llms:
   friday_llm:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
-    temperature: 0.1
-    max_tokens: 4000
+    temperature: 0.0
+    max_tokens: 110000
     description: "Main LLM for Friday AI Assistant - handles both documentation search and log analysis"
 
 # ----------------------------------------------------------------------------
@@ -103,9 +103,19 @@ workflow:
     1. For general information or keyword search, call confluence_search with a 'query' parameter.
     2. For searching by page title, call confluence_search with a 'title' parameter.
     3. For reading a specific Confluence page by link, call confluence_page_reader with a 'url' parameter.
-    4. For log analysis, call log_analyzer with a 'query' parameter.
-    5. Wait for results.
-    6. Then: Provide Final Answer based on those results, including links and summaries.
+    4. Wait for results.
+    5. Analyze and synthesize ALL the retrieved content.
+    6. Then: Provide a comprehensive summary of AT LEAST 500 WORDS that:
+       - Synthesizes all the information from the tool results
+       - Addresses the user's query thoroughly
+       - Includes key technical details and procedures
+       - Provides direct links to relevant Confluence pages
+       - Organizes information logically with clear sections
+       - Uses professional, clear language
+       - Highlights important facts, warnings, or recommendations
+    7. For log analysis, call log_analyzer with a 'query' parameter.
+       - Wait for results.
+       - Then: Provide Final Answer based on those results.
 
     CRITICAL: Never combine tool calls and Final Answer in the same response!
 
@@ -132,8 +142,41 @@ workflow:
 
 
     FORMAT FOR FINAL ANSWER (after getting tool results):
-    Thought: Based on the results, I can now provide a summary.
-    Final Answer: [Comprehensive answer with direct links to Confluence pages, summaries, and recommendations]
+    
+    # For Confluence search and page reader:
+    Thought: Based on the Confluence results, I can now provide a structured summary.
+    Final Answer:
+    
+    ## Summary
+    [Write a comprehensive summary of at least 500 words that synthesizes all the retrieved content.]
+    
+    ### Key Information
+    [Main points and technical details from the documentation]
+    
+    ### Procedures and Steps  
+    [Any processes, workflows, or step-by-step instructions found]
+    
+    ### Important Links
+    [Direct links to the Confluence pages with descriptions]
+    
+    ### Recommendations
+    [Any recommendations, best practices, or important notes from the documentation]
+    
+    [Ensure the summary is thorough, well-organized, and addresses the user's query completely using all the information retrieved from the tools.]
+
+    # For log analysis:
+    Thought: Based on the log analysis results, I can now provide a detailed log analysis report.
+    Final Answer:
+    
+    [Provide a comprehensive log analysis report without structured headings. Include:
+    - Overview of findings from the logs
+    - Error patterns and frequency analysis
+    - Timeline of significant events
+    - Root cause analysis where possible
+    - Actionable recommendations for resolution
+    - Any critical warnings or alerts found
+    
+    Keep the response focused, technical, and actionable for troubleshooting purposes.]
 
     Available parameters for confluence_search:
     - query (optional): What to search for (e.g., "API documentation", "onboarding guide")
