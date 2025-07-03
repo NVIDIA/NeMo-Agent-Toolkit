@@ -38,7 +38,7 @@ uv pip install -e examples/basic/functions/simple_calculator
 ## 📦 Installation
 
 ```bash
-uv pip install -e examples/intermediate/custom_routes/simple_calculator
+uv pip install -e examples/intermediate/custom_routes/simple_calculator_custom_routes
 ```
 
 ## 🚀 Usage
@@ -46,7 +46,7 @@ uv pip install -e examples/intermediate/custom_routes/simple_calculator
 ### Start the API Server
 
 ```bash
-aiq serve --config_file examples/intermediate/custom_routes/simple_calculator/configs/config-metadata.yml
+aiq serve --config_file examples/intermediate/custom_routes/simple_calculator_custom_routes/configs/config-metadata.yml
 ```
 
 The server will start with both default and custom endpoints:

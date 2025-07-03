@@ -66,7 +66,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/agno_personal_finance
+uv pip install -e examples/basic/frameworks/agno_personal_finance
 ```
 
 ### Set Up API Keys
@@ -84,14 +84,14 @@ export SERP_API_KEY=<SERP_API_KEY>
 Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file examples/agno_personal_finance/src/aiq_agno_personal_finance/configs/config.yml --input "My financial goal is to retire at age 60.  I am currently 40 years old, working as a Machine Learning engineer at NVIDIA."
+aiq run --config_file examples/basic/frameworks/agno_personal_finance/src/aiq_agno_personal_finance/configs/config.yml --input "My financial goal is to retire at age 60.  I am currently 40 years old, working as a Machine Learning engineer at NVIDIA."
 ```
 
 **Expected Output**
 ```console
-$ aiq run --config_file examples/agno_personal_finance/src/aiq_agno_personal_finance/configs/config.yml --input "My financial goal is to retire at age 60.  I am currently 40 years old, working as a Machine Learning engineer at NVIDIA."
+$ aiq run --config_file examples/basic/frameworks/agno_personal_finance/src/aiq_agno_personal_finance/configs/config.yml --input "My financial goal is to retire at age 60.  I am currently 40 years old, working as a Machine Learning engineer at NVIDIA."
 2025-04-23 15:11:38,790 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (501.427889 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:11:39,122 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/agno_personal_finance/src/aiq_agno_personal_finance/configs/config.yml'
+2025-04-23 15:11:39,122 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/basic/frameworks/agno_personal_finance/src/aiq_agno_personal_finance/configs/config.yml'
 2025-04-23 15:11:39,126 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-04-23 15:11:40,035 - httpx - INFO - HTTP Request: GET https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json "HTTP/1.1 200 OK"
 2025-04-23 15:11:40,990 - aiq.profiler.decorators.framework_wrapper - INFO - Agno callback handler registered
@@ -138,7 +138,7 @@ Prior to building the Docker image ensure that you have followed the steps in th
 From the root directory of the `aiqtoolkit` repository, build the Docker image:
 
 ```bash
-docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t agno_personal_finance -f examples/agno_personal_finance/Dockerfile .
+docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t agno_personal_finance -f examples/basic/frameworks/agno_personal_finance/Dockerfile .
 ```
 
 ### Run the Docker Container

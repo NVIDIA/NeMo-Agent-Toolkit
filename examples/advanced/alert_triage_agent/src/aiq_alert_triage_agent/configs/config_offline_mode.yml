@@ -52,7 +52,7 @@ functions:
   maintenance_check:
     _type: maintenance_check
     llm_name: maintenance_check_llm
-    static_data_path: examples/alert_triage_agent/data/maintenance_static_dataset.csv
+    static_data_path: examples/advanced/alert_triage_agent/data/maintenance_static_dataset.csv
   categorizer:
     _type: categorizer
     llm_name: categorizer_llm
@@ -68,8 +68,8 @@ workflow:
   llm_name: ata_agent_llm
   offline_mode: true
   # The below paths are only used if offline_mode is true
-  offline_data_path: examples/alert_triage_agent/data/offline_data.csv
-  benign_fallback_data_path: examples/alert_triage_agent/data/benign_fallback_offline_data.json
+  offline_data_path: examples/advanced/alert_triage_agent/data/offline_data.csv
+  benign_fallback_data_path: examples/advanced/alert_triage_agent/data/benign_fallback_offline_data.json
 
 llms:
   ata_agent_llm:
@@ -110,11 +110,11 @@ llms:
 
 eval:
   general:
-    output_dir: .tmp/aiq/examples/alert_triage_agent/output/
+    output_dir: .tmp/aiq/examples/advanced/alert_triage_agent/output/
     dataset:
       _type: json
       # JSON representation of the offline CSV data (including just the alerts, the expected output, and the label)
-      file_path: examples/alert_triage_agent/data/offline_data.json
+      file_path: examples/advanced/alert_triage_agent/data/offline_data.json
   evaluators:
     rag_accuracy:
       _type: ragas

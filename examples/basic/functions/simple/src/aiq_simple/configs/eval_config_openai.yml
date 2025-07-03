@@ -63,11 +63,11 @@ eval:
   general:
     workflow_alias: nat-simple-gpt-4o-mini
     output:
-      dir: ./.tmp/aiq/examples/simple/
+      dir: ./.tmp/aiq/examples/basic/functions/simple/
       cleanup: true
     dataset:
       _type: json
-      file_path: examples/simple/data/langsmith.json
+      file_path: examples/basic/functions/simple/data/langsmith.json
     profiler:
       # Compute inter query token uniqueness
       token_uniqueness_forecast: true

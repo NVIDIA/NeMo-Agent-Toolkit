@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 class MultiFrameworksWorkflowConfig(FunctionBaseConfig, name="multi_frameworks"):
     # Add your custom configuration parameters here
     llm: LLMRef = "nim_llm"
-    data_dir: str = "/home/coder/dev/ai-query-engine/examples/multi_frameworks/data/"
+    data_dir: str = "/home/coder/dev/ai-query-engine/examples/basic/frameworks/multi_frameworks/data/"
     research_tool: FunctionRef
     rag_tool: FunctionRef
     chitchat_agent: FunctionRef

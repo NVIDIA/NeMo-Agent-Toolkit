@@ -96,7 +96,7 @@ Before you begin using AIQ toolkit, ensure that you meet the following software 
     ```
 
     :::{note}
-    Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/simple/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
+    Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/basic/functions/simple/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
     :::
 
     In addition to plugins, there are optional dependencies needed for profiling. To install these dependencies, run the following:
@@ -140,14 +140,14 @@ Replace `<YOUR_API_KEY>` with your actual NVIDIA API key.
 2. Run the `aiq_simple` Workflow
 
     ```bash
-    aiq run --config_file=examples/simple/configs/config.yml --input "What is LangSmith"
+    aiq run --config_file=examples/basic/functions/simple/configs/config.yml --input "What is LangSmith"
     ```
 
 3. **Run and evaluate the `aiq_simple` Workflow**
 
     The `eval_config.yml` YAML is a super-set of the `config.yml` containing additional fields for evaluation. To evaluate the `aiq_simple` workflow, run the following command:
     ```bash
-    aiq eval --config_file=examples/simple/configs/eval_config.yml
+    aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml
     ```
 
 

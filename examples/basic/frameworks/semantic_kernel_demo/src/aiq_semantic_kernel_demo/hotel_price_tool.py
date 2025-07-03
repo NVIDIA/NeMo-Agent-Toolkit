@@ -22,7 +22,7 @@ from aiq.data_models.function import FunctionBaseConfig
 
 
 class HotelPriceToolConfig(FunctionBaseConfig, name="hotel_price"):
-    data_path: str = "examples/semantic_kernel_demo/data/hotel_prices.json"
+    data_path: str = "examples/basic/frameworks/semantic_kernel_demo/data/hotel_prices.json"
     date_format: str = "%Y-%m-%d"
 
 

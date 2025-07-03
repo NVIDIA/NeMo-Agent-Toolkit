@@ -120,7 +120,7 @@ def start_process(alert: dict, env_file: str) -> None:
         "run",
         "aiq",
         "run",
-        "--config_file=examples/alert_triage_agent/src/aiq_alert_triage_agent/configs/config.yml",
+        "--config_file=examples/advanced/alert_triage_agent/src/aiq_alert_triage_agent/configs/config.yml",
         "--input",
         payload,
     ]

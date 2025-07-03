@@ -52,7 +52,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/email_phishing_analyzer
+uv pip install -e examples/intermediate/evaluation_and_profiling/email_phishing_analyzer
 ```
 
 ### Set Up API Keys
@@ -69,14 +69,14 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file examples/email_phishing_analyzer/configs/config.yml --input "Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of $[Amount] to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]"
+aiq run --config_file examples/intermediate/evaluation_and_profiling/email_phishing_analyzer/configs/config.yml --input "Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of $[Amount] to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]"
 ```
 
 **Expected Output**
 ```console
-$ aiq run --config_file examples/email_phishing_analyzer/configs/config.yml --input "Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of $[Amount] to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]"
+$ aiq run --config_file examples/intermediate/evaluation_and_profiling/email_phishing_analyzer/configs/config.yml --input "Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of $[Amount] to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]"
 2025-04-23 15:24:54,183 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (502.501011 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:24:54,483 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/email_phishing_analyzer/configs/config.yml'
+2025-04-23 15:24:54,483 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/intermediate/evaluation_and_profiling/email_phishing_analyzer/configs/config.yml'
 2025-04-23 15:24:54,495 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 
 Configuration Summary:
@@ -99,7 +99,7 @@ Action: email_phishing_analyzer
 Action Input: {'text': 'Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of 0 to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]'}
 Observation
 ------------------------------
-/AIQToolkit/examples/email_phishing_analyzer/src/aiq_email_phishing_analyzer/register.py:56: LangChainDeprecationWarning: The method `BaseChatModel.apredict` was deprecated in langchain-core 0.1.7 and will be removed in 1.0. Use :meth:`~ainvoke` instead.
+/AIQToolkit/examples/intermediate/evaluation_and_profiling/email_phishing_analyzer/src/aiq_email_phishing_analyzer/register.py:56: LangChainDeprecationWarning: The method `BaseChatModel.apredict` was deprecated in langchain-core 0.1.7 and will be removed in 1.0. Use :meth:`~ainvoke` instead.
   response = await llm.apredict(config.prompt.format(body=text))
 2025-04-23 15:25:07,477 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
@@ -136,7 +136,7 @@ Prior to building the Docker image ensure that you have followed the steps in th
 From the root directory of the Simple Calculator repository, build the Docker image:
 
 ```bash
-docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t email_phishing_analyzer -f examples/email_phishing_analyzer/Dockerfile .
+docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t email_phishing_analyzer -f examples/intermediate/evaluation_and_profiling/email_phishing_analyzer/Dockerfile .
 ```
 
 ### Run the Docker Container

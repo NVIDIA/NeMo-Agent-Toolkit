@@ -71,19 +71,23 @@ weave = ["aiqtoolkit-weave"]
 zep-cloud = ["aiqtoolkit-zep-cloud"]
 
 examples = [
+  "aiq_agno_personal_finance",
   "aiq_alert_triage_agent",
+  "aiq_automated_description_generation",
   "aiq_email_phishing_analyzer",
   "aiq_multi_frameworks",
   "aiq_plot_charts",
-  "aiq_semantic_kernel_demo",
-  "aiq_simple_calculator",
-  "aiq_simple",
-  "aiq_swe_bench",
-  "aiq_automated_description_generation",
-  "aiq_agno_personal_finance",
+  "aiq_por_to_jiratickets",
   "aiq_profiler_agent",
+  "aiq_semantic_kernel_demo",
+  "aiq_simple",
+  "aiq_simple_calculator",
+  "aiq_simple_calculator_custom_routes",
+  "aiq_simple_calculator_eval",
+  "aiq_simple_calculator_mcp",
+  "aiq_simple_calculator_observability",
   "aiq_simple_rag",
-  "aiq_por_to_jiratickets"
+  "aiq_swe_bench",
 ]
 
 profiling = [
@@ -132,8 +136,8 @@ aiq_simple_rag = { path = "examples/intermediate/RAG/simple_rag", editable = tru
 aiq_por_to_jiratickets = { path = "examples/intermediate/HITL/por_to_jiratickets", editable = true }
 aiq_simple_calculator_eval = { path = "examples/intermediate/evaluation_and_profiling/simple_calculator_eval", editable = true }
 aiq_simple_calculator_observability = { path = "examples/intermediate/observability/simple_calculator_observability", editable = true }
-aiq_simple_calculator_mcp = { path = "examples/intermediate/MCP/simple_calculator", editable = true }
-aiq_simple_calculator_custom_routes = { path = "examples/intermediate/custom_routes/simple_calculator", editable = true }
+aiq_simple_calculator_mcp = { path = "examples/intermediate/MCP/simple_calculator_mcp", editable = true }
+aiq_simple_calculator_custom_routes = { path = "examples/intermediate/custom_routes/simple_calculator_custom_routes", editable = true }
 
 
 [tool.uv.workspace]
