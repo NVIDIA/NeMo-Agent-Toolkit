@@ -97,7 +97,7 @@ docker run -p 8080:8080 simple-calculator-mcp
 
 ## 📊 Available Configurations
 
-| Config File | MCP Server | Tools Available |
+| config File | MCP Server | Tools Available |
 |-------------|------------|-----------------|
 | `config-mcp-date.yml` | Date Server | Current time, date formatting |
 | `config-mcp-math.yml` | Math Server | Advanced mathematical operations |

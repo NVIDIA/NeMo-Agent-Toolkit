@@ -142,7 +142,7 @@ async def custom_function(input: str) -> str:
 
 ## 🔧 Advanced Features
 
-- **Middleware Integration**: Add custom middleware for pre/post processing
+- **Custom processing**: Add custom processing for pre/post request handling
 - **Response Customization**: Modify responses based on request context
 - **Error Handling**: Context-aware error responses
 - **Session Management**: Stateful interactions using request metadata

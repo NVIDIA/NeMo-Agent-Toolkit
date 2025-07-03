@@ -56,8 +56,8 @@ aiq run --config_file examples/intermediate/observability/simple_calculator_obse
 
 Visit `http://localhost:6006` to explore traces in Phoenix UI.
 
-### LangFuse Integration
-Configure LangFuse for production monitoring:
+### Langfuse Integration
+Configure Langfuse for production monitoring:
 
 ```bash
 # Set your LangFuse credentials
@@ -87,8 +87,8 @@ export WANDB_API_KEY=<your_api_key>
 aiq run --config_file examples/intermediate/observability/simple_calculator_observability/configs/config-weave.yml --input "What's the sum of 7 and 8?"
 ```
 
-### Patronus Monitoring
-Enable Patronus for AI safety and monitoring:
+### AI Safety Monitoring
+Enable AI safety monitoring and compliance:
 
 ```bash
 export PATRONUS_API_KEY=<your_api_key>
@@ -106,13 +106,13 @@ aiq run --config_file examples/intermediate/observability/simple_calculator_obse
 
 ## 📊 Available Configurations
 
-| Config File | Platform | Purpose |
+| config File | Platform | Purpose |
 |-------------|----------|---------|
 | `config-tracing.yml` | Phoenix | Local development tracing |
-| `config-langfuse.yml` | LangFuse | Production monitoring |
+| `config-langfuse.yml` | Langfuse | Production monitoring |
 | `config-langsmith.yml` | LangSmith | LangChain ecosystem monitoring |
 | `config-weave.yml` | Weave | Workflow-focused tracking |
-| `config-patronus.yml` | Patronus | AI safety and compliance |
+| `config-patronus.yml` | AI Safety | AI safety and compliance |
 
 ## 🎛️ What Gets Traced
 
