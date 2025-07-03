@@ -99,8 +99,8 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
             except GraphRecursionError:
                 logger.info("Recursion error detected, prompting user to increase recursion limit")
                 selected_option = await hitl_approval_fn.acall_invoke()
-                if selected_option:
-                    continue
+                if not selected_option:
+                    return AIQChatResponse.from_string("I seem to be having a problem.")
 
         return response
 
