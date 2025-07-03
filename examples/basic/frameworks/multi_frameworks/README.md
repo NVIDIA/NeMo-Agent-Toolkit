@@ -61,14 +61,14 @@ the 3 worker agents are :
 
 the multi-agents architecture looks like the below
 
-![LangGraph multi-agents workflow](../../docs/source/_static/aiq_multi_frameworks_agentic_schema.png)
+![LangGraph multi-agents workflow](../../../../docs/source/_static/aiq_multi_frameworks_agentic_schema.png)
 
 ## Local Installation and Usage
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
 
 ### Step 1: Set Your NVIDIA API Key and Tavily API Key Environment Variable
-If you have not already done so, follow the [Obtaining API Keys](../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services.
+If you have not already done so, follow the [Obtaining API Keys](../../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services.
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>

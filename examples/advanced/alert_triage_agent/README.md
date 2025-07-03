@@ -266,7 +266,7 @@ The list of evaluators can be extended or swapped out depending on your evaluati
 
 ## Installation and setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md) to create the development environment and install AIQ toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md) to create the development environment and install AIQ toolkit.
 
 ### Install this workflow
 

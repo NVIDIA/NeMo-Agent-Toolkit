@@ -27,7 +27,7 @@ This is a simple example RAG application to showcase how one can configure and u
 ## Quickstart: RAG with Milvus
 
 ### Installation and Setup
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit, and follow the [Obtaining API Keys](../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
+If you have not already done so, follow the instructions in the [Install Guide](../../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit, and follow the [Obtaining API Keys](../../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
 
 1. From the root directory of the AIQ toolkit library, run the following commands:
     ```bash

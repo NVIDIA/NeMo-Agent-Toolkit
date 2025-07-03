@@ -21,7 +21,7 @@ The profiler agent is a tool that allows you to analyze the performance of AIQ t
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md) to create the development environment and install AIQ toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md) to create the development environment and install AIQ toolkit.
 
 ### Install this Workflow:
 
@@ -32,7 +32,7 @@ uv pip install -e examples/profiler_agent
 ```
 
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
@@ -64,14 +64,14 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
    aiq serve --config_file=examples/profiler_agent/configs/config.yml
    ```
 
-4. Launch the AIQ toolkit User Interface by using the instructions in the [Launching the User Interface](../../docs/source/quick-start/launching-ui.md#launch-the-aiq-toolkit-user-interface) guide.
+4. Launch the AIQ toolkit User Interface by using the instructions in the [Launching the User Interface](../../../docs/source/quick-start/launching-ui.md#launch-the-aiq-toolkit-user-interface) guide.
 
 5. Query the agent with natural language via the UI:
    ```
    Show me the token usage of last run
    ```
 
-   ![Sample Response](../../docs/source/_static/profiler-agent.png "Sample Response UI Image")
+   ![Sample Response](../../../../docs/source/_static/profiler-agent.png "Sample Response UI Image")
 
    More examples:
    ```
