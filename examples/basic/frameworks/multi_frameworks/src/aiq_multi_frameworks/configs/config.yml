@@ -49,7 +49,7 @@ embedders:
 workflow:
   _type: multi_frameworks
   llm : nim_llm
-      data_dir : ./examples/basic/frameworks/multi_frameworks/README.md
+  data_dir : ./examples/basic/frameworks/multi_frameworks/README.md
   rag_tool: llama_index_rag
   research_tool: langchain_researcher_tool
   chitchat_agent: haystack_chitchat_agent
