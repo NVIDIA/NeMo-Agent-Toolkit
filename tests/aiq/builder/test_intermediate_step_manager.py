@@ -27,18 +27,17 @@ from aiq.builder.intermediate_step_manager import IntermediateStepManager
 from aiq.builder.intermediate_step_manager import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepType
+from aiq.data_models.invocation_node import InvocationNode
 
 # --------------------------------------------------------------------------- #
 # Minimal stubs so the tests do not need the whole aiq code-base
 # --------------------------------------------------------------------------- #
 
 
-class _DummyFunction:  # what active_function.get() returns
+class _DummyFunction(InvocationNode):  # what active_function.get() returns
 
     def __init__(self, name="fn", fid=None, parent_name=None):
-        self.function_name = name
-        self.function_id = fid or str(uuid.uuid4())
-        self.parent_name = parent_name
+        super().__init__(function_name=name, function_id=fid or str(uuid.uuid4()), parent_name=parent_name)
 
 
 # --------------------------------------------------------------------------- #
@@ -69,12 +68,12 @@ def ctx_fixture(ctx_state: AIQContextState):
 
 
 @pytest.fixture(name="mgr")
-def mgr_fixture(ctx_state: AIQContextState, output_steps: list[IntermediateStepPayload]):
+def mgr_fixture(ctx_state: AIQContextState, output_steps):
     """Fresh manager + its stubbed context-state for each test."""
     mgr = IntermediateStepManager(context_state=ctx_state)
 
-    def on_next(payload: IntermediateStepPayload):
-        output_steps.append(payload)
+    def on_next(step: IntermediateStep):
+        output_steps.append(step)
 
     mgr.subscribe(on_next)
     return mgr
@@ -94,8 +93,7 @@ def _payload(step_id=None, name="step", etype: IntermediateStepType = Intermedia
 # --------------------------------------------------------------------------- #
 
 
-def test_start_pushes_event_and_tracks_open_step(mgr: IntermediateStepManager,
-                                                 output_steps: list[IntermediateStepPayload]):
+def test_start_pushes_event_and_tracks_open_step(mgr: IntermediateStepManager, output_steps: list[IntermediateStep]):
     pay = _payload()
     mgr.push_intermediate_step(pay)
 
@@ -197,7 +195,7 @@ def _nested_fn_sync(mgr: IntermediateStepManager, to_call: list[str]):
     mgr.push_intermediate_step(_payload(step_id=pay.UUID, name=to_call[0], etype=IntermediateStepType.LLM_END))
 
 
-async def test_async_nested(mgr: IntermediateStepManager, output_steps: list[IntermediateStepPayload]):
+async def test_async_nested(mgr: IntermediateStepManager, output_steps: list[IntermediateStep]):
 
     await _nested_fn(mgr, ["fn1", "fn2", "fn3"])
 

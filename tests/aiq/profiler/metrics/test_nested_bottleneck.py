@@ -19,6 +19,7 @@ from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType as WorkflowEventEnum
+from aiq.data_models.invocation_node import InvocationNode
 from aiq.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import analyze_calls_and_build_result
 from aiq.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import build_call_tree_for_example
 from aiq.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import build_call_tree_per_example
@@ -57,34 +58,46 @@ def minimal_valid_df_fixture():
     # df = pd.DataFrame(data)
     # Create intermediate steps events to mock above dataframe
     events = [[
-        IntermediateStep(payload=IntermediateStepPayload(event_type=WorkflowEventEnum.LLM_START,
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="llama-3", function_id="u1"),
+                         payload=IntermediateStepPayload(event_type=WorkflowEventEnum.LLM_START,
                                                          event_timestamp=1.0,
                                                          name="llama-3",
                                                          framework=LLMFrameworkEnum.LANGCHAIN,
                                                          UUID="u1")),
-        IntermediateStep(payload=IntermediateStepPayload(event_type=WorkflowEventEnum.TOOL_START,
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="weather-search", function_id="u2"),
+                         payload=IntermediateStepPayload(event_type=WorkflowEventEnum.TOOL_START,
                                                          event_timestamp=1.5,
                                                          name="weather-search",
                                                          framework=LLMFrameworkEnum.LANGCHAIN,
                                                          UUID="u2")),
-        IntermediateStep(payload=IntermediateStepPayload(event_type=WorkflowEventEnum.TOOL_END,
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="weather-search", function_id="u2"),
+                         payload=IntermediateStepPayload(event_type=WorkflowEventEnum.TOOL_END,
                                                          event_timestamp=1.6,
                                                          name="weather-search",
                                                          framework=LLMFrameworkEnum.LANGCHAIN,
                                                          UUID="u2")),
-        IntermediateStep(payload=IntermediateStepPayload(event_type=WorkflowEventEnum.LLM_END,
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="llama-3", function_id="u1"),
+                         payload=IntermediateStepPayload(event_type=WorkflowEventEnum.LLM_END,
                                                          event_timestamp=2.0,
                                                          name="llama-3",
                                                          framework=LLMFrameworkEnum.LANGCHAIN,
                                                          UUID="u1"))
     ],
               [
-                  IntermediateStep(payload=IntermediateStepPayload(event_type=WorkflowEventEnum.TOOL_START,
+                  IntermediateStep(parent_id="root",
+                                   function_ancestry=InvocationNode(function_name="google-search", function_id="u3"),
+                                   payload=IntermediateStepPayload(event_type=WorkflowEventEnum.TOOL_START,
                                                                    event_timestamp=10.0,
                                                                    name="google-search",
                                                                    framework=LLMFrameworkEnum.LANGCHAIN,
                                                                    UUID="u3")),
-                  IntermediateStep(payload=IntermediateStepPayload(event_type=WorkflowEventEnum.TOOL_END,
+                  IntermediateStep(parent_id="root",
+                                   function_ancestry=InvocationNode(function_name="google-search", function_id="u3"),
+                                   payload=IntermediateStepPayload(event_type=WorkflowEventEnum.TOOL_END,
                                                                    name="google-search",
                                                                    event_timestamp=11.0,
                                                                    framework=LLMFrameworkEnum.LANGCHAIN,
