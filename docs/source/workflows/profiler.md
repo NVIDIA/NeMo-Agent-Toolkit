@@ -124,10 +124,10 @@ The profiler can be run through the `aiq eval` command. The profiler can be conf
 ```yaml
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/simple/
+    output_dir: ./.tmp/aiq/examples/basic/functions/simple/
     dataset:
       _type: json
-      file_path: examples/simple/data/langsmith.json
+      file_path: examples/basic/functions/simple/data/langsmith.json
     profiler:
       # Compute inter query token uniqueness
       token_uniqueness_forecast: true
@@ -180,7 +180,7 @@ Please also note the `output_dir` parameter which specifies the directory where 
 To run the profiler, simply run the `aiq eval` command with the workflow configuration file. The profiler will collect usage statistics and store them in the output directory specified in the configuration file.
 
 ```bash
-aiq eval --config_file examples/simple/configs/eval_config.yml
+aiq eval --config_file examples/basic/functions/simple/configs/eval_config.yml
 ```
 
 This will, based on the above configuration, produce the following files in the `output_dir` specified in the configuration file:
@@ -198,7 +198,7 @@ We will begin by creating a workflow to profile, explore some of the configurati
 
 ### Defining a Workflow
 For this guide, we will use a simple, but useful, workflow that analyzes the body of a given email to determine if it is a Phishing email. We will define a single tool that takes an email body as input and returns a response on
-whether the email is a Phishing email or not. We will then add that tool as the only tool available to the `tool_calling` agent pre-built in the AIQ toolkit library. Below is the implementation of the phishing tool. The source code for this example can be found at `examples/email_phishing_analyzer/`.
+whether the email is a Phishing email or not. We will then add that tool as the only tool available to the `tool_calling` agent pre-built in the AIQ toolkit library. Below is the implementation of the phishing tool. The source code for this example can be found at `examples/intermediate/evaluation_and_profiling/email_phishing_analyzer/`.
 
 ### Configuring the Workflow
 The configuration file for the workflow is as follows. Here, pay close attention to how the `profiler` and `eval` sections are configured.
@@ -227,11 +227,11 @@ functions:
 
 eval:
   general:
-    output_dir: ./.tmp/eval/examples/email_phishing_analyzer/test_models/llama-3.1-8b-instruct
+    output_dir: ./.tmp/eval/examples/intermediate/evaluation_and_profiling/email_phishing_analyzer/test_models/llama-3.1-8b-instruct
     verbose: true
     dataset:
         _type: csv
-        file_path: examples/email_phishing_analyzer/data/smaller_test.csv
+        file_path: examples/intermediate/evaluation_and_profiling/email_phishing_analyzer/data/smaller_test.csv
         id_key: "subject"
         structure:
           question_key: body
@@ -273,7 +273,7 @@ To run the profiler, simply run the `aiq eval` command with the workflow configu
 
 
 ```bash
-aiq eval --config_file examples/email_phishing_analyzer/configs/<config_file>.yml
+aiq eval --config_file examples/intermediate/evaluation_and_profiling/email_phishing_analyzer/configs/<config_file>.yml
 ```
 
 Among other files, this will produce a `standardized_results_all.csv` file in the `output_dir` specified in the configuration file. This file will contain the profiling results of the workflow that we will use for the rest of the analysis.

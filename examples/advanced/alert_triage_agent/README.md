@@ -227,10 +227,10 @@ The `eval` section defines how the system evaluates pipeline outputs using prede
 ```yaml
 eval:
   general:
-    output_dir: .tmp/aiq/examples/alert_triage_agent/output/
+    output_dir: .tmp/aiq/examples/advanced/alert_triage_agent/output/
     dataset:
       _type: json
-      file_path: examples/alert_triage_agent/data/offline_data.json
+      file_path: examples/advanced/alert_triage_agent/data/offline_data.json
   evaluators:
     rag_accuracy:
       _type: ragas

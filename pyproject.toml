@@ -71,19 +71,23 @@ weave = ["aiqtoolkit-weave"]
 zep-cloud = ["aiqtoolkit-zep-cloud"]
 
 examples = [
+  "aiq_agno_personal_finance",
   "aiq_alert_triage_agent",
+  "aiq_automated_description_generation",
   "aiq_email_phishing_analyzer",
   "aiq_multi_frameworks",
   "aiq_plot_charts",
-  "aiq_semantic_kernel_demo",
-  "aiq_simple_calculator",
-  "aiq_simple",
-  "aiq_swe_bench",
-  "aiq_automated_description_generation",
-  "aiq_agno_personal_finance",
+  "aiq_por_to_jiratickets",
   "aiq_profiler_agent",
+  "aiq_semantic_kernel_demo",
+  "aiq_simple",
+  "aiq_simple_calculator",
+  "aiq_simple_calculator_custom_routes",
+  "aiq_simple_calculator_eval",
+  "aiq_simple_calculator_mcp",
+  "aiq_simple_calculator_observability",
   "aiq_simple_rag",
-  "aiq_por_to_jiratickets"
+  "aiq_swe_bench",
 ]
 
 profiling = [

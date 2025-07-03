@@ -1,6 +1,6 @@
 ---
 description: Follow these rules when the user's request involves installing, setting up, or configuring AIQ Toolkit or its plugins
-globs: 
+globs:
 alwaysApply: false
 ---
 # AIQ Toolkit Installation Guide
@@ -111,7 +111,7 @@ uv pip install -e '.[profiling]'
 
 When installing specific plugins, these are the available options:
 - `langchain` - LangChain integration
-- `llama-index` - LlamaIndex integration  
+- `llama-index` - LlamaIndex integration
 - `crewai` - CrewAI integration
 - `mem0ai` - Mem0 integration
 - `semantic-kernel` - Microsoft Semantic Kernel integration
@@ -233,5 +233,5 @@ uv venv --seed .venv && source .venv/bin/activate
 uv sync
 uv pip install -e examples/simple
 export NVIDIA_API_KEY=<your_key>
-aiq run --config_file=examples/simple/configs/config.yml --input "What is LangSmith"
+aiq run --config_file=examples/basic/functions/simple/configs/config.yml --input "What is LangSmith"
 ```

@@ -52,9 +52,9 @@ The `code_generation` and `wiki_search` tools are part of the `aiqtoolkit[langch
 uv pip install -e '.[langchain]'
 ```
 
-In addition to this the example utilizes some tools from the `examples/simple_calculator` example.  To install the package run the following command:
+In addition to this the example utilizes some tools from the `examples/basic/functions/simple_calculator` example.  To install the package run the following command:
 ```bash
-uv pip install -e examples/simple_calculator
+uv pip install -e examples/basic/functions/simple_calculator
 ```
 
 ### Set Up API Keys
