@@ -50,7 +50,7 @@ functions:
   maintenance_check:
     _type: maintenance_check
     llm_name: maintenance_check_llm
-    static_data_path: examples/alert_triage_agent/data/maintenance_static_dataset.csv
+    static_data_path: examples/advanced/alert_triage_agent/data/maintenance_static_dataset.csv
   categorizer:
     _type: categorizer
     llm_name: categorizer_llm

@@ -65,10 +65,10 @@ class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agen
     llm_name: LLMRef
     offline_mode: bool = Field(default=True, description="Whether to run in offline model")
     offline_data_path: str | None = Field(
-        default="examples/alert_triage_agent/data/offline_data.csv",
+        default="examples/advanced/alert_triage_agent/data/offline_data.csv",
         description="Path to the main offline dataset in CSV format containing alerts and their simulated environments")
     benign_fallback_data_path: str | None = Field(
-        default="examples/alert_triage_agent/data/benign_fallback_offline_data.json",
+        default="examples/advanced/alert_triage_agent/data/benign_fallback_offline_data.json",
         description="Path to the JSON file with baseline/normal system behavior data")
 
 

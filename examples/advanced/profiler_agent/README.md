@@ -28,7 +28,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/profiler_agent
+uv pip install -e examples/advanced/profiler_agent
 ```
 
 ### Set Up API Keys
@@ -61,7 +61,7 @@ aiq run --config_file examples/basic/functions/simple_calculator/configs/config-
 
 3. Run the profiler agent:
    ```
-   aiq serve --config_file=examples/profiler_agent/configs/config.yml
+   aiq serve --config_file=examples/advanced/profiler_agent/configs/config.yml
    ```
 
 4. Launch the AIQ toolkit User Interface by using the instructions in the [Launching the User Interface](../../../docs/source/quick-start/launching-ui.md#launch-the-aiq-toolkit-user-interface) guide.
