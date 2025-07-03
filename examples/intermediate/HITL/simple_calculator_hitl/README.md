@@ -15,9 +15,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# A Simple Jira Agent that Extracts POR and creates tickets
+# Simple Calculator - Human in the Loop
 
-A minimal example demonstrating an end-to-end Jira ticket creating agentic workflow. This workflow leverages the AIQ toolkit plugin system to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
+This example demonstrates **human in the loop capabilities** of the AIQ toolkit using the Simple Calculator workflow. Learn how to reuse a registered function that leverages the toolkits human in the loop capabilities to gate agent behavior. In this case, user approval will be requested to allow the agent to make additional tool calls to reach a 
+final answer.
 
 ## Key Features
 
@@ -26,10 +27,7 @@ A minimal example demonstrating an end-to-end Jira ticket creating agentic workf
 - **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
 - **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
 - **Ease of Use:** Simplifies developer experience and deployment.
-- **Jira Agent Tool Call:** Following tools are available for the agent to extract POR, create and get Jira tickets.
-   - `create_jira_tickets_tool()`: This function creates Jira tickets using the REST API. It requires specifying the project key, Jira token, Jira username, domain, and ticket type (e.g., Epic, Bug, Task, New Feature), along with descriptions and priorities. The tool integrates Human in the Loop (HITL) functionality through the `hitl_approval_tool`, which prompts the user for explicit confirmation before creating any Jira tickets. Users must respond with "yes" to proceed with ticket creation; any other response will cancel the operation. Upon successful creation, it returns the ticket IDs and URLs.
-   -  `extract_from_por_tool`: Extract epics, tasks, features and bugs from the given PRO/PRD file using the LLM chain and store the result. Assigns story points for each type based on complexity/effort and also fills in description for each.
-   -  `get_jira_tickets_tool`: This function retrieves existing Jira tickets based on a JQL (Jira Query Language) filter. It fetches relevant information like ticket summary, status, and assignee. The returned data can be used for tracking or reporting.
+- **Humin in the Loop:** Solicits approval from the user before allowing the agent to make additional tool calls.
 
 
 ## Installation and Setup
@@ -55,11 +53,11 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 It is often helpful, or even required, to have human input during the execution of an agent workflow. For example, to ask about preferences, confirmations, or to provide additional information.
 The AIQ toolkit library provides a way to add HITL interaction to any tool or function, allowing for the dynamic collection of information during the workflow execution, without the need for coding it
 into the agent itself. For instance, this example asks for user approval to increase the maximum iterations of the ReAct agent to allow additional tool calling. This is enable by leveraging a reusable plugin developed in the por_to_jiratickets HITL example. We can view the implementation in the
-`aiq_por_to_jiratickets.jira_tickets_tool.py` file. The implementation is below:
+`aiq_por_to_jiratickets.hitl_approaval_tool.py` file. The implementation is shown below:
 
 ```python
 @register_function(config_type=HITLApprovalFnConfig)
-async def hilt_function(config: HITLApprovalFnConfig, builder: Builder):
+async def hilt_approval_function(config: HITLApprovalFnConfig, builder: Builder):
 
     import re
 

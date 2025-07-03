@@ -38,7 +38,7 @@ class HITLApprovalFnConfig(FunctionBaseConfig, name="hitl_approval_tool"):
 
 
 @register_function(config_type=HITLApprovalFnConfig)
-async def hilt_function(config: HITLApprovalFnConfig, builder: Builder):
+async def hilt_approval_function(config: HITLApprovalFnConfig, builder: Builder):
 
     import re
 
