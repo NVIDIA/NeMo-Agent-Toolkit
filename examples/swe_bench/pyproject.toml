@@ -17,7 +17,7 @@ description = "Example for solving SWE bench problems"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../", editable = true }
+aiqtoolkit = { path = "../..", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_swe_bench = "aiq_swe_bench.register"

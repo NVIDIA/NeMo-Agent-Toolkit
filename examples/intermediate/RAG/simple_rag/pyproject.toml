@@ -6,13 +6,13 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 packages = []
 
 [tool.setuptools_scm]
-root = "../.."
+root = "../../../.."
 
 [project]
 name = "aiq_simple_rag"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[ingestion, langchain, mem0ai]~=1.1"
+  "aiqtoolkit[ingestion, langchain, mem0ai]~=1.2"
 ]
 requires-python = ">=3.11,<3.13"
 description = "Simple Rag AIQ example"
@@ -20,5 +20,4 @@ keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../", editable = true }
-
+aiqtoolkit = { path = "../../../..", editable = true }
