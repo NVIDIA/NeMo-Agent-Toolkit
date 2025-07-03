@@ -15,6 +15,7 @@
 import abc
 import json
 import logging
+from typing import Optional
 from urllib.parse import urljoin
 
 import requests
@@ -95,8 +96,10 @@ warnings.filterwarnings('ignore')
 os.environ['OPENBLAS_NUM_THREADS'] = '16'
 """
 
+        # Use json.dumps to properly escape the generated_code instead of repr()
+        escaped_code = json.dumps(generated_code)
         code_to_execute += f"""
-\ngenerated_code = {repr(generated_code)}\n
+\ngenerated_code = {escaped_code}\n
 stdout = io.StringIO()
 stderr = io.StringIO()
 
@@ -131,6 +134,9 @@ print(json.dumps(output))
 class LocalSandbox(Sandbox):
     """Locally hosted sandbox."""
 
+    def __init__(self, *, uri: HttpUrl):
+        super().__init__(uri=uri)
+
     def _get_execute_url(self, uri):
         return urljoin(str(uri), "execute")
 
@@ -142,11 +148,56 @@ class LocalSandbox(Sandbox):
             return {'process_status': 'error', 'stdout': '', 'stderr': 'Unknown error'}
 
     def _prepare_request(self, generated_code, timeout, language='python', **kwargs):
-        return {
+        request = {
             "generated_code": generated_code,
             "timeout": timeout,
             "language": language,
         }
+        return request
+
+    async def execute_code(
+        self,
+        generated_code: str,
+        timeout: float = 10.0,
+        language: str = "python",
+        max_output_characters: int = 1000,
+    ) -> dict:
+        """Override execute_code to bypass the wrapper logic and send user code directly to our server."""
+        
+        print(f"[DEBUG] Raw input generated_code: {generated_code}")
+        
+        # The input appears to be a string representation of a dictionary
+        # We need to parse it and extract the actual code
+        try:
+            # Try to evaluate the string as a Python literal (dictionary)
+            import ast
+            parsed_dict = ast.literal_eval(generated_code)
+            if isinstance(parsed_dict, dict) and 'generated_code' in parsed_dict:
+                actual_code = parsed_dict['generated_code']
+                print(f"[DEBUG] Extracted code from dict: {actual_code[:100]}...")
+            else:
+                # If it's not a dict or doesn't have the expected key, use as-is
+                actual_code = generated_code
+                print(f"[DEBUG] Using code as-is: {actual_code[:100]}...")
+        except (ValueError, SyntaxError):
+            # If parsing fails, use the input as-is
+            actual_code = generated_code
+            print(f"[DEBUG] Failed to parse, using as-is: {actual_code[:100]}...")
+        
+        
+        # Clean the actual code (remove backticks and wrapper comments if present)
+        actual_code = actual_code.lstrip().rstrip().lstrip("`").rstrip("`").replace("```python", "").replace("```", "")
+        
+        print(f"[DEBUG] Final cleaned code: {actual_code}")
+        
+        # Send the user's code directly to our server without any wrapper logic
+        # Our server already handles stdout/stderr capture and error handling
+        request = self._prepare_request(actual_code, timeout, language)
+        try:
+            output = self._send_request(request, timeout)
+        except requests.exceptions.Timeout:
+            output = {"process_status": "timeout", "stdout": "", "stderr": "Timed out\n"}
+        return output
 
 
 class PistonSandbox(Sandbox):
