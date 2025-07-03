@@ -71,7 +71,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
    Show me the token usage of last run
    ```
 
-   ![Sample Response](../../../../docs/source/_static/profiler-agent.png "Sample Response UI Image")
+   ![Sample Response](../../../docs/source/_static/profiler-agent.png "Sample Response UI Image")
 
    More examples:
    ```
