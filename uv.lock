@@ -395,7 +395,7 @@ requires-dist = [{ name = "aiqtoolkit", extras = ["langchain"], editable = "." }
 
 [[package]]
 name = "aiq-simple-calculator-custom-routes"
-source = { editable = "examples/intermediate/custom_routes/simple_calculator" }
+source = { editable = "examples/intermediate/custom_routes/simple_calculator_custom_routes" }
 dependencies = [
     { name = "aiq-simple-calculator" },
     { name = "aiqtoolkit", extra = ["langchain"] },
@@ -423,7 +423,7 @@ requires-dist = [
 
 [[package]]
 name = "aiq-simple-calculator-mcp"
-source = { editable = "examples/intermediate/MCP/simple_calculator" }
+source = { editable = "examples/intermediate/MCP/simple_calculator_mcp" }
 dependencies = [
     { name = "aiq-simple-calculator" },
     { name = "aiqtoolkit", extra = ["langchain"] },
@@ -611,9 +611,9 @@ requires-dist = [
     { name = "aiq-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/basic/frameworks/semantic_kernel_demo" },
     { name = "aiq-simple", marker = "extra == 'examples'", editable = "examples/basic/functions/simple" },
     { name = "aiq-simple-calculator", marker = "extra == 'examples'", editable = "examples/basic/functions/simple_calculator" },
-    { name = "aiq-simple-calculator-custom-routes", marker = "extra == 'examples'", editable = "examples/intermediate/custom_routes/simple_calculator" },
+    { name = "aiq-simple-calculator-custom-routes", marker = "extra == 'examples'", editable = "examples/intermediate/custom_routes/simple_calculator_custom_routes" },
     { name = "aiq-simple-calculator-eval", marker = "extra == 'examples'", editable = "examples/intermediate/evaluation_and_profiling/simple_calculator_eval" },
-    { name = "aiq-simple-calculator-mcp", marker = "extra == 'examples'", editable = "examples/intermediate/MCP/simple_calculator" },
+    { name = "aiq-simple-calculator-mcp", marker = "extra == 'examples'", editable = "examples/intermediate/MCP/simple_calculator_mcp" },
     { name = "aiq-simple-calculator-observability", marker = "extra == 'examples'", editable = "examples/intermediate/observability/simple_calculator_observability" },
     { name = "aiq-simple-rag", marker = "extra == 'examples'", editable = "examples/intermediate/RAG/simple_rag" },
     { name = "aiq-swe-bench", marker = "extra == 'examples'", editable = "examples/swe_bench" },

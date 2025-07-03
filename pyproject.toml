@@ -136,8 +136,8 @@ aiq_simple_rag = { path = "examples/intermediate/RAG/simple_rag", editable = tru
 aiq_por_to_jiratickets = { path = "examples/intermediate/HITL/por_to_jiratickets", editable = true }
 aiq_simple_calculator_eval = { path = "examples/intermediate/evaluation_and_profiling/simple_calculator_eval", editable = true }
 aiq_simple_calculator_observability = { path = "examples/intermediate/observability/simple_calculator_observability", editable = true }
-aiq_simple_calculator_mcp = { path = "examples/intermediate/MCP/simple_calculator", editable = true }
-aiq_simple_calculator_custom_routes = { path = "examples/intermediate/custom_routes/simple_calculator", editable = true }
+aiq_simple_calculator_mcp = { path = "examples/intermediate/MCP/simple_calculator_mcp", editable = true }
+aiq_simple_calculator_custom_routes = { path = "examples/intermediate/custom_routes/simple_calculator_custom_routes", editable = true }
 
 
 [tool.uv.workspace]

@@ -38,7 +38,7 @@ uv pip install -e examples/basic/functions/simple_calculator
 ## 📦 Installation
 
 ```bash
-uv pip install -e examples/intermediate/MCP/simple_calculator
+uv pip install -e examples/intermediate/MCP/simple_calculator_mcp
 ```
 
 ## 🚀 Usage
@@ -49,17 +49,17 @@ Connect to external MCP servers to use remote tools:
 
 #### Date MCP Server
 ```bash
-aiq run --config_file examples/intermediate/MCP/simple_calculator/configs/config-mcp-date.yml --input "What day is it today and what's 2 + 3?"
+aiq run --config_file examples/intermediate/MCP/simple_calculator_mcp/configs/config-mcp-date.yml --input "What day is it today and what's 2 + 3?"
 ```
 
 #### Math MCP Server
 ```bash
-aiq run --config_file examples/intermediate/MCP/simple_calculator/configs/config-mcp-math.yml --input "Calculate the square root of 144"
+aiq run --config_file examples/intermediate/MCP/simple_calculator_mcp/configs/config-mcp-math.yml --input "Calculate the square root of 144"
 ```
 
 #### Combined Demo
 ```bash
-aiq run --config_file examples/intermediate/MCP/simple_calculator/configs/demo_config_mcp.yml --input "What time is it and what's 5 * 7?"
+aiq run --config_file examples/intermediate/MCP/simple_calculator_mcp/configs/demo_config_mcp.yml --input "What time is it and what's 5 * 7?"
 ```
 
 ### AIQ as MCP Server
