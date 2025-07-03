@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.usage_stats import UsageStats
+from aiq.profiler.data_models import GPUEstimatesPerConcurrency
 from aiq.profiler.data_models import ProfilerResults
 
 
@@ -132,18 +133,6 @@ class SizingMetricsPerConcurrency(BaseModel):
     total_runtime: float
     # per item metrics, key is the dataset entry id
     per_item_metrics: dict[typing.Any, SizingMetricPerItem]
-
-
-class GPUEstimatesPerConcurrency(BaseModel):
-    """
-    GPU estimates per concurrency.
-    """
-    # gpu estimates per concurrency based on the workflow runtime
-    gpu_estimate_by_wf_runtime: float | None = None
-    # gpu estimates per concurrency based on the LLM latency
-    gpu_estimate_by_llm_latency: float | None = None
-    # gpu estimates per concurrency based on the number of users
-    gpu_estimate: float | None = None
 
 
 class GPUEstimates(BaseModel):

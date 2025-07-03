@@ -22,9 +22,9 @@ from tabulate import tabulate
 
 from aiq.eval.config import CalcRunnerConfig
 from aiq.eval.config import CalcRunnerOutput
-from aiq.eval.config import GPUEstimatesPerConcurrency
 from aiq.eval.config import OutOfRangeRunsPerConcurrency
-from aiq.eval.runners.calc_runner import CalcRunner
+from aiq.profiler.calc.calc_runner import CalcRunner
+from aiq.profiler.data_models import GPUEstimatesPerConcurrency
 
 logger = logging.getLogger(__name__)
 
@@ -218,8 +218,8 @@ def calc_command(ctx,
 
         headers = [
             "Concurrency",
-            "LLM Latency",
-            "WF Runtime",
+            "p95 LLM Latency",
+            "p95 WF Runtime",
             "Total Runtime",
         ]
 

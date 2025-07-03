@@ -28,16 +28,70 @@ from aiq.eval.config import CalcRunnerConfig
 from aiq.eval.config import CalcRunnerOutput
 from aiq.eval.config import EvaluationRunConfig
 from aiq.eval.config import GPUEstimates
-from aiq.eval.config import GPUEstimatesPerConcurrency
 from aiq.eval.config import MultiEvaluationRunConfig
 from aiq.eval.config import OutOfRangeRunsPerConcurrency
 from aiq.eval.config import SizingMetricPerItem
 from aiq.eval.config import SizingMetricsPerConcurrency
 from aiq.eval.runners.multi_eval_runner import MultiEvaluationRunner
 from aiq.eval.usage_stats import UsageStats
+from aiq.profiler.data_models import GPUEstimatesPerConcurrency
 from aiq.profiler.data_models import ProfilerResults
 
 logger = logging.getLogger(__name__)
+
+
+def compute_single_gpu_estimate(target_llm_latency: float,
+                                target_workflow_runtime: float,
+                                target_users: int,
+                                test_gpu_count: int,
+                                observed_latency: float,
+                                observed_runtime: float) -> GPUEstimatesPerConcurrency:
+    """
+    Estimate GPU count to meet target latency and/or workflow runtime SLA
+    for a given target user load.
+    This formula is derived from the following assumptions:
+    - The workflow runtime increases linearly with the number of users.
+    - The LLM latency increases linearly with the number of users.
+    - The number of GPUs required increases linearly with the number of users.
+
+    Formula based on the target latency and runtime:
+        G_required = (U_target / C_test) * (L_obs / L_target) * (R_obs / R_target) * G_test
+
+    Formula based on the target latency:
+        G_required = (U_target / C_test) * (L_target / L_obs) * G_test
+
+    Formula based on the target runtime:
+        G_required = (U_target / C_test) * (R_target / R_obs) * G_test
+
+    where:
+        - U_target: Target number of users
+        - C_test: Test concurrency
+        - L_obs: Observed LLM latency
+        - L_target: Target LLM latency
+        - R_obs: Observed workflow runtime
+        - R_target: Target workflow runtime
+        - G_test: Test GPU count
+    """
+    use_latency = target_llm_latency > 0
+    use_runtime = target_workflow_runtime > 0
+
+    # if observed latency or runtime exceeds the target return empty GPUEstimatesPerConcurrency
+    if use_latency and observed_latency > target_llm_latency:
+        return GPUEstimatesPerConcurrency()
+
+    if use_runtime and observed_runtime > target_workflow_runtime:
+        return GPUEstimatesPerConcurrency()
+
+    llm_latency_multiplier = observed_latency / target_llm_latency if use_latency else 1.0
+    wf_runtime_multiplier = observed_runtime / target_workflow_runtime if use_runtime else 1.0
+
+    gpu_estimate_by_wf_runtime = (target_users / test_gpu_count) * wf_runtime_multiplier * test_gpu_count
+    gpu_estimate_by_llm_latency = (target_users / test_gpu_count) * llm_latency_multiplier * test_gpu_count
+    gpu_estimate = (target_users / test_gpu_count) * wf_runtime_multiplier * llm_latency_multiplier * test_gpu_count
+
+    return GPUEstimatesPerConcurrency(gpu_estimate_by_wf_runtime=gpu_estimate_by_wf_runtime,
+                                      gpu_estimate_by_llm_latency=gpu_estimate_by_llm_latency,
+                                      gpu_estimate=gpu_estimate)
 
 
 class CalcRunner:
@@ -286,29 +340,6 @@ class CalcRunner:
         """
         Estimate GPU count to meet target latency and/or workflow runtime SLA
         for a given target user load.
-        This formula is derived from the following assumptions:
-        - The workflow runtime increases linearly with the number of users.
-        - The LLM latency increases linearly with the number of users.
-        - The number of GPUs required increases linearly with the number of users.
-
-        The formula if both constraints are set:
-            G_required = (U_target / C_test) * (L_obs / L_target) * (R_obs / R_target) * G_test
-        The formula if only latency constraint is set:
-            G_required = (U_target / C_test) * (L_obs / L_target) * G_test
-        The formula if only runtime constraint is set:
-            G_required = (U_target / C_test) * (R_obs / R_target) * G_test
-
-        where:
-            - U_target: Target number of users
-            - C_test: Test concurrency
-            - L_obs: Observed LLM latency
-            - L_target: Target LLM latency
-            - R_obs: Observed workflow runtime
-            - R_target: Target workflow runtime
-            - G_test: Test GPU count
-
-        Runs that don't meet the SLA are ignored for e.g. if the target runtime is 2mins,
-        but the observed runtime is 3mins, the run is ignored.
         """
 
         if self.target_users <= 0 or self.test_gpu_count <= 0 or \
@@ -414,6 +445,7 @@ class CalcRunner:
 
     async def run_online(self) -> CalcRunnerOutput:
         """
+        Create a MultiEvaluationRunner with concurrency overrides.
         Run in online mode.
         1.Run the workflow
         2. Collect profiler results and usage stats
@@ -423,8 +455,16 @@ class CalcRunner:
         # Override the concurrency and alias keys in the config
         concurrency_key = "eval.general.max_concurrency"
         alias_key = "eval.general.workflow_alias"
+
         overrides = {
-            c: ((concurrency_key, str(c)), (alias_key, "wf_concurrency_" + str(c)))
+            c: ((concurrency_key, str(c)), (alias_key, "wf_concurrency_" + str(c)),
+                ("eval.general.profiler.gpu_estimate.enable",
+                 "true"), ("eval.general.profiler.gpu_estimate.target_llm_latency", str(self.target_latency)),
+                ("eval.general.profiler.gpu_estimate.target_workflow_runtime", str(self.target_runtime)),
+                ("eval.general.profiler.gpu_estimate.target_users",
+                 str(self.target_users)), ("eval.general.profiler.gpu_estimate.test_gpu_count",
+                                           str(self.test_gpu_count)), ("eval.general.profiler.gpu_estimate.output_dir",
+                                                                       str(self.config.output_dir)))
             for c in self.config.concurrencies
         }
 
@@ -486,10 +526,16 @@ class CalcRunner:
 
     async def run(self) -> CalcRunnerOutput:
         """
-        Create a MultiEvaluationRunner with concurrency overrides.
+        online mode:
+        1. Run the workflow
+        2. Collect profiler results and usage stats
+        3. Calculate GPU estimates
+        4. Write the output to the online subdirectory
 
-        Each concurrency value is used to override the `eval.general.max_concurrency`
-        key in the config.
+        offline mode:
+        1. Read previous jobs in online mode and only append unique concurrency values to metrics_per_concurrency
+        2. Calculate GPU estimates
+        3. Write the output to the offline subdirectory
         """
         if self.config.offline_mode:
             return self.run_offline()
