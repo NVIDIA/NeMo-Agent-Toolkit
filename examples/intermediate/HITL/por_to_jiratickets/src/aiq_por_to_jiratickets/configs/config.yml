@@ -36,6 +36,9 @@ functions:
     root_path: "./examples/por_to_jiratickets/data/"
     jira_domain: ""
     jira_project_key: ""
+  hitl_approval_tool:
+    _type: hitl_approval_tool
+    prompt: "I would like to create Jira tickets for the extracted data."
 
 llms:
   extract_llm:

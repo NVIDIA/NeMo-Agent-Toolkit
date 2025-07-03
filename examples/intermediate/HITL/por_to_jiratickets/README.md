@@ -27,7 +27,7 @@ A minimal example demonstrating an end-to-end Jira ticket creating agentic workf
 - **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
 - **Ease of Use:** Simplifies developer experience and deployment.
 - **Jira Agent Tool Call:** Following tools are available for the agent to extract POR, create and get Jira tickets.
-   - `create_jira_ticket`()`: This function creates Jira ticket using the REST API. It requires specifying the project key, Jira token, Jira username, domain, and also ticket type (e.g., Bug, Task, Story), description and priority. Upon successful creation, it returns the ticket ID and URL.
+   - `create_jira_tickets_tool()`: This function creates Jira tickets using the REST API. It requires specifying the project key, Jira token, Jira username, domain, and ticket type (e.g., Epic, Bug, Task, New Feature), along with descriptions and priorities. The tool integrates Human in the Loop (HITL) functionality through the `hitl_approval_tool`, which prompts the user for explicit confirmation before creating any Jira tickets. Users must respond with "yes" to proceed with ticket creation; any other response will cancel the operation. Upon successful creation, it returns the ticket IDs and URLs.
    -  `extract_from_por_tool`: Extract epics, tasks, features and bugs from the given PRO/PRD file using the LLM chain and store the result. Assigns story points for each type based on complexity/effort and also fills in description for each.
    -  `get_jira_tickets_tool`: This function retrieves existing Jira tickets based on a JQL (Jira Query Language) filter. It fetches relevant information like ticket summary, status, and assignee. The returned data can be used for tracking or reporting.
 
