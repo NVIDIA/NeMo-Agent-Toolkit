@@ -16,6 +16,7 @@
 import logging
 from collections.abc import Sequence
 
+from pydantic import BaseModel
 from ragas import EvaluationDataset
 from ragas import SingleTurnSample
 from ragas.dataset_schema import EvaluationResult
@@ -25,6 +26,7 @@ from tqdm import tqdm
 
 from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.eval.evaluator.evaluator_model import EvalInput
+from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.evaluator.evaluator_model import EvalOutputItem
 from aiq.eval.utils.tqdm_position_registry import TqdmPositionRegistry
@@ -34,13 +36,36 @@ logger = logging.getLogger(__name__)
 
 class RAGEvaluator:
 
-    def __init__(self, evaluator_llm: LangchainLLMWrapper, metrics: Sequence[Metric], max_concurrency=8):
+    def __init__(self,
+                 evaluator_llm: LangchainLLMWrapper,
+                 metrics: Sequence[Metric],
+                 max_concurrency=8,
+                 input_obj_field: str | None = None):
         self.evaluator_llm = evaluator_llm
         self.metrics = metrics
         self.max_concurrency = max_concurrency
+        self.input_obj_field = input_obj_field
 
-    @staticmethod
-    def eval_input_to_ragas(eval_input: EvalInput) -> EvaluationDataset:
+    def extract_input_obj(self, item: EvalInputItem) -> str:
+        """Extracts the input object from EvalInputItem based on the configured input_obj_field."""
+        input_obj = item.input_obj
+        if isinstance(input_obj, BaseModel):
+            if self.input_obj_field and hasattr(input_obj, self.input_obj_field):
+                # If input_obj_field is specified, return the value of that field
+                return str(getattr(input_obj, self.input_obj_field, ""))
+            else:
+                # If no input_obj_field is specified, return the string representation of the model
+                return input_obj.model_dump_json()
+
+        if isinstance(input_obj, dict):
+            # If input_obj is a dict, return the JSON string representation
+            if self.input_obj_field and self.input_obj_field in input_obj:
+                # If input_obj_field is specified, return the value of that field
+                return str(input_obj[self.input_obj_field])
+
+        return str(input_obj)  # Fallback to string representation of the dict
+
+    def eval_input_to_ragas(self, eval_input: EvalInput) -> EvaluationDataset:
         """Converts EvalInput into a Ragas-compatible EvaluationDataset."""
         from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
         event_filter = [IntermediateStepType.TOOL_END, IntermediateStepType.LLM_END, IntermediateStepType.CUSTOM_END]
@@ -49,7 +74,7 @@ class RAGEvaluator:
         intermediate_step_adapter = IntermediateStepAdapter()
         for item in eval_input.eval_input_items:
             # Extract required fields from EvalInputItem
-            user_input = item.input_obj  # Assumes input_obj is a string (modify if needed)
+            user_input = self.extract_input_obj(item)  # Extract input object as string
             reference = item.expected_output_obj  # Reference correct answer
             response = item.output_obj  # Model's generated response
 
