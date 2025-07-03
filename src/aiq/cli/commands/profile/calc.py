@@ -180,6 +180,11 @@ def calc_command(ctx,
         click.echo(f"Estimated GPU count: {results.gpu_estimates.gpu_estimate_min}")
         click.echo(f"Estimated GPU count (95th percentile): {results.gpu_estimates.gpu_estimate_p95}")
 
+        # Check if there are any out-of-range runs to determine if we should show fail columns
+        has_out_of_range_runs = any(out_of_range.num_runs_greater_than_target_latency > 0
+                                    or out_of_range.num_runs_greater_than_target_runtime > 0
+                                    for out_of_range in results.out_of_range_runs_per_concurrency.values())
+
         # Print per concurrency results as a table
         click.echo("Per concurrency results:")
         table = []
@@ -188,28 +193,49 @@ def calc_command(ctx,
                 concurrency, GPUEstimatesPerConcurrency())
             out_of_range_per_concurrency = results.out_of_range_runs_per_concurrency.get(
                 concurrency, OutOfRangeRunsPerConcurrency())
-            table.append([
+
+            row = [
                 concurrency,
                 metrics.llm_latency_p95,
                 metrics.workflow_runtime_p95,
                 metrics.total_runtime,
-                out_of_range_per_concurrency.num_runs_greater_than_target_latency,
-                out_of_range_per_concurrency.num_runs_greater_than_target_runtime,
+            ]
+
+            # Only include fail columns if there are actual out-of-range runs
+            if has_out_of_range_runs:
+                row.extend([
+                    out_of_range_per_concurrency.num_runs_greater_than_target_latency,
+                    out_of_range_per_concurrency.num_runs_greater_than_target_runtime,
+                ])
+
+            row.extend([
                 gpu_estimates_per_concurrency.gpu_estimate,
                 gpu_estimates_per_concurrency.gpu_estimate_by_llm_latency,
                 gpu_estimates_per_concurrency.gpu_estimate_by_wf_runtime,
             ])
+
+            table.append(row)
+
         headers = [
             "Concurrency",
             "LLM Latency",
             "WF Runtime",
             "Total Runtime",
-            "Latency Fails",
-            "Runtime Fails",
+        ]
+
+        # Only include fail headers if there are actual out-of-range runs
+        if has_out_of_range_runs:
+            headers.extend([
+                "Latency Fails",
+                "Runtime Fails",
+            ])
+
+        headers.extend([
             "GPUs (Overall)",
             "GPUs (LLM Latency)",
             "GPUs (WF Runtime)",
-        ]
+        ])
+
         click.echo(tabulate(table, headers=headers, tablefmt="github"))
 
     results = asyncio.run(run_calc())

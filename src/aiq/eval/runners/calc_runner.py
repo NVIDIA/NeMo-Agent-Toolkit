@@ -345,9 +345,16 @@ class CalcRunner:
         gpu_estimates, gpu_estimates_per_concurrency, out_of_range_runs_per_concurrency = \
             self._calc_gpu_count(self.metrics_per_concurrency)
 
+        # Filter out out_of_range_runs entries where all values are 0s
+        filtered_out_of_range_runs = {}
+        for concurrency, out_of_range_runs in out_of_range_runs_per_concurrency.items():
+            if (out_of_range_runs.number_failed_runs > 0 or out_of_range_runs.num_runs_greater_than_target_latency > 0
+                    or out_of_range_runs.num_runs_greater_than_target_runtime > 0):
+                filtered_out_of_range_runs[concurrency] = out_of_range_runs
+
         return CalcRunnerOutput(gpu_estimates=gpu_estimates,
                                 gpu_estimates_per_concurrency=gpu_estimates_per_concurrency,
-                                out_of_range_runs_per_concurrency=out_of_range_runs_per_concurrency,
+                                out_of_range_runs_per_concurrency=filtered_out_of_range_runs,
                                 sizing_metrics_per_concurrency=self.metrics_per_concurrency)
 
     def run_offline(self) -> CalcRunnerOutput:

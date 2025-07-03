@@ -131,7 +131,7 @@ class SizingMetricsPerConcurrency(BaseModel):
     # total workflow runtime
     total_runtime: float
     # per item metrics, key is the dataset entry id
-    per_item_metrics: dict[str, SizingMetricPerItem]
+    per_item_metrics: dict[typing.Any, SizingMetricPerItem]
 
 
 class GPUEstimatesPerConcurrency(BaseModel):
