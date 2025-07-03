@@ -79,12 +79,16 @@ class AIQContextState(metaclass=Singleton):
                                              | None] = ContextVar(
                                                  "user_input_callback",
                                                  default=AIQUserInteractionManager.default_callback_handler)
-
+        # MITIGATION STRATEGY:
+        # The self.user_auth_callback is being reset during HTTP streaming request due to the session manager not
+        # executing the callback during the session, it is exiting and resetting the callback. Defaulting to
+        # `user_auth_callback_server_http` since this bug only happens during streaming requests.
+        from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
         self.user_auth_callback: ContextVar[Callable[[OAuthClientBase, ConsentPromptMode],
                                                      Awaitable[AuthenticationError | None]]
                                             | None] = ContextVar(
                                                 "user_auth_callback",
-                                                default=AIQUserInteractionManager.user_auth_callback_default)
+                                                default=FastApiFrontEndPluginWorker.user_auth_callback_server_http)
 
     @staticmethod
     def get() -> "AIQContextState":

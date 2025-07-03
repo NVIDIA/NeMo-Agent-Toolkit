@@ -19,6 +19,7 @@ import uuid
 
 from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
 from aiq.authentication.interfaces import OAuthClientBase
+from aiq.data_models.authentication import AuthenticationEndpoint
 from aiq.data_models.authentication import ConsentPromptMode
 from aiq.data_models.interactive import HumanPrompt
 from aiq.data_models.interactive import HumanResponse
@@ -92,9 +93,29 @@ class AIQUserInteractionManager:
 
     async def authenticate_oauth_client(self, oauth_client: OAuthClientBase,
                                         consent_prompt_handle: ConsentPromptMode) -> AuthenticationError | None:
+        # pylint: disable=pointless-statement
+        f"""
+        Authenticate to an OAuth2.0 API provider using the OAuth2.0 authentication flow with configurable
+        consent handling.
 
-        # TODOD EE: Add doc string
+        - BROWSER mode: Automatically opens the user's default web browser to the authorization URL. The user
+          completes the consent prompt directly in the browser, and upon successful authorization, the browser
+          redirects back with an authorization code that is automatically captured and exchanged for access tokens.
 
+        - FRONTEND mode: Logs to the console notifying the user to complete the consent prompt. The user can retreive
+        the consent prompt redirect URL by sending a post request to the consent prompt redirect uri:
+        {AuthenticationEndpoint.PROMPT_REDIRECT_URI} with the consent prompt key in the request body. The consent
+        prompt key is the value of the consent_prompt_key field in the authentication provider configuration.
+
+        Args:
+            oauth_client (OAuthClientBase): The OAuth client to be used for authentication.
+            consent_prompt_handle (ConsentPromptMode): The consent prompt mode (BROWSER or FRONTEND) that determines
+                                                      how the user consent flow is handled.
+
+        Returns:
+            AuthenticationError | None: None if authentication succeeds, otherwise returns an AuthenticationError
+                                       with details about the failure.
+        """
         try:
 
             await self._context_state.user_auth_callback.get()(oauth_client, consent_prompt_handle)

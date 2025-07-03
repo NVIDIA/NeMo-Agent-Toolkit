@@ -200,8 +200,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
     def __init__(self, config: AIQConfig):
         super().__init__(config)
 
-    async def user_auth_callback_server_http(self,
-                                             oauth_client: OAuthClientBase,
+    @staticmethod
+    async def user_auth_callback_server_http(oauth_client: OAuthClientBase,
                                              consent_prompt_mode: ConsentPromptMode) -> AuthenticationError | None:
         """
         Callback handler for user authentication in server HTTP environments.
@@ -508,8 +508,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                async with session_manager.session(request=request,
-                                                   user_authentication_callback=self.user_auth_callback_server_http):
+                async with session_manager.session(
+                        request=request,
+                        user_authentication_callback=FastApiFrontEndPluginWorker.user_auth_callback_server_http):
 
                     return await generate_single_response(None, session_manager, result_type=result_type)
 
@@ -521,8 +522,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 async with session_manager.session(
                         request=request,
-                        # TODO EE: Investigate Bug.
-                        user_authentication_callback=self.user_auth_callback_server_http):
+                        user_authentication_callback=FastApiFrontEndPluginWorker.user_auth_callback_server_http):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
@@ -535,8 +535,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             return get_stream
 
-        def get_streaming_raw_endpoint(streaming: bool, result_type: type | None,
-                                       output_type: type | None):  # TODO EE: Add callbacks?
+        def get_streaming_raw_endpoint(streaming: bool, result_type: type | None, output_type: type | None):
 
             async def get_stream(filter_steps: str | None = None):
 
@@ -557,8 +556,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                async with session_manager.session(request=request,
-                                                   user_authentication_callback=self.user_auth_callback_server_http):
+                async with session_manager.session(
+                        request=request,
+                        user_authentication_callback=FastApiFrontEndPluginWorker.user_auth_callback_server_http):
 
                     return await generate_single_response(payload, session_manager, result_type=result_type)
 
@@ -573,8 +573,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 async with session_manager.session(
                         request=request,
-                        # TODO EE: Investigate Bug.
-                        user_authentication_callback=self.user_auth_callback_server_http):
+                        user_authentication_callback=FastApiFrontEndPluginWorker.user_auth_callback_server_http):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
@@ -595,7 +594,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             Stream raw intermediate steps without any step adaptor translations.
             """
 
-            # TODO EE: Add callbacks?
             async def post_stream(payload: request_type, filter_steps: str | None = None):
 
                 return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},

@@ -17,13 +17,13 @@
 # flake8: noqa
 
 # Import any tools which need to be automatically registered here
+from . import authentication_tools
 from . import datetime_tools
 from . import document_search
 from . import github_tools
 from . import nvidia_rag
 from . import retriever
 from . import server_tools
-from .authentication_tools import oauth2_browser_auth_tool
 from .code_execution import register
 from .github_tools import create_github_commit
 from .github_tools import create_github_issue
