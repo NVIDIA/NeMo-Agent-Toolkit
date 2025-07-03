@@ -11,6 +11,7 @@ echo.
 echo Use the mode switcher in the UI to toggle between:
 echo - ON_CALL mode (connects to backend on port 8000)
 echo - FRIDAY mode (connects to backend on port 8001)
+echo - SLACK mode (connects to backend on port 8002)
 echo.
 
 npm run dev 
