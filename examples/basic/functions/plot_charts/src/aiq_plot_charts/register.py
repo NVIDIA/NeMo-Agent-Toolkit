@@ -57,7 +57,7 @@ async def simple_workflow(config: PlotChartsWorkflowConfig, builder: Builder):
         logger.info("input_message=%s", input_message)
         cur_dir = os.path.abspath('.')
         logger.info("cur_dir=%s", cur_dir)
-        data_path = os.path.join(cur_dir, "examples/plot_charts/example_data.json")
+        data_path = os.path.join(cur_dir, "examples/basic/functions/plot_charts/example_data.json")
         logger.info("data_path=%s", data_path)
         with open(data_path, "r", encoding="utf-8") as f:
             data = json.load(f)
