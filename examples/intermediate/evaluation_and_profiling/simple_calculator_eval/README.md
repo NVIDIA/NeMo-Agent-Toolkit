@@ -17,16 +17,16 @@ limitations under the License.
 
 # Simple Calculator - Evaluation and Profiling
 
-This example demonstrates **evaluation and profiling capabilities** of the AIQ toolkit using the Simple Calculator workflow. Learn how to systematically evaluate your AI agent's performance and accuracy.
+This example demonstrates how to evaluate and profile AI agent performance using the NVIDIA NeMo Agent toolkit. You'll learn to systematically measure your agent's accuracy and analyze its behavior using the Simple Calculator workflow.
 
-## 🎯 What You'll Learn
+## What You'll Learn
 
-- **Accuracy Evaluation**: How to measure and validate agent responses using the Tunable RAG Evaluator
-- **Performance Profiling**: Understanding agent behavior through systematic evaluation
-- **Dataset Management**: Working with evaluation datasets for consistent testing
-- **Metrics Analysis**: Interpreting evaluation results to improve agent performance
+- **Accuracy Evaluation**: Measure and validate agent responses using the Tunable RAG Evaluator
+- **Performance Analysis**: Understand agent behavior through systematic evaluation
+- **Dataset Management**: Work with evaluation datasets for consistent testing
+- **Results Interpretation**: Analyze evaluation metrics to improve agent performance
 
-## 🔗 Prerequisites
+## Prerequisites
 
 This example builds upon the [basic Simple Calculator](../../../basic/functions/simple_calculator/). Install it first:
 
@@ -34,47 +34,34 @@ This example builds upon the [basic Simple Calculator](../../../basic/functions/
 uv pip install -e examples/basic/functions/simple_calculator
 ```
 
-## 📦 Installation
+## Installation
+
+Install this evaluation example:
 
 ```bash
 uv pip install -e examples/intermediate/evaluation_and_profiling/simple_calculator_eval
 ```
 
-## 🚀 Usage
+## Usage
 
-### Accuracy Evaluation
+### Running Evaluation
 
-Run evaluation against a sample dataset to measure response accuracy:
+Evaluate the Simple Calculator agent's accuracy against a test dataset:
 
 ```bash
 aiq eval --config_file examples/intermediate/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml
 ```
 
-The evaluation:
-- Uses the dataset in `examples/basic/functions/simple_calculator/data/simple_calculator.json`
-- Applies the Tunable RAG Evaluator to measure accuracy
-- Outputs detailed results to `.tmp/eval/simple_calculator/tuneable_eval_output.json`
+This command:
+- Uses the test dataset from `examples/basic/functions/simple_calculator/data/simple_calculator.json`
+- Applies the Tunable RAG Evaluator to measure response accuracy
+- Saves detailed results to `.tmp/eval/simple_calculator/tuneable_eval_output.json`
 
 ### Understanding Results
 
-The evaluation results include:
+The evaluation generates comprehensive metrics including:
+
 - **Accuracy Scores**: Quantitative measures of response correctness
-- **Detailed Breakdowns**: Per-question analysis
-- **Performance Metrics**: Response quality assessments
-
-## 🔍 Key Features Demonstrated
-
-- **Systematic Evaluation**: Repeatable testing methodology
-- **Quality Metrics**: Quantitative assessment of agent performance
-- **Dataset Integration**: Structured evaluation data management
-- **Results Analysis**: Actionable insights from evaluation runs
-
-## 📊 Configuration
-
-The `config-tunable-rag-eval.yml` demonstrates:
-- Evaluation pipeline setup
-- Dataset configuration
-- Evaluator parameters
-- Output format specifications
-
-This focused example showcases how AIQ toolkit enables comprehensive evaluation workflows essential for production AI systems.
+- **Question-by-Question Analysis**: Detailed breakdown of individual responses
+- **Performance Metrics**: Overall quality assessments
+- **Error Analysis**: Identification of common failure patterns

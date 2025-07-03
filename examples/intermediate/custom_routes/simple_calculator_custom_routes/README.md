@@ -9,7 +9,7 @@ You may obtain a copy of the License at
 http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
+distributed under the License is distributed on an "AS-IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
@@ -17,31 +17,32 @@ limitations under the License.
 
 # Simple Calculator - Custom Routes and Metadata Access
 
-This example demonstrates **custom API routes and request metadata access** using the Simple Calculator workflow. Learn how to extend AIQ toolkit applications with custom endpoints and access rich HTTP request context.
+This example demonstrates how to extend NVIDIA NeMo Agent toolkit applications with custom API routes and HTTP request metadata access. Build sophisticated APIs that capture rich request context for authentication, routing, and specialized business logic.
 
-## 🎯 What You'll Learn
+## What You'll Learn
 
-- **Custom API Routes**: Define and register custom endpoints dynamically
-- **Request Metadata Access**: Capture HTTP headers, query parameters, and more
-- **API Extension**: Extend AIQ toolkit applications with specialized endpoints
-- **Context Management**: Access request context within your functions
-- **Production APIs**: Build sophisticated API interfaces for AI workflows
+- **Custom API routes**: Define and register custom endpoints through configuration
+- **Request metadata access**: Capture HTTP headers, query parameters, and client information
+- **Context management**: Access request context throughout function execution
+- **API extension patterns**: Build production-ready APIs with specialized endpoints
 
-## 🔗 Prerequisites
+## Prerequisites
 
-This example builds upon the [basic Simple Calculator](../../../basic/functions/simple_calculator/). Install it first:
+This example extends the [basic Simple Calculator](../../../basic/functions/simple_calculator/). Install it first:
 
 ```bash
 uv pip install -e examples/basic/functions/simple_calculator
 ```
 
-## 📦 Installation
+## Installation
+
+Install this example:
 
 ```bash
 uv pip install -e examples/intermediate/custom_routes/simple_calculator_custom_routes
 ```
 
-## 🚀 Usage
+## Quick Start
 
 ### Start the API Server
 
@@ -49,23 +50,29 @@ uv pip install -e examples/intermediate/custom_routes/simple_calculator_custom_r
 aiq serve --config_file examples/intermediate/custom_routes/simple_calculator_custom_routes/configs/config-metadata.yml
 ```
 
-The server will start with both default and custom endpoints:
-- Standard endpoint: `POST /generate`
-- Custom endpoint: `POST /get_request_metadata`
+The server starts with both standard and custom endpoints:
 
-### Test Custom Routes
+- **Standard endpoint**: `POST /generate` - Default Agent toolkit workflow endpoint
+- **Custom endpoint**: `POST /get_request_metadata` - Demonstrates metadata access
 
-#### Access Request Metadata
+### Test the Custom Route
+
+Access comprehensive request metadata:
+
 ```bash
 curl -X 'POST' \
-  'http://localhost:8000/get_request_metadata' \
+  'http://localhost:8000/get_request_metadata?user_id=123&session=abc' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -H 'X-Custom-Header: test-value' \
+  -H 'Authorization: Bearer token123' \
   -d '{"input_message": "show me request details"}'
 ```
 
-#### Standard Calculator with Metadata Context
+### Test Standard Route with Metadata Context
+
+The metadata is also available in standard workflow functions:
+
 ```bash
 curl -X 'POST' \
   'http://localhost:8000/generate?user_id=123&session=abc' \
@@ -75,76 +82,53 @@ curl -X 'POST' \
   -d '{"input_message": "What is 5 + 3?"}'
 ```
 
-## 🔍 Key Features Demonstrated
+## Configuration
 
-- **Dynamic Route Registration**: Add custom endpoints via configuration
-- **Rich Metadata Access**: Capture comprehensive request information
-- **Context Propagation**: Request context available throughout execution
-- **HTTP Integration**: Full HTTP protocol support
-- **Custom Logic**: Implement specialized business logic in custom routes
+Users can define custom routes that are dynamically added to the API server, and capture HTTP request metadata such as the method, URL path, URL scheme, headers, query parameters, path parameters, host, port, and cookies.
 
-## 📊 Available Request Metadata
+### Defining Custom Routes
 
-The custom endpoint captures:
-
-| Metadata | Description | Example |
-|----------|-------------|---------|
-| `method` | HTTP method | `POST`, `GET` |
-| `url_path` | Request path | `/get_request_metadata` |
-| `url_scheme` | Protocol scheme | `http`, `https` |
-| `headers` | HTTP headers | `Authorization`, `Content-Type` |
-| `query_params` | URL parameters | `?user_id=123&session=abc` |
-| `path_params` | Path variables | `/users/{user_id}` |
-| `client_host` | Client IP address | `192.168.1.100` |
-| `client_port` | Client port | `12345` |
-| `cookies` | HTTP cookies | Session, authentication cookies |
-
-## ⚙️ Configuration
-
-The `config-metadata.yml` demonstrates:
+Add custom endpoints in your configuration file's `front_end` section:
 
 ```yaml
-front_end:
-  _type: fastapi
-  endpoints:
-    - path: /get_request_metadata
-      method: POST
-      description: Gets the request attributes from the request.
-      function_name: current_request_attributes
+general:
+  use_uvloop: true
+
+  front_end:
+    _type: fastapi
+    endpoints:
+      - path: /get_request_metadata
+        method: POST
+        description: "Gets the request attributes from the request."
+        function_name: current_request_attributes
 ```
 
-## 🛠️ Custom Function Implementation
-
-The example shows how to access metadata in your functions:
+### Complete Metadata Access Example
+Get the instance of the `aiq.builder.context.AIQContext` object using the `aiq.builder.context.AIQContext.get()` method. This will give you access to the metadata method which holds the request attributes defined by the user on request. A complete example of the function can be found in `src/aiq/tool/server_tools.py`.
 
 ```python
-async def custom_function(input: str) -> str:
-    from aiq.builder.context import AIQContext
-    context = AIQContext.get()
+@register_function(config_type=RequestAttributesTool)
+async def current_request_attributes(config: RequestAttributesTool, builder: Builder):
 
-    # Access request metadata
-    headers = context.metadata.headers
-    query_params = context.metadata.query_params
-    client_host = context.metadata.client_host
+    from starlette.datastructures import Headers
+    from starlette.datastructures import QueryParams
 
-    # Use metadata in your logic
-    return f"Request from {client_host}"
+    async def _get_request_attributes(unused: str) -> str:
+
+        from aiq.builder.context import AIQContext
+        aiq_context = AIQContext.get()
+
+        method: str | None = aiq_context.metadata.method
+        url_path: str | None = aiq_context.metadata.url_path
+        url_scheme: str | None = aiq_context.metadata.url_scheme
+        headers: Headers | None = aiq_context.metadata.headers
+        query_params: QueryParams | None = aiq_context.metadata.query_params
+        path_params: dict[str, str] | None = aiq_context.metadata.path_params
+        client_host: str | None = aiq_context.metadata.client_host
+        client_port: int | None = aiq_context.metadata.client_port
+        cookies: dict[str, str] | None = aiq_context.metadata.cookies
+        conversation_id: str | None = aiq_context.conversation_id
+
+    yield FunctionInfo.from_fn(_get_request_attributes,
+                               description="Returns the acquired user defined request attriubutes.")
 ```
-
-## 🌟 Use Cases
-
-- **Authentication & Authorization**: Access tokens and user context
-- **Request Routing**: Route based on headers or parameters
-- **Audit Logging**: Track requests with full context
-- **Rate Limiting**: Implement per-client rate limiting
-- **Personalization**: Customize responses based on request metadata
-- **Analytics**: Collect detailed usage analytics
-
-## 🔧 Advanced Features
-
-- **Custom processing**: Add custom processing for pre/post request handling
-- **Response Customization**: Modify responses based on request context
-- **Error Handling**: Context-aware error responses
-- **Session Management**: Stateful interactions using request metadata
-
-This example showcases how AIQ toolkit enables building sophisticated, production-ready APIs with rich request context and custom business logic.

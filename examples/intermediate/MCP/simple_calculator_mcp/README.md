@@ -17,66 +17,80 @@ limitations under the License.
 
 # Simple Calculator - Model Context Protocol (MCP)
 
-This example demonstrates **Model Context Protocol (MCP) integration** using the Simple Calculator workflow. Learn how to connect AIQ toolkit with external MCP servers and publish AIQ tools as MCP services.
+This example demonstrates how to integrate the NVIDIA NeMo Agent toolkit with Model Context Protocol (MCP) servers. You'll learn to use remote tools through MCP and publish Agent toolkit functions as MCP services.
 
-## 🎯 What You'll Learn
+## What is MCP?
 
-- **MCP Client Usage**: Connect to external MCP servers for remote tool access
-- **MCP Server Setup**: Publish AIQ toolkit functions as MCP services
-- **Protocol Integration**: Seamless interoperability with MCP ecosystem
-- **Remote Tool Access**: Use tools hosted on different systems
-- **Service Architecture**: Build distributed AI tool networks
+Model Context Protocol (MCP) is a standard protocol that enables AI applications to securely connect to external data sources and tools. It allows you to:
 
-## 🔗 Prerequisites
+- **Access remote tools**: Use functions hosted on different systems
+- **Share capabilities**: Publish your tools for other AI systems to use
+- **Build distributed systems**: Create networks of interconnected AI tools
+- **Maintain security**: Control access to remote capabilities
 
-This example builds upon the [basic Simple Calculator](../../../basic/functions/simple_calculator/). Install it first:
+## What You'll Learn
+
+- Connect to external MCP servers as a client
+- Publish Agent toolkit functions as MCP services
+- Build distributed AI tool networks
+- Integrate with the broader MCP ecosystem
+
+## Prerequisites
+
+Install the basic Simple Calculator example first:
 
 ```bash
 uv pip install -e examples/basic/functions/simple_calculator
 ```
 
-## 📦 Installation
+## Installation
 
 ```bash
 uv pip install -e examples/intermediate/MCP/simple_calculator_mcp
 ```
 
-## 🚀 Usage
+## Usage
 
-### AIQ as MCP Client
+### Using Agent Toolkit as MCP Client
 
-Connect to external MCP servers to use remote tools:
+Connect to external MCP servers to access remote tools:
 
-#### Date MCP Server
+#### Date Server Example
+Access date and time functions from a remote MCP server:
+
 ```bash
 aiq run --config_file examples/intermediate/MCP/simple_calculator_mcp/configs/config-mcp-date.yml --input "What day is it today and what's 2 + 3?"
 ```
 
-#### Math MCP Server
+#### Math Server Example
+Use advanced mathematical operations from a remote server:
+
 ```bash
 aiq run --config_file examples/intermediate/MCP/simple_calculator_mcp/configs/config-mcp-math.yml --input "Calculate the square root of 144"
 ```
 
-#### Combined Demo
+#### Combined Example
+Connect to multiple MCP servers simultaneously:
+
 ```bash
 aiq run --config_file examples/intermediate/MCP/simple_calculator_mcp/configs/demo_config_mcp.yml --input "What time is it and what's 5 * 7?"
 ```
 
-### AIQ as MCP Server
+### Using Agent Toolkit as MCP Server
 
-Publish AIQ toolkit tools as MCP services:
+Publish your Agent toolkit functions as MCP services for other applications:
 
 ```bash
-# Start AIQ as MCP server
+# Start Agent toolkit as MCP server
 aiq mcp --config_file examples/basic/functions/simple_calculator/configs/config.yml
 
-# Connect from MCP client applications
-# The calculator tools are now available via MCP protocol
+# Your calculator tools are now available via MCP protocol
+# Other MCP clients can connect and use these tools
 ```
 
 ### External MCP Deployment
 
-Deploy MCP servers independently:
+Deploy MCP servers independently using Docker:
 
 ```bash
 # Navigate to deployment directory
@@ -87,49 +101,32 @@ docker build -t simple-calculator-mcp .
 docker run -p 8080:8080 simple-calculator-mcp
 ```
 
-## 🔍 Key Features Demonstrated
+## Configuration Examples
 
-- **Remote Tool Access**: Use tools hosted on different systems
-- **Protocol Standardization**: Interoperable tool sharing
-- **Distributed Architecture**: Scale tools across infrastructure
-- **Service Discovery**: Dynamic tool registration and discovery
-- **Cross-Platform Integration**: Connect different AI frameworks
-
-## 📊 Available Configurations
-
-| config File | MCP Server | Tools Available |
-|-------------|------------|-----------------|
+| Configuration File | MCP Server Type | Available Tools |
+|-------------------|-----------------|-----------------|
 | `config-mcp-date.yml` | Date Server | Current time, date formatting |
 | `config-mcp-math.yml` | Math Server | Advanced mathematical operations |
-| `demo_config_mcp.yml` | Multiple | Combined demonstration |
+| `demo_config_mcp.yml` | Multiple Servers | Combined demonstration |
 
-## 🏗️ MCP Architecture
+## Key Benefits
 
-```
-┌─────────────────┐    MCP Protocol    ┌─────────────────┐
-│   AIQ Toolkit   │ ◄─────────────── │   MCP Server    │
-│   (Client)      │                   │   (Tools)       │
-└─────────────────┘                   └─────────────────┘
-        │                                       │
-        │              ┌─────────────────┐     │
-        └─────────────►│   MCP Server    │─────┘
-                       │   (AIQ Tools)   │
-                       └─────────────────┘
-```
-
-## 🛠️ MCP Protocol Benefits
-
-- **Standardization**: Common protocol for tool sharing
-- **Interoperability**: Works across different AI systems
-- **Scalability**: Distribute tools across networks
-- **Security**: Controlled access to remote capabilities
+- **Standardization**: Use a common protocol for tool sharing
+- **Interoperability**: Connect different AI systems seamlessly
+- **Scalability**: Distribute tools across your infrastructure
+- **Security**: Control access to remote capabilities
 - **Flexibility**: Mix and match tools from various sources
 
-## 📋 Supported MCP Operations
+## MCP Operations
+
+The Agent toolkit supports these MCP operations:
 
 - **Tool Discovery**: List available remote tools
 - **Tool Execution**: Call remote functions with parameters
 - **Resource Access**: Retrieve remote resources and data
 - **Session Management**: Maintain stateful connections
 
-This example showcases how AIQ toolkit seamlessly integrates with the MCP ecosystem for distributed AI tool architectures.
+## Learn More
+
+- [MCP Client Guide](../../../../docs/source/workflows/mcp/mcp-client.md) - Using Agent toolkit as MCP client
+- [MCP Server Guide](../../../../docs/source/workflows/mcp/mcp-server.md) - Publishing Agent toolkit tools via MCP
