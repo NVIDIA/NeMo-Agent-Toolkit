@@ -51,55 +51,11 @@ uv pip install -e examples/intermediate/MCP/simple_calculator_mcp
 
 ## Usage
 
-### Using Agent Toolkit as MCP Client
+### AIQ Toolkit as an MCP Client
+You can run the simple calculator workflow using Remote MCP tools. In this case, the workflow acts as a MCP client and connects to the MCP server running on the specified URL. Details are provided in the [MCP Client Guide](../../../../docs/source/workflows/mcp/mcp-client.md).
 
-Connect to external MCP servers to access remote tools:
-
-#### Date Server Example
-Access date and time functions from a remote MCP server:
-
-```bash
-aiq run --config_file examples/intermediate/MCP/simple_calculator_mcp/configs/config-mcp-date.yml --input "What day is it today and what's 2 + 3?"
-```
-
-#### Math Server Example
-Use advanced mathematical operations from a remote server:
-
-```bash
-aiq run --config_file examples/intermediate/MCP/simple_calculator_mcp/configs/config-mcp-math.yml --input "Calculate the square root of 144"
-```
-
-#### Combined Example
-Connect to multiple MCP servers simultaneously:
-
-```bash
-aiq run --config_file examples/intermediate/MCP/simple_calculator_mcp/configs/demo_config_mcp.yml --input "What time is it and what's 5 * 7?"
-```
-
-### Using Agent Toolkit as MCP Server
-
-Publish your Agent toolkit functions as MCP services for other applications:
-
-```bash
-# Start Agent toolkit as MCP server
-aiq mcp --config_file examples/basic/functions/simple_calculator/configs/config.yml
-
-# Your calculator tools are now available via MCP protocol
-# Other MCP clients can connect and use these tools
-```
-
-### External MCP Deployment
-
-Deploy MCP servers independently using Docker:
-
-```bash
-# Navigate to deployment directory
-cd examples/basic/functions/simple_calculator/deploy_external_mcp
-
-# Build and run MCP server container
-docker build -t simple-calculator-mcp .
-docker run -p 8080:8080 simple-calculator-mcp
-```
+### AIQ Toolkit as an MCP Server
+You can publish the simple calculator tools via MCP using the `aiq mcp` command. Details are provided in the [MCP Server Guide](../../../../docs/source/workflows/mcp/mcp-server.md).
 
 ## Configuration Examples
 
@@ -108,25 +64,3 @@ docker run -p 8080:8080 simple-calculator-mcp
 | `config-mcp-date.yml` | Date Server | Current time, date formatting |
 | `config-mcp-math.yml` | Math Server | Advanced mathematical operations |
 | `demo_config_mcp.yml` | Multiple Servers | Combined demonstration |
-
-## Key Benefits
-
-- **Standardization**: Use a common protocol for tool sharing
-- **Interoperability**: Connect different AI systems seamlessly
-- **Scalability**: Distribute tools across your infrastructure
-- **Security**: Control access to remote capabilities
-- **Flexibility**: Mix and match tools from various sources
-
-## MCP Operations
-
-The Agent toolkit supports these MCP operations:
-
-- **Tool Discovery**: List available remote tools
-- **Tool Execution**: Call remote functions with parameters
-- **Resource Access**: Retrieve remote resources and data
-- **Session Management**: Maintain stateful connections
-
-## Learn More
-
-- [MCP Client Guide](../../../../docs/source/workflows/mcp/mcp-client.md) - Using Agent toolkit as MCP client
-- [MCP Server Guide](../../../../docs/source/workflows/mcp/mcp-server.md) - Publishing Agent toolkit tools via MCP

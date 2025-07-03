@@ -55,7 +55,7 @@ aiq eval --config_file examples/intermediate/evaluation_and_profiling/simple_cal
 This command:
 - Uses the test dataset from `examples/basic/functions/simple_calculator/data/simple_calculator.json`
 - Applies the Tunable RAG Evaluator to measure response accuracy
-- Saves detailed results to `.tmp/eval/simple_calculator/tuneable_eval_output.json`
+- Saves detailed results to `.tmp/aiq/examples/basic/functions/simple_calculator/tuneable_eval_output.json`
 
 ### Understanding Results
 

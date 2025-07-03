@@ -61,25 +61,11 @@ Access comprehensive request metadata:
 
 ```bash
 curl -X 'POST' \
-  'http://localhost:8000/get_request_metadata?user_id=123&session=abc' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'X-Custom-Header: test-value' \
-  -H 'Authorization: Bearer token123' \
-  -d '{"input_message": "show me request details"}'
-```
-
-### Test Standard Route with Metadata Context
-
-The metadata is also available in standard workflow functions:
-
-```bash
-curl -X 'POST' \
-  'http://localhost:8000/generate?user_id=123&session=abc' \
+  'http://localhost:8000/get_request_metadata' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer token123' \
-  -d '{"input_message": "What is 5 + 3?"}'
+  -d '{"unused": "show me request details"}'
 ```
 
 ## Configuration
