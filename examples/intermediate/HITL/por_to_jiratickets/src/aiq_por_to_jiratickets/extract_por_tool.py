@@ -18,9 +18,6 @@ import logging
 import os
 import re
 
-from langchain.chains.llm import LLMChain
-from langchain.prompts import PromptTemplate
-
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function_info import FunctionInfo
@@ -132,6 +129,9 @@ async def extract_from_por_tool(config: ExtractPORToolConfig, builder: Builder):
     Extract epics and issues from the given PRO/PRD text using the LLM chain
     and store the result in session state.
     """
+
+    from langchain.chains.llm import LLMChain
+    from langchain.prompts import PromptTemplate
 
     llm = await builder.get_llm(llm_name=config.llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     prompt = PromptTemplate(
