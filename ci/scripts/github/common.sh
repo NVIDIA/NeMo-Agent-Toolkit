@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]:-$0}" )" &> /dev/null && pwd )"
-SCRIPT_DIR=$( dirname "${GITHUB_SCRIPT_DIR}" )
+GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+SCRIPT_DIR=$( dirname ${GITHUB_SCRIPT_DIR} )
 
 source ${SCRIPT_DIR}/common.sh
 
