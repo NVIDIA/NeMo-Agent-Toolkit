@@ -46,7 +46,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/simple
+uv pip install -e examples/basic/functions/simple
 ```
 
 ### Set Up API Keys

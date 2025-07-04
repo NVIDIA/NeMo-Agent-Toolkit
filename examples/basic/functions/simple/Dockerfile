@@ -51,7 +51,7 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_AIQ_SIMPLE=${AIQ_VERSION} && \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     uv sync --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
-    uv pip install --link-mode=copy ./examples/simple
+    uv pip install --link-mode=copy ./examples/basic/functions/simple
 
 # Set the config file environment variable
 ENV AIQ_CONFIG_FILE=/workspace/examples/basic/functions/simple/configs/eval_config.yml
