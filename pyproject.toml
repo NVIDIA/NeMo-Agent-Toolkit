@@ -86,6 +86,7 @@ examples = [
   "aiq_simple_calculator_eval",
   "aiq_simple_calculator_mcp",
   "aiq_simple_calculator_observability",
+  "aiq_simple_calculator_hitl",
   "aiq_simple_rag",
   "aiq_swe_bench",
 ]
@@ -138,6 +139,7 @@ aiq_simple_calculator_eval = { path = "examples/intermediate/evaluation_and_prof
 aiq_simple_calculator_observability = { path = "examples/intermediate/observability/simple_calculator_observability", editable = true }
 aiq_simple_calculator_mcp = { path = "examples/intermediate/MCP/simple_calculator_mcp", editable = true }
 aiq_simple_calculator_custom_routes = { path = "examples/intermediate/custom_routes/simple_calculator_custom_routes", editable = true }
+aiq_simple_calculator_hitl = { path = "examples/intermediate/HITL/simple_calculator_hitl", editable = true }
 
 
 [tool.uv.workspace]

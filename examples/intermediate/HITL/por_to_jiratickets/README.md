@@ -68,29 +68,44 @@ into the agent itself. For instance, this example asks for user permission to cr
 `aiq_por_to_jiratickets.jira_tickets_tool.py` file. The implementation is below:
 
 ```python
+### The reusable HITL function
+@register_function(config_type=HITLApprovalFnConfig)
+async def hilt_approval_function(config: HITLApprovalFnConfig, builder: Builder):
+
+    import re
+
+    prompt = f"{config.prompt} Please confirm if you would like to proceed. Respond with 'yes' or 'no'."
+
+    async def _arun(unused: str = "") -> bool:
+
+        aiq_context = AIQContext.get()
+        user_input_manager = aiq_context.user_interaction_manager
+
+        human_prompt_text = HumanPromptText(text=prompt, required=True, placeholder="<your response here>")
+        response: InteractionResponse = await user_input_manager.prompt_user_input(human_prompt_text)
+        response_str = response.content.text.lower()  # type: ignore
+        selected_option = re.search(r'\b(yes)\b', response_str)
+
+        if selected_option:
+            return True
+        return False
+
+    yield FunctionInfo.from_fn(_arun,
+                               description=("This function will be used to get the user's response to the prompt"))
+
+
+### The JIRA function that uses the HITL function
 @register_function(config_type=CreateJiraToolConfig)
 async def create_jira_tickets_tool(config: CreateJiraToolConfig, builder: Builder):
+
+    hitl_approval_fn = builder.get_function(config.hitl_approval_fn)
 
     async def _arun(input_text: str) -> str:
 
         # Get user confirmation first
         try:
-            aiq_context = AIQContext.get()
-            user_input_manager = aiq_context.user_interaction_manager
+            selected_option = await hitl_approval_fn.acall_invoke()
 
-            prompt = ("I would like to create Jira tickets for the extracted data. "
-                      "Please confirm if you would like to proceed. Respond with 'yes' or 'no'.")
-
-            human_prompt_text = HumanPromptText(text=prompt, required=True, placeholder="<your response here>")
-
-            response = await user_input_manager.prompt_user_input(human_prompt_text)
-
-            response_text = response.content.text.lower()
-
-            # Regex to see if the response has yes in it
-            # Set value to True if the response is yes
-            import re
-            selected_option = re.search(r'\b(yes)\b', response_text)
             if not selected_option:
                 return "Did not receive user confirmation to upload to Jira. You can exit with a final answer."
 

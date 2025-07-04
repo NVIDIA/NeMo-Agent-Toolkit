@@ -17,8 +17,7 @@ limitations under the License.
 
 # Simple Calculator - Human in the Loop
 
-This example demonstrates **human in the loop capabilities** of the AIQ toolkit using the Simple Calculator workflow. Learn how to reuse a registered function that leverages the toolkits human in the loop capabilities to gate agent behavior. In this case, user approval will be requested to allow the agent to make additional tool calls to reach a 
-final answer.
+This example demonstrates **human in the loop capabilities** of the AIQ toolkit using the Simple Calculator workflow. Learn how to reuse a registered function that leverages the toolkit's human in the loop capabilities to gate agent behavior. In this case, user approval will be requested to allow the agent to make additional tool calls to reach a final answer.
 
 ## Key Features
 
@@ -27,7 +26,7 @@ final answer.
 - **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
 - **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
 - **Ease of Use:** Simplifies developer experience and deployment.
-- **Humin in the Loop:** Solicits approval from the user before allowing the agent to make additional tool calls.
+- **Human in the Loop:** Solicits approval from the user before allowing the agent to make additional tool calls.
 
 
 ## Installation and Setup
@@ -52,8 +51,8 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 ### Human in the Loop (HITL) Configuration
 It is often helpful, or even required, to have human input during the execution of an agent workflow. For example, to ask about preferences, confirmations, or to provide additional information.
 The AIQ toolkit library provides a way to add HITL interaction to any tool or function, allowing for the dynamic collection of information during the workflow execution, without the need for coding it
-into the agent itself. For instance, this example asks for user approval to increase the maximum iterations of the ReAct agent to allow additional tool calling. This is enable by leveraging a reusable plugin developed in the por_to_jiratickets HITL example. We can view the implementation in the
-`aiq_por_to_jiratickets.hitl_approaval_tool.py` file. The implementation is shown below:
+into the agent itself. For instance, this example asks for user approval to increase the maximum iterations of the ReAct agent to allow additional tool calling. This is enable by leveraging a reusable plugin developed in the `examples/intermediate/HITL/por_to_jiratickets` example. We can view the implementation in the
+`aiq_por_to_jiratickets.hitl_approval_tool.py` file. The implementation is shown below:
 
 ```python
 @register_function(config_type=HITLApprovalFnConfig)

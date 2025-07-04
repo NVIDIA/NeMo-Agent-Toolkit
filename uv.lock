@@ -425,6 +425,22 @@ requires-dist = [
 ]
 
 [[package]]
+name = "aiq-simple-calculator-hitl"
+source = { editable = "examples/intermediate/HITL/simple_calculator_hitl" }
+dependencies = [
+    { name = "aiq-por-to-jiratickets" },
+    { name = "aiq-simple-calculator" },
+    { name = "aiqtoolkit", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiq-por-to-jiratickets", editable = "examples/intermediate/HITL/por_to_jiratickets" },
+    { name = "aiq-simple-calculator", editable = "examples/basic/functions/simple_calculator" },
+    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
+]
+
+[[package]]
 name = "aiq-simple-calculator-mcp"
 source = { editable = "examples/intermediate/MCP/simple_calculator_mcp" }
 dependencies = [
@@ -525,6 +541,7 @@ examples = [
     { name = "aiq-simple-calculator" },
     { name = "aiq-simple-calculator-custom-routes" },
     { name = "aiq-simple-calculator-eval" },
+    { name = "aiq-simple-calculator-hitl" },
     { name = "aiq-simple-calculator-mcp" },
     { name = "aiq-simple-calculator-observability" },
     { name = "aiq-simple-rag" },
@@ -616,6 +633,7 @@ requires-dist = [
     { name = "aiq-simple-calculator", marker = "extra == 'examples'", editable = "examples/basic/functions/simple_calculator" },
     { name = "aiq-simple-calculator-custom-routes", marker = "extra == 'examples'", editable = "examples/intermediate/custom_routes/simple_calculator_custom_routes" },
     { name = "aiq-simple-calculator-eval", marker = "extra == 'examples'", editable = "examples/intermediate/evaluation_and_profiling/simple_calculator_eval" },
+    { name = "aiq-simple-calculator-hitl", marker = "extra == 'examples'", editable = "examples/intermediate/HITL/simple_calculator_hitl" },
     { name = "aiq-simple-calculator-mcp", marker = "extra == 'examples'", editable = "examples/intermediate/MCP/simple_calculator_mcp" },
     { name = "aiq-simple-calculator-observability", marker = "extra == 'examples'", editable = "examples/intermediate/observability/simple_calculator_observability" },
     { name = "aiq-simple-rag", marker = "extra == 'examples'", editable = "examples/intermediate/RAG/simple_rag" },
