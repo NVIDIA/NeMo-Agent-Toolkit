@@ -134,7 +134,7 @@ Replace `<YOUR_API_KEY>` with your actual NVIDIA API key.
 1. Install the `aiq_simple` Workflow
 
     ```bash
-    uv pip install -e examples/simple
+    uv pip install -e examples/basic/functions/simple
     ```
 
 2. Run the `aiq_simple` Workflow

@@ -50,7 +50,7 @@ eval:
     output_dir: ./.tmp/aiq/examples/react_agent/
     dataset:
       _type: json
-      file_path: examples/agents/data/wikipedia.json
+      file_path: examples/intermediate/agents/agents/data/wikipedia.json
   evaluators:
     rag_accuracy:
       _type: ragas

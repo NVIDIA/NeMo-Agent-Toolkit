@@ -31,16 +31,16 @@ If you have not already done so, follow the instructions in the [Install Guide](
 
 1. From the root directory of the AIQ toolkit library, run the following commands:
     ```bash
-    uv pip install -e examples/simple_rag
+    uv pip install -e examples/intermediate/RAG/simple_rag
     ```
 
 1. Start the docker compose [Skip this step if you already have Milvus running]
     ```bash
-    docker compose -f examples/simple_rag/deploy/docker-compose.yaml up -d
+    docker compose -f examples/intermediate/RAG/simple_rag/deploy/docker-compose.yaml up -d
     ```
     > Note: It can take some time for Milvus to start up. You can check the logs with:
     ```bash
-    docker compose -f examples/simple_rag/deploy/docker-compose.yaml logs --follow
+    docker compose -f examples/intermediate/RAG/simple_rag/deploy/docker-compose.yaml logs --follow
     ```
 1. In a new terminal, from the root of the AIQ toolkit repository, run the provided bash script to store the data in a Milvus collection. By default the script will scrape a few pages from the CUDA documentation and store the data in a Milvus collection called `cuda_docs`. It will also pull a few pages of information about the Model Context Protocol (MCP) and store it in a collection called `mcp_docs`.
 
@@ -72,7 +72,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
     --clean_cache         If true, deletes local files (default: False)
     ```
 
-1. Configure your Agent to use the Milvus collections for RAG. We have pre-configured a configuration file for you in `examples/simple_rag/configs/milvus_rag_config.yml`. You can modify this file to point to your Milvus instance and collections or add tools to your agent. The agent, by default, is a `tool_calling` agent that can be used to interact with the retriever component. The configuration file is shown below. You can also modify your agent to be another one of the AIQ toolkit pre-built agent implementations such as the `react_agent`
+1. Configure your Agent to use the Milvus collections for RAG. We have pre-configured a configuration file for you in `examples/intermediate/RAG/simple_rag/configs/milvus_rag_config.yml`. You can modify this file to point to your Milvus instance and collections or add tools to your agent. The agent, by default, is a `tool_calling` agent that can be used to interact with the retriever component. The configuration file is shown below. You can also modify your agent to be another one of the AIQ toolkit pre-built agent implementations such as the `react_agent`
 
     ```yaml
     general:
@@ -129,13 +129,13 @@ If you have not already done so, follow the instructions in the [Install Guide](
 
 1. Run the workflow
     ```bash
-    aiq run --config_file examples/simple_rag/configs/milvus_rag_config.yml --input "How do I install CUDA"
+    aiq run --config_file examples/intermediate/RAG/simple_rag/configs/milvus_rag_config.yml --input "How do I install CUDA"
     ```
    The expected output of running the above command is:
     ```console
-    $ aiq run --config_file examples/simple_rag/configs/milvus_rag_config.yml --input "How do I install CUDA"
+    $ aiq run --config_file examples/intermediate/RAG/simple_rag/configs/milvus_rag_config.yml --input "How do I install CUDA"
     2025-04-23 16:45:01,698 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (469.127893 ms). Ensure all imports are inside your registered functions.
-    2025-04-23 16:45:02,024 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/simple_rag/configs/milvus_rag_config.yml'
+    2025-04-23 16:45:02,024 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/intermediate/RAG/simple_rag/configs/milvus_rag_config.yml'
     2025-04-23 16:45:02,032 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
     2025-04-23 16:45:02,169 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
     2025-04-23 16:45:02,177 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
@@ -286,16 +286,16 @@ Each function was given a description that helps the agent know when to use it a
 This time, we will tell the agent about how we like our responses formatted, and notice if it stores that fact to long term memory.
 
 ```bash
-aiq run --config_file=examples/simple_rag/configs/milvus_memory_rag_config.yml --input "How do I install CUDA? I like responses with a lot of emojis in them! :)"
+aiq run --config_file=examples/intermediate/RAG/simple_rag/configs/milvus_memory_rag_config.yml --input "How do I install CUDA? I like responses with a lot of emojis in them! :)"
 ```
 
 The expected output of the above run is:
 
 ```console
-$ aiq run --config_file=examples/simple_rag/configs/milvus_memory_rag_config.yml --input "How do I install CUDA? I like responses with a lot of emojis in them! :)"
+$ aiq run --config_file=examples/intermediate/RAG/simple_rag/configs/milvus_memory_rag_config.yml --input "How do I install CUDA? I like responses with a lot of emojis in them! :)"
 2025-04-23 16:56:40,025 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (478.030443 ms). Ensure all imports are inside your registered functions.
 2025-04-23 16:56:40,222 - aiq.runtime.loader - WARNING - Loading module 'aiq_swe_bench.register' from entry point 'aiq_swe_bench' took a long time (103.739262 ms). Ensure all imports are inside your registered functions.
-2025-04-23 16:56:40,376 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/simple_rag/configs/milvus_memory_rag_config.yml'
+2025-04-23 16:56:40,376 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/intermediate/RAG/simple_rag/configs/milvus_memory_rag_config.yml'
 2025-04-23 16:56:40,385 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-04-23 16:56:41,738 - httpx - INFO - HTTP Request: GET https://api.mem0.ai/v1/ping/ "HTTP/1.1 200 OK"
 2025-04-23 16:56:41,933 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
@@ -399,15 +399,15 @@ Notice above that the agent called the `add_memory` tool after retrieving the in
 Now, we can try another invocation of the agent without mentioning our preference to see if it remembers our preference from the previous conversation.
 
 ```bash
-aiq run --config_file=examples/simple_rag/configs/milvus_memory_rag_config.yml --input "How do I install CUDA?"
+aiq run --config_file=examples/intermediate/RAG/simple_rag/configs/milvus_memory_rag_config.yml --input "How do I install CUDA?"
 ```
 
 The expected output of the above run is:
 
 ```console
-$ aiq run --config_file=examples/simple_rag/configs/milvus_memory_rag_config.yml --input "How do I install CUDA?"
+$ aiq run --config_file=examples/intermediate/RAG/simple_rag/configs/milvus_memory_rag_config.yml --input "How do I install CUDA?"
 2025-04-23 16:59:21,197 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (444.273233 ms). Ensure all imports are inside your registered functions.
-2025-04-23 16:59:21,517 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/simple_rag/configs/milvus_memory_rag_config.yml'
+2025-04-23 16:59:21,517 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/intermediate/RAG/simple_rag/configs/milvus_memory_rag_config.yml'
 2025-04-23 16:59:21,525 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-04-23 16:59:22,833 - httpx - INFO - HTTP Request: GET https://api.mem0.ai/v1/ping/ "HTTP/1.1 200 OK"
 2025-04-23 16:59:23,029 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
@@ -541,13 +541,13 @@ These workflows demonstrate how agents can use multiple tools in tandem to provi
 We can now run one of these workflows with a slightly more complex input.
 
 ```bash
-aiq run --config_file examples/simple_rag/configs/milvus_rag_tools_config.yml --input "How do I install CUDA and get started developing with it? Provide example python code"
+aiq run --config_file examples/intermediate/RAG/simple_rag/configs/milvus_rag_tools_config.yml --input "How do I install CUDA and get started developing with it? Provide example python code"
 ```
 The expected output of the above run is:
 ````console
-$ aiq run --config_file examples/simple_rag/configs/milvus_rag_tools_config.yml --input "How do I install CUDA and get started developing with it? Provide example python code"
+$ aiq run --config_file examples/intermediate/RAG/simple_rag/configs/milvus_rag_tools_config.yml --input "How do I install CUDA and get started developing with it? Provide example python code"
 2025-04-23 20:31:34,456 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (491.573811 ms). Ensure all imports are inside your registered functions.
-2025-04-23 20:31:34,779 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/simple_rag/configs/milvus_rag_tools_config.yml'
+2025-04-23 20:31:34,779 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/intermediate/RAG/simple_rag/configs/milvus_rag_tools_config.yml'
 2025-04-23 20:31:34,788 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-04-23 20:31:34,950 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
 2025-04-23 20:31:34,960 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.

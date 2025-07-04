@@ -37,11 +37,11 @@ docker info
 # Quickstart
 1. Install the `swe_bench` example:
 ```bash
-uv pip install -e examples/intermediate/swe_bench
+uv pip install -e examples/intermediate/evaluation_and_profiling/swe_bench
 ```
 2. Run the example via the `aiq eval` CLI command:
 ```bash
-aiq eval --config_file examples/intermediate/swe_bench/configs/config_gold.yml
+aiq eval --config_file examples/intermediate/evaluation_and_profiling/swe_bench/configs/config_gold.yml
 ```
 
 ## Datasets
@@ -57,7 +57,7 @@ eval:
     datasets:
       test_verified:
         _type: json
-        file_path: examples/intermediate/swe_bench/data/test_dataset_verified.json
+        file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
 ```
 
 Alternately you can read any remote dataset by specifying the pandas URL in the configuration file:
@@ -79,7 +79,7 @@ eval:
   general:
     dataset:
       _type: json
-      file_path: examples/intermediate/swe_bench/data/test_dataset_lite.json
+      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true
@@ -99,7 +99,7 @@ eval:
   general:
     dataset:
       _type: json
-      file_path: examples/intermediate/swe_bench/data/test_dataset_lite.json
+      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true
@@ -127,8 +127,8 @@ in the input instance.
 That information is only used for evaluation. Using it can taint the predictor and lead to overfitting.
 
 These predictors are provided in this AIQ toolkit example:
-- `gold` - Uses the patch from the `SWEBenchInput` instance, bypassing problem-solving logic. See [predict_gold_stub.py](src/aiq_swe_bench/predictors/predict_gold/predict_gold_stub.py) and configuration file `examples/intermediate/swe_bench/configs/config_gold.yml`.
-- `skeleton` - Skeleton code for creating a problem-solving workflow. This code can be copied to create a net-new predictor. See [predict_skeleton.py](src/aiq_swe_bench/predictors/predict_skeleton/predict_skeleton.py) and configuration file `examples/intermediate/swe_bench/configs/config_skeleton.yml`.
+- `gold` - Uses the patch from the `SWEBenchInput` instance, bypassing problem-solving logic. See [predict_gold_stub.py](src/aiq_swe_bench/predictors/predict_gold/predict_gold_stub.py) and configuration file `examples/intermediate/evaluation_and_profiling/swe_bench/configs/config_gold.yml`.
+- `skeleton` - Skeleton code for creating a problem-solving workflow. This code can be copied to create a net-new predictor. See [predict_skeleton.py](src/aiq_swe_bench/predictors/predict_skeleton/predict_skeleton.py) and configuration file `examples/intermediate/evaluation_and_profiling/swe_bench/configs/config_skeleton.yml`.
 
 ### Adding a net new predictor
 To add a new predictor:
@@ -152,7 +152,7 @@ The evaluation results, logs and reports, are stored in the output directory spe
 ### Sample output
 Run:
 ```bash
-aiq eval --config_file examples/intermediate/swe_bench/configs/config_gold.yml
+aiq eval --config_file examples/intermediate/evaluation_and_profiling/swe_bench/configs/config_gold.yml
 ```
 Logs snippet:
 ```
@@ -178,8 +178,8 @@ Unstopped containers: 0
 Unremoved images: 0
 Report written to nim_llm.aiq_0.json
 2025-01-20 12:11:07,202 - aiq.eval.evaluate - INFO - Completed swe_bench run aiq_0
-2025-01-20 12:11:07,206 - aiq.eval.evaluate - INFO - Evaluation results written to .tmp/aiq/examples/intermediate/swe_bench/eval_output.json
-2025-01-20 12:11:07,206 - aiq.eval.evaluate - INFO - SWE_bench report and logs written to .tmp/aiq/examples/intermediate/swe_bench/swe_bench_reports directory
-2025-01-20 12:11:07,206 - aiq.eval.evaluate - INFO - Ending evaluation run with config file: examples/intermediate/swe_bench/configs/config_gold.yml
+2025-01-20 12:11:07,206 - aiq.eval.evaluate - INFO - Evaluation results written to .tmp/aiq/examples/intermediate/evaluation_and_profiling/swe_bench/eval_output.json
+2025-01-20 12:11:07,206 - aiq.eval.evaluate - INFO - SWE_bench report and logs written to .tmp/aiq/examples/intermediate/evaluation_and_profiling/swe_bench/swe_bench_reports directory
+2025-01-20 12:11:07,206 - aiq.eval.evaluate - INFO - Ending evaluation run with config file: examples/intermediate/evaluation_and_profiling/swe_bench/configs/config_gold.yml
 2025-01-20 12:11:07,208 - aiq.cli.entrypoint - INFO - Total time: 210.71 sec
 ```
