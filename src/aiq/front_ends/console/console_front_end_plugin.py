@@ -21,7 +21,7 @@ import click
 from colorama import Fore
 
 from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import OAuthClientBase
+from aiq.authentication.interfaces import OAuthClientManagerBase
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.authentication import ConsentPromptMode
 from aiq.data_models.interactive import HumanPromptModelType
@@ -111,7 +111,8 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         # Print result
         logger.info(f"\n{'-' * 50}\n{Fore.GREEN}Workflow Result:\n%s{Fore.RESET}\n{'-' * 50}", runner_outputs)
 
-    async def user_auth_callback_console(self, oauth_client: OAuthClientBase,
+    async def user_auth_callback_console(self,
+                                         oauth_client: OAuthClientManagerBase,
                                          consent_prompt_mode: ConsentPromptMode) -> AuthenticationError | None:
         """
         Callback handler for user authentication in console environments.

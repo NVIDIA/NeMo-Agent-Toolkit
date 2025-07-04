@@ -19,7 +19,7 @@ import typing
 import httpx
 
 from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import OAuthClientBase
+from aiq.authentication.interfaces import OAuthClientManagerBase
 from aiq.builder.builder import Builder
 from aiq.builder.context import AIQContext
 from aiq.builder.function_info import FunctionInfo
@@ -31,7 +31,7 @@ from aiq.data_models.function import FunctionBaseConfig
 logger = logging.getLogger(__name__)
 
 
-async def _test_jira_api_call(oauth_client_manager: OAuthClientBase) -> typing.Any | None:
+async def _test_jira_api_call(oauth_client_manager: OAuthClientManagerBase) -> typing.Any | None:
     """
     Test OAuth authentication by making provider-specific API calls.
     """
@@ -104,7 +104,8 @@ async def oauth2_browser_auth_tool(config: OAuth2BrowserAuthTool, builder: Build
 
         try:
             # Get the oauth registered authentication manager
-            oauth_client_manager: OAuthClientBase = await builder.get_authentication(authentication_provider_name)
+            oauth_client_manager: OAuthClientManagerBase = await builder.get_authentication(authentication_provider_name
+                                                                                            )
 
             # Authenticate by calling the authenticate_oauth_client to with browser consent handling.
             authentication_error: AuthenticationError | None = await user_input_manager.authenticate_oauth_client(
@@ -160,7 +161,8 @@ async def oauth2_frontend_auth_tool(config: OAuth2FrontendAuthTool, builder: Bui
 
         try:
             # Get the oauth registered authentication manager
-            oauth_client_manager: OAuthClientBase = await builder.get_authentication(authentication_provider_name)
+            oauth_client_manager: OAuthClientManagerBase = await builder.get_authentication(authentication_provider_name
+                                                                                            )
 
             # Authenticate by calling the authenticate_oauth_client to with frontend consent handling.
             authentication_error: AuthenticationError | None = await user_input_manager.authenticate_oauth_client(

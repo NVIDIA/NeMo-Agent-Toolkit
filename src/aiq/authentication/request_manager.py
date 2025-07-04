@@ -36,9 +36,6 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 class RequestManager(RequestManagerBase):
 
-    def __init__(self) -> None:
-        pass
-
     def _validate_data(self, input_dict: dict) -> None:
         """
         Validates that the provided dictionary has valid keys and values.
@@ -113,7 +110,7 @@ class RequestManager(RequestManagerBase):
         Validates that the provided headers are valid for an HTTP request.
 
         Args:
-            headers (dict): Dictionary of headers.
+            headers (dict | httpx.Headers | None): Dictionary of headers.
         """
         try:
             if headers is None:
@@ -223,10 +220,9 @@ class RequestManager(RequestManagerBase):
         Args:
             url (str | httpx.URL): The base URL to which the request will be sent.
             http_method (str | HTTPMethod): The HTTP method to use for the request (e.g., "GET", "POST").
-            authentication_header: httpx.Headers | None: The optional authentication HTTP header.
             headers (dict | None): Optional dictionary of HTTP headers.
             query_params (dict | None): Optional dictionary of query parameters.
-            data (dict | None): Optional dictionary representing the request body.
+            body_data (dict | None): Optional dictionary representing the request body.
 
         Returns:
             httpx.Response | None: The response from the HTTP request, or None if an error occurs.

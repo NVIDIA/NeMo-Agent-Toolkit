@@ -16,7 +16,6 @@
 authentication:
   jira:
     _type: oauth2_authorization_code_grant
-    consent_prompt_mode: "browser"
     consent_prompt_key: mock_consent_prompt_key_secure
     client_server_url: "https://mock.server.com"
     authorization_url: https://mock.auth.com/oauth/authorize
@@ -30,6 +29,6 @@ authentication:
       - manage:mock
   jira_api_key:
     _type: api_key
-    api_key: mock_api_key_123456
+    raw_key: mock_api_key_123456
     header_name: Authorization
     header_prefix: Bearer

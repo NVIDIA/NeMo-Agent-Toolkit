@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import logging
-import typing
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
@@ -23,7 +22,9 @@ import httpx
 
 from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
 from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowRefreshTokenError
-from aiq.authentication.interfaces import OAuthClientBase
+from aiq.authentication.interfaces import OAuthClientManagerBase
+from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
+from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
 from aiq.authentication.request_manager import RequestManager
 from aiq.authentication.response_manager import ResponseManager
 from aiq.data_models.authentication import ConsentPromptMode
@@ -36,16 +37,14 @@ from aiq.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEnd
 
 logger = logging.getLogger(__name__)
 
-if (typing.TYPE_CHECKING):
-    from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
 
+class AuthCodeGrantClientManager(OAuthClientManagerBase):
 
-class AuthCodeGrantClientManager(OAuthClientBase):
-
-    def __init__(self, config: "AuthCodeGrantConfig", config_name: str | None = None) -> None:
+    def __init__(self, config: AuthCodeGrantConfig, config_name: str | None = None) -> None:
+        assert isinstance(config, OAuthUserConsentConfigBase), ("Config is not OAuthUserConsentConfigBase")
 
         self._config_name: str | None = config_name
-        self._config: "AuthCodeGrantConfig" = config
+        self._config: AuthCodeGrantConfig = config
         self._request_manager: RequestManager = RequestManager()
         self._response_manager: ResponseManager = ResponseManager(self)
         self._consent_prompt_mode: ConsentPromptMode | None = None
@@ -73,12 +72,12 @@ class AuthCodeGrantClientManager(OAuthClientBase):
         self._config_name = config_name
 
     @property
-    def config(self) -> "AuthCodeGrantConfig | None":
+    def config(self) -> "OAuthUserConsentConfigBase | None":
         """
         Get the authentication configuration.
 
         Returns:
-            AuthCodeGrantConfig | None: The authentication configuration, or None if not set.
+            OAuthUserConsentConfigBase | None: The authentication configuration, or None if not set.
         """
         return self._config
 
@@ -125,7 +124,7 @@ class AuthCodeGrantClientManager(OAuthClientBase):
         valid and False if they are not. To reliably validate Auth Code Grant flow credentials, a request should be sent
         either to the authorization server's introspection endpoint or to a protected API endpoint, monitoring for a 200
         response. Since introspection endpoints are not standardized the most consistent approach is to check whether
-        the access is valid token has not expired.
+        the access token is valid and has not expired.
 
         Returns:
             bool: True if the credentials are valid and False if they are not.
@@ -149,14 +148,14 @@ class AuthCodeGrantClientManager(OAuthClientBase):
         from aiq.authentication.exceptions.call_back_exceptions import OAuthClientConsoleError
 
         try:
-            # Initiate code flow is there is no access token.
+            # Initiate code flow if there is no access token.
             if (self._config.access_token is None):
 
                 # Spawn an authentication client server to handle oauth code flow.
                 await self._spawn_oauth_client_server()
 
                 # Initiate oauth code flow by sending authorization request.
-                await self._send_authorization_request()
+                await self.send_authorization_request()
 
                 await _CredentialsManager().wait_for_oauth_credentials()
 
@@ -194,11 +193,11 @@ class AuthCodeGrantClientManager(OAuthClientBase):
         from aiq.authentication.exceptions.call_back_exceptions import OAuthClientServerError
 
         try:
-            # Initiate code flow is there is no access token.
+            # Initiate code flow if there is no access token.
             if (self._config.access_token is None):
 
                 # Initiate oauth code flow by sending authorization request.
-                await self._send_authorization_request()
+                await self.send_authorization_request()
 
                 await _CredentialsManager().wait_for_oauth_credentials()
 
@@ -225,13 +224,13 @@ class AuthCodeGrantClientManager(OAuthClientBase):
                          str(e),
                          exc_info=True)
 
-    async def _send_authorization_request(self) -> None:
+    async def send_authorization_request(self) -> None:
         """
-        Constructs Auth Code Grant flow authoriation URL and sends request to authentication server.
+        Constructs Auth Code Grant flow authorization URL and sends request to authentication server.
         """
         try:
             authorization_url: httpx.URL = httpx.URL(self._config.authorization_url).copy_merge_params(
-                self._construct_authorization_query_params().model_dump(exclude_none=True))
+                self.construct_authorization_query_params().model_dump(exclude_none=True))
 
             response: httpx.Response | None = await self._request_manager.send_request(url=str(authorization_url),
                                                                                        http_method="GET")
@@ -240,7 +239,7 @@ class AuthCodeGrantClientManager(OAuthClientBase):
                 raise AuthCodeGrantFlowError('auth_response_null', error_message)
 
             if not response.status_code == 200:
-                await self._response_manager.handle_auth_code_grant_response_codes(response)
+                await self.handle_authorization_server_response(response)
 
         except Exception as e:
             error_message = f"Unexpected error occurred during authorization request process: {str(e)}"
@@ -282,7 +281,7 @@ class AuthCodeGrantClientManager(OAuthClientBase):
                 raise AuthCodeGrantFlowRefreshTokenError('refresh_response_null', error_message)
 
             if not response.status_code == 200:
-                await self._response_manager.handle_auth_code_grant_response_codes(response)
+                await self._response_manager.process_http_response(response)
 
             if response.json().get("access_token") is None:
                 error_message = "Access token not in successful token request response payload"
@@ -397,18 +396,48 @@ class AuthCodeGrantClientManager(OAuthClientBase):
         redirect_uri: str = self._construct_redirect_uri(client_authorization_path=client_authorization_path,
                                                          client_authorization_endpoint=client_authorization_endpoint)
 
-        token_request_body: OAuth2TokenRequest = self._construct_token_request_body(
+        token_request_body: OAuth2TokenRequest = self.construct_token_request_body(
             redirect_uri=redirect_uri, authorization_code=authorization_code)
 
         # Send Token HTTP Request
-        return await self.send_request(url=self.config.authorization_token_url,
+        return await self.send_request(url=self._config.authorization_token_url,
                                        http_method=HTTPMethod.POST.value,
                                        headers=dict(headers),
                                        body_data=token_request_body.model_dump(exclude_none=True))
 
-    def _construct_authorization_query_params(self,
-                                              response_type: str = "code",
-                                              prompt: str = "consent") -> OAuth2AuthorizationQueryParams:
+    async def process_token_response(self, response: httpx.Response) -> None:
+        """
+        Processes and stores tokens received from the OAuth 2.0 token endpoint.
+
+        This method handles access tokens and other optional tokens (e.g., refresh token, ID token)
+        returned from the authorization server after a successful OAuth flow.
+
+        Args:
+            response (httpx.Response): The HTTP response received after exchanging authorization code for access token.
+
+        """
+        if not response.status_code == 200:
+            await self._response_manager.process_http_response(response)
+
+        if response.json().get("access_token") is None:
+            error_message = "No access token provided"
+            raise AuthCodeGrantFlowError('access_token_missing', error_message)
+
+        if response.json().get("expires_in") is None:
+            error_message = "No token expiry provided"
+            raise AuthCodeGrantFlowError('token_expiry_missing', error_message)
+
+        self._config.access_token = response.json().get("access_token")
+        self._config.access_token_expires_in = (datetime.now(timezone.utc) +
+                                                timedelta(seconds=response.json().get("expires_in")))
+
+        # Claim the refresh token if the refresh token is available.
+        if response.json().get("refresh_token"):
+            self._config.refresh_token = response.json().get("refresh_token")
+
+    def construct_authorization_query_params(self,
+                                             response_type: str = "code",
+                                             prompt: str = "consent") -> OAuth2AuthorizationQueryParams:
         """
         Constructs the OAuth2 authorization query parameters for the authorization URL.
 
@@ -432,10 +461,27 @@ class AuthCodeGrantClientManager(OAuthClientBase):
                                               response_type=response_type,
                                               prompt=prompt)
 
-    def _construct_token_request_body(self,
-                                      redirect_uri: str,
-                                      authorization_code: str,
-                                      grant_type: str = "authorization_code") -> OAuth2TokenRequest:
+    async def handle_authorization_server_response(self, response: httpx.Response) -> None:
+        """
+        Handles server responses returned during the OAuth 2.0 authorization process.
+
+        This method interprets and reacts to various response codes and payloads from the
+        authorization server, determining whether the flow should continue, retry, or fail.
+        It is designed to be applicable across OAuth 2.0 flows that need user consent.
+
+        Args:
+            response (httpx.Response): The HTTP response received after redirecting the user
+                                    to the authorization endpoint and receiving a callback.
+
+        Raises:
+            AuthenticationError or a subclass thereof if the response indicates a failure.
+        """
+        await self._response_manager.process_http_response(response)
+
+    def construct_token_request_body(self,
+                                     redirect_uri: str,
+                                     authorization_code: str,
+                                     grant_type: str = "authorization_code") -> OAuth2TokenRequest:
         """
         Constructs the OAuth2 token request body for exchanging authorization code for access token.
 

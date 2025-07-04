@@ -38,7 +38,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import OAuthClientBase
+from aiq.authentication.interfaces import OAuthClientManagerBase
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
@@ -197,11 +197,8 @@ class RouteInfo(BaseModel):
 
 class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
-    def __init__(self, config: AIQConfig):
-        super().__init__(config)
-
     @staticmethod
-    async def user_auth_callback_server_http(oauth_client: OAuthClientBase,
+    async def user_auth_callback_server_http(oauth_client: OAuthClientManagerBase,
                                              consent_prompt_mode: ConsentPromptMode) -> AuthenticationError | None:
         """
         Callback handler for user authentication in server HTTP environments.
@@ -209,9 +206,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         Args:
             oauth_client (OAuthClientBase): The OAuth client to authenticate.
             consent_prompt_mode (ConsentPromptMode): The consent prompt mode to use.
-
-        Returns:
-            AuthenticationError | None: The authentication error if the authentication fails, otherwise None.
         """
 
         from aiq.authentication.exceptions.call_back_exceptions import OAuthClientServerError
@@ -846,10 +840,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def add_authorization_route(self, app: FastAPI):
 
-        from datetime import datetime
-        from datetime import timedelta
-        from datetime import timezone
-
         import httpx
         from fastapi.responses import HTMLResponse
 
@@ -867,16 +857,21 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 error_message = "Authorization code and state not provided by authorization config"
                 raise AuthCodeGrantFlowError('auth_code_state_missing', error_message)
 
-            oauth_client_manager: OAuthClientBase | None = _CredentialsManager().get_authentication_manager_by_state(
-                state)
+            oauth_client_manager: OAuthClientManagerBase | None = _CredentialsManager(
+            ).get_authentication_manager_by_state(state)
 
             if oauth_client_manager is None:
                 error_message = "Authorization manager not found by Authorization Code Grant state"
                 raise AuthCodeGrantFlowError('auth_manager_not_found', error_message)
 
             # Send Token HTTP Request
+            authorization_path = FastApiFrontEndConfig().authorization.path
+            if authorization_path is None:
+                error_message = "Authorization path is not configured"
+                raise AuthCodeGrantFlowError('auth_path_not_configured', error_message)
+
             response: httpx.Response | None = await oauth_client_manager.send_token_request(
-                client_authorization_path=FastApiFrontEndConfig().authorization.path,
+                client_authorization_path=authorization_path,
                 client_authorization_endpoint=AuthenticationEndpoint.REDIRECT_URI.value,
                 authorization_code=authorization_code)
 
@@ -884,24 +879,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 error_message = "Invalid response received while exchanging authorization code for access token"
                 raise AuthCodeGrantFlowError('token_response_null', error_message)
 
-            if not response.status_code == 200:
-                await oauth_client_manager.response_manager.handle_auth_code_grant_response_codes(response)
-
-            if response.json().get("access_token") is None:
-                error_message = "No access token provided"
-                raise AuthCodeGrantFlowError('access_token_missing', error_message)
-
-            if response.json().get("expires_in") is None:
-                error_message = "No token expiry provided"
-                raise AuthCodeGrantFlowError('token_expiry_missing', error_message)
-
-            oauth_client_manager.config.access_token = response.json().get("access_token")
-            oauth_client_manager.config.access_token_expires_in = (datetime.now(timezone.utc) +
-                                                                   timedelta(seconds=response.json().get("expires_in")))
-
-            # Claim the refresh token if the refresh token is available.
-            if response.json().get("refresh_token"):
-                oauth_client_manager.config.refresh_token = response.json().get("refresh_token")
+            await oauth_client_manager.process_token_response(response)
 
             await _CredentialsManager().set_oauth_credentials()
 
@@ -914,7 +892,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         async def prompt_redirect_uri(request: Request, prompt_request_schema: PromptRedirectRequest):
             from fastapi.responses import JSONResponse
 
-            oauth_client_manager: OAuthClientBase | None = _CredentialsManager(
+            oauth_client_manager: OAuthClientManagerBase | None = _CredentialsManager(
             ).get_authentication_manager_by_consent_prompt_key(prompt_request_schema.consent_prompt_key)
 
             if (oauth_client_manager is None):
@@ -922,7 +900,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             location_url: str | None = None
 
-            if oauth_client_manager.config.consent_prompt_location_url is not None:
+            if (oauth_client_manager.config is not None
+                    and oauth_client_manager.config.consent_prompt_location_url is not None):
                 location_url = oauth_client_manager.config.consent_prompt_location_url
 
             await _CredentialsManager().set_consent_prompt_url()

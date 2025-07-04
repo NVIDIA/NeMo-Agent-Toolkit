@@ -40,12 +40,30 @@ class RequestManagerBase:
     pass
 
 
-class ResponseManagerBase:
+class ResponseManagerBase(ABC):
     """
     Base class for handling API responses.
     This class provides an interface for handling API responses.
     """
-    pass
+
+    @abstractmethod
+    async def handle_consent_prompt_redirect(self, location_header: str) -> None:
+        """
+        Handles redirect-based consent prompts initiated by OAuth 2.0 flows.
+
+        This method is responsible for processing the redirect URI received from the
+        authorization server (typically a 302 Location header). Depending on the execution
+        environment (e.g., headless server, local development, desktop), this may involve
+        opening a browser, triggering a frontend event, or notifying the user to complete
+        the consent flow manually.
+
+        Args:
+            location_header (str): The redirect URL containing the consent prompt.
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses tailored to the execution context.
+        """
+        pass
 
 
 class AuthenticationManagerBase(ABC):
@@ -122,7 +140,7 @@ class AuthenticationManagerBase(ABC):
         pass
 
 
-class OAuthClientBase(AuthenticationManagerBase, ABC):
+class OAuthClientManagerBase(AuthenticationManagerBase, ABC):
     """
     Base class for managing OAuth clients.
     This class provides an interface for managing OAuth clients.
@@ -140,6 +158,135 @@ class OAuthClientBase(AuthenticationManagerBase, ABC):
         pass
 
     @abstractmethod
+    async def initiate_authorization_flow_console(self) -> None:
+        """
+        Starts a lightweight server to initiate and complete the authorization
+        flow for OAuth clients in headless (console-based) environments.
+        """
+        pass
+
+    @abstractmethod
+    async def shut_down_code_flow_console(self) -> None:
+        """
+        Shuts down the lightweight server used to complete the authorization flow
+        for OAuth clients in headless (console-based) environments.
+        """
+        pass
+
+    @abstractmethod
+    async def initiate_authorization_flow_server(self) -> None:
+        """
+        Initiates and completes the authorization flow for OAuth clients
+        running in server-based environments.
+        """
+        pass
+
+    @abstractmethod
+    async def shut_down_code_flow_server(self) -> None:
+        """
+        Cleans up the OAuth client authorization flow in server
+        environments in the event of unexpected errors.
+        """
+        pass
+
+    @abstractmethod
+    async def send_authorization_request(self) -> str | None:
+        """
+        Initiates the OAuth 2.0 authorization request for flows that require user consent.
+
+        This method is responsible for constructing and initiating the authorization request
+        to the authorization server for any OAuth 2.0 flow that includes a user consent step.
+        Depending on the flow, this may involve redirecting the user to a browser (e.g.,
+        Authorization Code Grant), displaying a user code and verification URL (e.g., Device Flow),
+        or triggering a consent interface on the frontend.
+
+        Returns:
+            str | None: A string representing the consent prompt location (e.g., URL, device_code URI),
+                        or None if no user interaction is required at this stage.
+        """
+        pass
+
+    @abstractmethod
+    def construct_authorization_query_params(self, response_type: str, prompt: str) -> OAuth2AuthorizationQueryParams:
+        """
+        Constructs the query parameters used in the OAuth 2.0 authorization request URL.
+
+        This method generates the required query parameters for initiating an authorization
+        request to the authorization server, applicable to flows such as Authorization Code,
+        Authorization Code with PKCE, Hybrid, and other redirect-based OAuth 2.0 flows.
+
+        Args:
+            response_type (str): The OAuth 2.0 response type indicating the expected authorization response
+                                (e.g., "code", "token", or "id_token").
+            prompt (str): The type of user interaction or consent prompt requested
+                        (e.g., "consent", "login", "none").
+
+        Returns:
+            OAuth2AuthorizationQueryParams: A model containing the full set of query parameters to
+                                            be included in the authorization request URL.
+        """
+        pass
+
+    @abstractmethod
+    async def handle_authorization_server_response(self, response: httpx.Response) -> None:
+        """
+        Handles server responses returned during the OAuth 2.0 authorization process.
+
+        This method interprets and reacts to various response codes and payloads from the
+        authorization server, determining whether the flow should continue, retry, or fail.
+        It is designed to be applicable across OAuth 2.0 flows that need user consent.
+
+        Args:
+            response (httpx.Response): The HTTP response received after redirecting the user
+                                    to the authorization endpoint and receiving a callback.
+
+        Raises:
+            AuthenticationError or a subclass thereof if the response indicates a failure.
+        """
+        pass
+
+    @abstractmethod
+    async def send_token_request(self,
+                                 client_authorization_path: str,
+                                 client_authorization_endpoint: str,
+                                 authorization_code: str) -> httpx.Response | None:
+        """
+        Sends a token request to the token endpoint of the authorization server.
+
+        This method handles the final step in OAuth 2.0 flows that require exchanging an authorization code
+        or grant credential for an access token. It constructs and submits a request to the token endpoint,
+        using the required parameters and headers defined by the flow (e.g., client credentials, redirect URI,
+        code verifier).
+
+        Args:
+            client_authorization_path (str): The relative path on the client used to trigger token requests.
+            client_authorization_endpoint (str): The full URL to the authorization server's token endpoint.
+            authorization_code (str): The code or credential issued by the authorization server.
+
+        Returns:
+            httpx.Response | None: The response from the token endpoint, or None if the request failed.
+        """
+        pass
+
+    @abstractmethod
+    async def process_token_response(self, response: httpx.Response) -> None:
+        """
+        Processes the HTTP response received from the OAuth 2.0 token endpoint.
+
+        This method is responsible for extracting and validating the token response returned
+        by the authorization server, including access tokens and any optional fields such as
+        refresh tokens, ID tokens, token type, expiration time, and granted scopes.
+        The extracted values are typically delegated to a token storage handler.
+
+        Args:
+            response (httpx.Response): The HTTP response object returned from the token endpoint.
+
+        Returns:
+            None
+        """
+        pass
+
+    @abstractmethod
     async def validate_credentials(self) -> bool:
         """
         Validates the OAuth credentials.
@@ -150,24 +297,10 @@ class OAuthClientBase(AuthenticationManagerBase, ABC):
         pass
 
     @abstractmethod
-    def _construct_authorization_query_params(self, response_type: str, prompt: str) -> OAuth2AuthorizationQueryParams:
-        """
-        Constructs the OAuth2 authorization query parameters for the authorization URL.
-
-        Args:
-            response_type: The OAuth2 response type (typically "code")
-            prompt: The consent prompt behavior
-
-        Returns:
-            OAuth2AuthorizationQueryParams: The constructed query parameters for OAuth2 authorization
-        """
-        pass
-
-    @abstractmethod
-    def _construct_token_request_body(self,
-                                      redirect_uri: str,
-                                      authorization_code: str,
-                                      grant_type: str = "authorization_code") -> OAuth2TokenRequest:
+    def construct_token_request_body(self,
+                                     redirect_uri: str,
+                                     authorization_code: str,
+                                     grant_type: str = "authorization_code") -> OAuth2TokenRequest:
         """
         Constructs the OAuth2 token request body for exchanging authorization code for access token.
 
@@ -220,37 +353,5 @@ class OAuthClientBase(AuthenticationManagerBase, ABC):
 
         Args:
             consent_prompt_mode: The consent prompt mode to set.
-        """
-        pass
-
-    @abstractmethod
-    async def initiate_authorization_flow_console(self) -> None:
-        """
-        Starts a lightweight server to initiate and complete the authorization
-        flow for OAuth clients in headless (console-based) environments.
-        """
-        pass
-
-    @abstractmethod
-    async def shut_down_code_flow_console(self) -> None:
-        """
-        Shuts down the lightweight server used to complete the authorization flow
-        for OAuth clients in headless (console-based) environments.
-        """
-        pass
-
-    @abstractmethod
-    async def initiate_authorization_flow_server(self) -> None:
-        """
-        Initiates and completes the authorization flow for OAuth clients
-        running in server-based environments.
-        """
-        pass
-
-    @abstractmethod
-    async def shut_down_code_flow_server(self) -> None:
-        """
-        Cleans up the OAuth client authorization flow in server
-        environments in the event of unexpected errors.
         """
         pass

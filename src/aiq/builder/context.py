@@ -21,7 +21,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 
 from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import OAuthClientBase
+from aiq.authentication.interfaces import OAuthClientManagerBase
 from aiq.builder.intermediate_step_manager import IntermediateStepManager
 from aiq.builder.user_interaction_manager import AIQUserInteractionManager
 from aiq.data_models.authentication import ConsentPromptMode
@@ -84,7 +84,7 @@ class AIQContextState(metaclass=Singleton):
         # executing the callback during the session, it is exiting and resetting the callback. Defaulting to
         # `user_auth_callback_server_http` since this bug only happens during streaming requests.
         from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
-        self.user_auth_callback: ContextVar[Callable[[OAuthClientBase, ConsentPromptMode],
+        self.user_auth_callback: ContextVar[Callable[[OAuthClientManagerBase, ConsentPromptMode],
                                                      Awaitable[AuthenticationError | None]]
                                             | None] = ContextVar(
                                                 "user_auth_callback",

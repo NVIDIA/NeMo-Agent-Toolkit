@@ -16,165 +16,125 @@
 import pytest
 
 from aiq.authentication.api_key.api_key_config import APIKeyConfig
-
-# ========== API_KEY VALIDATION ==========
-
-
-def test_api_key_valid():
-    """Test valid api_key field validation."""
-
-    valid_api_keys = [
-        "test_api_key_12345",  # Standard API key (18 chars)
-        "1234567890123456",  # Exactly 16 characters (minimum)
-        "a" * 32,  # Long API key (32 chars)
-        "sk-1234567890abcdef1234567890abcdef",  # OpenAI-style key (35 chars)
-        "AIzaSyDummy_Api_Key_1234567890123456",  # Google-style key (39 chars)
-        "Bearer_token_123456789012345678901234",  # Bearer-style token (36 chars)
-        "ghp_1234567890abcdef1234567890abcdef12345678",  # GitHub-style token (40 chars)
-    ]
-
-    for api_key in valid_api_keys:
-        config = APIKeyConfig(api_key=api_key, header_name="Authorization", header_prefix="Bearer")
-        assert config.api_key == api_key
+from aiq.authentication.exceptions.api_key_exceptions import APIKeyFieldError
+from aiq.authentication.exceptions.api_key_exceptions import HeaderNameFieldError
+from aiq.authentication.exceptions.api_key_exceptions import HeaderPrefixFieldError
 
 
-def test_api_key_invalid():
-    """Test invalid api_key field invalidation."""
-    from aiq.authentication.exceptions.api_key_exceptions import APIKeyFieldError
+async def test_api_key_config_creation():
+    """Test creating API key configuration with valid parameters"""
+    config = APIKeyConfig(raw_key="test_api_key_12345", header_name="X-API-Key", header_prefix="Bearer")
 
-    invalid_api_keys = [
-        "",  # Empty key (value_missing)
-        "short",  # Too short - 5 chars (too_short)
-        "1234567890123",  # Too short - 13 chars (too_short)
-        "  valid_api_key_123456  ",  # Leading/trailing whitespace (whitespace_found)
-        " api_key_123456",  # Leading whitespace (whitespace_found)
-        "api_key_123456 ",  # Trailing whitespace (whitespace_found)
-        "api key with spaces 123456",  # Internal whitespace (whitespace_found)
-    ]
-
-    for api_key in invalid_api_keys:
-        with pytest.raises(APIKeyFieldError):
-            APIKeyConfig(api_key=api_key, header_name="Authorization", header_prefix="Bearer")
+    assert config.raw_key == "test_api_key_12345"
+    assert config.header_name == "X-API-Key"
+    assert config.header_prefix == "Bearer"
 
 
-# ========== HEADER_NAME VALIDATION ==========
+@pytest.mark.parametrize(
+    "valid_raw_key",
+    [
+        "abc12345",  # simple alphanumeric
+        "TOKEN_ABC123XYZ",  # uppercase with underscore
+        "apiKey-9999-8888",  # mixed with dashes
+        "a1b2c3d4e5",  # minimum 10 characters
+        "SuperSecureKey99",  # camelCase
+        "token1234567890",  # long numeric key
+        "K3yWithSymbols!@",  # symbols are allowed unless restricted explicitly
+    ])
+async def test_raw_key_field_validation(valid_raw_key):
+    """Test valid raw_key values"""
+    # Should not raise APIKeyFieldError
+    APIKeyConfig(raw_key=valid_raw_key, header_name="X-API-Key", header_prefix="Bearer")
 
 
-def test_header_name_valid():
-    """Test valid header_name field validation."""
-
-    valid_header_names = [
-        "Authorization",  # Standard HTTP header
-        "X-API-Key",  # Custom header with hyphens
-        "Content-Type",  # Standard header with hyphen
-        "User-Agent",  # Standard user agent header
-        "X-Custom-Header-123",  # Custom header with numbers
-        "APIKey",  # Simple alphanumeric header
-        "X-Auth-Token",  # Authentication token header
-        "X-RapidAPI-Key",  # RapidAPI style header
-        "Ocp-Apim-Subscription-Key",  # Azure API Management style
-    ]
-
-    for header_name in valid_header_names:
-        config = APIKeyConfig(api_key="test_api_key_123456", header_name=header_name, header_prefix="Bearer")
-        assert config.header_name == header_name
-
-
-def test_header_name_invalid():
-    """Test invalid header_name field invalidation."""
-    from aiq.authentication.exceptions.api_key_exceptions import HeaderNameFieldError
-
-    invalid_header_names = [
-        "",  # Empty header name (value_missing)
-        "Invalid Header",  # Contains space (invalid_format)
-        "Header@Name",  # Contains @ symbol (invalid_format)
-        "Header_Name!",  # Contains exclamation mark (invalid_format)
-        "Header.Name",  # Contains dot (invalid_format)
-        "Header:Name",  # Contains colon (invalid_format)
-        "Header/Name",  # Contains slash (invalid_format)
-        "Header=Name",  # Contains equals (invalid_format)
-        "Header?Name",  # Contains question mark (invalid_format)
-        "Header[Name]",  # Contains brackets (invalid_format)
-        "Header{Name}",  # Contains braces (invalid_format)
-        "Header(Name)",  # Contains parentheses (invalid_format)
-        "Héader-Name",  # Contains non-ASCII character (invalid_format)
-        "Header\tName",  # Contains tab (invalid_format)
-        "Header\nName",  # Contains newline (invalid_format)
-    ]
-
-    for header_name in invalid_header_names:
-        with pytest.raises(HeaderNameFieldError):
-            APIKeyConfig(api_key="test_api_key_123456", header_name=header_name, header_prefix="Bearer")
+@pytest.mark.parametrize(
+    "invalid_raw_key",
+    [
+        "",  # empty string
+        "  ",  # whitespace only
+        " abc12345",  # leading space
+        "abc12345 ",  # trailing space
+        "\tabc12345",  # tab character (leading)
+        "abc\n12345",  # contains newline
+        "abc",  # too short (less than 8 chars)
+        "validKey\t",  # trailing tab
+    ])
+async def test_raw_key_field_invalidation(invalid_raw_key):
+    """Test API key configuration validation with various invalid raw_key inputs."""
+    # Should raise APIKeyFieldError
+    with pytest.raises(APIKeyFieldError):
+        APIKeyConfig(raw_key=invalid_raw_key, header_name="X-API-Key", header_prefix="Bearer")
 
 
-# ========== HEADER_PREFIX VALIDATION ==========
+@pytest.mark.parametrize(
+    "valid_header_name",
+    [
+        "X-API-Key",  # standard API key header
+        "Authorization",  # standard auth header
+        "X-Auth-Token",  # custom auth token
+        "X-Custom-Header",  # custom header
+        "API-Key",  # simple API key
+        "Bearer-Token",  # bearer token header
+        "Content-Type",  # standard content type header
+        "X-Request-ID",  # request ID header
+    ])
+async def test_header_name_field_validation(valid_header_name):
+    """Test valid header_name values"""
+    # Should not raise HeaderNameFieldError
+    APIKeyConfig(raw_key="test12345", header_name=valid_header_name, header_prefix="Bearer")
 
 
-def test_header_prefix_valid():
-    """Test valid header_prefix field validation."""
-
-    valid_header_prefixes = [
-        "Bearer",  # Standard Bearer token
-        "Basic",  # Basic authentication
-        "Token",  # Generic token prefix
-        "JWT",  # JSON Web Token
-        "API",  # API prefix
-        "Key",  # Simple key prefix
-        "OAuth",  # OAuth prefix
-        "Bot",  # Bot token prefix (Discord style)
-        "SSWS",  # Okta style prefix
-        "sk",  # Short prefix (Stripe style)
-        "pk",  # Public key prefix
-        "APIKEY",  # All caps API key prefix
-        "Bearer123",  # Bearer with numbers
-        "Token456",  # Token with numbers
-    ]
-
-    for header_prefix in valid_header_prefixes:
-        config = APIKeyConfig(api_key="test_api_key_123456", header_name="Authorization", header_prefix=header_prefix)
-        assert config.header_prefix == header_prefix
+@pytest.mark.parametrize(
+    "invalid_header_name",
+    [
+        "",  # empty string
+        "  ",  # whitespace only
+        " X-API-Key",  # leading space
+        "X-API-Key ",  # trailing space
+        "\tX-API-Key",  # tab character (leading)
+        "X-API\nKey",  # contains newline
+        "X-API-Key\t",  # trailing tab
+        "X API Key"  # spaces in middle
+    ])
+async def test_header_name_field_invalidation(invalid_header_name):
+    """Test header_name field validation with various invalid inputs."""
+    # Should raise HeaderNameFieldError
+    with pytest.raises(HeaderNameFieldError):
+        APIKeyConfig(raw_key="test12345", header_name=invalid_header_name, header_prefix="Bearer")
 
 
-def test_header_prefix_invalid():
-    """Test invalid header_prefix field invalidation."""
-    from aiq.authentication.exceptions.api_key_exceptions import HeaderPrefixFieldError
+@pytest.mark.parametrize(
+    "valid_header_prefix",
+    [
+        "Bearer",  # standard bearer prefix
+        "Token",  # simple token prefix
+        "API-Key",  # API key prefix
+        "Basic",  # basic auth prefix
+        "Custom",  # custom prefix
+        "JWT",  # JWT token prefix
+        "Key",  # simple key prefix
+        "Auth"  # auth prefix
+    ])
+async def test_header_prefix_field_validation(valid_header_prefix):
+    """Test valid header_prefix values"""
+    # Should not raise HeaderPrefixFieldError
+    APIKeyConfig(raw_key="test12345", header_name="X-API-Key", header_prefix=valid_header_prefix)
 
-    invalid_header_prefixes = [
-        "",  # Empty prefix (value_missing)
-        "Bearer Token",  # Contains space (contains_whitespace)
-        "Basic Auth",  # Contains space (contains_whitespace)
-        "API Key",  # Contains space (contains_whitespace)
-        "Bearer\tToken",  # Contains tab (contains_whitespace)
-        "Bearer\nToken",  # Contains newline (contains_whitespace)
-        "Bearer-Token",  # Contains hyphen (invalid_format)
-        "Bearer_Token",  # Contains underscore (invalid_format)
-        "Bearer.Token",  # Contains dot (invalid_format)
-        "Bearer@Token",  # Contains @ symbol (invalid_format)
-        "Bearer#Token",  # Contains hash (invalid_format)
-        "Bearer$Token",  # Contains dollar sign (invalid_format)
-        "Bearer%Token",  # Contains percent (invalid_format)
-        "Bearer&Token",  # Contains ampersand (invalid_format)
-        "Bearer*Token",  # Contains asterisk (invalid_format)
-        "Bearer+Token",  # Contains plus (invalid_format)
-        "Bearer=Token",  # Contains equals (invalid_format)
-        "Bearer!Token",  # Contains exclamation (invalid_format)
-        "Bearer?Token",  # Contains question mark (invalid_format)
-        "Bearer/Token",  # Contains slash (invalid_format)
-        "Bearer\\Token",  # Contains backslash (invalid_format)
-        "Bearer|Token",  # Contains pipe (invalid_format)
-        "Bearer:Token",  # Contains colon (invalid_format)
-        "Bearer;Token",  # Contains semicolon (invalid_format)
-        "Bearer<Token",  # Contains less than (invalid_format)
-        "Bearer>Token",  # Contains greater than (invalid_format)
-        "Bearer[Token]",  # Contains brackets (invalid_format)
-        "Bearer{Token}",  # Contains braces (invalid_format)
-        "Bearer(Token)",  # Contains parentheses (invalid_format)
-        "Bearer\"Token\"",  # Contains quotes (invalid_format)
-        "Bearer'Token'",  # Contains single quotes (invalid_format)
-        "Bearer`Token`",  # Contains backticks (invalid_format)
-        "Bearer~Token",  # Contains tilde (invalid_format)
-    ]
 
-    for header_prefix in invalid_header_prefixes:
-        with pytest.raises(HeaderPrefixFieldError):
-            APIKeyConfig(api_key="test_api_key_123456", header_name="Authorization", header_prefix=header_prefix)
+@pytest.mark.parametrize(
+    "invalid_header_prefix",
+    [
+        "",  # empty string
+        "  ",  # whitespace only
+        " Bearer",  # leading space
+        "Bearer ",  # trailing space
+        "\tBearer",  # tab character (leading)
+        "Bear\ner",  # contains newline
+        "Bearer\t",  # trailing tab
+        "Bear er"  # spaces in middle
+    ])
+async def test_header_prefix_field_invalidation(invalid_header_prefix):
+    """Test header_prefix field validation with various invalid inputs."""
+    # Should raise HeaderPrefixFieldError
+    with pytest.raises(HeaderPrefixFieldError):
+        APIKeyConfig(raw_key="test12345", header_name="X-API-Key", header_prefix=invalid_header_prefix)

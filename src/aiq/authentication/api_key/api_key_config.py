@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import logging
+import re
+import string
 
 from pydantic import Field
 from pydantic import field_validator
@@ -27,6 +29,9 @@ from aiq.cli.register_workflow import register_authentication_provider
 from aiq.data_models.authentication import AuthenticationBaseConfig
 
 logger = logging.getLogger(__name__)
+
+# Strict RFC 7230 compliant header name regex
+HEADER_NAME_REGEX = re.compile(r"^[!#$%&'*+\-.^_`|~0-9a-zA-Z]+$")
 
 
 class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
@@ -51,63 +56,61 @@ class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
     @field_validator('raw_key')
     @classmethod
     def validate_raw_key(cls, value: str) -> str:
-        """
-        Validate raw_key field for security requirements.
-
-        Args:
-            value: The raw API key value to validate
-
-        Returns:
-            str: The validated raw key
-
-        Raises:
-            APIKeyFieldError: If validation fails
-        """
         if not value:
             raise APIKeyFieldError('value_missing', 'raw_key field value is required.')
 
-        # Check for whitespace
-        if len(value.strip()) != len(value):
-            raise APIKeyFieldError('whitespace_found',
-                                   'raw_key field value cannot have leading or trailing whitespace.')
-
-        # Check for minimum length
         if len(value) < 8:
             raise APIKeyFieldError(
                 'value_too_short',
                 'raw_key field value must be at least 8 characters long for security. '
-                'Got: {length} characters', {'length': len(value)})
+                f'Got: {len(value)} characters.')
+
+        if len(value.strip()) != len(value):
+            raise APIKeyFieldError('whitespace_found',
+                                   'raw_key field value cannot have leading or trailing whitespace.')
+
+        if any(c in string.whitespace for c in value):
+            raise APIKeyFieldError('contains_whitespace', 'raw_key must not contain any whitespace characters.')
 
         return value
 
     @field_validator('header_name')
     @classmethod
     def validate_header_name(cls, value: str) -> str:
-        """
-        Validate header_name is a valid HTTP header name.
-        """
         if not value:
             raise HeaderNameFieldError('value_missing', 'header_name is required.')
 
-        if not value.isascii() or not value.replace("-", "").isalnum():
-            raise HeaderNameFieldError('invalid_format',
-                                       'header_name must be ASCII and consist of alphanumeric characters or hyphens.')
+        if value != value.strip():
+            raise HeaderNameFieldError('whitespace_found',
+                                       'header_name field value cannot have leading or trailing whitespace.')
+
+        if any(c in string.whitespace for c in value):
+            raise HeaderNameFieldError('contains_whitespace', 'header_name must not contain any whitespace characters.')
+
+        if not HEADER_NAME_REGEX.fullmatch(value):
+            raise HeaderNameFieldError(
+                'invalid_format',
+                'header_name must match the HTTP token syntax per RFC 7230: ASCII letters, digits, or allowed symbols.')
+
         return value
 
     @field_validator('header_prefix')
     @classmethod
     def validate_header_prefix(cls, value: str) -> str:
-        """
-        Validate header_prefix is standard format (e.g., 'Bearer', 'JWT') and does not contain whitespace.
-        """
         if not value:
             raise HeaderPrefixFieldError('value_missing', 'header_prefix is required.')
 
-        if ' ' in value:
-            raise HeaderPrefixFieldError('contains_whitespace', 'header_prefix must not contain whitespace.')
+        if value != value.strip():
+            raise HeaderPrefixFieldError('whitespace_found',
+                                         'header_prefix field value cannot have leading or trailing whitespace.')
 
-        if not value.isalnum():
-            raise HeaderPrefixFieldError('invalid_format', 'header_prefix must consist of alphanumeric characters.')
+        if any(c in string.whitespace for c in value):
+            raise HeaderPrefixFieldError('contains_whitespace',
+                                         'header_prefix must not contain any whitespace characters.')
+
+        if not value.isascii():
+            raise HeaderPrefixFieldError('invalid_format', 'header_prefix must be ASCII.')
+
         return value
 
 

@@ -18,7 +18,7 @@ import logging
 import typing
 
 from aiq.authentication.interfaces import AuthenticationManagerBase
-from aiq.authentication.interfaces import OAuthClientBase
+from aiq.authentication.interfaces import OAuthClientManagerBase
 from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
 from aiq.builder.context import Singleton
 from aiq.data_models.authentication import AuthenticationBaseConfig
@@ -45,7 +45,7 @@ class _CredentialsManager(metaclass=Singleton):
 
     def validate_unique_consent_prompt_keys(self, authentication_configs: dict[str, AuthenticationBaseConfig]) -> None:
         """
-        Validate that all OAuthUserConsentBase instances have unique consent_prompt_key values.
+        Validate that all OAuthUserConsentConfigBase instances have unique consent_prompt_key values.
 
         Args:
             authentication_configs: Authentication configuration objects from config file.
@@ -77,7 +77,7 @@ class _CredentialsManager(metaclass=Singleton):
         """
         self._authentication_managers[name] = manager
 
-    def get_authentication_manager_by_state(self, state: str) -> OAuthClientBase | None:
+    def get_authentication_manager_by_state(self, state: str) -> OAuthClientManagerBase | None:
         """
         Get authentication manager by the state value.
 
@@ -88,13 +88,14 @@ class _CredentialsManager(metaclass=Singleton):
             The OAuth authentication manager if found, None otherwise.
         """
         for auth_manager in self._authentication_managers.values():
-            if (isinstance(auth_manager, OAuthClientBase) and auth_manager.config is not None
+            if (isinstance(auth_manager, OAuthClientManagerBase) and auth_manager.config is not None
                     and hasattr(auth_manager.config, 'state')):
                 if auth_manager.config.state == state:
                     return auth_manager
         return None
 
-    def get_authentication_manager_by_consent_prompt_key(self, consent_prompt_key: str) -> OAuthClientBase | None:
+    def get_authentication_manager_by_consent_prompt_key(self,
+                                                         consent_prompt_key: str) -> OAuthClientManagerBase | None:
         """
         Get authentication manager by the consent_prompt_key value.
 
@@ -105,7 +106,7 @@ class _CredentialsManager(metaclass=Singleton):
             The OAuth authentication manager if found, None otherwise.
         """
         for auth_manager in self._authentication_managers.values():
-            if (isinstance(auth_manager, OAuthClientBase) and auth_manager.config is not None
+            if (isinstance(auth_manager, OAuthClientManagerBase) and auth_manager.config is not None
                     and hasattr(auth_manager.config, 'consent_prompt_key')):
                 if auth_manager.config.consent_prompt_key == consent_prompt_key:
                     return auth_manager
@@ -148,15 +149,23 @@ class _CredentialsManager(metaclass=Singleton):
                     if item not in front_end_config.cors.allow_methods:
                         front_end_config.cors.allow_methods.append(item)
 
-            _CredentialsManager().full_config.general.front_end = front_end_config
+            # Check if full_config and general are not None before accessing
+            credentials_manager = _CredentialsManager()
+            if credentials_manager.full_config is not None and hasattr(credentials_manager.full_config, 'general'):
+                credentials_manager.full_config.general.front_end = front_end_config
+            else:
+                # Handle case where full_config or general is None
+                logger.warning("full_config or general is None, cannot set front_end configuration")
 
         except ValueError:
-            _CredentialsManager().full_config.general.front_end = FastApiFrontEndConfig(
-                cors=FastApiFrontEndConfig.CrossOriginResourceSharing(
-                    allow_origins=default_allow_origins,
-                    allow_headers=default_allow_headers,
-                    allow_methods=default_allow_methods,
-                ))
+            credentials_manager = _CredentialsManager()
+            if credentials_manager.full_config is not None and hasattr(credentials_manager.full_config, 'general'):
+                credentials_manager.full_config.general.front_end = FastApiFrontEndConfig(
+                    cors=FastApiFrontEndConfig.CrossOriginResourceSharing(
+                        allow_origins=default_allow_origins,
+                        allow_headers=default_allow_headers,
+                        allow_methods=default_allow_methods,
+                    ))
 
     async def wait_for_oauth_credentials(self) -> None:
         """
@@ -166,7 +175,7 @@ class _CredentialsManager(metaclass=Singleton):
 
     async def set_oauth_credentials(self) -> None:
         """
-        Unblock until the oauth credentials are set in the redirect uri.
+        Unblock when the oauth credentials are set in the redirect uri.
         """
         self._oauth_credentials_flag.set()
 
@@ -178,7 +187,7 @@ class _CredentialsManager(metaclass=Singleton):
 
     async def set_consent_prompt_url(self) -> None:
         """
-        Unblock until the consent prompt location header has been retrieved.
+        Unblock when the consent prompt location header has been retrieved.
         """
         self._consent_prompt_flag.set()
 

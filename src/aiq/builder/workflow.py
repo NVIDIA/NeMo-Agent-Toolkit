@@ -17,7 +17,6 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import Any
 
-from aiq.authentication.interfaces import AuthenticationManagerBase
 from aiq.builder.context import AIQContextState
 from aiq.builder.embedder import EmbedderProviderInfo
 from aiq.builder.function import Function
@@ -51,7 +50,6 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
                  *,
                  config: AIQConfig,
                  entry_fn: Function[InputT, StreamingOutputT, SingleOutputT],
-                 authentication: dict[str, AuthenticationManagerBase] | None = None,
                  functions: dict[str, Function] | None = None,
                  llms: dict[str, LLMProviderInfo] | None = None,
                  embeddings: dict[str, EmbedderProviderInfo] | None = None,
@@ -119,7 +117,6 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
     def from_entry_fn(*,
                       config: AIQConfig,
                       entry_fn: Function[InputT, StreamingOutputT, SingleOutputT],
-                      authentication: dict[str, AuthenticationManagerBase] | None = None,
                       functions: dict[str, Function] | None = None,
                       llms: dict[str, LLMProviderInfo] | None = None,
                       embeddings: dict[str, EmbedderProviderInfo] | None = None,
@@ -137,7 +134,6 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
 
         return WorkflowImpl(config=config,
                             entry_fn=entry_fn,
-                            authentication=authentication,
                             functions=functions,
                             llms=llms,
                             embeddings=embeddings,

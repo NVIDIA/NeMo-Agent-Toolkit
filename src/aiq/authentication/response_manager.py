@@ -19,7 +19,7 @@ import webbrowser
 import httpx
 
 from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
-from aiq.authentication.interfaces import OAuthClientBase
+from aiq.authentication.interfaces import OAuthClientManagerBase
 from aiq.data_models.authentication import ConsentPromptMode
 from aiq.front_ends.fastapi.message_handler import MessageHandler
 
@@ -29,9 +29,9 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 class ResponseManager:
 
-    def __init__(self, oauth_client_manager: OAuthClientBase) -> None:
+    def __init__(self, oauth_client_manager: OAuthClientManagerBase) -> None:
         self._message_handler: MessageHandler | None = None
-        self._oauth_client_manager: OAuthClientBase = oauth_client_manager
+        self._oauth_client_manager: OAuthClientManagerBase = oauth_client_manager
 
     @property
     def message_handler(self) -> MessageHandler | None:
@@ -53,9 +53,9 @@ class ResponseManager:
         """
         self._message_handler = message_handler
 
-    async def handle_auth_code_grant_response_codes(self, response: httpx.Response) -> None:
+    async def process_http_response(self, response: httpx.Response) -> None:
         """
-        Handles various Auth Code Grant Flow flow responses.
+        Handles various Auth Code Grant flow responses.
 
         Args:
             response (httpx.Response): The HTTP response from the authentication server.
@@ -69,7 +69,7 @@ class ResponseManager:
                     error_message = "Missing 'Location' header in 302 response to redirect user to consent browser"
                     raise AuthCodeGrantFlowError('location_header_missing', error_message)
 
-                await self._handle_auth_code_grant_302_consent_browser(redirect_location_header)
+                await self.handle_consent_prompt_redirect(redirect_location_header)
 
             # Handles the 4xx client status codes from Auth Code Grant flow authorization server.
             elif response.status_code >= 400 and response.status_code < 500:
@@ -87,13 +87,12 @@ class ResponseManager:
             logger.error(error_message, exc_info=True)
             raise AuthCodeGrantFlowError('auth_response_handler_failed', error_message) from e
 
-    async def _handle_auth_code_grant_302_consent_browser(self, location_header: str) -> None:
+    async def handle_consent_prompt_redirect(self, location_header: str) -> None:
         """
         Handles the consent prompt redirect for different execution environments.
 
         Args:
-            location_header (str) : Location header from authorization server HTTP 302 consent prompt redirect.
-            encrypted_authentication_config (OAuthClientBase): The registered Auth Code Grant flow config.
+            location_header (str): Location header from authorization server HTTP 302 consent prompt redirect.
         """
         from aiq.authentication.credentials_manager import _CredentialsManager
         from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
@@ -151,7 +150,7 @@ class ResponseManager:
         insufficient_scope.
 
         Args:
-            response (httpx.Response): The response form the Auth Code Grant flow authentication server.
+            response (httpx.Response): The response from the Auth Code Grant flow authentication server.
         """
         # 400 Bad Request: Invalid refresh token provided or malformed request.
         if response.status_code == 400:
@@ -159,7 +158,7 @@ class ResponseManager:
                              f"Response code: {response.status_code}, Response description: {response.text}")
             raise AuthCodeGrantFlowError('http_400_bad_request', error_message)
 
-        # 401 Unauthorized: Token is missing, revoked, invlaid or expired.
+        # 401 Unauthorized: Token is missing, revoked, invalid or expired.
         elif response.status_code == 401:
             error_message = (f"Access token is missing, revoked, or expired. Please re-authenticate. "
                              f"Response code: {response.status_code}, Response Description: {response.text}")

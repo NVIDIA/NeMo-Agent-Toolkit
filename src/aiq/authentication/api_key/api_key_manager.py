@@ -14,10 +14,10 @@
 # limitations under the License.
 
 import logging
-import typing
 
 import httpx
 
+from aiq.authentication.api_key.api_key_config import APIKeyConfig
 from aiq.authentication.interfaces import AuthenticationManagerBase
 from aiq.authentication.request_manager import RequestManager
 from aiq.data_models.authentication import HeaderAuthScheme
@@ -25,15 +25,14 @@ from aiq.data_models.authentication import HTTPMethod
 
 logger = logging.getLogger(__name__)
 
-if (typing.TYPE_CHECKING):
-    from aiq.authentication.api_key.api_key_config import APIKeyConfig
-
 
 class APIKeyManager(AuthenticationManagerBase):
 
-    def __init__(self, config: "APIKeyConfig", config_name: str | None = None) -> None:
+    def __init__(self, config: APIKeyConfig, config_name: str | None = None) -> None:
+        assert isinstance(config, APIKeyConfig), ("Config is not APIKeyConfig")
+
         self._config_name: str | None = config_name
-        self._config: "APIKeyConfig" = config
+        self._config: APIKeyConfig = config
         self._request_manager: RequestManager = RequestManager()
         super().__init__()
 
@@ -64,7 +63,7 @@ class APIKeyManager(AuthenticationManagerBase):
         Returns:
             bool: True if the API key credentials are valid, False otherwise.
         """
-        # Validate the API key credentials are set and non-empty.
+        # Validate the raw api key credentials are set and non-empty.
         if not self._config.raw_key or self._config.raw_key == "":
             return False
 
@@ -75,6 +74,7 @@ class APIKeyManager(AuthenticationManagerBase):
                                               ) -> httpx.Headers | None:
         """
         Constructs the authenticated HTTP header based on the authentication scheme.
+        Basic Authentication follows the OpenAPI 3.0 Basic Authentication standard as well as RFC 7617.
 
         Args:
             header_auth_scheme (HeaderAuthScheme): The HTTP authentication scheme to use.

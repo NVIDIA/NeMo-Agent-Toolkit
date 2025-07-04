@@ -38,7 +38,7 @@ class AuthCodeGrantConfig(OAuthUserConsentConfigBase, name="oauth2_authorization
     client_server_url: str = Field(description="The base url of the API server instance. "
                                    "This is needed to properly construct the redirect uri i.e: http://localhost:8000")
     authorization_url: str = Field(description="The base url to the authorization server in which authorization "
-                                   "request are made to receive access codes..")
+                                   "requests are made to receive access codes.")
     authorization_token_url: str = Field(
         description="The base url to the authorization token server in which access codes "
         "are exchanged for access tokens.")
@@ -57,8 +57,7 @@ class AuthCodeGrantConfig(OAuthUserConsentConfigBase, name="oauth2_authorization
         parsed = urlparse(value)
         if parsed.scheme not in ['http', 'https']:
             raise AuthCodeGrantConfigClientServerUrlFieldError(
-                'invalid_scheme',
-                'client_server_url must use HTTP or HTTPS protocol. Got: {scheme}://', {'scheme': parsed.scheme})
+                'invalid_scheme', f'client_server_url must use HTTP or HTTPS protocol. Got: {parsed.scheme}://')
 
         # Check for valid hostname
         if not parsed.netloc:
