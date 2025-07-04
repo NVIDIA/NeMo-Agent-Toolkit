@@ -464,7 +464,7 @@ requires-dist = [{ name = "aiqtoolkit", extras = ["ingestion", "langchain", "mem
 
 [[package]]
 name = "aiq-swe-bench"
-source = { editable = "examples/intermediate/swe_bench" }
+source = { editable = "examples/intermediate/evaluation_and_profiling/swe_bench" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain"] },
     { name = "swebench" },
@@ -619,7 +619,7 @@ requires-dist = [
     { name = "aiq-simple-calculator-mcp", marker = "extra == 'examples'", editable = "examples/intermediate/MCP/simple_calculator_mcp" },
     { name = "aiq-simple-calculator-observability", marker = "extra == 'examples'", editable = "examples/intermediate/observability/simple_calculator_observability" },
     { name = "aiq-simple-rag", marker = "extra == 'examples'", editable = "examples/intermediate/RAG/simple_rag" },
-    { name = "aiq-swe-bench", marker = "extra == 'examples'", editable = "examples/intermediate/swe_bench" },
+    { name = "aiq-swe-bench", marker = "extra == 'examples'", editable = "examples/intermediate/evaluation_and_profiling/swe_bench" },
     { name = "aiqtoolkit-agno", marker = "extra == 'agno'", editable = "packages/aiqtoolkit_agno" },
     { name = "aiqtoolkit-crewai", marker = "extra == 'crewai'", editable = "packages/aiqtoolkit_crewai" },
     { name = "aiqtoolkit-langchain", marker = "extra == 'langchain'", editable = "packages/aiqtoolkit_langchain" },
@@ -6053,8 +6053,8 @@ name = "secretstorage"
 version = "3.3.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cryptography" },
-    { name = "jeepney" },
+    { name = "cryptography", marker = "sys_platform == 'linux'" },
+    { name = "jeepney", marker = "sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/53/a4/f48c9d79cb507ed1373477dbceaba7401fd8a23af63b837fa61f1dcd3691/SecretStorage-3.3.3.tar.gz", hash = "sha256:2403533ef369eca6d2ba81718576c5e0f564d5cca1b58f73a8b23e7d4eeebd77", size = 19739, upload-time = "2022-08-13T16:22:46.976Z" }
 wheels = [
