@@ -126,7 +126,7 @@ aiq_plot_charts = { path = "examples/basic/functions/plot_charts", editable = tr
 aiq_semantic_kernel_demo = { path = "examples/basic/frameworks/semantic_kernel_demo", editable = true }
 aiq_simple = { path = "examples/basic/functions/simple", editable = true }
 aiq_simple_calculator = { path = "examples/basic/functions/simple_calculator", editable = true }
-aiq_swe_bench = { path = "examples/swe_bench", editable = true }
+aiq_swe_bench = { path = "examples/intermediate/evaluation_and_profiling/swe_bench", editable = true }
 aiq_automated_description_generation = { path = "examples/basic/functions/automated_description_generation", editable = true }
 aiq_agno_personal_finance = { path = "examples/basic/frameworks/agno_personal_finance", editable = true }
 aiq_profiler_agent = { path = "examples/advanced/profiler_agent", editable = true }
