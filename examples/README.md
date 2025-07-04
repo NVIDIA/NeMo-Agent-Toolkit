@@ -22,27 +22,27 @@ Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular f
 ## Example Categories
 
 ### Basic Examples ([`basic`](basic/))
-- **scaffolding**: Workflow scaffolding and project generation using automated commands and intelligent code generation
-- **functions**: Function implementation examples including simple LangSmith documentation agent, calculator workflow, automated content generation, and chart visualization tools
-- **frameworks**: Integration examples with different AI frameworks including multi-framework patterns, Semantic Kernel integration, and personal finance applications
+- **[`scaffolding`](basic/scaffolding/)**: Workflow scaffolding and project generation using automated commands and intelligent code generation
+- **[`functions`](basic/functions/)**: Function implementation examples including simple LangSmith documentation agent, calculator workflow, automated content generation, and chart visualization tools
+- **[`frameworks`](basic/frameworks/)**: Integration examples with different AI frameworks including multi-framework patterns, Semantic Kernel integration, and personal finance applications
 
 ### Intermediate Examples ([`intermediate`](intermediate/))
-- **evaluation_and_profiling**: Performance evaluation and profiling tools for workflow optimization
-- **UI**: User interface examples for interactive AIQ toolkit applications
-- **HITL**: Human-in-the-loop workflow examples for collaborative AI systems
-- **MCP**: Model Context Protocol implementation examples
-- **custom_routes**: Custom routing and API endpoint examples
-- **observability**: Monitoring and observability integration examples
-- **RAG**: Retrieval-Augmented Generation examples with Milvus vector database and long-term memory
-- **agents**: Multi-agent system examples and agent coordination patterns
+- **[`evaluation_and_profiling`](intermediate/evaluation_and_profiling/)**: Performance evaluation and profiling tools for workflow optimization
+- **[`UI`](intermediate/UI/)**: User interface examples for interactive AIQ toolkit applications
+- **[`HITL`](intermediate/HITL/)**: Human-in-the-loop workflow examples for collaborative AI systems
+- **[`MCP`](intermediate/MCP/)**: Model Context Protocol implementation examples
+- **[`custom_routes`](intermediate/custom_routes/)**: Custom routing and API endpoint examples
+- **[`observability`](intermediate/observability/)**: Monitoring and observability integration examples
+- **[`RAG`](intermediate/RAG/)**: Retrieval-Augmented Generation examples with Milvus vector database and long-term memory
+- **[`agents`](intermediate/agents/)**: Multi-agent system examples and agent coordination patterns
 
 ### Advanced Examples ([`advanced`](advanced/))
-- **alert_triage_agent**: Complex alert triage system using LangGraph for automated system monitoring and diagnostics
-- **profiler_agent**: Performance profiling agent for analyzing AIQ toolkit workflow performance using Phoenix server
-- **aiq-blueprint.md**: Blueprint documentation for advanced system architectures
+- **[`alert_triage_agent`](advanced/alert_triage_agent/)**: Complex alert triage system using LangGraph for automated system monitoring and diagnostics
+- **[`profiler_agent`](advanced/profiler_agent/)**: Performance profiling agent for analyzing AIQ toolkit workflow performance using Phoenix server
+- **[`AIQ-blueprint.md`](advanced/aiq-blueprint.md)**: Blueprint documentation for advanced system architectures
 
 ### Documentation Guides ([`documentation_guides`](documentation_guides/))
-- **locally_hosted_llms**: Examples for hosting and using local LLM models with AIQ toolkit
-- **workflows**: Workflow examples specifically created for documentation and tutorial purposes
+- **[`locally_hosted_llms`](documentation_guides/locally_hosted_llms/)**: Examples for hosting and using local LLM models with AIQ toolkit
+- **[`workflows`](documentation_guides/workflows/)**: Workflow examples specifically created for documentation and tutorial purposes
 
 To run the examples, install the AIQ toolkit from source, if you haven't already done so, by following the instructions in  [Install From Source](../docs/source/quick-start/installing.md#install-from-source) .
