@@ -81,7 +81,7 @@ eval:
   general:
     dataset:
       _type: json
-      file_path: examples/swe_bench/data/test_dataset_lite.json
+      file_path: examples/intermediate/swe_bench/data/test_dataset_lite.json
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true
@@ -104,7 +104,7 @@ and `sympy__sympy-21055`. The evaluation iteratively develops and debugs the wor
 eval:
     dataset:
       _type: json
-      file_path: examples/swe_bench/data/test_dataset_verified.json
+      file_path: examples/intermediate/swe_bench/data/test_dataset_verified.json
       id_key: instance_id
       structure:
         disable: true
@@ -122,7 +122,7 @@ You can also skip entries from the dataset. Here is an example configuration to 
 eval:
     dataset:
       _type: json
-      file_path: examples/swe_bench/data/test_dataset_verified.json
+      file_path: examples/intermediate/swe_bench/data/test_dataset_verified.json
       id_key: instance_id
       structure:
         disable: true
@@ -199,7 +199,7 @@ eval:
   general:
     dataset:
       _type: json
-      file_path: examples/swe_bench/data/test_dataset_lite.json
+      file_path: examples/intermediate/swe_bench/data/test_dataset_lite.json
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true

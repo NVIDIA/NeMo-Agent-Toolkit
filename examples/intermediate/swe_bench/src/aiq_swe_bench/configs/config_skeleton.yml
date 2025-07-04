@@ -20,17 +20,17 @@ general:
 workflow:
   _type: swe_bench
   predictor:
-    _type: gold
-    verbose: true
+    _type: skeleton
+    verbose: false
 
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/swe_bench/gold/
+    output_dir: ./.tmp/aiq/examples/intermediate/swe_bench/
     max_concurrency: 4
 
     dataset:
       _type: json
-      file_path: examples/swe_bench/data/test_dataset_lite.json
+      file_path: examples/intermediate/swe_bench/data/test_dataset_lite.json
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true
