@@ -70,7 +70,7 @@ into the agent itself. For instance, this example asks for user permission to cr
 ```python
 ### The reusable HITL function
 @register_function(config_type=HITLApprovalFnConfig)
-async def hilt_approval_function(config: HITLApprovalFnConfig, builder: Builder):
+async def hitl_approval_function(config: HITLApprovalFnConfig, builder: Builder):
 
     import re
 

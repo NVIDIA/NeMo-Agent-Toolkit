@@ -17,7 +17,7 @@ limitations under the License.
 
 # Simple Calculator - Human in the Loop
 
-This example demonstrates **human in the loop capabilities** of the AIQ toolkit using the Simple Calculator workflow. Learn how to reuse a registered function that leverages the toolkit's human in the loop capabilities to gate agent behavior. In this case, user approval will be requested to allow the agent to make additional tool calls to reach a final answer.
+This example demonstrates **human in the loop capabilities** of the AIQ toolkit using the Simple Calculator workflow. Learn how to reuse a registered function that leverages the human in the loop capabilities of the toolkit to gate agent behavior. In this case, user approval will be requested to allow the agent to make additional tool calls to reach a final answer.
 
 ## Key Features
 
@@ -51,12 +51,12 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 ### Human in the Loop (HITL) Configuration
 It is often helpful, or even required, to have human input during the execution of an agent workflow. For example, to ask about preferences, confirmations, or to provide additional information.
 The AIQ toolkit library provides a way to add HITL interaction to any tool or function, allowing for the dynamic collection of information during the workflow execution, without the need for coding it
-into the agent itself. For instance, this example asks for user approval to increase the maximum iterations of the ReAct agent to allow additional tool calling. This is enable by leveraging a reusable plugin developed in the `examples/intermediate/HITL/por_to_jiratickets` example. We can view the implementation in the
+into the agent itself. For instance, this example asks for user approval to increase the maximum iterations of the ReAct agent to allow additional tool calling. This is enabled by leveraging a reusable plugin developed in the `examples/intermediate/HITL/por_to_jiratickets` example. We can view the implementation in the
 `aiq_por_to_jiratickets.hitl_approval_tool.py` file. The implementation is shown below:
 
 ```python
 @register_function(config_type=HITLApprovalFnConfig)
-async def hilt_approval_function(config: HITLApprovalFnConfig, builder: Builder):
+async def hitl_approval_function(config: HITLApprovalFnConfig, builder: Builder):
 
     import re
 
@@ -88,7 +88,7 @@ This can occur in any tool or function in the workflow, allowing for dynamic int
 Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file examples/intermediate/HITL/configs/config-hitl.yml  --input "Is 2 * 4 greater 5?"
+aiq run --config_file examples/intermediate/HITL/configs/config-hitl.yml  --input "Is 2 * 4 greater than 5?"
 ```
 
 **Expected Output When Giving Permission**
