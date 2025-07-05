@@ -58,6 +58,39 @@ class CalcRunner:
 
         self.metrics_per_concurrency: dict[int, SizingMetricsPerConcurrency] = {}
 
+        # Validate configuration
+        self.validate_config()
+
+    def validate_config(self) -> None:
+        """
+        Validate the configuration parameters.
+        Raises ValueError if configuration is invalid.
+        """
+        if self.config.offline_mode:
+            # In offline mode target test parameters are needed to estimate the GPU count
+            if self.target_latency <= 0 and self.target_runtime <= 0:
+                raise ValueError("Both target_llm_latency and target_workflow_runtime are 0. "
+                                 "Cannot estimate the GPU count in offline mode.")
+            if self.test_gpu_count <= 0:
+                raise ValueError("Test GPU count is 0. Cannot estimate the GPU count in offline mode.")
+            if self.target_users <= 0:
+                raise ValueError("Target users is 0. Cannot estimate the GPU count in offline mode.")
+            if self.append_job:
+                raise ValueError("Appending jobs is not supported in offline mode.")
+            if not self.config.output_dir:
+                raise ValueError("Output directory is required in offline mode.")
+        else:
+            # Online mode validation
+            if not self.config.config_file:
+                raise ValueError("Config file is required in online mode.")
+            if self.target_latency <= 0 and self.target_runtime <= 0:
+                logger.warning("Both target_llm_latency and target_workflow_runtime are 0. "
+                               "No SLA will be enforced.")
+            if self.test_gpu_count <= 0:
+                logger.warning("Test GPU count is 0. Tests will be run but the GPU count will not be estimated.")
+            if self.target_users <= 0:
+                logger.warning("Target users is 0. Tests will be run but the GPU count will not be estimated.")
+
     @property
     def target_latency(self) -> float:
         return self.config.target_llm_latency_p95
@@ -533,8 +566,6 @@ class CalcRunner:
         subdir = output_dir / mode
 
         if self.append_job:
-            if self.config.offline_mode:
-                raise ValueError("Append job is not supported in offline mode.")
             job_dir = subdir / f"job_{uuid.uuid4()}"
         else:
             # Clear all previous jobs when not in append mode
@@ -567,9 +598,6 @@ class CalcRunner:
         2. Calculate GPU estimates
         3. Write the output to the offline subdirectory
         """
-        if not self.config.output_dir:
-            raise ValueError("Output directory is not set in offline mode.")
-
         # Read all jobs in online mode and only append unique concurrency values to metrics_per_concurrency
         online_dir = Path(self.config.output_dir) / "online"
         if not online_dir.exists():
