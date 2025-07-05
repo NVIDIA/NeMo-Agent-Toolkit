@@ -14,84 +14,30 @@
 # limitations under the License.
 
 import logging
-import math
 import shutil
 import uuid
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 from pydantic import ValidationError
 
-from aiq.eval.config import CalcRunnerConfig
-from aiq.eval.config import CalcRunnerOutput
 from aiq.eval.config import EvaluationRunConfig
-from aiq.eval.config import GPUEstimates
 from aiq.eval.config import MultiEvaluationRunConfig
-from aiq.eval.config import OutOfRangeRunsPerConcurrency
-from aiq.eval.config import SizingMetricPerItem
-from aiq.eval.config import SizingMetricsPerConcurrency
 from aiq.eval.runners.multi_eval_runner import MultiEvaluationRunner
 from aiq.eval.usage_stats import UsageStats
+from aiq.profiler.calc.data_models import CalcRunnerConfig
+from aiq.profiler.calc.data_models import CalcRunnerOutput
+from aiq.profiler.calc.data_models import GPUEstimates
+from aiq.profiler.calc.data_models import OutOfRangeRunsPerConcurrency
+from aiq.profiler.calc.data_models import SizingMetricPerItem
+from aiq.profiler.calc.data_models import SizingMetricsPerConcurrency
+from aiq.profiler.calc.utils import calc_gpu_estimate_based_on_slope
+from aiq.profiler.calc.utils import compute_slope
 from aiq.profiler.data_models import GPUEstimatesPerConcurrency
 from aiq.profiler.data_models import ProfilerResults
 
 logger = logging.getLogger(__name__)
-
-
-def compute_single_gpu_estimate(target_llm_latency: float,
-                                target_workflow_runtime: float,
-                                target_users: int,
-                                test_gpu_count: int,
-                                observed_latency: float,
-                                observed_runtime: float) -> GPUEstimatesPerConcurrency:
-    """
-    Estimate GPU count to meet target latency and/or workflow runtime SLA
-    for a given target user load.
-    This formula is derived from the following assumptions:
-    - The workflow runtime increases linearly with the number of users.
-    - The LLM latency increases linearly with the number of users.
-    - The number of GPUs required increases linearly with the number of users.
-
-    Formula based on the target latency and runtime:
-        G_required = (U_target / C_test) * (L_obs / L_target) * (R_obs / R_target) * G_test
-
-    Formula based on the target latency:
-        G_required = (U_target / C_test) * (L_target / L_obs) * G_test
-
-    Formula based on the target runtime:
-        G_required = (U_target / C_test) * (R_target / R_obs) * G_test
-
-    where:
-        - U_target: Target number of users
-        - C_test: Test concurrency
-        - L_obs: Observed LLM latency
-        - L_target: Target LLM latency
-        - R_obs: Observed workflow runtime
-        - R_target: Target workflow runtime
-        - G_test: Test GPU count
-    """
-    use_latency = target_llm_latency > 0
-    use_runtime = target_workflow_runtime > 0
-
-    # if observed latency or runtime exceeds the target return empty GPUEstimatesPerConcurrency
-    if use_latency and observed_latency > target_llm_latency:
-        return GPUEstimatesPerConcurrency()
-
-    if use_runtime and observed_runtime > target_workflow_runtime:
-        return GPUEstimatesPerConcurrency()
-
-    llm_latency_multiplier = observed_latency / target_llm_latency if use_latency else 1.0
-    wf_runtime_multiplier = observed_runtime / target_workflow_runtime if use_runtime else 1.0
-
-    gpu_estimate_by_wf_runtime = (target_users / test_gpu_count) * wf_runtime_multiplier * test_gpu_count
-    gpu_estimate_by_llm_latency = (target_users / test_gpu_count) * llm_latency_multiplier * test_gpu_count
-    gpu_estimate = (target_users / test_gpu_count) * wf_runtime_multiplier * llm_latency_multiplier * test_gpu_count
-
-    return GPUEstimatesPerConcurrency(gpu_estimate_by_wf_runtime=gpu_estimate_by_wf_runtime,
-                                      gpu_estimate_by_llm_latency=gpu_estimate_by_llm_latency,
-                                      gpu_estimate=gpu_estimate)
 
 
 class CalcRunner:
@@ -202,58 +148,81 @@ class CalcRunner:
 
         logger.info("Wrote output to %s", job_dir)
 
-    def _calc_p95_required_gpus(self,
-                                valid_runs: list[tuple[int, SizingMetricsPerConcurrency]],
-                                use_latency: bool,
-                                use_runtime: bool) -> GPUEstimates:
+    def _calc_slope_based_gpu_estimates(self,
+                                        valid_runs: list[tuple[int, SizingMetricsPerConcurrency]],
+                                        use_latency: bool,
+                                        use_runtime: bool) -> GPUEstimates:
         """
-        Get a gpu estimate based on every valid run and return the 95th percentile.
+        Calculate GPU estimates based on linear regression slope of time metrics vs concurrency.
         """
-        # maintain the gpu estimation for each concurrency
-        gpu_estimates = {}
-        gpu_estimates_by_wf_runtime = {}
-        gpu_estimates_by_llm_latency = {}
-
-        for concurrency, metrics in valid_runs:
-            observed_latency = metrics.llm_latency_p95
-            observed_runtime = metrics.workflow_runtime_p95
-
-            llm_latency_multiplier = observed_latency / self.target_latency if use_latency else 1.0
-            wf_runtime_multiplier = observed_runtime / self.target_runtime if use_runtime else 1.0
-
-            gpu_estimates_by_wf_runtime[concurrency] = (self.target_users /
-                                                        concurrency) * wf_runtime_multiplier * self.test_gpu_count
-            gpu_estimates_by_llm_latency[concurrency] = (self.target_users /
-                                                         concurrency) * llm_latency_multiplier * self.test_gpu_count
-            gpu_estimates[concurrency] = (
-                self.target_users / concurrency) * wf_runtime_multiplier * llm_latency_multiplier * self.test_gpu_count
-            logger.info(
-                "[GPU Estimation %s] Concurrency=%s, Latency=%.3fs, Runtime=%.3fs"
-                "GPUs required=%.2f (wf_runtime_based=%.2f, llm_latency_based=%.2f)",
-                "offline" if self.config.offline_mode else "online",
-                concurrency,
-                observed_latency,
-                observed_runtime,
-                gpu_estimates[concurrency],
-                gpu_estimates_by_wf_runtime[concurrency],
-                gpu_estimates_by_llm_latency[concurrency])
-
-        if not gpu_estimates:
-            logger.warning("No valid GPU estimates available.")
+        if len(valid_runs) < 2:
+            logger.warning("Need at least 2 valid runs for slope-based estimation.")
             return GPUEstimates()
 
-        # Use 95th percentile
-        gpu_estimate_p95 = np.percentile(list(gpu_estimates.values()), 95)
+        # Extract concurrencies and metrics for slope calculation
+        concurrencies = [run[0] for run in valid_runs]
+        latencies = [run[1].llm_latency_p95 for run in valid_runs]
+        runtimes = [run[1].workflow_runtime_p95 for run in valid_runs]
 
-        # Return the estimate corresponding to the highest concurrency that passed the SLA as min_required_gpus
-        gpu_estimate_min = gpu_estimates[max(gpu_estimates.keys())]
+        gpu_estimate_by_wf_runtime = None
+        gpu_estimate_by_llm_latency = None
 
-        logger.info("[GPU Estimation %s] min_required_gpus=%.2f, p95_required_gpus=%.2f",
+        # Calculate GPU estimate based on workflow runtime slope
+        if use_runtime:
+            try:
+                # Compute slope for runtime vs concurrency
+                runtime_fit = compute_slope(concurrencies, runtimes, remove_outliers=True, min_r_squared=0.7)
+
+                # Calculate GPU estimate using slope-based method
+                gpu_estimate_by_wf_runtime = calc_gpu_estimate_based_on_slope(target_time_metric=self.target_runtime,
+                                                                              observed_slope=runtime_fit.slope,
+                                                                              target_users=self.target_users,
+                                                                              test_gpu_count=self.test_gpu_count,
+                                                                              observed_intercept=runtime_fit.intercept)
+
+                logger.info(
+                    "[GPU Estimation %s] Runtime slope=%.4f, intercept=%.4f, R²=%.3f, "
+                    "outliers_removed=%d, GPUs_by_runtime=%.2f",
                     "offline" if self.config.offline_mode else "online",
-                    gpu_estimate_min,
-                    gpu_estimate_p95)
+                    runtime_fit.slope,
+                    runtime_fit.intercept,
+                    runtime_fit.r_squared,
+                    runtime_fit.outliers_removed,
+                    gpu_estimate_by_wf_runtime)
 
-        return GPUEstimates(gpu_estimate_p95=math.ceil(gpu_estimate_p95), gpu_estimate_min=math.ceil(gpu_estimate_min))
+            except ValueError as e:
+                logger.warning("Failed to calculate runtime-based GPU estimate: %s", e)
+                gpu_estimate_by_wf_runtime = None
+
+        # Calculate GPU estimate based on LLM latency slope
+        if use_latency:
+            try:
+                # Compute slope for latency vs concurrency
+                latency_fit = compute_slope(concurrencies, latencies, remove_outliers=True, min_r_squared=0.7)
+
+                # Calculate GPU estimate using slope-based method
+                gpu_estimate_by_llm_latency = calc_gpu_estimate_based_on_slope(target_time_metric=self.target_latency,
+                                                                               observed_slope=latency_fit.slope,
+                                                                               target_users=self.target_users,
+                                                                               test_gpu_count=self.test_gpu_count,
+                                                                               observed_intercept=latency_fit.intercept)
+
+                logger.info(
+                    "[GPU Estimation %s] Latency slope=%.4f, intercept=%.4f, R²=%.3f, "
+                    "outliers_removed=%d, GPUs_by_latency=%.2f",
+                    "offline" if self.config.offline_mode else "online",
+                    latency_fit.slope,
+                    latency_fit.intercept,
+                    latency_fit.r_squared,
+                    latency_fit.outliers_removed,
+                    gpu_estimate_by_llm_latency)
+
+            except ValueError as e:
+                logger.warning("Failed to calculate latency-based GPU estimate: %s", e)
+                gpu_estimate_by_llm_latency = None
+
+        return GPUEstimates(gpu_estimate_by_wf_runtime=gpu_estimate_by_wf_runtime,
+                            gpu_estimate_by_llm_latency=gpu_estimate_by_llm_latency)
 
     def _calculate_per_concurrency_metrics(
         self, sizing_metrics_per_concurrency: dict[int, SizingMetricsPerConcurrency]
@@ -360,7 +329,7 @@ class CalcRunner:
         # Calculate overall gpu estimates for each concurrency that passed the SLA
         use_latency = self.target_latency > 0
         use_runtime = self.target_runtime > 0
-        gpu_estimates = self._calc_p95_required_gpus(valid_runs, use_latency, use_runtime)
+        gpu_estimates = self._calc_slope_based_gpu_estimates(valid_runs, use_latency, use_runtime)
         return gpu_estimates, gpu_estimates_per_concurrency, out_of_range_runs_per_concurrency
 
     def _build_calc_runner_output(self) -> CalcRunnerOutput:
@@ -457,14 +426,7 @@ class CalcRunner:
         alias_key = "eval.general.workflow_alias"
 
         overrides = {
-            c: ((concurrency_key, str(c)), (alias_key, "wf_concurrency_" + str(c)),
-                ("eval.general.profiler.gpu_estimate.enable",
-                 "true"), ("eval.general.profiler.gpu_estimate.target_llm_latency", str(self.target_latency)),
-                ("eval.general.profiler.gpu_estimate.target_workflow_runtime", str(self.target_runtime)),
-                ("eval.general.profiler.gpu_estimate.target_users",
-                 str(self.target_users)), ("eval.general.profiler.gpu_estimate.test_gpu_count",
-                                           str(self.test_gpu_count)), ("eval.general.profiler.gpu_estimate.output_dir",
-                                                                       str(self.config.output_dir)))
+            c: ((concurrency_key, str(c)), (alias_key, "wf_concurrency_" + str(c)))
             for c in self.config.concurrencies
         }
 

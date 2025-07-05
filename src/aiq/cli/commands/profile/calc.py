@@ -20,10 +20,10 @@ from pathlib import Path
 import click
 from tabulate import tabulate
 
-from aiq.eval.config import CalcRunnerConfig
-from aiq.eval.config import CalcRunnerOutput
-from aiq.eval.config import OutOfRangeRunsPerConcurrency
 from aiq.profiler.calc.calc_runner import CalcRunner
+from aiq.profiler.calc.data_models import CalcRunnerConfig
+from aiq.profiler.calc.data_models import CalcRunnerOutput
+from aiq.profiler.calc.data_models import OutOfRangeRunsPerConcurrency
 from aiq.profiler.data_models import GPUEstimatesPerConcurrency
 
 logger = logging.getLogger(__name__)
@@ -177,8 +177,25 @@ def calc_command(ctx,
                    f"Users = {runner_config.target_users}")
         click.echo(f"Test parameters: GPUs = {runner_config.test_gpu_count}")
 
-        click.echo(f"Estimated GPU count: {results.gpu_estimates.gpu_estimate_min}")
-        click.echo(f"Estimated GPU count (95th percentile): {results.gpu_estimates.gpu_estimate_p95}")
+        # Display slope-based GPU estimates
+        if results.gpu_estimates.gpu_estimate_by_wf_runtime is not None:
+            click.echo(
+                f"Estimated GPU count (Workflow Runtime): {results.gpu_estimates.gpu_estimate_by_wf_runtime:.1f}")
+        if results.gpu_estimates.gpu_estimate_by_llm_latency is not None:
+            click.echo(f"Estimated GPU count (LLM Latency): {results.gpu_estimates.gpu_estimate_by_llm_latency:.1f}")
+
+        # Show recommendation based on available estimates
+        estimates = []
+        if results.gpu_estimates.gpu_estimate_by_llm_latency is not None:
+            estimates.append(results.gpu_estimates.gpu_estimate_by_llm_latency)
+        if results.gpu_estimates.gpu_estimate_by_wf_runtime is not None:
+            estimates.append(results.gpu_estimates.gpu_estimate_by_wf_runtime)
+
+        if estimates:
+            recommended_gpus = max(estimates)  # Use the higher estimate for safety
+            click.echo(f"Recommended GPU count: {recommended_gpus:.1f}")
+        else:
+            click.echo("No valid GPU estimates available.")
 
         # Check if there are any out-of-range runs to determine if we should show fail columns
         has_out_of_range_runs = any(out_of_range.num_runs_greater_than_target_latency > 0
@@ -209,7 +226,6 @@ def calc_command(ctx,
                 ])
 
             row.extend([
-                gpu_estimates_per_concurrency.gpu_estimate,
                 gpu_estimates_per_concurrency.gpu_estimate_by_llm_latency,
                 gpu_estimates_per_concurrency.gpu_estimate_by_wf_runtime,
             ])
@@ -231,7 +247,6 @@ def calc_command(ctx,
             ])
 
         headers.extend([
-            "GPUs (Overall)",
             "GPUs (LLM Latency)",
             "GPUs (WF Runtime)",
         ])

@@ -40,14 +40,6 @@ class PrefixSpanConfig(BaseModel):
     chain_with_common_prefixes: bool = False
 
 
-class GPUEstimateConfig(BaseModel):
-    enable: bool = False
-    target_llm_latency: float = 0
-    target_workflow_runtime: float = 0
-    target_users: int = 0
-    test_gpu_count: int = 0
-
-
 class ProfilerConfig(BaseModel):
 
     base_metrics: bool = False
@@ -60,4 +52,3 @@ class ProfilerConfig(BaseModel):
     bottleneck_analysis: BottleneckConfig = BottleneckConfig()
     concurrency_spike_analysis: ConcurrencySpikeConfig = ConcurrencySpikeConfig()
     prefix_span_analysis: PrefixSpanConfig = PrefixSpanConfig()
-    gpu_estimate: GPUEstimateConfig = GPUEstimateConfig()

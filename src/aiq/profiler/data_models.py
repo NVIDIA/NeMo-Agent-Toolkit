@@ -19,23 +19,6 @@ from aiq.profiler.inference_metrics_model import InferenceMetricsModel
 from aiq.profiler.inference_optimization.data_models import WorkflowRuntimeMetrics
 
 
-class GPUEstimatesPerConcurrency(BaseModel):
-    """
-    GPU estimates per concurrency.
-    """
-    # gpu estimates per concurrency based on the workflow runtime
-    gpu_estimate_by_wf_runtime: float | None = None
-    # gpu estimates per concurrency based on the LLM latency
-    gpu_estimate_by_llm_latency: float | None = None
-    # gpu estimates per concurrency based on the number of users
-    gpu_estimate: float | None = None
-
-
-class SizingCalcMetrics(BaseModel):
-    gpu_estimates: GPUEstimatesPerConcurrency | None = None
-
-
 class ProfilerResults(BaseModel):
     workflow_runtime_metrics: WorkflowRuntimeMetrics | None = None
     llm_latency_ci: InferenceMetricsModel | None = None
-    sizing_calc_metrics: SizingCalcMetrics | None = None
