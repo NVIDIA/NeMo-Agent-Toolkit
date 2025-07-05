@@ -15,6 +15,7 @@
 
 import logging
 import shutil
+import time
 import uuid
 from pathlib import Path
 
@@ -81,77 +82,10 @@ class CalcRunner:
     def output_dir(self) -> Path:
         return self.config.output_dir
 
-    def plot_concurrency_vs_p95_metrics(self, output_dir: Path):
-        """
-        Plots concurrency vs. p95 latency and workflow runtime using metrics_per_concurrency.
-        """
-        rows = []
-
-        for concurrency, metrics in self.metrics_per_concurrency.items():
-            if not metrics or not metrics.llm_latency_p95 or not metrics.workflow_runtime_p95:
-                continue
-
-            latency = metrics.llm_latency_p95
-            workflow_runtime = metrics.workflow_runtime_p95
-
-            rows.append({
-                "concurrency": concurrency, "llm_latency_p95": latency, "workflow_runtime_p95": workflow_runtime
-            })
-
-        if not rows:
-            logger.warning("No metrics data available to plot.")
-            return
-
-        df = pd.DataFrame(rows).sort_values("concurrency")
-
-        plt.plot(df["concurrency"], df["llm_latency_p95"], label="p95 LLM Latency (s)", marker="o")
-        plt.plot(df["concurrency"], df["workflow_runtime_p95"], label="p95 Workflow Runtime (s)", marker="x")
-
-        plt.xlabel("Concurrency")
-        plt.ylabel("Time (seconds)")
-        plt.title("Concurrency vs. p95 LLM Latency and Workflow Runtime")
-        plt.grid(True)
-        plt.legend()
-        plt.tight_layout()
-        output_dir.mkdir(parents=True, exist_ok=True)
-        plt.savefig(output_dir / "concurrency_vs_p95_metrics.png")
-        plt.close()
-
-    def write_output(self, output_dir: Path, calc_runner_output: CalcRunnerOutput):
-        """
-        Write the output to the output directory.
-        """
-        if not output_dir:
-            logger.warning("Output directory is not set. Skipping write.")
-            return
-
-        mode = "offline" if self.config.offline_mode else "online"
-        subdir = output_dir / mode
-
-        if self.append_job:
-            if self.config.offline_mode:
-                raise ValueError("Append job is not supported in offline mode.")
-            job_dir = subdir / f"job_{uuid.uuid4()}"
-        else:
-            # Clear previous jobs
-            for job in subdir.glob("job_*"):
-                if job.is_dir():
-                    shutil.rmtree(job)
-            job_dir = subdir / "job_0"
-
-        job_dir.mkdir(parents=True, exist_ok=True)
-
-        output_path = job_dir / "calc_runner_output.json"
-        output_path.write_text(calc_runner_output.model_dump_json(indent=2))
-
-        self.plot_concurrency_vs_p95_metrics(job_dir)
-
-        logger.info("Wrote output to %s", job_dir)
-
-    def _calc_slope_based_gpu_estimates(self,
-                                        valid_runs: list[tuple[int, SizingMetricsPerConcurrency]],
-                                        use_latency: bool,
-                                        use_runtime: bool) -> GPUEstimates:
+    def calc_slope_based_gpu_estimates(self,
+                                       valid_runs: list[tuple[int, SizingMetricsPerConcurrency]],
+                                       use_latency: bool,
+                                       use_runtime: bool) -> GPUEstimates:
         """
         Calculate GPU estimates based on linear regression slope of time metrics vs concurrency.
         """
@@ -224,138 +158,407 @@ class CalcRunner:
         return GPUEstimates(gpu_estimate_by_wf_runtime=gpu_estimate_by_wf_runtime,
                             gpu_estimate_by_llm_latency=gpu_estimate_by_llm_latency)
 
-    def _calculate_per_concurrency_metrics(
+    def calc_per_concurrency_metrics(
         self, sizing_metrics_per_concurrency: dict[int, SizingMetricsPerConcurrency]
     ) -> tuple[dict[int, GPUEstimatesPerConcurrency], dict[int, OutOfRangeRunsPerConcurrency]]:
-        """
-        Calculate per-concurrency GPU estimates and out-of-range runs.
-        """
+        """Calculate per-concurrency GPU estimates and out-of-range runs."""
         use_latency = self.target_latency > 0
         use_runtime = self.target_runtime > 0
 
         gpu_estimates_per_concurrency = {}
         out_of_range_runs_per_concurrency = {}
 
+        logger.info("Calculating per-concurrency metrics for %d concurrencies", len(sizing_metrics_per_concurrency))
+        logger.info("Target users: %d, Test GPU count: %d", self.target_users, self.test_gpu_count)
+        logger.info("Using targets - Latency: %s, Runtime: %s",
+                    "Yes" if use_latency else "No",
+                    "Yes" if use_runtime else "No")
+
         for concurrency, metrics_per_concurrency in sizing_metrics_per_concurrency.items():
             if not metrics_per_concurrency or not metrics_per_concurrency.llm_latency_p95 or\
                     not metrics_per_concurrency.workflow_runtime_p95:
+                logger.debug("Skipping concurrency %d: missing required metrics", concurrency)
                 continue
 
             observed_latency = metrics_per_concurrency.llm_latency_p95
             observed_runtime = metrics_per_concurrency.workflow_runtime_p95
 
-            # Compute multipliers
+            # Compute multipliers (use 1.0 as baseline when no targets specified)
             llm_latency_multiplier = observed_latency / self.target_latency if use_latency else 1.0
             wf_runtime_multiplier = observed_runtime / self.target_runtime if use_runtime else 1.0
 
-            gpu_estimate_by_wf_runtime = (self.target_users / concurrency) * wf_runtime_multiplier * self.test_gpu_count
+            # Calculate GPU estimates
+            # Base formula: (target_users / concurrency) * test_gpu_count
+            base_gpu_estimate = (self.target_users / concurrency) * self.test_gpu_count
 
-            gpu_estimate_by_llm_latency = (self.target_users /
-                                           concurrency) * llm_latency_multiplier * self.test_gpu_count
+            # Apply multipliers if targets are specified
+            gpu_estimate_by_wf_runtime = base_gpu_estimate * wf_runtime_multiplier
+            gpu_estimate_by_llm_latency = base_gpu_estimate * llm_latency_multiplier
 
-            gpu_estimate = (self.target_users /
-                            concurrency) * wf_runtime_multiplier * llm_latency_multiplier * self.test_gpu_count
+            # Combined estimate (geometric mean when both targets are specified, otherwise use available one)
+            if use_latency and use_runtime:
+                gpu_estimate = base_gpu_estimate * wf_runtime_multiplier * llm_latency_multiplier
+            elif use_latency:
+                gpu_estimate = gpu_estimate_by_llm_latency
+            elif use_runtime:
+                gpu_estimate = gpu_estimate_by_wf_runtime
+            else:
+                # No targets specified - use baseline scaling
+                gpu_estimate = base_gpu_estimate
 
             gpu_estimates_per_concurrency[concurrency] = GPUEstimatesPerConcurrency(
                 gpu_estimate_by_wf_runtime=gpu_estimate_by_wf_runtime,
                 gpu_estimate_by_llm_latency=gpu_estimate_by_llm_latency,
                 gpu_estimate=gpu_estimate)
 
-            # Calculate out-of-range runs based on per-item metrics
+            # Calculate out-of-range runs based on per-item metrics (only if targets are specified)
             num_runs_greater_than_target_latency = 0
             num_runs_greater_than_target_runtime = 0
 
-            if use_latency or use_runtime:
+            if (use_latency or use_runtime) and hasattr(
+                    metrics_per_concurrency, 'per_item_metrics') and metrics_per_concurrency.per_item_metrics:
                 for item_metrics in metrics_per_concurrency.per_item_metrics.values():
                     if use_latency and item_metrics.llm_latency > self.target_latency:
                         num_runs_greater_than_target_latency += 1
                     if use_runtime and item_metrics.workflow_runtime > self.target_runtime:
                         num_runs_greater_than_target_runtime += 1
+            else:
+                logger.debug("Skipping per-item processing for concurrency %d (no targets or no per-item data)",
+                             concurrency)
 
             out_of_range_runs_per_concurrency[concurrency] = OutOfRangeRunsPerConcurrency(
                 num_runs_greater_than_target_latency=num_runs_greater_than_target_latency,
                 num_runs_greater_than_target_runtime=num_runs_greater_than_target_runtime)
 
+            logger.debug(
+                "Concurrency %d: GPU estimate=%.2f (base=%.2f, wf_mult=%.3f, llm_mult=%.3f), out-of-range runs=%d",
+                concurrency,
+                gpu_estimate,
+                base_gpu_estimate,
+                wf_runtime_multiplier,
+                llm_latency_multiplier,
+                num_runs_greater_than_target_latency + num_runs_greater_than_target_runtime)
+
+        logger.info("Completed per-concurrency calculations:")
+        logger.info("  - GPU estimates calculated for %d concurrencies", len(gpu_estimates_per_concurrency))
+        logger.info("  - Out-of-range runs calculated for %d concurrencies", len(out_of_range_runs_per_concurrency))
+
         return gpu_estimates_per_concurrency, out_of_range_runs_per_concurrency
 
-    def _filter_valid_runs(
-        self, sizing_metrics_per_concurrency: dict[int, SizingMetricsPerConcurrency]
-    ) -> list[tuple[int, SizingMetricsPerConcurrency]]:
-        """
-        Get valid runs across all concurrencies that meet the SLA.
-        """
-        use_latency = self.target_latency > 0
-        use_runtime = self.target_runtime > 0
-
-        valid_runs = []
+    def _validate_metrics_data(self, sizing_metrics_per_concurrency: dict) -> dict:
+        """Validate and filter metrics data."""
+        valid_metrics = {}
         for concurrency, metrics in sizing_metrics_per_concurrency.items():
-            if (not metrics or not metrics.llm_latency_p95 or not metrics.workflow_runtime_p95):
+            if not metrics or not metrics.llm_latency_p95 or not metrics.workflow_runtime_p95:
+                logger.warning("Invalid metrics for concurrency %d: missing required fields", concurrency)
                 continue
+            valid_metrics[concurrency] = metrics
+        return valid_metrics
 
-            latency = metrics.llm_latency_p95
-            runtime = metrics.workflow_runtime_p95
-
-            latency_ok = not use_latency or latency <= self.target_latency
-            runtime_ok = not use_runtime or runtime <= self.target_runtime
-
-            if latency_ok and runtime_ok:
-                valid_runs.append((concurrency, metrics))
-
-        return valid_runs
-
-    def _calc_gpu_count(
+    def calc_gpu_estimate(
         self, sizing_metrics_per_concurrency: dict[int, SizingMetricsPerConcurrency]
     ) -> tuple[GPUEstimates, dict[int, GPUEstimatesPerConcurrency], dict[int, OutOfRangeRunsPerConcurrency]]:
         """
         Estimate GPU count to meet target latency and/or workflow runtime SLA
         for a given target user load.
         """
-
-        if self.target_users <= 0 or self.test_gpu_count <= 0 or \
-                (self.target_latency <= 0 and self.target_runtime <= 0):
+        # Validate required parameters
+        if self.target_users <= 0:
+            logger.warning("Target users must be positive for GPU estimation")
             return GPUEstimates(), {}, {}
+
+        if self.test_gpu_count <= 0:
+            logger.warning("Test GPU count must be positive for GPU estimation")
+            return GPUEstimates(), {}, {}
+
+        # Note: Per-concurrency metrics will be calculated even without targets (baseline scaling)
+        # Only slope-based estimation requires targets
+        if self.target_latency <= 0 and self.target_runtime <= 0:
+            logger.info("No targets specified - will calculate baseline per-concurrency estimates only")
+
+        # Validate that metrics contain required fields
+        valid_metrics = self._validate_metrics_data(sizing_metrics_per_concurrency)
+
+        if len(valid_metrics) < 2:
+            logger.warning("Need at least 2 concurrencies with valid metrics for slope-based estimation")
+            return GPUEstimates(), {}, {}
+
+        logger.info("Starting GPU estimation with %d concurrencies", len(valid_metrics))
+        logger.info("Target users: %d, Test GPU count: %d", self.target_users, self.test_gpu_count)
+        logger.info("Target latency: %.3fs, Target runtime: %.3fs",
+                    self.target_latency if self.target_latency > 0 else 0,
+                    self.target_runtime if self.target_runtime > 0 else 0)
+
+        # Cache the validation results
+        use_latency = self.target_latency > 0
+        use_runtime = self.target_runtime > 0
+
+        # Per-concurrency metrics are always calculated (with or without targets)
+        # Slope-based estimation requires at least one target
+        if not use_latency and not use_runtime:
+            logger.info("No valid targets specified - skipping slope-based estimation")
 
         # Calculate per-concurrency metrics and gpu estimates
         gpu_estimates_per_concurrency, out_of_range_runs_per_concurrency = \
-            self._calculate_per_concurrency_metrics(sizing_metrics_per_concurrency)
+            self.calc_per_concurrency_metrics(valid_metrics)
 
-        # Get valid runs for overall GPU estimation across all concurrencies
-        valid_runs = self._filter_valid_runs(sizing_metrics_per_concurrency)
+        # Use all concurrencies for slope-based GPU estimation (better data for linear regression)
+        all_runs = [(concurrency, metrics) for concurrency, metrics in valid_metrics.items()]
 
-        if not valid_runs:
-            logger.warning("No valid test run met both latency/runtime targets.")
+        if len(all_runs) < 2:
+            logger.warning("Need at least 2 concurrencies with valid metrics for slope-based estimation.")
             return GPUEstimates(), gpu_estimates_per_concurrency, out_of_range_runs_per_concurrency
 
-        # Calculate overall gpu estimates for each concurrency that passed the SLA
-        use_latency = self.target_latency > 0
-        use_runtime = self.target_runtime > 0
-        gpu_estimates = self._calc_slope_based_gpu_estimates(valid_runs, use_latency, use_runtime)
+        # Calculate overall gpu estimates using all available data (only if targets are specified)
+        if use_latency or use_runtime:
+            gpu_estimates = self.calc_slope_based_gpu_estimates(all_runs, use_latency, use_runtime)
+        else:
+            logger.info("No targets specified - returning empty slope-based estimates")
+            gpu_estimates = GPUEstimates()
+
         return gpu_estimates, gpu_estimates_per_concurrency, out_of_range_runs_per_concurrency
 
     def _build_calc_runner_output(self) -> CalcRunnerOutput:
         """
         Build CalcRunnerOutput from sizing metrics per concurrency.
-        This is a common function used by both offline and online modes.
         """
         if not self.metrics_per_concurrency:
             logger.warning("No metrics per concurrency found. Skipping build of CalcRunnerOutput.")
             return CalcRunnerOutput()
 
+        logger.info("Building CalcRunnerOutput from %d concurrency metrics", len(self.metrics_per_concurrency))
+
         # Calculate gpu estimates
         gpu_estimates, gpu_estimates_per_concurrency, out_of_range_runs_per_concurrency = \
-            self._calc_gpu_count(self.metrics_per_concurrency)
+            self.calc_gpu_estimate(self.metrics_per_concurrency)
 
         # Filter out out_of_range_runs entries where all values are 0s
         filtered_out_of_range_runs = {}
+        total_out_of_range_concurrencies = 0
+
         for concurrency, out_of_range_runs in out_of_range_runs_per_concurrency.items():
             if (out_of_range_runs.number_failed_runs > 0 or out_of_range_runs.num_runs_greater_than_target_latency > 0
                     or out_of_range_runs.num_runs_greater_than_target_runtime > 0):
                 filtered_out_of_range_runs[concurrency] = out_of_range_runs
+                total_out_of_range_concurrencies += 1
+
+        logger.info("Found %d concurrencies with out-of-range runs (filtered from %d total)",
+                    total_out_of_range_concurrencies,
+                    len(out_of_range_runs_per_concurrency))
+
+        # Log summary of GPU estimates
+        if gpu_estimates.gpu_estimate_by_wf_runtime is not None:
+            logger.info("GPU estimate by workflow runtime: %.2f", gpu_estimates.gpu_estimate_by_wf_runtime)
+        if gpu_estimates.gpu_estimate_by_llm_latency is not None:
+            logger.info("GPU estimate by LLM latency: %.2f", gpu_estimates.gpu_estimate_by_llm_latency)
 
         return CalcRunnerOutput(gpu_estimates=gpu_estimates,
                                 gpu_estimates_per_concurrency=gpu_estimates_per_concurrency,
                                 out_of_range_runs_per_concurrency=filtered_out_of_range_runs,
                                 sizing_metrics_per_concurrency=self.metrics_per_concurrency)
+
+    def plot_concurrency_vs_time_metrics(self, output_dir: Path):
+        """
+        Plots concurrency vs. p95 latency and workflow runtime using metrics_per_concurrency.
+        Enhanced with better styling, trend analysis, and annotations.
+        """
+        import numpy as np
+
+        rows = []
+
+        for concurrency, metrics in self.metrics_per_concurrency.items():
+            if not metrics or not metrics.llm_latency_p95 or not metrics.workflow_runtime_p95:
+                continue
+
+            latency = metrics.llm_latency_p95
+            workflow_runtime = metrics.workflow_runtime_p95
+
+            rows.append({
+                "concurrency": concurrency, "llm_latency_p95": latency, "workflow_runtime_p95": workflow_runtime
+            })
+
+        if not rows:
+            logger.warning("No metrics data available to plot.")
+            return
+
+        df = pd.DataFrame(rows).sort_values("concurrency")
+
+        # Create enhanced plot with better styling
+        plt.style.use('seaborn-v0_8')
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+
+        # Plot 1: LLM Latency
+        ax1.scatter(df["concurrency"],
+                    df["llm_latency_p95"],
+                    alpha=0.7,
+                    s=120,
+                    c='steelblue',
+                    edgecolors='white',
+                    linewidth=1,
+                    label='Data Points')
+
+        # Add trend line for latency
+        if len(df) > 1:
+            z_latency = np.polyfit(df["concurrency"], df["llm_latency_p95"], 1)
+            p_latency = np.poly1d(z_latency)
+            slope_latency = z_latency[0]
+
+            # Calculate R-squared for latency
+            y_pred_latency = p_latency(df["concurrency"])
+            ss_res_latency = np.sum((df["llm_latency_p95"] - y_pred_latency)**2)
+            ss_tot_latency = np.sum((df["llm_latency_p95"] - df["llm_latency_p95"].mean())**2)
+            r_squared_latency = 1 - (ss_res_latency / ss_tot_latency) if ss_tot_latency != 0 else 0
+
+            ax1.plot(df["concurrency"],
+                     p_latency(df["concurrency"]),
+                     "r--",
+                     alpha=0.8,
+                     linewidth=2,
+                     label=f'Trend (slope={slope_latency:.4f}, R²={r_squared_latency:.3f})')
+
+        # Add SLA reference line for latency (only if target is positive)
+        if self.target_latency > 0:
+            sla_latency = self.target_latency
+            ax1.axhline(y=sla_latency,
+                        color='red',
+                        linestyle=':',
+                        alpha=0.7,
+                        linewidth=2,
+                        label=f'SLA Threshold ({sla_latency}s)')
+
+        ax1.set_xlabel('Concurrency', fontsize=12, fontweight='bold')
+        ax1.set_ylabel('P95 LLM Latency (seconds)', fontsize=12, fontweight='bold')
+        ax1.set_title('Concurrency vs P95 LLM Latency', fontsize=14, fontweight='bold')
+        ax1.grid(True, alpha=0.3)
+        ax1.legend(fontsize=10)
+
+        # Plot 2: Workflow Runtime
+        ax2.scatter(df["concurrency"],
+                    df["workflow_runtime_p95"],
+                    alpha=0.7,
+                    s=120,
+                    c='darkgreen',
+                    edgecolors='white',
+                    linewidth=1,
+                    label='Data Points')
+
+        # Add trend line for runtime
+        if len(df) > 1:
+            z_runtime = np.polyfit(df["concurrency"], df["workflow_runtime_p95"], 1)
+            p_runtime = np.poly1d(z_runtime)
+            slope_runtime = z_runtime[0]
+
+            # Calculate R-squared for runtime
+            y_pred_runtime = p_runtime(df["concurrency"])
+            ss_res_runtime = np.sum((df["workflow_runtime_p95"] - y_pred_runtime)**2)
+            ss_tot_runtime = np.sum((df["workflow_runtime_p95"] - df["workflow_runtime_p95"].mean())**2)
+            r_squared_runtime = 1 - (ss_res_runtime / ss_tot_runtime) if ss_tot_runtime != 0 else 0
+
+            ax2.plot(df["concurrency"],
+                     p_runtime(df["concurrency"]),
+                     "r--",
+                     alpha=0.8,
+                     linewidth=2,
+                     label=f'Trend (slope={slope_runtime:.4f}, R²={r_squared_runtime:.3f})')
+
+        # Add SLA reference line for runtime (only if target is positive)
+        if self.target_runtime > 0:
+            sla_runtime = self.target_runtime
+            ax2.axhline(y=sla_runtime,
+                        color='red',
+                        linestyle=':',
+                        alpha=0.7,
+                        linewidth=2,
+                        label=f'SLA Threshold ({sla_runtime}s)')
+
+        ax2.set_xlabel('Concurrency', fontsize=12, fontweight='bold')
+        ax2.set_ylabel('P95 Workflow Runtime (seconds)', fontsize=12, fontweight='bold')
+        ax2.set_title('Concurrency vs P95 Workflow Runtime', fontsize=14, fontweight='bold')
+        ax2.grid(True, alpha=0.3)
+        ax2.legend(fontsize=10)
+
+        # Add summary statistics
+        stats_text = f'Data Points: {len(df)}\n'
+        stats_text += f'Concurrency Range: {df["concurrency"].min()}-{df["concurrency"].max()}\n'
+        stats_text += f'Latency Range: {df["llm_latency_p95"].min():.3f}-{df["llm_latency_p95"].max():.3f}s\n'
+        stats_text += f'Runtime Range: {df["workflow_runtime_p95"].min():.3f}-{df["workflow_runtime_p95"].max():.3f}s'
+
+        fig.text(0.02,
+                 0.02,
+                 stats_text,
+                 fontsize=10,
+                 bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8))
+
+        # Adjust layout and save with high quality
+        plt.tight_layout()
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save enhanced plot
+        enhanced_plot_path = output_dir / "concurrency_vs_p95_analysis.png"
+        plt.savefig(enhanced_plot_path, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
+        plt.close()
+
+        logger.info(f"Enhanced plot saved to {enhanced_plot_path}")
+
+        # Also save a simpler version for quick viewing
+        plt.figure(figsize=(12, 6))
+        plt.plot(df["concurrency"], df["llm_latency_p95"], label="p95 LLM Latency (s)", marker="o", linewidth=2)
+        plt.plot(df["concurrency"],
+                 df["workflow_runtime_p95"],
+                 label="p95 Workflow Runtime (s)",
+                 marker="x",
+                 linewidth=2)
+        plt.xlabel("Concurrency")
+        plt.ylabel("Time (seconds)")
+        plt.title("Concurrency vs. p95 LLM Latency and Workflow Runtime")
+        plt.grid(True, alpha=0.3)
+        plt.legend()
+        plt.tight_layout()
+
+        simple_plot_path = output_dir / "concurrency_vs_p95_simple.png"
+        plt.savefig(simple_plot_path, dpi=150, bbox_inches='tight')
+        plt.close()
+
+        logger.info(f"Simple plot saved to {simple_plot_path}")
+
+    def write_output(self, output_dir: Path, calc_runner_output: CalcRunnerOutput):
+        """
+        Write the output to the output directory.
+        """
+        if not output_dir:
+            logger.warning("Output directory is not set. Skipping write.")
+            return
+
+        mode = "offline" if self.config.offline_mode else "online"
+        subdir = output_dir / mode
+
+        if self.append_job:
+            if self.config.offline_mode:
+                raise ValueError("Append job is not supported in offline mode.")
+            job_dir = subdir / f"job_{uuid.uuid4()}"
+        else:
+            # Clear all previous jobs when not in append mode
+            existing_jobs = list(subdir.glob("job_*"))
+            if existing_jobs:
+                logger.info(f"Clearing {len(existing_jobs)} existing jobs")
+                for job in existing_jobs:
+                    if job.is_dir():
+                        shutil.rmtree(job)
+            # Use timestamp-based naming for better uniqueness
+            job_dir = subdir / f"job_{int(time.time())}"
+
+        job_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            output_path = job_dir / "calc_runner_output.json"
+            output_path.write_text(calc_runner_output.model_dump_json(indent=2))
+
+            self.plot_concurrency_vs_time_metrics(job_dir)
+
+            logger.info("Wrote output to %s", job_dir)
+        except Exception as e:
+            logger.error("Failed to write output to %s: %s", job_dir, e)
+            raise
 
     def run_offline(self) -> CalcRunnerOutput:
         """
@@ -373,32 +576,37 @@ class CalcRunner:
             logger.warning("Online directory %s does not exist. Skipping offline mode.", online_dir)
             return CalcRunnerOutput()
 
-        for job_dir in online_dir.iterdir():
-            if job_dir.is_dir() and job_dir.name.startswith("job_"):
-                calc_runner_output_path = job_dir / "calc_runner_output.json"
-                if not calc_runner_output_path.exists():
-                    logger.warning("Calc runner output file %s does not exist. Skipping job %s.",
-                                   calc_runner_output_path,
-                                   job_dir.name)
-                    continue
-                try:
-                    calc_output = CalcRunnerOutput.model_validate_json(calc_runner_output_path.read_text())
-                except ValidationError as e:
-                    logger.exception("Failed to validate calc runner output file %s. Skipping job %s.",
-                                     calc_runner_output_path,
-                                     e,
-                                     exc_info=True)
-                    continue
+        # Get all job directories and sort by creation time (most recent first)
+        job_dirs = [job_dir for job_dir in online_dir.iterdir() if job_dir.is_dir() and job_dir.name.startswith("job_")]
+        job_dirs.sort(key=lambda x: x.stat().st_mtime, reverse=True)
 
-                for concurrency, metrics in calc_output.sizing_metrics_per_concurrency.items():
-                    if concurrency not in self.metrics_per_concurrency:
-                        logger.info("Adding concurrency %s from job %s.", concurrency, job_dir.name)
-                        self.metrics_per_concurrency[concurrency] = metrics
-                    else:
-                        # log a warning and skip
-                        logger.warning("Concurrency %s already exists in offline mode. Skipping job %s.",
-                                       concurrency,
-                                       job_dir.name)
+        logger.info("Found %d job directories, processing from most recent to oldest", len(job_dirs))
+
+        for job_dir in job_dirs:
+            calc_runner_output_path = job_dir / "calc_runner_output.json"
+            if not calc_runner_output_path.exists():
+                logger.warning("Calc runner output file %s does not exist. Skipping job %s.",
+                               calc_runner_output_path,
+                               job_dir.name)
+                continue
+            try:
+                calc_output = CalcRunnerOutput.model_validate_json(calc_runner_output_path.read_text())
+            except ValidationError as e:
+                logger.exception("Failed to validate calc runner output file %s. Skipping job %s.",
+                                 calc_runner_output_path,
+                                 e,
+                                 exc_info=True)
+                continue
+
+            for concurrency, metrics in calc_output.sizing_metrics_per_concurrency.items():
+                if concurrency not in self.metrics_per_concurrency:
+                    logger.info("Adding concurrency %s from job %s (most recent available).", concurrency, job_dir.name)
+                    self.metrics_per_concurrency[concurrency] = metrics
+                else:
+                    # Skip since we already have this concurrency from a more recent job
+                    logger.debug("Concurrency %s already exists from a more recent job. Skipping job %s.",
+                                 concurrency,
+                                 job_dir.name)
 
         if not self.metrics_per_concurrency:
             logger.warning("No valid sizing_metrics_per_concurrency found in offline mode.")
