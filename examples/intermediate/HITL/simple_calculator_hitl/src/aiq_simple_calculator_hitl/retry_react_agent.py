@@ -25,7 +25,6 @@ from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.function import FunctionBaseConfig
-from aiq.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +39,6 @@ class RetryReactAgentConfig(FunctionBaseConfig, name="retry_react_agent"):
     more iterations to complete successfully.
     """
 
-    use_openai_api: bool = Field(default=False, description="Whether to use the OpenAI API")
     max_retries: int = Field(default=3, description="Maximum number of retry attempts")
     max_iterations_increment: int = Field(default=1, description="How much to increase max_iterations on each retry")
     description: str = Field(default="Retry React Agent",
@@ -208,33 +206,4 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
             # Handle any other unexpected exceptions
             return AIQChatResponse.from_string("I seem to be having a problem.")
 
-    # Return the appropriate function based on API configuration
-    if (config.use_openai_api):
-        # Use OpenAI API format (AIQChatRequest/AIQChatResponse)
-        yield FunctionInfo.from_fn(_response_fn, description=config.description)
-    else:
-        # Use string API format - convert between string and AIQ types
-        async def _str_api_fn(input_message: str) -> str:
-            """
-            String API wrapper function.
-
-            This function provides a string-based interface by converting
-            string inputs to AIQChatRequest, processing through the main
-            response function, and converting back to string output.
-
-            Args:
-                input_message: Input message as a string
-
-            Returns:
-                str: Response as a string
-            """
-            # Convert string input to AIQChatRequest
-            oai_input = GlobalTypeConverter.get().convert(input_message, to_type=AIQChatRequest)
-
-            # Process through the main response function
-            oai_output = await _response_fn(oai_input)
-
-            # Convert AIQChatResponse back to string
-            return GlobalTypeConverter.get().convert(oai_output, to_type=str)
-
-        yield FunctionInfo.from_fn(_str_api_fn, description=config.description)
+    yield FunctionInfo.from_fn(_response_fn, description=config.description)
