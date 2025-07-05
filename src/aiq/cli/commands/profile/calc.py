@@ -138,6 +138,9 @@ def calc_command(ctx,
         if append_job:
             click.echo("Appending jobs is not supported in offline mode.")
             return
+        if not output_dir:
+            click.echo("Output directory is required in offline mode.")
+            return
     else:
         if not config_file:
             click.echo("Config file is required in online mode.")
