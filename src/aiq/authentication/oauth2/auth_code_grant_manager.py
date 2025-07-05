@@ -111,13 +111,6 @@ class AuthCodeGrantClientManager(OAuthClientManagerBase):
         """
         return self._response_manager
 
-    @response_manager.setter
-    def response_manager(self, response_manager: "ResponseManager") -> None:
-        """
-        Set the response manager for the authentication manager.
-        """
-        self._response_manager = response_manager
-
     async def validate_credentials(self) -> bool:
         """
         Validates the Auth Code Grant grant flow authentication credentials and returns True if the credentials are
@@ -154,8 +147,15 @@ class AuthCodeGrantClientManager(OAuthClientManagerBase):
                 # Spawn an authentication client server to handle oauth code flow.
                 await self._spawn_oauth_client_server()
 
+                # Construct authorization request query parameters.
+                authorization_query_params: OAuth2AuthorizationQueryParams = self.construct_authorization_query_params()
+
                 # Initiate oauth code flow by sending authorization request.
-                await self.send_authorization_request()
+                response: httpx.Response | None = await self.send_authorization_request(
+                    self._config.authorization_url, authorization_query_params)
+
+                # Handle authorization server response from authorization server request.
+                await self.handle_authorization_server_response(response)
 
                 await _CredentialsManager().wait_for_oauth_credentials()
 
@@ -196,8 +196,15 @@ class AuthCodeGrantClientManager(OAuthClientManagerBase):
             # Initiate code flow if there is no access token.
             if (self._config.access_token is None):
 
+                # Construct authorization request query parameters.
+                authorization_query_params: OAuth2AuthorizationQueryParams = self.construct_authorization_query_params()
+
                 # Initiate oauth code flow by sending authorization request.
-                await self.send_authorization_request()
+                response: httpx.Response | None = await self.send_authorization_request(
+                    self._config.authorization_url, authorization_query_params)
+
+                # Handle authorization server response from authorization server request.
+                await self.handle_authorization_server_response(response)
 
                 await _CredentialsManager().wait_for_oauth_credentials()
 
@@ -224,27 +231,30 @@ class AuthCodeGrantClientManager(OAuthClientManagerBase):
                          str(e),
                          exc_info=True)
 
-    async def send_authorization_request(self) -> None:
+    async def send_authorization_request(
+            self, authorization_url: str,
+            authorization_query_params: OAuth2AuthorizationQueryParams) -> httpx.Response | None:
         """
-        Constructs Auth Code Grant flow authorization URL and sends request to authentication server.
+        Initiates the OAuth 2.0 Authorization Code Grant flow by sending the authorization request.
+
+        This method constructs the full authorization URL by combining the base authorization endpoint
+        with required query parameters (e.g., client_id, redirect_uri, response_type, scope, state, etc.).
+        It sends a request to the authorization server to begin the user consent step, which may result in
+        an HTTP redirect to a browser where the user grants access and authentication is completed.
+
+        Args:
+            authorization_url (str): The base authorization endpoint URL of the OAuth provider.
+            authorization_query_params (OAuth2AuthorizationQueryParams): The query parameters required
+                to complete the authorization request.
+
+        Returns:
+            httpx.Response | None: The response from the authorization server, or None if the flow
+            proceeds via browser redirection without returning an immediate HTTP response.
         """
-        try:
-            authorization_url: httpx.URL = httpx.URL(self._config.authorization_url).copy_merge_params(
-                self.construct_authorization_query_params().model_dump(exclude_none=True))
+        authorization_request_url: httpx.URL = httpx.URL(authorization_url).copy_merge_params(
+            authorization_query_params.model_dump(exclude_none=True))
 
-            response: httpx.Response | None = await self._request_manager.send_request(url=str(authorization_url),
-                                                                                       http_method="GET")
-            if response is None:
-                error_message = "Unexpected error occurred while sending authorization request - no response received"
-                raise AuthCodeGrantFlowError('auth_response_null', error_message)
-
-            if not response.status_code == 200:
-                await self.handle_authorization_server_response(response)
-
-        except Exception as e:
-            error_message = f"Unexpected error occurred during authorization request process: {str(e)}"
-            logger.error(error_message, exc_info=True)
-            raise AuthCodeGrantFlowError('auth_request_failed', error_message) from e
+        return await self._request_manager.send_request(url=str(authorization_request_url), http_method="GET")
 
     async def _get_access_token_with_refresh_token(self) -> None:
         """
@@ -461,22 +471,29 @@ class AuthCodeGrantClientManager(OAuthClientManagerBase):
                                               response_type=response_type,
                                               prompt=prompt)
 
-    async def handle_authorization_server_response(self, response: httpx.Response) -> None:
+    async def handle_authorization_server_response(self, response: httpx.Response | None) -> None:
         """
-        Handles server responses returned during the OAuth 2.0 authorization process.
-
-        This method interprets and reacts to various response codes and payloads from the
-        authorization server, determining whether the flow should continue, retry, or fail.
-        It is designed to be applicable across OAuth 2.0 flows that need user consent.
+        Handles the HTTP response received from the OAuth 2.0 authorization server request.
 
         Args:
-            response (httpx.Response): The HTTP response received after redirecting the user
-                                    to the authorization endpoint and receiving a callback.
+            response (httpx.Response | None): The HTTP response returned from the authorization server,
+                                            or None if the request failed or was interrupted.
 
         Raises:
-            AuthenticationError or a subclass thereof if the response indicates a failure.
+            AuthCodeGrantFlowError: If the response is None or any unexpected error occurs.
         """
-        await self._response_manager.process_http_response(response)
+        try:
+            if response is None:
+                error_message = "Unexpected error occurred while sending authorization request - no response received"
+                raise AuthCodeGrantFlowError('auth_response_null', error_message)
+
+            if not response.status_code == 200:
+                await self._response_manager.process_http_response(response)
+
+        except Exception as e:
+            error_message = f"Unexpected error occurred during authorization request process: {str(e)}"
+            logger.error(error_message, exc_info=True)
+            raise AuthCodeGrantFlowError('auth_request_failed', error_message) from e
 
     def construct_token_request_body(self,
                                      redirect_uri: str,

@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import typing
 from abc import ABC
 from abc import abstractmethod
 
@@ -22,12 +21,9 @@ import httpx
 from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
 from aiq.data_models.authentication import ConsentPromptMode
 from aiq.data_models.authentication import HeaderAuthScheme
-from aiq.data_models.authentication import HTTPMethod
 from aiq.data_models.authentication import OAuth2AuthorizationQueryParams
 from aiq.data_models.authentication import OAuth2TokenRequest
-
-if typing.TYPE_CHECKING:
-    from aiq.authentication.response_manager import ResponseManager
+from aiq.front_ends.fastapi.message_handler import MessageHandler
 
 AUTHORIZATION_HEADER = "Authorization"
 
@@ -45,6 +41,22 @@ class ResponseManagerBase(ABC):
     Base class for handling API responses.
     This class provides an interface for handling API responses.
     """
+
+    @property
+    @abstractmethod
+    def message_handler(self) -> "MessageHandler | None":
+        """
+        Get the message handler for the response manager.
+        """
+        pass
+
+    @message_handler.setter
+    @abstractmethod
+    def message_handler(self, message_handler: "MessageHandler") -> None:
+        """
+        Set the message handler for the response manager.
+        """
+        pass
 
     @abstractmethod
     async def handle_consent_prompt_redirect(self, location_header: str) -> None:
@@ -95,28 +107,6 @@ class AuthenticationManagerBase(ABC):
         pass
 
     @abstractmethod
-    async def send_request(self,
-                           url: str,
-                           http_method: str | HTTPMethod,
-                           headers: dict | None = None,
-                           query_params: dict | None = None,
-                           body_data: dict | None = None) -> httpx.Response | None:
-        """
-        Makes a generic HTTP request.
-
-        Args:
-            url: The URL to send the request to
-            http_method: The HTTP method to use (GET, POST, etc.)
-            headers: Optional dictionary of HTTP headers
-            query_params: Optional dictionary of query parameters
-            body_data: Optional dictionary representing the request body
-
-        Returns:
-            httpx.Response | None: The response from the HTTP request, or None if an error occurs.
-        """
-        pass
-
-    @abstractmethod
     async def validate_credentials(self) -> bool:
         """
         Validates the credentials for the authentication manager.
@@ -157,6 +147,28 @@ class OAuthClientManagerBase(AuthenticationManagerBase, ABC):
         """
         pass
 
+    @property
+    @abstractmethod
+    def consent_prompt_mode(self) -> ConsentPromptMode | None:
+        """
+        Get the consent prompt mode for the OAuth client.
+
+        Returns:
+            ConsentPromptMode | None: The consent prompt mode (BROWSER or FRONTEND), or None if not set.
+        """
+        pass
+
+    @consent_prompt_mode.setter
+    @abstractmethod
+    def consent_prompt_mode(self, consent_prompt_mode: ConsentPromptMode) -> None:
+        """
+        Set the consent prompt mode for the OAuth client.
+
+        Args:
+            consent_prompt_mode: The consent prompt mode to set.
+        """
+        pass
+
     @abstractmethod
     async def initiate_authorization_flow_console(self) -> None:
         """
@@ -190,19 +202,12 @@ class OAuthClientManagerBase(AuthenticationManagerBase, ABC):
         pass
 
     @abstractmethod
-    async def send_authorization_request(self) -> str | None:
+    async def validate_credentials(self) -> bool:
         """
-        Initiates the OAuth 2.0 authorization request for flows that require user consent.
-
-        This method is responsible for constructing and initiating the authorization request
-        to the authorization server for any OAuth 2.0 flow that includes a user consent step.
-        Depending on the flow, this may involve redirecting the user to a browser (e.g.,
-        Authorization Code Grant), displaying a user code and verification URL (e.g., Device Flow),
-        or triggering a consent interface on the frontend.
+        Validates the OAuth credentials.
 
         Returns:
-            str | None: A string representing the consent prompt location (e.g., URL, device_code URI),
-                        or None if no user interaction is required at this stage.
+            bool: True if credentials are valid, False otherwise.
         """
         pass
 
@@ -228,7 +233,29 @@ class OAuthClientManagerBase(AuthenticationManagerBase, ABC):
         pass
 
     @abstractmethod
-    async def handle_authorization_server_response(self, response: httpx.Response) -> None:
+    async def send_authorization_request(
+            self, authorization_url: str,
+            authorization_query_params: OAuth2AuthorizationQueryParams) -> httpx.Response | None:
+        """
+        Sends the OAuth 2.0 authorization request to the authorization server.
+
+        This method builds the full authorization request URL by combining the base authorization URL
+        with the provided query parameters. It then initiates the authorization request, which may
+        trigger a user consent prompt depending on the flow (e.g., Authorization Code Grant, Device Flow).
+
+        Args:
+            authorization_url (str): The base URL to the authorization server's authorization endpoint.
+            authorization_query_params (OAuth2AuthorizationQueryParams): Query parameters such as
+                client_id, redirect_uri, response_type, scope, and state to be merged into the URL.
+
+        Returns:
+            httpx.Response | None: The HTTP response received from the authorization server, or None
+            if user interaction is required through a browser or external interface.
+        """
+        pass
+
+    @abstractmethod
+    async def handle_authorization_server_response(self, response: httpx.Response | None) -> None:
         """
         Handles server responses returned during the OAuth 2.0 authorization process.
 
@@ -287,16 +314,6 @@ class OAuthClientManagerBase(AuthenticationManagerBase, ABC):
         pass
 
     @abstractmethod
-    async def validate_credentials(self) -> bool:
-        """
-        Validates the OAuth credentials.
-
-        Returns:
-            bool: True if credentials are valid, False otherwise.
-        """
-        pass
-
-    @abstractmethod
     def construct_token_request_body(self,
                                      redirect_uri: str,
                                      authorization_code: str,
@@ -311,47 +328,5 @@ class OAuthClientManagerBase(AuthenticationManagerBase, ABC):
 
         Returns:
             OAuth2TokenRequest: The constructed token request body for OAuth2 token exchange
-        """
-        pass
-
-    @property
-    def response_manager(self) -> "ResponseManager | None":
-        """
-        Get the response manager for the authentication manager.
-
-        Returns:
-            ResponseManager | None: The response manager or None if not set.
-        """
-        return getattr(self, '_response_manager', None)
-
-    @response_manager.setter
-    def response_manager(self, response_manager: "ResponseManager") -> None:
-        """
-        Set the response manager for the authentication manager.
-
-        Args:
-            response_manager: The response manager to set
-        """
-        self._response_manager = response_manager
-
-    @property
-    @abstractmethod
-    def consent_prompt_mode(self) -> ConsentPromptMode | None:
-        """
-        Get the consent prompt mode for the OAuth client.
-
-        Returns:
-            ConsentPromptMode | None: The consent prompt mode (BROWSER or FRONTEND), or None if not set.
-        """
-        pass
-
-    @consent_prompt_mode.setter
-    @abstractmethod
-    def consent_prompt_mode(self, consent_prompt_mode: ConsentPromptMode) -> None:
-        """
-        Set the consent prompt mode for the OAuth client.
-
-        Args:
-            consent_prompt_mode: The consent prompt mode to set.
         """
         pass
