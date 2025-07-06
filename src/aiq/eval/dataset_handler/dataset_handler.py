@@ -134,35 +134,49 @@ class DatasetHandler:
         if self.concurrency <= 0:
             raise ValueError("Concurrency must be > 0")
 
-        original_size = input_df.shape[0]
-        if self.num_passes > 0:
-            adjusted_size = self.concurrency * self.num_passes
-        else:
-            # Adjusted size should be the largest multiple of concurrency ≥ concurrency and ≤ original_size
-            # If original_size < concurrency, we must replicate to reach one full batch
-            if original_size >= self.concurrency:
-                adjusted_size = (original_size // self.concurrency) * self.concurrency
-            else:
-                adjusted_size = self.concurrency
+        if self.num_passes < 0:
+            raise ValueError("num_passes must be >= 0")
 
-        if adjusted_size == 0:
+        original_size = input_df.shape[0]
+
+        # Calculate target size
+        if self.num_passes > 0:
+            # When num_passes is specified, always use concurrency * num_passes
+            # This respects the user's intent for exact number of passes
+            target_size = self.concurrency * self.num_passes
+        else:
+            # When num_passes = 0, use the largest multiple of concurrency <= original_size
+            # If original_size < concurrency, we need at least concurrency rows
+            if original_size >= self.concurrency:
+                target_size = (original_size // self.concurrency) * self.concurrency
+            else:
+                target_size = self.concurrency
+
+        if target_size == 0:
             raise ValueError("Input dataset too small for even one batch at given concurrency.")
 
         id_col = self.dataset_config.id_key
 
-        if original_size < adjusted_size:
+        # If we need more rows than we have, replicate the dataset
+        if original_size < target_size:
             # Clean existing _rep suffix if present
             input_df[id_col] = input_df[id_col].astype(str).str.replace(r"_rep\d+$", "", regex=True)
 
-            # Replicate rows
-            repeat_count = math.ceil(adjusted_size / original_size)
-            input_df = pd.concat([input_df] * repeat_count, ignore_index=True)
+            # Calculate how many complete copies we need
+            copies_needed = math.ceil(target_size / original_size)
 
-            # Update IDs to include unique _repN suffix
-            rep_index = input_df.groupby(id_col).cumcount()
-            input_df[id_col] = input_df[id_col].astype(str) + "_rep" + rep_index.astype(str)
+            # Create the replicated dataframe
+            replicated_dfs = []
+            for i in range(copies_needed):
+                df_copy = input_df.copy()
+                if i > 0:  # Add suffix to all but the first copy
+                    df_copy[id_col] = df_copy[id_col].astype(str) + f"_rep{i}"
+                replicated_dfs.append(df_copy)
 
-        return input_df.head(adjusted_size)
+            input_df = pd.concat(replicated_dfs, ignore_index=True)
+
+        # Return exactly the target size
+        return input_df.head(target_size)
 
     def get_eval_input_from_dataset(self, dataset: str) -> EvalInput:
         # read the dataset and convert it to EvalInput
