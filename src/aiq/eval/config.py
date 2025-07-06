@@ -39,7 +39,7 @@ class EvaluationRunConfig(BaseModel):
     override: tuple[tuple[str, str], ...] = ()
     # If false, the output will not be written to the output directory. This is
     # useful when running evaluation via another tool.
-    write_output: bool = False
+    write_output: bool = True
     # if true, the dataset is adjusted to a multiple of the concurrency
     adjust_dataset_size: bool = False
     # number of passes at each concurrency, if 0 the dataset is adjusted to a multiple of the

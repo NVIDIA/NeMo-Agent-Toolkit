@@ -25,7 +25,7 @@ class CalcRunnerConfig(BaseModel):
     """
     # base config and endpoints (if remote)- not needed in offline mode
     config_file: Path | None = None
-    # endpoint to use for the workflow
+    # endpoint to use for the workflow, if not provided the workflow is run locally
     endpoint: str | None = None
     # timeout for the workflow
     endpoint_timeout: int = 300

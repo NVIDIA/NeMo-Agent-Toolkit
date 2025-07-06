@@ -227,8 +227,7 @@ class CalcRunner:
             observed_latency = metrics_per_concurrency.llm_latency_p95
             observed_runtime = metrics_per_concurrency.workflow_runtime_p95
 
-            # Get ROUGH GPU estimates per concurrency, this is not used for the final GPU estimation
-            # it is only available for information purposes
+            # Get ROUGH GPU estimates per concurrency using the centralized function
             gpu_estimates = calc_gpu_estimate_for_single_concurrency(target_llm_latency=self.target_latency,
                                                                      target_workflow_runtime=self.target_runtime,
                                                                      target_users=self.target_users,
@@ -237,23 +236,8 @@ class CalcRunner:
                                                                      observed_latency=observed_latency,
                                                                      observed_runtime=observed_runtime)
 
-            # Combined estimate (geometric mean when both targets are specified, otherwise use available one)
-            llm_latency_multiplier = observed_latency / self.target_latency if use_latency else 1.0
-            wf_runtime_multiplier = observed_runtime / self.target_runtime if use_runtime else 1.0
-            base_gpu_estimate = (self.target_users / concurrency) * self.test_gpu_count
-            if use_latency and use_runtime:
-                gpu_estimate = base_gpu_estimate * wf_runtime_multiplier * llm_latency_multiplier
-            elif use_latency:
-                gpu_estimate = gpu_estimates.gpu_estimate_by_llm_latency
-            elif use_runtime:
-                gpu_estimate = gpu_estimates.gpu_estimate_by_wf_runtime
-            else:
-                gpu_estimate = base_gpu_estimate
-
-            gpu_estimates_per_concurrency[concurrency] = GPUEstimatesPerConcurrency(
-                gpu_estimate_by_wf_runtime=gpu_estimates.gpu_estimate_by_wf_runtime,
-                gpu_estimate_by_llm_latency=gpu_estimates.gpu_estimate_by_llm_latency,
-                gpu_estimate=gpu_estimate)
+            # Store the GPU estimates directly (no need to reconstruct the same object)
+            gpu_estimates_per_concurrency[concurrency] = gpu_estimates
 
             # Calculate out-of-range runs based on per-item metrics (only if targets are specified)
             num_runs_greater_than_target_latency = 0
@@ -277,14 +261,10 @@ class CalcRunner:
                 num_runs_greater_than_target_runtime=num_runs_greater_than_target_runtime,
                 workflow_interrupted=workflow_interrupted)
 
-            logger.debug(
-                "Concurrency %d: GPU estimate=%.2f (base=%.2f, wf_mult=%.3f, llm_mult=%.3f), out-of-range runs=%d",
-                concurrency,
-                gpu_estimate,
-                base_gpu_estimate,
-                wf_runtime_multiplier,
-                llm_latency_multiplier,
-                num_runs_greater_than_target_latency + num_runs_greater_than_target_runtime)
+            logger.debug("Concurrency %d: GPU estimate=%.2f, out-of-range runs=%d",
+                         concurrency,
+                         gpu_estimates.gpu_estimate_by_wf_runtime,
+                         num_runs_greater_than_target_latency + num_runs_greater_than_target_runtime)
 
         logger.info("Completed per-concurrency calculations:")
         logger.info("  - GPU estimates calculated for %d concurrencies", len(gpu_estimates_per_concurrency))

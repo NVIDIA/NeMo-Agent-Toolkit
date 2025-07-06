@@ -103,7 +103,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             max_timestamp = 0.0
             runtime = 0.0
 
-        # find llm latency by calculating average of all llm calls (to match profiler approach)
+        # find llm latency by calculating p95 of all llm calls
         llm_latencies = []
         previous_llm_start_time = None
         for step in steps:
