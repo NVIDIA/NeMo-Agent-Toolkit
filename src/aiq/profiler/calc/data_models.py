@@ -113,14 +113,14 @@ class GPUEstimatesPerConcurrency(BaseModel):
     gpu_estimate_by_llm_latency: float | None = None
 
 
-class OutOfRangeRunsPerConcurrency(BaseModel):
+class OutOfRangeItemsPerConcurrency(BaseModel):
     """
-    Out of range runs.
+    Out of range items per concurrency.
     """
-    # number of runs that are greater than the target latency
-    num_runs_greater_than_target_latency: int = 0
-    # number of runs that are greater than the target runtime
-    num_runs_greater_than_target_runtime: int = 0
+    # number of items that are greater than the target latency
+    num_items_greater_than_target_latency: int = 0
+    # number of items that are greater than the target runtime
+    num_items_greater_than_target_runtime: int = 0
     # if the workflow was interrupted that pass cannot be used
     workflow_interrupted: bool = False
 
@@ -133,7 +133,7 @@ class CalcRunnerOutputPerConcurrency(BaseModel):
     # they are only available for information purposes
     gpu_estimates: GPUEstimatesPerConcurrency = GPUEstimatesPerConcurrency()
     # Out of range runs per concurrency
-    out_of_range_runs: OutOfRangeRunsPerConcurrency = OutOfRangeRunsPerConcurrency()
+    out_of_range_runs: OutOfRangeItemsPerConcurrency = OutOfRangeItemsPerConcurrency()
     # Sizing metrics per concurrency
     sizing_metrics: SizingMetricsPerConcurrency = SizingMetricsPerConcurrency()
 

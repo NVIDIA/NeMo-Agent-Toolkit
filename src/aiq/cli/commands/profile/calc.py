@@ -203,10 +203,10 @@ def calc_command(ctx,
         if results.gpu_estimates.gpu_estimate_by_llm_latency is not None:
             click.echo(f"Estimated GPU count (LLM Latency): {results.gpu_estimates.gpu_estimate_by_llm_latency:.1f}")
 
-        # Check if there are any out-of-range runs to determine if we should show fail columns
-        has_latency_fails = any(data.out_of_range_runs.num_runs_greater_than_target_latency > 0
+        # Check if there are any out-of-range items to determine if we should show fail columns
+        has_latency_fails = any(data.out_of_range_runs.num_items_greater_than_target_latency > 0
                                 for data in results.per_concurrency_data.values())
-        has_runtime_fails = any(data.out_of_range_runs.num_runs_greater_than_target_runtime > 0
+        has_runtime_fails = any(data.out_of_range_runs.num_items_greater_than_target_runtime > 0
                                 for data in results.per_concurrency_data.values())
 
         # Print per concurrency results as a table
@@ -226,9 +226,9 @@ def calc_command(ctx,
 
             # Only include fail columns if there are actual failures of that type
             if has_latency_fails:
-                row.append(out_of_range_per_concurrency.num_runs_greater_than_target_latency)
+                row.append(out_of_range_per_concurrency.num_items_greater_than_target_latency)
             if has_runtime_fails:
-                row.append(out_of_range_per_concurrency.num_runs_greater_than_target_runtime)
+                row.append(out_of_range_per_concurrency.num_items_greater_than_target_runtime)
 
             row.extend([
                 gpu_estimates_per_concurrency.gpu_estimate_by_llm_latency,
