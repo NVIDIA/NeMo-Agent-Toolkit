@@ -214,6 +214,11 @@ def calc_gpu_estimate_based_on_slope(target_time_metric: float,
     # Using the linear equation: time = slope * concurrency + intercept
     # Solving for concurrency: concurrency = (time - intercept) / slope
     calculated_concurrency = (target_time_metric - observed_intercept) / observed_slope
+    logger.info("Calculated concurrency: %f for target time metric: %f, observed intercept: %f, observed slope: %f",
+                calculated_concurrency,
+                target_time_metric,
+                observed_intercept,
+                observed_slope)
 
     if calculated_concurrency <= 0:
         raise ValueError(f"Calculated target concurrency ({calculated_concurrency}) is not positive. "
