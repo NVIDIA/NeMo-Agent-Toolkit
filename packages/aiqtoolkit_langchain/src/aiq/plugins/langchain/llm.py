@@ -16,6 +16,7 @@
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_llm_client
+from aiq.data_models.llm import APITypeEnum
 from aiq.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
@@ -25,6 +26,10 @@ from aiq.llm.openai_llm import OpenAIModelConfig
 async def nim_langchain(llm_config: NIMModelConfig, builder: Builder):
 
     from langchain_nvidia_ai_endpoints import ChatNVIDIA
+
+    if llm_config.api_type != APITypeEnum.CHAT_COMPLETION:
+        raise ValueError("NVIDIA AI Endpoints only supports chat completion API type. "
+                         f"Received: {llm_config.api_type}")
 
     yield ChatNVIDIA(**llm_config.model_dump(exclude={"type"}, by_alias=True))
 
@@ -40,6 +45,9 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
 
     kwargs = {**default_kwargs, **llm_config.model_dump(exclude={"type"}, by_alias=True)}
 
+    if llm_config.api_type == APITypeEnum.RESPONSES:
+        kwargs["use_responses_api"] = True
+
     yield ChatOpenAI(**kwargs)
 
 
@@ -47,5 +55,9 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
 async def aws_bedrock_langchain(llm_config: AWSBedrockModelConfig, builder: Builder):
 
     from langchain_aws import ChatBedrockConverse
+
+    if llm_config.api_type != APITypeEnum.CHAT_COMPLETION:
+        raise ValueError("AWS Bedrock only supports chat completion API type. "
+                         f"Received: {llm_config.api_type}")
 
     yield ChatBedrockConverse(**llm_config.model_dump(exclude={"type", "context_size"}, by_alias=True))

@@ -14,13 +14,30 @@
 # limitations under the License.
 
 import typing
+from enum import Enum
+
+from pydantic import Field
 
 from .common import BaseModelRegistryTag
 from .common import TypedBaseModel
 
 
+class APITypeEnum(str, Enum):
+    CHAT_COMPLETION = "chat_completion"
+    RESPONSES = "responses"
+
+
 class LLMBaseConfig(TypedBaseModel, BaseModelRegistryTag):
-    pass
+    """Base configuration for LLM providers."""
+
+    api_type: APITypeEnum = Field(
+        default=APITypeEnum.CHAT_COMPLETION,
+        description="The type of API to use for the LLM provider.",
+        json_schema_extra={
+            "enum": [e.value for e in APITypeEnum],
+            "examples": [e.value for e in APITypeEnum],
+        },
+    )
 
 
 LLMBaseConfigT = typing.TypeVar("LLMBaseConfigT", bound=LLMBaseConfig)
