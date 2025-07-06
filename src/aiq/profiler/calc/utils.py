@@ -135,9 +135,9 @@ def _remove_outliers(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarr
 
 
 def calc_gpu_estimate_based_on_slope(target_time_metric: float,
-                                     observed_slope: float,
                                      target_users: int,
                                      test_gpu_count: int,
+                                     observed_slope: float,
                                      observed_intercept: float = 0.0) -> float:
     """
     Calculate the GPU estimate based on the slope of the time metric.
@@ -165,15 +165,15 @@ def calc_gpu_estimate_based_on_slope(target_time_metric: float,
     # Calculate the concurrency that would achieve the target time metric
     # Using the linear equation: time = slope * concurrency + intercept
     # Solving for concurrency: concurrency = (time - intercept) / slope
-    target_concurrency = (target_time_metric - observed_intercept) / observed_slope
+    calculated_concurrency = (target_time_metric - observed_intercept) / observed_slope
 
-    if target_concurrency <= 0:
-        raise ValueError(f"Calculated target concurrency ({target_concurrency}) is not positive. "
+    if calculated_concurrency <= 0:
+        raise ValueError(f"Calculated target concurrency ({calculated_concurrency}) is not positive. "
                          f"This suggests the slope or intercept values may be invalid.")
 
     # Estimate GPUs using the ratio of target users to target concurrency
     # scaled by the test GPU count
-    gpu_estimate = (target_users / target_concurrency) * test_gpu_count
+    gpu_estimate = (target_users / calculated_concurrency) * test_gpu_count
 
     return gpu_estimate
 
@@ -221,48 +221,3 @@ def calc_gpu_estimate_for_single_concurrency(target_llm_latency: float,
 
     return GPUEstimatesPerConcurrency(gpu_estimate_by_wf_runtime=gpu_estimate_by_wf_runtime,
                                       gpu_estimate_by_llm_latency=gpu_estimate_by_llm_latency)
-
-
-def analyze_performance_scaling(concurrencies: list[float],
-                                time_metrics: list[float],
-                                target_time: float,
-                                target_users: int,
-                                test_gpu_count: int) -> dict:
-    """
-    Comprehensive analysis of performance scaling with GPU estimation.
-
-    Args:
-        concurrencies: List of concurrency values tested
-        time_metrics: List of corresponding time metrics
-        target_time: Target time metric (latency or runtime)
-        target_users: Target number of users
-        test_gpu_count: Number of GPUs used in testing
-
-    Returns:
-        Dictionary with analysis results including linear fit and GPU estimates
-    """
-    try:
-        # Get enhanced linear fit with outlier detection and validation
-        fit_result = compute_slope(concurrencies, time_metrics, remove_outliers=True, min_r_squared=0.7)
-
-        # Calculate GPU estimate using the slope-based method
-        gpu_estimate = calc_gpu_estimate_based_on_slope(target_time,
-                                                        fit_result.slope,
-                                                        target_users,
-                                                        test_gpu_count,
-                                                        fit_result.intercept)
-
-        return {
-            "linear_fit": {
-                "slope": fit_result.slope,
-                "intercept": fit_result.intercept,
-                "r_squared": fit_result.r_squared,
-                "outliers_removed": fit_result.outliers_removed
-            },
-            "gpu_estimate": gpu_estimate,
-            "equation": f"time = {fit_result.slope:.4f} * concurrency + {fit_result.intercept:.4f}",
-            "quality": "good" if fit_result.r_squared >= 0.8 else "moderate" if fit_result.r_squared >= 0.7 else "poor"
-        }
-
-    except ValueError as e:
-        return {"error": str(e), "linear_fit": None, "gpu_estimate": None}

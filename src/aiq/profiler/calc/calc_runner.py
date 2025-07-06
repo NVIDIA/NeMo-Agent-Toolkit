@@ -142,9 +142,9 @@ class CalcRunner:
 
                 # Calculate GPU estimate using slope-based method
                 gpu_estimate_by_wf_runtime = calc_gpu_estimate_based_on_slope(target_time_metric=self.target_runtime,
-                                                                              observed_slope=runtime_fit.slope,
                                                                               target_users=self.target_users,
                                                                               test_gpu_count=self.test_gpu_count,
+                                                                              observed_slope=runtime_fit.slope,
                                                                               observed_intercept=runtime_fit.intercept)
 
                 logger.info(
