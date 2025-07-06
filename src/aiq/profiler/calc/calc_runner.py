@@ -81,6 +81,14 @@ class CalcRunner:
         if len(self.config.concurrencies) < 2:
             raise ValueError("Atleast two concurrencies are needed to estimate the GPU count.")
 
+        # if the same value is repeated in the concurrencies list, raise an error
+        if len(self.config.concurrencies) != len(set(self.config.concurrencies)):
+            raise ValueError("Concurrencies list contains duplicate values.")
+
+        # The value of the concurrencies has to be greater than 0
+        if any(concurrency <= 0 for concurrency in self.config.concurrencies):
+            raise ValueError("Concurrencies list contains values less than or equal to 0.")
+
         if self.config.offline_mode:
             # In offline mode target test parameters are needed to estimate the GPU count
             if self.target_latency <= 0 and self.target_runtime <= 0:
