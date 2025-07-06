@@ -156,10 +156,6 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
             profile_metrics["llm_latency_p95"] = profiler_results.llm_latency_ci.p95
             profile_metrics["wf_runtime_p95"] = profiler_results.workflow_runtime_metrics.p95
 
-        sizing_calc_metrics = profiler_results.sizing_calc_metrics
-        if sizing_calc_metrics and sizing_calc_metrics.gpu_estimates:
-            profile_metrics["gpu_estimate_by_wf_runtime"] = sizing_calc_metrics.gpu_estimates.gpu_estimate_by_wf_runtime
-
         # TODO:get the LLM tokens from the usage stats and log them
 
         profile_metrics["total_runtime"] = usage_stats.total_runtime
