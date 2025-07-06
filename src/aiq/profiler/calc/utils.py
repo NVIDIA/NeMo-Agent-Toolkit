@@ -20,9 +20,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from aiq.profiler.calc.data_models import GPUEstimatesPerConcurrency
 from aiq.profiler.calc.data_models import LinearFitResult
-from aiq.profiler.data_models import GPUEstimatesPerConcurrency
-from aiq.profiler.data_models import SizingMetricsPerConcurrency
+from aiq.profiler.calc.data_models import SizingMetricsPerConcurrency
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +103,7 @@ def compute_slope(concurrencies: list[float],
 def _remove_outliers(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
     """
     Remove outliers using the Interquartile Range (IQR) method.
+    For small concurrency range (≤ 10 points), also checks raw y-values for extreme outliers.
 
     Args:
         x: Input x values
@@ -111,8 +112,38 @@ def _remove_outliers(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarr
     Returns:
         Tuple of (cleaned_x, cleaned_y, number_of_outliers_removed)
     """
-    # Calculate residuals from a simple linear fit
+    # if the number of concurrency points is less removing outliers can be challenging
+    # as exteme outliers can skew the results.
+    # We use a threshold of 10 points to check for extreme outliers in raw y-values first.
+    small_concurrency_range_threshold = 10
+    # Extreme outlier threshold is 2.0 times the IQR, extreme outliers are removed.
+    extreme_outlier_threshold = 2.0
+    # Conservative outlier threshold is 1.5 times the IQR, conservative outliers are removed
+    conservative_outlier_threshold = 1.5
+
     n = len(x)
+
+    # For smaller concurrency ranges, check for extreme outliers in raw y-values first
+    if n <= small_concurrency_range_threshold:
+        # Calculate IQR on raw y-values
+        y_q1 = np.percentile(y, 25)
+        y_q3 = np.percentile(y, 75)
+        y_iqr = y_q3 - y_q1
+
+        # Use a more aggressive threshold for small datasets
+        y_lower_bound = y_q1 - extreme_outlier_threshold * y_iqr  # More aggressive than 1.5
+        y_upper_bound = y_q3 + extreme_outlier_threshold * y_iqr
+
+        # Find extreme outliers in raw values
+        extreme_outlier_mask = (y >= y_lower_bound) & (y <= y_upper_bound)
+        extreme_outliers_removed = np.sum(~extreme_outlier_mask)
+
+        if extreme_outliers_removed > 0:
+            logger.info("Removed %d extreme outliers from raw values", extreme_outliers_removed)
+            return x[extreme_outlier_mask], y[extreme_outlier_mask], extreme_outliers_removed
+
+    # Standard residual-based outlier detection
+    # Calculate residuals from a simple linear fit
     sum_x = x.sum()
     sum_y = y.sum()
     sum_xy = (x * y).sum()
@@ -131,13 +162,22 @@ def _remove_outliers(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarr
     iqr = q3 - q1
 
     # Define outlier bounds (1.5 * IQR rule)
-    lower_bound = q1 - 1.5 * iqr
-    upper_bound = q3 + 1.5 * iqr
+    lower_bound = q1 - conservative_outlier_threshold * iqr
+    upper_bound = q3 + conservative_outlier_threshold * iqr
 
     # Find non-outlier indices
     non_outlier_mask = (residuals >= lower_bound) & (residuals <= upper_bound)
 
     outliers_removed = np.sum(~non_outlier_mask)
+
+    # Add debugging for small datasets
+    if n <= 6:
+        logger.info("Outlier detection for small dataset (n=%d):", n)
+        logger.info("  Data points: %s", list(zip(x, y)))
+        logger.info("  Residuals: %s", residuals.tolist())
+        logger.info("  Q1=%.3f, Q3=%.3f, IQR=%.3f", q1, q3, iqr)
+        logger.info("  Bounds: [%.3f, %.3f]", lower_bound, upper_bound)
+        logger.info("  Outliers removed: %d", outliers_removed)
 
     return x[non_outlier_mask], y[non_outlier_mask], outliers_removed
 
@@ -392,7 +432,7 @@ def plot_concurrency_vs_time_metrics(metrics_per_concurrency: dict[int, SizingMe
     # Also save a simpler version for quick viewing
     plt.figure(figsize=(12, 6))
     plt.plot(df["concurrency"], df["llm_latency_p95"], label="p95 LLM Latency (s)", marker="o", linewidth=2)
-    plt.plot(df["concurrency"], df["workflow_runtime_p95"], label="p95 Workflow Runtime (s)", marker="x", linewidth=2)
+    plt.plot(df["concurrency"], df["workflow_runtime_p95"], label="p95 Workflow Runtime (s)", marker="s", linewidth=2)
     plt.xlabel("Concurrency")
     plt.ylabel("Time (seconds)")
     plt.title("Concurrency vs. p95 LLM Latency and Workflow Runtime")

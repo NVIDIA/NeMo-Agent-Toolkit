@@ -30,13 +30,13 @@ from aiq.profiler.calc.data_models import CalcRunnerConfig
 from aiq.profiler.calc.data_models import CalcRunnerOutput
 from aiq.profiler.calc.data_models import CalcRunnerOutputPerConcurrency
 from aiq.profiler.calc.data_models import GPUEstimates
+from aiq.profiler.calc.data_models import GPUEstimatesPerConcurrency
 from aiq.profiler.calc.data_models import OutOfRangeItemsPerConcurrency
 from aiq.profiler.calc.data_models import SizingMetricPerItem
 from aiq.profiler.calc.data_models import SizingMetricsPerConcurrency
 from aiq.profiler.calc.utils import calc_gpu_estimate_based_on_slope
 from aiq.profiler.calc.utils import calc_gpu_estimate_for_single_concurrency
 from aiq.profiler.calc.utils import compute_slope
-from aiq.profiler.data_models import GPUEstimatesPerConcurrency
 from aiq.profiler.data_models import ProfilerResults
 
 logger = logging.getLogger(__name__)
@@ -264,8 +264,8 @@ class CalcRunner:
                 logger.debug("Skipping per-item processing for concurrency %d (no targets or no per-item data)",
                              concurrency)
 
-            # Get workflow interrupted status
-            workflow_interrupted = self.eval_outputs[concurrency].workflow_interrupted
+            # Get workflow interrupted status from metrics (in offline mode, eval_outputs is empty)
+            workflow_interrupted = not metrics_per_concurrency.eligible_for_slope_based_estimation
 
             out_of_range_items_per_concurrency[concurrency] = OutOfRangeItemsPerConcurrency(
                 num_items_greater_than_target_latency=num_items_greater_than_target_latency,
@@ -529,9 +529,11 @@ class CalcRunner:
         # Override the concurrency and alias keys in the config
         concurrency_key = "eval.general.max_concurrency"
         alias_key = "eval.general.workflow_alias"
+        # Enable profiler base metrics via overrides
+        profiler_base_metrics_key = "eval.general.profiler.base_metrics"
 
         overrides = {
-            c: ((concurrency_key, str(c)), (alias_key, "wf_concurrency_" + str(c)))
+            c: ((concurrency_key, str(c)), (alias_key, "wf_concurrency_" + str(c)), (profiler_base_metrics_key, "true"))
             for c in self.config.concurrencies
         }
 
@@ -577,9 +579,13 @@ class CalcRunner:
 
             # if the workflow was interrupted, the metrics are not eligible for slope-based GPU estimation
             eligible_for_slope_based_estimation = not eval_output.workflow_interrupted
+            llm_latency_p95 = eval_output.profiler_results.llm_latency_ci.p95 \
+                if eval_output.profiler_results.llm_latency_ci else 0
+            workflow_runtime_p95 = eval_output.profiler_results.workflow_runtime_metrics.p95 \
+                if eval_output.profiler_results.workflow_runtime_metrics else 0
             self.metrics_per_concurrency[concurrency] = SizingMetricsPerConcurrency(
-                llm_latency_p95=eval_output.profiler_results.llm_latency_ci.p95,
-                workflow_runtime_p95=eval_output.profiler_results.workflow_runtime_metrics.p95,
+                llm_latency_p95=llm_latency_p95,
+                workflow_runtime_p95=workflow_runtime_p95,
                 total_runtime=eval_output.usage_stats.total_runtime,
                 per_item_metrics=per_item_metrics,
                 eligible_for_slope_based_estimation=eligible_for_slope_based_estimation)

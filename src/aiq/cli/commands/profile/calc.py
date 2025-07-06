@@ -209,6 +209,16 @@ def calc_command(ctx,
         has_runtime_fails = any(data.out_of_range_runs.num_items_greater_than_target_runtime > 0
                                 for data in results.per_concurrency_data.values())
 
+        # Check if there are any GPU estimates to determine if we should show GPU estimate columns
+        has_llm_latency_gpu_estimates = any(data.gpu_estimates.gpu_estimate_by_llm_latency is not None
+                                            for data in results.per_concurrency_data.values())
+        has_wf_runtime_gpu_estimates = any(data.gpu_estimates.gpu_estimate_by_wf_runtime is not None
+                                           for data in results.per_concurrency_data.values())
+
+        # Check if there are any interrupted workflows to determine if we should show the interrupted column
+        has_interrupted_workflows = any(data.out_of_range_runs.workflow_interrupted
+                                        for data in results.per_concurrency_data.values())
+
         # Print per concurrency results as a table
         click.echo("Per concurrency results:")
         table = []
@@ -217,12 +227,18 @@ def calc_command(ctx,
             gpu_estimates_per_concurrency = data.gpu_estimates
             out_of_range_per_concurrency = data.out_of_range_runs
 
-            row = [
+            row = []
+
+            # Only include interrupted column if there are any interrupted workflows (first column)
+            if has_interrupted_workflows:
+                row.append("!" if out_of_range_per_concurrency.workflow_interrupted else "")
+
+            row.extend([
                 concurrency,
                 metrics.llm_latency_p95,
                 metrics.workflow_runtime_p95,
                 metrics.total_runtime,
-            ]
+            ])
 
             # Only include fail columns if there are actual failures of that type
             if has_latency_fails:
@@ -230,19 +246,26 @@ def calc_command(ctx,
             if has_runtime_fails:
                 row.append(out_of_range_per_concurrency.num_items_greater_than_target_runtime)
 
-            row.extend([
-                gpu_estimates_per_concurrency.gpu_estimate_by_llm_latency,
-                gpu_estimates_per_concurrency.gpu_estimate_by_wf_runtime,
-            ])
+            # Only include GPU estimate columns if there are actual estimates of that type
+            if has_llm_latency_gpu_estimates:
+                row.append(gpu_estimates_per_concurrency.gpu_estimate_by_llm_latency)
+            if has_wf_runtime_gpu_estimates:
+                row.append(gpu_estimates_per_concurrency.gpu_estimate_by_wf_runtime)
 
             table.append(row)
 
-        headers = [
+        headers = []
+
+        # Only include interrupted header if there are any interrupted workflows (first column)
+        if has_interrupted_workflows:
+            headers.append("Interrupted")
+
+        headers.extend([
             "Concurrency",
             "p95 LLM Latency",
             "p95 WF Runtime",
             "Total Runtime",
-        ]
+        ])
 
         # Only include fail headers if there are actual failures of that type
         if has_latency_fails:
@@ -250,10 +273,11 @@ def calc_command(ctx,
         if has_runtime_fails:
             headers.append("Runtime OOR")
 
-        headers.extend([
-            "GPUs (LLM Latency, Rough)",
-            "GPUs (WF Runtime, Rough)",
-        ])
+        # Only include GPU estimate headers if there are actual estimates of that type
+        if has_llm_latency_gpu_estimates:
+            headers.append("GPUs (LLM Latency, Rough)")
+        if has_wf_runtime_gpu_estimates:
+            headers.append("GPUs (WF Runtime, Rough)")
 
         click.echo(tabulate(table, headers=headers, tablefmt="github"))
 

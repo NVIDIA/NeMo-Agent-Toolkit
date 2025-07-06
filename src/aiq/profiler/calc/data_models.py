@@ -80,11 +80,11 @@ class SizingMetricsPerConcurrency(BaseModel):
     eligible_for_slope_based_estimation: bool = False
 
     # p95 LLM latency
-    llm_latency_p95: float
+    llm_latency_p95: float = 0.0
     # p95 workflow runtime
-    workflow_runtime_p95: float
+    workflow_runtime_p95: float = 0.0
     # total workflow runtime
-    total_runtime: float
+    total_runtime: float = 0.0
     # per item metrics, key is the dataset entry id
     per_item_metrics: dict[typing.Any, SizingMetricPerItem] = {}
 
