@@ -76,6 +76,9 @@ class SizingMetricsPerConcurrency(BaseModel):
     """
     Metrics per concurrency.
     """
+    # if true, the metrics are eligible for slope-based GPU estimation
+    eligible_for_slope_based_estimation: bool = False
+
     # p95 LLM latency
     llm_latency_p95: float
     # p95 workflow runtime
@@ -120,6 +123,18 @@ class OutOfRangeRunsPerConcurrency(BaseModel):
     workflow_interrupted: bool = False
 
 
+class CalcRunnerOutputPerConcurrency(BaseModel):
+    """
+    Output of the calc runner per concurrency.
+    """
+    # GPU estimates per concurrency
+    gpu_estimates: GPUEstimatesPerConcurrency = GPUEstimatesPerConcurrency()
+    # Out of range runs per concurrency
+    out_of_range_runs: OutOfRangeRunsPerConcurrency = OutOfRangeRunsPerConcurrency()
+    # Sizing metrics per concurrency
+    sizing_metrics: SizingMetricsPerConcurrency = SizingMetricsPerConcurrency()
+
+
 class CalcRunnerOutput(BaseModel):
     """
     Output of the calc runner.
@@ -127,12 +142,5 @@ class CalcRunnerOutput(BaseModel):
     # GPU estimates based on the slope of the time vs concurrency, calculated online or offline
     gpu_estimates: GPUEstimates = GPUEstimates()
 
-    # GPU estimates by concurrency, calculated online or offline
-    gpu_estimates_per_concurrency: dict[int, GPUEstimatesPerConcurrency] = {}
-
-    # Out of range runs, gathered based on the targets per concurrency. Calculated online or offline
-    out_of_range_runs_per_concurrency: dict[int, OutOfRangeRunsPerConcurrency] = {}
-
-    # Sizing metrics per tested concurrency. This information can only be gathered online.
-    # It can be used offline for post-processing and GPU estimation.
-    sizing_metrics_per_concurrency: dict[int, SizingMetricsPerConcurrency] = {}
+    # Per-concurrency data (GPU estimates, out-of-range runs, and sizing metrics)
+    per_concurrency_data: dict[int, CalcRunnerOutputPerConcurrency] = {}

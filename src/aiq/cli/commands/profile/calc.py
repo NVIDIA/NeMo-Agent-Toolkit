@@ -23,8 +23,6 @@ from tabulate import tabulate
 from aiq.profiler.calc.calc_runner import CalcRunner
 from aiq.profiler.calc.data_models import CalcRunnerConfig
 from aiq.profiler.calc.data_models import CalcRunnerOutput
-from aiq.profiler.calc.data_models import OutOfRangeRunsPerConcurrency
-from aiq.profiler.data_models import GPUEstimatesPerConcurrency
 
 logger = logging.getLogger(__name__)
 
@@ -219,19 +217,18 @@ def calc_command(ctx,
             click.echo("No valid GPU estimates available.")
 
         # Check if there are any out-of-range runs to determine if we should show fail columns
-        has_latency_fails = any(out_of_range.num_runs_greater_than_target_latency > 0
-                                for out_of_range in results.out_of_range_runs_per_concurrency.values())
-        has_runtime_fails = any(out_of_range.num_runs_greater_than_target_runtime > 0
-                                for out_of_range in results.out_of_range_runs_per_concurrency.values())
+        has_latency_fails = any(data.out_of_range_runs.num_runs_greater_than_target_latency > 0
+                                for data in results.per_concurrency_data.values())
+        has_runtime_fails = any(data.out_of_range_runs.num_runs_greater_than_target_runtime > 0
+                                for data in results.per_concurrency_data.values())
 
         # Print per concurrency results as a table
         click.echo("Per concurrency results:")
         table = []
-        for concurrency, metrics in results.sizing_metrics_per_concurrency.items():
-            gpu_estimates_per_concurrency = results.gpu_estimates_per_concurrency.get(
-                concurrency, GPUEstimatesPerConcurrency())
-            out_of_range_per_concurrency = results.out_of_range_runs_per_concurrency.get(
-                concurrency, OutOfRangeRunsPerConcurrency())
+        for concurrency, data in results.per_concurrency_data.items():
+            metrics = data.sizing_metrics
+            gpu_estimates_per_concurrency = data.gpu_estimates
+            out_of_range_per_concurrency = data.out_of_range_runs
 
             row = [
                 concurrency,

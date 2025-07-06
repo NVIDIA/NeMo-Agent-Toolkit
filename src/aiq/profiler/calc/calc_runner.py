@@ -30,6 +30,7 @@ from aiq.eval.runners.multi_eval_runner import MultiEvaluationRunner
 from aiq.eval.usage_stats import UsageStats
 from aiq.profiler.calc.data_models import CalcRunnerConfig
 from aiq.profiler.calc.data_models import CalcRunnerOutput
+from aiq.profiler.calc.data_models import CalcRunnerOutputPerConcurrency
 from aiq.profiler.calc.data_models import GPUEstimates
 from aiq.profiler.calc.data_models import OutOfRangeRunsPerConcurrency
 from aiq.profiler.calc.data_models import SizingMetricPerItem
@@ -348,7 +349,8 @@ class CalcRunner:
             self.calc_per_concurrency_metrics(valid_metrics)
 
         # Use all concurrencies for slope-based GPU estimation (better data for linear regression)
-        all_runs = [(concurrency, metrics) for concurrency, metrics in valid_metrics.items()]
+        all_runs = [(concurrency, metrics) for concurrency, metrics in valid_metrics.items()
+                    if metrics.eligible_for_slope_based_estimation]
 
         if len(all_runs) < 2:
             logger.warning("Need at least 2 concurrencies with valid metrics for slope-based estimation.")
@@ -377,19 +379,29 @@ class CalcRunner:
         gpu_estimates, gpu_estimates_per_concurrency, out_of_range_runs_per_concurrency = \
             self.calc_gpu_estimate(self.metrics_per_concurrency)
 
-        # Filter out out_of_range_runs entries where all values are 0s
-        filtered_out_of_range_runs = {}
+        # Build per-concurrency data
+        per_concurrency_data = {}
         total_out_of_range_concurrencies = 0
 
-        for concurrency, out_of_range_runs in out_of_range_runs_per_concurrency.items():
-            if (out_of_range_runs.num_runs_greater_than_target_latency > 0
-                    or out_of_range_runs.num_runs_greater_than_target_runtime > 0):
-                filtered_out_of_range_runs[concurrency] = out_of_range_runs
+        for concurrency in self.metrics_per_concurrency.keys():
+            gpu_estimates_for_concurrency = gpu_estimates_per_concurrency.get(concurrency, GPUEstimatesPerConcurrency())
+            out_of_range_runs_for_concurrency = out_of_range_runs_per_concurrency.get(
+                concurrency, OutOfRangeRunsPerConcurrency())
+            sizing_metrics_for_concurrency = self.metrics_per_concurrency[concurrency]
+
+            # Only include out-of-range runs if there are actual violations
+            if (out_of_range_runs_for_concurrency.num_runs_greater_than_target_latency > 0
+                    or out_of_range_runs_for_concurrency.num_runs_greater_than_target_runtime > 0):
                 total_out_of_range_concurrencies += 1
 
-        logger.info("Found %d concurrencies with out-of-range runs (filtered from %d total)",
+            per_concurrency_data[concurrency] = CalcRunnerOutputPerConcurrency(
+                gpu_estimates=gpu_estimates_for_concurrency,
+                out_of_range_runs=out_of_range_runs_for_concurrency,
+                sizing_metrics=sizing_metrics_for_concurrency)
+
+        logger.info("Found %d concurrencies with out-of-range runs (from %d total)",
                     total_out_of_range_concurrencies,
-                    len(out_of_range_runs_per_concurrency))
+                    len(per_concurrency_data))
 
         # Log summary of GPU estimates
         if gpu_estimates.gpu_estimate_by_wf_runtime is not None:
@@ -397,10 +409,7 @@ class CalcRunner:
         if gpu_estimates.gpu_estimate_by_llm_latency is not None:
             logger.info("GPU estimate by LLM latency: %.2f", gpu_estimates.gpu_estimate_by_llm_latency)
 
-        return CalcRunnerOutput(gpu_estimates=gpu_estimates,
-                                gpu_estimates_per_concurrency=gpu_estimates_per_concurrency,
-                                out_of_range_runs_per_concurrency=filtered_out_of_range_runs,
-                                sizing_metrics_per_concurrency=self.metrics_per_concurrency)
+        return CalcRunnerOutput(gpu_estimates=gpu_estimates, per_concurrency_data=per_concurrency_data)
 
     def plot_concurrency_vs_time_metrics(self, output_dir: Path):
         """
@@ -638,7 +647,9 @@ class CalcRunner:
                                  exc_info=True)
                 continue
 
-            for concurrency, metrics in calc_output.sizing_metrics_per_concurrency.items():
+            # Extract sizing metrics from per_concurrency_data
+            for concurrency, data in calc_output.per_concurrency_data.items():
+                metrics = data.sizing_metrics
                 if concurrency not in self.metrics_per_concurrency:
                     logger.info("Adding concurrency %s from job %s (most recent available).", concurrency, job_dir.name)
                     self.metrics_per_concurrency[concurrency] = metrics
@@ -710,6 +721,7 @@ class CalcRunner:
         }
 
         # Calculate sizing metrics per concurrency
+        # if the workflow was interrupted, the metrics are not eligible for slope-based GPU estimation
         for concurrency, eval_output in self.eval_outputs.items():
             per_item_metrics = {
                 item_id:
@@ -717,11 +729,14 @@ class CalcRunner:
                 for item_id, item_metrics in eval_output.usage_stats.usage_stats_items.items()
             }
 
+            # if the workflow was interrupted, the metrics are not eligible for slope-based GPU estimation
+            eligible_for_slope_based_estimation = not eval_output.workflow_interrupted
             self.metrics_per_concurrency[concurrency] = SizingMetricsPerConcurrency(
                 llm_latency_p95=eval_output.profiler_results.llm_latency_ci.p95,
                 workflow_runtime_p95=eval_output.profiler_results.workflow_runtime_metrics.p95,
                 total_runtime=eval_output.usage_stats.total_runtime,
-                per_item_metrics=per_item_metrics)
+                per_item_metrics=per_item_metrics,
+                eligible_for_slope_based_estimation=eligible_for_slope_based_estimation)
 
         # calculate gpu estimates
         calc_runner_output = self._build_calc_runner_output()
