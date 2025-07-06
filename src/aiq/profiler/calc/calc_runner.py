@@ -77,6 +77,10 @@ class CalcRunner:
         Validate the configuration parameters.
         Raises ValueError if configuration is invalid.
         """
+        # atleast two concurrencies are needed to estimate the GPU count
+        if len(self.config.concurrencies) < 2:
+            raise ValueError("Atleast two concurrencies are needed to estimate the GPU count.")
+
         if self.config.offline_mode:
             # In offline mode target test parameters are needed to estimate the GPU count
             if self.target_latency <= 0 and self.target_runtime <= 0:
