@@ -161,7 +161,7 @@ def calc_command(ctx,
             return
         if target_llm_latency == 0 and target_workflow_runtime == 0:
             click.echo("Both --target_llm_latency and --target_workflow_runtime are 0. "
-                       "No SLA will be enforced.")
+                       "GPU count will not be estimated.")
         if test_gpu_count <= 0:
             click.echo("Test GPU count is 0. Tests will be run but the GPU count will not be estimated.")
         if target_users <= 0:
@@ -202,19 +202,6 @@ def calc_command(ctx,
                 f"Estimated GPU count (Workflow Runtime): {results.gpu_estimates.gpu_estimate_by_wf_runtime:.1f}")
         if results.gpu_estimates.gpu_estimate_by_llm_latency is not None:
             click.echo(f"Estimated GPU count (LLM Latency): {results.gpu_estimates.gpu_estimate_by_llm_latency:.1f}")
-
-        # Show recommendation based on available estimates
-        estimates = []
-        if results.gpu_estimates.gpu_estimate_by_llm_latency is not None:
-            estimates.append(results.gpu_estimates.gpu_estimate_by_llm_latency)
-        if results.gpu_estimates.gpu_estimate_by_wf_runtime is not None:
-            estimates.append(results.gpu_estimates.gpu_estimate_by_wf_runtime)
-
-        if estimates:
-            recommended_gpus = max(estimates)  # Use the higher estimate for safety
-            click.echo(f"Recommended GPU count: {recommended_gpus:.1f}")
-        else:
-            click.echo("No valid GPU estimates available.")
 
         # Check if there are any out-of-range runs to determine if we should show fail columns
         has_latency_fails = any(data.out_of_range_runs.num_runs_greater_than_target_latency > 0
@@ -264,8 +251,8 @@ def calc_command(ctx,
             headers.append("Runtime OOR")
 
         headers.extend([
-            "GPUs (LLM Latency)",
-            "GPUs (WF Runtime)",
+            "GPUs (LLM Latency, Rough)",
+            "GPUs (WF Runtime, Rough)",
         ])
 
         click.echo(tabulate(table, headers=headers, tablefmt="github"))

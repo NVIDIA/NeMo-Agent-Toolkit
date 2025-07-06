@@ -36,6 +36,7 @@ from aiq.profiler.calc.data_models import OutOfRangeRunsPerConcurrency
 from aiq.profiler.calc.data_models import SizingMetricPerItem
 from aiq.profiler.calc.data_models import SizingMetricsPerConcurrency
 from aiq.profiler.calc.utils import calc_gpu_estimate_based_on_slope
+from aiq.profiler.calc.utils import calc_gpu_estimate_for_single_concurrency
 from aiq.profiler.calc.utils import compute_slope
 from aiq.profiler.data_models import GPUEstimatesPerConcurrency
 from aiq.profiler.data_models import ProfilerResults
@@ -226,32 +227,32 @@ class CalcRunner:
             observed_latency = metrics_per_concurrency.llm_latency_p95
             observed_runtime = metrics_per_concurrency.workflow_runtime_p95
 
-            # Compute multipliers (use 1.0 as baseline when no targets specified)
-            llm_latency_multiplier = observed_latency / self.target_latency if use_latency else 1.0
-            wf_runtime_multiplier = observed_runtime / self.target_runtime if use_runtime else 1.0
-
-            # Calculate GPU estimates
-            # Base formula: (target_users / concurrency) * test_gpu_count
-            base_gpu_estimate = (self.target_users / concurrency) * self.test_gpu_count
-
-            # Apply multipliers if targets are specified
-            gpu_estimate_by_wf_runtime = base_gpu_estimate * wf_runtime_multiplier
-            gpu_estimate_by_llm_latency = base_gpu_estimate * llm_latency_multiplier
+            # Get ROUGH GPU estimates per concurrency, this is not used for the final GPU estimation
+            # it is only available for information purposes
+            gpu_estimates = calc_gpu_estimate_for_single_concurrency(target_llm_latency=self.target_latency,
+                                                                     target_workflow_runtime=self.target_runtime,
+                                                                     target_users=self.target_users,
+                                                                     test_concurrency=concurrency,
+                                                                     test_gpu_count=self.test_gpu_count,
+                                                                     observed_latency=observed_latency,
+                                                                     observed_runtime=observed_runtime)
 
             # Combined estimate (geometric mean when both targets are specified, otherwise use available one)
+            llm_latency_multiplier = observed_latency / self.target_latency if use_latency else 1.0
+            wf_runtime_multiplier = observed_runtime / self.target_runtime if use_runtime else 1.0
+            base_gpu_estimate = (self.target_users / concurrency) * self.test_gpu_count
             if use_latency and use_runtime:
                 gpu_estimate = base_gpu_estimate * wf_runtime_multiplier * llm_latency_multiplier
             elif use_latency:
-                gpu_estimate = gpu_estimate_by_llm_latency
+                gpu_estimate = gpu_estimates.gpu_estimate_by_llm_latency
             elif use_runtime:
-                gpu_estimate = gpu_estimate_by_wf_runtime
+                gpu_estimate = gpu_estimates.gpu_estimate_by_wf_runtime
             else:
-                # No targets specified - use baseline scaling
                 gpu_estimate = base_gpu_estimate
 
             gpu_estimates_per_concurrency[concurrency] = GPUEstimatesPerConcurrency(
-                gpu_estimate_by_wf_runtime=gpu_estimate_by_wf_runtime,
-                gpu_estimate_by_llm_latency=gpu_estimate_by_llm_latency,
+                gpu_estimate_by_wf_runtime=gpu_estimates.gpu_estimate_by_wf_runtime,
+                gpu_estimate_by_llm_latency=gpu_estimates.gpu_estimate_by_llm_latency,
                 gpu_estimate=gpu_estimate)
 
             # Calculate out-of-range runs based on per-item metrics (only if targets are specified)

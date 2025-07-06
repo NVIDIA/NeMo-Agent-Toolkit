@@ -104,6 +104,8 @@ class GPUEstimatesPerConcurrency(BaseModel):
     """
     GPU estimates per concurrency. These use a multiplier based on the
     target users and the test concurrency to estimate the number of GPUs required.
+    These are ROUGH estimates and are not used for the final GPU estimation.
+    The final GPU estimation is slope-based.
     """
     # gpu estimates per concurrency based on the workflow runtime
     gpu_estimate_by_wf_runtime: float | None = None
@@ -127,7 +129,8 @@ class CalcRunnerOutputPerConcurrency(BaseModel):
     """
     Output of the calc runner per concurrency.
     """
-    # GPU estimates per concurrency
+    # ROUGH GPU estimates per concurrency: these are not used for the final GPU estimation
+    # they are only available for information purposes
     gpu_estimates: GPUEstimatesPerConcurrency = GPUEstimatesPerConcurrency()
     # Out of range runs per concurrency
     out_of_range_runs: OutOfRangeRunsPerConcurrency = OutOfRangeRunsPerConcurrency()

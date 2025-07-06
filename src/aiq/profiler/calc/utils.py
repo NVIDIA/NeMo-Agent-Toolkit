@@ -181,43 +181,57 @@ def calc_gpu_estimate_based_on_slope(target_time_metric: float,
 def calc_gpu_estimate_for_single_concurrency(target_llm_latency: float,
                                              target_workflow_runtime: float,
                                              target_users: int,
+                                             test_concurrency: int,
                                              test_gpu_count: int,
                                              observed_latency: float,
                                              observed_runtime: float) -> GPUEstimatesPerConcurrency:
     """
-    Estimate GPU count to meet target latency and/or workflow runtime SLA
-    for a given target user load.
+    ROUGH ESTIMATE: Calculate GPU count estimate for a single concurrency level.
+
+    This is a simplified estimate that assumes linear scaling and should be used
+    as a baseline only. For more accurate estimates, use slope-based estimation
+    with multiple concurrency levels.
 
     Formula based on the target latency:
-        G_required = (U_target / C_test) * (L_target / L_obs) * G_test
+        G_required = (U_target / C_test) * (L_obs / L_target) * G_test
 
     Formula based on the target runtime:
-        G_required = (U_target / C_test) * (R_target / R_obs) * G_test
+        G_required = (U_target / C_test) * (R_obs / R_target) * G_test
 
     where:
         - U_target: Target number of users
-        - C_test: Test concurrency
+        - C_test: Test concurrency level
         - L_obs: Observed LLM latency
         - L_target: Target LLM latency
         - R_obs: Observed workflow runtime
         - R_target: Target workflow runtime
         - G_test: Test GPU count
+
+    WARNING: This is a rough estimate that:
+    - Assumes perfect linear scaling (rarely true in practice)
+    - Doesn't account for GPU utilization inefficiencies
+    - May underestimate GPU requirements for high concurrency
+    - Should be validated against slope-based estimates
     """
     use_latency = target_llm_latency > 0
     use_runtime = target_workflow_runtime > 0
 
-    # if observed latency or runtime exceeds the target return empty GPUEstimatesPerConcurrency
+    # If observed latency or runtime exceeds the target, return empty estimates
     if use_latency and observed_latency > target_llm_latency:
         return GPUEstimatesPerConcurrency()
 
     if use_runtime and observed_runtime > target_workflow_runtime:
         return GPUEstimatesPerConcurrency()
 
+    # Calculate multipliers (how much faster we need to be)
     llm_latency_multiplier = observed_latency / target_llm_latency if use_latency else 1.0
     wf_runtime_multiplier = observed_runtime / target_workflow_runtime if use_runtime else 1.0
 
-    gpu_estimate_by_wf_runtime = (target_users / test_gpu_count) * wf_runtime_multiplier * test_gpu_count
-    gpu_estimate_by_llm_latency = (target_users / test_gpu_count) * llm_latency_multiplier * test_gpu_count
+    # Calculate GPU estimates using the corrected formula
+    gpu_estimate_by_wf_runtime = (target_users /
+                                  test_concurrency) * wf_runtime_multiplier * test_gpu_count if use_runtime else None
+    gpu_estimate_by_llm_latency = (target_users /
+                                   test_concurrency) * llm_latency_multiplier * test_gpu_count if use_latency else None
 
     return GPUEstimatesPerConcurrency(gpu_estimate_by_wf_runtime=gpu_estimate_by_wf_runtime,
                                       gpu_estimate_by_llm_latency=gpu_estimate_by_llm_latency)
