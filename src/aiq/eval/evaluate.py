@@ -113,10 +113,12 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                 llm_latencies.append(step.event_timestamp - previous_llm_start_time)
                 previous_llm_start_time = None
 
-        # Calculate average LLM latency (or 0 if no LLM calls)
-        # This matches the profiler approach which calculates individual LLM latencies
-        # and then computes percentiles across all individual calls
-        llm_latency = sum(llm_latencies) / len(llm_latencies) if llm_latencies else 0.0
+        # Calculate p95 LLM latency (or 0 if no LLM calls)
+        if llm_latencies:
+            import numpy as np
+            llm_latency = float(np.percentile(llm_latencies, 95))
+        else:
+            llm_latency = 0.0
 
         # add the usage stats to the usage stats dict
         self.usage_stats.usage_stats_items[item.id] = UsageStatsItem(usage_stats_per_llm=usage_stats_per_llm,

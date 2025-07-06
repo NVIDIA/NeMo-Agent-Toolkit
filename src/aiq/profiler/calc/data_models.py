@@ -23,8 +23,13 @@ class CalcRunnerConfig(BaseModel):
     """
     Parameters used for a calc runner.
     """
-    # base config - not needed in offline mode
+    # base config and endpoints (if remote)- not needed in offline mode
     config_file: Path | None = None
+    # endpoint to use for the workflow
+    endpoint: str | None = None
+    # timeout for the workflow
+    endpoint_timeout: int = 300
+
     # if true workflow is not run, instead results from previous runs are used to estimate the
     # GPU count
     offline_mode: bool = False
@@ -78,7 +83,7 @@ class SizingMetricsPerConcurrency(BaseModel):
     # total workflow runtime
     total_runtime: float
     # per item metrics, key is the dataset entry id
-    per_item_metrics: dict[typing.Any, SizingMetricPerItem]
+    per_item_metrics: dict[typing.Any, SizingMetricPerItem] = {}
 
 
 class GPUEstimates(BaseModel):
@@ -107,12 +112,12 @@ class OutOfRangeRunsPerConcurrency(BaseModel):
     """
     Out of range runs.
     """
-    # number of failed runs, no output or intermediate steps are available for these runs
-    number_failed_runs: int = 0
     # number of runs that are greater than the target latency
     num_runs_greater_than_target_latency: int = 0
     # number of runs that are greater than the target runtime
     num_runs_greater_than_target_runtime: int = 0
+    # if the workflow was interrupted that pass cannot be used
+    workflow_interrupted: bool = False
 
 
 class CalcRunnerOutput(BaseModel):

@@ -21,6 +21,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from pydantic import BaseModel
 from pydantic import ValidationError
 
 from aiq.eval.config import EvaluationRunConfig
@@ -41,6 +42,15 @@ from aiq.profiler.data_models import ProfilerResults
 logger = logging.getLogger(__name__)
 
 
+class EvalRunnerOutputForSizingMetrics(BaseModel):
+    """
+    Output of a single evaluation run needed for sizing metrics.
+    """
+    profiler_results: ProfilerResults
+    usage_stats: UsageStats
+    workflow_interrupted: bool
+
+
 class CalcRunner:
     """
     Runs MultiEvaluationRunner for a list of concurrencies.
@@ -52,9 +62,8 @@ class CalcRunner:
         """
         self.config = config
 
-        #  profiler results and usage stats per-concurrency
-        self.profiler_results: dict[int, ProfilerResults] = {}
-        self.usage_stats: dict[int, UsageStats] = {}
+        # Evaluation outputs per concurrency
+        self.eval_outputs: dict[int, EvalRunnerOutputForSizingMetrics] = {}
 
         self.metrics_per_concurrency: dict[int, SizingMetricsPerConcurrency] = {}
 
@@ -248,8 +257,7 @@ class CalcRunner:
             num_runs_greater_than_target_latency = 0
             num_runs_greater_than_target_runtime = 0
 
-            if (use_latency or use_runtime) and hasattr(
-                    metrics_per_concurrency, 'per_item_metrics') and metrics_per_concurrency.per_item_metrics:
+            if (use_latency or use_runtime) and metrics_per_concurrency.per_item_metrics:
                 for item_metrics in metrics_per_concurrency.per_item_metrics.values():
                     if use_latency and item_metrics.llm_latency > self.target_latency:
                         num_runs_greater_than_target_latency += 1
@@ -259,9 +267,13 @@ class CalcRunner:
                 logger.debug("Skipping per-item processing for concurrency %d (no targets or no per-item data)",
                              concurrency)
 
+            # Get workflow interrupted status
+            workflow_interrupted = self.eval_outputs[concurrency].workflow_interrupted
+
             out_of_range_runs_per_concurrency[concurrency] = OutOfRangeRunsPerConcurrency(
                 num_runs_greater_than_target_latency=num_runs_greater_than_target_latency,
-                num_runs_greater_than_target_runtime=num_runs_greater_than_target_runtime)
+                num_runs_greater_than_target_runtime=num_runs_greater_than_target_runtime,
+                workflow_interrupted=workflow_interrupted)
 
             logger.debug(
                 "Concurrency %d: GPU estimate=%.2f (base=%.2f, wf_mult=%.3f, llm_mult=%.3f), out-of-range runs=%d",
@@ -370,7 +382,7 @@ class CalcRunner:
         total_out_of_range_concurrencies = 0
 
         for concurrency, out_of_range_runs in out_of_range_runs_per_concurrency.items():
-            if (out_of_range_runs.number_failed_runs > 0 or out_of_range_runs.num_runs_greater_than_target_latency > 0
+            if (out_of_range_runs.num_runs_greater_than_target_latency > 0
                     or out_of_range_runs.num_runs_greater_than_target_runtime > 0):
                 filtered_out_of_range_runs[concurrency] = out_of_range_runs
                 total_out_of_range_concurrencies += 1
@@ -676,7 +688,10 @@ class CalcRunner:
                                               num_passes=num_passes)
 
         # Instantiate the multi-evaluation run config
-        config = MultiEvaluationRunConfig(base_config=eval_run_config, overrides=overrides)
+        config = MultiEvaluationRunConfig(base_config=eval_run_config,
+                                          overrides=overrides,
+                                          endpoint=self.config.endpoint,
+                                          endpoint_timeout=self.config.endpoint_timeout)
 
         # Instantiate and run multi-evaluation runner
         runner = MultiEvaluationRunner(config)
@@ -685,33 +700,27 @@ class CalcRunner:
             logger.warning("No evaluation run outputs found. Skipping online mode.")
             return CalcRunnerOutput()
 
-        # Stash profiler results for post-processing
-        self.profiler_results = {
-            concurrency: output.profiler_results
-            for concurrency, output in runner.evaluation_run_outputs.items()
-        }
-
-        # Stash usage stats for post-processing
-        self.usage_stats = {
-            concurrency: output.usage_stats
+        # Stash evaluation outputs for post-processing
+        self.eval_outputs = {
+            concurrency:
+                EvalRunnerOutputForSizingMetrics(profiler_results=output.profiler_results,
+                                                 usage_stats=output.usage_stats,
+                                                 workflow_interrupted=output.workflow_interrupted)
             for concurrency, output in runner.evaluation_run_outputs.items()
         }
 
         # Calculate sizing metrics per concurrency
-        for concurrency, profiler_results in self.profiler_results.items():
-            if concurrency not in self.usage_stats:
-                logger.warning("Missing usage stats for concurrency %s. Skipping.", concurrency)
-                continue
+        for concurrency, eval_output in self.eval_outputs.items():
             per_item_metrics = {
                 item_id:
                     SizingMetricPerItem(llm_latency=item_metrics.llm_latency, workflow_runtime=item_metrics.runtime)
-                for item_id, item_metrics in self.usage_stats[concurrency].usage_stats_items.items()
+                for item_id, item_metrics in eval_output.usage_stats.usage_stats_items.items()
             }
 
             self.metrics_per_concurrency[concurrency] = SizingMetricsPerConcurrency(
-                llm_latency_p95=profiler_results.llm_latency_ci.p95,
-                workflow_runtime_p95=profiler_results.workflow_runtime_metrics.p95,
-                total_runtime=self.usage_stats[concurrency].total_runtime,
+                llm_latency_p95=eval_output.profiler_results.llm_latency_ci.p95,
+                workflow_runtime_p95=eval_output.profiler_results.workflow_runtime_metrics.p95,
+                total_runtime=eval_output.usage_stats.total_runtime,
                 per_item_metrics=per_item_metrics)
 
         # calculate gpu estimates

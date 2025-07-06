@@ -47,5 +47,7 @@ class MultiEvaluationRunner:
         """
         config_copy = copy.deepcopy(self.config.base_config)
         config_copy.override = override_value
+        config_copy.endpoint = self.config.endpoint
+        config_copy.endpoint_timeout = self.config.endpoint_timeout
         evaluation_run = EvaluationRun(config_copy)
         return await evaluation_run.run_and_evaluate()

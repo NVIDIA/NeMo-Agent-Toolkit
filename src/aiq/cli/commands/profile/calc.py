@@ -101,6 +101,20 @@ logger = logging.getLogger(__name__)
     help="Append a job to the output directory. "
     "By default append is set to False and the content of the online directory is overwritten.",
 )
+@click.option(
+    "--endpoint",
+    type=str,
+    required=False,
+    default=None,
+    help="Endpoint to use for the workflow if it is remote(optional).",
+)
+@click.option(
+    "--endpoint_timeout",
+    type=int,
+    required=False,
+    default=300,
+    help="Timeout for the remote workflow endpoint in seconds (default: 300).",
+)
 @click.pass_context
 def calc_command(ctx,
                  config_file,
@@ -112,7 +126,9 @@ def calc_command(ctx,
                  output_dir,
                  concurrencies,
                  num_passes,
-                 append_job):
+                 append_job,
+                 endpoint,
+                 endpoint_timeout):
     """Estimate GPU count and plot metrics for a workflow profile."""
     # Only use CLI concurrencies, with default
     concurrencies_list = [int(x) for x in concurrencies.split(",") if x.strip()]
@@ -165,6 +181,8 @@ def calc_command(ctx,
         num_passes=num_passes,
         offline_mode=offline_mode,
         append_job=append_job,
+        endpoint=endpoint,
+        endpoint_timeout=endpoint_timeout,
     )
 
     async def run_calc() -> CalcRunnerOutput:
@@ -201,9 +219,10 @@ def calc_command(ctx,
             click.echo("No valid GPU estimates available.")
 
         # Check if there are any out-of-range runs to determine if we should show fail columns
-        has_out_of_range_runs = any(out_of_range.num_runs_greater_than_target_latency > 0
-                                    or out_of_range.num_runs_greater_than_target_runtime > 0
-                                    for out_of_range in results.out_of_range_runs_per_concurrency.values())
+        has_latency_fails = any(out_of_range.num_runs_greater_than_target_latency > 0
+                                for out_of_range in results.out_of_range_runs_per_concurrency.values())
+        has_runtime_fails = any(out_of_range.num_runs_greater_than_target_runtime > 0
+                                for out_of_range in results.out_of_range_runs_per_concurrency.values())
 
         # Print per concurrency results as a table
         click.echo("Per concurrency results:")
@@ -221,12 +240,11 @@ def calc_command(ctx,
                 metrics.total_runtime,
             ]
 
-            # Only include fail columns if there are actual out-of-range runs
-            if has_out_of_range_runs:
-                row.extend([
-                    out_of_range_per_concurrency.num_runs_greater_than_target_latency,
-                    out_of_range_per_concurrency.num_runs_greater_than_target_runtime,
-                ])
+            # Only include fail columns if there are actual failures of that type
+            if has_latency_fails:
+                row.append(out_of_range_per_concurrency.num_runs_greater_than_target_latency)
+            if has_runtime_fails:
+                row.append(out_of_range_per_concurrency.num_runs_greater_than_target_runtime)
 
             row.extend([
                 gpu_estimates_per_concurrency.gpu_estimate_by_llm_latency,
@@ -242,12 +260,11 @@ def calc_command(ctx,
             "Total Runtime",
         ]
 
-        # Only include fail headers if there are actual out-of-range runs
-        if has_out_of_range_runs:
-            headers.extend([
-                "Latency Fails",
-                "Runtime Fails",
-            ])
+        # Only include fail headers if there are actual failures of that type
+        if has_latency_fails:
+            headers.append("Latency OOR")
+        if has_runtime_fails:
+            headers.append("Runtime OOR")
 
         headers.extend([
             "GPUs (LLM Latency)",

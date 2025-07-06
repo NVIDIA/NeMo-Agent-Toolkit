@@ -69,6 +69,8 @@ class MultiEvaluationRunConfig(BaseModel):
     starts.
     """
     base_config: EvaluationRunConfig
+    endpoint: str | None = None
+    endpoint_timeout: int = 300
     overrides: dict[typing.Any, tuple[tuple[str, str], ...]]
 
 
