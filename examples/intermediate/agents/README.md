@@ -28,7 +28,7 @@ The examples showcase 5 distinct AI Agent architectures solving a similar proble
 ## Learn More
 
 For a deeper dive into the AI Agents utilized in the examples, refer to the component documentation:
-- [ReAct Agent](../../../../docs/source/workflows/about/react-agent.md)
-- [Reasoning Agent](../../../../docs/source/workflows/about/reasoning-agent.md)
-- [Tool Calling Agent](../../../../docs/source/workflows/about/tool-calling-agent.md)
-- [ReWOO Agent](../../../../docs/source/workflows/about/rewoo-agent.md)
+- [ReAct Agent](../../../docs/source/workflows/about/react-agent.md)
+- [Reasoning Agent](../../../docs/source/workflows/about/reasoning-agent.md)
+- [Tool Calling Agent](../../../docs/source/workflows/about/tool-calling-agent.md)
+- [ReWOO Agent](../../../docs/source/workflows/about/rewoo-agent.md)

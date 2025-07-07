@@ -30,7 +30,7 @@ A configurable ReAct agent. This agent leverages the AIQ toolkit plugin system a
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
 
 ### Install this Workflow:
 
@@ -47,7 +47,7 @@ uv pip install -e '.[langchain]'
 ```
 
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
@@ -60,7 +60,7 @@ The ReAct agent can be used as either a workflow or a function, and there's an e
 If you’re looking for an example workflow where the ReAct agent runs as the main workflow, refer to [config.yml](configs/config.yml).
 To see the ReAct agent used as a function within a workflow, alongside the Reasoning Agent, refer to [config-reasoning.yml](configs/config-reasoning.yml).
 This README primarily covers the former case, where the ReAct agent functions as the main workflow, in config.yml.
-For more details, refer to the [ReAct agent documentation](../../../../../docs/source/workflows/about/react-agent.md) and the [Reasoning agent documentation](../../../../../docs/source/workflows/about/reasoning-agent.md)
+For more details, refer to the [ReAct agent documentation](../../../../docs/source/workflows/about/react-agent.md) and the [Reasoning agent documentation](../../../../docs/source/workflows/about/reasoning-agent.md)
 
 Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
