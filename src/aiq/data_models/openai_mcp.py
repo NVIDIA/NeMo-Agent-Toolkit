@@ -40,6 +40,7 @@ class OpenAIMCPSchemaTool(BaseModel):
                                             description="List of allowed tool names that can be used by the agent.")
     require_approval: MCPApprovalRequiredEnum = Field(default=MCPApprovalRequiredEnum.NEVER,
                                                       description="Specifies if approval is required for tool usage.")
-    headers: dict[str, str] | None = Field(description="Optional headers to include in requests to the tool server.")
+    headers: dict[str, str] | None = Field(default=None,
+                                           description="Optional headers to include in requests to the tool server.")
 
     model_config = ConfigDict(use_enum_values=True)

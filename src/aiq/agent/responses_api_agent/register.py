@@ -79,7 +79,7 @@ async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, 
     aiq_tools = builder.get_tools(tool_names=config.aiq_tools, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     tools.extend(aiq_tools)
     # MCP tools are optional, if provided they will be used by the agent
-    tools.extend([mcp_tool.model_dump() for mcp_tool in config.mcp_tools])
+    tools.extend([m.model_dump() for m in config.mcp_tools])
     # Built-in tools are optional, if provided they will be used by the agent
     tools.extend(config.builtin_tools)
 
