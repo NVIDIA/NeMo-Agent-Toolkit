@@ -48,7 +48,11 @@ def _extract_tools_schema(invocation_params: dict) -> list:
     tools_schema = []
     if invocation_params is not None:
         for tool in invocation_params.get("tools", []):
-            tools_schema.append(ToolSchema(**tool))
+            try:
+                tools_schema.append(ToolSchema(**tool))
+            except Exception as e:
+                logger.info("Error extracting tool schema for tool %s. Skipping.", tool)
+
 
     return tools_schema
 

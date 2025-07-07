@@ -88,7 +88,7 @@ async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, 
         llm: Runnable = llm.bind_tools(tools=tools, parallel_tool_calls= config.parallel_tool_calls, strict=True)
 
     if config.verbose:
-        logger.info(f"{AGENT_LOG_PREFIX} Using LLM: {llm.name} with tools: {[tool.name for tool in tools]}")
+        logger.info(f"{AGENT_LOG_PREFIX} Using LLM: {llm.name} with tools: {tools}")
 
     agent = ToolCallAgentGraph(
         llm = llm,
