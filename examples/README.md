@@ -21,7 +21,7 @@ Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular f
 
 ## Example Categories
 
-### Basic Examples ([`basic`](basic/))
+### Basic ([`basic`](basic/))
 - **[`scaffolding`](basic/scaffolding/)**: Workflow scaffolding and project generation using automated commands and intelligent code generation
 - **[`functions`](basic/functions/)**: Function implementation examples including:
   - [`simple`](basic/functions/simple/): LangSmith documentation agent that scrapes and answers questions about LangSmith using web retrieval and vector search
@@ -33,7 +33,7 @@ Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular f
   - [`agno_personal_finance`](basic/frameworks/agno_personal_finance/): Personal finance planning agent built with Agno framework that researches and creates tailored financial plans
   - [`semantic_kernel_demo`](basic/frameworks/semantic_kernel_demo/): Multi-agent travel planning system using Microsoft Semantic Kernel with specialized agents for itinerary creation, budget management, and report formatting, including long-term memory for user preferences
 
-### Intermediate Examples ([`intermediate`](intermediate/))
+### Intermediate ([`intermediate`](intermediate/))
 - **[`evaluation_and_profiling`](intermediate/evaluation_and_profiling/)**: Performance evaluation and profiling tools including:
   - [`swe_bench`](intermediate/evaluation_and_profiling/swe_bench/): Software engineering benchmark system for evaluating AI models on real-world coding tasks
   - [`simple_calculator_eval`](intermediate/evaluation_and_profiling/simple_calculator_eval/): Evaluation and profiling configurations based on the basic simple calculator example
@@ -57,7 +57,7 @@ Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular f
   - [`rewoo`](intermediate/agents/rewoo/): ReWOO (Reasoning WithOut Observation) agent pattern for planning-based workflows
   - [`tool_calling`](intermediate/agents/tool_calling/): Tool-calling agent with direct function invocation capabilities
 
-### Advanced Examples ([`advanced`](advanced/))
+### Advanced ([`advanced`](advanced/))
 - **[`alert_triage_agent`](advanced/alert_triage_agent/)**: Production-ready intelligent alert triage system using LangGraph that automates system monitoring diagnostics with tools for hardware checks, network connectivity, performance analysis, and generates structured triage reports with root cause categorization
 - **[`profiler_agent`](advanced/profiler_agent/)**: Performance profiling agent for analyzing AIQ toolkit workflow performance and bottlenecks using Phoenix observability server with comprehensive metrics collection and analysis
 - **[`AIQ-blueprint.md`](advanced/aiq-blueprint.md)**: Blueprint documentation for advanced system architectures and design patterns
