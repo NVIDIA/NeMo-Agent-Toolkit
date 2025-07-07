@@ -78,7 +78,7 @@ examples/
 
 
 ## Customizing the Configuration Object
-Given that the purpose of this tool will be similar to that of the `webpage_query` tool, you can use it as a reference and starting point. Examining the `webpage_query` tool configuration object from `examples/simple/src/aiq_simple/register.py`:
+Given that the purpose of this tool will be similar to that of the `webpage_query` tool, you can use it as a reference and starting point. Examining the `webpage_query` tool configuration object from `examples/basic/functions/simple/src/aiq_simple/register.py`:
 ```python
 class WebQueryToolConfig(FunctionBaseConfig, name="webpage_query"):
     webpage_url: str
@@ -109,7 +109,7 @@ The `text_file_ingest_tool` function created is already correctly associated wit
 async def text_file_ingest_tool(config: TextFileIngestToolConfig, builder: Builder):
 ```
 
-Examining the `webquery_tool` function (`examples/simple/src/aiq_simple/register.py`), you can observe that at the heart of the tool is the [`langchain_community.document_loaders.WebBaseLoader`](https://python.langchain.com/docs/integrations/document_loaders/web_base) class.
+Examining the `webquery_tool` function (`examples/basic/functions/simple/src/aiq_simple/register.py`), you can observe that at the heart of the tool is the [`langchain_community.document_loaders.WebBaseLoader`](https://python.langchain.com/docs/integrations/document_loaders/web_base) class.
 
 ```python
     loader = WebBaseLoader(config.webpage_url)
