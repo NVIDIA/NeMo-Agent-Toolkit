@@ -208,12 +208,16 @@ def calc_command(ctx,
         has_wf_runtime_gpu_estimates = any(data.gpu_estimates.gpu_estimate_by_wf_runtime is not None
                                            for data in results.per_concurrency_data.values())
 
-        # Check if there are any interrupted workflows to determine if we should show the interrupted column
-        has_interrupted_workflows = any(data.out_of_range_runs.workflow_interrupted
-                                        for data in results.per_concurrency_data.values())
+        # Check if there are any interrupted workflows to determine if we should show the alerts column
+        has_alerts = any(data.out_of_range_runs.workflow_interrupted for data in results.per_concurrency_data.values())
 
         # Print per concurrency results as a table
         click.echo("Per concurrency results:")
+
+        # Show alerts legend if there are any alerts
+        if has_alerts:
+            click.echo("Alerts: !W = Workflow interrupted")
+
         table = []
         for concurrency, data in results.per_concurrency_data.items():
             metrics = data.sizing_metrics
@@ -222,9 +226,9 @@ def calc_command(ctx,
 
             row = []
 
-            # Only include interrupted column if there are any interrupted workflows (first column)
-            if has_interrupted_workflows:
-                row.append("!" if out_of_range_per_concurrency.workflow_interrupted else "")
+            # Only include alerts column if there are any interrupted workflows (first column)
+            if has_alerts:
+                row.append("!W" if out_of_range_per_concurrency.workflow_interrupted else "")
 
             row.extend([
                 concurrency,
@@ -249,9 +253,9 @@ def calc_command(ctx,
 
         headers = []
 
-        # Only include interrupted header if there are any interrupted workflows (first column)
-        if has_interrupted_workflows:
-            headers.append("Interrupted")
+        # Only include alerts header if there are any alerts (first column)
+        if has_alerts:
+            headers.append("Alerts")
 
         headers.extend([
             "Concurrency",
