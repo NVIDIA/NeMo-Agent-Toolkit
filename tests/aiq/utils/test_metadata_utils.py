@@ -58,6 +58,19 @@ def test_generate_config_type_docs_no_docstring(base_configs: list[TypedBaseMode
                 "    field4 (str | dict[str, str]): description4.\n"
                 "    field5 (str | dict[str, int]): description5. Defaults to {'key5': 0}.")
 
+    expected_llm = ("Description unavailable.\n"
+                    "\n"
+                    "  Args:\n"
+                    "    _type (str): The type of the object.\n"
+                    "    api_type (APITypeEnum): The type of API to use for the LLM provider. "
+                    "Defaults to \"APITypeEnum.CHAT_COMPLETION\".\n"
+                    "    field0 (str): description0.\n"
+                    "    field1 (str): description1. Defaults to \"value1\".\n"
+                    "    field2 (str | None): description2.\n"
+                    "    field3 (str | None): description3. Defaults to None.\n"
+                    "    field4 (str | dict[str, str]): description4.\n"
+                    "    field5 (str | dict[str, int]): description5. Defaults to {'key5': 0}.")
+
     for base_config in base_configs:
 
         class TestConfig(base_config, name="test"):  # type: ignore
@@ -68,7 +81,10 @@ def test_generate_config_type_docs_no_docstring(base_configs: list[TypedBaseMode
             field4: str | dict[str, str] = Field(description="description4")
             field5: str | dict[str, int] = Field(default={"key5": 0}, description="description5")
 
-        assert generate_config_type_docs(TestConfig) == expected
+        if base_config == LLMBaseConfig:
+            assert generate_config_type_docs(TestConfig) == expected_llm
+        else:
+            assert generate_config_type_docs(TestConfig) == expected
 
 
 def test_generate_config_type_docs_no_args(base_configs: list[TypedBaseModelT]):
@@ -84,6 +100,19 @@ def test_generate_config_type_docs_no_args(base_configs: list[TypedBaseModelT]):
                 "    field4 (str | dict[str, str]): Description unavailable.\n"
                 "    field5 (str | dict[str, int]): Description unavailable. Defaults to {'key5': 0}.")
 
+    expected_llm = ("Notional Docstring.\n"
+                    "\n"
+                    "  Args:\n"
+                    "    _type (str): The type of the object.\n"
+                    "    api_type (APITypeEnum): The type of API to use for the LLM provider. "
+                    "Defaults to \"APITypeEnum.CHAT_COMPLETION\".\n"
+                    "    field0 (str): Description unavailable.\n"
+                    "    field1 (str): Description unavailable. Defaults to \"value1\".\n"
+                    "    field2 (str | None): Description unavailable.\n"
+                    "    field3 (str | None): Description unavailable. Defaults to None.\n"
+                    "    field4 (str | dict[str, str]): Description unavailable.\n"
+                    "    field5 (str | dict[str, int]): Description unavailable. Defaults to {'key5': 0}.")
+
     for base_config in base_configs:
 
         class TestConfig(base_config, name="test"):  # type: ignore
@@ -96,7 +125,10 @@ def test_generate_config_type_docs_no_args(base_configs: list[TypedBaseModelT]):
             field4: str | dict[str, str]
             field5: str | dict[str, int] = {"key5": 0}
 
-        assert generate_config_type_docs(TestConfig) == expected
+        if base_config == LLMBaseConfig:
+            assert generate_config_type_docs(TestConfig) == expected_llm
+        else:
+            assert generate_config_type_docs(TestConfig) == expected
 
 
 def test_generate_config_type_docs_no_docstring_and_no_args(base_configs: list[TypedBaseModelT]):
@@ -112,6 +144,19 @@ def test_generate_config_type_docs_no_docstring_and_no_args(base_configs: list[T
                 "    field4 (str | dict[str, str]): Description unavailable.\n"
                 "    field5 (str | dict[str, int]): Description unavailable. Defaults to {'key5': 0}.")
 
+    expected_llm = ("Description unavailable.\n"
+                    "\n"
+                    "  Args:\n"
+                    "    _type (str): The type of the object.\n"
+                    "    api_type (APITypeEnum): The type of API to use for the LLM provider. "
+                    "Defaults to \"APITypeEnum.CHAT_COMPLETION\".\n"
+                    "    field0 (str): Description unavailable.\n"
+                    "    field1 (str): Description unavailable. Defaults to \"value1\".\n"
+                    "    field2 (str | None): Description unavailable.\n"
+                    "    field3 (str | None): Description unavailable. Defaults to None.\n"
+                    "    field4 (str | dict[str, str]): Description unavailable.\n"
+                    "    field5 (str | dict[str, int]): Description unavailable. Defaults to {'key5': 0}.")
+
     for base_config in base_configs:
 
         class TestConfig(base_config, name="test"):  # type: ignore
@@ -123,4 +168,7 @@ def test_generate_config_type_docs_no_docstring_and_no_args(base_configs: list[T
             field4: str | dict[str, str]
             field5: str | dict[str, int] = {"key5": 0}
 
-        assert generate_config_type_docs(TestConfig) == expected
+        if base_config == LLMBaseConfig:
+            assert generate_config_type_docs(TestConfig) == expected_llm
+        else:
+            assert generate_config_type_docs(TestConfig) == expected
