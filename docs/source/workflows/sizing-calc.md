@@ -81,9 +81,9 @@ The per-concurrency metrics are stored in the `output_dir` specified in the comm
 By default the metrics of the latest run overwrite the previous runs. You can use the `--append_jobs` command line parameter to store each run in a separate subdirectory.
 
 The results of each run are available as
-1. A table, [sample table output](../_static/sizing_calc_online.png).
+1. A table, ![sample table output](../_static/sizing_calc_online.png).
 
-2. Plots, [sample analysis plot output](../_static/concurrency_vs_p95_analysis.png).
+2. Plots, ![sample analysis plot output](../_static/concurrency_vs_p95_analysis.png).
 
 3. A json file:
 `calc_runner_output.json`:
