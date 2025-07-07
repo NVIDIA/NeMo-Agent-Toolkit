@@ -97,7 +97,7 @@ async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, 
         handle_tool_errors=config.handle_tool_errors
     )
 
-    graph: CompiledGraph = agent.build_graph()
+    graph: CompiledGraph = await agent.build_graph()
 
     async def _response_fn(input_message: str) -> str:
         try:

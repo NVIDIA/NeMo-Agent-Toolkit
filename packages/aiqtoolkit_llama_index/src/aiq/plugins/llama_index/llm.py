@@ -31,7 +31,7 @@ async def nim_llama_index(llm_config: NIMModelConfig, builder: Builder):
         raise ValueError("NVIDIA AI Endpoints only supports chat completion API type. "
                          f"Received: {llm_config.api_type}")
 
-    kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
+    kwargs = llm_config.model_dump(exclude={"type", "api_type"}, by_alias=True)
 
     if ("base_url" in kwargs and kwargs["base_url"] is None):
         del kwargs["base_url"]
@@ -47,7 +47,7 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, builder: Builder):
     from llama_index.llms.openai import OpenAI
     from llama_index.llms.openai import OpenAIResponses
 
-    kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
+    kwargs = llm_config.model_dump(exclude={"type", "api_type"}, by_alias=True)
 
     if ("base_url" in kwargs and kwargs["base_url"] is None):
         del kwargs["base_url"]
@@ -76,7 +76,7 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, builder: Bu
         raise ValueError("AWS Bedrock only supports chat completion API type. "
                          f"Received: {llm_config.api_type}")
 
-    kwargs = llm_config.model_dump(exclude={"type", "max_tokens"}, by_alias=True)
+    kwargs = llm_config.model_dump(exclude={"type", "max_tokens", "api_type"}, by_alias=True)
 
     llm = Bedrock(**kwargs)
 
