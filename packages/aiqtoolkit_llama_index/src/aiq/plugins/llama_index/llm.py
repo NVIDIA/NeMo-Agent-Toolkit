@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_llm_client
@@ -22,9 +20,6 @@ from aiq.data_models.llm import APITypeEnum
 from aiq.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
-
-logger = logging.getLogger(__name__)
-
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
 async def nim_llama_index(llm_config: NIMModelConfig, builder: Builder):
@@ -62,13 +57,12 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, builder: Builder):
         yield llm
 
     elif llm_config.api_type == APITypeEnum.RESPONSES:
-        logger.warning("LLama Index OpenAIResponses class does not support aiq callback handlers. "
-                       "Intermediate steps will not be logged. ")
 
-        llm = OpenAIResponses(**kwargs)
+        llm = OpenAIResponses(**kwargs)#, callback_manager=callback_manager)
         yield llm
 
-    raise ValueError(f"Unsupported API type for OpenAI LLM: {llm_config.api_type}. "
+    else:
+        raise ValueError(f"Unsupported API type for OpenAI LLM: {llm_config.api_type}. "
                      "Supported types are: "
                      f"{APITypeEnum.CHAT_COMPLETION}, {APITypeEnum.RESPONSES}.")
 

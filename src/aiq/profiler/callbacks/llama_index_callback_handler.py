@@ -25,6 +25,8 @@ from llama_index.core.callbacks import CBEventType
 from llama_index.core.callbacks import EventPayload
 from llama_index.core.callbacks.base_handler import BaseCallbackHandler
 from llama_index.core.llms import ChatResponse
+from pydantic import BaseModel
+from pydantic import ConfigDict
 
 from aiq.builder.context import AIQContext
 from aiq.builder.framework_enum import LLMFrameworkEnum
@@ -37,6 +39,13 @@ from aiq.profiler.callbacks.base_callback_class import BaseProfilerCallback
 from aiq.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
 logger = logging.getLogger(__name__)
+
+class ServerToolUseSchema(BaseModel):
+    name: str
+    arguments: str | dict[str, Any] | Any
+    output: Any
+
+    model_config = ConfigDict(extra="ignore")
 
 
 class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
@@ -167,6 +176,17 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
                 except Exception as e:
                     logger.exception("Error getting model name: %s", e, exc_info=True)
 
+                tool_outputs_list = []
+                # Check if message.additional_kwargs as tool_outputs indicative of server side tool calling
+                if response and response.additional_kwargs and "built_in_tool_calls" in response.additional_kwargs:
+                    tools_outputs = response.additional_kwargs["built_in_tool_calls"]
+                    if isinstance(tools_outputs, list):
+                        for tool in tools_outputs:
+                            try:
+                                tool_outputs_list.append(ServerToolUseSchema(**tool.model_dump()))
+                            except Exception as e:
+                                pass
+
                 # Append usage data to AIQ Toolkit usage stats
                 with self._lock:
                     stats = IntermediateStepPayload(
@@ -176,7 +196,8 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
                         name=model_name,
                         UUID=event_id,
                         data=StreamEventData(input=self._run_id_to_llm_input.get(event_id), output=llm_text_output),
-                        metadata=TraceMetadata(chat_responses=response.message if response.message else None),
+                        metadata=TraceMetadata(chat_responses=response.message if response.message else None,
+                                               tool_outputs=tool_outputs_list if tool_outputs_list else None),
                         usage_info=UsageInfo(token_usage=TokenUsageBaseModel(**response.additional_kwargs)))
                     self.step_manager.push_intermediate_step(stats)
 
