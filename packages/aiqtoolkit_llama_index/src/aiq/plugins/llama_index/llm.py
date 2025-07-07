@@ -21,6 +21,7 @@ from aiq.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
 
+
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
 async def nim_llama_index(llm_config: NIMModelConfig, builder: Builder):
 
@@ -58,13 +59,13 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, builder: Builder):
 
     elif llm_config.api_type == APITypeEnum.RESPONSES:
 
-        llm = OpenAIResponses(**kwargs)#, callback_manager=callback_manager)
+        llm = OpenAIResponses(**kwargs)
         yield llm
 
     else:
         raise ValueError(f"Unsupported API type for OpenAI LLM: {llm_config.api_type}. "
-                     "Supported types are: "
-                     f"{APITypeEnum.CHAT_COMPLETION}, {APITypeEnum.RESPONSES}.")
+                         "Supported types are: "
+                         f"{APITypeEnum.CHAT_COMPLETION}, {APITypeEnum.RESPONSES}.")
 
 
 @register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)

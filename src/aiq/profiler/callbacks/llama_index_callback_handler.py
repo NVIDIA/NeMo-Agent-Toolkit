@@ -25,13 +25,12 @@ from llama_index.core.callbacks import CBEventType
 from llama_index.core.callbacks import EventPayload
 from llama_index.core.callbacks.base_handler import BaseCallbackHandler
 from llama_index.core.llms import ChatResponse
-from pydantic import BaseModel
-from pydantic import ConfigDict
 
 from aiq.builder.context import AIQContext
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
+from aiq.data_models.intermediate_step import ServerToolUseSchema
 from aiq.data_models.intermediate_step import StreamEventData
 from aiq.data_models.intermediate_step import TraceMetadata
 from aiq.data_models.intermediate_step import UsageInfo
@@ -39,13 +38,6 @@ from aiq.profiler.callbacks.base_callback_class import BaseProfilerCallback
 from aiq.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
 logger = logging.getLogger(__name__)
-
-class ServerToolUseSchema(BaseModel):
-    name: str
-    arguments: str | dict[str, Any] | Any
-    output: Any
-
-    model_config = ConfigDict(extra="ignore")
 
 
 class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
@@ -184,7 +176,7 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
                         for tool in tools_outputs:
                             try:
                                 tool_outputs_list.append(ServerToolUseSchema(**tool.model_dump()))
-                            except Exception as e:
+                            except Exception:
                                 pass
 
                 # Append usage data to AIQ Toolkit usage stats

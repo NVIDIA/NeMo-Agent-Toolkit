@@ -28,13 +28,12 @@ from langchain_core.messages import AIMessage
 from langchain_core.messages import BaseMessage
 from langchain_core.outputs import ChatGeneration
 from langchain_core.outputs import LLMResult
-from pydantic import BaseModel
-from pydantic import ConfigDict
 
 from aiq.builder.context import AIQContext
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
+from aiq.data_models.intermediate_step import ServerToolUseSchema
 from aiq.data_models.intermediate_step import StreamEventData
 from aiq.data_models.intermediate_step import ToolSchema
 from aiq.data_models.intermediate_step import TraceMetadata
@@ -43,16 +42,6 @@ from aiq.profiler.callbacks.base_callback_class import BaseProfilerCallback
 from aiq.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
 logger = logging.getLogger(__name__)
-
-warnings_logged_tools = set()
-
-
-class ServerToolUseSchema(BaseModel):
-    name: str
-    arguments: str | dict[str, Any] | Any
-    output: Any
-
-    model_config = ConfigDict(extra="ignore")
 
 
 def _extract_tools_schema(invocation_params: dict) -> list:
