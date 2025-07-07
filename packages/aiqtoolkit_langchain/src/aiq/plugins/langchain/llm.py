@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_llm_client
@@ -20,6 +22,8 @@ from aiq.data_models.llm import APITypeEnum
 from aiq.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
+
+logger = logging.getLogger(__name__)
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
@@ -48,6 +52,10 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
     if llm_config.api_type == APITypeEnum.RESPONSES:
         kwargs["use_responses_api"] = True
         kwargs["use_previous_response_id"] = True
+        if "stream" in kwargs and kwargs["stream"]:
+            kwargs["stream"] = False
+            logger.warning("Streaming is not supported with the OpenAI Responses API. "
+                           "Setting stream to False.")
 
     client = ChatOpenAI(**kwargs)
 
