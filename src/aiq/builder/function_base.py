@@ -373,4 +373,4 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
             return value
 
         # Fallback to the converter
-        return self._converter.convert(value, to_type=self.input_class)
+        return self._converter.convert_safe(value, to_type=self.input_class)

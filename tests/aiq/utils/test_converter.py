@@ -305,3 +305,179 @@ def test_three_hop_chain(inheritance_converter):
     result = inheritance_converter.convert(data, float)
     assert result == float(1234)
     assert isinstance(result, float)
+
+
+# --------------------------------------------------------------------
+# Unit tests for convert_safe() method
+# --------------------------------------------------------------------
+
+
+def test_convert_safe_successful_conversion(basic_converter):
+    """Test that convert_safe() works the same as convert() for successful conversions."""
+    # Test successful direct conversion
+    result = basic_converter.convert_safe("123", int)
+    assert result == 123
+    assert isinstance(result, int)
+
+    # Should be identical to regular convert() for successful cases
+    regular_result = basic_converter.convert("123", int)
+    assert result == regular_result
+
+
+def test_convert_safe_failed_conversion_returns_original(basic_converter):
+    """Test that convert_safe() returns original value when conversion fails."""
+    original_value = "not-a-number"
+    result = basic_converter.convert_safe(original_value, int)
+
+    # Should return the original value, not raise an exception
+    assert result is original_value
+    assert isinstance(result, str)
+
+
+def test_convert_safe_vs_convert_failure_behavior(basic_converter):
+    """Test that convert_safe() and convert() behave differently on failure."""
+    original_value = 123.456
+
+    # convert() should raise ValueError
+    with pytest.raises(ValueError):
+        basic_converter.convert(original_value, dict)
+
+    # convert_safe() should return original value
+    result = basic_converter.convert_safe(original_value, dict)
+    assert result is original_value
+    assert isinstance(result, float)
+
+
+def test_convert_safe_already_correct_type(basic_converter):
+    """Test that convert_safe() handles already-correct types properly."""
+    original_value = 999
+    result = basic_converter.convert_safe(original_value, int)
+    assert result is original_value  # Same object reference
+
+
+def test_convert_safe_indirect_conversion_success(basic_converter):
+    """Test that convert_safe() works with successful indirect conversions."""
+    data = {"value": "123.456"}
+    result = basic_converter.convert_safe(data, float)
+    assert result == 123.456
+    assert isinstance(result, float)
+
+
+def test_convert_safe_indirect_conversion_failure(basic_converter):
+    """Test that convert_safe() returns original value for failed indirect conversions."""
+    # This should fail because there's no path from list to dict
+    original_value = [1, 2, 3]
+    result = basic_converter.convert_safe(original_value, dict)
+    assert result is original_value
+    assert isinstance(result, list)
+
+
+def test_convert_safe_parent_fallback_success(child_converter):
+    """Test that convert_safe() works with parent fallback for successful conversions."""
+    result = child_converter.convert_safe("TRUE", bool)
+    assert result is True
+
+
+def test_convert_safe_parent_fallback_failure(child_converter):
+    """Test that convert_safe() returns original value when parent fallback fails."""
+    original_value = [1, 2, 3]
+    result = child_converter.convert_safe(original_value, dict)
+    assert result is original_value
+    assert isinstance(result, list)
+
+
+def test_convert_safe_convert_exception_handled(basic_converter):
+    """Test that convert_safe() handles ConvertException gracefully."""
+    # This will trigger ConvertException in convert_str_to_int
+    original_value = "not-a-number"
+    result = basic_converter.convert_safe(original_value, int)
+    assert result is original_value
+    assert isinstance(result, str)
+
+
+def test_convert_safe_inheritance_success(inheritance_converter):
+    """Test that convert_safe() works with inheritance-based conversions."""
+    d = Derived()
+    result = inheritance_converter.convert_safe(d, str)
+    assert result == repr(d)
+    assert isinstance(result, str)
+
+
+def test_convert_safe_inheritance_failure(inheritance_converter):
+    """Test that convert_safe() handles inheritance conversion failures."""
+    # Try to convert a list to a custom class - should fail gracefully
+    original_value = [1, 2, 3]
+    result = inheritance_converter.convert_safe(original_value, Base)
+    assert result is original_value
+    assert isinstance(result, list)
+
+
+def test_global_type_converter_convert_safe():
+    """Test that GlobalTypeConverter.convert_safe() works correctly."""
+    # Test successful conversion
+    pseudo_file = BytesIO(b"Hello World")
+    text_wrapper = TextIOWrapper(pseudo_file, encoding="utf-8")
+    result = GlobalTypeConverter.convert_safe(text_wrapper, str)
+    assert result == "Hello World"
+    assert isinstance(result, str)
+
+    # Test failed conversion
+    original_value = [1, 2, 3]
+    result = GlobalTypeConverter.convert_safe(original_value, dict)
+    assert result is original_value
+    assert isinstance(result, list)
+
+
+def test_convert_safe_multiple_failure_scenarios():
+    """Test convert_safe() with various failure scenarios."""
+    converter = TypeConverter([])  # Empty converter - everything should fail
+
+    test_cases = [
+        ("string", int),
+        (123, str),
+        ([1, 2, 3], dict),
+        ({
+            "key": "value"
+        }, list),
+        (42.5, bool),
+    ]
+
+    for original_value, target_type in test_cases:
+        result = converter.convert_safe(original_value, target_type)
+        assert result is original_value, f"Failed for {original_value} -> {target_type}"
+
+
+def test_convert_safe_preserves_object_identity():
+    """Test that convert_safe() preserves object identity when returning original values."""
+    converter = TypeConverter([])
+
+    # Test with mutable objects
+    original_list = [1, 2, 3]
+    result = converter.convert_safe(original_list, dict)
+    assert result is original_list  # Same object, not a copy
+
+    original_dict = {"key": "value"}
+    result = converter.convert_safe(original_dict, list)
+    assert result is original_dict  # Same object, not a copy
+
+
+def test_convert_safe_evaluation_system_pattern():
+    """Test that convert_safe() follows the evaluation system pattern exactly."""
+    converter = TypeConverter([convert_str_to_int])
+
+    # Successful conversion - should work normally
+    result = converter.convert_safe("123", int)
+    assert result == 123
+
+    # Failed conversion - should return original value and continue
+    # This mimics the evaluation system pattern:
+    # try:
+    #     base_output = runner.convert(base_output, to_type=str)
+    # except ValueError:
+    #     pass  # Continue with original value
+    original_value = "not-a-number"
+    result = converter.convert_safe(original_value, int)
+    assert result is original_value
+
+    # The key insight: downstream code can handle whatever type it gets
+    # Whether conversion succeeded or failed, processing continues

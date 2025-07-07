@@ -109,6 +109,18 @@ class TypeConverter:
             return result
         raise ValueError(f"Cannot convert type {type(data)} to {to_type}. No match found.")
 
+    def convert_safe(self, data, to_type: type[_T]) -> _T:
+        """
+        Converts with graceful error handling. If conversion fails, returns the original data
+        and continues processing.
+        """
+        try:
+            return self.convert(data, to_type)
+        except ValueError:
+            logger.warning("Type conversion failed, using original value. From %s to %s", type(data), to_type)
+            # Return original data, let downstream code handle it
+            return data
+
     # -------------------------------------------------
     # INTERNAL DIRECT CONVERSION (with parent fallback)
     # -------------------------------------------------
@@ -220,6 +232,10 @@ class GlobalTypeConverter:
     @staticmethod
     def convert(data, to_type: type[_T]) -> _T:
         return GlobalTypeConverter._global_converter.convert(data, to_type)
+
+    @staticmethod
+    def convert_safe(data, to_type: type[_T]) -> _T:
+        return GlobalTypeConverter._global_converter.convert_safe(data, to_type)
 
 
 TypeConverter._global_initialized = True
