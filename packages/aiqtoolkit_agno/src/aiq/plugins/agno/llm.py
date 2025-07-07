@@ -18,14 +18,24 @@ import os
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_llm_client
+from aiq.data_models.llm import APITypeEnum
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
+
+
+def _validate_no_responses_api(llm_config):
+    """Validate that the LLM config does not use the Responses API."""
+
+    if llm_config.api_type == APITypeEnum.RESPONSES:
+        raise ValueError("Responses API is not supported with Agno. Please use a different API type.")
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
 async def nim_agno(llm_config: NIMModelConfig, builder: Builder):
 
     from agno.models.nvidia import Nvidia
+
+    _validate_no_responses_api(llm_config)
 
     config_obj = {
         **llm_config.model_dump(exclude={"type", "model_name", "api_type"}, by_alias=True),
@@ -57,9 +67,24 @@ async def nim_agno(llm_config: NIMModelConfig, builder: Builder):
 async def openai_agno(llm_config: OpenAIModelConfig, builder: Builder):
 
     from agno.models.openai import OpenAIChat
+    from agno.models.openai import OpenAIResponses
 
-    config_obj = {
-        **llm_config.model_dump(exclude={"type", "api_type"}, by_alias=True),
-    }
+    if llm_config.api_type == APITypeEnum.RESPONSES:
+        config_obj = {
+            **llm_config.model_dump(exclude={"type", "model_name", "api_type", "seed", "max_tokens", "stream"},
+                                    by_alias=True),
+            "id":
+                f"{llm_config.model_name}",
+            "max_output_tokens":
+                llm_config.max_tokens,
+        }
 
-    yield OpenAIChat(**config_obj)
+        yield OpenAIResponses(**config_obj)
+    else:
+        config_obj = {
+            **llm_config.model_dump(exclude={"type", "model_name", "api_type", "stream"}, by_alias=True),
+            "id":
+                f"{llm_config.model_name}",
+        }
+
+        yield OpenAIChat(**config_obj)
