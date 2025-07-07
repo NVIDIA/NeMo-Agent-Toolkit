@@ -40,15 +40,13 @@ class ResponsesAPIAgentWorkflowConfig(FunctionBaseConfig, name="responses_api_ag
     llm_name: LLMRef = Field(description="The LLM model to use with the react agent.")
     verbose: bool = Field(default=False, description="Set the verbosity of the react agent's logging.")
     aiq_tools: list[FunctionRef] = Field(default_factory=list,
-                                              description="The list of tools to provide to the react agent.")
+                                         description="The list of tools to provide to the react agent.")
     mcp_tools: list[OpenAIMCPSchemaTool] = Field(
         default_factory=list,
-        description="List of MCP tools to use with the agent. If empty, no MCP tools will be used."
-    )
+        description="List of MCP tools to use with the agent. If empty, no MCP tools will be used.")
     builtin_tools: list[dict[str, typing.Any]] = Field(
         default_factory=list,
-        description="List of built-in tools to use with the agent. If empty, no built-in tools will be used."
-    )
+        description="List of built-in tools to use with the agent. If empty, no built-in tools will be used.")
 
     max_iterations: int = Field(default=15, description="Number of tool calls before stoping the react agent.")
     description: str = Field(default="ReAct Agent Workflow", description="The description of this functions use.")
@@ -56,20 +54,18 @@ class ResponsesAPIAgentWorkflowConfig(FunctionBaseConfig, name="responses_api_ag
                                       description="Specify whether to allow parallel tool calls in the agent.")
     handle_tool_errors: bool = Field(
         default=True,
-        description="Specify ability to handle tool calling errors. If False, tool errors will raise an exception."
-    )
+        description="Specify ability to handle tool calling errors. If False, tool errors will raise an exception.")
 
 
 @register_function(config_type=ResponsesAPIAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, builder: Builder):
     from langchain_core.messages.human import HumanMessage
-    from langchain_openai import ChatOpenAI
     from langchain_core.runnables import Runnable
+    from langchain_openai import ChatOpenAI
     from langgraph.graph.graph import CompiledGraph
 
     from aiq.agent.tool_calling_agent.agent import ToolCallAgentGraph
     from aiq.agent.tool_calling_agent.agent import ToolCallAgentGraphState
-
 
     llm: ChatOpenAI = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     assert llm.use_responses_api, "Responses API Agent requires an LLM that supports the Responses API."
@@ -85,17 +81,16 @@ async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, 
 
     # Bind tools to LLM
     if tools:
-        llm: Runnable = llm.bind_tools(tools=tools, parallel_tool_calls= config.parallel_tool_calls, strict=True)
+        llm: Runnable = llm.bind_tools(tools=tools, parallel_tool_calls=config.parallel_tool_calls, strict=True)
 
     if config.verbose:
         logger.info(f"{AGENT_LOG_PREFIX} Using LLM: {llm.name} with tools: {tools}")
 
     agent = ToolCallAgentGraph(
-        llm = llm,
-        tools = aiq_tools, # MCP and built-in tools are already bound to the LLM and need not be handled by graph
+        llm=llm,
+        tools=aiq_tools,  # MCP and built-in tools are already bound to the LLM and need not be handled by graph
         detailed_logs=config.verbose,
-        handle_tool_errors=config.handle_tool_errors
-    )
+        handle_tool_errors=config.handle_tool_errors)
 
     graph: CompiledGraph = await agent.build_graph()
 
@@ -116,11 +111,10 @@ async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, 
             output_message = state.messages[-1]  # pylint: disable=E1136
             content = output_message.content[-1]['text'] if output_message.content and isinstance(
                 output_message.content[-1], dict) and 'text' in output_message.content[-1] else str(
-                output_message.content)
+                    output_message.content)
             return content
         except Exception as ex:
-            logger.exception("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX,
-                             ex, exc_info=ex)
+            logger.exception("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
             if config.verbose:
                 return str(ex)
             return "I seem to be having a problem."
@@ -131,21 +125,3 @@ async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, 
         logger.exception("%s Workflow exited early!", AGENT_LOG_PREFIX, exc_info=True)
     finally:
         logger.debug("%s Cleaning up react_agent workflow.", AGENT_LOG_PREFIX)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

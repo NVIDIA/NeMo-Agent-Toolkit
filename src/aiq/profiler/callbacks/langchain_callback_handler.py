@@ -51,8 +51,7 @@ def _extract_tools_schema(invocation_params: dict) -> list:
             try:
                 tools_schema.append(ToolSchema(**tool))
             except Exception as e:
-                logger.info("Error extracting tool schema for tool %s. Skipping.", tool)
-
+                logger.info("Error extracting tool schema for tool %s: %s. Skipping.", tool, e)
 
     return tools_schema
 
