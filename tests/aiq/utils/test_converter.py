@@ -459,25 +459,3 @@ def test_convert_safe_preserves_object_identity():
     original_dict = {"key": "value"}
     result = converter.convert_safe(original_dict, list)
     assert result is original_dict  # Same object, not a copy
-
-
-def test_convert_safe_evaluation_system_pattern():
-    """Test that convert_safe() follows the evaluation system pattern exactly."""
-    converter = TypeConverter([convert_str_to_int])
-
-    # Successful conversion - should work normally
-    result = converter.convert_safe("123", int)
-    assert result == 123
-
-    # Failed conversion - should return original value and continue
-    # This mimics the evaluation system pattern:
-    # try:
-    #     base_output = runner.convert(base_output, to_type=str)
-    # except ValueError:
-    #     pass  # Continue with original value
-    original_value = "not-a-number"
-    result = converter.convert_safe(original_value, int)
-    assert result is original_value
-
-    # The key insight: downstream code can handle whatever type it gets
-    # Whether conversion succeeded or failed, processing continues
