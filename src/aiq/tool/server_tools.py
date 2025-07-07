@@ -23,8 +23,8 @@ class RequestAttributesTool(FunctionBaseConfig, name="current_request_attributes
     """
     A simple tool that demonstrates how to retrieve user-defined request attributes from HTTP requests
     within workflow tools. Please refer to the 'general' section of the configuration file located in the
-    'examples/simple_calculator/configs/config-metadata.yml' directory to see how to define a custom route using a
-    YAML file and associate it with a corresponding function to acquire request attributes.
+    'examples/basic/functions/simple_calculator/configs/config-metadata.yml' directory to see how to define a
+    custom route using a YAML file and associate it with a corresponding function to acquire request attributes.
     """
     pass
 

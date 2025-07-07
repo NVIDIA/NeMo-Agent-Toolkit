@@ -27,7 +27,7 @@ NVIDIA Agent Intelligence (AIQ) toolkit provides a user interface for interactin
 - Override intermediate steps with the same ID
 
 ## Walk-through
-This walk-through guides you through the steps to set up and configure the AIQ toolkit user interface. Refer to `examples/simple_calculator/README.md` to set up the simple calculator workflow demonstrated in the following walk-through properly.
+This walk-through guides you through the steps to set up and configure the AIQ toolkit user interface. Refer to `examples/basic/functions/simple_calculator/README.md` to set up the simple calculator workflow demonstrated in the following walk-through properly.
 
 
 The AIQ toolkit UI is located in a git submodule at `external/aiqtoolkit-opensource-ui`. Ensure you have checked out all of the
@@ -40,11 +40,11 @@ git submodule update --init --recursive
 You can start the AIQ toolkit server using the `aiq serve` command with the appropriate configuration file.
 
 ```bash
-aiq serve --config_file=examples/simple_calculator/configs/config.yml
+aiq serve --config_file=examples/basic/functions/simple_calculator/configs/config.yml
 ```
 Running this command will produce the expected output as shown below:
 ```bash
-2025-03-07 12:54:20,394 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/simple_calculator/configs/config.yml'
+2025-03-07 12:54:20,394 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/basic/functions/simple_calculator/configs/config.yml'
 WARNING:  Current configuration will not reload as not all conditions are met, please refer to documentation.
 INFO:     Started server process [47250]
 INFO:     Waiting for application startup.
