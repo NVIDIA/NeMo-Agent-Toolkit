@@ -114,7 +114,10 @@ async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, 
             # get and return the output from the state
             state = ToolCallAgentGraphState(**state)
             output_message = state.messages[-1]  # pylint: disable=E1136
-            return output_message.content
+            content = output_message.content[-1]['text'] if output_message.content and isinstance(
+                output_message.content[-1], dict) and 'text' in output_message.content[-1] else str(
+                output_message.content)
+            return content
         except Exception as ex:
             logger.exception("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX,
                              ex, exc_info=ex)
