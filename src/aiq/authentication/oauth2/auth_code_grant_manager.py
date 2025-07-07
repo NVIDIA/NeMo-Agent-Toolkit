@@ -371,6 +371,8 @@ class AuthCodeGrantClientManager(OAuthClientManagerBase):
         Returns:
             httpx.Headers | None: The constructed HTTP header if successful, otherwise returns None.
         """
+        import base64
+
         from aiq.authentication.interfaces import AUTHORIZATION_HEADER
 
         if not await self.validate_credentials():
@@ -380,6 +382,11 @@ class AuthCodeGrantClientManager(OAuthClientManagerBase):
         if header_auth_scheme == HeaderAuthScheme.BEARER:
             return httpx.Headers(
                 {f"{AUTHORIZATION_HEADER}": f"{HeaderAuthScheme.BEARER.value} {self._config.access_token}"})
+
+        if header_auth_scheme == HeaderAuthScheme.BASIC:
+            token = f"{self._config.client_id}:{self._config.client_secret}"
+            encoded = base64.b64encode(token.encode()).decode()
+            return httpx.Headers({f"{AUTHORIZATION_HEADER}": f"{HeaderAuthScheme.BASIC.value} {encoded}"})
 
         logger.error('Header authentication scheme not supported for provider: %s', self._config_name)
         return None
@@ -403,8 +410,13 @@ class AuthCodeGrantClientManager(OAuthClientManagerBase):
         # Build Token request body.
         headers: httpx.Headers = httpx.Headers({"Content-Type": "application/json"})
 
-        redirect_uri: str = self._construct_redirect_uri(client_authorization_path=client_authorization_path,
-                                                         client_authorization_endpoint=client_authorization_endpoint)
+        redirect_uri: str | None = self._construct_redirect_uri(
+            client_authorization_path=client_authorization_path,
+            client_authorization_endpoint=client_authorization_endpoint)
+
+        if redirect_uri is None:
+            error_message = "Invalid redirect URI"
+            raise AuthCodeGrantFlowError('invalid_redirect_uri', error_message)
 
         token_request_body: OAuth2TokenRequest = self.construct_token_request_body(
             redirect_uri=redirect_uri, authorization_code=authorization_code)
@@ -516,7 +528,7 @@ class AuthCodeGrantClientManager(OAuthClientManagerBase):
                                   code=authorization_code,
                                   grant_type=grant_type)
 
-    def _construct_redirect_uri(self, client_authorization_path: str, client_authorization_endpoint: str) -> str:
+    def _construct_redirect_uri(self, client_authorization_path: str, client_authorization_endpoint: str) -> str | None:
         """
         Constructs the redirect URI for the OAuth client by combining server URL with authorization paths.
 
@@ -527,7 +539,15 @@ class AuthCodeGrantClientManager(OAuthClientManagerBase):
         Returns:
             str: The complete redirect URI for OAuth authorization flow
         """
-        return f"{self._config.client_server_url}{client_authorization_path}{client_authorization_endpoint}"
+        from aiq.authentication.exceptions.request_exceptions import BaseUrlValidationError
+
+        try:
+            redirect_uri = f"{self._config.client_server_url}{client_authorization_path}{client_authorization_endpoint}"
+            self._request_manager._validate_base_url(redirect_uri)
+            return redirect_uri
+        except BaseUrlValidationError as e:
+            logger.error("Invalid redirect URI: %s. Error: %s", redirect_uri, str(e))
+            return None
 
     async def send_request(self,
                            url: str,

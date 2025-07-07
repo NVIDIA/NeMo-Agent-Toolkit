@@ -167,11 +167,17 @@ class _CredentialsManager(metaclass=Singleton):
                         allow_methods=default_allow_methods,
                     ))
 
-    async def wait_for_oauth_credentials(self) -> None:
+    async def wait_for_oauth_credentials(self, timeout_in_seconds: float = 30.0) -> None:
         """
         Block until the oauth credentials are set in the redirect uri.
         """
-        await self._oauth_credentials_flag.wait()
+        from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
+        try:
+            await asyncio.wait_for(self._oauth_credentials_flag.wait(), timeout=timeout_in_seconds)
+        except asyncio.TimeoutError as e:
+            raise AuthCodeGrantFlowError(
+                error_code='oauth_credentials_timeout',
+                message=f"OAuth flow timed out after {timeout_in_seconds} seconds waiting for credentials.") from e
 
     async def set_oauth_credentials(self) -> None:
         """
@@ -179,11 +185,17 @@ class _CredentialsManager(metaclass=Singleton):
         """
         self._oauth_credentials_flag.set()
 
-    async def wait_for_consent_prompt_url(self) -> None:
+    async def wait_for_consent_prompt_url(self, timeout_in_seconds: float = 30.0) -> None:
         """
         Block until the consent prompt location header has been retrieved.
         """
-        await self._consent_prompt_flag.wait()
+        from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
+        try:
+            await asyncio.wait_for(self._consent_prompt_flag.wait(), timeout=timeout_in_seconds)
+        except asyncio.TimeoutError as e:
+            raise AuthCodeGrantFlowError(
+                error_code='consent_prompt_timeout',
+                message=f"OAuth flow timed out after {timeout_in_seconds} seconds waiting for consent prompt.") from e
 
     async def set_consent_prompt_url(self) -> None:
         """

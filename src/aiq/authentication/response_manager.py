@@ -154,50 +154,71 @@ class ResponseManager:
         """
         # 400 Bad Request: Invalid refresh token provided or malformed request.
         if response.status_code == 400:
-            error_message = (f"Invalid request. Please check the request parameters. "
-                             f"Response code: {response.status_code}, Response description: {response.text}")
-            raise AuthCodeGrantFlowError('http_400_bad_request', error_message)
+            logger.error(
+                "Invalid request. Please check the request parameters. "
+                "Response code: %s, Response description: %s",
+                response.status_code,
+                response.text)
+            raise AuthCodeGrantFlowError(error_code=str(response.status_code), message=response.text)
 
         # 401 Unauthorized: Token is missing, revoked, invalid or expired.
         elif response.status_code == 401:
-            error_message = (f"Access token is missing, revoked, or expired. Please re-authenticate. "
-                             f"Response code: {response.status_code}, Response Description: {response.text}")
-            raise AuthCodeGrantFlowError('http_401_unauthorized', error_message)
+            logger.error(
+                "Access token is missing, revoked, or expired. Please re-authenticate. "
+                "Response code: %s, Response Description: %s",
+                response.status_code,
+                response.text)
+            raise AuthCodeGrantFlowError(error_code=str(response.status_code), message=response.text)
 
         # 403 Forbidden: The client is authenticated but does not have proper permission.
         elif response.status_code == 403:
-            error_message = (f"Access token is valid, but the client does not have permission to access the "
-                             f"requested resource. Please check your permissions. "
-                             f"Response code: {response.status_code}, Response Description: {response.text}")
-            raise AuthCodeGrantFlowError('http_403_forbidden', error_message)
+            logger.error(
+                "Access token is valid, but the client does not have permission to access the "
+                "requested resource. Please check your permissions. "
+                "Response code: %s, Response Description: %s",
+                response.status_code,
+                response.text)
+            raise AuthCodeGrantFlowError(error_code=str(response.status_code), message=response.text)
 
         # 404 Not Found: The requested endpoint or resource server does not exist.
         elif response.status_code == 404:
-            error_message = (f"The requested endpoint does not exist. "
-                             f"Response code: {response.status_code}, Response Description: {response.text}")
-            raise AuthCodeGrantFlowError('http_404_not_found', error_message)
+            logger.error("The requested endpoint does not exist. "
+                         "Response code: %s, Response Description: %s",
+                         response.status_code,
+                         response.text)
+            raise AuthCodeGrantFlowError(error_code=str(response.status_code), message=response.text)
 
         # 405 Method Not Allowed: HTTP method not allowed to the authorization server.
         elif response.status_code == 405:
-            error_message = (f"The HTTP method is not allowed. "
-                             f"Response code: {response.status_code}, Response Description: {response.text}")
-            raise AuthCodeGrantFlowError('http_405_method_not_allowed', error_message)
+            logger.error("The HTTP method is not allowed. "
+                         "Response code: %s, Response Description: %s",
+                         response.status_code,
+                         response.text)
+            raise AuthCodeGrantFlowError(error_code=str(response.status_code), message=response.text)
 
         # 422 Unprocessable Entity: The request was well-formed but contains semantic errors.
         elif response.status_code == 422:
-            error_message = (f"The request was well-formed but could not be processed. "
-                             f"Response code: {response.status_code}, Response Description: {response.text}")
-            raise AuthCodeGrantFlowError('http_422_unprocessable_entity', error_message)
+            logger.error(
+                "The request was well-formed but could not be processed. "
+                "Response code: %s, Response Description: %s",
+                response.status_code,
+                response.text)
+            raise AuthCodeGrantFlowError(error_code=str(response.status_code), message=response.text)
 
         # 429 Too Many Requests: The client has sent too many requests in a given amount of time.
         elif response.status_code == 429:
-            error_message = (f"Too many requests - you are being rate-limited. "
-                             f"Response code: {response.status_code}, Response Description: {response.text}")
-            raise AuthCodeGrantFlowError('http_429_too_many_requests', error_message)
+            logger.error(
+                "Too many requests - you are being rate-limited. "
+                "Response code: %s, Response Description: %s",
+                response.status_code,
+                response.text)
+            raise AuthCodeGrantFlowError(error_code=str(response.status_code), message=response.text)
         else:
-            error_message = (f"Unknown response. "
-                             f"Response code: {response.status_code}, Response Description: {response.text}")
-            raise AuthCodeGrantFlowError('http_unknown_error', error_message)
+            logger.error("Unknown response. "
+                         "Response code: %s, Response Description: %s",
+                         response.status_code,
+                         response.text)
+            raise AuthCodeGrantFlowError(error_code=str(response.status_code), message=response.text)
 
     async def _general_500_status_code_handler(self, response: httpx.Response) -> None:
         """
