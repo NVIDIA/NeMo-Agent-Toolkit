@@ -38,18 +38,19 @@ functions:
     verbose: true
 
 workflow:
-  _type: tool_calling_agent
+  _type: react_agent
   tool_names: [wikipedia_search, current_datetime, code_generation]
   llm_name: nim_llm
   verbose: true
-  handle_tool_errors: true
+  handle_parsing_errors: true
+  max_retries: 2
 
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/tool_calling_agent/
+    output_dir: ./.tmp/aiq/examples/react_agent/
     dataset:
       _type: json
-      file_path: examples/intermediate/agents/agents/data/wikipedia.json
+      file_path: examples/intermediate/agents/data/wikipedia.json
   evaluators:
     rag_accuracy:
       _type: ragas
