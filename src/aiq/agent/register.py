@@ -20,4 +20,5 @@
 from .react_agent import register as react_agent
 from .reasoning_agent import reasoning_agent
 from .rewoo_agent import register as rewoo_agent
+from .responses_api_agent import register as responses_api_agent
 from .tool_calling_agent import register as tool_calling_agent

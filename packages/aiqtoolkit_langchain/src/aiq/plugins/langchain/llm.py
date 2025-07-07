@@ -47,6 +47,7 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
 
     if llm_config.api_type == APITypeEnum.RESPONSES:
         kwargs["use_responses_api"] = True
+        kwargs["use_previous_response_id"] = True
 
     yield ChatOpenAI(**kwargs)
 

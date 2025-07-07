@@ -1,0 +1,148 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import logging
+import typing
+
+from pydantic import Field
+
+from aiq.agent.base import AGENT_LOG_PREFIX
+from aiq.builder.builder import Builder
+from aiq.builder.framework_enum import LLMFrameworkEnum
+from aiq.builder.function_info import FunctionInfo
+from aiq.cli.register_workflow import register_function
+from aiq.data_models.component_ref import FunctionRef
+from aiq.data_models.component_ref import LLMRef
+from aiq.data_models.function import FunctionBaseConfig
+from aiq.data_models.openai_mcp import OpenAIMCPSchemaTool
+
+logger = logging.getLogger(__name__)
+
+
+class ResponsesAPIAgentWorkflowConfig(FunctionBaseConfig, name="responses_api_agent"):
+    """
+    Defines an AIQ Toolkit function that uses a ReAct Agent performs reasoning inbetween tool calls, and utilizes the
+    tool names and descriptions to select the optimal tool.
+    """
+
+    llm_name: LLMRef = Field(description="The LLM model to use with the react agent.")
+    verbose: bool = Field(default=False, description="Set the verbosity of the react agent's logging.")
+    aiq_tools: list[FunctionRef] = Field(default_factory=list,
+                                              description="The list of tools to provide to the react agent.")
+    mcp_tools: list[OpenAIMCPSchemaTool] = Field(
+        default_factory=list,
+        description="List of MCP tools to use with the agent. If empty, no MCP tools will be used."
+    )
+    builtin_tools: list[dict[str, typing.Any]] = Field(
+        default_factory=list,
+        description="List of built-in tools to use with the agent. If empty, no built-in tools will be used."
+    )
+
+    max_iterations: int = Field(default=15, description="Number of tool calls before stoping the react agent.")
+    description: str = Field(default="ReAct Agent Workflow", description="The description of this functions use.")
+    parallel_tool_calls: bool = Field(default=False,
+                                      description="Specify whether to allow parallel tool calls in the agent.")
+    handle_tool_errors: bool = Field(
+        default=True,
+        description="Specify ability to handle tool calling errors. If False, tool errors will raise an exception."
+    )
+
+
+@register_function(config_type=ResponsesAPIAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
+async def responses_api_agent_workflow(config: ResponsesAPIAgentWorkflowConfig, builder: Builder):
+    from langchain_core.messages.human import HumanMessage
+    from langchain_openai import ChatOpenAI
+    from langchain_core.runnables import Runnable
+    from langgraph.graph.graph import CompiledGraph
+
+    from aiq.agent.tool_calling_agent.agent import ToolCallAgentGraph
+    from aiq.agent.tool_calling_agent.agent import ToolCallAgentGraphState
+
+
+    llm: ChatOpenAI = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    assert llm.use_responses_api, "Responses API Agent requires an LLM that supports the Responses API."
+
+    # Get tools
+    tools = []
+    aiq_tools = builder.get_tools(tool_names=config.aiq_tools, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    tools.extend(aiq_tools)
+    # MCP tools are optional, if provided they will be used by the agent
+    tools.extend([mcp_tool.model_dump() for mcp_tool in config.mcp_tools])
+    # Built-in tools are optional, if provided they will be used by the agent
+    tools.extend(config.builtin_tools)
+
+    # Bind tools to LLM
+    if tools:
+        llm: Runnable = llm.bind_tools(tools=tools, parallel_tool_calls= config.parallel_tool_calls, strict=True)
+
+    if config.verbose:
+        logger.info(f"{AGENT_LOG_PREFIX} Using LLM: {llm.name} with tools: {[tool.name for tool in tools]}")
+
+    agent = ToolCallAgentGraph(
+        llm = llm,
+        tools = aiq_tools, # MCP and built-in tools are already bound to the LLM and need not be handled by graph
+        detailed_logs=config.verbose,
+        handle_tool_errors=config.handle_tool_errors
+    )
+
+    graph: CompiledGraph = agent.build_graph()
+
+    async def _response_fn(input_message: str) -> str:
+        try:
+            # initialize the starting state with the user query
+            input_message = HumanMessage(content=input_message)
+            state = ToolCallAgentGraphState(messages=[input_message])
+
+            # run the Tool Calling Agent Graph
+            state = await graph.ainvoke(state, config={'recursion_limit': (config.max_iterations + 1) * 2})
+            # setting recursion_limit: 4 allows 1 tool call
+            #   - allows the Tool Calling Agent to perform 1 cycle / call 1 single tool,
+            #   - but stops the agent when it tries to call a tool a second time
+
+            # get and return the output from the state
+            state = ToolCallAgentGraphState(**state)
+            output_message = state.messages[-1]  # pylint: disable=E1136
+            return output_message.content
+        except Exception as ex:
+            logger.exception("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX,
+                             ex, exc_info=ex)
+            if config.verbose:
+                return str(ex)
+            return "I seem to be having a problem."
+
+    try:
+        yield FunctionInfo.from_fn(_response_fn, description=config.description)
+    except GeneratorExit:
+        logger.exception("%s Workflow exited early!", AGENT_LOG_PREFIX, exc_info=True)
+    finally:
+        logger.debug("%s Cleaning up react_agent workflow.", AGENT_LOG_PREFIX)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
