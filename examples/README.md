@@ -42,7 +42,7 @@ Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular f
 - **[`UI`](intermediate/UI/)**: User interface examples for interactive AIQ toolkit applications
 - **[`HITL`](intermediate/HITL/)**: Human-in-the-loop workflow examples including:
   - [`simple_calculator_hitl`](intermediate/HITL/simple_calculator_hitl/): Human-in-the-loop version of the basic simple calculator that requests approval before increasing the agent's iteration limits
-  - [`por_to_jiratickets`](intermediate/HITL/por_to_jiratickets/): Project requirements to JIRA ticket conversion with human oversight
+  - [`por_to_jiratickets`](intermediate/HITL/por_to_jiratickets/): Project requirements to Jira ticket conversion with human oversight
 - **[`MCP`](intermediate/MCP/)**: Model Context Protocol implementation examples:
   - [`simple_calculator_mcp`](intermediate/MCP/simple_calculator_mcp/): Demonstrates Model Context Protocol support using the basic simple calculator example
 - **[`custom_routes`](intermediate/custom_routes/)**: Custom routing and API endpoint examples:
