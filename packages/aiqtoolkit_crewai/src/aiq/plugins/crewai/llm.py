@@ -28,7 +28,7 @@ async def nim_crewai(llm_config: NIMModelConfig, builder: Builder):
     from crewai import LLM
 
     config_obj = {
-        **llm_config.model_dump(exclude={"type"}, by_alias=True),
+        **llm_config.model_dump(exclude={"type", "api_type"}, by_alias=True),
         "model": f"nvidia_nim/{llm_config.model_name}",
     }
 
@@ -54,7 +54,7 @@ async def openai_crewai(llm_config: OpenAIModelConfig, builder: Builder):
     from crewai import LLM
 
     config_obj = {
-        **llm_config.model_dump(exclude={"type"}, by_alias=True),
+        **llm_config.model_dump(exclude={"type", "api_type"}, by_alias=True),
     }
 
     yield LLM(**config_obj)

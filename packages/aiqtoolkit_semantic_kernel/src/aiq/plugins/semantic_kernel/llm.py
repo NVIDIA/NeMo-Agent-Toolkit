@@ -25,7 +25,7 @@ async def openai_semantic_kernel(llm_config: OpenAIModelConfig, builder: Builder
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
     config_obj = {
-        **llm_config.model_dump(exclude={"type"}, by_alias=True),
+        **llm_config.model_dump(exclude={"type", "api_type"}, by_alias=True),
     }
 
     llm = OpenAIChatCompletion(ai_model_id=config_obj.get("model"))

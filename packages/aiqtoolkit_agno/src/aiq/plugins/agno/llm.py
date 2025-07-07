@@ -28,7 +28,7 @@ async def nim_agno(llm_config: NIMModelConfig, builder: Builder):
     from agno.models.nvidia import Nvidia
 
     config_obj = {
-        **llm_config.model_dump(exclude={"type", "model_name"}, by_alias=True),
+        **llm_config.model_dump(exclude={"type", "model_name", "api_type"}, by_alias=True),
         "id": f"{llm_config.model_name}",
     }
 
@@ -58,7 +58,7 @@ async def openai_agno(llm_config: OpenAIModelConfig, builder: Builder):
     from agno.models.openai import OpenAIChat
 
     config_obj = {
-        **llm_config.model_dump(exclude={"type"}, by_alias=True),
+        **llm_config.model_dump(exclude={"type", "api_type"}, by_alias=True),
     }
 
     yield OpenAIChat(**config_obj)

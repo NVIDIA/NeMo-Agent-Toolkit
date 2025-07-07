@@ -33,7 +33,8 @@ logger = logging.getLogger(__name__)
 
 class ResponsesAPIAgentWorkflowConfig(FunctionBaseConfig, name="responses_api_agent"):
     """
-    Defines an AIQ Toolkit function that uses a ReAct Agent performs reasoning inbetween tool calls, and utilizes the
+    Defines an AIQ Toolkit function that uses a Responses API
+    Agent performs reasoning inbetween tool calls, and utilizes the
     tool names and descriptions to select the optimal tool.
     """
 
