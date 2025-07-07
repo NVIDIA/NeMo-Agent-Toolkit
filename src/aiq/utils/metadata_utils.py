@@ -44,6 +44,10 @@ def generate_config_type_docs(config_type: TypedBaseModelT) -> str:
         if (field_name == "type"):
             field_name = "_type"
 
+        if (field_name == "api_type"):
+            # Skip api_type field as it is not relevant for documentation
+            continue
+
         decomponsed_type = DecomposedType(field_info.annotation)
 
         if not (decomponsed_type.is_union):

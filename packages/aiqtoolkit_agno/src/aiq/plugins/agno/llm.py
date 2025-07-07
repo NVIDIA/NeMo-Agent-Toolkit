@@ -29,7 +29,8 @@ async def nim_agno(llm_config: NIMModelConfig, builder: Builder):
 
     config_obj = {
         **llm_config.model_dump(exclude={"type", "model_name", "api_type"}, by_alias=True),
-        "id": f"{llm_config.model_name}",
+        "id":
+            f"{llm_config.model_name}",
     }
 
     # Because Agno uses a different environment variable for the API key, we need to set it here manually

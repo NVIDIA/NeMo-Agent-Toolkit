@@ -29,7 +29,8 @@ async def nim_crewai(llm_config: NIMModelConfig, builder: Builder):
 
     config_obj = {
         **llm_config.model_dump(exclude={"type", "api_type"}, by_alias=True),
-        "model": f"nvidia_nim/{llm_config.model_name}",
+        "model":
+            f"nvidia_nim/{llm_config.model_name}",
     }
 
     # Because CrewAI uses a different environment variable for the API key, we need to set it here manually
