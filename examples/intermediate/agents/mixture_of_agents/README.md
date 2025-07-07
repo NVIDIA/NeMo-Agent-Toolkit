@@ -36,7 +36,7 @@ An example of a Mixture of Agents (naive Mixture of Experts / naive Agent Hyperv
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
 
 ### Install this Workflow:
 
@@ -58,7 +58,7 @@ uv pip install -e examples/basic/functions/simple_calculator
 ```
 
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
@@ -68,7 +68,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file=examples/intermediate/agents/agents/mixture_of_agents/configs/config.yml --input "who was Djikstra?"
+aiq run --config_file=examples/intermediate/agents/mixture_of_agents/configs/config.yml --input "who was Djikstra?"
 ```
 
 **Expected Output**
@@ -145,7 +145,7 @@ You can start the AIQ toolkit server using the `aiq serve` command with the appr
 **Starting the Mixture of Agents Example Workflow**
 
 ```bash
-aiq serve --config_file=examples/intermediate/agents/agents/mixture_of_agents/configs/config.yml
+aiq serve --config_file=examples/intermediate/agents/mixture_of_agents/configs/config.yml
 ```
 
 ### Making Requests to the AIQ Toolkit Server
