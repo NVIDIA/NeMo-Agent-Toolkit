@@ -80,8 +80,8 @@ logger = logging.getLogger(__name__)
     "--concurrencies",
     type=str,
     required=False,
-    default="1,2,4,8",
-    help="Comma-separated list of concurrency values to test (e.g., 1,2,4,8). Default: 1,2,4,8",
+    default="1,2,3,4,5,6,7,8,9,10",
+    help="Comma-separated list of concurrency values to test (e.g., 1,2,4,8). Default: 1,2,3,4,5,6,7,8,9,10",
 )
 @click.option(
     "--num_passes",
@@ -196,13 +196,6 @@ def calc_command(ctx,
                    f"Users = {runner_config.target_users}")
         click.echo(f"Test parameters: GPUs = {runner_config.test_gpu_count}")
 
-        # Display slope-based GPU estimates
-        if results.gpu_estimates.gpu_estimate_by_wf_runtime is not None:
-            click.echo(
-                f"Estimated GPU count (Workflow Runtime): {results.gpu_estimates.gpu_estimate_by_wf_runtime:.1f}")
-        if results.gpu_estimates.gpu_estimate_by_llm_latency is not None:
-            click.echo(f"Estimated GPU count (LLM Latency): {results.gpu_estimates.gpu_estimate_by_llm_latency:.1f}")
-
         # Check if there are any out-of-range items to determine if we should show fail columns
         has_latency_fails = any(data.out_of_range_runs.num_items_greater_than_target_latency > 0
                                 for data in results.per_concurrency_data.values())
@@ -280,6 +273,22 @@ def calc_command(ctx,
             headers.append("GPUs (WF Runtime, Rough)")
 
         click.echo(tabulate(table, headers=headers, tablefmt="github"))
+
+        # Display slope-based GPU estimates at the end
+        click.echo("")  # Add blank line for separation
+        click.echo(click.style("=== GPU ESTIMATES ===", fg="bright_blue", bold=True))
+        if results.gpu_estimates.gpu_estimate_by_wf_runtime is not None:
+            click.echo(
+                click.style(
+                    f"Estimated GPU count (Workflow Runtime): {results.gpu_estimates.gpu_estimate_by_wf_runtime:.1f}",
+                    fg="green",
+                    bold=True))
+        if results.gpu_estimates.gpu_estimate_by_llm_latency is not None:
+            click.echo(
+                click.style(
+                    f"Estimated GPU count (LLM Latency): {results.gpu_estimates.gpu_estimate_by_llm_latency:.1f}",
+                    fg="green",
+                    bold=True))
 
     results = asyncio.run(run_calc())
     print_results(results)
