@@ -18,27 +18,27 @@ limitations under the License.
 # Sizing your GPU Cluster with AIQ Toolkit
 AIQ toolkit provides a sizing calculator to estimate the GPU cluster size required for a workflow. The sizing calculator uses the evaluation system in the AIQ toolkit. Refer to the [Evaluate](./evaluate.md) documentation for more details on the evaluation system.
 
-# Quick Start
-## Gather Metrics
+## Quick Start
+### Gather Metrics
 ```
 aiq profile calc --config examples/simple_calculator/src/aiq_simple_calculator/configs/config-sizing-calc.yml --output_dir .tmp/aiq/examples/simple_calculator/calc/ --concurrencies 1,2,4,8,16,32 --num_passes 2
 ```
-## Estimate GPU Cluster Size
+### Estimate GPU Cluster Size
 ```
 aiq profile calc --offline_mode --output_dir .tmp/aiq/examples/simple_calculator/calc/ --test_gpu_count 8 --target_workflow_runtime 10 --target_users 100
 ```
 You can optionally combine the two steps and get the GPU estimate in `online_mode` by providing the target and test parameters in the previous command.
 
 
-# Detailed Guide
-## Gather Metrics
+## Detailed Guide
+### Gather Metrics
 To use the calculator you can first gather metrics from the workflow and separately size the cluster in `offline_mode` using the previously gathered metrics.
 Sample command:
 ```
 aiq profile calc --config examples/simple_calculator/src/aiq_simple_calculator/configs/config-sizing-calc.yml --output_dir .tmp/aiq/examples/simple_calculator/calc/ --concurrencies 1,2,4,8,16,32 --num_passes 2
 ```
 
-### Dataset
+#### Dataset
 To use the calculator, you need a representative dataset of inputs. The size of the dataset can be as small as one input. However if your workflow takes widely different trajectories for different inputs it is recommended to have datapoints for each trajectory.
 
 The dataset is provided in the evals section of the workflow configuration file.
@@ -68,26 +68,29 @@ For example, the following dataset is valid:
 ]
 ```
 
-### Specifying the Concurrency Range
+#### Specifying the Concurrency Range
 A slope based mechanism is used to estimate the GPU count required for the workflow. To create an accurate linear fit it is recommended to use a wide range of concurrency values. A minimum of 10 concurrency values is recommended. The concurrency range is specified as a comma separated list in the `concurrencies` command line parameter.
 
 In addition to the concurrency range you can specify the number of passes made with each concurrency. By default the number of passes is 1 or a multiple of the concurrency if the dataset is larger than the concurrency value.
 
 If the size of the dataset is smaller than the concurrency range specified, the dataset is repeated to match the concurrency range.
 
-### Sample Output
+#### Sample Output
 The per-concurrency metrics are stored in the `output_dir` specified in the command line. It is recommended to use a separate output directory for the calculator than the one used for the evaluation. This is to avoid accidental deletion of the metrics when the evaluation jobs are cleaned up.
 
 By default the metrics of the latest run overwrite the previous runs. You can use the `--append_jobs` command line parameter to store each run in a separate subdirectory.
 
-The results of each run are available as:
-#### Summary output
+The results of each run are available as a summary table, analysis plots and a JSON file.
+
+##### Sample Summary output
 ![Summary output](../_static/sizing_calc_online.png).
 
-#### Plots
+##### Sample Plots
 ![Analysis plot output](../_static/concurrency_vs_p95_analysis.png).
 
-#### JSON output for Additional Analysis
+##### JSON output for Additional Analysis
+The JSON file contains the per-concurrency metrics that can be used for additional analysis.
+Sample output:
 `calc_runner_output.json`:
 ```json
 {
@@ -113,27 +116,34 @@ The results of each run are available as:
 ```
 Output has been truncated for brevity.
 
-### Using a Remote Workflow
+#### Using a Remote Workflow
 By default the calculator runs the workflow locally to gather metrics. You can use the `--remote_endpoint` and `--remote_endpoint_timeout` command line parameters to use a remote workflow for gathering metrics.
 
-Sample usage:
+Start the Remote Workflow:
+```
+aiq start fastapi --config_file=examples/simple_calculator/src/aiq_simple_calculator/configs/config-sizing-calc.yml
+```
 
-### Failed Workflows
-WIP: Talk about interrupted workflows.
+Run the Calculator using the remote endpoint:
+```
+aiq profile calc --config_file examples/simple_calculator/src/aiq_simple_calculator/configs/config-sizing-calc.yml --output_dir .tmp/aiq/examples/simple_calculator/calc/ --concurrencies 1,2,4,8,16,32 --num_passes 2 --endpoint http://localhost:8000
+```
 
-## Estimate GPU Cluster Size
-### Target and test parameters
+#### Failed Workflows
+Based on the test setup you may encounter failures as the concurrency value increases. When a workflow fails for an input the pass is stopped for that particular concurrency value. The pass is tagged with a `workflow_interrupted` flag in the JSON output. Such concurrency fails are not included in the GPU estimate. This is information is indicated in the summary table via an `Alerts` column.
+
+- TODO: Provide a sample output with alerts.
+
+### Estimate GPU Cluster Size
+
+
+#### Target and Test Parameters:
 Target parameters:
 Test parameters:
 
-### Slope-based Estimation
+#### Slope-based Estimation
 WIP: Talk about slope-based estimation.
 
 
-### GPU Estimates
-WIP: Talk about GPU estimates.
-
-### Reough GPU Estimates
-WIP: Talk about GPU estimates.
-
-# Using the Sizing Calculator Programatically
+## Using the Sizing Calculator Programatically
+TODO: Add details
