@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import typing
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -59,25 +58,3 @@ class EvaluationRunOutput(BaseModel):
     evaluation_results: list[tuple[str, EvalOutput]]
     usage_stats: UsageStats | None = None
     profiler_results: ProfilerResults
-
-
-class MultiEvaluationRunConfig(BaseModel):
-    """
-    Parameters used for a multi-evaluation run.
-    This includes a base config and a dict of overrides. The key is an id of
-    any type.
-    Each pass loads the base config and runs to completion before the next pass
-    starts.
-    """
-    base_config: EvaluationRunConfig
-    endpoint: str | None = None
-    endpoint_timeout: int = 300
-    overrides: dict[typing.Any, tuple[tuple[str, str], ...]]
-
-
-class MultiEvaluationRunOutput(BaseModel):
-    """
-    Output of a multi-evaluation run.
-    The results per-pass are accumulated in the evaluation_runs dict.
-    """
-    evaluation_runs: dict[typing.Any, EvaluationRunOutput]

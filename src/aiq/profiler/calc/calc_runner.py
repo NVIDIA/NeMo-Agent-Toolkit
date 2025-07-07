@@ -23,7 +23,7 @@ from pydantic import BaseModel
 from pydantic import ValidationError
 
 from aiq.eval.config import EvaluationRunConfig
-from aiq.eval.config import MultiEvaluationRunConfig
+from aiq.eval.runners.config import MultiEvaluationRunConfig
 from aiq.eval.runners.multi_eval_runner import MultiEvaluationRunner
 from aiq.eval.usage_stats import UsageStats
 from aiq.profiler.calc.data_models import CalcRunnerConfig
