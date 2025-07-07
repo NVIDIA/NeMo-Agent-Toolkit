@@ -28,6 +28,8 @@ from langchain_core.messages import AIMessage
 from langchain_core.messages import BaseMessage
 from langchain_core.outputs import ChatGeneration
 from langchain_core.outputs import LLMResult
+from pydantic import BaseModel
+from pydantic import ConfigDict
 
 from aiq.builder.context import AIQContext
 from aiq.builder.framework_enum import LLMFrameworkEnum
@@ -42,6 +44,16 @@ from aiq.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
 logger = logging.getLogger(__name__)
 
+warnings_logged_tools = set()
+
+
+class ServerToolUseSchema(BaseModel):
+    name: str
+    arguments: str | dict[str, Any] | Any
+    output: Any
+
+    model_config = ConfigDict(extra="ignore")
+
 
 def _extract_tools_schema(invocation_params: dict) -> list:
 
@@ -50,8 +62,8 @@ def _extract_tools_schema(invocation_params: dict) -> list:
         for tool in invocation_params.get("tools", []):
             try:
                 tools_schema.append(ToolSchema(**tool))
-            except Exception as e:
-                logger.info("Error extracting tool schema for tool %s: %s. Skipping.", tool, e)
+            except Exception:
+                pass
 
     return tools_schema
 
@@ -216,6 +228,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # p
         except IndexError:
             generation = None
 
+        message = None
         if isinstance(generation, ChatGeneration):
             try:
                 message = generation.message
@@ -228,6 +241,17 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # p
 
         llm_text_output = generation.message.content if generation else ""
 
+        tool_outputs_list = []
+        # Check if message.additional_kwargs as tool_outputs indicative of server side tool calling
+        if message and message.additional_kwargs and "tool_outputs" in message.additional_kwargs:
+            tools_outputs = message.additional_kwargs["tool_outputs"]
+            if isinstance(tools_outputs, list):
+                for tool in tools_outputs:
+                    try:
+                        tool_outputs_list.append(ServerToolUseSchema(**tool))
+                    except Exception:
+                        pass
+
         # update shared state behind lock
         with self._lock:
             usage_stat = IntermediateStepPayload(
@@ -239,7 +263,8 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # p
                 data=StreamEventData(input=self._run_id_to_llm_input.get(str(kwargs.get("run_id", "")), ""),
                                      output=llm_text_output),
                 usage_info=UsageInfo(token_usage=self._extract_token_base_model(usage_metadata)),
-                metadata=TraceMetadata(chat_responses=[generation] if generation else []))
+                metadata=TraceMetadata(chat_responses=[generation] if generation else [],
+                                       tool_outputs=tool_outputs_list if tool_outputs_list else None))
 
             self.step_manager.push_intermediate_step(usage_stat)
 
