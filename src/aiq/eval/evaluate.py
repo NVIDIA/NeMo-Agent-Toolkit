@@ -243,9 +243,11 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         for input_item in self.eval_input.eval_input_items:
             all_stats.append(input_item.trajectory)
 
-        profiler_runner = ProfilerRunner(self.eval_config.general.profiler, self.eval_config.general.output_dir)
+        profiler_runner = ProfilerRunner(self.eval_config.general.profiler,
+                                         self.eval_config.general.output_dir,
+                                         write_output=self.config.write_output)
 
-        return await profiler_runner.run(all_stats, write_output=self.config.write_output)
+        return await profiler_runner.run(all_stats)
 
     def cleanup_output_directory(self):
         '''Remove contents of the output directory if it exists'''
@@ -479,9 +481,12 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         profiler_results = await self.profile_workflow()
 
         # compute total runtime
-        self.usage_stats.total_runtime = max(self.usage_stats.usage_stats_items.values(),
-                                             key=lambda x: x.max_timestamp).max_timestamp - \
-            min(self.usage_stats.usage_stats_items.values(), key=lambda x: x.min_timestamp).min_timestamp
+        if self.usage_stats.usage_stats_items:
+            self.usage_stats.total_runtime = max(self.usage_stats.usage_stats_items.values(),
+                                                 key=lambda x: x.max_timestamp).max_timestamp - \
+                min(self.usage_stats.usage_stats_items.values(), key=lambda x: x.min_timestamp).min_timestamp
+        else:
+            self.usage_stats.total_runtime = 0.0
 
         # Publish the results
         self.publish_output(dataset_handler, profiler_results)
