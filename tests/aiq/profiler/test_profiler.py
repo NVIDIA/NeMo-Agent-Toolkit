@@ -183,7 +183,9 @@ async def test_average_workflow_runtime(minimal_eval_config):
     ]
 
     # Initialize the ProfilerRunner
-    runner = ProfilerRunner(minimal_eval_config.general.profiler, minimal_eval_config.general.output_dir)
+    runner = ProfilerRunner(minimal_eval_config.general.profiler,
+                            minimal_eval_config.general.output_dir,
+                            write_output=True)
 
     # Run
     await runner.run(events)
@@ -230,7 +232,9 @@ async def test_average_llm_latency(minimal_eval_config):
         ]
     ]
 
-    runner = ProfilerRunner(minimal_eval_config.general.profiler, minimal_eval_config.general.output_dir)
+    runner = ProfilerRunner(minimal_eval_config.general.profiler,
+                            minimal_eval_config.general.output_dir,
+                            write_output=True)
     await runner.run(events)
 
     metrics_path = os.path.join(minimal_eval_config.general.output_dir, "inference_optimization.json")
