@@ -107,7 +107,7 @@ AIQ toolkit is a Python library that doesn’t require a GPU to run the workflow
    For example, install the Simple Calculator example with the following command.
 
      ```bash
-     uv pip install -e ./examples/simple_calculator
+     uv pip install -e ./examples/basic/functions/simple_calculator
      ```
 
 2. Verify that you've installed the AIQ toolkit library.

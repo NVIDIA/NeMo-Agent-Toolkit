@@ -74,7 +74,7 @@ Once configured, a Pydantic input schema will be generated based on the input sc
 ## Example
 The simple calculator workflow can be configured to use remote MCP tools. Sample configuration is provided in the `config-mcp-date.yml` file.
 
-`examples/simple_calculator/configs/config-mcp-date.yml`:
+`examples/basic/functions/simple_calculator/configs/config-mcp-date.yml`:
 ```yaml
 functions:
   mcp_time_tool:
@@ -85,7 +85,7 @@ functions:
 ```
 
 To run the simple calculator workflow using remote MCP tools, follow these steps:
-1. Start the remote MCP server, `mcp-server-time`, by following the instructions in the `examples/simple_calculator/deploy_external_mcp/README.md` file. Check that the server is running by running the following command:
+1. Start the remote MCP server, `mcp-server-time`, by following the instructions in the `examples/basic/functions/simple_calculator/deploy_external_mcp/README.md` file. Check that the server is running by running the following command:
 ```bash
 docker ps --filter "name=mcp-proxy-aiq-time"
 ```
@@ -97,7 +97,7 @@ CONTAINER ID   IMAGE                      COMMAND                  CREATED      
 
 2. Run the workflow using the `aiq run` command.
 ```bash
-aiq run --config_file examples/simple_calculator/configs/config-mcp-date.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+aiq run --config_file examples/basic/functions/simple_calculator/configs/config-mcp-date.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 This will use the `mcp_time_tool` function to get the current hour of the day from the MCP server.
 

@@ -28,7 +28,7 @@ The `aiq mcp` command can be used to start an MCP server that publishes the func
 To start an MCP server publishing all tools from your workflow, run the following command:
 
 ```bash
-aiq mcp --config_file examples/simple_calculator/configs/config.yml
+aiq mcp --config_file examples/basic/functions/simple_calculator/configs/config.yml
 ```
 
 This will load the workflow configuration from the specified file, start an MCP server on the default host (localhost) and port (9901), and publish all tools from the workflow as MCP tools.
@@ -36,7 +36,7 @@ This will load the workflow configuration from the specified file, start an MCP 
 You can also specify a filter to only publish a subset of tools.
 
 ```bash
-aiq mcp --config_file examples/simple_calculator/configs/config.yml \
+aiq mcp --config_file examples/basic/functions/simple_calculator/configs/config.yml \
   --tool_names calculator_multiply \
   --tool_names calculator_divide \
   --tool_names calculator_subtract \
@@ -100,11 +100,11 @@ In this example, we will use AIQ toolkit as both a MCP client and a MCP server.
 1. Start the MCP server by following the instructions in the [MCP Server Usage](#mcp-server-usage) section. `aiqtoolkit` will act as a MCP server and publish the `math` tools as MCP tools.
 2. Run the simple calculator workflow with the `config-mcp-math.yml` config file. `aiqtoolkit` will act as a MCP client and connect to the MCP server started in the previous step to access the remote tools.
 ```bash
-aiq run --config_file examples/simple_calculator/configs/config-mcp-math.yml --input "Is 2 times 2 greater than the current hour?"
+aiq run --config_file examples/basic/functions/simple_calculator/configs/config-mcp-math.yml --input "Is 2 times 2 greater than the current hour?"
 ```
 
 The functions in `config-mcp-math.yml` are configured to use the `math` tools published by the MCP server running on `http://localhost:9901/sse`.
-`examples/simple_calculator/configs/config-mcp-math.yml`:
+`examples/basic/functions/simple_calculator/configs/config-mcp-math.yml`:
 ```yaml
 functions:
   calculator_multiply:

@@ -51,6 +51,11 @@ def _get_sample_schema():
                 'title': 'OptionalString',
                 'type': 'string'
             },
+            'optional_union_field': {
+                'description': 'Optional field that needs to be a string or an integer',
+                'title': 'OptionalUnion',
+                'type': ['string', 'integer', 'null']
+            },
             'required_int_field': {
                 'description': 'Required int field.',
                 'exclusiveMaximum': 1000000,
@@ -151,6 +156,13 @@ def test_schema_generation(sample_schema):
     field_type = m.model_fields["optional_string_field_no_default"].annotation
     args = get_args(field_type)
     assert str in args and type(None) in args, f"Expected str | None, got {field_type}"
+
+    # Check that the optional union field is present
+    assert hasattr(m, "optional_union_field")
+    assert m.optional_union_field is None
+    field_type = m.model_fields["optional_union_field"].annotation
+    args = get_args(field_type)
+    assert str in args and type(None) in args and int in args, f"Expected str | None | int, got {field_type}"
 
 
 def test_schema_missing_required_fields_raises(sample_schema):
