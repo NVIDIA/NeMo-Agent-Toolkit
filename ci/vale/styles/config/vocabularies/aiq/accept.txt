@@ -89,6 +89,7 @@ onboarding
 pandas
 [Pp]arallelization
 [Pp]arsable
+Patronus
 PCIe
 PDF(s?)
 [Pp]reprocess

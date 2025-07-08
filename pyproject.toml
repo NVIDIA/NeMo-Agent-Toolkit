@@ -71,17 +71,24 @@ weave = ["aiqtoolkit-weave"]
 zep-cloud = ["aiqtoolkit-zep-cloud"]
 
 examples = [
+  "aiq_agno_personal_finance",
   "aiq_alert_triage_agent",
+  "aiq_automated_description_generation",
   "aiq_email_phishing_analyzer",
   "aiq_multi_frameworks",
   "aiq_plot_charts",
+  "aiq_por_to_jiratickets",
+  "aiq_profiler_agent",
   "aiq_semantic_kernel_demo",
-  "aiq_simple_calculator",
   "aiq_simple",
+  "aiq_simple_calculator",
+  "aiq_simple_calculator_custom_routes",
+  "aiq_simple_calculator_eval",
+  "aiq_simple_calculator_mcp",
+  "aiq_simple_calculator_observability",
+  "aiq_simple_calculator_hitl",
+  "aiq_simple_rag",
   "aiq_swe_bench",
-  "aiq_automated_description_generation",
-  "aiq_agno_personal_finance",
-  "aiq_profiler_agent"
 ]
 
 profiling = [
@@ -113,17 +120,26 @@ aiqtoolkit-agno = { workspace = true }
 aiqtoolkit-weave = { workspace = true }
 
 # All examples here
-aiq_alert_triage_agent = { path = "examples/alert_triage_agent", editable = true }
-aiq_email_phishing_analyzer = { path = "examples/email_phishing_analyzer", editable = true }
-aiq_multi_frameworks = { path = "examples/multi_frameworks", editable = true }
-aiq_plot_charts = { path = "examples/plot_charts", editable = true }
-aiq_semantic_kernel_demo = { path = "examples/semantic_kernel_demo", editable = true }
-aiq_simple = { path = "examples/simple", editable = true }
-aiq_simple_calculator = { path = "examples/simple_calculator", editable = true }
-aiq_swe_bench = { path = "examples/swe_bench", editable = true }
-aiq_automated_description_generation = { path = "examples/automated_description_generation", editable = true }
-aiq_agno_personal_finance = { path = "examples/agno_personal_finance", editable = true }
-aiq_profiler_agent = {path = "examples/profiler_agent", editable = true}
+aiq_alert_triage_agent = { path = "examples/advanced/alert_triage_agent", editable = true }
+aiq_email_phishing_analyzer = { path = "examples/intermediate/evaluation_and_profiling/email_phishing_analyzer", editable = true }
+aiq_multi_frameworks = { path = "examples/basic/frameworks/multi_frameworks", editable = true }
+aiq_plot_charts = { path = "examples/basic/functions/plot_charts", editable = true }
+aiq_semantic_kernel_demo = { path = "examples/basic/frameworks/semantic_kernel_demo", editable = true }
+aiq_simple = { path = "examples/basic/functions/simple", editable = true }
+aiq_simple_calculator = { path = "examples/basic/functions/simple_calculator", editable = true }
+aiq_swe_bench = { path = "examples/intermediate/evaluation_and_profiling/swe_bench", editable = true }
+aiq_automated_description_generation = { path = "examples/basic/functions/automated_description_generation", editable = true }
+aiq_agno_personal_finance = { path = "examples/basic/frameworks/agno_personal_finance", editable = true }
+aiq_profiler_agent = { path = "examples/advanced/profiler_agent", editable = true }
+
+# Additional examples from reorganization
+aiq_simple_rag = { path = "examples/intermediate/RAG/simple_rag", editable = true }
+aiq_por_to_jiratickets = { path = "examples/intermediate/HITL/por_to_jiratickets", editable = true }
+aiq_simple_calculator_eval = { path = "examples/intermediate/evaluation_and_profiling/simple_calculator_eval", editable = true }
+aiq_simple_calculator_observability = { path = "examples/intermediate/observability/simple_calculator_observability", editable = true }
+aiq_simple_calculator_mcp = { path = "examples/intermediate/MCP/simple_calculator_mcp", editable = true }
+aiq_simple_calculator_custom_routes = { path = "examples/intermediate/custom_routes/simple_calculator_custom_routes", editable = true }
+aiq_simple_calculator_hitl = { path = "examples/intermediate/HITL/simple_calculator_hitl", editable = true }
 
 
 [tool.uv.workspace]
