@@ -76,7 +76,7 @@ async def openai_agno(llm_config: OpenAIModelConfig, builder: Builder):
             "id":
                 f"{llm_config.model_name}",
             "max_output_tokens":
-                llm_config.max_tokens,
+                llm_config.max_tokens if hasattr(llm_config, "max_tokens") else None,
         }
 
         yield OpenAIResponses(**config_obj)
