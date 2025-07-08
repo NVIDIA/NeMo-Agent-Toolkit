@@ -189,7 +189,8 @@ aiq profile calc --offline_mode --output_dir .tmp/aiq/examples/simple_calculator
 ```
 
 ### Target and Test Parameters
-** Target Parameters **
+**Target Parameters**
+
 To estimate the GPU cluster size, you need to specify the target number of users and the target workflow runtime i.e. the maximum acceptable response time for the workflow.
 
 Optionally you can specify the target p95 LLM latency if the LLM latency is a defining factor for the workflow and if it is possible to measure the maximum acceptable LLM latency.
@@ -197,7 +198,8 @@ Optionally you can specify the target p95 LLM latency if the LLM latency is a de
 - `target_workflow_runtime`: Target p95 workflow runtime (seconds). Can be set to 0 to ignore.
 - `target_llm_latency`: Target p95 LLM latency (seconds). Can be set to 0 to ignore.
 
-** Test Parameters **
+**Test Parameters**
+
 You need to specify the number of GPUs used for running the workflow via the `--test_gpu_count` command line parameter. This is the number of GPUs used during the profiling run, not the target cluster size. This information is used to extrapolate the GPU count required for the target users.
 
 ### Slope-based Estimation
