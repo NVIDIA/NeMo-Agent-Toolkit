@@ -133,7 +133,7 @@ class CalcRunner:
         Generic slope-based GPU estimation for a given time metric (runtime or latency).
         """
         try:
-            fit = compute_slope(concurrencies, time_metrics, remove_outliers=True, min_r_squared=0.7)
+            fit = compute_slope(concurrencies, time_metrics, remove_outliers=True)
             gpu_estimate = calc_gpu_estimate_based_on_slope(target_time_metric=target_value,
                                                             target_users=self.target_users,
                                                             test_gpu_count=self.test_gpu_count,

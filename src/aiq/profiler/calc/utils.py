@@ -290,6 +290,126 @@ def calc_gpu_estimate_for_single_concurrency(target_llm_latency: float,
                         gpu_estimate_by_llm_latency=gpu_estimate_by_llm_latency)
 
 
+def plot_concurrency_vs_time_metrics_simple(df: pd.DataFrame, output_dir: Path) -> None:
+    """
+    Save a simple plot of concurrency vs. p95 LLM latency and workflow runtime.
+    """
+    plt.figure(figsize=(12, 6))
+    plt.plot(df["concurrency"], df["llm_latency_p95"], label="p95 LLM Latency (s)", marker="o", linewidth=2)
+    plt.plot(df["concurrency"], df["workflow_runtime_p95"], label="p95 Workflow Runtime (s)", marker="s", linewidth=2)
+    plt.xlabel("Concurrency")
+    plt.ylabel("Time (seconds)")
+    plt.title("Concurrency vs. p95 LLM Latency and Workflow Runtime")
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+
+    simple_plot_path = output_dir / "concurrency_vs_p95_simple.png"
+    plt.savefig(simple_plot_path, dpi=150, bbox_inches='tight')
+    plt.close()
+    logger.info("Simple plot saved to %s", simple_plot_path)
+
+
+def plot_concurrency_vs_time_metric_helper(
+    ax: plt.Axes,
+    x: np.ndarray,
+    y: np.ndarray,
+    metric_name: str,
+    y_label: str,
+    title: str,
+    color: str,
+    sla_value: float = 0.0,
+    sla_label: str = None,
+):
+    """
+    Helper to plot a metric vs concurrency with trend line, outlier highlighting, and SLA line.
+    """
+    marker = 'o'
+    outlier_marker = 'x'
+    outlier_color = 'crimson'
+    trend_color = 'r'
+    trend_linestyle = '--'
+    trend_alpha = 0.8
+    trend_linewidth = 2.0
+    note_box_color = 'mistyrose'
+    note_text_color = 'crimson'
+    legend_fontsize = 10
+    outliers_x = outliers_y = np.array([])
+    outliers_note = ""
+    if len(x) > 1:
+        try:
+            fit = compute_slope(x.tolist(), y.tolist(), remove_outliers=True)
+            if fit.outliers_removed > 0:
+                x_clean, y_clean, _ = _remove_outliers(x, y)
+                mask = np.isin(x, x_clean) & np.isin(y, y_clean)
+                outliers_x = x[~mask]
+                outliers_y = y[~mask]
+                outliers_note = f"Outliers removed: {fit.outliers_removed}"
+            ax.scatter(x,
+                       y,
+                       alpha=0.7,
+                       s=120,
+                       c=color,
+                       edgecolors='white',
+                       linewidth=1,
+                       marker=marker,
+                       label='Data Points')
+            if fit.outliers_removed > 0:
+                ax.scatter(outliers_x,
+                           outliers_y,
+                           alpha=0.9,
+                           s=140,
+                           c=outlier_color,
+                           marker=outlier_marker,
+                           label='Removed Outliers')
+            x_fit = np.linspace(x.min(), x.max(), 100)
+            y_fit = fit.slope * x_fit + fit.intercept
+            ax.plot(x_fit,
+                    y_fit,
+                    trend_linestyle,
+                    alpha=trend_alpha,
+                    linewidth=trend_linewidth,
+                    color=trend_color,
+                    label=f'Trend (slope={fit.slope:.4f}, R²={fit.r_squared:.3f})')
+        except Exception as e:
+            logger.warning(f"Could not compute slope for {metric_name}: {e}")
+            ax.scatter(x,
+                       y,
+                       alpha=0.7,
+                       s=120,
+                       c=color,
+                       edgecolors='white',
+                       linewidth=1,
+                       marker=marker,
+                       label='Data Points')
+    else:
+        ax.scatter(x, y, alpha=0.7, s=120, c=color, edgecolors='white', linewidth=1, marker=marker, label='Data Points')
+
+    if sla_value > 0:
+        ax.axhline(y=sla_value,
+                   color='red',
+                   linestyle=':',
+                   alpha=0.7,
+                   linewidth=2,
+                   label=sla_label or f'SLA Threshold ({sla_value}s)')
+
+    ax.set_xlabel('Concurrency', fontsize=12, fontweight='bold')
+    ax.set_ylabel(y_label, fontsize=12, fontweight='bold')
+    ax.set_title(title, fontsize=14, fontweight='bold')
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=legend_fontsize)
+    if outliers_note:
+        ax.text(0.98,
+                0.02,
+                outliers_note,
+                transform=ax.transAxes,
+                fontsize=10,
+                color=note_text_color,
+                ha='right',
+                va='bottom',
+                bbox=dict(boxstyle='round,pad=0.3', facecolor=note_box_color, alpha=0.7))
+
+
 def plot_concurrency_vs_time_metrics(metrics_per_concurrency: dict[int, SizingMetrics],
                                      output_dir: Path,
                                      target_latency: float = 0.0,
@@ -297,12 +417,7 @@ def plot_concurrency_vs_time_metrics(metrics_per_concurrency: dict[int, SizingMe
     """
     Plot concurrency vs. p95 latency and workflow runtime using metrics_per_concurrency.
     Enhanced with better styling, trend analysis, and annotations.
-
-    Args:
-        metrics_per_concurrency: Dictionary mapping concurrency to metrics objects
-        output_dir: Directory to save the plots
-        target_latency: Target p95 LLM latency (seconds). If 0, no SLA line is drawn
-        target_runtime: Target p95 workflow runtime (seconds). If 0, no SLA line is drawn
+    Uses compute_slope for trend lines and R², and highlights removed outliers.
     """
     rows = []
 
@@ -319,101 +434,34 @@ def plot_concurrency_vs_time_metrics(metrics_per_concurrency: dict[int, SizingMe
         logger.warning("No metrics data available to plot.")
         return
 
-    df = pd.DataFrame(rows).sort_values("concurrency")
-
-    # Create enhanced plot with better styling
     plt.style.use('seaborn-v0_8')
+    df = pd.DataFrame(rows).sort_values("concurrency")
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
 
-    # Plot 1: LLM Latency
-    ax1.scatter(df["concurrency"],
-                df["llm_latency_p95"],
-                alpha=0.7,
-                s=120,
-                c='steelblue',
-                edgecolors='white',
-                linewidth=1,
-                label='Data Points')
+    # Use the helper for both plots
+    plot_concurrency_vs_time_metric_helper(
+        ax1,
+        df["concurrency"].to_numpy(),
+        df["llm_latency_p95"].to_numpy(),
+        metric_name="latency",
+        y_label='P95 LLM Latency (seconds)',
+        title='Concurrency vs P95 LLM Latency',
+        color='steelblue',
+        sla_value=target_latency,
+        sla_label=f'SLA Threshold ({target_latency}s)' if target_latency > 0 else None,
+    )
 
-    # Add trend line for latency
-    if len(df) > 1:
-        z_latency = np.polyfit(df["concurrency"], df["llm_latency_p95"], 1)
-        p_latency = np.poly1d(z_latency)
-        slope_latency = z_latency[0]
-
-        # Calculate R-squared for latency
-        y_pred_latency = p_latency(df["concurrency"])
-        ss_res_latency = np.sum((df["llm_latency_p95"] - y_pred_latency)**2)
-        ss_tot_latency = np.sum((df["llm_latency_p95"] - df["llm_latency_p95"].mean())**2)
-        r_squared_latency = 1 - (ss_res_latency / ss_tot_latency) if ss_tot_latency != 0 else 0
-
-        ax1.plot(df["concurrency"],
-                 p_latency(df["concurrency"]),
-                 "r--",
-                 alpha=0.8,
-                 linewidth=2,
-                 label=f'Trend (slope={slope_latency:.4f}, R²={r_squared_latency:.3f})')
-
-    # Add SLA reference line for latency (only if target is positive)
-    if target_latency > 0:
-        sla_latency = target_latency
-        ax1.axhline(y=sla_latency,
-                    color='red',
-                    linestyle=':',
-                    alpha=0.7,
-                    linewidth=2,
-                    label=f'SLA Threshold ({sla_latency}s)')
-
-    ax1.set_xlabel('Concurrency', fontsize=12, fontweight='bold')
-    ax1.set_ylabel('P95 LLM Latency (seconds)', fontsize=12, fontweight='bold')
-    ax1.set_title('Concurrency vs P95 LLM Latency', fontsize=14, fontweight='bold')
-    ax1.grid(True, alpha=0.3)
-    ax1.legend(fontsize=10)
-
-    # Plot 2: Workflow Runtime
-    ax2.scatter(df["concurrency"],
-                df["workflow_runtime_p95"],
-                alpha=0.7,
-                s=120,
-                c='darkgreen',
-                edgecolors='white',
-                linewidth=1,
-                label='Data Points')
-
-    # Add trend line for runtime
-    if len(df) > 1:
-        z_runtime = np.polyfit(df["concurrency"], df["workflow_runtime_p95"], 1)
-        p_runtime = np.poly1d(z_runtime)
-        slope_runtime = z_runtime[0]
-
-        # Calculate R-squared for runtime
-        y_pred_runtime = p_runtime(df["concurrency"])
-        ss_res_runtime = np.sum((df["workflow_runtime_p95"] - y_pred_runtime)**2)
-        ss_tot_runtime = np.sum((df["workflow_runtime_p95"] - df["workflow_runtime_p95"].mean())**2)
-        r_squared_runtime = 1 - (ss_res_runtime / ss_tot_runtime) if ss_tot_runtime != 0 else 0
-
-        ax2.plot(df["concurrency"],
-                 p_runtime(df["concurrency"]),
-                 "r--",
-                 alpha=0.8,
-                 linewidth=2,
-                 label=f'Trend (slope={slope_runtime:.4f}, R²={r_squared_runtime:.3f})')
-
-    # Add SLA reference line for runtime (only if target is positive)
-    if target_runtime > 0:
-        sla_runtime = target_runtime
-        ax2.axhline(y=sla_runtime,
-                    color='red',
-                    linestyle=':',
-                    alpha=0.7,
-                    linewidth=2,
-                    label=f'SLA Threshold ({sla_runtime}s)')
-
-    ax2.set_xlabel('Concurrency', fontsize=12, fontweight='bold')
-    ax2.set_ylabel('P95 Workflow Runtime (seconds)', fontsize=12, fontweight='bold')
-    ax2.set_title('Concurrency vs P95 Workflow Runtime', fontsize=14, fontweight='bold')
-    ax2.grid(True, alpha=0.3)
-    ax2.legend(fontsize=10)
+    plot_concurrency_vs_time_metric_helper(
+        ax2,
+        df["concurrency"].to_numpy(),
+        df["workflow_runtime_p95"].to_numpy(),
+        metric_name="runtime",
+        y_label='P95 Workflow Runtime (seconds)',
+        title='Concurrency vs P95 Workflow Runtime',
+        color='darkgreen',
+        sla_value=target_runtime,
+        sla_label=f'SLA Threshold ({target_runtime}s)' if target_runtime > 0 else None,
+    )
 
     # Add summary statistics
     stats_text = f'Data Points: {len(df)}\n'
@@ -423,30 +471,14 @@ def plot_concurrency_vs_time_metrics(metrics_per_concurrency: dict[int, SizingMe
 
     fig.text(0.02, 0.02, stats_text, fontsize=10, bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8))
 
-    # Adjust layout and save with high quality
     plt.tight_layout()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save enhanced plot
     enhanced_plot_path = output_dir / "concurrency_vs_p95_analysis.png"
     plt.savefig(enhanced_plot_path, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
 
     logger.info("Enhanced plot saved to %s", enhanced_plot_path)
 
-    # Also save a simpler version for quick viewing
-    plt.figure(figsize=(12, 6))
-    plt.plot(df["concurrency"], df["llm_latency_p95"], label="p95 LLM Latency (s)", marker="o", linewidth=2)
-    plt.plot(df["concurrency"], df["workflow_runtime_p95"], label="p95 Workflow Runtime (s)", marker="s", linewidth=2)
-    plt.xlabel("Concurrency")
-    plt.ylabel("Time (seconds)")
-    plt.title("Concurrency vs. p95 LLM Latency and Workflow Runtime")
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
-
-    simple_plot_path = output_dir / "concurrency_vs_p95_simple.png"
-    plt.savefig(simple_plot_path, dpi=150, bbox_inches='tight')
-    plt.close()
-
-    logger.info("Simple plot saved to %s", simple_plot_path)
+    # Also generate a simple plot for the user to see the data points
+    plot_concurrency_vs_time_metrics_simple(df, output_dir)
