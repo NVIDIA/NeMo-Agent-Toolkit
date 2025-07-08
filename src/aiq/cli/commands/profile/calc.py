@@ -197,19 +197,19 @@ def calc_command(ctx,
         click.echo(f"Test parameters: GPUs = {runner_config.test_gpu_count}")
 
         # Check if there are any out-of-range items to determine if we should show fail columns
-        has_latency_fails = any(data.out_of_range_runs.num_items_greater_than_target_latency > 0
-                                for data in results.per_concurrency_data.values())
-        has_runtime_fails = any(data.out_of_range_runs.num_items_greater_than_target_runtime > 0
-                                for data in results.per_concurrency_data.values())
+        has_latency_fails = any(data.alerts.num_items_greater_than_target_latency > 0
+                                for data in results.calc_data.values())
+        has_runtime_fails = any(data.alerts.num_items_greater_than_target_runtime > 0
+                                for data in results.calc_data.values())
 
         # Check if there are any GPU estimates to determine if we should show GPU estimate columns
         has_llm_latency_gpu_estimates = any(data.gpu_estimates.gpu_estimate_by_llm_latency is not None
-                                            for data in results.per_concurrency_data.values())
+                                            for data in results.calc_data.values())
         has_wf_runtime_gpu_estimates = any(data.gpu_estimates.gpu_estimate_by_wf_runtime is not None
-                                           for data in results.per_concurrency_data.values())
+                                           for data in results.calc_data.values())
 
         # Check if there are any interrupted workflows to determine if we should show the alerts column
-        has_alerts = any(data.out_of_range_runs.workflow_interrupted for data in results.per_concurrency_data.values())
+        has_alerts = any(data.alerts.workflow_interrupted for data in results.calc_data.values())
 
         # Print per concurrency results as a table
         click.echo("Per concurrency results:")
@@ -219,16 +219,16 @@ def calc_command(ctx,
             click.echo("Alerts: !W = Workflow interrupted")
 
         table = []
-        for concurrency, data in results.per_concurrency_data.items():
+        for concurrency, data in results.calc_data.items():
             metrics = data.sizing_metrics
             gpu_estimates_per_concurrency = data.gpu_estimates
-            out_of_range_per_concurrency = data.out_of_range_runs
+            alerts_per_concurrency = data.alerts
 
             row = []
 
             # Only include alerts column if there are any interrupted workflows (first column)
             if has_alerts:
-                row.append("!W" if out_of_range_per_concurrency.workflow_interrupted else "")
+                row.append("!W" if alerts_per_concurrency.workflow_interrupted else "")
 
             row.extend([
                 concurrency,
@@ -239,9 +239,9 @@ def calc_command(ctx,
 
             # Only include fail columns if there are actual failures of that type
             if has_latency_fails:
-                row.append(out_of_range_per_concurrency.num_items_greater_than_target_latency)
+                row.append(alerts_per_concurrency.num_items_greater_than_target_latency)
             if has_runtime_fails:
-                row.append(out_of_range_per_concurrency.num_items_greater_than_target_runtime)
+                row.append(alerts_per_concurrency.num_items_greater_than_target_runtime)
 
             # Only include GPU estimate columns if there are actual estimates of that type
             if has_llm_latency_gpu_estimates:

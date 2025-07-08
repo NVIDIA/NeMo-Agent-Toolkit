@@ -55,7 +55,9 @@ class CalcRunnerConfig(BaseModel):
 
 
 class LinearFitResult(BaseModel):
-    """Result of linear regression including slope, intercept, and quality metrics."""
+    """
+    Result of linear regression including slope, intercept, and quality metrics.
+    """
     slope: float
     intercept: float
     r_squared: float
@@ -64,7 +66,7 @@ class LinearFitResult(BaseModel):
 
 class SizingMetricPerItem(BaseModel):
     """
-    Metrics per item.
+    Sizing metrics per dataset entry item.
     """
     # LLM latency
     llm_latency: float
@@ -72,9 +74,9 @@ class SizingMetricPerItem(BaseModel):
     workflow_runtime: float
 
 
-class SizingMetricsPerConcurrency(BaseModel):
+class SizingMetrics(BaseModel):
     """
-    Metrics per concurrency.
+    Sizing metrics for a single concurrency.
     """
     # if true, the metrics are eligible for slope-based GPU estimation
     eligible_for_slope_based_estimation: bool = False
@@ -91,51 +93,42 @@ class SizingMetricsPerConcurrency(BaseModel):
 
 class GPUEstimates(BaseModel):
     """
-    GPU estimates. These use the slope of the time vs concurrency to
-    estimate the number of GPUs required.
+    GPU estimates.
     """
-    # GPU estimate based on the slope of the runtime vs concurrency
+    # GPU estimate based on the workflow runtime
     gpu_estimate_by_wf_runtime: float | None = None
-    # GPU estimate based on the slope of the latency vs concurrency
+    # GPU estimate based on the LLM latency
     gpu_estimate_by_llm_latency: float | None = None
 
 
-class GPUEstimatesPerConcurrency(BaseModel):
+class CalcAlerts(BaseModel):
     """
-    GPU estimates per concurrency. These use a multiplier based on the
-    target users and the test concurrency to estimate the number of GPUs required.
-    These are ROUGH estimates and are not used for the final GPU estimation.
-    The final GPU estimation is slope-based.
+    Calc runner alerts.
     """
-    # gpu estimates per concurrency based on the workflow runtime
-    gpu_estimate_by_wf_runtime: float | None = None
-    # gpu estimates per concurrency based on the LLM latency
-    gpu_estimate_by_llm_latency: float | None = None
+    # if the workflow was interrupted that concurrency cannot be used
+    workflow_interrupted: bool = False
+    # if true, the run was identified as an outlier by the workflow runtime linear fit
+    outlier_workflow_runtime: bool = False
+    # if true, the run was identified as an outlier by the LLM latency linear fit
+    outlier_llm_latency: bool = False
 
-
-class OutOfRangeItemsPerConcurrency(BaseModel):
-    """
-    Out of range items per concurrency.
-    """
     # number of items that are greater than the target latency
     num_items_greater_than_target_latency: int = 0
     # number of items that are greater than the target runtime
     num_items_greater_than_target_runtime: int = 0
-    # if the workflow was interrupted that pass cannot be used
-    workflow_interrupted: bool = False
 
 
-class CalcRunnerOutputPerConcurrency(BaseModel):
+class CalcData(BaseModel):
     """
     Output of the calc runner per concurrency.
     """
     # ROUGH GPU estimates per concurrency: these are not used for the final GPU estimation
     # they are only available for information purposes
-    gpu_estimates: GPUEstimatesPerConcurrency = GPUEstimatesPerConcurrency()
-    # Out of range runs per concurrency
-    out_of_range_runs: OutOfRangeItemsPerConcurrency = OutOfRangeItemsPerConcurrency()
-    # Sizing metrics per concurrency
-    sizing_metrics: SizingMetricsPerConcurrency = SizingMetricsPerConcurrency()
+    gpu_estimates: GPUEstimates = GPUEstimates()
+    # Calc runner alerts
+    alerts: CalcAlerts = CalcAlerts()
+    # Sizing metrics
+    sizing_metrics: SizingMetrics = SizingMetrics()
 
 
 class CalcRunnerOutput(BaseModel):
@@ -146,4 +139,4 @@ class CalcRunnerOutput(BaseModel):
     gpu_estimates: GPUEstimates = GPUEstimates()
 
     # Per-concurrency data (GPU estimates, out-of-range runs, and sizing metrics)
-    per_concurrency_data: dict[int, CalcRunnerOutputPerConcurrency] = {}
+    calc_data: dict[int, CalcData] = {}

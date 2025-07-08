@@ -20,9 +20,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from aiq.profiler.calc.data_models import GPUEstimatesPerConcurrency
+from aiq.profiler.calc.data_models import GPUEstimates
 from aiq.profiler.calc.data_models import LinearFitResult
-from aiq.profiler.calc.data_models import SizingMetricsPerConcurrency
+from aiq.profiler.calc.data_models import SizingMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +171,7 @@ def _remove_outliers(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarr
     outliers_removed = np.sum(~non_outlier_mask)
 
     # Add debugging for small datasets
-    if n <= 6:
+    if n <= small_concurrency_range_threshold:
         logger.info("Outlier detection for small dataset (n=%d):", n)
         logger.info("  Data points: %s", list(zip(x, y)))
         logger.info("  Residuals: %s", residuals.tolist())
@@ -237,7 +237,7 @@ def calc_gpu_estimate_for_single_concurrency(target_llm_latency: float,
                                              test_concurrency: int,
                                              test_gpu_count: int,
                                              observed_latency: float,
-                                             observed_runtime: float) -> GPUEstimatesPerConcurrency:
+                                             observed_runtime: float) -> GPUEstimates:
     """
     ROUGH ESTIMATE: Calculate GPU count estimate for a single concurrency level.
 
@@ -271,10 +271,10 @@ def calc_gpu_estimate_for_single_concurrency(target_llm_latency: float,
 
     # If observed latency or runtime exceeds the target, return empty estimates
     if use_latency and observed_latency > target_llm_latency:
-        return GPUEstimatesPerConcurrency()
+        return GPUEstimates()
 
     if use_runtime and observed_runtime > target_workflow_runtime:
-        return GPUEstimatesPerConcurrency()
+        return GPUEstimates()
 
     # Calculate multipliers (how much faster we need to be)
     llm_latency_multiplier = observed_latency / target_llm_latency if use_latency else 1.0
@@ -286,11 +286,11 @@ def calc_gpu_estimate_for_single_concurrency(target_llm_latency: float,
     gpu_estimate_by_llm_latency = (target_users /
                                    test_concurrency) * llm_latency_multiplier * test_gpu_count if use_latency else None
 
-    return GPUEstimatesPerConcurrency(gpu_estimate_by_wf_runtime=gpu_estimate_by_wf_runtime,
-                                      gpu_estimate_by_llm_latency=gpu_estimate_by_llm_latency)
+    return GPUEstimates(gpu_estimate_by_wf_runtime=gpu_estimate_by_wf_runtime,
+                        gpu_estimate_by_llm_latency=gpu_estimate_by_llm_latency)
 
 
-def plot_concurrency_vs_time_metrics(metrics_per_concurrency: dict[int, SizingMetricsPerConcurrency],
+def plot_concurrency_vs_time_metrics(metrics_per_concurrency: dict[int, SizingMetrics],
                                      output_dir: Path,
                                      target_latency: float = 0.0,
                                      target_runtime: float = 0.0) -> None:
@@ -432,7 +432,7 @@ def plot_concurrency_vs_time_metrics(metrics_per_concurrency: dict[int, SizingMe
     plt.savefig(enhanced_plot_path, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
     plt.close()
 
-    logger.info(f"Enhanced plot saved to {enhanced_plot_path}")
+    logger.info("Enhanced plot saved to %s", enhanced_plot_path)
 
     # Also save a simpler version for quick viewing
     plt.figure(figsize=(12, 6))
@@ -449,4 +449,4 @@ def plot_concurrency_vs_time_metrics(metrics_per_concurrency: dict[int, SizingMe
     plt.savefig(simple_plot_path, dpi=150, bbox_inches='tight')
     plt.close()
 
-    logger.info(f"Simple plot saved to {simple_plot_path}")
+    logger.info("Simple plot saved to %s", simple_plot_path)
