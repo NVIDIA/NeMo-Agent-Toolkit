@@ -102,16 +102,19 @@ The summary table provides an overview of the per-concurrency metrics.
 - The P95 LLM latency is computed across all LLM invocations. If multiple models are used the value will trend towards the latency of the model with the highest latency.
 - The P95 workflow runtime is the response time of the workflow and is computed across all runs at the specified concurrency.
 - The total runtime is the total time taken to process the entire dataset at a specified concurrency level.
-
-| Concurrency | p95 LLM Latency | p95 WF Runtime | Total Runtime |
-|-------------|-----------------|----------------|---------------|
-| 1           | 1.10438         | 3.86448        | 7.71942       |
-| 2           | 1.29807         | 4.67094        | 9.03173       |
-| 4           | 4.71100         | 8.73793        | 15.2026       |
-| 8           | 1.99912         | 8.0153         | 16.2514       |
-| 16          | 3.95316         | 14.394         | 27.5015       |
-| 32          | 6.42463         | 23.3671        | 45.4901       |
-
+```
+Targets: LLM Latency ≤ 0.0s, Workflow Runtime ≤ 0.0s, Users = 0
+Test parameters: GPUs = 0
+Per concurrency results:
+|   Concurrency |   p95 LLM Latency |   p95 WF Runtime |   Total Runtime |
+|---------------|-------------------|------------------|-----------------|
+|             1 |           1.14981 |          4.03488 |         8.06977 |
+|             2 |           1.3591  |          4.71197 |         9.32298 |
+|             4 |           1.50682 |          5.67581 |        11.1683  |
+|             8 |           2.10668 |          7.90895 |        15.6193  |
+|            16 |           3.30196 |         12.677   |        25.3173  |
+|            32 |           6.57847 |         24.5307  |        43.9806  |
+```
 **Plots**
 
 The calculator generates plots to help visualize the concurrency vs. time metrics.
@@ -167,16 +170,18 @@ Based on the test setup you may encounter failures as the concurrency value incr
 
 **Sample output with alerts:**
 ```
+Targets: LLM Latency ≤ 0.0s, Workflow Runtime ≤ 0.0s, Users = 0
+Test parameters: GPUs = 0
 Per concurrency results:
 Alerts: !W = Workflow interrupted
-| Alerts | Concurrency | p95 LLM Latency | p95 WF Runtime | Total Runtime |
-|--------|-------------|-----------------|----------------|---------------|
-|        | 1           | 1.10438         | 3.86448        | 7.71942       |
-|        | 2           | 1.29807         | 4.67094        | 9.03173       |
-| !W     | 4           | 4.71100         | 8.73793        | 15.2026       |
-|        | 8           | 1.99912         | 8.0153         | 16.2514       |
-|        | 16          | 3.95316         | 14.394         | 27.5015       |
-|        | 32          | 6.42463         | 23.3671        | 45.4901       |
+| Alerts |   Concurrency |   p95 LLM Latency |   p95 WF Runtime |   Total Runtime |
+|--------|---------------|-------------------|------------------|-----------------|
+|        | 1             | 1.14981           | 4.03488          |         8.06977 |
+|        | 2             | 1.3591            | 4.71197          |         9.32298 |
+| !W     | 4             | 1.50682           | 5.67581          |         11.1683 |
+|        | 8             | 2.10668           | 7.90895          |         15.6193 |
+|        | 16            | 3.30196           | 12.677           |         25.3173 |
+|        | 32            | 6.57847           | 24.5307          |         43.9806 |
 ```
 
 In this example, the workflow failed at concurrency level 4 (indicated by `!W` in the Alerts column). The time metrics for concurrency 4 are not included in the GPU estimate as they are not reliable and may skew the linear fit used to estimate the GPU count.
@@ -263,22 +268,21 @@ The sizing calculator provides two GPU count estimates:
 You can use a maximum of the two estimates as the final GPU count to accommodate the target users.
 
 **Sample output:**
-
 ```
 Targets: LLM Latency ≤ 0.0s, Workflow Runtime ≤ 10.0s, Users = 100
 Test parameters: GPUs = 8
 Per concurrency results:
-| Concurrency | p95 LLM Latency | p95 WF Runtime | Total Runtime | Runtime OOR | GPUs (WF Runtime, Rough) |
-|-------------|-----------------|----------------|---------------|-------------|--------------------------|
-| 1           | 1.10438         | 3.86448        | 7.71942       | 0           | 309.158                  |
-| 2           | 1.29807         | 4.67094        | 9.03173       | 0           | 186.837                  |
-| 4           | 4.71100         | 8.73793        | 15.2026       | 0           | 174.759                  |
-| 8           | 1.99912         | 8.0153         | 16.2514       | 0           | 80.153                   |
-| 16          | 3.95316         | 14.394         | 27.5015       | 32          |                          |
-| 32          | 6.42463         | 23.3671        | 45.4901       | 64          |                          |
+|   Concurrency |   p95 LLM Latency |   p95 WF Runtime |   Total Runtime |   Runtime OOR |   GPUs (WF Runtime, Rough) |
+|---------------|-------------------|------------------|-----------------|---------------|----------------------------|
+|             1 |           1.14981 |          4.03488 |         8.06977 |             0 |                   322.79   |
+|             2 |           1.3591  |          4.71197 |         9.32298 |             0 |                   188.479  |
+|             4 |           1.50682 |          5.67581 |        11.1683  |             0 |                   113.516  |
+|             8 |           2.10668 |          7.90895 |        15.6193  |             0 |                    79.0895 |
+|            16 |           3.30196 |         12.677   |        25.3173  |            32 |                            |
+|            32 |           6.57847 |         24.5307  |        43.9806  |            64 |                            |
 
 === GPU ESTIMATES ===
-Estimated GPU count (Workflow Runtime): 76.6
+Estimated GPU count (Workflow Runtime): 75.4
 ```
 
 **Note:**
