@@ -18,7 +18,7 @@ import time
 import uuid
 
 from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import OAuthClientManagerBase
+from aiq.authentication.interfaces import OAuthClientBase
 from aiq.data_models.authentication import AuthenticationEndpoint
 from aiq.data_models.authentication import ConsentPromptMode
 from aiq.data_models.interactive import HumanPrompt
@@ -55,7 +55,7 @@ class AIQUserInteractionManager:
         raise NotImplementedError("No human prompt callback was registered. Unable to handle requested prompt.")
 
     @staticmethod
-    async def user_auth_callback_default(oauth_client: OAuthClientManagerBase,
+    async def user_auth_callback_default(oauth_client: OAuthClientBase,
                                          consent_prompt_mode: ConsentPromptMode) -> AuthenticationError | None:
         """
         Default callback handler for user authentication strategy. This no-op function raises a NotImplementedError
@@ -91,8 +91,7 @@ class AIQUserInteractionManager:
 
         return sys_human_interaction
 
-    async def authenticate_oauth_client(self,
-                                        oauth_client: OAuthClientManagerBase,
+    async def authenticate_oauth_client(self, oauth_client: OAuthClientBase,
                                         consent_prompt_handle: ConsentPromptMode) -> AuthenticationError | None:
         # pylint: disable=pointless-statement
         f"""

@@ -42,7 +42,7 @@ class _FastApiFrontEndController:
 
     async def start_server(self) -> None:
         "Starts the API server."
-        from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantFlowError
+        from aiq.authentication.oauth2.auth_code_grant_client import AuthCodeGrantFlowError
         try:
             self._server_background_task = asyncio.create_task(self._server.serve())
 

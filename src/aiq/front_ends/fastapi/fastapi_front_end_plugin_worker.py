@@ -38,7 +38,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import OAuthClientManagerBase
+from aiq.authentication.interfaces import OAuthClientBase
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
@@ -198,7 +198,7 @@ class RouteInfo(BaseModel):
 class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     @staticmethod
-    async def user_auth_callback_server_http(oauth_client: OAuthClientManagerBase,
+    async def user_auth_callback_server_http(oauth_client: OAuthClientBase,
                                              consent_prompt_mode: ConsentPromptMode) -> AuthenticationError | None:
         """
         Callback handler for user authentication in server HTTP environments.
@@ -857,12 +857,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 error_message = "Authorization code and state not provided by authorization config"
                 raise AuthCodeGrantFlowError('auth_code_state_missing', error_message)
 
-            oauth_client_manager: OAuthClientManagerBase | None = _CredentialsManager(
-            ).get_authentication_manager_by_state(state)
+            oauth_client: OAuthClientBase | None = _CredentialsManager().get_authentication_client_by_state(state)
 
-            if oauth_client_manager is None:
-                error_message = "Authorization manager not found by Authorization Code Grant state"
-                raise AuthCodeGrantFlowError('auth_manager_not_found', error_message)
+            if oauth_client is None:
+                error_message = "Authorization client not found by Authorization Code Grant state"
+                raise AuthCodeGrantFlowError('auth_client_not_found', error_message)
 
             # Send Token HTTP Request
             authorization_path = FastApiFrontEndConfig().authorization.path
@@ -870,7 +869,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 error_message = "Authorization path is not configured"
                 raise AuthCodeGrantFlowError('auth_path_not_configured', error_message)
 
-            response: httpx.Response | None = await oauth_client_manager.send_token_request(
+            response: httpx.Response | None = await oauth_client.send_token_request(
                 client_authorization_path=authorization_path,
                 client_authorization_endpoint=AuthenticationEndpoint.REDIRECT_URI.value,
                 authorization_code=authorization_code)
@@ -879,7 +878,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 error_message = "Invalid response received while exchanging authorization code for access token"
                 raise AuthCodeGrantFlowError('token_response_null', error_message)
 
-            await oauth_client_manager.process_token_response(response)
+            await oauth_client.process_token_response(response)
 
             await _CredentialsManager().set_oauth_credentials()
 
@@ -892,23 +891,20 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         async def prompt_redirect_uri(request: Request, prompt_request_schema: PromptRedirectRequest):
             from fastapi.responses import JSONResponse
 
-            oauth_client_manager: OAuthClientManagerBase | None = _CredentialsManager(
-            ).get_authentication_manager_by_consent_prompt_key(prompt_request_schema.consent_prompt_key)
+            oauth_client: OAuthClientBase | None = _CredentialsManager(
+            ).get_authentication_client_by_consent_prompt_key(prompt_request_schema.consent_prompt_key)
 
-            if (oauth_client_manager is None):
+            if (oauth_client is None):
                 raise HTTPException(status_code=403, detail="Consent prompt key not found.")
 
             location_url: str | None = None
 
-            if (oauth_client_manager.config is not None
-                    and oauth_client_manager.config.consent_prompt_location_url is not None):
-                location_url = oauth_client_manager.config.consent_prompt_location_url
+            if (oauth_client.config is not None and oauth_client.config.consent_prompt_location_url is not None):
+                location_url = oauth_client.config.consent_prompt_location_url
 
             await _CredentialsManager().set_consent_prompt_url()
 
-            return JSONResponse(content={
-                "auth_provider_name": oauth_client_manager.config_name, "redirect_url": location_url
-            })
+            return JSONResponse(content={"auth_provider_name": oauth_client.config_name, "redirect_url": location_url})
 
         if self.front_end_config.authorization.path:
             app.add_api_route(

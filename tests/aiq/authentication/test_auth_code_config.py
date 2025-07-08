@@ -78,7 +78,7 @@ async def test_client_server_url_invalid(invalid_client_server_url):
         "https://api.internal.company.com/auth/oauth/authorize",  # Internal company API
     ])
 async def test_authorization_url_valid(valid_authorization_url):
-    """Test valid authorization_url configurations following RFC 6819 Section 4.2.1."""
+    """Test valid authorization_url configurations."""
 
     # Should not raise AuthCodeGrantConfigAuthorizationUrlFieldError
     AuthCodeGrantConfig(client_server_url="http://localhost:8000",
@@ -126,7 +126,7 @@ async def test_authorization_url_invalid(invalid_authorization_url):
         "https://api.internal.company.com/auth/oauth/token",  # Internal company API
     ])
 async def test_authorization_token_url_valid(valid_authorization_token_url):
-    """Test valid authorization_token_url configurations following RFC 6819 Section 4.2.1."""
+    """Test valid authorization_token_url configurations."""
     # Should not raise AuthCodeGrantConfigAuthorizationUrlFieldError
     AuthCodeGrantConfig(client_server_url="http://localhost:8000",
                         authorization_url="https://auth.example.com/oauth/authorize",
@@ -314,9 +314,6 @@ async def test_client_id_invalid(invalid_client_id):
 async def test_scope_valid(valid_scope):
     """
     Test valid scope configurations.
-
-    RFC 6819 Section 4.3.1 - Access Token Disclosure to Unintended Recipients
-    Scopes should follow principle of least privilege.
     """
 
     # Should not raise AuthCodeGrantConfigScopeFieldError
@@ -341,9 +338,6 @@ async def test_scope_valid(valid_scope):
 async def test_scope_invalid(invalid_scope):
     """
     Test invalid scope configurations.
-
-    RFC 6819 Section 4.3.1 - Access Token Disclosure to Unintended Recipients
-    Scopes should follow principle of least privilege.
     """
     from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantConfigScopeFieldError
 

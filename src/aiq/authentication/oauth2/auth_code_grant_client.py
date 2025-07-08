@@ -22,12 +22,14 @@ import httpx
 
 from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
 from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowRefreshTokenError
-from aiq.authentication.interfaces import OAuthClientManagerBase
+from aiq.authentication.interfaces import OAuthClientBase
 from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
 from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
 from aiq.authentication.request_manager import RequestManager
 from aiq.authentication.response_manager import ResponseManager
+from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import ConsentPromptMode
+from aiq.data_models.authentication import CredentialLocation
 from aiq.data_models.authentication import HeaderAuthScheme
 from aiq.data_models.authentication import HTTPMethod
 from aiq.data_models.authentication import OAuth2AuthorizationQueryParams
@@ -38,7 +40,7 @@ from aiq.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEnd
 logger = logging.getLogger(__name__)
 
 
-class AuthCodeGrantClientManager(OAuthClientManagerBase):
+class AuthCodeGrantClient(OAuthClientBase):
 
     def __init__(self, config: AuthCodeGrantConfig, config_name: str | None = None) -> None:
         assert isinstance(config, OAuthUserConsentConfigBase), ("Config is not OAuthUserConsentConfigBase")
@@ -104,7 +106,7 @@ class AuthCodeGrantClientManager(OAuthClientManagerBase):
     @property
     def response_manager(self) -> "ResponseManager | None":
         """
-        Get the response manager for the authentication manager.
+        Get the response manager for the authentication client.
 
         Returns:
             ResponseManager | None: The response manager or None if not set.
@@ -245,7 +247,7 @@ class AuthCodeGrantClientManager(OAuthClientManagerBase):
         Args:
             authorization_url (str): The base authorization endpoint URL of the OAuth provider.
             authorization_query_params (OAuth2AuthorizationQueryParams): The query parameters required
-                to complete the authorization request.
+            to complete the authorization request.
 
         Returns:
             httpx.Response | None: The response from the authorization server, or None if the flow
@@ -359,6 +361,19 @@ class AuthCodeGrantClientManager(OAuthClientManagerBase):
         await _CredentialsManager().set_consent_prompt_url()
         await _CredentialsManager().set_oauth_credentials()
 
+    async def construct_authentication_context(self,
+                                               credential_location: CredentialLocation,
+                                               header_scheme: HeaderAuthScheme) -> AuthenticatedContext | None:
+        """
+        Construct the authentication context to be injected into an API request.
+        """
+        if credential_location == CredentialLocation.HEADER:
+            authentication_header: httpx.Headers | None = await self.construct_authentication_header(header_scheme)
+            return AuthenticatedContext(headers=authentication_header)
+
+        logger.error('Credential location %s not supported for OAuth2 client', credential_location)
+        return None
+
     async def construct_authentication_header(self,
                                               header_auth_scheme: HeaderAuthScheme = HeaderAuthScheme.BEARER
                                               ) -> httpx.Headers | None:
@@ -437,6 +452,8 @@ class AuthCodeGrantClientManager(OAuthClientManagerBase):
         Args:
             response (httpx.Response): The HTTP response received after exchanging authorization code for access token.
 
+        Raises:
+            AuthCodeGrantFlowError: If the response is invalid or missing required tokens.
         """
         if not response.status_code == 200:
             await self._response_manager.process_http_response(response)
@@ -489,7 +506,7 @@ class AuthCodeGrantClientManager(OAuthClientManagerBase):
 
         Args:
             response (httpx.Response | None): The HTTP response returned from the authorization server,
-                                            or None if the request failed or was interrupted.
+            or None if the request failed or was interrupted.
 
         Raises:
             AuthCodeGrantFlowError: If the response is None or any unexpected error occurs.

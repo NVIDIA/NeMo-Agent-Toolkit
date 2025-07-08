@@ -19,7 +19,7 @@ import webbrowser
 import httpx
 
 from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
-from aiq.authentication.interfaces import OAuthClientManagerBase
+from aiq.authentication.interfaces import OAuthClientBase
 from aiq.data_models.authentication import ConsentPromptMode
 from aiq.front_ends.fastapi.message_handler import MessageHandler
 
@@ -29,9 +29,9 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 
 class ResponseManager:
 
-    def __init__(self, oauth_client_manager: OAuthClientManagerBase) -> None:
+    def __init__(self, oauth_client: OAuthClientBase) -> None:
         self._message_handler: MessageHandler | None = None
-        self._oauth_client_manager: OAuthClientManagerBase = oauth_client_manager
+        self._oauth_client: OAuthClientBase = oauth_client
 
     @property
     def message_handler(self) -> MessageHandler | None:
@@ -98,14 +98,14 @@ class ResponseManager:
         from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
         from aiq.data_models.interactive import HumanPromptNotification
 
-        oauth_config: OAuthUserConsentConfigBase | None = self._oauth_client_manager.config
+        oauth_config: OAuthUserConsentConfigBase | None = self._oauth_client.config
         try:
-            if self._oauth_client_manager.consent_prompt_mode == ConsentPromptMode.BROWSER:
+            if self._oauth_client.consent_prompt_mode == ConsentPromptMode.BROWSER:
 
                 default_browser = webbrowser.get()
                 default_browser.open(location_header)
 
-            if self._oauth_client_manager.consent_prompt_mode == ConsentPromptMode.FRONTEND:
+            if self._oauth_client.consent_prompt_mode == ConsentPromptMode.FRONTEND:
 
                 logger.info(
                     "\n\n******************************************************************\n\n"
@@ -114,13 +114,13 @@ class ResponseManager:
                     "Please ensure your client sends a POST request with the registered [ consent_prompt_key ] to "
                     "continue Auth Code Grant flow.\n\n"
                     "******************************************************************",
-                    self._oauth_client_manager.config_name)
+                    self._oauth_client.config_name)
 
                 if (self.message_handler):
                     await self.message_handler.create_websocket_message(
                         HumanPromptNotification(
                             text="Auth Code Grant flow consent request needed for authentication config: "
-                            f"[ {self._oauth_client_manager.config_name} ]. "
+                            f"[ {self._oauth_client.config_name} ]. "
                             "Navigate to the '/aiq-auth' page to continue Auth Code Grant flow."))
 
                 if oauth_config:

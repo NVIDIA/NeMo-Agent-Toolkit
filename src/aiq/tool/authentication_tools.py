@@ -19,40 +19,43 @@ import typing
 import httpx
 
 from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import OAuthClientManagerBase
+from aiq.authentication.interfaces import OAuthClientBase
 from aiq.builder.builder import Builder
 from aiq.builder.context import AIQContext
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
+from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import ConsentPromptMode
+from aiq.data_models.authentication import CredentialLocation
 from aiq.data_models.authentication import HeaderAuthScheme
 from aiq.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 
 
-async def _test_jira_api_call(oauth_client_manager: OAuthClientManagerBase) -> typing.Any | None:
+async def _test_jira_api_call(oauth_client: OAuthClientBase) -> typing.Any | None:
     """
     Test OAuth authentication by making provider-specific API calls.
     """
-    authentication_header: httpx.Headers | None = await oauth_client_manager.construct_authentication_header(
-        header_auth_scheme=HeaderAuthScheme.BEARER)
 
-    if not authentication_header:
+    authentication_context: AuthenticatedContext | None = await oauth_client.construct_authentication_context(
+        credential_location=CredentialLocation.HEADER, header_scheme=HeaderAuthScheme.BEARER)
+
+    if not authentication_context:
         return "Failed to construct authentication headers"
 
     base_headers: httpx.Headers = httpx.Headers({"Accept": "application/json"})
-    merged_headers: httpx.Headers = httpx.Headers({**(base_headers or {}), **(authentication_header or {})})
+    merged_headers: httpx.Headers = httpx.Headers({**(base_headers or {}), **(authentication_context.headers or {})})
 
     response: httpx.Response | None = None
     test_api_call_result: typing.Any | None = None
 
     # Test JIRA/Atlassian authentication with accessible resources
-    response = await oauth_client_manager.send_request(url="https://api.atlassian.com/oauth/token/accessible-resources",
-                                                       http_method="GET",
-                                                       headers=dict(merged_headers),
-                                                       query_params=None,
-                                                       body_data=None)
+    response = await oauth_client.send_request(url="https://api.atlassian.com/oauth/token/accessible-resources",
+                                               http_method="GET",
+                                               headers=dict(merged_headers),
+                                               query_params=None,
+                                               body_data=None)
 
     data: typing.Any | None = None
     if (response and response.status_code == 200):
@@ -65,7 +68,7 @@ async def _test_jira_api_call(oauth_client_manager: OAuthClientManagerBase) -> t
 
     if (cloud_id):
         # Test the authentication with provider-specific API calls
-        response = await oauth_client_manager.send_request(
+        response = await oauth_client.send_request(
             url=f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/2/project",
             http_method="GET",
             headers=dict(merged_headers),
@@ -89,10 +92,10 @@ async def oauth2_browser_auth_tool(config: OAuth2BrowserAuthTool, builder: Build
     Authenticates to any registered API provider using OAuth 2.0 authentication code flow.
 
     Extracts the provider name from user prompts (e.g., "authenticate to my registered API provider: jira"),
-    and uses that name to retrieve a registered authentication manager. A user authentication callback is then invoked
+    and uses that name to retrieve a registered authentication client. A user authentication callback is then invoked
     to initiate the OAuth 2.0 authentication flow, opening a browser to complete the consent prompt.
 
-    All authentication credentials are stored and managed internally. The authentication manager then verifies
+    All authentication credentials are stored and managed internally. The authentication client then verifies
     the authenticated connection as a TEST in this tool by making an HTTP request and handling the response.
     """
 
@@ -103,21 +106,20 @@ async def oauth2_browser_auth_tool(config: OAuth2BrowserAuthTool, builder: Build
         user_input_manager = aiq_context.user_interaction_manager
 
         try:
-            # Get the oauth registered authentication manager
-            oauth_client_manager: OAuthClientManagerBase = await builder.get_authentication(authentication_provider_name
-                                                                                            )
+            # Get the oauth registered authentication client
+            oauth_client: OAuthClientBase = await builder.get_authentication(authentication_provider_name)
 
             # Authenticate by calling the authenticate_oauth_client to with browser consent handling.
             authentication_error: AuthenticationError | None = await user_input_manager.authenticate_oauth_client(
-                oauth_client_manager, ConsentPromptMode.BROWSER)
+                oauth_client, ConsentPromptMode.BROWSER)
 
             # If an authentication error occurs, the authentication flow has failed
-            if authentication_error or not await oauth_client_manager.validate_credentials():
+            if authentication_error or not await oauth_client.validate_credentials():
                 return (f"Failed to authenticate provider: {authentication_provider_name}: "
                         f"Error: {authentication_error.error_code if authentication_error else 'Invalid credentials'} ")
 
             # Make a test API call to the API provider.
-            test_api_call_result: typing.Any | None = await _test_jira_api_call(oauth_client_manager)
+            test_api_call_result: typing.Any | None = await _test_jira_api_call(oauth_client)
 
             return (f"Your registered API Provider name: [{authentication_provider_name}] is now authenticated.\n"
                     f"Test API Response to API Provider: {test_api_call_result}. \n")
@@ -145,11 +147,11 @@ async def oauth2_frontend_auth_tool(config: OAuth2FrontendAuthTool, builder: Bui
     Authenticates to any registered API provider using OAuth 2.0 authentication code flow.
 
     Extracts the provider name from user prompts (e.g., "authenticate to my registered API provider: jira"),
-    and uses that name to retrieve a registered authentication manager. A user authentication callback is then invoked
+    and uses that name to retrieve a registered authentication client. A user authentication callback is then invoked
     to initiate the OAuth 2.0 authentication flow. A notification is displayed on the console notifying the user to
     complete the authentication flow handling the consent prompt on the frontend.
 
-    All authentication credentials are stored and managed internally. The authentication manager then verifies
+    All authentication credentials are stored and managed internally. The authentication client then verifies
     the authenticated connection as a TEST in this tool by making an HTTP request and handling the response.
     """
 
@@ -160,21 +162,20 @@ async def oauth2_frontend_auth_tool(config: OAuth2FrontendAuthTool, builder: Bui
         user_input_manager = aiq_context.user_interaction_manager
 
         try:
-            # Get the oauth registered authentication manager
-            oauth_client_manager: OAuthClientManagerBase = await builder.get_authentication(authentication_provider_name
-                                                                                            )
+            # Get the oauth registered authentication client
+            oauth_client: OAuthClientBase = await builder.get_authentication(authentication_provider_name)
 
             # Authenticate by calling the authenticate_oauth_client to with frontend consent handling.
             authentication_error: AuthenticationError | None = await user_input_manager.authenticate_oauth_client(
-                oauth_client_manager, ConsentPromptMode.FRONTEND)
+                oauth_client, ConsentPromptMode.FRONTEND)
 
             # If an authentication error occurs, the authentication flow has failed
-            if authentication_error or not await oauth_client_manager.validate_credentials():
+            if authentication_error or not await oauth_client.validate_credentials():
                 return (f"Failed to authenticate provider: {authentication_provider_name}: "
                         f"Error: {authentication_error.error_code if authentication_error else 'Invalid credentials'} ")
 
             # Make a test API call to the API provider.
-            test_api_call_result: typing.Any | None = await _test_jira_api_call(oauth_client_manager)
+            test_api_call_result: typing.Any | None = await _test_jira_api_call(oauth_client)
 
             return (f"Your registered API Provider name: [{authentication_provider_name}] is now authenticated.\n"
                     f"Test API Response to API Provider: {test_api_call_result}. \n")

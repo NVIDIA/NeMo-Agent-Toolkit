@@ -30,7 +30,7 @@ from flask import jsonify
 from flask import redirect
 from flask import request
 
-from aiq.authentication.interfaces import OAuthClientManagerBase
+from aiq.authentication.interfaces import OAuthClientBase
 from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
 from aiq.data_models.authentication import OAuth2AuthorizationQueryParams
 
@@ -241,7 +241,7 @@ class MockOAuth2Server:
                 del self.tokens[token]
                 return '', 200
 
-            return '', 200  # RFC requirement: always return success
+            return '', 200
 
     def _handle_authorization_code_grant(self, data):
         """Handle authorization code grant flow."""
@@ -405,16 +405,16 @@ class OAuth2FlowTester:
     Handles all setup, execution, and validation of OAuth2 flows.
     """
 
-    def __init__(self, manager: OAuthClientManagerBase, flow: OAuth2Flow):
+    def __init__(self, oauth_client: OAuthClientBase, flow: OAuth2Flow):
 
-        assert isinstance(manager, OAuthClientManagerBase), \
-            "Manager must be an instance of OAuthClientManagerBase"
+        assert isinstance(oauth_client, OAuthClientBase), \
+            "OAuth client must be an instance of OAuthClientBase"
 
-        assert isinstance(manager.config, OAuthUserConsentConfigBase), \
+        assert isinstance(oauth_client.config, OAuthUserConsentConfigBase), \
             ("Config must be of type OAuthUserConsentConfigBase, "
-                f"got {type(manager.config).__name__}")
+                f"got {type(oauth_client.config).__name__}")
 
-        self._manager = manager
+        self._oauth_client = oauth_client
         self._flow = flow
         self._mock_server = MockOAuth2Server()
 
@@ -423,7 +423,7 @@ class OAuth2FlowTester:
         Main entry point for running the complete OAuth2 flow test.
 
         Handles all setup, execution, and validation:
-        - Creates and configures the appropriate OAuth client manager
+        - Creates and configures the appropriate OAuth client
         - Creates and configures mock OAuth2 server
         - Registers test client
         - Runs OAuth2 flow tests
@@ -437,8 +437,8 @@ class OAuth2FlowTester:
             if self._flow != OAuth2Flow.AUTHORIZATION_CODE:
                 raise NotImplementedError(f"Flow {self._flow.value} not yet implemented")
 
-            # Setup client manager with properly configured config
-            await self._setup_client_manager()
+            # Setup client with properly configured config
+            await self._setup_oauth_client()
 
             # Create mock server
             await self._create_mock_server()
@@ -456,38 +456,38 @@ class OAuth2FlowTester:
         finally:
             await self._cleanup()
 
-    async def _setup_client_manager(self):
-        """Setup and configure the OAuth client manager based on the flow type."""
+    async def _setup_oauth_client(self):
+        """Setup and configure the OAuth client based on the flow type."""
 
         # Check if the config has the required attributes for OAuthUserConsentConfigBase
         required_attrs = ['client_id', 'client_secret', 'audience', 'scope']
-        missing_attrs = [attr for attr in required_attrs if not hasattr(self._manager.config, attr)]
+        missing_attrs = [attr for attr in required_attrs if not hasattr(self._oauth_client.config, attr)]
 
         if missing_attrs:
             raise AssertionError(f"Invalid config: Missing required attributes {missing_attrs}. "
                                  f"The config must have all required attributes for OAuth2 testing. "
-                                 f"Config type: {type(self._manager.config).__name__}")
+                                 f"Config type: {type(self._oauth_client.config).__name__}")
 
-        # Update client manager config parameters to match mock server parameters
-        if hasattr(self._manager.config, 'authorization_url'):
-            setattr(self._manager.config, 'authorization_url', self._mock_server.get_authorization_url())
-        if hasattr(self._manager.config, 'authorization_token_url'):
-            setattr(self._manager.config, 'authorization_token_url', self._mock_server.get_token_url())
-        if hasattr(self._manager.config, 'client_server_url'):
-            setattr(self._manager.config, 'client_server_url', self._mock_server.get_base_url())
-        if hasattr(self._manager.config, 'client_secret'):
-            setattr(self._manager.config, 'client_secret', 'test_client_secret')
+        # Update oauth client config parameters to match mock server parameters
+        if hasattr(self._oauth_client.config, 'authorization_url'):
+            setattr(self._oauth_client.config, 'authorization_url', self._mock_server.get_authorization_url())
+        if hasattr(self._oauth_client.config, 'authorization_token_url'):
+            setattr(self._oauth_client.config, 'authorization_token_url', self._mock_server.get_token_url())
+        if hasattr(self._oauth_client.config, 'client_server_url'):
+            setattr(self._oauth_client.config, 'client_server_url', self._mock_server.get_base_url())
+        if hasattr(self._oauth_client.config, 'client_secret'):
+            setattr(self._oauth_client.config, 'client_secret', 'test_client_secret')
 
     async def _create_mock_server(self):
         """Create and configure the mock OAuth2 server."""
 
         mock_base_url = self._mock_server.get_base_url()
 
-        if not self._manager.config:
-            raise Exception("Manager config is None")
+        if not self._oauth_client.config:
+            raise Exception("OAuth client config is None")
 
-        self._mock_server.register_client(client_id=self._manager.config.client_id,
-                                          client_secret=self._manager.config.client_secret,
+        self._mock_server.register_client(client_id=self._oauth_client.config.client_id,
+                                          client_secret=self._oauth_client.config.client_secret,
                                           base_url=mock_base_url)
 
         self._mock_server.start_server(threaded=True)
@@ -531,7 +531,7 @@ class OAuth2FlowTester:
 
         # Process the token response and ensure no errors are raised
         try:
-            await self._manager.process_token_response(response)
+            await self._oauth_client.process_token_response(response)
         except Exception as e:
             # If any error occurs during token processing, fail the test with detailed error message
             raise AssertionError(f"Token response processing failed: {str(e)}") from e
@@ -543,48 +543,50 @@ class OAuth2FlowTester:
         token_data = response.json()
 
         # Assert that the access token matches the one the mock server returned
-        if self._manager.config and hasattr(self._manager.config, 'access_token'):
+        if self._oauth_client.config and hasattr(self._oauth_client.config, 'access_token'):
             expected_token = token_data.get('access_token')
-            assert self._manager.config.access_token == expected_token, \
-                f"Access token mismatch: expected {expected_token}, got {self._manager.config.access_token}"
+            assert self._oauth_client.config.access_token == expected_token, \
+                f"Access token mismatch: expected {expected_token}, got {self._oauth_client.config.access_token}"
 
         # Assert that the access token expiry matches the one the mock server returned
-        if self._manager.config and hasattr(self._manager.config, 'access_token_expires_in'):
-            assert self._manager.config.access_token_expires_in is not None, \
+        if self._oauth_client.config and hasattr(self._oauth_client.config, 'access_token_expires_in'):
+            assert self._oauth_client.config.access_token_expires_in is not None, \
                 "Access token expiry should be set based on mock server response"
 
         # Assert that the refresh token matches the one the mock server returned
         if self._flow in [OAuth2Flow.AUTHORIZATION_CODE, OAuth2Flow.AUTHORIZATION_CODE_PKCE]:
             expected_refresh_token = token_data.get('refresh_token')
-            if (expected_refresh_token and self._manager.config and hasattr(self._manager.config, 'refresh_token')):
-                assert self._manager.config.refresh_token == expected_refresh_token, \
+            if (expected_refresh_token and self._oauth_client.config
+                    and hasattr(self._oauth_client.config, 'refresh_token')):
+                assert self._oauth_client.config.refresh_token == expected_refresh_token, \
                     (f"Refresh token mismatch: expected {expected_refresh_token}, "
-                     f"got {self._manager.config.refresh_token}")
+                     f"got {self._oauth_client.config.refresh_token}")
 
         # Assert that the credentials are valid
-        assert await self._manager.validate_credentials(), "Credentials should be valid"
+        assert await self._oauth_client.validate_credentials(), "Credentials should be valid"
 
     async def test_authorization_request_query_params(self, response_type: str,
                                                       prompt: str) -> OAuth2AuthorizationQueryParams:
         """Test OAuth2 authorization query parameters construction."""
 
-        query_params = self._manager.construct_authorization_query_params(response_type=response_type, prompt=prompt)
+        query_params = self._oauth_client.construct_authorization_query_params(response_type=response_type,
+                                                                               prompt=prompt)
 
         # Validate query parameters
-        if self._manager.config:
-            assert query_params.client_id == self._manager.config.client_id, \
-                f"Expected client_id {self._manager.config.client_id}, got {query_params.client_id}"
+        if self._oauth_client.config:
+            assert query_params.client_id == self._oauth_client.config.client_id, \
+                f"Expected client_id {self._oauth_client.config.client_id}, got {query_params.client_id}"
 
-            if hasattr(self._manager.config, 'audience'):
-                assert query_params.audience == self._manager.config.audience, \
-                    f"Expected audience {self._manager.config.audience}, got {query_params.audience}"
+            if hasattr(self._oauth_client.config, 'audience'):
+                assert query_params.audience == self._oauth_client.config.audience, \
+                    f"Expected audience {self._oauth_client.config.audience}, got {query_params.audience}"
 
-            if hasattr(self._manager.config, 'state'):
-                assert query_params.state == self._manager.config.state, \
-                    f"Expected state {self._manager.config.state}, got {query_params.state}"
+            if hasattr(self._oauth_client.config, 'state'):
+                assert query_params.state == self._oauth_client.config.state, \
+                    f"Expected state {self._oauth_client.config.state}, got {query_params.state}"
 
-            if hasattr(self._manager.config, 'scope'):
-                expected_scope = " ".join(self._manager.config.scope)
+            if hasattr(self._oauth_client.config, 'scope'):
+                expected_scope = " ".join(self._oauth_client.config.scope)
                 assert query_params.scope == expected_scope, \
                     f"Expected scope {expected_scope}, got {query_params.scope}"
 
@@ -601,7 +603,7 @@ class OAuth2FlowTester:
                                               authorization_query_params: OAuth2AuthorizationQueryParams):
         """Test OAuth2 authorization request sending."""
 
-        response = await self._manager.send_authorization_request(authorization_url, authorization_query_params)
+        response = await self._oauth_client.send_authorization_request(authorization_url, authorization_query_params)
         assert response is not None, "Authorization request should return a response"
         # For OAuth flows, 302 redirect is expected for authorization endpoint
         assert response.status_code in [200, 302], \
@@ -614,9 +616,9 @@ class OAuth2FlowTester:
                                       authorization_code: str):
         """Test OAuth2 token request sending."""
 
-        response = await self._manager.send_token_request(client_authorization_path,
-                                                          client_authorization_endpoint,
-                                                          authorization_code)
+        response = await self._oauth_client.send_token_request(client_authorization_path,
+                                                               client_authorization_endpoint,
+                                                               authorization_code)
         assert response is not None, "Token request should return a response"
         assert response.status_code == 200, \
             f"Token request should return 200, got {response.status_code}"

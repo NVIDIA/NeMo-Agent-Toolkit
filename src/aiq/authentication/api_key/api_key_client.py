@@ -18,15 +18,17 @@ import logging
 import httpx
 
 from aiq.authentication.api_key.api_key_config import APIKeyConfig
-from aiq.authentication.interfaces import AuthenticationManagerBase
+from aiq.authentication.interfaces import AuthenticationClientBase
 from aiq.authentication.request_manager import RequestManager
+from aiq.data_models.authentication import AuthenticatedContext
+from aiq.data_models.authentication import CredentialLocation
 from aiq.data_models.authentication import HeaderAuthScheme
 from aiq.data_models.authentication import HTTPMethod
 
 logger = logging.getLogger(__name__)
 
 
-class APIKeyManager(AuthenticationManagerBase):
+class APIKeyClient(AuthenticationClientBase):
 
     def __init__(self, config: APIKeyConfig, config_name: str | None = None) -> None:
         assert isinstance(config, APIKeyConfig), ("Config is not APIKeyConfig")
@@ -68,6 +70,19 @@ class APIKeyManager(AuthenticationManagerBase):
             return False
 
         return True
+
+    async def construct_authentication_context(self,
+                                               credential_location: CredentialLocation,
+                                               header_scheme: HeaderAuthScheme) -> AuthenticatedContext | None:
+        """
+        Construct the authentication object to inject into headers, query, or cookies.
+        """
+        if credential_location == CredentialLocation.HEADER:
+            authentication_header: httpx.Headers | None = await self.construct_authentication_header(header_scheme)
+            return AuthenticatedContext(headers=authentication_header)
+
+        logger.error('Credential location %s not supported for API key client', credential_location)
+        return None
 
     async def construct_authentication_header(self,
                                               header_auth_scheme: HeaderAuthScheme = HeaderAuthScheme.BEARER

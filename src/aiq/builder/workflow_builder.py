@@ -470,23 +470,23 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Get authentication config info
             authentication_config_info = self._authentications[authentication_config_name]
 
-            authentication_manager_info = self._registry.get_authentication_manager(
+            authentication_client_info = self._registry.get_authentication_client(
                 config_type=type(authentication_config_info.config))
 
-            authentication_manager = await self._get_exit_stack().enter_async_context(
-                authentication_manager_info.build_fn(authentication_config_info.config, self))
+            authentication_client = await self._get_exit_stack().enter_async_context(
+                authentication_client_info.build_fn(authentication_config_info.config, self))
 
             # Set the config name
-            authentication_manager.config_name = authentication_config_name
+            authentication_client.config_name = authentication_config_name
 
-            # Store the manager instance in the credentials manager
-            _CredentialsManager().store_authentication_manager(authentication_config_name, authentication_manager)
+            # Store the client instance in the credentials manager
+            _CredentialsManager().store_authentication_client(authentication_config_name, authentication_client)
 
-            # Return the authentication manager
-            return authentication_manager
+            # Return the authentication client
+            return authentication_client
 
         except Exception as e:
-            logger.error("Error getting authentication manager `%s`", authentication_config_name, exc_info=True)
+            logger.error("Error getting authentication client `%s`", authentication_config_name, exc_info=True)
             raise e
 
     @override

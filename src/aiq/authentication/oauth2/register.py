@@ -13,13 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from aiq.authentication.oauth2.auth_code_grant_client import AuthCodeGrantClient
 from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
-from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantClientManager
 from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_authentication_manager
+from aiq.cli.register_workflow import register_authentication_client
 
 
-@register_authentication_manager(config_type=AuthCodeGrantConfig)
-async def oauth2_authorization_code_grant_manager(authentication_provider: AuthCodeGrantConfig, builder: Builder):
+@register_authentication_client(config_type=AuthCodeGrantConfig)
+async def oauth2_authorization_code_grant_client(authentication_provider: AuthCodeGrantConfig, builder: Builder):
 
-    yield AuthCodeGrantClientManager(config=authentication_provider)
+    yield AuthCodeGrantClient(config=authentication_provider)

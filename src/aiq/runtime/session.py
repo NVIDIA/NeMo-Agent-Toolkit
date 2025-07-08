@@ -24,7 +24,7 @@ from contextlib import nullcontext
 from fastapi import Request
 
 from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import OAuthClientManagerBase
+from aiq.authentication.interfaces import OAuthClientBase
 from aiq.builder.context import AIQContext
 from aiq.builder.context import AIQContextState
 from aiq.builder.workflow import Workflow
@@ -92,7 +92,7 @@ class AIQSessionManager:
                       request: Request | None = None,
                       conversation_id: str | None = None,
                       user_input_callback: Callable[[InteractionPrompt], Awaitable[HumanResponse]] = None,
-                      user_authentication_callback: Callable[[OAuthClientManagerBase, ConsentPromptMode],
+                      user_authentication_callback: Callable[[OAuthClientBase, ConsentPromptMode],
                                                              Awaitable[AuthenticationError | None]] = None):
 
         token_user_input = None

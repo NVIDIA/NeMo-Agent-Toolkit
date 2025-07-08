@@ -26,7 +26,7 @@ from starlette.endpoints import WebSocketEndpoint
 from starlette.websockets import WebSocketDisconnect
 
 from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import OAuthClientManagerBase
+from aiq.authentication.interfaces import OAuthClientBase
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.api_server import AIQChatResponseChunk
@@ -156,8 +156,7 @@ class AIQWebSocket(WebSocketEndpoint):
 
         return await self._process_message(payload, result_type=AIQChatResponse)
 
-    async def user_auth_callback_websocket(self,
-                                           oauth_client: OAuthClientManagerBase,
+    async def user_auth_callback_websocket(self, oauth_client: OAuthClientBase,
                                            consent_prompt_mode: ConsentPromptMode) -> AuthenticationError | None:
         """
         Callback handler for user authentication in server websocket environment.

@@ -21,8 +21,8 @@ import httpx
 import pytest
 
 from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
+from aiq.authentication.oauth2.auth_code_grant_client import AuthCodeGrantClient
 from aiq.authentication.oauth2.auth_code_grant_config import AuthCodeGrantConfig
-from aiq.authentication.oauth2.auth_code_grant_manager import AuthCodeGrantClientManager
 from aiq.authentication.response_manager import ResponseManager
 from aiq.data_models.authentication import ConsentPromptMode
 
@@ -41,27 +41,27 @@ def auth_code_grant_config():
 
 
 @pytest.fixture
-def auth_code_grant_manager(auth_code_grant_config):
-    """Create a test AuthCodeGrantClientManager instance."""
-    return AuthCodeGrantClientManager(config=auth_code_grant_config, config_name="test_config")
+def auth_code_grant_client(auth_code_grant_config):
+    """Create a test AuthCodeGrantClient instance."""
+    return AuthCodeGrantClient(config=auth_code_grant_config, config_name="test_config")
 
 
 @pytest.fixture
-def response_manager(auth_code_grant_manager):
+def response_manager(auth_code_grant_client):
     """Create a test ResponseManager instance."""
-    return ResponseManager(oauth_client_manager=auth_code_grant_manager)
+    return ResponseManager(oauth_client=auth_code_grant_client)
 
 
-async def test_auth_code_grant_consent_browser_redirect_error_302(auth_code_grant_manager: AuthCodeGrantClientManager):
+async def test_auth_code_grant_consent_browser_redirect_error_302(auth_code_grant_client: AuthCodeGrantClient):
     """Test handling of browser error in 302 consent browser."""
 
     location_header = "https://test.com/consent"
 
     # Set consent prompt mode to BROWSER
-    auth_code_grant_manager.consent_prompt_mode = ConsentPromptMode.BROWSER
+    auth_code_grant_client.consent_prompt_mode = ConsentPromptMode.BROWSER
 
     # Create a response manager for this test
-    response_manager = ResponseManager(oauth_client_manager=auth_code_grant_manager)
+    response_manager = ResponseManager(oauth_client=auth_code_grant_client)
 
     # Raise AuthCodeGrantFlowError if browser error occurs.
     with patch('webbrowser.get', side_effect=webbrowser.Error("Browser error")):

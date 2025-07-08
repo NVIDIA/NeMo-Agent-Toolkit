@@ -19,7 +19,9 @@ from abc import abstractmethod
 import httpx
 
 from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
+from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import ConsentPromptMode
+from aiq.data_models.authentication import CredentialLocation
 from aiq.data_models.authentication import HeaderAuthScheme
 from aiq.data_models.authentication import OAuth2AuthorizationQueryParams
 from aiq.data_models.authentication import OAuth2TokenRequest
@@ -78,7 +80,7 @@ class ResponseManagerBase(ABC):
         pass
 
 
-class AuthenticationManagerBase(ABC):
+class AuthenticationClientBase(ABC):
     """
     Base class for authenticating to API services.
     This class provides an interface for authenticating to API services.
@@ -109,7 +111,7 @@ class AuthenticationManagerBase(ABC):
     @abstractmethod
     async def validate_credentials(self) -> bool:
         """
-        Validates the credentials for the authentication manager.
+        Validates the credentials for the authentication client.
 
         Returns:
             bool: True if credentials are valid, False otherwise.
@@ -117,20 +119,30 @@ class AuthenticationManagerBase(ABC):
         pass
 
     @abstractmethod
-    async def construct_authentication_header(self, header_auth_scheme: HeaderAuthScheme) -> httpx.Headers | None:
+    async def construct_authentication_context(self,
+                                               credential_location: CredentialLocation,
+                                               header_scheme: HeaderAuthScheme) -> AuthenticatedContext | None:
         """
-        Constructs the authenticated HTTP header based on the authentication scheme.
+        Construct the authentication context to be injected into an API request.
+
+        This method builds an authentication context based on the given credential location
+        (e.g., headers, query parameters, or cookies) and the specified authentication scheme
+        (e.g., Bearer, Basic, API key). The resulting context encapsulates the credentials
+        in a structured format suitable for inclusion in outbound API requests.
 
         Args:
-            header_auth_scheme: The authentication scheme to use (BEARER, BASIC, X_API_KEY, CUSTOM)
+            credential_location (CredentialLocation): The part of the request where credentials
+                should be injected (header, query, or cookie).
+            header_scheme (HeaderAuthScheme): The HTTP authentication scheme to apply
+                (e.g., BEARER, BASIC, CUSTOM).
 
         Returns:
-            httpx.Headers | None: The constructed authentication header, or None if construction fails.
+            AuthenticatedContext | None: A populated authentication context if authentication is
+            successful, or None if credentials are missing or invalid.
         """
-        pass
 
 
-class OAuthClientManagerBase(AuthenticationManagerBase, ABC):
+class OAuthClientBase(AuthenticationClientBase, ABC):
     """
     Base class for managing OAuth clients.
     This class provides an interface for managing OAuth clients.
@@ -222,9 +234,8 @@ class OAuthClientManagerBase(AuthenticationManagerBase, ABC):
 
         Args:
             response_type (str): The OAuth 2.0 response type indicating the expected authorization response
-                                (e.g., "code", "token", or "id_token").
-            prompt (str): The type of user interaction or consent prompt requested
-                        (e.g., "consent", "login", "none").
+            (e.g., "code", "token", or "id_token").
+            prompt (str): The type of user interaction or consent prompt requested (e.g., "consent", "login", "none").
 
         Returns:
             OAuth2AuthorizationQueryParams: A model containing the full set of query parameters to
@@ -246,7 +257,7 @@ class OAuthClientManagerBase(AuthenticationManagerBase, ABC):
         Args:
             authorization_url (str): The base URL to the authorization server's authorization endpoint.
             authorization_query_params (OAuth2AuthorizationQueryParams): Query parameters such as
-                client_id, redirect_uri, response_type, scope, and state to be merged into the URL.
+            client_id, redirect_uri, response_type, scope, and state to be merged into the URL.
 
         Returns:
             httpx.Response | None: The HTTP response received from the authorization server, or None
@@ -258,17 +269,14 @@ class OAuthClientManagerBase(AuthenticationManagerBase, ABC):
     async def handle_authorization_server_response(self, response: httpx.Response | None) -> None:
         """
         Handles server responses returned during the OAuth 2.0 authorization process.
-
-        This method interprets and reacts to various response codes and payloads from the
-        authorization server, determining whether the flow should continue, retry, or fail.
-        It is designed to be applicable across OAuth 2.0 flows that need user consent.
+        This method interprets and reacts to various response codes and payloads from
+        the authorization server, determining whether the flow should continue, retry,
+        or fail. It is designed to be applicable across OAuth 2.0 flows that need
+        user consent.
 
         Args:
-            response (httpx.Response): The HTTP response received after redirecting the user
-                                    to the authorization endpoint and receiving a callback.
-
-        Raises:
-            AuthenticationError or a subclass thereof if the response indicates a failure.
+            response (httpx.Response): The HTTP response received after redirecting the user to the authorization
+            endpoint and receiving a callback.
         """
         pass
 
@@ -278,12 +286,10 @@ class OAuthClientManagerBase(AuthenticationManagerBase, ABC):
                                  client_authorization_endpoint: str,
                                  authorization_code: str) -> httpx.Response | None:
         """
-        Sends a token request to the token endpoint of the authorization server.
-
-        This method handles the final step in OAuth 2.0 flows that require exchanging an authorization code
-        or grant credential for an access token. It constructs and submits a request to the token endpoint,
-        using the required parameters and headers defined by the flow (e.g., client credentials, redirect URI,
-        code verifier).
+        Sends a token request to the token endpoint of the authorization server. This method handles the final step in
+        OAuth 2.0 flows that require exchanging an authorization code or grant credential for an access token. It
+        constructs and submits a request to the token endpoint, using the required parameters and headers defined by the
+        flow (e.g., client credentials, redirect URI, code verifier).
 
         Args:
             client_authorization_path (str): The relative path on the client used to trigger token requests.
@@ -309,7 +315,7 @@ class OAuthClientManagerBase(AuthenticationManagerBase, ABC):
             response (httpx.Response): The HTTP response object returned from the token endpoint.
 
         Returns:
-            None
+            None: This method does not return a value.
         """
         pass
 
@@ -322,9 +328,13 @@ class OAuthClientManagerBase(AuthenticationManagerBase, ABC):
         Constructs the OAuth2 token request body for exchanging authorization code for access token.
 
         Args:
-            redirect_uri: The redirect URI used in the authorization request
-            authorization_code: The authorization code received from the OAuth provider
-            grant_type: The OAuth2 grant type (default: "authorization_code")
+            redirect_uri (str): The redirect URI used in the authorization request
+            authorization_code (str): The authorization code received from the OAuth provider
+            grant_type (str): The OAuth2 grant type (default: "authorization_code")
+            - `authorization_code`: (Authorization Code Grant, Authorization Code with PKCE)
+            - `client_credentials`: (Client Credentials Grant)
+            - `urn:ietf:params:oauth:grant-type:device_code`: (Device Code Grant)
+            - `refresh_token`: (Refresh Token Grant)
 
         Returns:
             OAuth2TokenRequest: The constructed token request body for OAuth2 token exchange

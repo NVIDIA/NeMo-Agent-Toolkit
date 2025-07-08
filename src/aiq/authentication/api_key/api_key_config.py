@@ -90,7 +90,7 @@ class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
         if not HEADER_NAME_REGEX.fullmatch(value):
             raise HeaderNameFieldError(
                 'invalid_format',
-                'header_name must match the HTTP token syntax per RFC 7230: ASCII letters, digits, or allowed symbols.')
+                'header_name must match the HTTP token syntax: ASCII letters, digits, or allowed symbols.')
 
         return value
 

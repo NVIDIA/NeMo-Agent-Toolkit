@@ -59,7 +59,7 @@ class OAuthBaseConfig(AuthenticationBaseConfig):
         if len(value) < 16:
             raise AuthCodeGrantConfigClientSecretFieldError(
                 'value_too_short',
-                'client_secret must be at least 16 characters long for security (RFC 6819 Section 4.1.3). '
+                'client_secret must be at least 16 characters long, ensuring a minimum of 128 bits of entropy.'
                 'Got: {length} characters', {
                     'length': len(value), 'minimum_length': 16
                 })
@@ -111,7 +111,7 @@ class OAuthBaseConfig(AuthenticationBaseConfig):
         if found_dangerous:
             raise AuthCodeGrantConfigScopeFieldError(
                 'value_too_broad',
-                'Overly broad scopes detected. Follow principle of least privilege (RFC 6819 Section 4.3.1). '
+                'Overly broad scopes detected. Follow principle of least privilege.'
                 'Dangerous scopes: {dangerous_scopes}', {'dangerous_scopes': list(found_dangerous)})
 
         # Check for duplicate scopes

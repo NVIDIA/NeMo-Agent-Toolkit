@@ -17,8 +17,8 @@ import asyncio
 import logging
 import typing
 
-from aiq.authentication.interfaces import AuthenticationManagerBase
-from aiq.authentication.interfaces import OAuthClientManagerBase
+from aiq.authentication.interfaces import AuthenticationClientBase
+from aiq.authentication.interfaces import OAuthClientBase
 from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
 from aiq.builder.context import Singleton
 from aiq.data_models.authentication import AuthenticationBaseConfig
@@ -38,7 +38,7 @@ class _CredentialsManager(metaclass=Singleton):
         Credentials Manager to store AIQ Authorization configurations.
         """
         super().__init__()
-        self._authentication_managers: dict[str, AuthenticationManagerBase] = {}
+        self._authentication_clients: dict[str, AuthenticationClientBase] = {}
         self._full_config: "AIQConfig | None" = None
         self._oauth_credentials_flag: asyncio.Event = asyncio.Event()
         self._consent_prompt_flag: asyncio.Event = asyncio.Event()
@@ -67,49 +67,48 @@ class _CredentialsManager(metaclass=Singleton):
                 else:
                     consent_prompt_keys.append(auth_config.consent_prompt_key)
 
-    def store_authentication_manager(self, name: str, manager: AuthenticationManagerBase) -> None:
+    def store_authentication_client(self, name: str, client: AuthenticationClientBase) -> None:
         """
-        Store or update an authentication manager instance.
+        Store or update an authentication client instance.
 
         Args:
-            name: The name/key for the authentication manager
-            manager: The authentication manager instance to store
+            name: The name/key for the authentication client
+            client: The authentication client instance to store
         """
-        self._authentication_managers[name] = manager
+        self._authentication_clients[name] = client
 
-    def get_authentication_manager_by_state(self, state: str) -> OAuthClientManagerBase | None:
+    def get_authentication_client_by_state(self, state: str) -> OAuthClientBase | None:
         """
-        Get authentication manager by the state value.
+        Get authentication client by the state value.
 
         Args:
             state: The state value to match.
 
         Returns:
-            The OAuth authentication manager if found, None otherwise.
+            The OAuth authentication client if found, None otherwise.
         """
-        for auth_manager in self._authentication_managers.values():
-            if (isinstance(auth_manager, OAuthClientManagerBase) and auth_manager.config is not None
-                    and hasattr(auth_manager.config, 'state')):
-                if auth_manager.config.state == state:
-                    return auth_manager
+        for auth_client in self._authentication_clients.values():
+            if (isinstance(auth_client, OAuthClientBase) and auth_client.config is not None
+                    and hasattr(auth_client.config, 'state')):
+                if auth_client.config.state == state:
+                    return auth_client
         return None
 
-    def get_authentication_manager_by_consent_prompt_key(self,
-                                                         consent_prompt_key: str) -> OAuthClientManagerBase | None:
+    def get_authentication_client_by_consent_prompt_key(self, consent_prompt_key: str) -> OAuthClientBase | None:
         """
-        Get authentication manager by the consent_prompt_key value.
+        Get authentication client by the consent_prompt_key value.
 
         Args:
             consent_prompt_key: The consent prompt key to match.
 
         Returns:
-            The OAuth authentication manager if found, None otherwise.
+            The OAuth authentication client if found, None otherwise.
         """
-        for auth_manager in self._authentication_managers.values():
-            if (isinstance(auth_manager, OAuthClientManagerBase) and auth_manager.config is not None
-                    and hasattr(auth_manager.config, 'consent_prompt_key')):
-                if auth_manager.config.consent_prompt_key == consent_prompt_key:
-                    return auth_manager
+        for auth_client in self._authentication_clients.values():
+            if (isinstance(auth_client, OAuthClientBase) and auth_client.config is not None
+                    and hasattr(auth_client.config, 'consent_prompt_key')):
+                if auth_client.config.consent_prompt_key == consent_prompt_key:
+                    return auth_client
         return None
 
     def validate_and_set_cors_config(self, front_end_config: FrontEndBaseConfig) -> None:

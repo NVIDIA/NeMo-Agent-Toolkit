@@ -16,8 +16,8 @@
 from contextlib import asynccontextmanager
 
 from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.cli.type_registry import AuthenticationManagerBuildCallableT
-from aiq.cli.type_registry import AuthenticationManagerRegisteredCallableT
+from aiq.cli.type_registry import AuthenticationClientBuildCallableT
+from aiq.cli.type_registry import AuthenticationClientRegisteredCallableT
 from aiq.cli.type_registry import AuthenticationProviderBuildCallableT
 from aiq.cli.type_registry import AuthenticationProviderRegisteredCallableT
 from aiq.cli.type_registry import EmbedderClientBuildCallableT
@@ -221,28 +221,28 @@ def register_authentication_provider(config_type: type[AuthenticationBaseConfigT
     return register_authentication_provider_inner
 
 
-def register_authentication_manager(config_type: type[AuthenticationBaseConfigT]):
+def register_authentication_client(config_type: type[AuthenticationBaseConfigT]):
 
-    def register_authentication_manager_inner(
-        fn: AuthenticationManagerBuildCallableT[AuthenticationBaseConfigT]
-    ) -> AuthenticationManagerRegisteredCallableT[AuthenticationBaseConfigT]:
+    def register_authentication_client_inner(
+        fn: AuthenticationClientBuildCallableT[AuthenticationBaseConfigT]
+    ) -> AuthenticationClientRegisteredCallableT[AuthenticationBaseConfigT]:
         from .type_registry import GlobalTypeRegistry
-        from .type_registry import RegisteredAuthenticationManagerInfo
+        from .type_registry import RegisteredAuthenticationClientInfo
 
         context_manager_fn = asynccontextmanager(fn)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
                                                                 component_type=AIQComponentEnum.AUTHENTICATION_PROVIDER)
 
-        GlobalTypeRegistry.get().register_authentication_manager(
-            RegisteredAuthenticationManagerInfo(full_type=config_type.full_type,
-                                                config_type=config_type,
-                                                build_fn=context_manager_fn,
-                                                discovery_metadata=discovery_metadata))
+        GlobalTypeRegistry.get().register_authentication_client(
+            RegisteredAuthenticationClientInfo(full_type=config_type.full_type,
+                                               config_type=config_type,
+                                               build_fn=context_manager_fn,
+                                               discovery_metadata=discovery_metadata))
 
         return context_manager_fn
 
-    return register_authentication_manager_inner
+    return register_authentication_client_inner
 
 
 def register_llm_client(config_type: type[LLMBaseConfigT], wrapper_type: LLMFrameworkEnum | str):

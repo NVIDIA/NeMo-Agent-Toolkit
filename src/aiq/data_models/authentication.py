@@ -16,6 +16,7 @@
 import typing
 from enum import Enum
 
+import httpx
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
@@ -29,6 +30,27 @@ class AuthenticationBaseConfig(TypedBaseModel, BaseModelRegistryTag):
 
 
 AuthenticationBaseConfigT = typing.TypeVar("AuthenticationBaseConfigT", bound=AuthenticationBaseConfig)
+
+
+class CredentialLocation(str, Enum):
+    HEADER = "header"
+    QUERY = "query"
+    COOKIE = "cookie"
+    BODY = "body"
+
+
+class AuthenticatedContext(BaseModel):
+    """
+    Represents the context used to authenticate an API request. This can include
+    headers, query parameters, cookies, or other metadata used for authentication.
+    """
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+    headers: dict[str, str] | httpx.Headers | None = Field(default=None,
+                                                           description="HTTP headers used for authentication.")
+    query_params: dict[str, str] | httpx.QueryParams | None = Field(
+        default=None, description="Query parameters used for authentication.")
+    cookies: dict[str, str] | httpx.Cookies | None = Field(default=None, description="Cookies used for authentication.")
+    body: dict[str, str] | None = Field(default=None, description="Authenticated Body value, if applicable.")
 
 
 class HeaderAuthScheme(str, Enum):

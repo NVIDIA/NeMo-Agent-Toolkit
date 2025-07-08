@@ -33,7 +33,6 @@ logger = logging.getLogger(__name__)
 class AuthCodeGrantConfig(OAuthUserConsentConfigBase, name="oauth2_authorization_code_grant"):
     """
     OAuth 2.0 authorization code grant authentication configuration model.
-    Implements RFC 6819 security validation requirements.
     """
     client_server_url: str = Field(description="The base url of the API server instance. "
                                    "This is needed to properly construct the redirect uri i.e: http://localhost:8000")
@@ -77,7 +76,6 @@ class AuthCodeGrantConfig(OAuthUserConsentConfigBase, name="oauth2_authorization
     def validate_authorization_url(cls, value: str, info: ValidationInfo) -> str:
         """
         Validate authorization_url and authorization_token_url field values.
-        RFC 6819 Section 4.2.1 - OAuth endpoints MUST use HTTPS to prevent token interception.
         """
         if not value:
             raise AuthCodeGrantConfigAuthorizationUrlFieldError('value_missing',
@@ -90,7 +88,7 @@ class AuthCodeGrantConfig(OAuthUserConsentConfigBase, name="oauth2_authorization
         if parsed.scheme != 'https':
             raise AuthCodeGrantConfigAuthorizationUrlFieldError(
                 'https_required',
-                '{field_name} must use HTTPS protocol for security (RFC 6819 Section 4.2.1). Got: {scheme}://', {
+                '{field_name} must use HTTPS protocol for security. Got: {scheme}://', {
                     'field_name': info.field_name, 'scheme': parsed.scheme
                 })
 
