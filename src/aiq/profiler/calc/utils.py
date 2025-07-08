@@ -172,11 +172,11 @@ def _remove_outliers(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarr
 
     # Add debugging for small datasets
     if n <= small_concurrency_range_threshold:
-        logger.info("Outlier detection for small dataset (n=%d):", n)
-        logger.info("  Data points: %s", list(zip(x, y)))
-        logger.info("  Residuals: %s", residuals.tolist())
-        logger.info("  Q1=%.3f, Q3=%.3f, IQR=%.3f", q1, q3, iqr)
-        logger.info("  Bounds: [%.3f, %.3f]", lower_bound, upper_bound)
+        logger.debug("Outlier detection for small dataset (n=%d):", n)
+        logger.debug("  Data points: %s", list(zip(x, y)))
+        logger.debug("  Residuals: %s", residuals.tolist())
+        logger.debug("  Q1=%.3f, Q3=%.3f, IQR=%.3f", q1, q3, iqr)
+        logger.debug("  Bounds: [%.3f, %.3f]", lower_bound, upper_bound)
         logger.info("  Outliers removed: %d", outliers_removed)
 
     return x[non_outlier_mask], y[non_outlier_mask], outliers_removed

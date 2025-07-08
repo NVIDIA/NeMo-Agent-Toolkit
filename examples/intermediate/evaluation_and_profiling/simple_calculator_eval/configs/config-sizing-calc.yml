@@ -69,4 +69,4 @@ eval:
     output_dir: .tmp/aiq/examples/simple_calculator/eval
     dataset:
       _type: json
-      file_path: examples/simple_calculator/data/simple_calculator.json
+      file_path: examples/basic/functions/simple_calculator/data/simple_calculator.json
