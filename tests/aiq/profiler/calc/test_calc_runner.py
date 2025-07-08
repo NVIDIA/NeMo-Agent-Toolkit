@@ -39,8 +39,8 @@ def make_sizing_metrics(latency, runtime, interrupted=False):
 
 def make_config(
     offline_mode=False,
-    target_latency=1.0,
-    target_runtime=2.0,
+    target_latency=20.0,
+    target_runtime=200.0,
     target_users=10,
     test_gpu_count=1,
     concurrencies=None,
@@ -70,23 +70,28 @@ def patch_write_output():
     ([5, 50], [80, 300]),
 ])
 async def test_calc_runner(latencies, runtimes):
-    config = make_config(offline_mode=False, concurrencies=[1, 2, 3])
+    target_latency = 20.0
+    target_runtime = 200.0
+    config = make_config(offline_mode=False,
+                         concurrencies=[1, 2, 3],
+                         target_latency=target_latency,
+                         target_runtime=target_runtime)
     runner = CalcRunner(config)
     evaluation_run_outputs = {
         1:
             SimpleNamespace(profiler_results=SimpleNamespace(llm_latency_ci=SimpleNamespace(p95=latencies[0]),
                                                              workflow_runtime_metrics=SimpleNamespace(p95=runtimes[0])),
-                            usage_stats=SimpleNamespace(total_runtime=latencies[0] + runtimes[0], usage_stats_items=[]),
+                            usage_stats=SimpleNamespace(total_runtime=runtimes[0] + 10, usage_stats_items={}),
                             workflow_interrupted=False),
         2:
             SimpleNamespace(profiler_results=SimpleNamespace(llm_latency_ci=SimpleNamespace(p95=latencies[1]),
                                                              workflow_runtime_metrics=SimpleNamespace(p95=runtimes[1])),
-                            usage_stats=SimpleNamespace(total_runtime=latencies[1] + runtimes[1], usage_stats_items=[]),
+                            usage_stats=SimpleNamespace(total_runtime=runtimes[1] + 10, usage_stats_items={}),
                             workflow_interrupted=False),
         3:
             SimpleNamespace(profiler_results=SimpleNamespace(llm_latency_ci=SimpleNamespace(p95=30),
                                                              workflow_runtime_metrics=SimpleNamespace(p95=300)),
-                            usage_stats=SimpleNamespace(total_runtime=330, usage_stats_items=[]),
+                            usage_stats=SimpleNamespace(total_runtime=330, usage_stats_items={}),
                             workflow_interrupted=True)
     }
 
@@ -95,13 +100,30 @@ async def test_calc_runner(latencies, runtimes):
         mock_instance.run_all = AsyncMock(return_value=evaluation_run_outputs)
         output = await runner.run_online()
 
-    # Validate structure
-    assert isinstance(output, CalcRunnerOutput)
-    assert output.gpu_estimates.gpu_estimate_by_llm_latency > 0
-    assert output.gpu_estimates.gpu_estimate_by_wf_runtime > 0
-    assert set(output.calc_data.keys()) == {1, 2, 3}
+    concurrency_list = evaluation_run_outputs.keys()
 
-    # Validate metrics match inputs
-    assert output.calc_data[1].llm_latency_p95 == latencies[0]
-    assert output.calc_data[2].workflow_runtime_p95 == runtimes[1]
-    assert output.calc_data[3].alerts.workflow_interrupted is True
+    assert isinstance(output, CalcRunnerOutput)
+
+    # Validate gpu estimates across concurrencies
+    assert output.gpu_estimates.gpu_estimate_by_llm_latency is not None
+    assert output.gpu_estimates.gpu_estimate_by_wf_runtime is not None
+
+    # Check all concurrencies are present
+    assert set(output.calc_data.keys()) == set(concurrency_list)
+
+    # Check the inputs are copied correctly
+    assert output.calc_data[1].sizing_metrics.llm_latency_p95 == latencies[0]
+    assert output.calc_data[2].sizing_metrics.workflow_runtime_p95 == runtimes[1]
+    assert output.calc_data[3].sizing_metrics.alerts.workflow_interrupted is True
+
+    # check the gpu estimates are present per concurrency
+    for concurrency in concurrency_list:
+        workflow_interrupted = output.calc_data[concurrency].sizing_metrics.alerts.workflow_interrupted
+        if output.calc_data[concurrency].sizing_metrics.llm_latency_p95 > target_latency or workflow_interrupted:
+            assert output.calc_data[concurrency].gpu_estimates.gpu_estimate_by_llm_latency is None
+        else:
+            assert output.calc_data[concurrency].gpu_estimates.gpu_estimate_by_llm_latency is not None
+        if output.calc_data[concurrency].sizing_metrics.workflow_runtime_p95 > target_runtime:
+            assert output.calc_data[concurrency].gpu_estimates.gpu_estimate_by_wf_runtime is None
+        else:
+            assert output.calc_data[concurrency].gpu_estimates.gpu_estimate_by_wf_runtime is not None

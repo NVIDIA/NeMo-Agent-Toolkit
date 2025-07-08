@@ -504,7 +504,7 @@ class CalcRunner:
 
         # Calculate sizing metrics per concurrency
         # if the workflow was interrupted, the metrics are not eligible for slope-based GPU estimation
-        for concurrency, eval_output in runner.evaluation_run_outputs.items():
+        for concurrency, eval_output in evaluation_run_outputs.items():
             profiler_results = eval_output.profiler_results
             usage_stats = eval_output.usage_stats
             workflow_interrupted = eval_output.workflow_interrupted
