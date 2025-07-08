@@ -123,7 +123,7 @@ The plots provide a visual representation of the concurrency vs. latency and con
 The JSON file contains the per-concurrency metrics that can be used for additional analysis.
 Sample output:
 `calc_runner_output.json`:
-```json
+```bash
 {
   "gpu_estimates": {
     "gpu_estimate_by_wf_runtime": 76.61472307484419,
