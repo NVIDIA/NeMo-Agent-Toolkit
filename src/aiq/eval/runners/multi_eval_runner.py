@@ -16,6 +16,7 @@
 import copy
 import typing
 
+from aiq.eval.config import EvaluationRunConfig
 from aiq.eval.config import EvaluationRunOutput
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.runners.config import MultiEvaluationRunConfig
@@ -37,17 +38,17 @@ class MultiEvaluationRunner:
         """
         Run all evaluations defined by the overrides.
         """
-        for override_id, override_value in self.config.overrides.items():
-            output = await self.run_single_evaluation(override_id, override_value)
-            self.evaluation_run_outputs[override_id] = output
+        for id, config in self.config.configs.items():
+            output = await self.run_single_evaluation(id, config)
+            self.evaluation_run_outputs[id] = output
 
-    async def run_single_evaluation(self, override_id: typing.Any, override_value: str) -> EvaluationRunOutput:
+        return self.evaluation_run_outputs
+
+    async def run_single_evaluation(self, id: typing.Any, config: EvaluationRunConfig) -> EvaluationRunOutput:
         """
         Run a single evaluation and return the output.
         """
-        config_copy = copy.deepcopy(self.config.base_config)
-        config_copy.override = override_value
-        config_copy.endpoint = self.config.endpoint
-        config_copy.endpoint_timeout = self.config.endpoint_timeout
+        # copy the config in case the caller is using the same config for multiple evaluations
+        config_copy = copy.deepcopy(config)
         evaluation_run = EvaluationRun(config_copy)
         return await evaluation_run.run_and_evaluate()

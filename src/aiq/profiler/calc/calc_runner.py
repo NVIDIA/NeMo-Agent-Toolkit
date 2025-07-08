@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import logging
 import shutil
 import time
@@ -529,33 +530,32 @@ class CalcRunner:
         # Override the concurrency and alias keys in the config
         concurrency_key = "eval.general.max_concurrency"
         alias_key = "eval.general.workflow_alias"
-        # Enable profiler base metrics via overrides
+        # Ensure profiler base metrics are enabled via overrides
         profiler_base_metrics_key = "eval.general.profiler.base_metrics"
 
-        overrides = {
-            c: ((concurrency_key, str(c)), (alias_key, "wf_concurrency_" + str(c)), (profiler_base_metrics_key, "true"))
-            for c in self.config.concurrencies
-        }
-
-        # Adjust the dataset size to a multiple of the concurrency and passes
-        adjust_dataset_size = True
-        num_passes = self.config.num_passes
-
-        # Instantiate the base config
+        # setup the base config
         eval_run_config = EvaluationRunConfig(config_file=self.config.config_file,
-                                              adjust_dataset_size=adjust_dataset_size,
-                                              num_passes=num_passes)
+                                              adjust_dataset_size=True,
+                                              num_passes=self.config.num_passes,
+                                              endpoint=self.config.endpoint,
+                                              endpoint_timeout=self.config.endpoint_timeout)
 
-        # Instantiate the multi-evaluation run config
-        config = MultiEvaluationRunConfig(base_config=eval_run_config,
-                                          overrides=overrides,
-                                          endpoint=self.config.endpoint,
-                                          endpoint_timeout=self.config.endpoint_timeout)
+        # Create a copy of the base config and apply the overrides for each concurrency
+        configs = {}
+        for concurrency in self.config.concurrencies:
+            config = copy.deepcopy(eval_run_config)
+            override = ((concurrency_key, str(concurrency)), (alias_key, "wf_concurrency_" + str(concurrency)),
+                        (profiler_base_metrics_key, "true"))
+            config.override = override
+            configs[concurrency] = config
+
+        # Instantiate the multi-evaluation run config with the overrides for each concurrency
+        config = MultiEvaluationRunConfig(configs=configs)
 
         # Instantiate and run multi-evaluation runner
         runner = MultiEvaluationRunner(config)
-        await runner.run_all()
-        if not runner.evaluation_run_outputs:
+        evaluation_run_outputs = await runner.run_all()
+        if not evaluation_run_outputs:
             logger.warning("No evaluation run outputs found. Skipping online mode.")
             return CalcRunnerOutput()
 
