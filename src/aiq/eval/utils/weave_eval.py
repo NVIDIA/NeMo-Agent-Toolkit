@@ -152,8 +152,9 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
     def _log_profiler_metrics(self, profiler_results: ProfilerResults, usage_stats: UsageStats) -> dict[str, Any]:
         """Log profiler metrics to Weave."""
         profile_metrics = {}
-        if profiler_results.workflow_runtime_metrics:
+        if profiler_results.llm_latency_ci:
             profile_metrics["llm_latency_p95"] = profiler_results.llm_latency_ci.p95
+        if profiler_results.workflow_runtime_metrics:
             profile_metrics["wf_runtime_p95"] = profiler_results.workflow_runtime_metrics.p95
 
         # TODO:get the LLM tokens from the usage stats and log them
