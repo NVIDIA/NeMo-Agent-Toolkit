@@ -17,6 +17,7 @@ import json
 import logging
 import math
 import os
+from pathlib import Path
 
 import ansible_runner
 import pandas as pd
@@ -100,12 +101,41 @@ def preload_offline_data(offline_data_path: str | None, benign_fallback_data_pat
     if benign_fallback_data_path is None:
         raise ValueError("benign_fallback_data_path must be provided")
 
-    _DATA_CACHE['offline_data'] = pd.read_csv(offline_data_path)
-    logger.info(f"Preloaded test data from: {offline_data_path}")
+    # Helper to turn a repo-relative path into an absolute one.
+    # If the incoming path is already absolute, it is returned unchanged.
+    # Otherwise we walk up from this file until we find the directory *above*
+    # 'examples', treating that as the repo root, and join the relative path.
+    def _make_abs(path_str: str) -> Path:
+        path = Path(path_str)
+        if path.is_absolute():
+            return path
 
-    with open(benign_fallback_data_path, "r") as f:
-        _DATA_CACHE['benign_fallback_offline_data'] = json.load(f)
-    logger.info(f"Preloaded benign fallback data from: {benign_fallback_data_path}")
+        for ancestor in Path(__file__).resolve().parents:
+            if ancestor.name == "examples":
+                return (ancestor.parent / path).resolve()
+
+        # Fallback: join with the current working directory
+        return (Path.cwd() / path).resolve()
+
+    # ---- Load CSV (offline data) ----
+    offline_path = Path(offline_data_path)
+    try:
+        _DATA_CACHE['offline_data'] = pd.read_csv(offline_path)
+    except FileNotFoundError:
+        offline_path = _make_abs(offline_data_path)
+        _DATA_CACHE['offline_data'] = pd.read_csv(offline_path)
+    logger.info(f"Preloaded test data from: {offline_path}")
+
+    # ---- Load JSON (benign fallback) ----
+    benign_path = Path(benign_fallback_data_path)
+    try:
+        with open(benign_path, "r") as f:
+            _DATA_CACHE['benign_fallback_offline_data'] = json.load(f)
+    except FileNotFoundError:
+        benign_path = _make_abs(benign_fallback_data_path)
+        with open(benign_path, "r") as f:
+            _DATA_CACHE['benign_fallback_offline_data'] = json.load(f)
+    logger.info(f"Preloaded benign fallback data from: {benign_path}")
 
 
 def get_offline_data() -> pd.DataFrame:

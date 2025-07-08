@@ -28,7 +28,6 @@ from aiq.runtime.loader import load_workflow
 
 logger = logging.getLogger(__name__)
 
-
 @pytest.mark.e2e
 async def test_full_workflow():
 
@@ -41,15 +40,21 @@ async def test_full_workflow():
         config = yaml.safe_load(file)
         input_filepath = config["eval"]["general"]["dataset"]["file_path"]
 
-    input_filepath_abs = importlib.resources.files(package_name).joinpath("../../../../", input_filepath).absolute()
+    # Build an absolute path to the dataset file.
+    # `input_filepath` is relative to the repo root (e.g. "examples/advanced/...").
+    # Ascend from this test file to the repo root and join the relative path.
+    repo_root = Path(__file__).resolve().parents[4]  # adjust if directory depth changes
+    input_filepath_abs = (repo_root / input_filepath).resolve()
 
     # Load input data
     with open(input_filepath_abs, 'r') as f:
         input_data = json.load(f)
 
-    # Run the workflow
+    #
+    # # Run the workflow
     results = []
     async with load_workflow(config_file) as workflow:
+        pass
         for item in input_data:
             async with workflow.run(item["question"]) as runner:
                 result = await runner.result(to_type=str)
