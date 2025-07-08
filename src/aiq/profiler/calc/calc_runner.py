@@ -339,12 +339,12 @@ class CalcRunner:
 
         return gpu_estimates, gpu_estimates_per_concurrency, alerts_per_concurrency
 
-    def _build_calc_runner_output(self) -> CalcRunnerOutput:
+    def generate_calc_runner_output(self) -> CalcRunnerOutput:
         """
         Build CalcRunnerOutput from sizing metrics per concurrency.
         """
         if not self.metrics_per_concurrency:
-            logger.warning("No metrics per concurrency found. Skipping build of CalcRunnerOutput.")
+            logger.warning("No metrics per concurrency found. Skipping generation of CalcRunnerOutput.")
             return CalcRunnerOutput()
 
         logger.info("Building CalcRunnerOutput from %d concurrency metrics", len(self.metrics_per_concurrency))
@@ -474,7 +474,7 @@ class CalcRunner:
             return CalcRunnerOutput()
 
         # calculate gpu estimates
-        calc_runner_output = self._build_calc_runner_output()
+        calc_runner_output = self.generate_calc_runner_output()
 
         # write the offline output
         self.write_output(self.config.output_dir, calc_runner_output)
@@ -554,7 +554,7 @@ class CalcRunner:
                 eligible_for_slope_based_estimation=eligible_for_slope_based_estimation)
 
         # calculate gpu estimates
-        calc_runner_output = self._build_calc_runner_output()
+        calc_runner_output = self.generate_calc_runner_output()
 
         # plot the metrics and write the output
         self.write_output(self.config.output_dir, calc_runner_output)
