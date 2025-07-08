@@ -250,6 +250,7 @@ Suppose your target workflow runtime is 10 seconds, the linear fit gives a slope
   `(100 / 10.83) * 8 ≈ 73.9 GPUs`
 
 **Key Points:**
+
 - The more concurrency levels you test, the more accurate the estimation.
 - Outliers and failed runs are excluded from the fit.
 - The calculator provides both runtime-based and latency-based GPU estimates (if both targets are specified).
@@ -259,9 +260,10 @@ The sizing calculator provides two GPU count estimates:
 - `Estimated GPU count (Workflow Runtime)`: Estimated GPU count based on the target workflow runtime.
 - `Estimated GPU count (LLM Latency)`: Estimated GPU count based on the target LLM latency.
 
-The calculator will provide both estimates if both target parameters are specified. You can use a maximum of the two estimates as the final GPU count to accommodate the target users.
+You can use a maximum of the two estimates as the final GPU count to accommodate the target users.
 
 **Sample output:**
+
 ```
 Targets: LLM Latency ≤ 0.0s, Workflow Runtime ≤ 10.0s, Users = 100
 Test parameters: GPUs = 8
@@ -279,7 +281,8 @@ Per concurrency results:
 Estimated GPU count (Workflow Runtime): 76.6
 ```
 
-**Note:** The GPU estimate is for the total cluster, not per GPU.
+**Note:**
+
 In addition to the slope based estimation, the calculator also provides a rough estimate of the GPU count required for the target user based on the data from each concurrency level. This is useful to get a quick estimate of the GPU count required for the workflow but is not as accurate as the slope based estimation and is not recommended for production use.
 
 ## Programmatic Usage

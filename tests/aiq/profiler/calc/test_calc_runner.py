@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock
 from unittest.mock import patch
 
 import pytest
@@ -72,32 +72,28 @@ def patch_write_output():
 async def test_calc_runner(latencies, runtimes):
     config = make_config(offline_mode=False, concurrencies=[1, 2, 3])
     runner = CalcRunner(config)
+    evaluation_run_outputs = {
+        1:
+            SimpleNamespace(profiler_results=SimpleNamespace(llm_latency_ci=SimpleNamespace(p95=latencies[0]),
+                                                             workflow_runtime_metrics=SimpleNamespace(p95=runtimes[0])),
+                            usage_stats=SimpleNamespace(total_runtime=latencies[0] + runtimes[0], usage_stats_items=[]),
+                            workflow_interrupted=False),
+        2:
+            SimpleNamespace(profiler_results=SimpleNamespace(llm_latency_ci=SimpleNamespace(p95=latencies[1]),
+                                                             workflow_runtime_metrics=SimpleNamespace(p95=runtimes[1])),
+                            usage_stats=SimpleNamespace(total_runtime=latencies[1] + runtimes[1], usage_stats_items=[]),
+                            workflow_interrupted=False),
+        3:
+            SimpleNamespace(profiler_results=SimpleNamespace(llm_latency_ci=SimpleNamespace(p95=30),
+                                                             workflow_runtime_metrics=SimpleNamespace(p95=300)),
+                            usage_stats=SimpleNamespace(total_runtime=330, usage_stats_items=[]),
+                            workflow_interrupted=True)
+    }
 
     with patch("aiq.profiler.calc.calc_runner.MultiEvaluationRunner") as mock_runner:
         mock_instance = mock_runner.return_value
-
-        mock_instance.evaluation_run_outputs = {
-            1:
-                SimpleNamespace(profiler_results=SimpleNamespace(
-                    llm_latency_ci=SimpleNamespace(p95=latencies[0]),
-                    workflow_runtime_metrics=SimpleNamespace(p95=runtimes[0])),
-                                usage_stats=SimpleNamespace(total_runtime=latencies[0] + runtimes[0]),
-                                workflow_interrupted=False),
-            2:
-                SimpleNamespace(profiler_results=SimpleNamespace(
-                    llm_latency_ci=SimpleNamespace(p95=latencies[1]),
-                    workflow_runtime_metrics=SimpleNamespace(p95=runtimes[1])),
-                                usage_stats=SimpleNamespace(total_runtime=latencies[1] + runtimes[1]),
-                                workflow_interrupted=False),
-            3:
-                SimpleNamespace(profiler_results=SimpleNamespace(llm_latency_ci=SimpleNamespace(p95=30),
-                                                                 workflow_runtime_metrics=SimpleNamespace(p95=300)),
-                                usage_stats=SimpleNamespace(total_runtime=330),
-                                workflow_interrupted=True)
-        }
-
-        with patch.object(runner, "output_dir", new_callable=MagicMock):
-            output = await runner.run_online()
+        mock_instance.run_all = AsyncMock(return_value=evaluation_run_outputs)
+        output = await runner.run_online()
 
     # Validate structure
     assert isinstance(output, CalcRunnerOutput)
