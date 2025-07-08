@@ -295,8 +295,8 @@ In addition to the command line interface, the sizing calculator can be used pro
 **Sample code:**
 ```python
 import asyncio
+from aiq.profiler.calc.calc_runner import CalcRunner
 from aiq.profiler.calc.data_models import CalcRunnerConfig
-from aiq.cli.commands.profile.calc import CalcRunner
 from aiq.profiler.calc.data_models import CalcRunnerOutput
 
 async def run_calc():

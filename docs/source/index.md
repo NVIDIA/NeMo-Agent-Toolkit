@@ -48,8 +48,6 @@ Agent Intelligence toolkit was previously known as <!-- vale off -->AgentIQ<!-- 
 
 - [**Evaluation System:**](./workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 
-- [**Sizing Calculator:**](./workflows/sizing-calc.md) Calculate the GPU count required for a target user count and runtime for your workflow based on profiling data from various concurrency levels.
-
 - [**User Interface:**](./quick-start/launching-ui.md) Use the AIQ toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 
 - [**Full MCP Support:**](./workflows/mcp/index.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use AIQ toolkit as an [MCP client](./workflows/mcp/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use AIQ toolkit as an [MCP server](./workflows/mcp/mcp-server.md) to publish tools via MCP.
@@ -87,6 +85,7 @@ Functions <./workflows/functions/index.md>
 ./workflows/mcp/index.md
 Evaluate Workflows <./workflows/evaluate.md>
 Profiling Workflows <./workflows/profiler.md>
+Sizing Calculator <./workflows/sizing-calc.md>
 ./workflows/using-local-llms.md
 ./workflows/observe/index.md
 ```

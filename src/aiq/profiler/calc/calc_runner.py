@@ -362,11 +362,15 @@ class CalcRunner:
         Enhanced with better styling, trend analysis, and annotations.
         """
         from aiq.profiler.calc.utils import plot_concurrency_vs_time_metrics as plot_metrics
-
-        plot_metrics(metrics_per_concurrency=self.metrics_per_concurrency,
-                     output_dir=output_dir,
-                     target_latency=self.target_latency,
-                     target_runtime=self.target_runtime)
+        try:
+            plot_metrics(metrics_per_concurrency=self.metrics_per_concurrency,
+                         output_dir=output_dir,
+                         target_latency=self.target_latency,
+                         target_runtime=self.target_runtime)
+        except Exception as e:
+            # Move forward with summary table even if the plot fails
+            logger.exception("Failed to plot concurrency vs. time metrics: %s", e, exc_info=True)
+            logger.warning("Skipping plot of concurrency vs. time metrics")
 
     def write_output(self, output_dir: Path, calc_runner_output: CalcRunnerOutput):
         """
