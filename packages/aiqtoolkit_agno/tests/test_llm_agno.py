@@ -182,7 +182,7 @@ class TestOpenAIAgno:
             call_kwargs = mock_openai_chat.call_args[1]
 
             # Check that all parameters are passed correctly
-            assert call_kwargs["model"] == "gpt-4"
+            assert call_kwargs["id"] == "gpt-4"
             assert call_kwargs["api_key"] == "test-api-key"
             assert call_kwargs["temperature"] == 0.7
             # Not checking max_tokens
