@@ -33,12 +33,11 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 from pydantic import Field
 
+from aiq.agent.base import AGENT_CALL_LOG_MESSAGE
 from aiq.agent.base import AGENT_LOG_PREFIX
-from aiq.agent.base import AGENT_RESPONSE_LOG_MESSAGE
 from aiq.agent.base import INPUT_SCHEMA_MESSAGE
 from aiq.agent.base import NO_INPUT_ERROR_MESSAGE
 from aiq.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
-from aiq.agent.base import TOOL_RESPONSE_LOG_MESSAGE
 from aiq.agent.base import AgentDecision
 from aiq.agent.dual_node import DualNodeAgent
 from aiq.agent.react_agent.output_parser import ReActOutputParser
@@ -67,7 +66,7 @@ class ReActAgentGraph(DualNodeAgent):
                  prompt: ChatPromptTemplate,
                  tools: list[BaseTool],
                  use_tool_schema: bool = True,
-                 callbacks: list[AsyncCallbackHandler] = None,
+                 callbacks: list[AsyncCallbackHandler] | None = None,
                  detailed_logs: bool = False,
                  retry_parsing_errors: bool = True,
                  max_retries: int = 1):
@@ -91,12 +90,12 @@ class ReActAgentGraph(DualNodeAgent):
                          f"{INPUT_SCHEMA_MESSAGE.format(schema=tools[-1].input_schema.model_fields)}")
         prompt = prompt.partial(tools=tool_names_and_descriptions, tool_names=tool_names)
         # construct the ReAct Agent
-        llm = llm.bind(stop=["Observation:"])
-        self.agent = prompt | llm
+        bound_llm = llm.bind(stop=["Observation:"])  # type: ignore
+        self.agent = prompt | bound_llm
         self.tools_dict = {tool.name: tool for tool in tools}
         logger.debug("%s Initialized ReAct Agent Graph", AGENT_LOG_PREFIX)
 
-    def _get_tool(self, tool_name):
+    def _get_tool(self, tool_name: str):
         try:
             return self.tools_dict.get(tool_name)
         except Exception as ex:
@@ -120,19 +119,23 @@ class ReActAgentGraph(DualNodeAgent):
                     if len(state.messages) == 0:
                         raise RuntimeError('No input received in state: "messages"')
                     # to check is any human input passed or not, if no input passed Agent will return the state
-                    if state.messages[0].content.strip() == "":
+                    content = str(state.messages[0].content)
+                    if content.strip() == "":
                         logger.error("%s No human input passed to the agent.", AGENT_LOG_PREFIX)
                         state.messages += [AIMessage(content=NO_INPUT_ERROR_MESSAGE)]
                         return state
-                    question = state.messages[0].content
+                    question = content
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
-                    output_message = ""
-                    async for event in self.agent.astream({"question": question},
-                                                          config=RunnableConfig(callbacks=self.callbacks)):
-                        output_message += event.content
-                    output_message = AIMessage(content=output_message)
+
+                    output_message_content = await self._stream_llm_with_retry(
+                        self.agent,
+                        {"question": question},
+                        RunnableConfig(callbacks=self.callbacks)  # type: ignore
+                    )
+                    output_message = AIMessage(content=output_message_content)
+
                     if self.detailed_logs:
-                        logger.info(AGENT_RESPONSE_LOG_MESSAGE, question, output_message.content)
+                        logger.info(AGENT_CALL_LOG_MESSAGE, question, output_message_content)
                 else:
                     # ReAct Agents require agentic cycles
                     # in an agentic cycle, preserve the agent's thoughts from the previous cycles,
@@ -141,41 +144,45 @@ class ReActAgentGraph(DualNodeAgent):
                     for index, intermediate_step in enumerate(state.agent_scratchpad):
                         agent_thoughts = AIMessage(content=intermediate_step.log)
                         agent_scratchpad.append(agent_thoughts)
-                        tool_response = HumanMessage(content=state.tool_responses[index].content)
+                        tool_response_content = str(state.tool_responses[index].content)
+                        tool_response = HumanMessage(content=tool_response_content)
                         agent_scratchpad.append(tool_response)
                     agent_scratchpad += working_state
-                    question = state.messages[0].content
+                    question = str(state.messages[0].content)
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
-                    output_message = ""
-                    async for event in self.agent.astream({
+
+                    output_message_content = await self._stream_llm_with_retry(
+                        self.agent,
+                        {
                             "question": question, "agent_scratchpad": agent_scratchpad
-                    },
-                                                          config=RunnableConfig(callbacks=self.callbacks)):
-                        output_message += event.content
-                    output_message = AIMessage(content=output_message)
+                        },
+                        RunnableConfig(callbacks=self.callbacks)  # type: ignore
+                    )
+                    output_message = AIMessage(content=output_message_content)
+
                     if self.detailed_logs:
-                        logger.info(AGENT_RESPONSE_LOG_MESSAGE, question, output_message.content)
+                        logger.info(AGENT_CALL_LOG_MESSAGE, question, output_message_content)
                         logger.debug("%s The agent's scratchpad (with tool result) was:\n%s",
                                      AGENT_LOG_PREFIX,
                                      agent_scratchpad)
                 try:
                     # check if the agent has the final answer yet
                     logger.debug("%s Successfully obtained agent response. Parsing agent's response", AGENT_LOG_PREFIX)
-                    agent_output = await ReActOutputParser().aparse(output_message.content)
+                    agent_output = await ReActOutputParser().aparse(output_message_content)
                     logger.debug("%s Successfully parsed agent's response", AGENT_LOG_PREFIX)
                     if attempt > 1:
                         logger.debug("%s Successfully parsed agent response after %s attempts",
                                      AGENT_LOG_PREFIX,
                                      attempt)
                     if isinstance(agent_output, AgentFinish):
-                        final_answer = agent_output.return_values.get('output', output_message.content)
+                        final_answer = agent_output.return_values.get('output', output_message_content)
                         logger.debug("%s The agent has finished, and has the final answer", AGENT_LOG_PREFIX)
                         # this is where we handle the final output of the Agent, we can clean-up/format/postprocess here
                         # the final answer goes in the "messages" state channel
                         state.messages += [AIMessage(content=final_answer)]
                     else:
                         # the agent wants to call a tool, ensure the thoughts are preserved for the next agentic cycle
-                        agent_output.log = output_message.content
+                        agent_output.log = output_message_content
                         logger.debug("%s The agent wants to call a tool: %s", AGENT_LOG_PREFIX, agent_output.tool)
                         state.agent_scratchpad += [agent_output]
                     return state
@@ -187,7 +194,7 @@ class ReActAgentGraph(DualNodeAgent):
                     logger.warning("%s Error parsing agent output\nObservation:%s\nAgent Output:\n%s",
                                    AGENT_LOG_PREFIX,
                                    ex.observation,
-                                   output_message.content)
+                                   output_message_content)
                     if attempt == self.max_tries:
                         logger.exception(
                             "%s Failed to parse agent output after %d attempts, consider enabling or "
@@ -196,13 +203,14 @@ class ReActAgentGraph(DualNodeAgent):
                             attempt,
                             exc_info=True)
                         # the final answer goes in the "messages" state channel
-                        output_message.content = ex.observation + '\n' + output_message.content
+                        combined_content = str(ex.observation) + '\n' + output_message_content
+                        output_message.content = combined_content
                         state.messages += [output_message]
                         return state
                     # retry parsing errors, if configured
                     logger.info("%s Retrying ReAct Agent, including output parsing Observation", AGENT_LOG_PREFIX)
                     working_state.append(output_message)
-                    working_state.append(HumanMessage(content=ex.observation))
+                    working_state.append(HumanMessage(content=str(ex.observation)))
         except Exception as ex:
             logger.exception("%s Failed to call agent_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
             raise ex
@@ -212,7 +220,8 @@ class ReActAgentGraph(DualNodeAgent):
             logger.debug("%s Starting the ReAct Conditional Edge", AGENT_LOG_PREFIX)
             if len(state.messages) > 1:
                 # the ReAct Agent has finished executing, the last agent output was AgentFinish
-                logger.debug("%s Final answer:\n%s", AGENT_LOG_PREFIX, state.messages[-1].content)
+                last_message_content = str(state.messages[-1].content)
+                logger.debug("%s Final answer:\n%s", AGENT_LOG_PREFIX, last_message_content)
                 return AgentDecision.END
             # else the agent wants to call a tool
             agent_output = state.agent_scratchpad[-1]
@@ -256,42 +265,31 @@ class ReActAgentGraph(DualNodeAgent):
 
             # Run the tool. Try to use structured input, if possible.
             try:
-                tool_input_str = agent_thoughts.tool_input.strip().replace("'", '"')
+                tool_input_str = str(agent_thoughts.tool_input).strip().replace("'", '"')
                 tool_input_dict = json.loads(tool_input_str) if tool_input_str != 'None' else tool_input_str
                 logger.debug("%s Successfully parsed structured tool input from Action Input", AGENT_LOG_PREFIX)
-                tool_response = await requested_tool.ainvoke(tool_input_dict,
-                                                             config=RunnableConfig(callbacks=self.callbacks))
+
+                tool_response = await self._call_tool_with_retry(requested_tool, tool_input_dict)
+
                 if self.detailed_logs:
-                    # The tool response can be very large, so we log only the first 1000 characters
-                    tool_response_str = str(tool_response)
-                    tool_response_str = tool_response_str[:1000] + "..." if len(
-                        tool_response_str) > 1000 else tool_response_str
-                    tool_response_log_message = TOOL_RESPONSE_LOG_MESSAGE % (
-                        requested_tool.name, tool_input_str, tool_response_str)
-                    logger.info(tool_response_log_message)
+                    self._log_tool_response(requested_tool.name, tool_input_dict, tool_response)
+
             except JSONDecodeError as ex:
-                logger.warning(
+                logger.debug(
                     "%s Unable to parse structured tool input from Action Input. Using Action Input as is."
                     "\nParsing error: %s",
                     AGENT_LOG_PREFIX,
                     ex,
                     exc_info=True)
-                tool_input_str = agent_thoughts.tool_input
-                tool_response = await requested_tool.ainvoke(tool_input_str,
-                                                             config=RunnableConfig(callbacks=self.callbacks))
+                tool_input_str = str(agent_thoughts.tool_input)
 
-            # some tools, such as Wikipedia, will return an empty response when no search results are found
-            if tool_response is None or tool_response == "":
-                tool_response = "The tool provided an empty response.\n"
+                tool_response = await self._call_tool_with_retry(requested_tool, tool_input_str)
+
             # put the tool response in the graph state
             tool_response = ToolMessage(name=agent_thoughts.tool,
                                         tool_call_id=agent_thoughts.tool,
                                         content=tool_response)
-            logger.debug("%s Called tool %s with input: %s\nThe tool returned: %s",
-                         AGENT_LOG_PREFIX,
-                         requested_tool.name,
-                         agent_thoughts.tool_input,
-                         tool_response.content)
+
             state.tool_responses += [tool_response]
             return state
         except Exception as ex:

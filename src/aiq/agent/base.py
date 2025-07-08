@@ -13,25 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+import json
 import logging
 from abc import ABC
 from abc import abstractmethod
 from enum import Enum
+from typing import Any
 
 from colorama import Fore
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import BaseMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph.graph import CompiledGraph
 
-log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 TOOL_NOT_FOUND_ERROR_MESSAGE = "There is no tool named {tool_name}. Tool must be one of {tools}."
 INPUT_SCHEMA_MESSAGE = ". Arguments must be provided as a valid JSON object following this format: {schema}"
-NO_INPUT_ERROR_MESSAGE = "No human input recieved to the agent, Please ask a valid question."
+NO_INPUT_ERROR_MESSAGE = "No human input received to the agent, Please ask a valid question."
 
 AGENT_LOG_PREFIX = "[AGENT]"
-AGENT_RESPONSE_LOG_MESSAGE = f"\n{'-' * 30}\n" + \
+AGENT_CALL_LOG_MESSAGE = f"\n{'-' * 30}\n" + \
                                  AGENT_LOG_PREFIX + "\n" + \
                                  Fore.YELLOW + \
                                  "Agent input: %s\n" + \
@@ -40,7 +45,7 @@ AGENT_RESPONSE_LOG_MESSAGE = f"\n{'-' * 30}\n" + \
                                  Fore.RESET + \
                                  f"\n{'-' * 30}"
 
-TOOL_RESPONSE_LOG_MESSAGE = f"\n{'-' * 30}\n" + \
+TOOL_CALL_LOG_MESSAGE = f"\n{'-' * 30}\n" + \
                                  AGENT_LOG_PREFIX + "\n" + \
                                  Fore.WHITE + \
                                  "Calling tools: %s\n" + \
@@ -62,15 +67,211 @@ class BaseAgent(ABC):
     def __init__(self,
                  llm: BaseChatModel,
                  tools: list[BaseTool],
-                 callbacks: list[AsyncCallbackHandler] = None,
-                 detailed_logs: bool = False):
-        log.debug("Initializing Agent Graph")
+                 callbacks: list[AsyncCallbackHandler] | None = None,
+                 detailed_logs: bool = False) -> None:
+        logger.debug("Initializing Agent Graph")
         self.llm = llm
         self.tools = tools
         self.callbacks = callbacks or []
         self.detailed_logs = detailed_logs
         self.graph = None
 
+    async def _stream_llm_with_retry(self,
+                                     runnable: Any,
+                                     inputs: dict[str, Any],
+                                     config: RunnableConfig | None = None,
+                                     max_retries: int = 3) -> str:
+        """
+        Safely stream from LLM with retry logic and graceful error handling.
+        Common pattern used across multiple agents.
+
+        Parameters
+        ----------
+        runnable : Any
+            The LLM runnable (prompt | llm or similar)
+        inputs : Dict[str, Any]
+            The inputs to pass to the runnable
+        config : RunnableConfig | None
+            The config to pass to the runnable (should include callbacks)
+        max_retries : int
+            Maximum number of retry attempts (default: 3)
+
+        Returns
+        -------
+        str
+            The LLM response or error message
+        """
+        for attempt in range(1, max_retries + 1):
+            try:
+                output_message = ""
+                async for event in runnable.astream(inputs, config=config):
+                    output_message += event.content
+
+                return output_message
+
+            except Exception as e:
+                logger.warning("%s LLM streaming failed on attempt %d/%d: %s",
+                               AGENT_LOG_PREFIX,
+                               attempt,
+                               max_retries,
+                               str(e))
+
+                # If this is the last attempt, return an error message
+                if attempt == max_retries:
+                    error_msg = f"LLM streaming failed after {max_retries} attempts: {str(e)}"
+                    logger.error("%s %s", AGENT_LOG_PREFIX, error_msg)
+                    return error_msg
+
+                # Wait before retry (exponential backoff)
+                await asyncio.sleep(2**attempt)
+
+        return "LLM streaming failed after all retry attempts"
+
+    async def _call_llm_with_retry(self, messages: list[BaseMessage], max_retries: int = 3) -> str:
+        """
+        Safely call the LLM with retry logic and graceful error handling.
+        If the LLM fails, returns an error message instead of raising an exception.
+
+        Parameters
+        ----------
+        messages : list[BaseMessage]
+            The messages to send to the LLM
+        max_retries : int
+            Maximum number of retry attempts (default: 3)
+
+        Returns
+        -------
+        str
+            The LLM response or error message
+        """
+        for attempt in range(1, max_retries + 1):
+            try:
+                response = await self.llm.ainvoke(messages)
+
+                # Handle different response types safely
+                return str(response.content)
+
+            except Exception as e:
+                logger.warning("%s LLM call failed on attempt %d/%d: %s",
+                               AGENT_LOG_PREFIX,
+                               attempt,
+                               max_retries,
+                               str(e))
+
+                # If this is the last attempt, return an error message
+                if attempt == max_retries:
+                    error_msg = f"LLM call failed after {max_retries} attempts: {str(e)}"
+                    logger.error("%s %s", AGENT_LOG_PREFIX, error_msg)
+                    return error_msg
+
+                # Wait before retry (exponential backoff)
+                await asyncio.sleep(2**attempt)
+
+        return "LLM call failed after all retry attempts"
+
+    async def _call_tool_with_retry(self,
+                                    tool: BaseTool,
+                                    tool_input: dict[str, Any] | str,
+                                    config: RunnableConfig | None = None,
+                                    max_retries: int = 3) -> Any:
+        """
+        Safely call a tool with retry logic and graceful error handling.
+        If the tool fails, returns an error message instead of raising an exception.
+
+        Parameters
+        ----------
+        tool : BaseTool
+            The tool to call
+        tool_input : Union[Dict[str, Any], str]
+            The input to pass to the tool
+        max_retries : int
+            Maximum number of retry attempts (default: 3)
+
+        Returns
+        -------
+        Any
+            The tool response or error message
+        """
+        for attempt in range(1, max_retries + 1):
+            try:
+                response = await tool.ainvoke(tool_input, config=config)
+
+                # Handle empty responses
+                if isinstance(response, str):
+                    if response is None or response == "":
+                        return f"The tool {tool.name} provided an empty response."
+
+                return response
+
+            except Exception as e:
+                logger.warning("%s Tool %s failed on attempt %d/%d: %s",
+                               AGENT_LOG_PREFIX,
+                               tool.name,
+                               attempt,
+                               max_retries,
+                               str(e))
+
+                # If this is the last attempt, return an error message
+                if attempt == max_retries:
+                    error_msg = f"Tool {tool.name} failed after {max_retries} attempts: {str(e)}"
+                    logger.error("%s %s", AGENT_LOG_PREFIX, error_msg)
+                    return error_msg
+
+                # Wait before retry (exponential backoff)
+                await asyncio.sleep(2**attempt)
+
+        return f"Tool {tool.name} failed after all retry attempts"
+
+    def _log_tool_response(self, tool_name: str, tool_input: Any, tool_response: str, max_chars: int = 1000) -> None:
+        """
+        Log tool response with consistent formatting and length limits.
+
+        Parameters
+        ----------
+        tool_name : str
+            The name of the tool that was called
+        tool_input : Any
+            The input that was passed to the tool
+        tool_response : str
+            The response from the tool
+        max_chars : int
+            Maximum number of characters to log (default: 1000)
+        """
+        if self.detailed_logs:
+            # Truncate tool response if too long
+            display_response = tool_response[:max_chars] + "...(rest of response truncated)" if len(
+                tool_response) > max_chars else tool_response
+
+            # Format the tool input for display
+            tool_input_str = str(tool_input)
+
+            tool_response_log_message = TOOL_CALL_LOG_MESSAGE % (tool_name, tool_input_str, display_response)
+            logger.info(tool_response_log_message)
+
+    def _parse_json(self, json_string: str) -> dict[str, Any]:
+        """
+        Safely parse JSON with graceful error handling.
+        If JSON parsing fails, returns an empty dict or error info.
+
+        Parameters
+        ----------
+        json_string : str
+            The JSON string to parse
+
+        Returns
+        -------
+        Dict[str, Any]
+            The parsed JSON or error information
+        """
+        try:
+            return json.loads(json_string)
+        except json.JSONDecodeError as e:
+            logger.warning("%s JSON parsing failed, returning the original string: %s", AGENT_LOG_PREFIX, str(e))
+            return {"error": f"JSON parsing failed: {str(e)}", "original_string": json_string}
+        except Exception as e:
+            logger.warning("%s Unexpected error during JSON parsing: %s", AGENT_LOG_PREFIX, str(e))
+            return {"error": f"Unexpected parsing error: {str(e)}", "original_string": json_string}
+
     @abstractmethod
-    async def _build_graph(self, state_schema) -> CompiledGraph:
+    async def _build_graph(self, state_schema: type) -> CompiledGraph:
         pass
