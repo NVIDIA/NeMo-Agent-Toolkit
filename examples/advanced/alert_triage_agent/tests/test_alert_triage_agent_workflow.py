@@ -28,6 +28,7 @@ from aiq.runtime.loader import load_workflow
 
 logger = logging.getLogger(__name__)
 
+
 @pytest.mark.e2e
 async def test_full_workflow():
 
@@ -36,7 +37,7 @@ async def test_full_workflow():
     config_file: Path = importlib.resources.files(package_name).joinpath("configs",
                                                                          "config_offline_mode.yml").absolute()
 
-    with open(config_file, "r") as file:
+    with open(config_file, "r", encoding="utf-8") as file:
         config = yaml.safe_load(file)
         input_filepath = config["eval"]["general"]["dataset"]["file_path"]
 
@@ -47,10 +48,9 @@ async def test_full_workflow():
     input_filepath_abs = (repo_root / input_filepath).resolve()
 
     # Load input data
-    with open(input_filepath_abs, 'r') as f:
+    with open(input_filepath_abs, 'r', encoding='utf-8') as f:
         input_data = json.load(f)
 
-    #
     # # Run the workflow
     results = []
     async with load_workflow(config_file) as workflow:
@@ -69,6 +69,6 @@ async def test_full_workflow():
     assert 'maintenance' in results[3]
 
     # Check that rows with hosts not under maintenance contain root cause categorization
-    for i in range(len(results)):
+    for i, res in enumerate(results):
         if i != 3:
-            assert "root cause category" in results[i].lower()
+            assert "root cause category" in res.lower()
