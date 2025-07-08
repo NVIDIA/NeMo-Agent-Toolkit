@@ -1,6 +1,6 @@
-examples/plot_charts/src/plot_charts/data/** filter=lfs diff=lfs merge=lfs -text
-examples/simple_calculator/src/aiq_simple_calculator/data/** filter=lfs diff=lfs merge=lfs -text
-examples/simple/src/aiq_simple/data/** filter=lfs diff=lfs merge=lfs -text
-examples/swe_bench/src/aiq_swe_bench/data/** filter=lfs diff=lfs merge=lfs -text
+examples/basic/functions/plot_charts/src/aiq_plot_charts/data/** filter=lfs diff=lfs merge=lfs -text
+examples/basic/functions/simple_calculator/src/aiq_simple_calculator/data/** filter=lfs diff=lfs merge=lfs -text
+examples/basic/functions/simple/src/aiq_simple/data/** filter=lfs diff=lfs merge=lfs -text
+examples/intermediate/evaluation_and_profiling/swe_bench/src/aiq_swe_bench/data/** filter=lfs diff=lfs merge=lfs -text
 docs/source/_static/*.png filter=lfs diff=lfs merge=lfs -text
-examples/alert_triage_agent/src/aiq_alert_triage_agent/data/** filter=lfs diff=lfs merge=lfs -text
+examples/advanced/alert_triage_agent/src/aiq_alert_triage_agent/data/** filter=lfs diff=lfs merge=lfs -text
