@@ -34,12 +34,12 @@ uv pip install -e '.[weave]'
 Pick an example from the list of available workflows. In this guide, we will be using the `simple_calculator` example.
 
 ```bash
-uv pip install -e examples/simple_calculator
+uv pip install -e examples/basic/functions/simple_calculator
 ```
 
 ### Step 3: Modify Workflow Configuration
 
-Update your workflow configuration file to include the weave telemetry settings. For example, `examples/simple_calculator/configs/config-weave.yml` has the following weave settings:
+Update your workflow configuration file to include the weave telemetry settings. For example, `examples/basic/functions/simple_calculator/configs/config-weave.yml` has the following weave settings:
 
 ```bash
 general:
@@ -59,11 +59,11 @@ This setup enables logging trace data to W&B weave. The weave integration requir
 | `entity` (optional) | Your W&B username or team name | `"your-wandb-username-or-teamname"` |
 
 ### Step 4: Run Your Workflow
-Install `simple_calculator` example using the instructions in the `examples/simple_calculator/README.md` guide.
+Install `simple_calculator` example using the instructions in the `examples/basic/functions/simple_calculator/README.md` guide.
 Run the workflow using `config-weave.yml` configuration file:
 
 ```bash
-aiq run --config_file examples/simple_calculator/configs/config-weave.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+aiq run --config_file examples/basic/functions/simple_calculator/configs/config-weave.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
 If it is your first time running the workflow, you will be prompted to login to W&B Weave.

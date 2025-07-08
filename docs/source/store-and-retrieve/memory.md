@@ -28,8 +28,8 @@ The AIQ toolkit includes two memory module providers, both of which are availabl
 
 ## Examples
 The following examples demonstrate how to use the memory module in the AIQ toolkit:
-* `examples/simple_rag`
-* `examples/semantic_kernel_demo`
+* `examples/intermediate/RAG/simple_rag`
+* `examples/basic/frameworks/semantic_kernel_demo`
 
 ## Additional Resources
 For information on how to write a new memory module provider can be found in the [Adding a Memory Provider](../extend/memory.md) document.

@@ -47,6 +47,8 @@ class RagasEvaluatorConfig(EvaluatorBaseConfig, name="ragas"):
     # Ragas metric
     metric: str | dict[str, RagasMetricConfig] = Field(default="AnswerAccuracy",
                                                        description="RAGAS metric callable with optional 'kwargs:'")
+    input_obj_field: str | None = Field(
+        default=None, description="The field in the input object that contains the content to evaluate.")
 
     @model_validator(mode="before")
     @classmethod
@@ -133,7 +135,9 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
             metrics.append(metric_callable(**kwargs))
 
     # Create the RAG evaluator
-    _evaluator = RAGEvaluator(evaluator_llm=llm, metrics=metrics,
-                              max_concurrency=builder.get_max_concurrency()) if metrics else None
+    _evaluator = RAGEvaluator(evaluator_llm=llm,
+                              metrics=metrics,
+                              max_concurrency=builder.get_max_concurrency(),
+                              input_obj_field=config.input_obj_field) if metrics else None
 
     yield EvaluatorInfo(config=config, evaluate_fn=evaluate_fn, description="Evaluator for RAGAS metrics")

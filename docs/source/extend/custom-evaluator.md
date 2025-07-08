@@ -40,7 +40,7 @@ The evaluator configuration defines the evaluator name and any evaluator-specifi
 
 The following example shows how to define and register a custom evaluator. The code is added to a new `evaluator_register.py` file in the simple example directory for testing purposes.
 
-`examples/simple/src/aiq_simple/evaluator_register.py`:
+`examples/basic/functions/simple/src/aiq_simple/evaluator_register.py`:
 ```python
 from pydantic import Field
 
@@ -72,7 +72,7 @@ The evaluator logic is implemented in the `SimilarityEvaluator` class described 
 
 ### Importing for registration
 To ensure the evaluator is registered at runtime, import the evaluator function in the example project's register.py file — even if the function is not called directly.
-`examples/simple/src/aiq_simple/register.py`:
+`examples/basic/functions/simple/src/aiq_simple/register.py`:
 ```python
 from .evaluator_register import register_similarity_evaluator  # pylint: disable=unused-import
 ```
@@ -109,7 +109,7 @@ To create a custom evaluator, subclass `BaseEvaluator` and implement the `evalua
 The following example defines a SimilarityEvaluator that computes the cosine similarity between a generated output and an expected reference using TF-IDF embeddings. This is useful for evaluating natural language generation tasks such as Q&A, summarization, or text rewriting.
 
 We define the evaluator in the `similarity_evaluator.py` file:
-`examples/simple/src/aiq_simple/similarity_evaluator.py`:
+`examples/basic/functions/simple/src/aiq_simple/similarity_evaluator.py`:
 ```python
 from typing import override
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -153,7 +153,7 @@ This will now display the custom evaluator `similarity` in the list of evaluator
 
 ### Evaluation configuration
 Add the evaluator to the workflow configuration file in the `eval.evaluators` section. The following is an example of the similarity evaluator configuration:
-`examples/simple/configs/eval_config.yml`:
+`examples/basic/functions/simple/configs/eval_config.yml`:
 ```yaml
 eval:
   evaluators:
@@ -166,20 +166,20 @@ The `_type` field specifies the evaluator name. The keyword `similarity_eval` ca
 ### Evaluating the workflow
 Run and evaluate the workflow using the following command:
 ```bash
-aiq eval --config_file=examples/simple/configs/eval_config.yml
+aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml
 ```
 
 ### Evaluation results
 The evaluation results are stored in the output directory specified in the workflow configuration file.
-`examples/simple/configs/eval_config.yml`:
+`examples/basic/functions/simple/configs/eval_config.yml`:
 ```yaml
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/simple/
+    output_dir: ./.tmp/aiq/examples/basic/functions/simple/
 ```
 
 The results of each evaluator is stored in a separate file with name `<keyword>_eval_output.json`. The following is an example of the similarity evaluator output file:
-`examples/simple/.tmp/aiq/examples/simple/similarity_eval_output.json`:
+`examples/basic/functions/simple/.tmp/aiq/examples/basic/functions/simple/similarity_eval_output.json`:
 ```json
 {
   "average_score": 0.63,

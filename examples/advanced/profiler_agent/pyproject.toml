@@ -1,0 +1,33 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+# intentionally empty, the section is required for setuptools_scm to work but we don't need to set anything
+root = "../../.."
+
+[project]
+name = "aiq_profiler_agent"
+dynamic = ["version"]
+dependencies = [
+  # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
+  # version when adding a new package. If unsure, default to using `~=` instead of `==`. When using `~=`, use 2 digits
+  # of precision in the version specifier. For example, use `~=1.2` instead of `~=1.2.3` and `~=0.1.3` instead of
+  # `~=0.1.3.5`.
+  # Keep sorted!!!
+  "aiqtoolkit[langchain,profiling,telemetry]~=1.2",
+  "pydantic ~= 2.10.0, <2.11.0",
+]
+requires-python = ">=3.11,<3.13"
+description = "AIQ toolkit Profiler Agent"
+license = { file = "LICENSE.md" }
+keywords = ["ai", "rag", "agents"]
+classifiers = ["Programming Language :: Python"]
+authors = [{ name = "NVIDIA Corporation" }]
+maintainers = [{ name = "NVIDIA Corporation" }]
+
+[tool.uv.sources]
+aiqtoolkit = { path = "../../..", editable = true }
+
+[project.entry-points.'aiq.plugins']
+aiq_profiler_agent = "aiq_profiler_agent.register"
