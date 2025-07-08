@@ -83,6 +83,7 @@ NIM(s?)
 npm
 NumPy
 NVIDIA
+OTel
 onboarding
 [Oo]verfitting
 pandas
