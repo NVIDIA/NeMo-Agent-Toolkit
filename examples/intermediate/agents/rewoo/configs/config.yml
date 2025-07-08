@@ -52,7 +52,7 @@ eval:
     output_dir: ./.tmp/aiq/examples/rewoo_agent/
     dataset:
       _type: json
-      file_path: examples/intermediate/agents/agents/data/rewoo.json
+      file_path: examples/intermediate/agents/data/rewoo.json
   evaluators:
     rag_accuracy:
       _type: ragas
