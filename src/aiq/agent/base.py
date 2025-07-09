@@ -24,7 +24,9 @@ from typing import Any
 from colorama import Fore
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import AIMessage
 from langchain_core.messages import BaseMessage
+from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph.graph import CompiledGraph
@@ -80,7 +82,7 @@ class BaseAgent(ABC):
                                      runnable: Any,
                                      inputs: dict[str, Any],
                                      config: RunnableConfig | None = None,
-                                     max_retries: int = 3) -> str:
+                                     max_retries: int = 3) -> AIMessage:
         """
         Safely stream from LLM with retry logic and graceful error handling.
         Common pattern used across multiple agents.
@@ -98,7 +100,7 @@ class BaseAgent(ABC):
 
         Returns
         -------
-        str
+        AIMessage
             The LLM response or error message
         """
         for attempt in range(1, max_retries + 1):
@@ -107,7 +109,7 @@ class BaseAgent(ABC):
                 async for event in runnable.astream(inputs, config=config):
                     output_message += event.content
 
-                return output_message
+                return AIMessage(content=output_message)
 
             except Exception as e:
                 logger.warning("%s LLM streaming failed on attempt %d/%d: %s",
@@ -116,18 +118,13 @@ class BaseAgent(ABC):
                                max_retries,
                                str(e))
 
-                # If this is the last attempt, return an error message
-                if attempt == max_retries:
-                    error_msg = f"LLM streaming failed after {max_retries} attempts: {str(e)}"
-                    logger.error("%s %s", AGENT_LOG_PREFIX, error_msg)
-                    return error_msg
-
                 # Wait before retry (exponential backoff)
-                await asyncio.sleep(2**attempt)
+                if attempt < max_retries:
+                    await asyncio.sleep(2**attempt)
 
-        return "LLM streaming failed after all retry attempts"
+        return AIMessage(content="LLM streaming failed after all retry attempts")
 
-    async def _call_llm_with_retry(self, messages: list[BaseMessage], max_retries: int = 3) -> str:
+    async def _call_llm_with_retry(self, messages: list[BaseMessage], max_retries: int = 3) -> AIMessage:
         """
         Safely call the LLM with retry logic and graceful error handling.
         If the LLM fails, returns an error message instead of raising an exception.
@@ -141,7 +138,7 @@ class BaseAgent(ABC):
 
         Returns
         -------
-        str
+        AIMessage
             The LLM response or error message
         """
         for attempt in range(1, max_retries + 1):
@@ -149,7 +146,7 @@ class BaseAgent(ABC):
                 response = await self.llm.ainvoke(messages)
 
                 # Handle different response types safely
-                return str(response.content)
+                return AIMessage(content=str(response.content))
 
             except Exception as e:
                 logger.warning("%s LLM call failed on attempt %d/%d: %s",
@@ -158,22 +155,17 @@ class BaseAgent(ABC):
                                max_retries,
                                str(e))
 
-                # If this is the last attempt, return an error message
-                if attempt == max_retries:
-                    error_msg = f"LLM call failed after {max_retries} attempts: {str(e)}"
-                    logger.error("%s %s", AGENT_LOG_PREFIX, error_msg)
-                    return error_msg
-
                 # Wait before retry (exponential backoff)
-                await asyncio.sleep(2**attempt)
+                if attempt < max_retries:
+                    await asyncio.sleep(2**attempt)
 
-        return "LLM call failed after all retry attempts"
+        return AIMessage(content="LLM call failed after all retry attempts")
 
     async def _call_tool_with_retry(self,
                                     tool: BaseTool,
                                     tool_input: dict[str, Any] | str,
                                     config: RunnableConfig | None = None,
-                                    max_retries: int = 3) -> Any:
+                                    max_retries: int = 3) -> ToolMessage:
         """
         Safely call a tool with retry logic and graceful error handling.
         If the tool fails, returns an error message instead of raising an exception.
@@ -199,9 +191,11 @@ class BaseAgent(ABC):
                 # Handle empty responses
                 if isinstance(response, str):
                     if response is None or response == "":
-                        return f"The tool {tool.name} provided an empty response."
+                        return ToolMessage(name=tool.name,
+                                           tool_call_id=tool.name,
+                                           content=f"The tool {tool.name} provided an empty response.")
 
-                return response
+                return ToolMessage(name=tool.name, tool_call_id=tool.name, content=response)
 
             except Exception as e:
                 logger.warning("%s Tool %s failed on attempt %d/%d: %s",
@@ -211,16 +205,14 @@ class BaseAgent(ABC):
                                max_retries,
                                str(e))
 
-                # If this is the last attempt, return an error message
-                if attempt == max_retries:
-                    error_msg = f"Tool {tool.name} failed after {max_retries} attempts: {str(e)}"
-                    logger.error("%s %s", AGENT_LOG_PREFIX, error_msg)
-                    return error_msg
-
                 # Wait before retry (exponential backoff)
-                await asyncio.sleep(2**attempt)
+                if attempt < max_retries:
+                    await asyncio.sleep(2**attempt)
 
-        return f"Tool {tool.name} failed after all retry attempts"
+        return ToolMessage(status="error",
+                           name=tool.name,
+                           tool_call_id=tool.name,
+                           content=f"Tool {tool.name} failed after all retry attempts")
 
     def _log_tool_response(self, tool_name: str, tool_input: Any, tool_response: str, max_chars: int = 1000) -> None:
         """

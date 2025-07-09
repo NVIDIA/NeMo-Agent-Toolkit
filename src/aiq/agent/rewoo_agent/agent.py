@@ -190,13 +190,13 @@ class ReWOOAgentGraph(BaseAgent):
                 RunnableConfig(callbacks=self.callbacks)  # type: ignore
             )
 
-            steps = self._parse_planner_output(plan)
+            steps = self._parse_planner_output(str(plan.content))
 
             if self.detailed_logs:
-                agent_response_log_message = AGENT_CALL_LOG_MESSAGE % (task, plan)
+                agent_response_log_message = AGENT_CALL_LOG_MESSAGE % (task, str(plan.content))
                 logger.info("ReWOO agent planner output: %s", agent_response_log_message)
 
-            return {"plan": AIMessage(content=plan), "steps": steps}
+            return {"plan": plan, "steps": steps}
 
         except Exception as ex:
             logger.exception("%s Failed to call planner_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
@@ -309,17 +309,15 @@ class ReWOOAgentGraph(BaseAgent):
                 tool = step_info.get("tool")
                 plan += f"Plan: {_plan}\n{placeholder} = {tool}[{tool_input}]"
 
-            task = state.task.content
+            task = str(state.task.content)
             solver_prompt = self.solver_prompt.partial(plan=plan)
             solver = solver_prompt | self.llm
 
-            output_message_content = await self._stream_llm_with_retry(solver, {"task": task},
-                                                                       RunnableConfig(callbacks=self.callbacks)
-                                                                       )  # type: ignore
+            output_message = await self._stream_llm_with_retry(solver, {"task": task},
+                                                               RunnableConfig(callbacks=self.callbacks))  # type: ignore
 
-            output_message = AIMessage(content=output_message_content)
             if self.detailed_logs:
-                solver_output_log_message = AGENT_CALL_LOG_MESSAGE % (task, output_message_content)
+                solver_output_log_message = AGENT_CALL_LOG_MESSAGE % (task, str(output_message.content))
                 logger.info("ReWOO agent solver output: %s", solver_output_log_message)
 
             return {"result": output_message}

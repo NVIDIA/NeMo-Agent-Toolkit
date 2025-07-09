@@ -43,7 +43,7 @@ workflow:
   llm_name: nim_llm
   verbose: true
   handle_parsing_errors: true
-  max_retries: 2
+  parsing_agent_response_max_retries: 2
 
 eval:
   general:

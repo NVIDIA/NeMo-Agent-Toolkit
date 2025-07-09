@@ -22,12 +22,12 @@ functions:
     _type: serp_api_tool
     # You can add your SerpAPI key here or use environment variables
     # api_key: your_serp_api_key
-  
+
   agno_personal_finance:
     _type: agno_personal_finance
     llm_name: nim_llm
     serp_api_tool: serp_api_tool
-  
+
 llms:
   nim_llm:
     _type: nim
@@ -39,5 +39,4 @@ workflow:
   llm_name: nim_llm
   serp_api_tool: serp_api_tool
   verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  parsing_agent_response_max_retries: 3

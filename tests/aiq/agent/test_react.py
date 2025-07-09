@@ -54,7 +54,7 @@ async def test_state_schema():
 
 @pytest.fixture(name='mock_config_react_agent', scope="module")
 def mock_config():
-    return ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', verbose=True, retry_parsing_errors=False)
+    return ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', verbose=True)
 
 
 def test_react_init(mock_config_react_agent, mock_llm, mock_tool):
@@ -65,8 +65,7 @@ def test_react_init(mock_config_react_agent, mock_llm, mock_tool):
     assert agent.llm == mock_llm
     assert agent.tools == tools
     assert agent.detailed_logs == mock_config_react_agent.verbose
-    assert agent.max_tries >= 1
-    assert agent.retry_parsing_errors
+    assert agent.parsing_agent_response_max_retries >= 1
 
 
 @pytest.fixture(name='mock_react_agent', scope="module")
@@ -418,7 +417,6 @@ def test_react_additional_instructions(mock_llm, mock_tool):
     config_react_agent = ReActAgentWorkflowConfig(tool_names=['test'],
                                                   llm_name='test',
                                                   verbose=True,
-                                                  retry_parsing_errors=False,
                                                   additional_instructions="Talk like a parrot and repeat the question.")
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
     prompt = create_react_agent_prompt(config_react_agent)
@@ -432,7 +430,6 @@ def test_react_custom_system_prompt(mock_llm, mock_tool):
         tool_names=['test'],
         llm_name='test',
         verbose=True,
-        retry_parsing_errors=False,
         system_prompt="Refuse to run any of the following tools: {tools}.  or ones named: {tool_names}")
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
     prompt = create_react_agent_prompt(config_react_agent)

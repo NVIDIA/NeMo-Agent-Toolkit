@@ -42,11 +42,17 @@ class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
                                           description="The list of tools to provide to the react agent.")
     llm_name: LLMRef = Field(description="The LLM model to use with the react agent.")
     verbose: bool = Field(default=False, description="Set the verbosity of the react agent's logging.")
-    retry_parsing_errors: bool = Field(default=True, description="Specify retrying when encountering parsing errors.")
-    max_retries: int = Field(default=1, description="Sent the number of retries before raising a parsing error.")
+    parsing_agent_response_max_retries: int = Field(
+        default=1, description="The number of retries of parsing the agent's response before raising a parsing error.")
+    tool_call_max_retries: int = Field(default=1, description="The number of retries before raising a tool call error.")
+    max_tool_calls: int = Field(default=15, description="Maximum number of tool calls before stopping the agent.")
+    pass_tool_call_errors_to_agent: bool = Field(
+        default=True,
+        description=
+        "Whether to pass tool call errors to agent. If False, any failed tool call will result in raising an exception."
+    )
     include_tool_input_schema_in_tool_description: bool = Field(
         default=True, description="Specify inclusion of tool input schemas in the prompt.")
-    max_iterations: int = Field(default=15, description="Number of tool calls before stoping the react agent.")
     description: str = Field(default="ReAct Agent Workflow", description="The description of this functions use.")
     system_prompt: str | None = Field(
         default=None,
@@ -80,13 +86,15 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
         raise ValueError(f"No tools specified for ReAct Agent '{config.llm_name}'")
     # configure callbacks, for sending intermediate steps
     # construct the ReAct Agent Graph from the configured llm, prompt, and tools
-    graph: CompiledGraph = await ReActAgentGraph(llm=llm,
-                                                 prompt=prompt,
-                                                 tools=tools,
-                                                 use_tool_schema=config.include_tool_input_schema_in_tool_description,
-                                                 detailed_logs=config.verbose,
-                                                 retry_parsing_errors=config.retry_parsing_errors,
-                                                 max_retries=config.max_retries).build_graph()
+    graph: CompiledGraph = await ReActAgentGraph(
+        llm=llm,
+        prompt=prompt,
+        tools=tools,
+        use_tool_schema=config.include_tool_input_schema_in_tool_description,
+        detailed_logs=config.verbose,
+        parsing_agent_response_max_retries=config.parsing_agent_response_max_retries,
+        tool_call_max_retries=config.tool_call_max_retries,
+        pass_tool_call_errors_to_agent=config.pass_tool_call_errors_to_agent).build_graph()
 
     async def _response_fn(input_message: AIQChatRequest) -> AIQChatResponse:
         try:
@@ -101,7 +109,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             state = ReActGraphState(messages=messages)
 
             # run the ReAct Agent Graph
-            state = await graph.ainvoke(state, config={'recursion_limit': (config.max_iterations + 1) * 2})
+            state = await graph.ainvoke(state, config={'recursion_limit': (config.max_tool_calls + 1) * 2})
             # setting recursion_limit: 4 allows 1 tool call
             #   - allows the ReAct Agent to perform 1 cycle / call 1 single tool,
             #   - but stops the agent when it tries to call a tool a second time
@@ -109,7 +117,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             # get and return the output from the state
             state = ReActGraphState(**state)
             output_message = state.messages[-1]  # pylint: disable=E1136
-            return AIQChatResponse.from_string(output_message.content)
+            return AIQChatResponse.from_string(str(output_message.content))
 
         except Exception as ex:
             logger.exception("%s ReAct Agent failed with exception: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)

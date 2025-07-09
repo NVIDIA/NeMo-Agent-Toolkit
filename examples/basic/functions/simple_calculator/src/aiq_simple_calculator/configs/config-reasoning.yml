@@ -46,7 +46,6 @@ functions:
     llm_name: nim_mistral
     verbose: true
     handle_tool_errors: true
-    # max_retries: 3
 
 llms:
   nim_llm:
