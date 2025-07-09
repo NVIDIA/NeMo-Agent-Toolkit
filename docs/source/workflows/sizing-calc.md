@@ -18,28 +18,28 @@ limitations under the License.
 # Sizing your GPU Cluster with AIQ Toolkit
 AIQ toolkit provides a sizing calculator to estimate the GPU cluster size required to accommodate a target number of users with a target response time. The estimation is based on the performance of the workflow at different concurrency levels.
 
-The sizing calculator uses the evaluation and profiling systems in the AIQ toolkit. Refer to the [Evaluate](./evaluate.md) documentation for more details on the evaluation system.
+The sizing calculator uses the [evaluation](evaluate.md) and [profiler](./profiler.md) systems in the AIQ toolkit.
 
 ## Quick Start
 Set the configuration file and output directory:
 ```
 export CONFIG_FILE=examples/intermediate/evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml
-export OUTPUT_DIR=.tmp/sizing_calc/
+export CALC_OUTPUT_DIR=.tmp/sizing_calc/
 ```
 ### Step 1: Gather Metrics
 Collect performance data at different concurrency levels:
 ```
-aiq sizing calc --config_file $CONFIG_FILE --output_dir $OUTPUT_DIR --concurrencies 1,2,4,8,16,32 --num_passes 2
+aiq sizing calc --config_file $CONFIG_FILE --calc_output_dir $CALC_OUTPUT_DIR --concurrencies 1,2,4,8,16,32 --num_passes 2
 ```
 ### Step 2: Estimate GPU Cluster Size
 Use the previously collected metrics to estimate the GPU cluster size:
 ```
-aiq sizing calc --offline_mode --output_dir $OUTPUT_DIR --test_gpu_count 8 --target_workflow_runtime 10 --target_users 100
+aiq sizing calc --offline_mode --calc_output_dir $CALC_OUTPUT_DIR --test_gpu_count 8 --target_workflow_runtime 10 --target_users 100
 ```
 
 You can optionally combine both steps by adding the target and test parameters to the first command. For example:
 ```
-aiq sizing calc --config_file $CONFIG_FILE --output_dir $OUTPUT_DIR --concurrencies 1,2,4,8,16,32 --num_passes 2 --test_gpu_count 8 --target_workflow_runtime 10 --target_users 100
+aiq sizing calc --config_file $CONFIG_FILE --calc_output_dir $CALC_OUTPUT_DIR --concurrencies 1,2,4,8,16,32 --num_passes 2 --test_gpu_count 8 --target_workflow_runtime 10 --target_users 100
 ```
 This will run the workflow at the specified concurrency levels and estimate the GPU cluster size.
 
@@ -50,7 +50,7 @@ To use the calculator you can first gather metrics from the workflow and then se
 **Sample Command for Gathering Metrics**
 
 ```
-aiq sizing calc --config $CONFIG_FILE --output_dir $OUTPUT_DIR --concurrencies 1,2,4,8,16,32 --num_passes 2
+aiq sizing calc --config $CONFIG_FILE --calc_output_dir $CALC_OUTPUT_DIR --concurrencies 1,2,4,8,16,32 --num_passes 2
 ```
 
 ### Dataset Requirements
@@ -91,9 +91,9 @@ In addition to the concurrency range you can specify the number of passes made w
 If the size of the dataset is smaller than the concurrency range specified, the dataset is repeated to match the concurrency range.
 
 ### Sample Output
-The per-concurrency metrics are stored in the `output_dir` specified in the command line. It is recommended to use a separate output directory for the calculator than the one used for the evaluation (specified via `eval.general.output_dir` in the workflow configuration file). This is to avoid accidental deletion of the calculator metrics when the evaluation jobs are cleaned up.
+The per-concurrency metrics are stored in the `calc_output_dir` specified in the command line. It is recommended to use a separate output directory for the calculator than the one used for the evaluation (specified via `eval.general.output_dir` in the workflow configuration file). This is to avoid accidental deletion of the calculator metrics when the evaluation jobs are cleaned up.
 
-By default the metrics of the latest calculator run overwrite the previous runs. You can use the `--append_jobs` command line parameter to store each run in a separate subdirectory.
+By default the metrics of the latest calculator run overwrite the previous runs. You can use the `--append_calc_outputs` command line parameter to store each run in a separate subdirectory.
 
 The results of each run are available as:
 - a summary table,
@@ -165,7 +165,7 @@ aiq start fastapi --config_file=examples/simple_calculator/src/aiq_simple_calcul
 
 Run the Calculator using the remote endpoint:
 ```
-aiq sizing calc --config_file $CONFIG_FILE --output_dir $OUTPUT_DIR --concurrencies 1,2,4,8,16,32 --num_passes 2 --endpoint http://localhost:8000
+aiq sizing calc --config_file $CONFIG_FILE --calc_output_dir $CALC_OUTPUT_DIR --concurrencies 1,2,4,8,16,32 --num_passes 2 --endpoint http://localhost:8000
 ```
 The configuration file used for running the calculator only needs to specify the `eval` section. The `workflow` section is not used by the calculator when running with a remote endpoint.
 
@@ -194,7 +194,7 @@ In this example, the workflow failed at concurrency level 4 (indicated by `!W` i
 Once the metrics are gathered, you can estimate the GPU cluster size using the `aiq sizing calc` command in `offline_mode`.
 Sample command:
 ```
-aiq sizing calc --offline_mode --output_dir $OUTPUT_DIR --test_gpu_count 8 --target_workflow_runtime 10 --target_users 100
+aiq sizing calc --offline_mode --calc_output_dir $CALC_OUTPUT_DIR --test_gpu_count 8 --target_workflow_runtime 10 --target_users 100
 ```
 
 ### Target and Test Parameters

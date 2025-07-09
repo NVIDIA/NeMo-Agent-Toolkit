@@ -70,7 +70,7 @@ logger = logging.getLogger(__name__)
     help="Number of GPUs used in the test.",
 )
 @click.option(
-    "--output_dir",
+    "--calc_output_dir",
     type=click.Path(file_okay=False, dir_okay=True, path_type=Path),
     required=False,
     default=None,
@@ -92,11 +92,11 @@ logger = logging.getLogger(__name__)
     " If set to 0 the dataset is adjusted to a multiple of the concurrency. Default: 0",
 )
 @click.option(
-    "--append_job",
+    "--append_calc_outputs",
     is_flag=True,
     required=False,
     default=False,
-    help="Append a job to the output directory. "
+    help="Append calc outputs to the output directory. "
     "By default append is set to False and the content of the online directory is overwritten.",
 )
 @click.option(
@@ -121,10 +121,10 @@ def calc_command(ctx,
                  target_workflow_runtime,
                  target_users,
                  test_gpu_count,
-                 output_dir,
+                 calc_output_dir,
                  concurrencies,
                  num_passes,
-                 append_job,
+                 append_calc_outputs,
                  endpoint,
                  endpoint_timeout):
     """Estimate GPU count and plot metrics for a workflow profile."""
@@ -149,10 +149,10 @@ def calc_command(ctx,
         if target_users <= 0:
             click.echo("Target users is 0. Cannot estimate the GPU count.")
             return
-        if append_job:
-            click.echo("Appending jobs is not supported in offline mode.")
+        if append_calc_outputs:
+            click.echo("Appending calc outputs is not supported in offline mode.")
             return
-        if not output_dir:
+        if not calc_output_dir:
             click.echo("Output directory is required in offline mode.")
             return
     else:
@@ -175,10 +175,10 @@ def calc_command(ctx,
         target_workflow_runtime_p95=target_workflow_runtime,
         target_users=target_users,
         test_gpu_count=test_gpu_count,
-        output_dir=output_dir,
+        output_dir=calc_output_dir,
         num_passes=num_passes,
         offline_mode=offline_mode,
-        append_job=append_job,
+        append_job=append_calc_outputs,
         endpoint=endpoint,
         endpoint_timeout=endpoint_timeout,
     )
