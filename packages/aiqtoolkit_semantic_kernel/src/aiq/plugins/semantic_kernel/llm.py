@@ -18,14 +18,7 @@ from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_llm_client
 from aiq.data_models.llm import APITypeEnum
 from aiq.llm.openai_llm import OpenAIModelConfig
-
-
-def _validate_no_responses_api(llm_config):
-    """Validate that the LLM config does not use the Responses API."""
-
-    if llm_config.api_type == APITypeEnum.RESPONSES:
-        raise ValueError("Responses API is not supported with Semantic Kernel as a Connector. "
-                         "Use semantic_kernel.agents.OpenAIResponsesAgent instead.")
+from aiq.utils.responses_api import validate_no_responses_api
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
@@ -33,7 +26,7 @@ async def openai_semantic_kernel(llm_config: OpenAIModelConfig, builder: Builder
 
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
-    _validate_no_responses_api(llm_config)
+    validate_no_responses_api(llm_config)
 
     config_obj = {
         **llm_config.model_dump(exclude={"type", "api_type"}, by_alias=True),

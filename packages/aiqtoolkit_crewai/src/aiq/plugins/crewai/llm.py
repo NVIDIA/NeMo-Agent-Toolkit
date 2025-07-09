@@ -21,13 +21,7 @@ from aiq.cli.register_workflow import register_llm_client
 from aiq.data_models.llm import APITypeEnum
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
-
-
-def _validate_no_responses_api(llm_config):
-    """Validate that the LLM config does not use the Responses API."""
-
-    if llm_config.api_type == APITypeEnum.RESPONSES:
-        raise ValueError("Responses API is not supported with CrewAI. Please use a different API type.")
+from aiq.utils.responses_api import validate_no_responses_api
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
@@ -35,7 +29,7 @@ async def nim_crewai(llm_config: NIMModelConfig, builder: Builder):
 
     from crewai import LLM
 
-    _validate_no_responses_api(llm_config)
+    validate_no_responses_api(llm_config)
 
     config_obj = {
         **llm_config.model_dump(exclude={"type", "api_type"}, by_alias=True),
@@ -64,7 +58,7 @@ async def openai_crewai(llm_config: OpenAIModelConfig, builder: Builder):
 
     from crewai import LLM
 
-    _validate_no_responses_api(llm_config)
+    validate_no_responses_api(llm_config)
 
     config_obj = {
         **llm_config.model_dump(exclude={"type", "api_type"}, by_alias=True),

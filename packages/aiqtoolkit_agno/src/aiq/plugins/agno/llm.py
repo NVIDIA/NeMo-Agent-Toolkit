@@ -21,13 +21,8 @@ from aiq.cli.register_workflow import register_llm_client
 from aiq.data_models.llm import APITypeEnum
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
+from aiq.utils.responses_api import validate_no_responses_api
 
-
-def _validate_no_responses_api(llm_config):
-    """Validate that the LLM config does not use the Responses API."""
-
-    if llm_config.api_type == APITypeEnum.RESPONSES:
-        raise ValueError("Responses API is not supported with Agno. Please use a different API type.")
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
@@ -35,7 +30,7 @@ async def nim_agno(llm_config: NIMModelConfig, builder: Builder):
 
     from agno.models.nvidia import Nvidia
 
-    _validate_no_responses_api(llm_config)
+    validate_no_responses_api(llm_config)
 
     config_obj = {
         **llm_config.model_dump(exclude={"type", "model_name", "api_type"}, by_alias=True),
