@@ -150,7 +150,7 @@ The `tracing` section contains one or more tracing providers. Each provider has 
         project: "aiqtoolkit-demo"
         dataset: "aiqtoolkit-dataset"
     ```
-  - See [Observing with Phoenix](./observe-workflow-with-catalyst.md) for more information
+  - See [Observing with Catalyst](./observe-workflow-with-catalyst.md) for more information
 - **Custom providers**
   - See [Registering a New Telemetry Provider as a Plugin](#registering-a-new-telemetry-provider-as-a-plugin) for more information
 
