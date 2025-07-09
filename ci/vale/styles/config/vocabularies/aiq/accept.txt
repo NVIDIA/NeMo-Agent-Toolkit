@@ -85,11 +85,13 @@ NumPy
 NVIDIA
 OAuth
 URIs
+OTel
 onboarding
 [Oo]verfitting
 pandas
 [Pp]arallelization
 [Pp]arsable
+Patronus
 PCIe
 PDF(s?)
 [Pp]reprocess
