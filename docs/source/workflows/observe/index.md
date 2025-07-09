@@ -113,6 +113,18 @@ The `tracing` section contains one or more tracing providers. Each provider has 
         project: "aiqtoolkit-demo"
     ```
   - See [Observing with Phoenix](./observe-workflow-with-phoenix.md) for more information
+- [**Galileo**](https://galileo.ai/)
+  - Example configuration:
+    ```yaml
+    tracing:
+      galileo:
+        _type: galileo
+        endpoint: https://app.galileo.ai/api/galileo/otel/traces
+        project: "aiqtoolkit-demo"
+        logstream: "default"
+        api_key: "<YOUR-GALILEO-API-KEY>"
+    ```
+  - See [Observing with Galileo](./observe-workflow-with-galileo.md) for more information
 - [**Langfuse**](https://langfuse.com/)
   - Example configuration:
     ```yaml
@@ -188,5 +200,6 @@ async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: 
 
 Observing with Catalyst <./observe-workflow-with-catalyst.md>
 Observing with Phoenix <./observe-workflow-with-phoenix.md>
+Observing with Galileo <./observe-workflow-with-galileo.md>
 Observing with W&B Weave <./observe-workflow-with-weave.md>
 ```
