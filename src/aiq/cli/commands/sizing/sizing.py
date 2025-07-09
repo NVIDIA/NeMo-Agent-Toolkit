@@ -18,10 +18,10 @@ import click
 from .calc import calc_command
 
 
-@click.group(help="Profile a workflow with the specified options.")
-def profile():
-    """Profile-related commands."""
+@click.group(help="Size GPU clusters for workflows with the specified options.")
+def sizing():
+    """Sizing-related commands."""
     pass
 
 
-profile.add_command(calc_command)
+sizing.add_command(calc_command)
