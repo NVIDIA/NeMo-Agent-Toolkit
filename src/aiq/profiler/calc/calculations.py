@@ -14,15 +14,11 @@
 # limitations under the License.
 
 import logging
-from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 
 from aiq.profiler.calc.data_models import GPUEstimates
 from aiq.profiler.calc.data_models import LinearFitResult
-from aiq.profiler.calc.data_models import SizingMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +41,7 @@ def compute_slope(concurrencies: list[float],
         min_r_squared: Minimum R-squared value to consider the relationship linear
 
     Returns:
-        LinearFitResult with slope, intercept, R-squared, and number of outliers removed
+        LinearFitResult with slope, intercept, R-squared, and list of removed concurrencies
 
     Raises:
         ValueError: If insufficient data or poor linear fit
@@ -56,13 +52,13 @@ def compute_slope(concurrencies: list[float],
     x = np.array(concurrencies)
     y = np.array(time_metrics)
 
-    outliers_removed = 0
+    outliers_removed = []
 
     # Remove outliers if requested
     if remove_outliers and len(x) > 4:  # Need at least 4 points for outlier detection
-        x_clean, y_clean, removed = _remove_outliers(x, y)
+        x_clean, y_clean, removed_concurrencies = _remove_outliers(x, y)
         x, y = x_clean, y_clean
-        outliers_removed = removed
+        outliers_removed = removed_concurrencies
 
         if len(x) < 2:
             raise ValueError("After outlier removal, insufficient data points remain.")
@@ -100,17 +96,17 @@ def compute_slope(concurrencies: list[float],
     return LinearFitResult(slope=slope, intercept=intercept, r_squared=r_squared, outliers_removed=outliers_removed)
 
 
-def _remove_outliers(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:
+def _remove_outliers(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray, list[int]]:
     """
     Remove outliers using the Interquartile Range (IQR) method.
     For small concurrency range (≤ 10 points), also checks raw y-values for extreme outliers.
 
     Args:
-        x: Input x values
-        y: Input y values
+        x: Input x values (concurrencies)
+        y: Input y values (time metrics)
 
     Returns:
-        Tuple of (cleaned_x, cleaned_y, number_of_outliers_removed)
+        Tuple of (cleaned_x, cleaned_y, list_of_removed_concurrencies)
     """
     # if the number of concurrency points is less removing outliers can be challenging
     # as exteme outliers can skew the results.
@@ -122,6 +118,7 @@ def _remove_outliers(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarr
     conservative_outlier_threshold = 1.5
 
     n = len(x)
+    all_removed_concurrencies = []
 
     # For smaller concurrency ranges, check for extreme outliers in raw y-values first
     if n <= small_concurrency_range_threshold:
@@ -139,8 +136,15 @@ def _remove_outliers(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarr
         extreme_outliers_removed = np.sum(~extreme_outlier_mask)
 
         if extreme_outliers_removed > 0:
-            logger.info("Removed %d extreme outliers from raw values", extreme_outliers_removed)
-            return x[extreme_outlier_mask], y[extreme_outlier_mask], extreme_outliers_removed
+            extreme_removed_concurrencies = x[~extreme_outlier_mask].tolist()
+            all_removed_concurrencies.extend(extreme_removed_concurrencies)
+            logger.info("Removed %d extreme outliers from raw values: concurrencies %s",
+                        extreme_outliers_removed,
+                        extreme_removed_concurrencies)
+            # Continue with residual-based detection on the cleaned data
+            x = x[extreme_outlier_mask]
+            y = y[extreme_outlier_mask]
+            n = len(x)
 
     # Standard residual-based outlier detection
     # Calculate residuals from a simple linear fit
@@ -169,17 +173,19 @@ def _remove_outliers(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarr
     non_outlier_mask = (residuals >= lower_bound) & (residuals <= upper_bound)
 
     outliers_removed = np.sum(~non_outlier_mask)
+    residual_removed_concurrencies = x[~non_outlier_mask].tolist()
+    all_removed_concurrencies.extend(residual_removed_concurrencies)
 
     # Add debugging for small datasets
-    if n <= small_concurrency_range_threshold:
-        logger.debug("Outlier detection for small dataset (n=%d):", n)
+    if len(x) <= small_concurrency_range_threshold:
+        logger.debug("Outlier detection for small dataset (n=%d):", len(x))
         logger.debug("  Data points: %s", list(zip(x, y)))
         logger.debug("  Residuals: %s", residuals.tolist())
         logger.debug("  Q1=%.3f, Q3=%.3f, IQR=%.3f", q1, q3, iqr)
         logger.debug("  Bounds: [%.3f, %.3f]", lower_bound, upper_bound)
-        logger.info("  Outliers removed: %d", outliers_removed)
+        logger.info("  Outliers removed: %d (concurrencies: %s)", outliers_removed, residual_removed_concurrencies)
 
-    return x[non_outlier_mask], y[non_outlier_mask], outliers_removed
+    return x[non_outlier_mask], y[non_outlier_mask], all_removed_concurrencies
 
 
 def calc_gpu_estimate_based_on_slope(target_time_metric: float,
@@ -288,197 +294,3 @@ def calc_gpu_estimate_for_single_concurrency(target_llm_latency: float,
 
     return GPUEstimates(gpu_estimate_by_wf_runtime=gpu_estimate_by_wf_runtime,
                         gpu_estimate_by_llm_latency=gpu_estimate_by_llm_latency)
-
-
-def plot_concurrency_vs_time_metrics_simple(df: pd.DataFrame, output_dir: Path) -> None:
-    """
-    Save a simple plot of concurrency vs. p95 LLM latency and workflow runtime.
-    """
-    plt.figure(figsize=(12, 6))
-    plt.plot(df["concurrency"], df["llm_latency_p95"], label="p95 LLM Latency (s)", marker="o", linewidth=2)
-    plt.plot(df["concurrency"], df["workflow_runtime_p95"], label="p95 Workflow Runtime (s)", marker="s", linewidth=2)
-    plt.xlabel("Concurrency")
-    plt.ylabel("Time (seconds)")
-    plt.title("Concurrency vs. p95 LLM Latency and Workflow Runtime")
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
-
-    simple_plot_path = output_dir / "concurrency_vs_p95_simple.png"
-    plt.savefig(simple_plot_path, dpi=150, bbox_inches='tight')
-    plt.close()
-    logger.info("Simple plot saved to %s", simple_plot_path)
-
-
-def plot_concurrency_vs_time_metric_helper(
-    ax: plt.Axes,
-    x: np.ndarray,
-    y: np.ndarray,
-    metric_name: str,
-    y_label: str,
-    title: str,
-    color: str,
-    sla_value: float = 0.0,
-    sla_label: str = None,
-):
-    """
-    Helper to plot a metric vs concurrency with trend line, outlier highlighting, and SLA line.
-    """
-    marker = 'o'
-    outlier_marker = 'x'
-    outlier_color = 'crimson'
-    trend_color = 'r'
-    trend_linestyle = '--'
-    trend_alpha = 0.8
-    trend_linewidth = 2.0
-    note_box_color = 'mistyrose'
-    note_text_color = 'crimson'
-    legend_fontsize = 10
-    outliers_x = outliers_y = np.array([])
-    outliers_note = ""
-    if len(x) > 1:
-        try:
-            fit = compute_slope(x.tolist(), y.tolist(), remove_outliers=True)
-            if fit.outliers_removed > 0:
-                x_clean, y_clean, _ = _remove_outliers(x, y)
-                mask = np.isin(x, x_clean) & np.isin(y, y_clean)
-                outliers_x = x[~mask]
-                outliers_y = y[~mask]
-                outliers_note = f"Outliers removed: {fit.outliers_removed}"
-            ax.scatter(x,
-                       y,
-                       alpha=0.7,
-                       s=120,
-                       c=color,
-                       edgecolors='white',
-                       linewidth=1,
-                       marker=marker,
-                       label='Data Points')
-            if fit.outliers_removed > 0:
-                ax.scatter(outliers_x,
-                           outliers_y,
-                           alpha=0.9,
-                           s=140,
-                           c=outlier_color,
-                           marker=outlier_marker,
-                           label='Removed Outliers')
-            x_fit = np.linspace(x.min(), x.max(), 100)
-            y_fit = fit.slope * x_fit + fit.intercept
-            ax.plot(x_fit,
-                    y_fit,
-                    trend_linestyle,
-                    alpha=trend_alpha,
-                    linewidth=trend_linewidth,
-                    color=trend_color,
-                    label=f'Trend (slope={fit.slope:.4f}, R²={fit.r_squared:.3f})')
-        except Exception as e:
-            logger.warning(f"Could not compute slope for {metric_name}: {e}")
-            ax.scatter(x,
-                       y,
-                       alpha=0.7,
-                       s=120,
-                       c=color,
-                       edgecolors='white',
-                       linewidth=1,
-                       marker=marker,
-                       label='Data Points')
-    else:
-        ax.scatter(x, y, alpha=0.7, s=120, c=color, edgecolors='white', linewidth=1, marker=marker, label='Data Points')
-
-    if sla_value > 0:
-        ax.axhline(y=sla_value,
-                   color='red',
-                   linestyle=':',
-                   alpha=0.7,
-                   linewidth=2,
-                   label=sla_label or f'SLA Threshold ({sla_value}s)')
-
-    ax.set_xlabel('Concurrency', fontsize=12, fontweight='bold')
-    ax.set_ylabel(y_label, fontsize=12, fontweight='bold')
-    ax.set_title(title, fontsize=14, fontweight='bold')
-    ax.grid(True, alpha=0.3)
-    ax.legend(fontsize=legend_fontsize)
-    if outliers_note:
-        ax.text(0.98,
-                0.02,
-                outliers_note,
-                transform=ax.transAxes,
-                fontsize=10,
-                color=note_text_color,
-                ha='right',
-                va='bottom',
-                bbox=dict(boxstyle='round,pad=0.3', facecolor=note_box_color, alpha=0.7))
-
-
-def plot_concurrency_vs_time_metrics(metrics_per_concurrency: dict[int, SizingMetrics],
-                                     output_dir: Path,
-                                     target_latency: float = 0.0,
-                                     target_runtime: float = 0.0) -> None:
-    """
-    Plot concurrency vs. p95 latency and workflow runtime using metrics_per_concurrency.
-    Enhanced with better styling, trend analysis, and annotations.
-    Uses compute_slope for trend lines and R², and highlights removed outliers.
-    """
-    rows = []
-
-    for concurrency, metrics in metrics_per_concurrency.items():
-        if not metrics or not metrics.llm_latency_p95 or not metrics.workflow_runtime_p95:
-            continue
-
-        latency = metrics.llm_latency_p95
-        workflow_runtime = metrics.workflow_runtime_p95
-
-        rows.append({"concurrency": concurrency, "llm_latency_p95": latency, "workflow_runtime_p95": workflow_runtime})
-
-    if not rows:
-        logger.warning("No metrics data available to plot.")
-        return
-
-    plt.style.use('seaborn-v0_8')
-    df = pd.DataFrame(rows).sort_values("concurrency")
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
-
-    # Use the helper for both plots
-    plot_concurrency_vs_time_metric_helper(
-        ax1,
-        df["concurrency"].to_numpy(),
-        df["llm_latency_p95"].to_numpy(),
-        metric_name="latency",
-        y_label='P95 LLM Latency (seconds)',
-        title='Concurrency vs P95 LLM Latency',
-        color='steelblue',
-        sla_value=target_latency,
-        sla_label=f'SLA Threshold ({target_latency}s)' if target_latency > 0 else None,
-    )
-
-    plot_concurrency_vs_time_metric_helper(
-        ax2,
-        df["concurrency"].to_numpy(),
-        df["workflow_runtime_p95"].to_numpy(),
-        metric_name="runtime",
-        y_label='P95 Workflow Runtime (seconds)',
-        title='Concurrency vs P95 Workflow Runtime',
-        color='darkgreen',
-        sla_value=target_runtime,
-        sla_label=f'SLA Threshold ({target_runtime}s)' if target_runtime > 0 else None,
-    )
-
-    # Add summary statistics
-    stats_text = f'Data Points: {len(df)}\n'
-    stats_text += f'Concurrency Range: {df["concurrency"].min()}-{df["concurrency"].max()}\n'
-    stats_text += f'Latency Range: {df["llm_latency_p95"].min():.3f}-{df["llm_latency_p95"].max():.3f}s\n'
-    stats_text += f'Runtime Range: {df["workflow_runtime_p95"].min():.3f}-{df["workflow_runtime_p95"].max():.3f}s'
-
-    fig.text(0.02, 0.02, stats_text, fontsize=10, bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8))
-
-    plt.tight_layout()
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    enhanced_plot_path = output_dir / "concurrency_vs_p95_analysis.png"
-    plt.savefig(enhanced_plot_path, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
-    plt.close()
-
-    logger.info("Enhanced plot saved to %s", enhanced_plot_path)
-
-    # Also generate a simple plot for the user to see the data points
-    plot_concurrency_vs_time_metrics_simple(df, output_dir)

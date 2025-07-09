@@ -25,6 +25,10 @@ from pydantic import ValidationError
 from aiq.eval.config import EvaluationRunConfig
 from aiq.eval.runners.config import MultiEvaluationRunConfig
 from aiq.eval.runners.multi_eval_runner import MultiEvaluationRunner
+from aiq.profiler.calc.calculations import LinearFitResult
+from aiq.profiler.calc.calculations import calc_gpu_estimate_based_on_slope
+from aiq.profiler.calc.calculations import calc_gpu_estimate_for_single_concurrency
+from aiq.profiler.calc.calculations import compute_slope
 from aiq.profiler.calc.data_models import CalcAlerts
 from aiq.profiler.calc.data_models import CalcData
 from aiq.profiler.calc.data_models import CalcRunnerConfig
@@ -33,16 +37,13 @@ from aiq.profiler.calc.data_models import GPUEstimates
 from aiq.profiler.calc.data_models import SizingMetricPerItem
 from aiq.profiler.calc.data_models import SizingMetrics
 from aiq.profiler.calc.data_models import SizingMetricsAlerts
-from aiq.profiler.calc.utils import calc_gpu_estimate_based_on_slope
-from aiq.profiler.calc.utils import calc_gpu_estimate_for_single_concurrency
-from aiq.profiler.calc.utils import compute_slope
 
 logger = logging.getLogger(__name__)
 
 
 class CalcRunner:
     """
-    Runs MultiEvaluationRunner for a list of concurrencies.
+    Calculator for GPU sizing based on concurrency vs. time metrics.
     """
 
     def __init__(self, config: CalcRunnerConfig):
@@ -54,6 +55,10 @@ class CalcRunner:
         # Sizing metrics per concurrency, collected from the evaluation runs
         # This is used as input to calculate the GPU estimates and alerts
         self.metrics_per_concurrency: dict[int, SizingMetrics] = {}
+
+        # Store linear regression fits for reuse in plotting
+        self.latency_fit: LinearFitResult | None = None
+        self.runtime_fit: LinearFitResult | None = None
 
         # Validate configuration
         self.validate_config()
@@ -128,9 +133,10 @@ class CalcRunner:
                                            concurrencies: list[int],
                                            time_metrics: list[float],
                                            target_value: float,
-                                           display_name: str) -> float | None:
+                                           display_name: str) -> tuple[float | None, LinearFitResult | None]:
         """
         Generic slope-based GPU estimation for a given time metric (runtime or latency).
+        Returns GPU estimate and the linear fit result.
         """
         try:
             fit = compute_slope(concurrencies, time_metrics, remove_outliers=True)
@@ -140,7 +146,7 @@ class CalcRunner:
                                                             observed_slope=fit.slope,
                                                             observed_intercept=fit.intercept)
             logger.info(
-                "[GPU Estimation %s] %s slope=%.4f, intercept=%.4f, R²=%.3f, outliers_removed=%d, estimate=%.2f",
+                "[GPU Estimation %s] %s slope=%.4f, intercept=%.4f, R²=%.3f, outliers_removed=%s, estimate=%.2f",
                 "offline" if self.config.offline_mode else "online",
                 display_name,
                 fit.slope,
@@ -148,10 +154,10 @@ class CalcRunner:
                 fit.r_squared,
                 fit.outliers_removed,
                 gpu_estimate)
-            return gpu_estimate
+            return gpu_estimate, fit
         except ValueError as e:
             logger.warning(f"Failed to calculate {display_name.lower()}-based GPU estimate: %s", e)
-            return None
+            return None, None
 
     def _calc_gpu_estimates_based_on_slope(self,
                                            sizing_metrics_per_concurrency: dict[int, SizingMetrics],
@@ -170,20 +176,22 @@ class CalcRunner:
 
         if use_runtime:
             runtimes = [run.workflow_runtime_p95 for run in sizing_metrics_per_concurrency.values()]
-            gpu_estimate_by_wf_runtime = self._calc_gpu_estimate_for_time_metric(concurrencies,
-                                                                                 runtimes,
-                                                                                 self.target_runtime,
-                                                                                 "Runtime")
+            gpu_estimate_by_wf_runtime, self.runtime_fit = self._calc_gpu_estimate_for_time_metric(concurrencies,
+                                                                                                   runtimes,
+                                                                                                   self.target_runtime,
+                                                                                                   "Runtime")
 
         if use_latency:
             latencies = [run.llm_latency_p95 for run in sizing_metrics_per_concurrency.values()]
-            gpu_estimate_by_llm_latency = self._calc_gpu_estimate_for_time_metric(concurrencies,
-                                                                                  latencies,
-                                                                                  self.target_latency,
-                                                                                  "Latency")
+            gpu_estimate_by_llm_latency, self.latency_fit = self._calc_gpu_estimate_for_time_metric(concurrencies,
+                                                                                                    latencies,
+                                                                                                    self.target_latency,
+                                                                                                    "Latency")
 
-        return GPUEstimates(gpu_estimate_by_wf_runtime=gpu_estimate_by_wf_runtime,
-                            gpu_estimate_by_llm_latency=gpu_estimate_by_llm_latency)
+        gpu_estimates = GPUEstimates(gpu_estimate_by_wf_runtime=gpu_estimate_by_wf_runtime,
+                                     gpu_estimate_by_llm_latency=gpu_estimate_by_llm_latency)
+
+        return gpu_estimates
 
     def _calc_gpu_estimates_per_concurrency(
         self,
@@ -322,6 +330,22 @@ class CalcRunner:
 
         return gpu_estimates, gpu_estimates_per_concurrency, alerts_per_concurrency
 
+    def _add_outliers_to_alerts(self, alerts_per_concurrency: dict[int, CalcAlerts]):
+        """Add outliers to the alerts per concurrency."""
+        # Handle latency outliers
+        if self.latency_fit:
+            for concurrency in self.latency_fit.outliers_removed:
+                if concurrency not in alerts_per_concurrency:
+                    alerts_per_concurrency[concurrency] = CalcAlerts()
+                alerts_per_concurrency[concurrency].outlier_llm_latency = True
+
+        # Handle runtime outliers
+        if self.runtime_fit:
+            for concurrency in self.runtime_fit.outliers_removed:
+                if concurrency not in alerts_per_concurrency:
+                    alerts_per_concurrency[concurrency] = CalcAlerts()
+                alerts_per_concurrency[concurrency].outlier_workflow_runtime = True
+
     def generate_calc_runner_output(self) -> CalcRunnerOutput:
         """
         Build CalcRunnerOutput from sizing metrics per concurrency.
@@ -335,6 +359,9 @@ class CalcRunner:
         # Calculate gpu estimates and per-concurrency metrics
         gpu_estimates, gpu_estimates_per_concurrency, alerts_per_concurrency = \
             self._calc_gpu_estimate(self.metrics_per_concurrency)
+
+        # Add outliers to the calc data alerts
+        self._add_outliers_to_alerts(alerts_per_concurrency)
 
         # Group per-concurrency data (inputs to the calculator and outputs from the calculator)
         calc_data = {}
@@ -361,12 +388,15 @@ class CalcRunner:
         Plots concurrency vs. p95 latency and workflow runtime using metrics_per_concurrency.
         Enhanced with better styling, trend analysis, and annotations.
         """
-        from aiq.profiler.calc.utils import plot_concurrency_vs_time_metrics as plot_metrics
+        from aiq.profiler.calc.plot import plot_concurrency_vs_time_metrics as plot_metrics
+
         try:
             plot_metrics(metrics_per_concurrency=self.metrics_per_concurrency,
                          output_dir=output_dir,
                          target_latency=self.target_latency,
-                         target_runtime=self.target_runtime)
+                         target_runtime=self.target_runtime,
+                         latency_fit=self.latency_fit,
+                         runtime_fit=self.runtime_fit)
         except Exception as e:
             # Move forward with summary table even if the plot fails
             logger.exception("Failed to plot concurrency vs. time metrics: %s", e, exc_info=True)
@@ -402,7 +432,8 @@ class CalcRunner:
             output_path = job_dir / "calc_runner_output.json"
             output_path.write_text(calc_runner_output.model_dump_json(indent=2))
 
-            self.plot_concurrency_vs_time_metrics(job_dir)
+            if self.config.plot_data:
+                self.plot_concurrency_vs_time_metrics(job_dir)
 
             logger.info("Wrote output to %s", job_dir)
         except Exception as e:

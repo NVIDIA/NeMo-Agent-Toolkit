@@ -208,15 +208,16 @@ def calc_command(ctx,
         has_wf_runtime_gpu_estimates = any(data.gpu_estimates.gpu_estimate_by_wf_runtime is not None
                                            for data in results.calc_data.values())
 
-        # Check if there are any interrupted workflows to determine if we should show the alerts column
-        has_alerts = any(data.sizing_metrics.alerts.workflow_interrupted for data in results.calc_data.values())
+        # Check if there are any interrupted workflows or outliers to determine if we should show the alerts column
+        has_alerts = any(data.sizing_metrics.alerts.workflow_interrupted or data.alerts.outlier_llm_latency
+                         or data.alerts.outlier_workflow_runtime for data in results.calc_data.values())
 
         # Print per concurrency results as a table
         click.echo("Per concurrency results:")
 
         # Show alerts legend if there are any alerts
         if has_alerts:
-            click.echo("Alerts: !W = Workflow interrupted")
+            click.echo("Alerts!: W = Workflow interrupted, L = LLM latency outlier, R = Workflow runtime outlier")
 
         table = []
         for concurrency, data in results.calc_data.items():
@@ -229,7 +230,19 @@ def calc_command(ctx,
 
             # Only include alerts column if there are any interrupted workflows (first column)
             if has_alerts:
-                row.append("!W" if sizing_metrics_alerts.workflow_interrupted else "")
+                alerts = []
+                if sizing_metrics_alerts.workflow_interrupted:
+                    alerts.append("W")
+                if calc_alerts.outlier_llm_latency:
+                    alerts.append("L")
+                if calc_alerts.outlier_workflow_runtime:
+                    alerts.append("R")
+
+                # Show ! followed by all alert characters
+                if alerts:
+                    row.append(f"!{''.join(alerts)}")
+                else:
+                    row.append("")
 
             row.extend([
                 concurrency,
