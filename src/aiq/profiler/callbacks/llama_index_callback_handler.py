@@ -189,7 +189,7 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
                         UUID=event_id,
                         data=StreamEventData(input=self._run_id_to_llm_input.get(event_id), output=llm_text_output),
                         metadata=TraceMetadata(chat_responses=response.message if response.message else None,
-                                               tool_outputs=tool_outputs_list if tool_outputs_list else None),
+                                               tool_outputs=tool_outputs_list if tool_outputs_list else []),
                         usage_info=UsageInfo(token_usage=TokenUsageBaseModel(**response.additional_kwargs)))
                     self.step_manager.push_intermediate_step(stats)
 

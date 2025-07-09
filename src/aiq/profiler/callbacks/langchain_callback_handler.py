@@ -43,6 +43,8 @@ from aiq.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
 logger = logging.getLogger(__name__)
 
+tool_schema_warned = False
+
 
 def _extract_tools_schema(invocation_params: dict) -> list:
 
@@ -52,7 +54,14 @@ def _extract_tools_schema(invocation_params: dict) -> list:
             try:
                 tools_schema.append(ToolSchema(**tool))
             except Exception:
-                pass
+                global tool_schema_warned
+                if not tool_schema_warned:
+                    logger.warning(
+                        "Failed to parse tool schema from invocation params: %s. \n This "
+                        "can occur when the LLM server has native tools and can be ignored if "
+                        "using the responses API.",
+                        tool)
+                    tool_schema_warned = True
 
     return tools_schema
 
@@ -253,7 +262,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # p
                                      output=llm_text_output),
                 usage_info=UsageInfo(token_usage=self._extract_token_base_model(usage_metadata)),
                 metadata=TraceMetadata(chat_responses=[generation] if generation else [],
-                                       tool_outputs=tool_outputs_list if tool_outputs_list else None))
+                                       tool_outputs=tool_outputs_list if tool_outputs_list else []))
 
             self.step_manager.push_intermediate_step(usage_stat)
 

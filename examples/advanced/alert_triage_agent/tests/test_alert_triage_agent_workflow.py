@@ -51,10 +51,9 @@ async def test_full_workflow():
     with open(input_filepath_abs, 'r', encoding='utf-8') as f:
         input_data = json.load(f)
 
-    # # Run the workflow
+    # Run the workflow
     results = []
     async with load_workflow(config_file) as workflow:
-        pass
         for item in input_data:
             async with workflow.run(item["question"]) as runner:
                 result = await runner.result(to_type=str)
