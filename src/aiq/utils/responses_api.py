@@ -15,9 +15,9 @@
 
 from aiq.data_models.llm import APITypeEnum
 
+
 def validate_no_responses_api(llm_config):
     """Validate that the LLM config does not use the Responses API."""
 
     if llm_config.api_type == APITypeEnum.RESPONSES:
-        raise ValueError("Responses API is not supported for config %s. Please use a different API type."
-                         , llm_config)
+        raise ValueError("Responses API is not supported for config %s. Please use a different API type.", llm_config)

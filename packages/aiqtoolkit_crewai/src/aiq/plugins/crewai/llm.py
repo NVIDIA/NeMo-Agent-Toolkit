@@ -18,7 +18,6 @@ import os
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_llm_client
-from aiq.data_models.llm import APITypeEnum
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
 from aiq.utils.responses_api import validate_no_responses_api

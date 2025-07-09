@@ -24,7 +24,6 @@ from aiq.llm.openai_llm import OpenAIModelConfig
 from aiq.utils.responses_api import validate_no_responses_api
 
 
-
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
 async def nim_agno(llm_config: NIMModelConfig, builder: Builder):
 
