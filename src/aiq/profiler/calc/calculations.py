@@ -111,7 +111,7 @@ def _remove_outliers(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarr
     # if the number of concurrency points is less removing outliers can be challenging
     # as exteme outliers can skew the results.
     # We use a threshold of 10 points to check for extreme outliers in raw y-values first.
-    small_concurrency_range_threshold = 10
+    small_concurrency_range_threshold = 8
     # Extreme outlier threshold is 2.0 times the IQR, extreme outliers are removed.
     extreme_outlier_threshold = 2.0
     # Conservative outlier threshold is 1.5 times the IQR, conservative outliers are removed
