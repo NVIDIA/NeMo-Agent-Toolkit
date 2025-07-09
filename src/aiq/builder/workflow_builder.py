@@ -173,6 +173,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             from opentelemetry.sdk.trace import TracerProvider
             from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
+            from aiq.observability.register import GalileoTelemetryExporter
             from aiq.observability.register import PhoenixTelemetryExporter
 
             # Create a default provider first
@@ -180,7 +181,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             # Check if we have a phoenix telemetry exporter and use its project name
             for key, trace_exporter_config in telemetry_config.tracing.items():
-                if isinstance(trace_exporter_config, PhoenixTelemetryExporter):
+                if isinstance(trace_exporter_config, PhoenixTelemetryExporter) or isinstance(
+                        trace_exporter_config, GalileoTelemetryExporter):
                     provider = TracerProvider(resource=Resource(
                         attributes={ResourceAttributes.PROJECT_NAME: trace_exporter_config.project}))
                     break
