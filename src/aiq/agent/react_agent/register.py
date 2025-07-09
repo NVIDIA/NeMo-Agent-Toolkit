@@ -48,9 +48,7 @@ class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
     max_tool_calls: int = Field(default=15, description="Maximum number of tool calls before stopping the agent.")
     pass_tool_call_errors_to_agent: bool = Field(
         default=True,
-        description=
-        "Whether to pass tool call errors to agent. If False, any failed tool call will result in raising an exception."
-    )
+        description="Whether to pass tool call errors to agent. If False, failed tool calls will raise an exception.")
     include_tool_input_schema_in_tool_description: bool = Field(
         default=True, description="Specify inclusion of tool input schemas in the prompt.")
     description: str = Field(default="ReAct Agent Workflow", description="The description of this functions use.")
