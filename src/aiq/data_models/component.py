@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 class AIQComponentEnum(StrEnum):
     AUTHENTICATION_PROVIDER = "authentication_provider"
+    AUTHENTICATION_CLIENT = "authentication_client"
     FRONT_END = "front_end"
     FUNCTION = "function"
     TOOL_WRAPPER = "tool_wrapper"

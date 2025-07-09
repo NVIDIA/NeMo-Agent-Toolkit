@@ -321,6 +321,10 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         self._registered_authentication_client_infos: dict[type[AuthenticationBaseConfig],
                                                            RegisteredAuthenticationClientInfo] = {}
 
+        self._authentication_client_framework_to_provider: dict[str,
+                                                                dict[type[AuthenticationBaseConfig],
+                                                                     RegisteredAuthenticationClientInfo]] = {}
+
         # Embedders
         self._registered_embedder_provider_infos: dict[type[EmbedderBaseConfig], RegisteredEmbedderProviderInfo] = {}
         self._embedder_client_provider_to_framework: dict[type[EmbedderBaseConfig],
@@ -756,6 +760,16 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         if component_type == AIQComponentEnum.FRONT_END:
             return self._registered_front_end_infos
+
+        if component_type == AIQComponentEnum.AUTHENTICATION_PROVIDER:
+            return self._registered_authentication_provider_infos
+
+        if component_type == AIQComponentEnum.AUTHENTICATION_CLIENT:
+            leaf_authentication_client_infos = {}
+            for framework in self._authentication_client_framework_to_provider.values():
+                for info in framework.values():
+                    leaf_authentication_client_infos[info.discovery_metadata.component_name] = info
+            return leaf_authentication_client_infos
 
         if component_type == AIQComponentEnum.FUNCTION:
             return self._registered_functions
