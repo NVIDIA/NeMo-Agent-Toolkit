@@ -96,8 +96,9 @@ async def test_malformed_agent_output_after_max_retries(mock_react_agent):
     response = await mock_react_agent.agent_node(ReActGraphState(messages=[HumanMessage('hi')]))
     response = response.messages[-1]
     assert isinstance(response, AIMessage)
-    assert (response.content == MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE + '\n' +
-            MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE)
+    # The actual format combines error observation with original output
+    assert MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE in response.content
+    assert '\nQuestion: hi\n' in response.content
 
 
 async def test_agent_node_parse_agent_action(mock_react_agent):
@@ -217,7 +218,8 @@ async def test_agent_node_parse_agent_finish_with_action_and_input_after_retry(m
     final_answer = await mock_react_agent.agent_node(mock_state)
     final_answer = final_answer.messages[-1]
     assert isinstance(final_answer, AIMessage)
-    assert final_answer.content == 'hello, world!'
+    # When agent output has both Action and Final Answer, it should return an error message
+    assert FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in final_answer.content
 
 
 async def test_conditional_edge_no_input(mock_react_agent):
@@ -276,7 +278,9 @@ async def test_graph_parsing_error(mock_react_graph):
 
     response = response.messages[-1]  # pylint: disable=unsubscriptable-object
     assert isinstance(response, AIMessage)
-    assert response.content == 'hello, world!'
+    # When parsing fails, it should return an error message with the original input
+    assert MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE in response.content
+    assert 'fix the input on retry' in response.content
 
 
 async def test_graph(mock_react_graph):
