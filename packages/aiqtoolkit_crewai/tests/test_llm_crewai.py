@@ -60,7 +60,7 @@ class TestNimCrewAI:
     @patch("crewai.LLM")
     async def test_responses_api_blocked(self, mock_llm, nim_cfg_responses, mock_builder):
         """Selecting the Responses API must raise a ValueError."""
-        with pytest.raises(ValueError, match="Responses API is not supported with CrewAI"):
+        with pytest.raises(ValueError, match="Responses API is not supported"):
             async with nim_crewai(nim_cfg_responses, mock_builder):
                 pass
         mock_llm.assert_not_called()
@@ -120,7 +120,7 @@ class TestOpenAICrewAI:
 
     @patch("crewai.LLM")
     async def test_responses_api_blocked(self, mock_llm, openai_cfg_responses, mock_builder):
-        with pytest.raises(ValueError, match="Responses API is not supported with CrewAI"):
+        with pytest.raises(ValueError, match="Responses API is not supported"):
             async with openai_crewai(openai_cfg_responses, mock_builder):
                 pass
         mock_llm.assert_not_called()

@@ -62,8 +62,7 @@ class TestNimAgno:
     async def test_nim_agno_responses(self, mock_nvidia, nim_config_responses, mock_builder):
         """Test that nim_agno raises ValueError for NIMModelConfig with Responses API."""
         # Use the context manager properly
-        with pytest.raises(ValueError,
-                           match="Responses API is not supported with Agno. Please use a different API type."):
+        with pytest.raises(ValueError, match="Responses API is not supported"):
             async with nim_agno(nim_config_responses, mock_builder):
                 pass
 
