@@ -138,6 +138,13 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
             description=("Path for the default workflow using the OpenAI API Specification. "
                          "If None, no workflow endpoint with the OpenAI API Specification is created."),
         )
+        openai_api_compatible: bool = Field(
+            default=False,
+            description=("Enable full OpenAI Chat Completions API compatibility mode. "
+                         "When True, only creates the openai_api_path endpoint that handles both "
+                         "streaming and non-streaming based on the 'stream' parameter. "
+                         "When False, creates separate endpoints for streaming and non-streaming."),
+        )
 
     class Endpoint(EndpointBase):
         function_name: str = Field(description="The name of the function to call for this endpoint")

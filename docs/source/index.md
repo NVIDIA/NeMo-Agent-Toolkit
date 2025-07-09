@@ -119,6 +119,7 @@ Cursor Rules Developer Guide <./extend/cursor-rules-developer-guide.md>
 ./api/index.rst
 ./reference/interactive-models.md
 API Server Endpoints <./reference/api-server-endpoints.md>
+OpenAI API Compatible Endpoints <./reference/openai-api-compatible-endpoint.md>
 ./reference/websockets.md
 Command Line Interface (CLI) <./reference/cli.md>
 Cursor Rules Reference <./reference/cursor-rules-reference.md>

@@ -83,7 +83,6 @@ NIM(s?)
 npm
 NumPy
 NVIDIA
-OTel
 onboarding
 [Oo]verfitting
 pandas
@@ -119,6 +118,7 @@ Tavily
 triages
 [Uu]nencrypted
 [Uu]nittest(s?)
+[Uu]nprocessable
 [Uu]ploader
 uv
 VectorDB
