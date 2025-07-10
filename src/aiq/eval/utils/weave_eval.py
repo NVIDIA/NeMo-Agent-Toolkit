@@ -118,6 +118,22 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         # log the total tokens for this item, per-llm tokens can be exported later if needed
         await self.pred_loggers[item.id].alog_score(scorer="wf_tokens", score=usage_stats_item.total_tokens)
 
+        # Compute total cached tokens and log it
+        total_cached_tokens = 0
+        for k in usage_stats_item.usage_stats_per_llm:
+            llm_stats = usage_stats_item.usage_stats_per_llm[k]
+            total_cached_tokens += llm_stats.cached_tokens
+
+        await self.pred_loggers[item.id].alog_score(scorer="total_cached_tokens", score=total_cached_tokens)
+
+        # Compute total reasoning tokens and log it
+        total_reasoning_tokens = 0
+        for k in usage_stats_item.usage_stats_per_llm:
+            llm_stats = usage_stats_item.usage_stats_per_llm[k]
+            total_reasoning_tokens += llm_stats.reasoning_tokens
+
+        await self.pred_loggers[item.id].alog_score(scorer="total_reasoning_tokens", score=total_reasoning_tokens)
+
     async def alog_score(self, eval_output: EvalOutput, evaluator_name: str):
         """Log scores for evaluation outputs."""
         if not self.eval_logger:

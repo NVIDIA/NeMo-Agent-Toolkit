@@ -46,8 +46,11 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
     # Default kwargs for OpenAI to include usage metadata in the response. If the user has set stream_usage to False, we
     # will not include this.
     default_kwargs = {"stream_usage": True}
+    exclude = {"type", "api_type"}
+    if llm_config.model_name.startswith('o'):
+        exclude.add("temperature")
 
-    kwargs = {**default_kwargs, **llm_config.model_dump(exclude={"type", "api_type"}, by_alias=True)}
+    kwargs = {**default_kwargs, **llm_config.model_dump(exclude=exclude, by_alias=True)}
 
     if llm_config.api_type == APITypeEnum.RESPONSES:
         kwargs["use_responses_api"] = True
