@@ -56,8 +56,7 @@ workflow:
   tool_names: [wikipedia_search, current_datetime, code_generation, math_agent]
   llm_name: nim_llm
   verbose: true
-  handle_parsing_errors: true
-  max_retries: 2
+  parsing_agent_response_max_retries: 2
 ```
 In your YAML file, to use the ReAct agent as a function:
 ```yaml
