@@ -20,7 +20,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from aiq.profiler.calc.calculations import compute_slope
 from aiq.profiler.calc.data_models import LinearFitResult
 from aiq.profiler.calc.data_models import SizingMetrics
 
@@ -48,7 +47,7 @@ class PlotConfig:
     TREND_LINEWIDTH = 2.0
 
     # Colors
-    LATENCY_COLOR = 'steelblue'
+    LLM_LATENCY_COLOR = 'steelblue'
     RUNTIME_COLOR = 'darkgreen'
     SLA_COLOR = 'red'
     NOTE_BOX_COLOR = 'mistyrose'
@@ -134,8 +133,8 @@ def plot_metric_vs_concurrency_with_optional_fit(
     fit: LinearFitResult | None = None,
 ):
     """
-    Helper to plot a metric vs concurrency with optional pre-computed fit, outlier highlighting, and SLA line.
-    Automatically computes fit if not provided.
+    Helper to plot a metric vs concurrency with pre-computed fit, outlier highlighting, and SLA line.
+    Requires pre-computed fit to be provided.
     """
     marker = PlotConfig.DATA_MARKER
     outlier_marker = PlotConfig.OUTLIER_MARKER
@@ -150,15 +149,12 @@ def plot_metric_vs_concurrency_with_optional_fit(
     outliers_x = outliers_y = np.array([])
     outliers_note = ""
 
-    # If no fit provided, compute one
-    if not fit and len(x) > 1:
-        try:
-            fit = compute_slope(x.tolist(), y.tolist(), remove_outliers=True)
-        except Exception as e:
-            logger.warning(f"Could not compute slope for {metric_name}: {e}")
-            fit = None
+    # Skip analysis plot if no fit is available
+    if not fit:
+        logger.warning(f"No linear fit available for {metric_name}, skipping analysis plot")
+        return False
 
-    if fit and fit.outliers_removed:
+    if fit.outliers_removed:
         # Use the concurrencies that were removed to identify outlier points
         outlier_mask = np.isin(x, fit.outliers_removed)
         outliers_x = x[outlier_mask]
@@ -185,7 +181,7 @@ def plot_metric_vs_concurrency_with_optional_fit(
                    marker=outlier_marker,
                    label='Removed Outliers')
     else:
-        # No outliers or no fit available, plot all data points
+        # No outliers plot all data points
         ax.scatter(x,
                    y,
                    alpha=PlotConfig.DATA_ALPHA,
@@ -196,17 +192,16 @@ def plot_metric_vs_concurrency_with_optional_fit(
                    marker=marker,
                    label='Data Points')
 
-    if fit:
-        # Plot trend line using the fit
-        x_fit = np.linspace(x.min(), x.max(), PlotConfig.TREND_LINE_POINTS)
-        y_fit = fit.slope * x_fit + fit.intercept
-        ax.plot(x_fit,
-                y_fit,
-                trend_linestyle,
-                alpha=trend_alpha,
-                linewidth=trend_linewidth,
-                color=trend_color,
-                label=f'Trend (slope={fit.slope:.4f}, R²={fit.r_squared:.3f})')
+    # Plot trend line using the fit
+    x_fit = np.linspace(x.min(), x.max(), PlotConfig.TREND_LINE_POINTS)
+    y_fit = fit.slope * x_fit + fit.intercept
+    ax.plot(x_fit,
+            y_fit,
+            trend_linestyle,
+            alpha=trend_alpha,
+            linewidth=trend_linewidth,
+            color=trend_color,
+            label=f'Trend (slope={fit.slope:.4f}, R²={fit.r_squared:.3f})')
 
     if sla_value > 0:
         ax.axhline(y=sla_value,
@@ -234,70 +229,99 @@ def plot_metric_vs_concurrency_with_optional_fit(
                           facecolor=note_box_color,
                           alpha=PlotConfig.NOTE_BOX_ALPHA))
 
+    return True
+
 
 def plot_concurrency_vs_time_metrics(metrics_per_concurrency: dict[int, SizingMetrics],
                                      output_dir: Path,
-                                     target_latency: float = 0.0,
+                                     target_llm_latency: float = 0.0,
                                      target_runtime: float = 0.0,
-                                     latency_fit: LinearFitResult | None = None,
+                                     llm_latency_fit: LinearFitResult | None = None,
                                      runtime_fit: LinearFitResult | None = None) -> None:
     """
     Plot concurrency vs. p95 latency and workflow runtime using metrics_per_concurrency.
     Enhanced with better styling, trend analysis, and annotations.
-    Uses pre-computed fits if provided, otherwise computes them during plotting.
+    Only plots valid runs and requires pre-computed fits.
     """
     rows = []
 
     for concurrency, metrics in metrics_per_concurrency.items():
-        if not metrics or not metrics.llm_latency_p95 or not metrics.workflow_runtime_p95:
-            continue
-
-        latency = metrics.llm_latency_p95
+        llm_latency = metrics.llm_latency_p95
         workflow_runtime = metrics.workflow_runtime_p95
 
-        rows.append({"concurrency": concurrency, "llm_latency_p95": latency, "workflow_runtime_p95": workflow_runtime})
+        rows.append({
+            "concurrency": concurrency, "llm_latency_p95": llm_latency, "workflow_runtime_p95": workflow_runtime
+        })
 
     if not rows:
-        logger.warning("No metrics data available to plot.")
+        logger.warning("No valid metrics data available to plot.")
         return
 
     plt.style.use('seaborn-v0_8')
     df = pd.DataFrame(rows).sort_values("concurrency")
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=PlotConfig.ENHANCED_FIGSIZE)
 
-    # Plot latency with optional pre-computed fit
-    plot_metric_vs_concurrency_with_optional_fit(
-        ax1,
-        df["concurrency"].to_numpy(),
-        df["llm_latency_p95"].to_numpy(),
-        metric_name="latency",
-        y_label='P95 LLM Latency (seconds)',
-        title='Concurrency vs P95 LLM Latency',
-        color=PlotConfig.LATENCY_COLOR,
-        sla_value=target_latency,
-        sla_label=f'SLA Threshold ({target_latency}s)' if target_latency > 0 else None,
-        fit=latency_fit,
-    )
+    # Always generate simple plot first
+    plot_concurrency_vs_time_metrics_simple(df, output_dir)
 
-    # Plot runtime with optional pre-computed fit
-    plot_metric_vs_concurrency_with_optional_fit(
-        ax2,
-        df["concurrency"].to_numpy(),
-        df["workflow_runtime_p95"].to_numpy(),
-        metric_name="runtime",
-        y_label='P95 Workflow Runtime (seconds)',
-        title='Concurrency vs P95 Workflow Runtime',
-        color=PlotConfig.RUNTIME_COLOR,
-        sla_value=target_runtime,
-        sla_label=f'SLA Threshold ({target_runtime}s)' if target_runtime > 0 else None,
-        fit=runtime_fit,
-    )
+    # Check if we have fits available for analysis plots
+    has_llm_latency_fit = llm_latency_fit is not None
+    has_runtime_fit = runtime_fit is not None
+
+    if not has_llm_latency_fit and not has_runtime_fit:
+        logger.warning("No linear fits available for analysis plots, skipping enhanced plot")
+        return
+
+    # Create subplots based on available fits
+    if has_llm_latency_fit and has_runtime_fit:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=PlotConfig.ENHANCED_FIGSIZE)
+    else:
+        fig, ax1 = plt.subplots(1, 1, figsize=(8, 6))
+        ax2 = None
+
+    # Plot llm_latency if fit is available
+    llm_latency_plotted = False
+    if has_llm_latency_fit:
+        llm_latency_plotted = plot_metric_vs_concurrency_with_optional_fit(
+            ax1,
+            df["concurrency"].to_numpy(),
+            df["llm_latency_p95"].to_numpy(),
+            metric_name="llm_latency",
+            y_label='P95 LLM Latency (seconds)',
+            title='Concurrency vs P95 LLM Latency',
+            color=PlotConfig.LLM_LATENCY_COLOR,
+            sla_value=target_llm_latency,
+            sla_label=f'SLA Threshold ({target_llm_latency}s)' if target_llm_latency > 0 else None,
+            fit=llm_latency_fit,
+        )
+
+    # Plot runtime if fit is available
+    runtime_plotted = False
+    if has_runtime_fit and ax2 is not None:
+        runtime_plotted = plot_metric_vs_concurrency_with_optional_fit(
+            ax2,
+            df["concurrency"].to_numpy(),
+            df["workflow_runtime_p95"].to_numpy(),
+            metric_name="runtime",
+            y_label='P95 Workflow Runtime (seconds)',
+            title='Concurrency vs P95 Workflow Runtime',
+            color=PlotConfig.RUNTIME_COLOR,
+            sla_value=target_runtime,
+            sla_label=f'SLA Threshold ({target_runtime}s)' if target_runtime > 0 else None,
+            fit=runtime_fit,
+        )
+
+    # Check if any plots were successfully created
+    plots_created = (llm_latency_plotted or runtime_plotted)
+
+    if not plots_created:
+        logger.warning("No analysis plots could be created, skipping enhanced plot")
+        plt.close(fig)
+        return
 
     # Add summary statistics
     stats_text = f'Data Points: {len(df)}\n'
-    stats_text += f'Concurrency Range: {df["concurrency"].min()}-{df["concurrency"].max()}\n'
-    stats_text += f'Latency Range: {df["llm_latency_p95"].min():.3f}-{df["llm_latency_p95"].max():.3f}s\n'
-    stats_text += f'Runtime Range: {df["workflow_runtime_p95"].min():.3f}-{df["workflow_runtime_p95"].max():.3f}s'
+    stats_text += f'LLM Latency Range: {df["llm_latency_p95"].min():.3f}-{df["llm_latency_p95"].max():.3f}s\n'
+    stats_text += f'WF Runtime Range: {df["workflow_runtime_p95"].min():.3f}-{df["workflow_runtime_p95"].max():.3f}s'
 
     fig.text(PlotConfig.STATS_X_POS,
              PlotConfig.STATS_Y_POS,
@@ -319,6 +343,3 @@ def plot_concurrency_vs_time_metrics(metrics_per_concurrency: dict[int, SizingMe
     plt.close()
 
     logger.info("Enhanced plot saved to %s", enhanced_plot_path)
-
-    # Also generate a simple plot for the user to see the data points
-    plot_concurrency_vs_time_metrics_simple(df, output_dir)
