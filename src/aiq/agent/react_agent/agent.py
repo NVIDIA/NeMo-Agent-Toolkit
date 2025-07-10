@@ -68,11 +68,13 @@ class ReActAgentGraph(DualNodeAgent):
                  use_tool_schema: bool = True,
                  callbacks: list[AsyncCallbackHandler] | None = None,
                  detailed_logs: bool = False,
+                 retry_agent_response_parsing_errors: bool = True,
                  parsing_agent_response_max_retries: int = 1,
                  tool_call_max_retries: int = 1,
                  pass_tool_call_errors_to_agent: bool = True):
         super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs)
-        self.parsing_agent_response_max_retries = parsing_agent_response_max_retries
+        self.parsing_agent_response_max_retries = (parsing_agent_response_max_retries
+                                                   if retry_agent_response_parsing_errors else 1)
         self.tool_call_max_retries = tool_call_max_retries
         self.pass_tool_call_errors_to_agent = pass_tool_call_errors_to_agent
         logger.debug(

@@ -15,6 +15,7 @@
 
 import logging
 
+from pydantic import AliasChoices
 from pydantic import Field
 
 from aiq.agent.base import AGENT_LOG_PREFIX
@@ -42,10 +43,18 @@ class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
                                           description="The list of tools to provide to the react agent.")
     llm_name: LLMRef = Field(description="The LLM model to use with the react agent.")
     verbose: bool = Field(default=False, description="Set the verbosity of the react agent's logging.")
+    retry_agent_response_parsing_errors: bool = Field(
+        default=True,
+        validation_alias=AliasChoices("retry_agent_response_parsing_errors", "retry_parsing_errors"),
+        description="Whether to retry when encountering parsing errors in the agent's response.")
     parsing_agent_response_max_retries: int = Field(
-        default=1, description="The number of retries of parsing the agent's response before raising a parsing error.")
+        default=1,
+        validation_alias=AliasChoices("parsing_agent_response_max_retries", "max_retries"),
+        description="The number of retries of parsing the agent's response before raising a parsing error.")
     tool_call_max_retries: int = Field(default=1, description="The number of retries before raising a tool call error.")
-    max_tool_calls: int = Field(default=15, description="Maximum number of tool calls before stopping the agent.")
+    max_tool_calls: int = Field(default=15,
+                                validation_alias=AliasChoices("max_tool_calls", "max_iterations"),
+                                description="Maximum number of tool calls before stopping the agent.")
     pass_tool_call_errors_to_agent: bool = Field(
         default=True,
         description="Whether to pass tool call errors to agent. If False, failed tool calls will raise an exception.")
@@ -90,6 +99,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
         tools=tools,
         use_tool_schema=config.include_tool_input_schema_in_tool_description,
         detailed_logs=config.verbose,
+        retry_agent_response_parsing_errors=config.retry_agent_response_parsing_errors,
         parsing_agent_response_max_retries=config.parsing_agent_response_max_retries,
         tool_call_max_retries=config.tool_call_max_retries,
         pass_tool_call_errors_to_agent=config.pass_tool_call_errors_to_agent).build_graph()

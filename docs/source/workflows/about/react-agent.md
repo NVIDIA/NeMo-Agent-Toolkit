@@ -83,6 +83,8 @@ functions:
 
 * `verbose`: Defaults to `False` (useful to prevent logging of sensitive data).  If set to `True`, the Agent will log input, output, and intermediate steps.
 
+* `retry_agent_response_parsing_errors`: Defaults to `True`.  If set to `True`, the Agent will retry parsing errors.  If set to `False`, the Agent will raise an exception.
+
 * `parsing_agent_response_max_retries`: Defaults to `1`.  Maximum amount of times the Agent may retry parsing errors.  Prevents the Agent from getting into infinite hallucination loops.
 
 * `tool_call_max_retries`: Defaults to `1`.  Maximum amount of times the Agent may retry tool call errors.  Prevents the Agent from getting into infinite tool call loops.
