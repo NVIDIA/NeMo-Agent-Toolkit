@@ -97,7 +97,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         _T
             The converted value, or original value if conversion fails.
         """
-        return self._converter.convert_safe(value, to_type=to_type)
+        return self._converter.try_convert(value, to_type=to_type)
 
     @abstractmethod
     async def _ainvoke(self, value: InputT) -> SingleOutputT:
@@ -139,7 +139,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
                 result = await self._ainvoke(converted_input)
 
                 if to_type is not None and not isinstance(result, to_type):
-                    result = self._converter.convert_safe(result, to_type=to_type)
+                    result = self._converter.try_convert(result, to_type=to_type)
 
                 manager.set_output(result)
 
@@ -224,7 +224,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
                 async for data in self._astream(converted_input):
 
                     if to_type is not None and not isinstance(data, to_type):
-                        yield self._converter.convert_safe(data, to_type=to_type)
+                        yield self._converter.try_convert(data, to_type=to_type)
                     else:
                         yield data
             except Exception as e:

@@ -443,7 +443,7 @@ def test_convert_safe_multiple_failure_scenarios():
     ]
 
     for original_value, target_type in test_cases:
-        result = converter.convert_safe(original_value, target_type)
+        result = converter.try_convert(original_value, target_type)
         assert result is original_value, f"Failed for {original_value} -> {target_type}"
 
 
@@ -453,9 +453,9 @@ def test_convert_safe_preserves_object_identity():
 
     # Test with mutable objects
     original_list = [1, 2, 3]
-    result = converter.convert_safe(original_list, dict)
+    result = converter.try_convert(original_list, dict)
     assert result is original_list  # Same object, not a copy
 
     original_dict = {"key": "value"}
-    result = converter.convert_safe(original_dict, list)
+    result = converter.try_convert(original_dict, list)
     assert result is original_dict  # Same object, not a copy

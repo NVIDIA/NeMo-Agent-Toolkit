@@ -70,7 +70,7 @@ class TypeConverter:
         self._converters.setdefault(to_type, OrderedDict())[from_type] = converter
         # to do(MDD): If needed, sort by specificity here.
 
-    def try_convert(self, data, to_type: type[_T]) -> _T | None:
+    def _convert(self, data, to_type: type[_T]) -> _T | None:
         """
         Attempts to convert `data` into `to_type`. Returns None if no path is found.
         """
@@ -100,7 +100,7 @@ class TypeConverter:
         Converts or raises ValueError if no path is found.
         We also give the parent a chance if self fails.
         """
-        result = self.try_convert(data, to_type)
+        result = self._convert(data, to_type)
         if result is None and self._parent:
             # fallback on parent entirely
             return self._parent.convert(data, to_type)
@@ -109,7 +109,7 @@ class TypeConverter:
             return result
         raise ValueError(f"Cannot convert type {type(data)} to {to_type}. No match found.")
 
-    def convert_safe(self, data, to_type: type[_T]) -> _T:
+    def try_convert(self, data, to_type: type[_T]) -> _T:
         """
         Converts with graceful error handling. If conversion fails, returns the original data
         and continues processing.
@@ -235,7 +235,7 @@ class GlobalTypeConverter:
 
     @staticmethod
     def convert_safe(data, to_type: type[_T]) -> _T:
-        return GlobalTypeConverter._global_converter.convert_safe(data, to_type)
+        return GlobalTypeConverter._global_converter.try_convert(data, to_type)
 
 
 TypeConverter._global_initialized = True
