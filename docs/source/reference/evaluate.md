@@ -25,7 +25,7 @@ AIQ toolkit provides a set of evaluators to run and evaluate the AIQ toolkit wor
 
 Example:
 ```bash
-aiq eval --config_file=examples/simple/configs/eval_config.yml
+aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml
 ```
 
 ## Using Datasets
@@ -43,7 +43,7 @@ eval:
   general:
     dataset:
       _type: json
-      file_path: examples/simple/data/langsmith.json
+      file_path: examples/basic/functions/simple/data/langsmith.json
 ```
 
 ### Dataset Format
@@ -81,11 +81,14 @@ eval:
   general:
     dataset:
       _type: json
-      file_path: examples/swe_bench/data/test_dataset_lite.json
+      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true
 ```
+
+### Accessing Additional Dataset Fields in Evaluators
+In some evaluation scenarios, you may have additional fields in your dataset that are not consumed by the workflow but are required by the evaluator. These fields are automatically available during evaluation via the `full_dataset_entry` field in the `EvalInputItem` object. The entire dataset entry is passed as a dictionary to the evaluator, making all dataset fields available for custom evaluators that require access to fields like `labels` or `metadata` which are not part of the workflow's inputs but are relevant for scoring or analysis.
 
 ### Filtering Datasets
 While evaluating large datasets, you can filter the dataset to a
@@ -101,7 +104,7 @@ and `sympy__sympy-21055`. The evaluation iteratively develops and debugs the wor
 eval:
     dataset:
       _type: json
-      file_path: examples/swe_bench/data/test_dataset_verified.json
+      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
       id_key: instance_id
       structure:
         disable: true
@@ -119,7 +122,7 @@ You can also skip entries from the dataset. Here is an example configuration to 
 eval:
     dataset:
       _type: json
-      file_path: examples/swe_bench/data/test_dataset_verified.json
+      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
       id_key: instance_id
       structure:
         disable: true
@@ -196,7 +199,7 @@ eval:
   general:
     dataset:
       _type: json
-      file_path: examples/swe_bench/data/test_dataset_lite.json
+      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true
@@ -232,6 +235,13 @@ eval:
     tuneable_eval:
       _type: tunable_rag_evaluator
       llm_name: nim_rag_eval_llm
+      # (optional) retry control params for handling rate limiting
+      llm_retry_control_params:
+        stop_after_attempt: 3
+        # set initial backoff (seconds)
+        initial_backoff_delay_seconds: 1
+        # Add jitter to exponential backoff
+        has_exponential_jitter: true
       default_scoring: false
       default_score_weights:
         coverage: 0.5
@@ -261,7 +271,7 @@ Note: In your evaluation dataset, make sure that the `answer` field is a descrip
 
 **Sample Usage:**
 ```bash
-aiq eval --config_file=examples/simple_calculator/configs/config-tunable-rag-eval.yml
+aiq eval --config_file=examples/basic/functions/simple_calculator/configs/config-tunable-rag-eval.yml
 ```
 
 ## Adding Custom Evaluators
@@ -271,7 +281,7 @@ You can add custom evaluators to evaluate the workflow output. To add a custom e
 ## Running multiple repetitions
 You can run multiple repetitions of the evaluation by running a command line option `--reps`. For example, to run the evaluation 5 times, run the following command:
 ```bash
-aiq eval --config_file=examples/simple/configs/eval_config.yml --reps=5
+aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml --reps=5
 ```
 This will allow you to get an average score across multiple runs and analyze the variation in the generated outputs.
 
@@ -290,33 +300,33 @@ You can then re-run evaluation on that output file along with `--skip_completed_
 
 Pass-1:
 ```
-aiq eval --config_file=examples/simple/configs/eval_config.yml
+aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml
 ```
 This pass results in workflow interrupted warning. You can then do another pass.
 
 Pass-2:
 ```bash
-cp .tmp/aiq/examples/simple/workflow_output.json .tmp/simple_workflow_output.json
-aiq eval --config_file=examples/simple/configs/eval_config.yml --skip_completed_entries --dataset=.tmp/simple_workflow_output.json
+cp .tmp/aiq/examples/basic/functions/simple/workflow_output.json .tmp/simple_workflow_output.json
+aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml --skip_completed_entries --dataset=.tmp/simple_workflow_output.json
 ```
 
 ## Running evaluation offline
 You can evaluate a dataset with previously generated answers via the `--skip_workflow` option. In this case the dataset has both the expected `answer` and the `generated_answer`.
 ```bash
-cp .tmp/aiq/examples/simple/workflow_output.json .tmp/simple_workflow_output.json
-aiq eval --config_file=examples/simple/configs/eval_config.yml --skip_workflow --dataset=.tmp/simple_workflow_output.json
+cp .tmp/aiq/examples/basic/functions/simple/workflow_output.json .tmp/simple_workflow_output.json
+aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml --skip_workflow --dataset=.tmp/simple_workflow_output.json
 ```
-This assumes that the workflow output was previously generated and stored in `.tmp/aiq/examples/simple/workflow_output.json`
+This assumes that the workflow output was previously generated and stored in `.tmp/aiq/examples/basic/functions/simple/workflow_output.json`
 
 ## Running the workflow over a dataset without evaluation
 You can do this by running `aiq eval` with a workflow configuration file that includes an `eval` section with no `evaluators`.
 ```yaml
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/simple/
+    output_dir: ./.tmp/aiq/examples/basic/functions/simple/
     dataset:
       _type: json
-      file_path: examples/simple/data/langsmith.json
+      file_path: examples/basic/functions/simple/data/langsmith.json
 ```
 
 ## Evaluation output
@@ -324,7 +334,7 @@ The output of the workflow is stored as `workflow_output.json` in the `output_di
 ```yaml
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/simple/
+    output_dir: ./.tmp/aiq/examples/basic/functions/simple/
 ```
 Here is a sample workflow output snipped generated by running evaluation on the `simple` example workflow -
 ```
@@ -376,7 +386,7 @@ The output of the evaluators are stored in distinct files in the same `output_di
 The workflow_output.json file contains the intermediate steps for each entry in the dataset. The intermediate steps are filtered using the `eval.general.output.workflow_output_step_filter` parameter in the `config.yml` file. The default value for the filter is `[LLM_END, TOOL_END]`. You can customize the filter by providing a list of intermediate step types to include in the output file.
 
 **Example:**
-`examples/simple/configs/eval_config.yml` can be modified to include the intermediate steps in the output by adding the following configuration:
+`examples/basic/functions/simple/configs/eval_config.yml` can be modified to include the intermediate steps in the output by adding the following configuration:
 ```yaml
 eval:
   general:
@@ -399,7 +409,7 @@ eval:
       dir: ./.tmp/aiq/examples/simple_output/
       custom_scripts:
         convert_workflow_to_csv:
-          script: examples/simple/src/aiq_simple/scripts/workflow_to_csv.py
+          script: examples/basic/functions/simple/src/aiq_simple/scripts/workflow_to_csv.py
           kwargs:
             # The input and output are relative to the output directory
             input: workflow_output.json
@@ -425,13 +435,34 @@ eval:
 ```
 The `remote_file_path` is the path to the dataset in the remote storage. The `file_path` is the local path where the dataset will be downloaded. The `s3` section contains the information needed to access the remote storage.
 
-### Uploading output directory to remote storage
-You can upload the contents of the entire output directory to remote storage by providing the information needed to upload the output directory in the `eval.general.output` section of the `config.yml` file. The following is an example configuration to upload the output directory to remote storage.
+### Preserving outputs across multiple runs
+By default, evaluation outputs are written to the same directory specified in `eval.general.output.dir`. This means that running the evaluation multiple times will overwrite previous results. To keep the outputs from each run separate, enable the `append_job_id_to_output_dir` option in the `job_management` section:
+
 ```yaml
 eval:
   general:
     output:
-      # Upload contents of output directory to remote storage using S3 credentials
+      dir: ./.tmp/aiq/examples/simple_output/
+      job_management:
+        append_job_id_to_output_dir: true
+      cleanup: false
+```
+
+When `append_job_id_to_output_dir` is set to `true`, a unique job ID (`job_{UUID}`) is automatically generated for each evaluation run and appended to the output directory path. This results in:
+- Local output path: `./.tmp/aiq/examples/basic/functions/simple/jobs/job_{unique-job-id}/`
+- Remote output path (if S3 is configured): `output/jobs/job_{unique-job-id}/`
+
+The `cleanup` option is used to control the cleanup of the output directory. If `cleanup` is set to `true`, the entire output directory and all job `sub-directories` are deleted at the beginning of the evaluation. So `cleanup` must be set to `false` if you want to preserve the output directory and job `sub-directories`.
+
+### Uploading output directory to remote storage
+You can upload the contents of the entire output directory to remote storage by providing the information needed to upload the output directory in the `eval.general.output` section of the `config.yml` file. The following is an example configuration to upload the output directory to remote storage.
+
+For connecting with S3 using endpoint URL:
+```yaml
+eval:
+  general:
+    output:
+      # Upload contents of output directory to remote storage using custom endpoint url & S3 credentials
       remote_dir: output
       s3:
         endpoint_url: http://10.185.X.X:9000
@@ -439,6 +470,21 @@ eval:
         access_key: fake-access-key
         secret_key: fake-secret-key
 ```
+
+For connecting with default S3 you can use `region_name` instead of `endpoint_url`:
+```yaml
+eval:
+  general:
+    output:
+      # Upload contents of output directory to remote storage using S3 credentials
+      remote_dir: output
+      s3:
+        region_name: us-west-2
+        bucket: aiq-simple-bucket
+        access_key: fake-access-key
+        secret_key: fake-secret-key
+```
+
 ### Cleanup output directory
 The contents of the output directory can be deleted before running the evaluation pipeline by specifying the `eval.general.output.cleanup` section in the `config.yml` file. The following is an example configuration to clean up the output directory before running the evaluation pipeline.
 ```yaml
@@ -449,6 +495,24 @@ eval:
       cleanup: true
 ```
 Output directory cleanup is disabled by default for easy troubleshooting.
+
+### Job eviction from output directory
+When running multiple evaluations, especially with `append_job_id_to_output_dir` enabled, the output directory can accumulate a large number of job folders over time. You can control this growth using a job eviction policy.
+Configure job eviction with the following options in the `config.yml` file:
+```yaml
+eval:
+  general:
+    output:
+      dir: ./.tmp/aiq/examples/simple_output/
+      cleanup: false
+      job_management:
+        append_job_id_to_output_dir: true
+        max_jobs: 5
+        eviction_policy: TIME_CREATED
+```
+Configuration notes:
+- `max_jobs` sets the maximum number of job directories to keep. The oldest ones will be evicted based on the selected policy. Default is 0, which means no limit.
+- `eviction_policy` controls how "oldest" is determined—either by creation time (TIME_CREATED) or last modification time (TIME_MODIFIED). Default is TIME_CREATED.
 
 ## Profiling and Performance Monitoring of AIQ Toolkit Workflows
 You can profile workflows using the AIQ toolkit evaluation system. For more information, see the [Profiler](../workflows/profiler.md) documentation.

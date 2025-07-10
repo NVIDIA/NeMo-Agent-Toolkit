@@ -1,0 +1,61 @@
+---
+description: Follow these rules when the user's request involves integrating or selecting ReAct, Tool-Calling, Reasoning, or ReWOO agents within AIQ workflows
+globs: 
+alwaysApply: false
+---
+# AIQ Agents Integration & Selection Rules
+
+These rules standardise how the four built-in AIQ agents are configured inside YAML‐based workflows/functions and provide guidance for choosing the most suitable agent for a task.
+
+## Referenced Documentation
+
+- **ReAct Agent Docs**: [react-agent.md](mdc:docs/source/workflows/about/react-agent.md) – Configuration, prompt format and limitations.
+- **Tool-Calling Agent Docs**: [tool-calling-agent.md](mdc:docs/source/workflows/about/tool-calling-agent.md) – Configuration, tool schema routing and limitations.
+- **Reasoning Agent Docs**: [reasoning-agent.md](mdc:docs/source/workflows/about/reasoning-agent.md) – Configuration, wrapper semantics and limitations.
+- **ReWOO Agent Docs**: [rewoo-agent.md](mdc:docs/source/workflows/about/rewoo-agent.md) – Configuration, planning/solver architecture and limitations.
+
+## Integration Guidelines
+
+1. **ReAct Agent**
+   - Use `_type: react_agent` in either the top-level `workflow:` or inside `functions:`.
+   - Always provide `tool_names` (list of YAML-defined functions) and `llm_name`.
+   - Optional but recommended parameters: `verbose`, `max_iterations`, `handle_parsing_errors`, `max_retries`.
+   - When overriding the prompt, keep `{tools}` and `{tool_names}` placeholders and ensure the LLM outputs in ReAct format.
+
+2. **Tool-Calling Agent**
+   - Use `_type: tool_calling_agent`.
+   - Requires an LLM that supports function/tool calling (e.g. OpenAI, Nim chat-completion).
+   - Mandatory fields: `tool_names`, `llm_name`.
+   - Recommended fields: `verbose`, `handle_tool_errors`, `max_iterations`.
+   - Tool input parameters must be well-named; the agent relies on them for routing.
+
+3. **ReWOO Agent**
+   - Use `_type: rewoo_agent`.
+   - Provide `tool_names` and `llm_name`.
+   - The agent executes a *planning* and then *solver* phase; advanced users may override `planner_prompt` or `solver_prompt` but must preserve required placeholders.
+   - Use `include_tool_input_schema_in_tool_description: true` to improve tool disambiguation.
+
+4. **Reasoning Agent**
+   - Use `_type: reasoning_agent`.
+   - Requires a *reasoning-capable* LLM (e.g. DeepSeek-R1) that supports `<think></think>` tags.
+   - Mandatory fields: `llm_name`, `augmented_fn` (the underlying function/agent to wrap).
+   - Optional fields: `verbose`, `reasoning_prompt_template`, `instruction_prompt_template`.
+   - The `augmented_fn` must itself be defined in the YAML (commonly a ReAct or Tool-Calling agent).
+
+## Selection Guidelines
+
+Use this quick heuristic when deciding which agent best fits a workflow:
+
+| Scenario | Recommended Agent | Rationale |
+| --- | --- | --- |
+| Simple, schema-driven tasks (single or few tool calls) | **Tool-Calling** | Lowest latency; leverages function-calling; no iterative reasoning needed |
+| Multi-step tasks requiring dynamic reasoning between tool calls | **ReAct** | Iterative Think → Act → Observe loop excels at adaptive decision-making |
+| Complex tasks where token/latency cost of ReAct is high but advance planning is beneficial | **ReWOO** | Plans once, then executes; reduces token usage vs. ReAct |
+| Need to bolt an upfront reasoning/planning layer onto an existing agent or function | **Reasoning Agent** | Produces a plan that guides the wrapped function; separates planning from execution |
+
+### Additional Tips
+
+- If the LLM **does not** support function/tool calling, prefer **ReAct** or **ReWOO**.
+- If up-front planning suffices and adaptability during execution is less critical, prefer **ReWOO** over **ReAct** for better token efficiency.
+- When using **Reasoning Agent**, ensure the underlying `augmented_fn` itself can handle the planned steps (e.g., is a ReAct or Tool-Calling agent with relevant tools).
+- For workflows that need parallel execution of independent tool calls, none of these agents currently offer built-in parallelism; consider splitting tasks or using custom orchestration.

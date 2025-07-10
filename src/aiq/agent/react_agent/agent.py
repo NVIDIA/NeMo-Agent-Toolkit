@@ -26,7 +26,8 @@ from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.base import BaseMessage
 from langchain_core.messages.human import HumanMessage
 from langchain_core.messages.tool import ToolMessage
-from langchain_core.prompts.chat import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import MessagesPlaceholder
 from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
@@ -42,6 +43,9 @@ from aiq.agent.base import AgentDecision
 from aiq.agent.dual_node import DualNodeAgent
 from aiq.agent.react_agent.output_parser import ReActOutputParser
 from aiq.agent.react_agent.output_parser import ReActOutputParserException
+from aiq.agent.react_agent.prompt import SYSTEM_PROMPT
+from aiq.agent.react_agent.prompt import USER_PROMPT
+from aiq.agent.react_agent.register import ReActAgentWorkflowConfig
 
 logger = logging.getLogger(__name__)
 
@@ -320,3 +324,32 @@ class ReActAgentGraph(DualNodeAgent):
             logger.exception("%s %s", AGENT_LOG_PREFIX, error_text)
             raise ValueError(error_text)
         return True
+
+
+def create_react_agent_prompt(config: ReActAgentWorkflowConfig) -> ChatPromptTemplate:
+    """
+    Create a ReAct Agent prompt from the config.
+
+    Args:
+        config (ReActAgentWorkflowConfig): The config to use for the prompt.
+
+    Returns:
+        ChatPromptTemplate: The ReAct Agent prompt.
+    """
+    # the ReAct Agent prompt can be customized via config option system_prompt and additional_instructions.
+
+    if config.system_prompt:
+        prompt_str = config.system_prompt
+    else:
+        prompt_str = SYSTEM_PROMPT
+
+    if config.additional_instructions:
+        prompt_str += f" {config.additional_instructions}"
+
+    valid_prompt = ReActAgentGraph.validate_system_prompt(prompt_str)
+    if not valid_prompt:
+        logger.exception("%s Invalid system_prompt", AGENT_LOG_PREFIX)
+        raise ValueError("Invalid system_prompt")
+    prompt = ChatPromptTemplate([("system", prompt_str), ("user", USER_PROMPT),
+                                 MessagesPlaceholder(variable_name='agent_scratchpad', optional=True)])
+    return prompt

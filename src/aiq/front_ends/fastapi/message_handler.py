@@ -130,28 +130,29 @@ class MessageHandler:
 
         return None
 
-    async def process_user_message(self, message_as_validated_type: WebSocketUserMessage) -> None:
+    async def process_user_message(self, user_message_as_validated_type: WebSocketUserMessage) -> None:
         """
         Process user messages and routes them appropriately.
 
-        :param message_as_validated_type: A WebSocketUserMessage Data Model instance.
+        :param user_message_as_validated_type: A WebSocketUserMessage Data Model instance.
         """
 
         try:
-            self._message_parent_id = message_as_validated_type.id
-            self._workflow_schema_type = message_as_validated_type.schema_type
+            self._message_parent_id = user_message_as_validated_type.id
+            self._workflow_schema_type = user_message_as_validated_type.schema_type
+            conversation_id: str = user_message_as_validated_type.conversation_id
 
-            content: BaseModel | None = await self.process_user_message_content(message_as_validated_type)
+            content: BaseModel | None = await self.process_user_message_content(user_message_as_validated_type)
 
             if content is None:
-                raise ValueError(f"User message content could not be found: {message_as_validated_type}")
+                raise ValueError(f"User message content could not be found: {user_message_as_validated_type}")
 
             if isinstance(content, TextContent) and (self._background_task is None):
 
                 await self._process_response()
                 self._background_task = asyncio.create_task(
                     self._websocket_reference.workflow_schema_type.get(self._workflow_schema_type)(
-                        content.text)).add_done_callback(
+                        content.text, conversation_id)).add_done_callback(
                             lambda task: asyncio.create_task(self._on_process_stream_task_done(task)))
 
         except ValueError as e:

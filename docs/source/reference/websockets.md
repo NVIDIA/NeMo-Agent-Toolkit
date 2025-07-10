@@ -41,7 +41,7 @@ to the client.
 - `schema_type`:  Defines the response schema for a given workflow
 - `id`: A unique identifier for the message.
     - Purpose: Used for tracking, referencing, and updating messages.
-- `thread_id`: Identifies the conversation thread to which the message belongs.
+- `conversation_id`: A unique identifier used to associate all messages and interactions with a specific conversation session.
     - Purpose: Groups-related messages within the same conversation/chat feed.
 - `parent_id`: Links a message to its originating message.
     -   Optional: Used for responses, updates, or continuations of earlier messages.
@@ -75,7 +75,7 @@ running workflow.
   "type": "user_message",
   "schema_type": "string",
   "id": "string",
-  "thread_id": "string",
+  "conversation_id": "string",
   "content": {
     "messages": [
       {

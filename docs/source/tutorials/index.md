@@ -23,4 +23,5 @@ limitations under the License.
 ./customize-a-workflow.md
 ./add-tools-to-a-workflow.md
 ./create-a-new-workflow.md
+./build-a-demo-agent-workflow-using-cursor-rules.md
 ```

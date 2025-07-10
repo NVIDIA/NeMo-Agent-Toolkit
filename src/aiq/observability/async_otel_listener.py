@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import re
 import warnings
@@ -73,6 +74,24 @@ except TelemetryOptionalImportError:
     TracerProvider = DummyTracerProvider
     Span = DummySpan
     set_span_in_context = dummy_set_span_in_context
+
+
+def merge_dicts(dict1: dict, dict2: dict) -> dict:
+    """
+    Merge two dictionaries, prioritizing non-null values from the first dictionary.
+
+    Args:
+        dict1 (dict): First dictionary (higher priority)
+        dict2 (dict): Second dictionary (lower priority)
+
+    Returns:
+        dict: Merged dictionary with non-null values from dict1 taking precedence
+    """
+    result = dict2.copy()  # Start with a copy of the second dictionary
+    for key, value in dict1.items():
+        if value is not None:  # Only update if value is not None
+            result[key] = value
+    return result
 
 
 def _ns_timestamp(seconds_float: float) -> int:
@@ -285,6 +304,10 @@ class AsyncOtelSpanListener:
                 sub_span.set_attribute(SpanAttributes.INPUT_VALUE, serialized_input)
                 sub_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE, "application/json" if is_json else "text/plain")
 
+        # Optional: add metadata to the span from TraceMetadata
+        if step.payload.metadata:
+            sub_span.set_attribute("aiq.metadata", step.payload.metadata.model_dump_json())
+
         self._span_stack[step.UUID] = sub_span
 
         self._outstanding_spans[step.UUID] = sub_span
@@ -322,6 +345,13 @@ class AsyncOtelSpanListener:
             serialized_output, is_json = self._serialize_payload(step.payload.data.output)
             sub_span.set_attribute(SpanAttributes.OUTPUT_VALUE, serialized_output)
             sub_span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE, "application/json" if is_json else "text/plain")
+
+        # # Optional: add metadata to the span from TraceMetadata
+        if step.payload.metadata:
+            start_event_metadata = json.loads(sub_span.attributes.get("aiq.metadata", {}))
+            end_event_metadata = json.loads(step.payload.metadata.model_dump_json())
+            merged_event_metadata = merge_dicts(start_event_metadata, end_event_metadata)
+            sub_span.set_attribute("aiq.metadata", json.dumps(merged_event_metadata))
 
         end_ns = _ns_timestamp(step.payload.event_timestamp)
 
