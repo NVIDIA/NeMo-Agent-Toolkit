@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Run Agent Intelligence Toolkit Workflows
+# Run NVIDIA NeMo Agent Toolkit Workflows
 
-A workflow is defined by a YAML configuration file that specifies the tools and models to use. AIQ toolkit provides the following ways to run a workflow:
+A workflow is defined by a YAML configuration file that specifies the tools and models to use. NeMo Agent toolkit provides the following ways to run a workflow:
 - Using the `aiq run` command.
    - This is the simplest and most common way to run a workflow.
 - Using the `aiq serve` command.
@@ -49,7 +49,7 @@ aiq run --config_file examples/basic/functions/simple/configs/config.yml --input
 ```
 
 ## Using the `aiq eval` Command
-The `aiq eval` command is similar to the `aiq run` command. However, in addition to running the workflow, it also evaluates the accuracy of the workflow, refer to [Evaluating AIQ toolkit Workflows](../workflows/evaluate.md) for more information.
+The `aiq eval` command is similar to the `aiq run` command. However, in addition to running the workflow, it also evaluates the accuracy of the workflow, refer to [Evaluating NeMo Agent toolkit Workflows](../workflows/evaluate.md) for more information.
 
 ## Using the `aiq serve` Command
 The `aiq serve` command starts a web server that listens for incoming requests and runs the specified workflow. The server can be accessed with a web browser or by sending a POST request to the server's endpoint. Similar to the `aiq run` command, the `aiq serve` command requires a configuration file specified by the `--config_file` flag.

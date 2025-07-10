@@ -20,13 +20,13 @@ limitations under the License.
 ## Prerequisites
 
 1. Set up your environment by following the instructions in the [Install From Source](../quick-start/installing.md#install-from-source) section of the install guide.
-1. Install AIQ toolkit and the AIQ toolkit Simple example workflow.
+1. Install NeMo Agent toolkit and the NeMo Agent toolkit Simple example workflow.
     ```bash
     uv pip install -e .
     uv pip install -e examples/basic/functions/simple
     ```
 
-This tutorial assumes familiarity with [workflows](../workflows/about/index.md) and the [command line interface](../reference/cli.md) of AIQ toolkit.
+This tutorial assumes familiarity with [workflows](../workflows/about/index.md) and the [command line interface](../reference/cli.md) of NeMo Agent toolkit.
 
 ## Customizing the `examples/basic/functions/simple` Workflow
 

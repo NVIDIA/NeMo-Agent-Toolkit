@@ -17,13 +17,13 @@ limitations under the License.
 
 # Retrievers
 
-Retrievers are an important component of Retrieval Augmented Generation (RAG) workflows which allow LLMs to search a data store for content which is semantically similar to a query, which can be used as context by the LLM when providing a response to the query. Within AIQ toolkit, retrievers are a configurable component that can be used within functions, similar to LLMs and Embedders, to provide a consistent read-only interface for connecting to different data store providers.
+Retrievers are an important component of Retrieval Augmented Generation (RAG) workflows which allow LLMs to search a data store for content which is semantically similar to a query, which can be used as context by the LLM when providing a response to the query. Within NeMo Agent toolkit, retrievers are a configurable component that can be used within functions, similar to LLMs and Embedders, to provide a consistent read-only interface for connecting to different data store providers.
 
 ## Features
  - **Standard Interface**: Retrievers implement a standard search interface, allowing for compatibility across different retriever implementations.
  - **Standard Output Format**: Retrievers also implement a standard output format along with conversion functions to provide retriever output as a dictionary or string.
  - **Extensible Via Plugins**: Additional retrievers can be added as plugins by developers to support more data stores.
- - **Additional Framework Implementations**: Retrievers can be loaded using a framework implementation rather than the default AIQ toolkit retriever implementation.
+ - **Additional Framework Implementations**: Retrievers can be loaded using a framework implementation rather than the default NeMo Agent toolkit retriever implementation.
 
 ## Included Retrievers
  - [Milvus](https://milvus.io/docs)
@@ -31,7 +31,7 @@ Retrievers are an important component of Retrieval Augmented Generation (RAG) wo
 
 ## Usage
 ### Configuration
-Retrievers are configured similarly to other AIQ toolkit components, such as Functions and LLMs. Each Retriever provider (e.g., Milvus) has a Pydantic config object which defines its configurable parameters and type. These parameters can then be configured in the config file under the `retrievers` section.
+Retrievers are configured similarly to other NeMo Agent toolkit components, such as Functions and LLMs. Each Retriever provider (e.g., Milvus) has a Pydantic config object which defines its configurable parameters and type. These parameters can then be configured in the config file under the `retrievers` section.
 
 Below is an example config object for the NeMo Retriever:
 ```python
@@ -109,4 +109,4 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
     langchain_retriever = await builder.get_retriever(config.retriever, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 ```
 
-Retrievers expose a `search` method for retrieving data that takes a single required argument, "query", and any number of optional keyword arguments. AIQ toolkit Retrievers support a `bind` method which can be used to set or override defaults for these optional keyword arguments. Any additional required, unbound, parameters can be inspected using the `get_unbound_params` method. This provides flexibility in how retrievers are used in functions, allowing for all search parameters to be specified in the config, or allowing some to be specified by the agent when the function is called.
+Retrievers expose a `search` method for retrieving data that takes a single required argument, "query", and any number of optional keyword arguments. NeMo Agent toolkit Retrievers support a `bind` method which can be used to set or override defaults for these optional keyword arguments. Any additional required, unbound, parameters can be inspected using the `get_unbound_params` method. This provides flexibility in how retrievers are used in functions, allowing for all search parameters to be specified in the config, or allowing some to be specified by the agent when the function is called.

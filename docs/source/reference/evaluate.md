@@ -15,13 +15,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Evaluating NVIDIA Agent Intelligence Toolkit Workflows Details
+# Evaluating NVIDIA NeMo Agent Toolkit Workflows Details
 
 :::{note}
-It is recommended that the [Evaluating AIQ toolkit Workflows](../workflows/evaluate.md) guide be read before proceeding with this detailed documentation.
+It is recommended that the [Evaluating NeMo Agent toolkit Workflows](../workflows/evaluate.md) guide be read before proceeding with this detailed documentation.
 :::
 
-AIQ toolkit provides a set of evaluators to run and evaluate the AIQ toolkit workflows. In addition to the built-in evaluators, AIQ toolkit provides a plugin system to add custom evaluators.
+NeMo Agent toolkit provides a set of evaluators to run and evaluate the NeMo Agent toolkit workflows. In addition to the built-in evaluators, NeMo Agent toolkit provides a plugin system to add custom evaluators.
 
 Example:
 ```bash
@@ -31,7 +31,7 @@ aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml
 ## Using Datasets
 Run and evaluate the workflow on a specified dataset. The dataset files types are `json`, `jsonl`, `csv`, `xls`, or `parquet`.
 
-Download and use datasets provided by AIQ toolkit examples by running the following.
+Download and use datasets provided by NeMo Agent toolkit examples by running the following.
 
 ```bash
 git lfs fetch
@@ -134,16 +134,16 @@ eval:
               - sympy__sympy-21055
 ```
 
-## AIQ Toolkit Built-in Evaluators
-AIQ toolkit provides the following built-in evaluator:
+## NeMo Agent Toolkit Built-in Evaluators
+NeMo Agent toolkit provides the following built-in evaluator:
 - `ragas` - An evaluator to run and evaluate RAG-like workflows using the public RAGAS API.
 - `trajectory` - An evaluator to run and evaluate the LangChain agent trajectory.
 - `swe_bench` - An evaluator to run and evaluate the workflow on the SWE-Bench dataset.
 
 ### RAGAS Evaluator
 [RAGAS](https://docs.ragas.io/) is an OSS evaluation framework that enables end-to-end
-evaluation of RAG workflows. AIQ toolkit provides an interface to RAGAS to evaluate the performance
-of RAG-like AIQ toolkit workflows.
+evaluation of RAG workflows. NeMo Agent toolkit provides an interface to RAGAS to evaluate the performance
+of RAG-like NeMo Agent toolkit workflows.
 
 RAGAS provides a set of evaluation metrics to configure in the `config.yml` file
 by adding an evaluator section with type`ragas`.
@@ -275,7 +275,7 @@ aiq eval --config_file=examples/basic/functions/simple_calculator/configs/config
 ```
 
 ## Adding Custom Evaluators
-You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the AIQ toolkit evaluator system. See the [Custom Evaluator](../extend/custom-evaluator.md) documentation for more information.
+You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the NeMo Agent toolkit evaluator system. See the [Custom Evaluator](../extend/custom-evaluator.md) documentation for more information.
 
 
 ## Running multiple repetitions
@@ -514,5 +514,5 @@ Configuration notes:
 - `max_jobs` sets the maximum number of job directories to keep. The oldest ones will be evicted based on the selected policy. Default is 0, which means no limit.
 - `eviction_policy` controls how "oldest" is determined—either by creation time (TIME_CREATED) or last modification time (TIME_MODIFIED). Default is TIME_CREATED.
 
-## Profiling and Performance Monitoring of AIQ Toolkit Workflows
-You can profile workflows using the AIQ toolkit evaluation system. For more information, see the [Profiler](../workflows/profiler.md) documentation.
+## Profiling and Performance Monitoring of NeMo Agent Toolkit Workflows
+You can profile workflows using the NeMo Agent toolkit evaluation system. For more information, see the [Profiler](../workflows/profiler.md) documentation.
