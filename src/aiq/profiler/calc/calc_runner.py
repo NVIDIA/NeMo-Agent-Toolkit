@@ -69,7 +69,7 @@ class LinearFitAnalyzer:
         concurrencies = list(sizing_metrics_per_concurrency.keys())
         latencies = [run.llm_latency_p95 for run in sizing_metrics_per_concurrency.values()]
         try:
-            self.llm_latency_fit = compute_slope(concurrencies, latencies, remove_outliers=True)
+            self.llm_latency_fit = compute_slope(concurrencies, latencies, self.config.fit_config)
             logger.info("Computed latency fit: slope=%.4f, R²=%.3f",
                         self.llm_latency_fit.slope,
                         self.llm_latency_fit.r_squared)
@@ -79,7 +79,7 @@ class LinearFitAnalyzer:
 
         runtimes = [run.workflow_runtime_p95 for run in sizing_metrics_per_concurrency.values()]
         try:
-            self.wf_runtime_fit = compute_slope(concurrencies, runtimes, remove_outliers=True)
+            self.wf_runtime_fit = compute_slope(concurrencies, runtimes, self.config.fit_config)
             logger.info("Computed runtime fit: slope=%.4f, R²=%.3f",
                         self.wf_runtime_fit.slope,
                         self.wf_runtime_fit.r_squared)

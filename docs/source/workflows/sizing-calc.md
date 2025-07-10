@@ -153,7 +153,7 @@ Sample output:
   }
 }
 ```
-Output has been truncated for brevity.
+Output has been truncated for brevity. For details see the [CalcRunnerOutput](../../../src/aiq/profiler/calc/data_models.py) Pydantic model.
 
 ### Using a Remote Workflow
 By default the calculator runs the workflow locally to gather metrics. You can use the `--endpoint` and `--endpoint_timeout` command line parameters to use a remote workflow for gathering metrics.
@@ -240,7 +240,7 @@ To estimate the GPU count required for the workflow, the calculator performs the
    - Outliers (data points that deviate significantly from the trend) are automatically detected and removed to ensure a robust fit. The R² value is used to determine which points are considered outliers and should be excluded from the fit.
 
 5. **Estimating Required Concurrency**
-   - Using your target time metric (e.g., target workflow runtime), the calculator determines the maximum concurrency that can be supported for the `test_gpu_count` while still meeting the target. This is the `calculated_concurrency` in the formula below.
+   - Using your target time metric (e.g., target workflow runtime), the calculator determines the maximum concurrency that can be supported for the `test_gpu_count` while still meeting the target time. This is the `calculated_concurrency` in the formula below.
 
 6. **GPU Count Formula**
    - The required GPU count is estimated using the formula:
@@ -262,7 +262,7 @@ Suppose your target workflow runtime is 10 seconds, the linear fit gives a slope
 
 - The more concurrency levels you test, the more accurate the estimation.
 - Outliers and failed runs are excluded from the fit.
-- The calculator provides both runtime-based and latency-based GPU estimates (if both targets are specified).
+- The calculator provides both workflow runtime-based and LLM latency-based GPU estimates (if both targets are specified).
 
 #### Interpreting the Results
 The sizing calculator provides two GPU count estimates:
@@ -322,9 +322,9 @@ async def run_calc():
 # Run the async calc function
 asyncio.run(run_calc())
 ```
-
+`CalcRunnerConfig` is a Pydantic model that contains the configuration for the calculator. It provides fine-grained control over the calculator's behavior.
 `CalcRunnerOutput` is a Pydantic model that contains the per-concurrency metrics and the GPU count estimates.
-See the [CalcRunnerOutput](../../../src/aiq/profiler/calc/data_models.py) for more details.
+See the [calculator data models](../../../src/aiq/profiler/calc/data_models.py) for more details.
 
 # Summary
 This guide provides a step-by-step process to estimate the GPU cluster size required to accommodate a target number of users with a target response time. The estimation is based on the performance of the workflow at different concurrency levels.

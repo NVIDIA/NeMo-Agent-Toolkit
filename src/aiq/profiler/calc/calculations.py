@@ -17,6 +17,7 @@ import logging
 
 import numpy as np
 
+from aiq.profiler.calc.data_models import FitConfig
 from aiq.profiler.calc.data_models import GPUEstimates
 from aiq.profiler.calc.data_models import LinearFitResult
 
@@ -25,111 +26,99 @@ logger = logging.getLogger(__name__)
 
 def compute_slope(concurrencies: list[float],
                   time_metrics: list[float],
-                  remove_outliers: bool = True,
-                  min_r_squared: float = 0.7) -> LinearFitResult:
+                  fit_config: FitConfig | None = None) -> LinearFitResult:
     """
     Concurrency is the independent variable (x-axis) and time metric (which can be runtime or latency)
-    is the dependent variable (y-axis).
-
-    Compute the slope and intercept of the time metric vs concurrency
-    with optional outlier detection and linearity validation.
+    is the dependent variable (y-axis). This function computes the slope of the linear relationship
+    between concurrency and time metric.
 
     Args:
         concurrencies: List of concurrency values (x-axis)
         time_metrics: List of time metric values (y-axis)
-        remove_outliers: Whether to remove outliers using IQR method
-        min_r_squared: Minimum R-squared value to consider the relationship linear
+        fit_config: Configuration for outlier detection and fit validation
 
     Returns:
-        LinearFitResult with slope, intercept, R-squared, and list of removed concurrencies
+        LinearFitResult containing slope, intercept, R-squared, and outliers removed
 
     Raises:
-        ValueError: If insufficient data or poor linear fit
+        ValueError: If the relationship is not linear (R² < min_r_squared)
     """
-    if len(concurrencies) != len(time_metrics) or len(concurrencies) < 2:
-        raise ValueError("Need at least two data points with matching lengths.")
+    # Use default config if none provided
+    if fit_config is None:
+        fit_config = FitConfig()
 
+    # Convert to numpy arrays for calculations
     x = np.array(concurrencies)
     y = np.array(time_metrics)
+
+    # Validate input
+    if len(x) != len(y):
+        raise ValueError("Concurrencies and time_metrics must have the same length")
+    if len(x) < 2:
+        raise ValueError("Need at least 2 points for linear regression")
 
     outliers_removed = []
 
     # Remove outliers if requested
-    if remove_outliers and len(x) > 4:  # Need at least 4 points for outlier detection
-        x_clean, y_clean, removed_concurrencies = _remove_outliers(x, y)
+    if fit_config.remove_outliers and len(x) > 4:  # Need at least 4 points for outlier detection
+        x_clean, y_clean, removed_concurrencies = _remove_outliers(x, y, fit_config)
         x, y = x_clean, y_clean
         outliers_removed = removed_concurrencies
 
-        if len(x) < 2:
-            raise ValueError("After outlier removal, insufficient data points remain.")
-
-    # Use the least squares formula for slope and intercept
+    # Calculate linear regression using least squares
     n = len(x)
     sum_x = x.sum()
     sum_y = y.sum()
     sum_xy = (x * y).sum()
     sum_x2 = (x**2).sum()
 
-    # Calculate slope
-    numerator = n * sum_xy - sum_x * sum_y
-    denominator = n * sum_x2 - sum_x**2
-
-    if denominator == 0:
-        raise ValueError("Cannot compute slope: denominator is zero (possibly all x values are identical)")
-
-    slope = numerator / denominator
-
-    # Calculate y-intercept
+    # Calculate slope and intercept
+    slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x**2)
     intercept = (sum_y - slope * sum_x) / n
 
-    # Calculate R-squared for linearity validation
+    # Calculate R-squared
     y_pred = slope * x + intercept
-    ss_res = np.sum((y - y_pred)**2)
-    ss_tot = np.sum((y - np.mean(y))**2)
-    r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
+    ss_res = ((y - y_pred)**2).sum()
+    ss_tot = ((y - y.mean())**2).sum()
+    r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0.0
 
     # Validate linearity
-    if r_squared < min_r_squared:
-        raise ValueError(f"Poor linear fit detected (R² = {r_squared:.3f} < {min_r_squared}). "
+    if r_squared < fit_config.min_r_squared:
+        raise ValueError(f"Poor linear fit detected (R² = {r_squared:.3f} < {fit_config.min_r_squared}). "
                          f"The relationship may not be linear. Consider using non-linear regression.")
 
     return LinearFitResult(slope=slope, intercept=intercept, r_squared=r_squared, outliers_removed=outliers_removed)
 
 
-def _remove_outliers(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray, list[int]]:
+def _remove_outliers(x: np.ndarray, y: np.ndarray, fit_config: FitConfig) -> tuple[np.ndarray, np.ndarray, list[int]]:
     """
     Remove outliers using the Interquartile Range (IQR) method.
-    For small concurrency range (≤ 10 points), also checks raw y-values for extreme outliers.
+    For small concurrency range (≤ threshold points), also checks raw y-values for extreme outliers.
 
     Args:
         x: Input x values (concurrencies)
         y: Input y values (time metrics)
+        fit_config: Configuration for outlier detection
 
     Returns:
         Tuple of (cleaned_x, cleaned_y, list_of_removed_concurrencies)
     """
     # if the number of concurrency points is less removing outliers can be challenging
-    # as exteme outliers can skew the results.
-    # We use a threshold of 10 points to check for extreme outliers in raw y-values first.
-    small_concurrency_range_threshold = 8
-    # Extreme outlier threshold is 2.0 times the IQR, extreme outliers are removed.
-    extreme_outlier_threshold = 2.0
-    # Conservative outlier threshold is 1.5 times the IQR, conservative outliers are removed
-    conservative_outlier_threshold = 1.5
-
+    # as extreme outliers can skew the results.
+    # We use a threshold to check for extreme outliers in raw y-values first.
     n = len(x)
     all_removed_concurrencies = []
 
     # For smaller concurrency ranges, check for extreme outliers in raw y-values first
-    if n <= small_concurrency_range_threshold:
+    if n <= fit_config.small_concurrency_range_threshold:
         # Calculate IQR on raw y-values
         y_q1 = np.percentile(y, 25)
         y_q3 = np.percentile(y, 75)
         y_iqr = y_q3 - y_q1
 
         # Use a more aggressive threshold for small datasets
-        y_lower_bound = y_q1 - extreme_outlier_threshold * y_iqr  # More aggressive than 1.5
-        y_upper_bound = y_q3 + extreme_outlier_threshold * y_iqr
+        y_lower_bound = y_q1 - fit_config.extreme_outlier_threshold * y_iqr  # More aggressive than 1.5
+        y_upper_bound = y_q3 + fit_config.extreme_outlier_threshold * y_iqr
 
         # Find extreme outliers in raw values
         extreme_outlier_mask = (y >= y_lower_bound) & (y <= y_upper_bound)
@@ -169,8 +158,8 @@ def _remove_outliers(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarr
     iqr = q3 - q1
 
     # Define outlier bounds (1.5 * IQR rule)
-    lower_bound = q1 - conservative_outlier_threshold * iqr
-    upper_bound = q3 + conservative_outlier_threshold * iqr
+    lower_bound = q1 - fit_config.conservative_outlier_threshold * iqr
+    upper_bound = q3 + fit_config.conservative_outlier_threshold * iqr
 
     # Find non-outlier indices
     non_outlier_mask = (residuals >= lower_bound) & (residuals <= upper_bound)
@@ -180,7 +169,7 @@ def _remove_outliers(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarr
     all_removed_concurrencies.extend(residual_removed_concurrencies)
 
     # Add debugging for small datasets
-    if len(x) <= small_concurrency_range_threshold:
+    if len(x) <= fit_config.small_concurrency_range_threshold:
         logger.debug("Outlier detection for small dataset (n=%d):", len(x))
         logger.debug("  Data points: %s", list(zip(x, y)))
         logger.debug("  Residuals: %s", residuals.tolist())

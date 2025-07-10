@@ -19,6 +19,26 @@ from pathlib import Path
 from pydantic import BaseModel
 
 
+class FitConfig(BaseModel):
+    """
+    Configuration parameters for linear fit and outlier detection.
+    """
+    # Threshold for small concurrency range (≤ 8 points) to check for extreme outliers in raw y-values first
+    small_concurrency_range_threshold: int = 8
+
+    # Extreme outlier threshold is 2.0 times the IQR, extreme outliers are removed
+    extreme_outlier_threshold: float = 2.0
+
+    # Conservative outlier threshold is 1.5 times the IQR, conservative outliers are removed
+    conservative_outlier_threshold: float = 1.5
+
+    # Minimum R-squared value required for a valid linear fit
+    min_r_squared: float = 0.7
+
+    # Whether to remove outliers during linear fit calculation
+    remove_outliers: bool = True
+
+
 class CalcRunnerConfig(BaseModel):
     """
     Parameters used for a calc runner.
@@ -54,6 +74,9 @@ class CalcRunnerConfig(BaseModel):
     append_job: bool = False
     # if true, the data is plotted
     plot_data: bool = True
+
+    # Configuration for linear fit and outlier detection
+    fit_config: FitConfig = FitConfig()
 
 
 # Sizing metrics are gathered from the evaluation runs and used as input by the calculator.
