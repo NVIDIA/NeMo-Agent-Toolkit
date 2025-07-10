@@ -234,7 +234,7 @@ class GlobalTypeConverter:
         return GlobalTypeConverter._global_converter.convert(data, to_type)
 
     @staticmethod
-    def convert_safe(data, to_type: type[_T]) -> _T:
+    def try_convert(data, to_type: type[_T]) -> _T:
         return GlobalTypeConverter._global_converter.try_convert(data, to_type)
 
 

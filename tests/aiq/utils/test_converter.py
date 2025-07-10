@@ -308,14 +308,14 @@ def test_three_hop_chain(inheritance_converter):
 
 
 # --------------------------------------------------------------------
-# Unit tests for convert_safe() method
+# Unit tests for try_convert() method
 # --------------------------------------------------------------------
 
 
-def test_convert_safe_successful_conversion(basic_converter):
-    """Test that convert_safe() works the same as convert() for successful conversions."""
+def test_try_convert_successful_conversion(basic_converter):
+    """Test that try_convert() works the same as convert() for successful conversions."""
     # Test successful direct conversion
-    result = basic_converter.convert_safe("123", int)
+    result = basic_converter.try_convert("123", int)
     assert result == 123
     assert isinstance(result, int)
 
@@ -324,112 +324,112 @@ def test_convert_safe_successful_conversion(basic_converter):
     assert result == regular_result
 
 
-def test_convert_safe_failed_conversion_returns_original(basic_converter):
-    """Test that convert_safe() returns original value when conversion fails."""
+def test_try_convert_failed_conversion_returns_original(basic_converter):
+    """Test that try_convert() returns original value when conversion fails."""
     original_value = "not-a-number"
-    result = basic_converter.convert_safe(original_value, int)
+    result = basic_converter.try_convert(original_value, int)
 
     # Should return the original value, not raise an exception
     assert result is original_value
     assert isinstance(result, str)
 
 
-def test_convert_safe_vs_convert_failure_behavior(basic_converter):
-    """Test that convert_safe() and convert() behave differently on failure."""
+def test_try_convert_vs_convert_failure_behavior(basic_converter):
+    """Test that try_convert() and convert() behave differently on failure."""
     original_value = 123.456
 
     # convert() should raise ValueError
     with pytest.raises(ValueError):
         basic_converter.convert(original_value, dict)
 
-    # convert_safe() should return original value
-    result = basic_converter.convert_safe(original_value, dict)
+    # try_convert() should return original value
+    result = basic_converter.try_convert(original_value, dict)
     assert result is original_value
     assert isinstance(result, float)
 
 
-def test_convert_safe_already_correct_type(basic_converter):
-    """Test that convert_safe() handles already-correct types properly."""
+def test_try_convert_already_correct_type(basic_converter):
+    """Test that try_convert() handles already-correct types properly."""
     original_value = 999
-    result = basic_converter.convert_safe(original_value, int)
+    result = basic_converter.try_convert(original_value, int)
     assert result is original_value  # Same object reference
 
 
-def test_convert_safe_indirect_conversion_success(basic_converter):
-    """Test that convert_safe() works with successful indirect conversions."""
+def test_try_convert_indirect_conversion_success(basic_converter):
+    """Test that try_convert() works with successful indirect conversions."""
     data = {"value": "123.456"}
-    result = basic_converter.convert_safe(data, float)
+    result = basic_converter.try_convert(data, float)
     assert result == 123.456
     assert isinstance(result, float)
 
 
-def test_convert_safe_indirect_conversion_failure(basic_converter):
-    """Test that convert_safe() returns original value for failed indirect conversions."""
+def test_try_convert_indirect_conversion_failure(basic_converter):
+    """Test that try_convert() returns original value for failed indirect conversions."""
     # This should fail because there's no path from list to dict
     original_value = [1, 2, 3]
-    result = basic_converter.convert_safe(original_value, dict)
+    result = basic_converter.try_convert(original_value, dict)
     assert result is original_value
     assert isinstance(result, list)
 
 
-def test_convert_safe_parent_fallback_success(child_converter):
-    """Test that convert_safe() works with parent fallback for successful conversions."""
-    result = child_converter.convert_safe("TRUE", bool)
+def test_try_convert_parent_fallback_success(child_converter):
+    """Test that try_convert() works with parent fallback for successful conversions."""
+    result = child_converter.try_convert("TRUE", bool)
     assert result is True
 
 
-def test_convert_safe_parent_fallback_failure(child_converter):
-    """Test that convert_safe() returns original value when parent fallback fails."""
+def test_try_convert_parent_fallback_failure(child_converter):
+    """Test that try_convert() returns original value when parent fallback fails."""
     original_value = [1, 2, 3]
-    result = child_converter.convert_safe(original_value, dict)
+    result = child_converter.try_convert(original_value, dict)
     assert result is original_value
     assert isinstance(result, list)
 
 
-def test_convert_safe_convert_exception_handled(basic_converter):
-    """Test that convert_safe() handles ConvertException gracefully."""
+def test_try_convert_convert_exception_handled(basic_converter):
+    """Test that try_convert() handles ConvertException gracefully."""
     # This will trigger ConvertException in convert_str_to_int
     original_value = "not-a-number"
-    result = basic_converter.convert_safe(original_value, int)
+    result = basic_converter.try_convert(original_value, int)
     assert result is original_value
     assert isinstance(result, str)
 
 
-def test_convert_safe_inheritance_success(inheritance_converter):
-    """Test that convert_safe() works with inheritance-based conversions."""
+def test_try_convert_inheritance_success(inheritance_converter):
+    """Test that try_convert() works with inheritance-based conversions."""
     d = Derived()
-    result = inheritance_converter.convert_safe(d, str)
+    result = inheritance_converter.try_convert(d, str)
     assert result == repr(d)
     assert isinstance(result, str)
 
 
-def test_convert_safe_inheritance_failure(inheritance_converter):
-    """Test that convert_safe() handles inheritance conversion failures."""
+def test_try_convert_inheritance_failure(inheritance_converter):
+    """Test that try_convert() handles inheritance conversion failures."""
     # Try to convert a list to a custom class - should fail gracefully
     original_value = [1, 2, 3]
-    result = inheritance_converter.convert_safe(original_value, Base)
+    result = inheritance_converter.try_convert(original_value, Base)
     assert result is original_value
     assert isinstance(result, list)
 
 
-def test_global_type_converter_convert_safe():
-    """Test that GlobalTypeConverter.convert_safe() works correctly."""
+def test_global_type_converter_try_convert():
+    """Test that GlobalTypeConverter.try_convert() works correctly."""
     # Test successful conversion
     pseudo_file = BytesIO(b"Hello World")
     text_wrapper = TextIOWrapper(pseudo_file, encoding="utf-8")
-    result = GlobalTypeConverter.convert_safe(text_wrapper, str)
+    result = GlobalTypeConverter.try_convert(text_wrapper, str)
     assert result == "Hello World"
     assert isinstance(result, str)
 
     # Test failed conversion
     original_value = [1, 2, 3]
-    result = GlobalTypeConverter.convert_safe(original_value, dict)
+    result = GlobalTypeConverter.try_convert(original_value, dict)
     assert result is original_value
     assert isinstance(result, list)
 
 
-def test_convert_safe_multiple_failure_scenarios():
-    """Test convert_safe() with various failure scenarios."""
+def test_try_convert_multiple_failure_scenarios():
+    """Test try_convert() with various failure scenarios."""
     converter = TypeConverter([])  # Empty converter - everything should fail
 
     test_cases = [
@@ -447,8 +447,8 @@ def test_convert_safe_multiple_failure_scenarios():
         assert result is original_value, f"Failed for {original_value} -> {target_type}"
 
 
-def test_convert_safe_preserves_object_identity():
-    """Test that convert_safe() preserves object identity when returning original values."""
+def test_try_convert_preserves_object_identity():
+    """Test that try_convert() preserves object identity when returning original values."""
     converter = TypeConverter([])
 
     # Test with mutable objects

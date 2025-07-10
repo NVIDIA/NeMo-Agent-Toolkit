@@ -80,7 +80,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
 
         return self._converter.convert(value, to_type=to_type)
 
-    def convert_safe(self, value: typing.Any, to_type: type[_T]) -> _T:
+    def try_convert(self, value: typing.Any, to_type: type[_T]) -> _T:
         """
         Converts the given value to the specified type using graceful error handling.
         If conversion fails, returns the original value and continues processing.
