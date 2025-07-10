@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import os
 import tempfile
 import typing
@@ -22,6 +23,8 @@ from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfi
 from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
 from aiq.front_ends.fastapi.main import get_app
 from aiq.utils.io.yaml_tools import yaml_dump
+
+logger = logging.getLogger(__name__)
 
 
 class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
@@ -44,7 +47,7 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
     async def run(self):
 
         # Write the entire config to a temporary file
-        with tempfile.NamedTemporaryFile(mode="w", prefix="aiq_config", suffix=".yml", delete=True) as config_file:
+        with tempfile.NamedTemporaryFile(mode="w", prefix="aiq_config", suffix=".yml", delete=False) as config_file:
 
             # Get as dict
             config_dict = self.full_config.model_dump(mode="json", by_alias=True, round_trip=True)
@@ -52,12 +55,16 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
             # Write to YAML file
             yaml_dump(config_dict, config_file)
 
+            # Save the config file path for cleanup (required on Windows due to delete=False workaround)
+            config_file_name = config_file.name
+
             # Set the config file in the environment
             os.environ["AIQ_CONFIG_FILE"] = str(config_file.name)
 
             # Set the worker class in the environment
             os.environ["AIQ_FRONT_END_WORKER"] = self.get_worker_class_name()
 
+        try:
             if not self.front_end_config.use_gunicorn:
                 import uvicorn
 
@@ -101,3 +108,9 @@ class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
                 }
 
                 StandaloneApplication(app, options=options).run()
+
+        finally:
+            try:
+                os.remove(config_file_name)
+            except OSError as e:
+                logger.error(f"Warning: Failed to delete temp file {config_file_name}: {e}")
