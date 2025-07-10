@@ -148,6 +148,9 @@ def _remove_outliers(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarr
 
     # Standard residual-based outlier detection
     # Calculate residuals from a simple linear fit
+    if n == 0:
+        raise ValueError("No data points remaining after outlier removal. Cannot compute linear fit.")
+
     sum_x = x.sum()
     sum_y = y.sum()
     sum_xy = (x * y).sum()
