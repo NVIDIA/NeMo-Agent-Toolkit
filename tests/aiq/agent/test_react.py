@@ -447,7 +447,7 @@ def test_config_alias_retry_parsing_errors():
     """Test that retry_parsing_errors alias works correctly."""
     config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test', retry_parsing_errors=False)
     # The old field name should map to the new field name
-    assert config.retry_agent_response_parsing_errors == False
+    assert not config.retry_agent_response_parsing_errors
 
 
 def test_config_alias_max_retries():
@@ -472,7 +472,7 @@ def test_config_alias_all_old_field_names():
                                       max_retries=7,
                                       max_iterations=25)
     # All old field names should map to the new field names
-    assert config.retry_agent_response_parsing_errors == False
+    assert not config.retry_agent_response_parsing_errors
     assert config.parsing_agent_response_max_retries == 7
     assert config.max_tool_calls == 25
 
@@ -485,7 +485,7 @@ def test_config_alias_new_field_names():
                                       parsing_agent_response_max_retries=8,
                                       max_tool_calls=30)
     # The new field names should work directly
-    assert config.retry_agent_response_parsing_errors == False
+    assert not config.retry_agent_response_parsing_errors
     assert config.parsing_agent_response_max_retries == 8
     assert config.max_tool_calls == 30
 
@@ -501,7 +501,7 @@ def test_config_alias_both_old_and_new():
                                       parsing_agent_response_max_retries=10,
                                       max_tool_calls=35)
     # New field names should take precedence
-    assert config.retry_agent_response_parsing_errors == True
+    assert config.retry_agent_response_parsing_errors
     assert config.parsing_agent_response_max_retries == 10
     assert config.max_tool_calls == 35
 
@@ -517,7 +517,7 @@ def test_config_alias_default_values():
     """Test that default values work when no aliases are provided."""
     config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test')
     # All fields should have default values
-    assert config.retry_agent_response_parsing_errors == True
+    assert config.retry_agent_response_parsing_errors
     assert config.parsing_agent_response_max_retries == 1
     assert config.tool_call_max_retries == 1
     assert config.max_tool_calls == 15
@@ -536,7 +536,7 @@ def test_config_alias_json_serialization():
     assert 'retry_agent_response_parsing_errors' in config_dict
     assert 'parsing_agent_response_max_retries' in config_dict
     assert 'max_tool_calls' in config_dict
-    assert config_dict['retry_agent_response_parsing_errors'] == False
+    assert not config_dict['retry_agent_response_parsing_errors']
     assert config_dict['parsing_agent_response_max_retries'] == 6
     assert config_dict['max_tool_calls'] == 22
 
@@ -548,19 +548,20 @@ def test_config_alias_json_serialization():
         'max_retries': 9,
         'max_iterations': 40
     })
-    assert config_from_dict.retry_agent_response_parsing_errors == True
+    assert config_from_dict.retry_agent_response_parsing_errors
     assert config_from_dict.parsing_agent_response_max_retries == 9
     assert config_from_dict.max_tool_calls == 40
 
 
 def test_react_agent_with_alias_config(mock_llm, mock_tool):
     """Test that ReActAgentGraph works correctly with alias configuration."""
-    config = ReActAgentWorkflowConfig(tool_names=['test'],
-                                      llm_name='test',
-                                      retry_parsing_errors=True,  # Changed to True so retries value is used
-                                      max_retries=4,
-                                      max_iterations=25,
-                                      verbose=True)
+    config = ReActAgentWorkflowConfig(
+        tool_names=['test'],
+        llm_name='test',
+        retry_parsing_errors=True,  # Changed to True so retries value is used
+        max_retries=4,
+        max_iterations=25,
+        verbose=True)
     tools = [mock_tool('Tool A'), mock_tool('Tool B')]
     prompt = create_react_agent_prompt(config)
     agent = ReActAgentGraph(llm=mock_llm,
@@ -586,7 +587,7 @@ def test_config_mixed_alias_usage():
         max_iterations=28  # old alias
     )
 
-    assert config.retry_agent_response_parsing_errors == False
+    assert not config.retry_agent_response_parsing_errors
     assert config.parsing_agent_response_max_retries == 12
     assert config.max_tool_calls == 28
     assert config.tool_call_max_retries == 1  # default value
