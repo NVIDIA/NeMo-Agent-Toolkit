@@ -196,12 +196,6 @@ def calc_command(ctx,
                    f"Users = {runner_config.target_users}")
         click.echo(f"Test parameters: GPUs = {runner_config.test_gpu_count}")
 
-        # Check if there are any out-of-range items to determine if we should show fail columns
-        has_latency_fails = any(data.alerts.num_items_greater_than_target_latency > 0
-                                for data in results.calc_data.values())
-        has_runtime_fails = any(data.alerts.num_items_greater_than_target_runtime > 0
-                                for data in results.calc_data.values())
-
         # Check if there are any GPU estimates to determine if we should show GPU estimate columns
         has_llm_latency_gpu_estimates = any(data.gpu_estimates.gpu_estimate_by_llm_latency is not None
                                             for data in results.calc_data.values())
@@ -251,12 +245,6 @@ def calc_command(ctx,
                 metrics.total_runtime,
             ])
 
-            # Only include fail columns if there are actual failures of that type
-            if has_latency_fails:
-                row.append(calc_alerts.num_items_greater_than_target_latency)
-            if has_runtime_fails:
-                row.append(calc_alerts.num_items_greater_than_target_runtime)
-
             # Only include GPU estimate columns if there are actual estimates of that type
             if has_llm_latency_gpu_estimates:
                 row.append(gpu_estimates_per_concurrency.gpu_estimate_by_llm_latency)
@@ -277,12 +265,6 @@ def calc_command(ctx,
             "p95 WF Runtime",
             "Total Runtime",
         ])
-
-        # Only include fail headers if there are actual failures of that type
-        if has_latency_fails:
-            headers.append("Latency OOR")
-        if has_runtime_fails:
-            headers.append("Runtime OOR")
 
         # Only include GPU estimate headers if there are actual estimates of that type
         if has_llm_latency_gpu_estimates:
