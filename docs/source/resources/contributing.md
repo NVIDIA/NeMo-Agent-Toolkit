@@ -219,9 +219,8 @@ The spelling of a project name should use the casing of the project, for example
 * Full Name: `NVIDIA NeMo Agent toolkit`
   - Use for document titles, webpage headers, any public descriptions
   - In situations where all words are capitalized (ex: document titles and headings), 'Toolkit' should be capitalized, in all other situations 'toolkit' should not be.
-  - When used for the first time in the body of a document (not a heading or title) it should include the NeMo Agent abbreviation in parentheses, ex: `NVIDIA NeMo Agent toolkit`
 
-* Short Names: `NeMo Agent toolkit` or `Agent toolkit`
+* Short Name: `NeMo Agent toolkit`
   - Use after `NVIDIA NeMo Agent toolkit` has been referenced in blogs, documents, and other public locations
   - Note that the 't' is lowercase in toolkit unless used in a title or heading
 * Uppercase No Space: `AIQtoolkit`
