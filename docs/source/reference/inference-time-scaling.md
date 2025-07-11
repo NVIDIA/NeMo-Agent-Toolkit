@@ -36,7 +36,7 @@ so mismatches are caught at build‑time.
 
 ### `StrategyBase`
 
-Every concrete strategy extends `StrategyBase`:
+Every concrete strategy extends `StrategyBase`.
 
 ```python
 class MyStrategy(StrategyBase):
