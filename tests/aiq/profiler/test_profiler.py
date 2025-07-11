@@ -23,6 +23,7 @@ from aiq.data_models.evaluate import EvalConfig
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType as WorkflowEventEnum
+from aiq.data_models.invocation_node import InvocationNode
 from aiq.data_models.profiler import ProfilerConfig
 from aiq.profiler.data_frame_row import DataFrameRow
 from aiq.profiler.profile_runner import ProfilerRunner
@@ -169,17 +170,45 @@ async def test_average_workflow_runtime(minimal_eval_config):
     # => average run time = 5.5
     events = [
         [
-            IntermediateStep(payload=IntermediateStepPayload(
-                event_type=WorkflowEventEnum.LLM_START, event_timestamp=100.0, framework=LLMFrameworkEnum.LANGCHAIN)),
-            IntermediateStep(payload=IntermediateStepPayload(
-                event_type=WorkflowEventEnum.LLM_END, event_timestamp=105.0, framework=LLMFrameworkEnum.LANGCHAIN))
+            IntermediateStep(
+                parent_id="root",
+                function_ancestry=InvocationNode(function_name="llama-3", function_id="u1"),
+                payload=IntermediateStepPayload(
+                    event_type=WorkflowEventEnum.LLM_START,
+                    event_timestamp=100.0,
+                    framework=LLMFrameworkEnum.LANGCHAIN,
+                ),
+            ),
+            IntermediateStep(
+                parent_id="root",
+                function_ancestry=InvocationNode(function_name="llama-3", function_id="u1"),
+                payload=IntermediateStepPayload(
+                    event_type=WorkflowEventEnum.LLM_END,
+                    event_timestamp=105.0,
+                    framework=LLMFrameworkEnum.LANGCHAIN,
+                ),
+            ),
         ],
         [
-            IntermediateStep(payload=IntermediateStepPayload(
-                event_type=WorkflowEventEnum.LLM_START, event_timestamp=200.0, framework=LLMFrameworkEnum.LLAMA_INDEX)),
-            IntermediateStep(payload=IntermediateStepPayload(
-                event_type=WorkflowEventEnum.LLM_END, event_timestamp=206.0, framework=LLMFrameworkEnum.LLAMA_INDEX))
-        ]
+            IntermediateStep(
+                parent_id="root",
+                function_ancestry=InvocationNode(function_name="llama-3", function_id="u1"),
+                payload=IntermediateStepPayload(
+                    event_type=WorkflowEventEnum.LLM_START,
+                    event_timestamp=200.0,
+                    framework=LLMFrameworkEnum.LLAMA_INDEX,
+                ),
+            ),
+            IntermediateStep(
+                parent_id="root",
+                function_ancestry=InvocationNode(function_name="llama-3", function_id="u1"),
+                payload=IntermediateStepPayload(
+                    event_type=WorkflowEventEnum.LLM_END,
+                    event_timestamp=206.0,
+                    framework=LLMFrameworkEnum.LLAMA_INDEX,
+                ),
+            ),
+        ],
     ]
 
     # Initialize the ProfilerRunner
@@ -219,17 +248,45 @@ async def test_average_llm_latency(minimal_eval_config):
 
     events = [
         [
-            IntermediateStep(payload=IntermediateStepPayload(
-                event_type=WorkflowEventEnum.LLM_START, event_timestamp=50.0, framework=LLMFrameworkEnum.LANGCHAIN)),
-            IntermediateStep(payload=IntermediateStepPayload(
-                event_type=WorkflowEventEnum.LLM_END, event_timestamp=55.5, framework=LLMFrameworkEnum.LANGCHAIN))
+            IntermediateStep(
+                parent_id="root",
+                function_ancestry=InvocationNode(function_name="llama-3", function_id="u1"),
+                payload=IntermediateStepPayload(
+                    event_type=WorkflowEventEnum.LLM_START,
+                    event_timestamp=50.0,
+                    framework=LLMFrameworkEnum.LANGCHAIN,
+                ),
+            ),
+            IntermediateStep(
+                parent_id="root",
+                function_ancestry=InvocationNode(function_name="llama-3", function_id="u1"),
+                payload=IntermediateStepPayload(
+                    event_type=WorkflowEventEnum.LLM_END,
+                    event_timestamp=55.5,
+                    framework=LLMFrameworkEnum.LANGCHAIN,
+                ),
+            ),
         ],
         [
-            IntermediateStep(payload=IntermediateStepPayload(
-                event_type=WorkflowEventEnum.LLM_START, event_timestamp=60.0, framework=LLMFrameworkEnum.LLAMA_INDEX)),
-            IntermediateStep(payload=IntermediateStepPayload(
-                event_type=WorkflowEventEnum.LLM_END, event_timestamp=66.0, framework=LLMFrameworkEnum.LLAMA_INDEX))
-        ]
+            IntermediateStep(
+                parent_id="root",
+                function_ancestry=InvocationNode(function_name="llama-3", function_id="u1"),
+                payload=IntermediateStepPayload(
+                    event_type=WorkflowEventEnum.LLM_START,
+                    event_timestamp=60.0,
+                    framework=LLMFrameworkEnum.LLAMA_INDEX,
+                ),
+            ),
+            IntermediateStep(
+                parent_id="root",
+                function_ancestry=InvocationNode(function_name="llama-3", function_id="u1"),
+                payload=IntermediateStepPayload(
+                    event_type=WorkflowEventEnum.LLM_END,
+                    event_timestamp=66.0,
+                    framework=LLMFrameworkEnum.LLAMA_INDEX,
+                ),
+            ),
+        ],
     ]
 
     runner = ProfilerRunner(minimal_eval_config.general.profiler,
@@ -246,5 +303,4 @@ async def test_average_llm_latency(minimal_eval_config):
     llm_stats = metrics["confidence_intervals"].get("llm_latency_confidence_intervals", {})
     # We expect the average = (5.5 + 6.0) / 2 = 5.75
     computed_mean = llm_stats.get("mean", -1)
-    assert abs(computed_mean - 5.75) < 1e-6, \
-        f"Expected mean=5.75 for LLM latency, got {computed_mean}"
+    assert (abs(computed_mean - 5.75) < 1e-6), f"Expected mean=5.75 for LLM latency, got {computed_mean}"
