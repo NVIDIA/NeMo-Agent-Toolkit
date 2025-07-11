@@ -7,7 +7,7 @@ The remainder of this document explains each step in detail.
 
 ---
 
-## 2. Core design
+## Core Design
 
 ### 2.1 Strategy pipeline
 
