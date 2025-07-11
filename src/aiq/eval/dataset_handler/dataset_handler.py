@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import json
+import math
 
 import pandas as pd
 
@@ -33,12 +34,23 @@ class DatasetHandler:
     One DatasetHandler object is needed for each dataset to be evaluated.
     """
 
-    def __init__(self, dataset_config: EvalDatasetConfig, reps: int):
+    def __init__(self,
+                 dataset_config: EvalDatasetConfig,
+                 reps: int,
+                 concurrency: int,
+                 num_passes: int | None = None,
+                 adjust_dataset_size: bool = False):
         from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
 
         self.dataset_config = dataset_config
         self.dataset_filter = DatasetFilter(dataset_config.filter)
         self.reps = reps
+
+        # number of passes at specific concurrency
+        self.concurrency = concurrency
+        self.num_passes = num_passes
+        self.adjust_dataset_size = adjust_dataset_size
+
         # Helpers
         self.intermediate_step_adapter = IntermediateStepAdapter()
 
@@ -109,6 +121,63 @@ class DatasetHandler:
 
         return input_df
 
+    def adjust_dataset(self, input_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Adjust the dataset so its length is a multiple of concurrency.
+
+        If num_passes > 0:
+            dataset size is adjusted to concurrency * num_passes
+        else:
+            dataset size is adjusted to the largest multiple of concurrency
+            that is less than or equal to the current dataset size
+        """
+        if self.concurrency <= 0:
+            raise ValueError("Concurrency must be > 0")
+
+        if self.num_passes < 0:
+            raise ValueError("num_passes must be >= 0")
+
+        original_size = input_df.shape[0]
+
+        # Calculate target size
+        if self.num_passes > 0:
+            # When num_passes is specified, always use concurrency * num_passes
+            # This respects the user's intent for exact number of passes
+            target_size = self.concurrency * self.num_passes
+        else:
+            # When num_passes = 0, use the largest multiple of concurrency <= original_size
+            # If original_size < concurrency, we need at least concurrency rows
+            if original_size >= self.concurrency:
+                target_size = (original_size // self.concurrency) * self.concurrency
+            else:
+                target_size = self.concurrency
+
+        if target_size == 0:
+            raise ValueError("Input dataset too small for even one batch at given concurrency.")
+
+        id_col = self.dataset_config.id_key
+
+        # If we need more rows than we have, replicate the dataset
+        if original_size < target_size:
+            # Clean existing _rep suffix if present
+            input_df[id_col] = input_df[id_col].astype(str).str.replace(r"_rep\d+$", "", regex=True)
+
+            # Calculate how many complete copies we need
+            copies_needed = math.ceil(target_size / original_size)
+
+            # Create the replicated dataframe
+            replicated_dfs = []
+            for i in range(copies_needed):
+                df_copy = input_df.copy()
+                if i > 0:  # Add suffix to all but the first copy
+                    df_copy[id_col] = df_copy[id_col].astype(str) + f"_rep{i}"
+                replicated_dfs.append(df_copy)
+
+            input_df = pd.concat(replicated_dfs, ignore_index=True)
+
+        # Return exactly the target size
+        return input_df.head(target_size)
+
     def get_eval_input_from_dataset(self, dataset: str) -> EvalInput:
         # read the dataset and convert it to EvalInput
 
@@ -127,9 +196,14 @@ class DatasetHandler:
         input_df = self.dataset_filter.apply_filters(input_df)
         input_df.drop_duplicates(subset=[self.dataset_config.id_key], inplace=True)
 
+        if self.reps > 1 and self.adjust_dataset_size:
+            raise ValueError("reps and adjust_dataset_size are mutually exclusive")
+
         # If more than one repetition is needed, replicate the rows
         if self.reps > 1:
             input_df = self.setup_reps(input_df)
+        elif self.adjust_dataset_size:
+            input_df = self.adjust_dataset(input_df)
 
         # Convert the DataFrame to a list of EvalInput objects
         return self.get_eval_input_from_df(input_df)
