@@ -18,7 +18,7 @@ The remainder of this document explains each step in detail.
 | **Scoring**   | Assign a numeric quality score                               | `llm_based_plan_scorer`, `llm_based_agent_scorer`, `motivation_aware_scorer`                                                                  |
 | **Selection** | Down‑select or merge                                         | `best_of_n_selector`, `threshold_selector`, `llm_based_plan_selector`, `llm_based_output_merging_selector`, `llm_based_agent_output_selector` |
 
-A **pipeline type** tells a strategy *where* it is used:
+A pipeline type tells a strategy where it is used.
 
 ```text
 PipelineTypeEnum = { PLANNING, TOOL_USE, AGENT_EXECUTION }
