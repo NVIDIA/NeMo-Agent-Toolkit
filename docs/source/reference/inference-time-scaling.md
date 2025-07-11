@@ -1,4 +1,4 @@
-## 1. Inference‑time scaling at a glance
+# Inference‑Time Scaling With NVIDIA NeMo Agent Toolkit
 Inference‑time scaling reallocates compute *after* a model has been trained, trading extra inference cycles for markedly better reasoning, factuality and robustness often without any additional training data. The new **`aiq.experimental.inference_time_scaling`** package codifies this idea as four pluggable *strategy* types (Search ▶ Editing ▶ Scoring ▶ Selection) that operate on a lightweight `ITSItem` record.  Developers can compose these strategies manually or use several **pre‑built ITS functions** that wire everything up automatically.  Adding your own strategy is as simple as (1) writing a config subclass, (2) implementing a `StrategyBase` child and (3) registering it with the `@register_its_strategy` decorator.  The remainder of this document explains each step in detail.
 
 ---
