@@ -1,5 +1,5 @@
 ---
-description: 
+description:
 globs: **/*.md
 alwaysApply: false
 ---
@@ -31,10 +31,10 @@ Follow these rules when working with any documentation in the AIQ Toolkit projec
 ### Terminology and Naming
 - Make sure to follow this naming convention for all the documentation. If there is any documentation not following this rule, you MUST update it.
 - **Full name on first use**: "NVIDIA NeMo Agent toolkit"
-- **Subsequent references**: "Agent toolkit" 
+- **Subsequent references**: "NeMo Agent toolkit"
 - Examples:
-  - "In the Agent toolkit, you can…"
-  - "Change directory to the Agent toolkit repo root…"
+  - "In the NeMo Agent toolkit, you can…"
+  - "Change directory to the NeMo Agent toolkit repo root…"
 - Consistently use this terminology throughout all documentation
 
 ### Style Guide Compliance
@@ -51,4 +51,3 @@ When creating, updating, or reviewing documentation, follow the comprehensive st
 - **Consistency**: Apply the same style rules throughout all documentation
 - **Accessibility**: Ensure content is accessible to users with different abilities and technical levels
 - **Scannability**: Structure content so users can quickly find what they need
-
