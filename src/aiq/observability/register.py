@@ -53,6 +53,42 @@ async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: 
         )
 
 
+class GalileoTelemetryExporter(TelemetryExporterBaseConfig, name="galileo"):
+    """A telemetry exporter to transmit traces to externally hosted galileo service."""
+
+    endpoint: str = Field(description="The galileo endpoint to export telemetry traces.")
+    project: str = Field(description="The project name to group the telemetry traces.")
+    logstream: str = Field(description="The logstream name to group the telemetry traces.")
+    api_key: str = Field(description="The api key to authenticate with the galileo service.")
+    session_id: str = Field(description="The session id to group the telemetry traces.", default=None)
+
+
+@register_telemetry_exporter(config_type=GalileoTelemetryExporter)
+async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: Builder):
+    """Create a Galileo telemetry exporter."""
+    try:
+        # If the dependencies are not installed, a TelemetryOptionalImportError will be raised
+        phoenix = try_import_phoenix()  # noqa: F841
+        from phoenix.otel import HTTPSpanExporter
+
+        headers = {
+            "Galileo-API-Key": config.api_key,
+            "logstream": config.logstream,
+            "project": config.project,
+        }
+
+        if config.session_id:
+            headers["sessionid"] = config.session_id
+
+        yield HTTPSpanExporter(config.endpoint, headers=headers)
+    except ConnectionError as ex:
+        logger.warning(
+            f"Unable to connect to Galileo. Are you sure {config.endpoint} is correct?\n %s",
+            ex,
+            exc_info=True,
+        )
+
+
 class LangfuseTelemetryExporter(TelemetryExporterBaseConfig, name="langfuse"):
     """A telemetry exporter to transmit traces to externally hosted langfuse service."""
 
