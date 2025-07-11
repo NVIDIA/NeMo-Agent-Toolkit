@@ -33,6 +33,7 @@ from aiq.profiler.calc.data_models import CalcAlerts
 from aiq.profiler.calc.data_models import CalcData
 from aiq.profiler.calc.data_models import CalcRunnerConfig
 from aiq.profiler.calc.data_models import CalcRunnerOutput
+from aiq.profiler.calc.data_models import FitConfig
 from aiq.profiler.calc.data_models import GPUEstimates
 from aiq.profiler.calc.data_models import SizingMetricPerItem
 from aiq.profiler.calc.data_models import SizingMetrics
@@ -44,7 +45,8 @@ logger = logging.getLogger(__name__)
 class LinearFitAnalyzer:
     """Handles linear regression analysis for concurrency vs time metrics."""
 
-    def __init__(self):
+    def __init__(self, fit_config: FitConfig):
+        self.fit_config = fit_config
         self.llm_latency_fit: LinearFitResult | None = None
         self.wf_runtime_fit: LinearFitResult | None = None
 
@@ -69,7 +71,7 @@ class LinearFitAnalyzer:
         concurrencies = list(sizing_metrics_per_concurrency.keys())
         latencies = [run.llm_latency_p95 for run in sizing_metrics_per_concurrency.values()]
         try:
-            self.llm_latency_fit = compute_slope(concurrencies, latencies, self.config.fit_config)
+            self.llm_latency_fit = compute_slope(concurrencies, latencies, self.fit_config)
             logger.info("Computed latency fit: slope=%.4f, R²=%.3f",
                         self.llm_latency_fit.slope,
                         self.llm_latency_fit.r_squared)
@@ -79,7 +81,7 @@ class LinearFitAnalyzer:
 
         runtimes = [run.workflow_runtime_p95 for run in sizing_metrics_per_concurrency.values()]
         try:
-            self.wf_runtime_fit = compute_slope(concurrencies, runtimes, self.config.fit_config)
+            self.wf_runtime_fit = compute_slope(concurrencies, runtimes, self.fit_config)
             logger.info("Computed runtime fit: slope=%.4f, R²=%.3f",
                         self.wf_runtime_fit.slope,
                         self.wf_runtime_fit.r_squared)
@@ -126,7 +128,7 @@ class CalcRunner:
         self.alerts_per_concurrency: dict[int, CalcAlerts] = {}
 
         # Linear fit analyzer for outlier detection and trend analysis
-        self.linear_analyzer = LinearFitAnalyzer()
+        self.linear_analyzer = LinearFitAnalyzer(self.config.fit_config)
 
         # Validate configuration
         self.validate_config()
