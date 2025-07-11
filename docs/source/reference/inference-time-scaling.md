@@ -9,7 +9,7 @@ The remainder of this document explains each step in detail.
 
 ## Core Design
 
-### 2.1 Strategy pipeline
+### Strategy pipeline
 
 | Stage         | Purpose                                                      | Examples                                                                                                                                      |
 | ------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
