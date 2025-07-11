@@ -36,8 +36,11 @@ from aiq.data_models.invocation_node import InvocationNode
 
 class _DummyFunction(InvocationNode):  # what active_function.get() returns
 
-    def __init__(self, name="fn", fid=None, parent_name=None):
-        super().__init__(function_name=name, function_id=fid or str(uuid.uuid4()), parent_name=parent_name)
+    def __init__(self, name="fn", fid=None, parent_id=None, parent_name=None):
+        super().__init__(function_id=fid or str(uuid.uuid4()),
+                         function_name=name,
+                         parent_id=parent_id,
+                         parent_name=parent_name)
 
 
 # --------------------------------------------------------------------------- #
@@ -50,7 +53,7 @@ def ctx_state_fixture():
     """Fresh manager + its stubbed context-state for each test."""
     s = AIQContextState()
 
-    s.active_function.set(_DummyFunction())
+    s.active_function.set(_DummyFunction(parent_id="root", parent_name="root"))
 
     yield s
 
@@ -208,9 +211,9 @@ async def test_async_nested(mgr: IntermediateStepManager, output_steps: list[Int
         ("fn1", IntermediateStepType.LLM_END),
     ]
 
-    for expected, actual in zip(expected_output, output_steps):
-        assert expected[0] == actual.name
-        assert expected[1] == actual.event_type
+    for (child, etype), actual in zip(expected_output, output_steps):
+        assert child == actual.name
+        assert etype == actual.event_type
 
 
 async def test_async_nested_with_coroutine(mgr: IntermediateStepManager, output_steps: list[IntermediateStep]):
@@ -234,10 +237,11 @@ async def test_async_nested_with_coroutine(mgr: IntermediateStepManager, output_
         ("c2", "c1"),
     ]
 
-    for expected in expected_ancestry:
-        for actual in output_steps:
-            if actual.name == expected[0]:
-                assert expected[1] == actual.function_ancestry.parent_id
+    for actual in output_steps:
+        for child, parent in expected_ancestry:
+            if actual.name == child:
+                assert parent == actual.parent_id
+                break
 
 
 async def test_async_with_task_end(mgr: IntermediateStepManager, output_steps: list[IntermediateStep]):
@@ -287,7 +291,7 @@ async def test_async_with_task_end(mgr: IntermediateStepManager, output_steps: l
         ("base", "root", IntermediateStepType.LLM_END),
     ]
 
-    for expected, actual in zip(expected_output, output_steps):
-        assert expected[0] == actual.name
-        assert expected[1] is None or expected[1] == actual.function_ancestry.parent_id
-        assert expected[2] == actual.event_type
+    for (child, parent, etype), actual in zip(expected_output, output_steps):
+        assert child == actual.name
+        assert parent is None or parent == actual.parent_id
+        assert etype == actual.event_type
