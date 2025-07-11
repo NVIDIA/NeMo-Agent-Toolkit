@@ -53,7 +53,7 @@ def dataset_handler(dataset_config):
     While setting this up we intentionally use default key names. They are compared with keys dataset_structure.
     This ensures that the defaults are not changed (easily or accidentally).
     """
-    return DatasetHandler(dataset_config, reps=1)
+    return DatasetHandler(dataset_config, reps=1, concurrency=1)
 
 
 @pytest.fixture
@@ -137,7 +137,7 @@ def dataset_swe_bench_config(dataset_swe_bench_id_key):
 
 @pytest.fixture
 def dataset_swe_bench_handler(dataset_swe_bench_config):
-    return DatasetHandler(dataset_swe_bench_config, reps=1)
+    return DatasetHandler(dataset_swe_bench_config, reps=1, concurrency=1)
 
 
 @pytest.fixture
@@ -158,7 +158,7 @@ def test_get_eval_input_from_df_with_additional_fields(mock_input_df_with_extras
     Test that additional fields are always passed to the evaluator as full_dataset_entry.
     """
     dataset_config = EvalDatasetJsonConfig()
-    dataset_handler = DatasetHandler(dataset_config, reps=1)
+    dataset_handler = DatasetHandler(dataset_config, reps=1, concurrency=1)
     eval_input = dataset_handler.get_eval_input_from_df(mock_input_df_with_extras)
 
     # check core fields
@@ -350,7 +350,7 @@ def test_publish_eval_input_unstructured_string_and_json():
     """Test that unstructured input handles plain strings, JSON strings, and Python objects correctly."""
 
     config = EvalDatasetJsonConfig(id_key="id", structure=EvalDatasetStructureConfig(disable=True))
-    handler = DatasetHandler(config, reps=1)
+    handler = DatasetHandler(config, reps=1, concurrency=1)
 
     items = [
         make_eval_input_item(id="1", output_obj="plain string output"),

@@ -13,12 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pydantic import BaseModel
+import click
 
-from aiq.profiler.inference_metrics_model import InferenceMetricsModel
-from aiq.profiler.inference_optimization.data_models import WorkflowRuntimeMetrics
+from .calc import calc_command
 
 
-class ProfilerResults(BaseModel):
-    workflow_runtime_metrics: WorkflowRuntimeMetrics | None = None
-    llm_latency_ci: InferenceMetricsModel | None = None
+@click.group(help="Size GPU clusters for workflows with the specified options.")
+def sizing():
+    """Sizing-related commands."""
+    pass
+
+
+sizing.add_command(calc_command)

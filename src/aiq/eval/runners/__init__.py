@@ -12,13 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from pydantic import BaseModel
-
-from aiq.profiler.inference_metrics_model import InferenceMetricsModel
-from aiq.profiler.inference_optimization.data_models import WorkflowRuntimeMetrics
-
-
-class ProfilerResults(BaseModel):
-    workflow_runtime_metrics: WorkflowRuntimeMetrics | None = None
-    llm_latency_ci: InferenceMetricsModel | None = None

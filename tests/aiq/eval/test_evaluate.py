@@ -509,7 +509,8 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
          patch.object(evaluation_run, "run_workflow_local",
                       wraps=evaluation_run.run_workflow_local) as mock_run_workflow, \
          patch.object(evaluation_run, "run_evaluators", AsyncMock()) as mock_run_evaluators, \
-         patch.object(evaluation_run, "profile_workflow", AsyncMock()) as mock_profile_workflow, \
+         patch.object(evaluation_run, "profile_workflow",
+                      AsyncMock(return_value=ProfilerResults())) as mock_profile_workflow, \
          patch.object(evaluation_run, "write_output", MagicMock()) as mock_write_output:
 
         # Run the function
