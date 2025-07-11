@@ -38,6 +38,7 @@ from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.data_models.intermediate_step import StreamEventData
+from aiq.data_models.invocation_node import InvocationNode
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
 from aiq.eval.evaluator.evaluator_model import EvalInput
@@ -96,15 +97,21 @@ def generated_answer():
 @pytest.fixture
 def tool_end_intermediate_step():
     """Fixture to create a valid TOOL_END IntermediateStep."""
-    return IntermediateStep(payload=IntermediateStepPayload(
-        event_type=IntermediateStepType.TOOL_END, data=StreamEventData(input="Tool input", output="Tool output")))
+    return IntermediateStep(parent_id="root",
+                            function_ancestry=InvocationNode(function_name="tool_test", function_id="test-tool-end"),
+                            payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END,
+                                                            data=StreamEventData(input="Tool input",
+                                                                                 output="Tool output")))
 
 
 @pytest.fixture
 def llm_end_intermediate_step(generated_answer):
     """Fixture to create a valid LLM_END IntermediateStep."""
-    return IntermediateStep(payload=IntermediateStepPayload(
-        event_type=IntermediateStepType.LLM_END, data=StreamEventData(input="User input", output=generated_answer)))
+    return IntermediateStep(parent_id="root",
+                            function_ancestry=InvocationNode(function_name="llm_test", function_id="test-llm-end"),
+                            payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
+                                                            data=StreamEventData(input="User input",
+                                                                                 output=generated_answer)))
 
 
 @pytest.fixture

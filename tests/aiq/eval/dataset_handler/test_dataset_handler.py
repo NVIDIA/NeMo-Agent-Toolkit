@@ -23,6 +23,7 @@ from aiq.data_models.dataset_handler import EvalDatasetStructureConfig
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
+from aiq.data_models.invocation_node import InvocationNode
 from aiq.eval.dataset_handler.dataset_handler import DatasetHandler
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
@@ -295,17 +296,25 @@ def mock_intermediate_steps():
     steps = []
     # Add LLM_START step
     steps.append(
-        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_START, name="llm_start")))
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="llm_start", function_id="test-llm-start"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_START, name="llm_start")))
     # Add LLM_END step
     steps.append(
-        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_END, name="llm_end")))
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="llm_end", function_id="test-llm-end"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_END, name="llm_end")))
     # Add TOOL_START step
     steps.append(
-        IntermediateStep(
-            payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START, name="tool_start")))
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="tool_start", function_id="test-tool-start"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START,
+                                                         name="tool_start")))
     # Add TOOL_END step
     steps.append(
-        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END, name="tool_end")))
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="tool_end", function_id="test-tool-end"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END, name="tool_end")))
     return steps
 
 
