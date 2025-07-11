@@ -234,9 +234,23 @@ class IntermediateStep(BaseModel):
     # Allow extra fields in the model_config to support derived models
     model_config = ConfigDict(extra="forbid")
 
-    function_ancestry: InvocationNode | None = InvocationNode(function_name="N/A", function_id="N/A")
+    parent_id: str
+    """
+    The parent step ID for the current step. The parent ID is the ID of the last START step which has a different UUID
+    than the current step. This value is different from the function_ancestry.parent_id value which tracks the last
+    parent FUNCTION step. For the first START step, the parent_id is 'root'.
+    """
+
+    function_ancestry: InvocationNode
+    """
+    The function ancestry for the current step showing the current AIQ function that was being executed when the step
+    was created.
+    """
 
     payload: IntermediateStepPayload
+    """
+    The payload for the current step.
+    """
 
     # ===== Payload Properties =====
     @property
@@ -286,7 +300,3 @@ class IntermediateStep(BaseModel):
     @property
     def event_state(self) -> IntermediateStepState:
         return self.payload.event_state
-
-    @property
-    def parent_id(self) -> str | None:
-        return self.function_ancestry.function_id if self.function_ancestry else None
