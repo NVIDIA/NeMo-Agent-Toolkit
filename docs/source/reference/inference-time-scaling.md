@@ -50,9 +50,9 @@ class MyStrategy(StrategyBase):
         ...
 ```
 
-*Implementation hint*: use the `Builder` helpers (`get_llm`, `get_function`, …) during `build_components` to resolve references just once and cache them.
+*Implementation hint*: Use the `Builder` helpers (`get_llm`, `get_function`, …) during `build_components` to resolve references once and cache them.
 
-### 2.3 `ITSItem`
+### `ITSItem`
 
 A **single, interoperable record** passed between stages.
 
@@ -70,9 +70,9 @@ Because it is a `pydantic.BaseModel`, you get `.model_dump()` and validation for
 
 ---
 
-## 3. Built‑in strategies
+## Built‑in Strategies
 
-Below is a non‑exhaustive catalogue you can use immediately; refer to the inline doc‑strings for full parameter lists.
+Below is a non‑exhaustive catalog you can use immediately; refer to the inline doc‑strings for full parameter lists.
 
 | Category  | Config class                                                    | One‑liner                                                                 |
 | --------- | --------------------------------------------------------------- | ------------------------------------------------------------------------- |
@@ -91,9 +91,9 @@ Below is a non‑exhaustive catalogue you can use immediately; refer to the inli
 
 ---
 
-## 4. Pre‑built ITS functions
+## Pre‑Built ITS Functions
 
-AgentIQ ships higher‑level wrappers that hide all orchestration:
+NeMo Agent toolkit ships higher‑level wrappers that hide all orchestration.
 
 | Function                              | Use‑case                                                                                                            |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
@@ -106,16 +106,16 @@ These are declared in `aiq.experimental.inference_time_scaling.functions.*` and 
 
 ---
 
-## 5. Creating and registering a new strategy
+## Creating and Registering a New Strategy
 
-1. **Define a config model**
+1. Define a config model.
 
    ```python
    class MyStrategyConfig(ITSStrategyBaseConfig, name="my_strategy"):
        my_param: float = 0.5
    ```
 
-2. **Implement the strategy**
+2. Implement the strategy
 
    ```python
    from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
@@ -123,7 +123,7 @@ These are declared in `aiq.experimental.inference_time_scaling.functions.*` and 
        ...
    ```
 
-3. **Register**
+3. Register the strategy.
 
    ```python
    from aiq.cli.register_workflow import register_its_strategy
@@ -135,11 +135,11 @@ These are declared in `aiq.experimental.inference_time_scaling.functions.*` and 
        yield strat
    ```
 
-That’s it — your strategy is now discoverable by `TypeRegistry` and can be referenced in `AIQConfig` fields.
+Your strategy is now discoverable by `TypeRegistry` and can be referenced in `AIQConfig` fields.
 
 ---
 
-## 6. Composing strategies in an `AIQConfig`
+## Composing Strategies in an `AIQConfig`
 
 ```python
 from aiq.experimental.inference_time_scaling.models.search_config import SingleShotMultiPlanConfig
@@ -176,17 +176,17 @@ The builder will:
 
 ---
 
-## 7. Extending tools and pipelines
+## Extending Tools and Pipelines
 
 * **Multiple stages**: Nothing stops you from chaining *search → edit → search* again, as long as each stage returns `List[ITSItem]`.
-* **Streaming**: Strategies themselves are non‑streaming, but you can wrap a streaming LLM in an ITS pipeline by choosing an appropriate pre‑built function (e.g., `plan_select_execute_function` keeps streaming support if the downstream agent streams).
+* **Streaming**: Strategies themselves are non‑streaming, but you can wrap a streaming LLM in an ITS pipeline by choosing an appropriate pre‑built function such as `plan_select_execute_function`, which keeps streaming support if the downstream agent streams.
 * **Debugging**: Log levels are respected through the standard `logging` module; export `AIQ_LOG_LEVEL=DEBUG` for verbose traces, including every intermediate `ITSItem`.
 
 ---
 
-## 8. Testing your strategy
+## Testing your strategy
 
-*Write isolated unit tests* by instantiating your config and strategy directly, then calling `ainvoke` with hand‑crafted `ITSItem` lists.  See the companion `tests/` directory for reference tests on `ThresholdSelector` and `BestOfNSelector`.
+Write isolated unit tests by instantiating your config and strategy directly, then call `ainvoke` with hand‑crafted `ITSItem` lists.  Refer to the companion `tests/` directory for reference tests on `ThresholdSelector` and `BestOfNSelector`.
 
 ---
 

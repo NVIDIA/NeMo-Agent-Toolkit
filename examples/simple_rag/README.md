@@ -733,4 +733,4 @@ Workflow Result:
 --------------------------------------------------
 ```
 
-Note that the workflow was executed thrice, with three different `Final Answer` sections! The selector then combines them into a single, comprehensive response.
+**Note**: The workflow was executed three times, with three different `Final Answer` sections. The selector then combines them into a single, comprehensive response.
