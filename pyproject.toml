@@ -39,6 +39,7 @@ dependencies = [
   "PyYAML~=6.0",
   "ragas~=0.2.14",
   "rich~=13.9",
+  "tabulate~=0.9",
   "uvicorn[standard]~=0.32.0",
   "wikipedia~=1.4",
 ]

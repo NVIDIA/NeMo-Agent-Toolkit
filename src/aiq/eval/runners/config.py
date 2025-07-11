@@ -13,12 +13,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
+
 from pydantic import BaseModel
 
-from aiq.profiler.inference_metrics_model import InferenceMetricsModel
-from aiq.profiler.inference_optimization.data_models import WorkflowRuntimeMetrics
+from aiq.eval.config import EvaluationRunConfig
+from aiq.eval.config import EvaluationRunOutput
 
 
-class ProfilerResults(BaseModel):
-    workflow_runtime_metrics: WorkflowRuntimeMetrics | None = None
-    llm_latency_ci: InferenceMetricsModel | None = None
+class MultiEvaluationRunConfig(BaseModel):
+    """
+    Parameters used for a multi-evaluation run.
+    This includes a dict of configs. The key is an id of any type.
+    Each pass loads the config, applies the overrides and runs to completion
+    before the next pass starts.
+    """
+    configs: dict[typing.Any, EvaluationRunConfig]
+
+
+class MultiEvaluationRunOutput(BaseModel):
+    """
+    Output of a multi-evaluation run.
+    The results per-pass are accumulated in the evaluation_run_outputs dict.
+    """
+    evaluation_run_outputs: dict[typing.Any, EvaluationRunOutput]
