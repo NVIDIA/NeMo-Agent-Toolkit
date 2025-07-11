@@ -34,7 +34,7 @@ stage_type()                -> StageTypeEnum
 
 so mismatches are caught at build‑time.
 
-### 2.2 `StrategyBase`
+### `StrategyBase`
 
 Every concrete strategy extends `StrategyBase`:
 
