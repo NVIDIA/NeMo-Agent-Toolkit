@@ -5,8 +5,6 @@ Inference‑time scaling reallocates compute after a model has been trained, tra
 3. Register it with the `@register_its_strategy` decorator.  
 The remainder of this document explains each step in detail.
 
----
-
 ## Core Design
 
 ### Strategy pipeline
@@ -21,18 +19,18 @@ The remainder of this document explains each step in detail.
 A pipeline type tells a strategy where it is used.
 
 ```text
-PipelineTypeEnum = { PLANNING, TOOL_USE, AGENT_EXECUTION }
+PipelineTypeEnum = { PLANNING, TOOL_USE, AGENT_EXECUTION, CUSTOM }
 StageTypeEnum    = { SEARCH, EDITING, SCORING, SELECTION }
 ```
 
-Each strategy advertises
+Each strategy exposes the following methods to the `Builder` to allow the `Builder` to resolve dependencies and ensure type safety:
 
 ```python
 supported_pipeline_types() -> list[PipelineTypeEnum]
 stage_type()                -> StageTypeEnum
 ```
 
-so mismatches are caught at build‑time.
+The `Builder` will ensure that when an `ITS Strategy` is requested, that the stage and pipeline types match the implementation's supported types.
 
 ### `StrategyBase`
 
@@ -68,8 +66,6 @@ A **single, interoperable record** passed between stages.
 
 Because it is a `pydantic.BaseModel`, you get `.model_dump()` and validation for free.
 
----
-
 ## Built‑in Strategies
 
 Below is a non‑exhaustive catalog you can use immediately; refer to the inline doc‑strings for full parameter lists.
@@ -89,7 +85,6 @@ Below is a non‑exhaustive catalog you can use immediately; refer to the inline
 |           | `ThresholdSelectionConfig`                                      | Filter by score ≥ τ.                                                      |
 |           | `LLMBasedPlanSelectionConfig` / …AgentOutput… / …OutputMerging… | Let an LLM choose or merge.                                               |
 
----
 
 ## Pre‑Built ITS Functions
 
@@ -104,9 +99,9 @@ NeMo Agent toolkit ships higher‑level wrappers that hide all orchestration.
 
 These are declared in `aiq.experimental.inference_time_scaling.functions.*` and can be referenced in your `AIQConfig` just like any other function.
 
----
-
 ## Creating and Registering a New Strategy
+
+Follow the steps below to create and register a new strategy.
 
 1. Define a config model.
 
@@ -141,6 +136,8 @@ Your strategy is now discoverable by `TypeRegistry` and can be referenced in `AI
 
 ## Composing Strategies in an `AIQConfig`
 
+Run the following to compose strategies in an `AIQConfig`.
+
 ```python
 from aiq.experimental.inference_time_scaling.models.search_config import SingleShotMultiPlanConfig
 from aiq.experimental.inference_time_scaling.models.selection_config import BestOfNSelectionConfig
@@ -174,20 +171,16 @@ The builder will:
 2. Inject them into the function that needs them.
 3. Guarantee type compatibility at build‑time.
 
----
-
 ## Extending Tools and Pipelines
 
 * **Multiple stages**: Nothing stops you from chaining *search → edit → search* again, as long as each stage returns `List[ITSItem]`.
 * **Streaming**: Strategies themselves are non‑streaming, but you can wrap a streaming LLM in an ITS pipeline by choosing an appropriate pre‑built function such as `plan_select_execute_function`, which keeps streaming support if the downstream agent streams.
 * **Debugging**: Log levels are respected through the standard `logging` module; export `AIQ_LOG_LEVEL=DEBUG` for verbose traces, including every intermediate `ITSItem`.
 
----
 
 ## Testing your strategy
 
 Write isolated unit tests by instantiating your config and strategy directly, then call `ainvoke` with hand‑crafted `ITSItem` lists.  Refer to the companion `tests/` directory for reference tests on `ThresholdSelector` and `BestOfNSelector`.
 
----
 
 Happy scaling!
