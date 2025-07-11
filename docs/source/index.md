@@ -85,6 +85,7 @@ Functions <./workflows/functions/index.md>
 ./workflows/mcp/index.md
 Evaluate Workflows <./workflows/evaluate.md>
 Profiling Workflows <./workflows/profiler.md>
+Sizing Calculator <./workflows/sizing-calc.md>
 ./workflows/using-local-llms.md
 ./workflows/observe/index.md
 ```
