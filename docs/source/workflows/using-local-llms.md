@@ -17,7 +17,7 @@ limitations under the License.
 
 # Using Local LLMs
 
-AIQ toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the AIQ toolkit simple example (`examples/simple`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/).
+AIQ toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the AIQ toolkit simple example (`examples/basic/functions/simple`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/).
 
 ## Using NIM
 In the AIQ toolkit simple example the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model was used. For the purposes of this guide we will be using a smaller model, the [`microsoft/phi-3-mini-4k-instruct`](https://build.nvidia.com/microsoft/phi-3-mini-4k) which is more likely to be runnable on a local workstation.
@@ -80,7 +80,7 @@ docker run -it --rm \
 ```
 
 ### AIQ Toolkit Configuration
-To define the pipeline configuration, we will start with the `examples/simple/configs/config.yml` file and modify it to use the locally hosted LLMs, the only changes needed are to define the `base_url` for the LLM and embedding models, along with the names of the models to use.
+To define the pipeline configuration, we will start with the `examples/basic/functions/simple/configs/config.yml` file and modify it to use the locally hosted LLMs, the only changes needed are to define the `base_url` for the LLM and embedding models, along with the names of the models to use.
 
 `examples/documentation_guides/locally_hosted_llms/nim_config.yml`:
 ```yaml

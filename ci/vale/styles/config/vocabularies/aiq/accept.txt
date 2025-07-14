@@ -83,11 +83,13 @@ NIM(s?)
 npm
 NumPy
 NVIDIA
+OTel
 onboarding
 [Oo]verfitting
 pandas
 [Pp]arallelization
 [Pp]arsable
+Patronus
 PCIe
 PDF(s?)
 [Pp]reprocess

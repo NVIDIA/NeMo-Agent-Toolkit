@@ -57,7 +57,7 @@ From the root directory of the AIQ toolkit library, install dependencies and exe
 
 **Example:**
 ```bash
-uv pip install -e examples/simple_calculator
+uv pip install -e examples/basic/functions/simple_calculator
 ```
 As the workflow runs, telemetry data will start showing up in Phoenix and the console.
 

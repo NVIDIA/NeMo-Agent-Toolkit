@@ -167,11 +167,26 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             # pylint: disable=unused-variable,redefined-outer-name
             opentelemetry = try_import_opentelemetry()  # noqa: F841
+            from openinference.semconv.resource import ResourceAttributes
             from opentelemetry import trace
+            from opentelemetry.sdk.resources import Resource
             from opentelemetry.sdk.trace import TracerProvider
             from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
+            from aiq.observability.register import GalileoTelemetryExporter
+            from aiq.observability.register import PhoenixTelemetryExporter
+
+            # Create a default provider first
             provider = TracerProvider()
+
+            # Check if we have a phoenix telemetry exporter and use its project name
+            for key, trace_exporter_config in telemetry_config.tracing.items():
+                if isinstance(trace_exporter_config, PhoenixTelemetryExporter) or isinstance(
+                        trace_exporter_config, GalileoTelemetryExporter):
+                    provider = TracerProvider(resource=Resource(
+                        attributes={ResourceAttributes.PROJECT_NAME: trace_exporter_config.project}))
+                    break
+
             trace.set_tracer_provider(provider)
 
             for key, trace_exporter_config in telemetry_config.tracing.items():
@@ -320,7 +335,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         if (isinstance(build_result, FunctionInfo)):
             # Create the function object
-            build_result = LambdaFunction.from_info(config=config, info=build_result)
+            build_result = LambdaFunction.from_info(config=config, info=build_result, instance_name=name)
 
         if (not isinstance(build_result, Function)):
             raise ValueError("Expected a function, FunctionInfo object, or FunctionBase object to be "

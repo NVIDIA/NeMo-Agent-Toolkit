@@ -23,8 +23,8 @@ class RequestAttributesTool(FunctionBaseConfig, name="current_request_attributes
     """
     A simple tool that demonstrates how to retrieve user-defined request attributes from HTTP requests
     within workflow tools. Please refer to the 'general' section of the configuration file located in the
-    'examples/simple_calculator/configs/config-metadata.yml' directory to see how to define a custom route using a
-    YAML file and associate it with a corresponding function to acquire request attributes.
+    'examples/basic/functions/simple_calculator/configs/config-metadata.yml' directory to see how to define a
+    custom route using a YAML file and associate it with a corresponding function to acquire request attributes.
     """
     pass
 
@@ -39,6 +39,7 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
 
         from aiq.builder.context import AIQContext
         aiq_context = AIQContext.get()
+
         method: str | None = aiq_context.metadata.method
         url_path: str | None = aiq_context.metadata.url_path
         url_scheme: str | None = aiq_context.metadata.url_scheme
@@ -48,6 +49,7 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
         client_host: str | None = aiq_context.metadata.client_host
         client_port: int | None = aiq_context.metadata.client_port
         cookies: dict[str, str] | None = aiq_context.metadata.cookies
+        conversation_id: str | None = aiq_context.conversation_id
 
         return (f"Method: {method}, "
                 f"URL Path: {url_path}, "
@@ -57,7 +59,8 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
                 f"Path Params: {path_params}, "
                 f"Client Host: {client_host}, "
                 f"Client Port: {client_port}, "
-                f"Cookies: {cookies}")
+                f"Cookies: {cookies}, "
+                f"Conversation Id: {conversation_id}")
 
     yield FunctionInfo.from_fn(_get_request_attributes,
                                description="Returns the acquired user defined request attriubutes.")
