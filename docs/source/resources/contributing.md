@@ -222,7 +222,7 @@ The spelling of a project name should use the casing of the project, for example
 * Short Name: `NeMo Agent toolkit`
   - Use after `NVIDIA NeMo Agent toolkit` has been referenced in blogs, documents, and other public locations
   - Note that the 't' is lowercase in toolkit unless used in a title or heading
-* Uppercase No Space: `AIQtoolkit`
+* Uppercase No Space: `NeMo-Agent-Toolkit`
   - Use for situations where capitalization will be preserved like the GitHub URL, directories, etc.
   - Do not use dashes or underscores
   - Note that the 't' is lowercase in toolkit unless used in a title or heading

@@ -99,7 +99,7 @@ An `EvalOutputItem` represents the result of evaluating a single item. It includ
 - `reasoning`: An explanation or trace of how the score was computed. This can contain any serializable structure (e.g., dictionary, string, list), and is often shown in logs or UI output for `interpretability`.
 
 ### Similarity Evaluator (Custom Evaluator Example)
-NeMo Agent Toolkit provides a convenient `BaseEvaluator` class that simplifies writing custom evaluators. It handles common tasks such as:
+NeMo Agent toolkit provides a convenient `BaseEvaluator` class that simplifies writing custom evaluators. It handles common tasks such as:
 - Asynchronous evaluation of input items
 - Concurrency control
 - Progress bar display using `tqdm`

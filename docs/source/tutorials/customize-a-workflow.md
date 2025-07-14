@@ -26,7 +26,7 @@ limitations under the License.
     uv pip install -e examples/basic/functions/simple
     ```
 
-This tutorial assumes familiarity with [workflows](../workflows/about/index.md) and the [command line interface](../reference/cli.md) of NeMo Agent toolkit.
+This tutorial assumes familiarity with [workflows](../workflows/about/index.md) and the [command line interface](../reference/cli.md).
 
 ## Customizing the `examples/basic/functions/simple` Workflow
 

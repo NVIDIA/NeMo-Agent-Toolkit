@@ -26,7 +26,6 @@ Cursor rules in NeMo Agent toolkit act as an intelligent development that offers
 * Learn and understand NeMo Agent toolkit quickly and simply: For less experienced developers, Cursor rules provide an interactive approach to mastering NeMo Agent toolkit through contextual assistance and comprehensive examples for typical development workflows.
 * Standardization: Ensures uniform development standards, such as formatting, type annotations, and documentation requirements, across development teams and projects. Thus, decreasing code review overhead during submissions.
 
-
 ## Common Prompts
 
 :::{note}
@@ -152,7 +151,7 @@ Keep your prompts specific and concise. For instance, rather than stating "Creat
 
 ## Cursor Rules Organization
 
-NeMo Agent Toolkit offers a comprehensive collection of Cursor rules organized into four primary categories:
+NeMo Agent toolkit offers a comprehensive collection of Cursor rules organized into four primary categories:
 
 - **[Foundation Rules](../reference/cursor-rules-reference.md#foundation-rules)**: Core code quality standards and cursor rules management
 - **[Setup and Installation Rules](../reference/cursor-rules-reference.md#setup-and-installation-rules)**: Environment configuration and toolkit installation procedures
