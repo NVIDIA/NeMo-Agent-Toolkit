@@ -65,6 +65,26 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
         self._run_id_to_tool_input = {}
         self._run_id_to_timestamp = {}
 
+    @staticmethod
+    def _extract_token_usage(response: ChatResponse) -> TokenUsageBaseModel:
+        token_usage = TokenUsageBaseModel()
+        try:
+            if response and response.additional_kwargs and "usage" in response.additional_kwargs:
+                usage = response.additional_kwargs["usage"] if "usage" in response.additional_kwargs else {}
+                token_usage.prompt_tokens = usage.input_tokens if hasattr(usage, "input_tokens") else 0
+                token_usage.completion_tokens = usage.output_tokens if hasattr(usage, "output_tokens") else 0
+
+                if hasattr(usage, "input_tokens_details") and hasattr(usage.input_tokens_details, "cached_tokens"):
+                    token_usage.cached_tokens = usage.input_tokens_details.cached_tokens
+
+                if hasattr(usage, "output_tokens_details") and hasattr(usage.output_tokens_details, "reasoning_tokens"):
+                    token_usage.reasoning_tokens = usage.output_tokens_details.reasoning_tokens
+
+        except Exception as e:
+            logger.debug("Error extracting token usage: %s", e, exc_info=True)
+
+        return token_usage
+
     def on_event_start(
         self,
         event_type: CBEventType,
@@ -190,7 +210,7 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
                         data=StreamEventData(input=self._run_id_to_llm_input.get(event_id), output=llm_text_output),
                         metadata=TraceMetadata(chat_responses=response.message if response.message else None,
                                                tool_outputs=tool_outputs_list if tool_outputs_list else []),
-                        usage_info=UsageInfo(token_usage=TokenUsageBaseModel(**response.additional_kwargs)))
+                        usage_info=UsageInfo(token_usage=self._extract_token_usage(response)))
                     self.step_manager.push_intermediate_step(stats)
 
         elif event_type == CBEventType.FUNCTION_CALL and payload:

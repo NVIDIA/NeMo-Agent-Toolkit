@@ -655,7 +655,7 @@ requires-dist = [
     { name = "jsonpath-ng", specifier = "~=1.7" },
     { name = "lxml", marker = "extra == 'ingestion'", specifier = "~=5.4" },
     { name = "matplotlib", marker = "extra == 'profiling'", specifier = "~=3.9" },
-    { name = "mcp", specifier = ">=1.0.0" },
+    { name = "mcp", specifier = "~=1.10" },
     { name = "networkx", specifier = "~=3.4" },
     { name = "numpy", specifier = "~=1.26" },
     { name = "openinference-semantic-conventions", specifier = "~=0.1.14" },
