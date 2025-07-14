@@ -74,7 +74,55 @@ As the workflow runs, you will find a Weave URL (starting with a 🍩 emoji). Cl
 
 Note how the integration captures not only the `aiq` intermediate steps but also the underlying framework. This is because [Weave has integrations](https://weave-docs.wandb.ai/guides/integrations/) with many of your favorite frameworks.
 
+## Redacting Sensitive Data
+
+When tracing LLM workflows, you may be processing sensitive information like personal identifiers, credit card numbers, or API keys. AIQ Toolkit Weave integration supports automatic redaction of Personally Identifiable Information (PII) and sensitive keys from your traces.
+
+**Prerequisites**: To enable PII redaction, you need `presidio-analyzer` and `presidio-anonymizer` installed. Installing the weave plugin will install these packages for you.
+
+```bash
+pip install -e '.[weave]'
+```
+
+**Enabling PII Redaction**: Update your workflow configuration to enable PII redaction:
+
+```yaml
+general:
+  use_uvloop: true
+  telemetry:
+    tracing:
+      weave:
+        _type: weave
+        project: "aiqtoolkit-demo"
+        redact_pii: true                    # Enable PII redaction
+        redact_pii_fields:                  # Optional: specify which entity types to redact
+          - EMAIL_ADDRESS
+          - PHONE_NUMBER
+          - CREDIT_CARD
+          - US_SSN
+          - PERSON
+        redact_keys:                        # Optional: specify additional keys to redact
+          - custom_secret
+          - api_key
+          - auth_token
+```
+
+**Redaction Options**: The Weave integration supports the following redaction options:
+
+| Parameter | Description | Required |
+|-----------|-------------|----------|
+| `redact_pii` | Enable PII redaction (true/false) | No (default: false) |
+| `redact_pii_fields` | List of PII entity types to redact | No (default: all supported entities) |
+| `redact_keys` | List of additional keys to redact beyond the defaults | No |
+
+When `redact_pii` is enabled, common PII entities like email addresses, phone numbers, credit cards, and more are automatically redacted from your traces before they are sent to Weave. The `redact_pii_fields` parameter allows you to customize which entity types to redact.
+
+See the [Microsoft Presidio documentation](https://microsoft.github.io/presidio/) for a full list of supported entity types.
+
+Additionally, the `redact_keys` parameter allows you to specify custom keys that should be redacted beyond the default sensitive keys (`api_key`, `auth_headers`, `authorization`).
+
 ## Resources
 
 - Learn more about tracing [here](https://weave-docs.wandb.ai/guides/tracking/tracing).
 - Learn more about how to navigate the logged traces [here](https://weave-docs.wandb.ai/guides/tracking/trace-tree).
+- Learn more about PII redaction [here](https://weave-docs.wandb.ai/guides/tracking/redact-pii).
