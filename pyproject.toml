@@ -126,7 +126,7 @@ aiq_alert_triage_agent = { path = "examples/advanced/alert_triage_agent", editab
 aiq_email_phishing_analyzer = { path = "examples/intermediate/evaluation_and_profiling/email_phishing_analyzer", editable = true }
 aiq_multi_frameworks = { path = "examples/basic/frameworks/multi_frameworks", editable = true }
 aiq_plot_charts = { path = "examples/basic/functions/plot_charts", editable = true }
-aiq_redact_pii = { path = "examples/intermediate/redact_pii", editable = true }
+aiq_redact_pii = { path = "examples/intermediate/observability/redact_pii", editable = true }
 aiq_semantic_kernel_demo = { path = "examples/basic/frameworks/semantic_kernel_demo", editable = true }
 aiq_simple = { path = "examples/basic/functions/simple", editable = true }
 aiq_simple_calculator = { path = "examples/basic/functions/simple_calculator", editable = true }
