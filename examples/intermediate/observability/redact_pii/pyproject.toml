@@ -20,4 +20,4 @@ classifiers = ["Programming Language :: Python"]
 aiqtoolkit = { path = "../../../..", editable = true }
 
 [project.entry-points.'aiq.components']
-redact_pii = "redact_pii.register"
+redact_pii = "aiq_redact_pii.register"
