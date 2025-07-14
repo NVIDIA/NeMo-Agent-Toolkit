@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observing a Workflow with Phoenix
 
-This guide provides a step-by-step process to enable observability in an NeMo Agent toolkit workflow using Phoenix for tracing and logging. By the end of this guide, you will have:
+This guide provides a step-by-step process to enable observability in a NeMo Agent toolkit workflow using Phoenix for tracing and logging. By the end of this guide, you will have:
 - Configured telemetry in your workflow.
 - Run the Phoenix server.
 - Able to view traces in the Phoenix UI.

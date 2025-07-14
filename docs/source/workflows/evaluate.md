@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Evaluating NVIDIA NeMo Agent Toolkit Workflows
-NeMo Agent toolkit provides a set of evaluators to run and evaluate the NeMo Agent toolkit workflows. In addition to the built-in evaluators, NeMo Agent toolkit provides a plugin system to add custom evaluators.
+NeMo Agent toolkit provides a set of evaluators to run and evaluate workflows. In addition to the built-in evaluators, the toolkit provides a plugin system to add custom evaluators.
 
 ## Evaluating a Workflow
 To evaluate a workflow, you can use the `aiq eval` command. The `aiq eval` command takes a workflow configuration file as input. It runs the workflow using the dataset specified in the configuration file. The workflow output is then evaluated using the evaluators specified in the configuration file.
@@ -317,4 +317,4 @@ aiq eval --config_file examples/basic/functions/simple/configs/eval_config.yml \
 For details on other evaluators and evaluation options, refer to [NeMo Agent toolkit Evaluation Concepts](../reference/evaluate.md) for more information.
 
 ##  Profiling and Performance Monitoring of NeMo Agent Toolkit Workflows
-You can profile workflows via the NeMo Agent toolkit evaluation system. For more information, refer to the [Profiler](profiler.md) documentation.
+You can profile workflows using the NeMo Agent toolkit evaluation system. For more information, refer to the [Profiler](profiler.md) documentation.

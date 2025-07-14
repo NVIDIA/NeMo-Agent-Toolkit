@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observing a Workflow with Catalyst
 
-This guide provides a step-by-step process to enable observability in an NeMo Agent toolkit workflow using Catalyst for tracing. By the end of this guide, you will have:
+This guide provides a step-by-step process to enable observability in a NeMo Agent toolkit workflow using Catalyst for tracing. By the end of this guide, you will have:
 - Configured telemetry in your workflow.
 - Able to view traces in the Catalyst platform.
 

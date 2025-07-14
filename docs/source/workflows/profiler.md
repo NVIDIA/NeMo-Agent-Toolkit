@@ -193,7 +193,7 @@ This will, based on the above configuration, produce the following files in the 
 
 
 ## Walkthrough of Profiling a Workflow
-In this guide, we will walk you through an end-to-end example of how to profile an NeMo Agent toolkit workflow using the NeMo Agent toolkit profiler, which is part of the library's evaluation harness.
+In this guide, we will walk you through an end-to-end example of how to profile a NeMo Agent toolkit workflow using the NeMo Agent toolkit profiler, which is part of the library's evaluation harness.
 We will begin by creating a workflow to profile, explore some of the configuration options of the profiler, and then perform an in-depth analysis of the profiling results.
 
 ### Defining a Workflow
@@ -447,7 +447,7 @@ Clearly, the `phi-3-*` models are not good fits given their `groundedness` and `
 The `mixtral-8x22b-instruct` model has a much higher runtime than the `llama-3.1-8b-instruct` model, so we will not use it either. The `llama-3.1-8b-instruct` model has the highest `groundedness` and `relevance`, so we will use it for our workflow.
 
 ### Conclusion
-In this guide, we walked through an end-to-end example of how to profile an NeMo Agent toolkit workflow using the profiler. We defined a simple workflow, configured the profiler, ran the profiler, and analyzed the profiling results to compare the performance of various LLMs and evaluate the workflow's efficiency. We used the collected telemetry data to identify which LLM we think is the best fit for our workflow. We hope this guide has given you a good understanding of how to profile a workflow and analyze the results to make informed decisions about your workflow configuration.
+In this guide, we walked through an end-to-end example of how to profile a NeMo Agent toolkit workflow using the profiler. We defined a simple workflow, configured the profiler, ran the profiler, and analyzed the profiling results to compare the performance of various LLMs and evaluate the workflow's efficiency. We used the collected telemetry data to identify which LLM we think is the best fit for our workflow. We hope this guide has given you a good understanding of how to profile a workflow and analyze the results to make informed decisions about your workflow configuration.
 
 If you'd like to optimize further, we recommend exploring the `workflow_profiling_report.txt` file that was also created by the profiler. That has detailed information about workflow bottlenecks, and latency at various `concurrencies`, which can be helpful metrics when identifying performance issues in your workflow.
 
