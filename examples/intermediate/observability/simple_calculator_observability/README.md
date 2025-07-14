@@ -142,6 +142,25 @@ export PATRONUS_API_KEY=<your_api_key>
 aiq run --config_file examples/intermediate/observability/simple_calculator_observability/configs/config-patronus.yml --input "Divide 144 by 12"
 ```
 
+#### RagAI Catalyst Integration
+
+Transmit traces to RagAI Catalyst.
+
+1. Set your Patronus API key:
+
+```bash
+export CATALYST_ACCESS_KEY=<your_api_key>
+export CATALYST_SECRET_KEY=<your_secret_key>
+export CATALYST_ENDPOINT=<your_endpoint>
+```
+
+2. Run the workflow:
+
+```bash
+aiq run --config_file examples/intermediate/observability/simple_calculator_observability/configs/config-catalyst.yml --input "Divide 144 by 12"
+```
+
+
 ## Configuration Files
 
 The example includes multiple configuration files for different observability platforms:
@@ -153,6 +172,7 @@ The example includes multiple configuration files for different observability pl
 | `config-langsmith.yml` | LangSmith | LangChain ecosystem integration |
 | `config-weave.yml` | Weave | Workflow-focused tracking |
 | `config-patronus.yml` | Patronus | AI safety and compliance monitoring |
+| `config-catalyst.yml` | Catalyst | RagaAI Catalyst integration |
 
 ## What Gets Traced
 

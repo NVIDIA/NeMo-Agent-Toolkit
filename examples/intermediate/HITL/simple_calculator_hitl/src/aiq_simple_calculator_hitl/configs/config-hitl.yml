@@ -31,7 +31,6 @@ functions:
     _type: hitl_approval_tool
     prompt: |
       You have reached the maximum number of iterations.
-      Please confirm if you would like to proceed with more iterations.
   react_agent:
     _type: react_agent
     tool_names:

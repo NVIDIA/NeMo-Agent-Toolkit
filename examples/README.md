@@ -48,6 +48,7 @@ Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular f
 - **[`custom_routes`](intermediate/custom_routes/)**: Custom routing and API endpoint examples:
   - [`simple_calculator_custom_routes`](intermediate/custom_routes/simple_calculator_custom_routes/): Basic simple calculator with custom API routing and endpoint configuration
 - **[`observability`](intermediate/observability/)**: Monitoring and observability integration examples:
+  - [`redact_pii`](intermediate/observability/redact_pii/): Demonstrates how to use Weights & Biases (W&B) Weave with PII redaction
   - [`simple_calculator_observability`](intermediate/observability/simple_calculator_observability/): Basic simple calculator with integrated monitoring, telemetry, and observability features
 - **[`RAG`](intermediate/RAG/)**: Retrieval-Augmented Generation examples:
   - [`simple_rag`](intermediate/RAG/simple_rag/): Complete RAG system with Milvus vector database, document ingestion, and long-term memory using Mem0 platform
