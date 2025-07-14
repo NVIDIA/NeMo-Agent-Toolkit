@@ -15,7 +15,7 @@
     limitations under the License.
 -->
 
-# Contributing to NVIDIA NeMo Agent Toolkit
+# Contributing to NVIDIA NeMo Agent toolkit
 
 Contributions to NeMo Agent toolkit fall into the following three categories.
 
@@ -59,7 +59,7 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 
     Then, set the upstream to the main repository and fetch the latest changes:
     ```bash
-    git remote add upstream git@github.com:NVIDIA/AIQToolkit.git
+    git remote add upstream git@github.com:NVIDIA/NeMo-Agent-Toolkit.git
     git fetch --all
     ```
 
@@ -95,7 +95,7 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
     code ./aiq.code-workspace
     ```
 
-### Install the NeMo Agent Toolkit Library
+### Install the NeMo Agent toolkit Library
 
 1. Install the NeMo Agent toolkit Examples by doing the following.
    - Install NeMo Agent toolkit examples.
@@ -201,23 +201,22 @@ Once you have gotten your feet wet and are more comfortable with the code, you c
 
 Review the unassigned issues and choose an issue that you are comfortable contributing. Ensure you comment on the issue before you begin to inform others that you are working on it. If you have questions about implementing the issue, comment your questions in the issue instead of the PR.
 
-## Developing with NeMo Agent Toolkit
+## Developing with NeMo Agent toolkit
 
 Refer to the [Get Started](../quick-start/installing.md) guide to quickly begin development.
 
 ## Documentation
 
-All NeMo Agent toolkit should be written in Markdown format. The documentation located under the `docs/source` directory is included in the documentation builds, refer to `docs/README.md` for information on how to build the documentation. In addition to this, each example should contain a `README.md` file that describes the example.
+All NeMo Agent toolkit documentation should be written in Markdown format. The documentation located under the `docs/source` directory is included in the documentation builds, refer to `docs/README.md` for information on how to build the documentation. In addition to this, each example should contain a `README.md` file that describes the example.
 
 ### Checks
 All documentation is checked using [Vale](https://vale.sh/). In documentation the name of a command, variable, class, or function should be surrounded by backticks. For example referring `aiq` should always be surrounded by backticks. Vale will not perform a check against anything surrounded by backticks or by a code block.
 
 The spelling of a project name should use the casing of the project, for example [PyPI](https://pypi.org/) should always be spelled as `PyPI` and not `pypi` or `PYPI`. If needed new words can be added to the `ci/vale/styles/config/vocabularies/aiq/accept.txt` and `ci/vale/styles/config/vocabularies/aiq/reject.txt` files.
 
-### NVIDIA NeMo Agent Toolkit Name Guidelines
+### NVIDIA NeMo Agent toolkit Name Guidelines
 
-* Full Name: `NVIDIA NeMo Agent toolkit`
-  - Use for document titles, webpage headers, any public descriptions
+* Full Name: `NVIDIA NeMo Agent toolkit`  - Use for document titles, webpage headers, any public descriptions
   - In situations where all words are capitalized (ex: document titles and headings), 'Toolkit' should be capitalized, in all other situations 'toolkit' should not be.
 
 * Short Name: `NeMo Agent toolkit`
@@ -227,6 +226,4 @@ The spelling of a project name should use the casing of the project, for example
   - Use for situations where capitalization will be preserved like the GitHub URL, directories, etc.
   - Do not use dashes or underscores
   - Note that the 't' is lowercase in toolkit unless used in a title or heading
-* Lowercase No Space: `aiqtoolkit`
-  - Use for URLs, PyPI package, any place where spaces are not allowed and casing is not preserved.
-  - Do not use dashes or underscores
+

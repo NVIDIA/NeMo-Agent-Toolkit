@@ -26,5 +26,5 @@ NeMo Agent toolkit [Model Context Protocol (MCP)](https://modelcontextprotocol.i
 :caption: MCP
 
 Connecting to Remote Tools <./mcp-client.md>
-Serving NeMo Agent Functions <./mcp-server.md>
+Serving NeMo Agent toolkit Functions <./mcp-server.md>
 ```

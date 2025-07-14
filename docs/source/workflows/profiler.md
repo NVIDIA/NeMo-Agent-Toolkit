@@ -18,16 +18,16 @@ limitations under the License.
 
 # Profiling and Performance Monitoring of NVIDIA NeMo Agent Toolkit Workflows
 
-The NeMo Agent toolkit Profiler Module provides profiling and forecasting capabilities for NeMo Agent toolkit workflows. The profiler instruments the workflow execution by:
-- Collecting usage statistics in real time (via callbacks).
-- Recording the usage statistics on a per-invocation basis (e.g., tokens used, time between calls, LLM calls).
+The NeMo Agent toolkit Profiler Module provides profiling and forecasting capabilities for workflows. The profiler instruments the workflow execution by:
+- Collecting usage statistics in real time (using callbacks).
+- Recording the usage statistics on a per-invocation basis (for example, tokens used, time between calls, and LLM calls).
 - Storing the data for offline analysis.
-- Forecasting usage metrics using time-series style models (linear, random forest, etc.).
-- Computing workflow specific metrics for performance analysis (e.g., latency, throughput, etc.).
+- Forecasting usage metrics using time-series style models (for example, linear, random forest)
+- Computing workflow specific metrics for performance analysis (for example, latency, and throughput).
 - Analyzing workflow performance measures such as bottlenecks, latency, and concurrency spikes.
 
 These functionalities will allow NeMo Agent toolkit developers to dynamically stress test their workflows in pre-production phases to receive workflow-specific sizing guidance based on observed latency and throughput of their specific workflows
-At any or every stage in a workflow execution, the NeMo Agent toolkit profiler generates predictions/forecasts about future token and tool usage.  Client side forecasting allows for workflow-specific predictions which can be difficult, if not impossible, to achieve server side in order to facilitate inference planning.
+At any or every stage in a workflow execution, the NeMo Agent toolkit profiler generates predictions/forecasts about future token and tool usage. Client side forecasting allows for workflow-specific predictions which can be difficult, if not impossible, to achieve server side in order to facilitate inference planning.
 Will allow for features such as offline-replay or simulation of workflow runs without the need for deployed infrastructure such as tooling/vector DBs, etc. Will also allow for NeMo Agent toolkit native observability and workflow fingerprinting.
 
 ## Prerequisites
@@ -49,7 +49,7 @@ LLama Index, CrewAI, and Semantic Kernel.
 
 ### Profiler Runner
 
-- **profiler/profile_runner.py** is the main orchestration class. It collects workflow run statistics from the NeMo Agent toolkit Eval module, computed workflow-specific metrics, and optionally forecasts usage metrics using the NeMo Agent toolkit Profiler module.
+- **profiler/profile_runner.py** is the main orchestration class. It collects workflow run statistics from the NeMo Agent toolkit Eval module, computed workflow-specific metrics, and optionally forecasts usage metrics using the Profiler module.
 
 - **Under profiler/forecasting**, the code trains scikit-learn style models on the usage data.
 model_trainer.py can train a LinearModel or a RandomForestModel on the aggregated usage data (the raw statistics collected).
@@ -66,7 +66,7 @@ Native integrations with `aiq eval` to allow for running of the profiler through
 ### Step 1: Enabling Instrumentation on a Workflow [Optional]
 **NOTE:** If you don't set it, NeMo Agent toolkit will inspect your code to infer frameworks used. We recommend you set it explicitly.
 To enable profiling on a workflow, you need to wrap the workflow with the profiler decorators. The decorators can be applied to any workflow using the `framework_wrappers` argument of the `register_function` decorator.
-Simply specify which NeMo Agent toolkit supported frameworks you will be using anywhere in your workflow (including tools) upon registration and NeMo Agent toolkit will automatically apply the appropriate profiling decorators at build time.
+Simply specify which NeMo Agent toolkit supported frameworks you will be using anywhere in your workflow (including tools) upon registration and the toolkit will automatically apply the appropriate profiling decorators at build time.
 For example:
 
 ```python
@@ -447,12 +447,12 @@ Clearly, the `phi-3-*` models are not good fits given their `groundedness` and `
 The `mixtral-8x22b-instruct` model has a much higher runtime than the `llama-3.1-8b-instruct` model, so we will not use it either. The `llama-3.1-8b-instruct` model has the highest `groundedness` and `relevance`, so we will use it for our workflow.
 
 ### Conclusion
-In this guide, we walked through an end-to-end example of how to profile an NeMo Agent toolkit workflow using the NeMo Agent toolkit profiler. We defined a simple workflow, configured the profiler, ran the profiler, and analyzed the profiling results to compare the performance of various LLMs and evaluate the workflow's efficiency. We used the collected telemetry data to identify which LLM we think is the best fit for our workflow. We hope this guide has given you a good understanding of how to profile an NeMo Agent toolkit workflow and analyze the results to make informed decisions about your workflow configuration.
+In this guide, we walked through an end-to-end example of how to profile an NeMo Agent toolkit workflow using the profiler. We defined a simple workflow, configured the profiler, ran the profiler, and analyzed the profiling results to compare the performance of various LLMs and evaluate the workflow's efficiency. We used the collected telemetry data to identify which LLM we think is the best fit for our workflow. We hope this guide has given you a good understanding of how to profile a workflow and analyze the results to make informed decisions about your workflow configuration.
 
 If you'd like to optimize further, we recommend exploring the `workflow_profiling_report.txt` file that was also created by the profiler. That has detailed information about workflow bottlenecks, and latency at various `concurrencies`, which can be helpful metrics when identifying performance issues in your workflow.
 
 ## Providing Feedback
 
-We welcome feedback on the NeMo Agent toolkit Profiler module. Please provide feedback by creating an issue on the NeMo Agent toolkit Git repository.
+We welcome feedback on the NeMo Agent toolkit Profiler module. Please provide feedback by creating an issue on the [Git repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit).
 
 If you're filing a bug report, please also include a reproducer workflow and the profiler output files.

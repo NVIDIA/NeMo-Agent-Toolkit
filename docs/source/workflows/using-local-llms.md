@@ -17,7 +17,7 @@ limitations under the License.
 
 # Using Local LLMs
 
-NeMo Agent toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the NeMo Agent toolkit simple example (`examples/basic/functions/simple`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/).
+NeMo Agent toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the simple example (`examples/basic/functions/simple`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/).
 
 ## Using NIM
 In the NeMo Agent toolkit simple example the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model was used. For the purposes of this guide we will be using a smaller model, the [`microsoft/phi-3-mini-4k-instruct`](https://build.nvidia.com/microsoft/phi-3-mini-4k) which is more likely to be runnable on a local workstation.
@@ -116,7 +116,7 @@ workflow:
 ```
 
 ### Running the NeMo Agent Toolkit Workflow
-To run the NeMo Agent toolkit workflow using the locally hosted LLMs, run the following command:
+To run the workflow using the locally hosted LLMs, run the following command:
 ```bash
 aiq run --config_file examples/documentation_guides/locally_hosted_llms/nim_config.yml --input "What is LangSmith?"
 ```
@@ -181,7 +181,7 @@ workflow:
 ```
 
 ### Running the NeMo Agent Toolkit Workflow
-To run the NeMo Agent toolkit workflow using the locally hosted LLMs, run the following command:
+To run the workflow using the locally hosted LLMs, run the following command:
 ```bash
 aiq run --config_file examples/documentation_guides/locally_hosted_llms/vllm_config.yml --input "What is LangSmith?"
 ```

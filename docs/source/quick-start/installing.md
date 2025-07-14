@@ -19,16 +19,19 @@ limitations under the License.
 
 This guide will help you set up your NVIDIA NeMo Agent toolkit development environment, run existing workflows, and create your own custom workflows using the `aiq` command-line interface.
 
-## Supported LLM APIs:
+## Supported LLM APIs
+
+The following LLM APIs are supported:
+
 - NIM (such as Llama-3.1-70b-instruct and Llama-3.3-70b-instruct)
 - OpenAI
 - AWS Bedrock
 
 ## Framework Integrations
 
-To keep the library lightweight, many of the first party plugins supported by NeMo Agent toolkit are located in separate distribution packages. For example, the `aiqtoolkit-langchain` distribution contains all the LangChain specific plugins and the `aiqtoolkit-mem0ai` distribution contains the Mem0 specific plugins.
+To keep the library lightweight, many of the first-party plugins supported by NeMo Agent toolkit are located in separate distribution packages. For example, the `aiqtoolkit-langchain` distribution contains all the LangChain-specific plugins and the `aiqtoolkit-mem0ai` distribution contains the Mem0-specific plugins.
 
-To install these first-party plugin libraries, you can use the full distribution name (for example, `aiqtoolkit-langchain`) or use the `aiqtoolkit[langchain]` extra distribution. A full list of the supported extras is listed below:
+To install these first-party plugin libraries, you can use the full distribution name (for example, `aiqtoolkit-langchain`) or use the `aiqtoolkit[langchain]` extra distribution. The following extras are supported:
 
 - `aiqtoolkit[agno]` or `aiqtoolkit-agno` - [Agno](https://agno.com/) specific plugins
 - `aiqtoolkit[crewai]` or `aiqtoolkit-crewai` - [CrewAI](https://www.crewai.com/) specific plugins
@@ -46,7 +49,7 @@ To install these first-party plugin libraries, you can use the full distribution
 NVIDIA NeMo Agent toolkit is a Python library that doesn't require a GPU to run the workflow by default. You can deploy the core workflows using one of the following:
 - Ubuntu or other Linux distributions, including WSL, in a Python virtual environment.
 
-Before you begin using NeMo Agent toolkit, ensure that you meet the following software prerequisites.
+Before you begin using NeMo Agent toolkit, ensure that you meet the following software prerequisites:
 
 - Install [Git](https://git-scm.com/)
 - Install [Git Large File Storage](https://git-lfs.github.com/) (LFS)
@@ -171,5 +174,5 @@ aiqtoolkit[langchain]==1.0.*
 
 ## Next Steps
 
-* NeMo Agent toolkit contains several examples which demonstrate how NeMo Agent toolkit can be used to build custom workflows and tools. These examples are located in the `examples` directory of the NeMo Agent toolkit repository.
-* Refer to the NeMo Agent toolkit tutorials for more detailed information on how to use NeMo Agent toolkit.
+* Explore the examples in the `examples` directory to learn how to build custom workflows and tools with NeMo Agent toolkit.
+* Review the NeMo Agent toolkit tutorials for detailed guidance on using the toolkit.

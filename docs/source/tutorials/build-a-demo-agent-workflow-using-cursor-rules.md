@@ -21,9 +21,9 @@ Learn how to use Cursor rules for NeMo Agent toolkit development to create and r
 
 ## About Cursor Rules
 Cursor rules in NeMo Agent toolkit act as an intelligent development that offers structured assistance for developers at all experience levels. The key functionalities of Cursor rules are as follows:
-* Streamline NeMo Agent workflow creation with intelligent prompts: You can build complete agent workflows, integrate functions, and configure tools through natural language commands. It allows you to transform complex development tasks into simple conversational interactions.
-* Accelerate NeMo Agent development workflows: You can use Cursor rules to develop NeMo Agent toolkit efficiently and consistently as it provides streamlined workflows with established and tested patterns. It also enhances productivity by minimizing routine tasks, while applying best practices for coding, documentation, and configuration.
-* Learn and understand NeMo Agent quickly and simply: For less experienced developers, Cursor rules provide an interactive approach to mastering NeMo Agent Toolkit through contextual assistance and comprehensive examples for typical development workflows.
+* Streamline workflow creation with intelligent prompts: You can build complete agent workflows, integrate functions, and configure tools through natural language commands. It allows you to transform complex development tasks into simple conversational interactions.
+* Accelerate development workflows: You can use Cursor rules to develop NeMo Agent toolkit efficiently and consistently as it provides streamlined workflows with established and tested patterns. It also enhances productivity by minimizing routine tasks, while applying best practices for coding, documentation, and configuration.
+* Learn and understand NeMo Agent toolkit quickly and simply: For less experienced developers, Cursor rules provide an interactive approach to mastering NeMo Agent toolkit through contextual assistance and comprehensive examples for typical development workflows.
 * Standardization: Ensures uniform development standards, such as formatting, type annotations, and documentation requirements, across development teams and projects. Thus, decreasing code review overhead during submissions.
 
 
@@ -156,7 +156,7 @@ NeMo Agent Toolkit offers a comprehensive collection of Cursor rules organized i
 
 - **[Foundation Rules](../reference/cursor-rules-reference.md#foundation-rules)**: Core code quality standards and cursor rules management
 - **[Setup and Installation Rules](../reference/cursor-rules-reference.md#setup-and-installation-rules)**: Environment configuration and toolkit installation procedures
-- **[CLI Command Rules](../reference/cursor-rules-reference.md#cli-command-rules)**: Complete NeMo Agent CLI operations and command handling
+- **[CLI Command Rules](../reference/cursor-rules-reference.md#cli-command-rules)**: Complete CLI operations and command handling
 - **[Workflow Development Rules](../reference/cursor-rules-reference.md#workflow-development-rules)**: Function and tool development for workflow creation
 
 For a **comprehensive overview of all supported tasks**, including detailed prompts, examples, and capabilities for each rule, refer to the **[Cursor Rules Reference](../reference/cursor-rules-reference.md)**.

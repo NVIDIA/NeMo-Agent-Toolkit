@@ -18,10 +18,10 @@ limitations under the License.
 # Evaluating NVIDIA NeMo Agent Toolkit Workflows Details
 
 :::{note}
-It is recommended that the [Evaluating NeMo Agent toolkit Workflows](../workflows/evaluate.md) guide be read before proceeding with this detailed documentation.
+We recommend reading the [Evaluating NeMo Agent Toolkit Workflows](../workflows/evaluate.md) guide before proceeding with this detailed documentation.
 :::
 
-NeMo Agent toolkit provides a set of evaluators to run and evaluate the NeMo Agent toolkit workflows. In addition to the built-in evaluators, NeMo Agent toolkit provides a plugin system to add custom evaluators.
+NeMo Agent toolkit provides a set of evaluators to run and evaluate the workflows. In addition to the built-in evaluators, the toolkit provides a plugin system to add custom evaluators.
 
 Example:
 ```bash

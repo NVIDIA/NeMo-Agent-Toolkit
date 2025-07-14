@@ -17,7 +17,7 @@ limitations under the License.
 
 # Cursor Rules Reference
 
-This document provides a comprehensive reference for all available Cursor rules in NeMo Agent Toolkit. Each rule includes a purpose description, usage prompt, and practical examples.
+This document provides a comprehensive reference for all available Cursor rules in NeMo Agent toolkit. Each rule includes a purpose description, usage prompt, and practical examples.
 
 ## Foundation Rules
 
@@ -106,7 +106,7 @@ Install NeMo Agent Toolkit with all plugins and verify the installation is worki
 
 **Prompt**:
 ```
-Show me how to use AIQ CLI commands to manage workflows
+Show me how to use CLI commands to manage workflows
 ```
 
 **Capabilities**:
