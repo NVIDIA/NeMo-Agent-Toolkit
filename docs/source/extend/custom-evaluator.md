@@ -17,10 +17,10 @@ limitations under the License.
 
 # Adding a Custom Evaluator
 :::{note}
-We recommend reading the [Evaluating AIQ toolkit Workflows](../workflows/evaluate.md) guide before proceeding with this detailed documentation.
+We recommend reading the [Evaluating NeMo Agent toolkit Workflows](../workflows/evaluate.md) guide before proceeding with this detailed documentation.
 :::
 
-AIQ toolkit provides a set of evaluators to run and evaluate AIQ toolkit workflows. In addition to the built-in evaluators, AIQ toolkit provides a plugin system to add custom evaluators.
+NeMo Agent toolkit provides a set of evaluators to run and evaluate NeMo Agent toolkit workflows. In addition to the built-in evaluators, NeMo Agent toolkit provides a plugin system to add custom evaluators.
 
 
 ## Existing Evaluators
@@ -30,10 +30,10 @@ aiq info components -t evaluator
 ```
 `ragas` is an example of an existing evaluator. The `ragas` evaluator is used to evaluate the accuracy of a workflow output.
 
-## Extending AIQ Toolkit with Custom Evaluators
-To extend AIQ toolkit with custom evaluators, you need to create an evaluator function and register it with AIQ toolkit by using the `register_evaluator` decorator.
+## Extending NeMo Agent Toolkit with Custom Evaluators
+To extend NeMo Agent toolkit with custom evaluators, you need to create an evaluator function and register it with NeMo Agent toolkit by using the `register_evaluator` decorator.
 
-This section provides a step-by-step guide to create and register a custom evaluator with AIQ toolkit. A similarity evaluator is used as an example to demonstrate the process.
+This section provides a step-by-step guide to create and register a custom evaluator with NeMo Agent toolkit. A similarity evaluator is used as an example to demonstrate the process.
 
 ### Evaluator Configuration
 The evaluator configuration defines the evaluator name and any evaluator-specific parameters. This configuration is paired with a registration function that yields an asynchronous evaluation method.
@@ -65,7 +65,7 @@ async def register_similarity_evaluator(config: SimilarityEvaluatorConfig, build
 ```
 
 - The `SimilarityEvaluatorConfig` class defines evaluator-specific settings, including the `similarity_type` parameter.
-- The `register_similarity_evaluator` function uses the `@register_evaluator` decorator to register the evaluator with AIQ Toolkit.
+- The `register_similarity_evaluator` function uses the `@register_evaluator` decorator to register the evaluator with NeMo Agent toolkit.
 - The evaluator yields an `EvaluatorInfo` object, which binds the config, evaluation function, and a human-readable description.
 
 The evaluator logic is implemented in the `SimilarityEvaluator` class described in the [Similarity Evaluator](#similarity-evaluator-custom-evaluator-example) section.
@@ -78,7 +78,7 @@ from .evaluator_register import register_similarity_evaluator  # pylint: disable
 ```
 
 ### Understanding `EvalInputItem` and `EvalOutputItem`
-Custom evaluators in AIQ Toolkit implement an asynchronous `evaluate_item` method, which receives an `EvalInputItem` as input and returns an `EvalOutputItem` as output.
+Custom evaluators in NeMo Agent toolkit implement an asynchronous `evaluate_item` method, which receives an `EvalInputItem` as input and returns an `EvalOutputItem` as output.
 
 **EvalInputItem**
 
@@ -99,7 +99,7 @@ An `EvalOutputItem` represents the result of evaluating a single item. It includ
 - `reasoning`: An explanation or trace of how the score was computed. This can contain any serializable structure (e.g., dictionary, string, list), and is often shown in logs or UI output for `interpretability`.
 
 ### Similarity Evaluator (Custom Evaluator Example)
-AIQ Toolkit provides a convenient `BaseEvaluator` class that simplifies writing custom evaluators. It handles common tasks such as:
+NeMo Agent toolkit provides a convenient `BaseEvaluator` class that simplifies writing custom evaluators. It handles common tasks such as:
 - Asynchronous evaluation of input items
 - Concurrency control
 - Progress bar display using `tqdm`
@@ -210,4 +210,4 @@ The results of each evaluator is stored in a separate file with name `<keyword>_
 The contents of the file have been `snipped` for brevity.
 
 # Summary
-This guide provides a step-by-step process to create and register a custom evaluator with AIQ toolkit. The similarity evaluator is used as an example to demonstrate the process. The evaluator configuration, evaluator function, and evaluation results are explained in detail.
+This guide provides a step-by-step process to create and register a custom evaluator with NeMo Agent toolkit. The similarity evaluator is used as an example to demonstrate the process. The evaluator configuration, evaluator function, and evaluation results are explained in detail.

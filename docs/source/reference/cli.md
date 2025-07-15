@@ -19,10 +19,10 @@ limitations under the License.
 
 ## Overview
 
-While the AIQ toolkit library provides the capability to implement components that come together to form Agentic AI
+While the NeMo Agent toolkit library provides the capability to implement components that come together to form Agentic AI
 workflow, the command line interface (CLI) provides a no code entrypoint to configure settings, access the features of
 pre-built components, and mechanisms to launch workflows from configuration files. This document describes the layout
-and functionality of the AIQ toolkit CLI. To begin, the command hierarchy is depicted below. Each command will be introduced
+and functionality of the NeMo Agent toolkit CLI. To begin, the command hierarchy is depicted below. Each command will be introduced
 throughout the remainder of this document.
 
 ```
@@ -113,7 +113,7 @@ The Swagger API docs will be available at: [http://localhost:8000/docs](http://l
 
 ### Console
 
-The `aiq start console` command will run an AIQ toolkit workflow from a provided configuration file against inputs supplied
+The `aiq start console` command will run an NeMo Agent toolkit workflow from a provided configuration file against inputs supplied
 at the command line or from file using the `--inputs` and `--input_file` options, respectively. Additionally, fields in
 the configuration file can be overridden by command line using the `--override` flag and dot notation to traverse to the
 configuration hierarchy to the field being overridden. The run command can be useful running one off tests when
@@ -139,7 +139,7 @@ Options:
 
 ### MCP
 
-The `aiq start mcp` command (or simply `aiq mcp`) will start a Model Context Protocol (MCP) server that exposes workflow functions as MCP tools. This allows other applications that support the MCP protocol to use your AIQ toolkit functions directly. MCP is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. The MCP front-end is especially useful for integrating AIQ toolkit workflows with MCP-compatible clients.
+The `aiq start mcp` command (or simply `aiq mcp`) will start a Model Context Protocol (MCP) server that exposes workflow functions as MCP tools. This allows other applications that support the MCP protocol to use your NeMo Agent toolkit functions directly. MCP is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. The MCP front-end is especially useful for integrating NeMo Agent toolkit workflows with MCP-compatible clients.
 
 The MCP front-end can be configured using the following options:
 
@@ -172,7 +172,7 @@ This will start an MCP server exposing the `mcp_retriever_tool` function from th
 
 ## Run
 
-The `aiq run` is an alias for the `aiq start console` command and will run an AIQ toolkit workflow from a provided configuration file against inputs supplied at the
+The `aiq run` is an alias for the `aiq start console` command and will run an NeMo Agent toolkit workflow from a provided configuration file against inputs supplied at the
 command line or from file using the `--inputs` and `--input_file` options, respectively. Additionally, fields in the
 configuration file can be overridden by command line using the `--override` flag and dot notation to traverse to the
 configuration hierarchy to the field being overridden. The run command can be useful running one off tests when
@@ -246,9 +246,9 @@ aiq serve --config_file=path/to/config --host 0.0.0.0 --port 8000
 The Swagger API docs will be available at: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ## Evaluation
-The `aiq eval` command provides access a set of evaluators designed to assessing the accuracy of AIQ toolkit workflows as
+The `aiq eval` command provides access a set of evaluators designed to assessing the accuracy of NeMo Agent toolkit workflows as
 well as instrumenting their performance characteristics. Please reference
-[Evaluating AIQ toolkit Workflows](../workflows/evaluate.md) for a detailed overview of the
+[Evaluating NeMo Agent toolkit Workflows](../workflows/evaluate.md) for a detailed overview of the
 suite of evaluation capabilities.
 
 The `aiq eval --help` utility provides a brief overview of the command and its available options.
@@ -295,7 +295,7 @@ illustrates is usage:
 $ aiq uninstall --help
 Usage: aiq uninstall [OPTIONS] PACKAGES COMMAND [ARGS]...
 
-  Uninstall an AIQ toolkit plugin packages from the local environment.
+  Uninstall an NeMo Agent toolkit plugin packages from the local environment.
 
 Options:
   --help  Show this message and exit.
@@ -303,7 +303,7 @@ Options:
 
 ## Validate
 
-Running an AIQ toolkit workflow from the CLI requires a valid workflow configuration file. Use the `aiq validate` command to
+Running an NeMo Agent toolkit workflow from the CLI requires a valid workflow configuration file. Use the `aiq validate` command to
 ensure a configuration files has been created with the right settings, components and parameters. It can be useful to
 each components valid configuration settings using the `aiq info components` command and corresponding filters.
 The `aiq validate` help utility illustrates its usage.
@@ -321,23 +321,23 @@ Options:
 
 ## Workflow
 
-The extensibility of AIQ toolkit is made possible through its plugin system. To install these plugins, they must be part of
-a Python package that gets installed in an environment where the AIQ toolkit library is installed. Creating boiler plate
+The extensibility of NeMo Agent toolkit is made possible through its plugin system. To install these plugins, they must be part of
+a Python package that gets installed in an environment where the NeMo Agent toolkit library is installed. Creating boiler plate
 package files (e.g. `pyproject.toml`) and component code scaffolding can be tedious. This section provides an overview
 of commands that automate some of these steps.
 
 ### Create
 
 The `aiq workflow create` command generates a valid `pyproject.toml` file with a plugin section that points to a
-register.py file that has been pre-populated with AIQ toolkit programming model boiler plate code. This boiler plate code
-should be further customized to implement the desired custom workflow and necessary AIQ toolkit components. The
+register.py file that has been pre-populated with NeMo Agent toolkit programming model boiler plate code. This boiler plate code
+should be further customized to implement the desired custom workflow and necessary NeMo Agent toolkit components. The
 `aiq workflow create --help` utility provides a description of its usage.
 
 ```console
 $ aiq workflow create --help
 Usage: aiq workflow create [OPTIONS] WORKFLOW_NAME
 
-  Create a new AIQ toolkit workflow using templates.
+  Create a new NeMo Agent toolkit workflow using templates.
 
   Args:     workflow_name (str): The name of the new workflow.     install
   (bool): Whether to install the workflow package immediately.
@@ -425,21 +425,21 @@ Options:
 
 ## Information Commands
 
-The `aiq info` command group provides utilities that facilitate the discovery of registered AIQ toolkit components and
-retrieval of information about the locally configured AIQ toolkit environment.
+The `aiq info` command group provides utilities that facilitate the discovery of registered NeMo Agent toolkit components and
+retrieval of information about the locally configured NeMo Agent toolkit environment.
 
 ### Components Information
 
-When defining an AIQ toolkit workflow's configuration file, it can be helpful to discover the locally registered components,
+When defining an NeMo Agent toolkit workflow's configuration file, it can be helpful to discover the locally registered components,
 possible configuration settings, and their default values. The `aiq info components` will provide this information in
 tabular format with the following columns.
 
-- `package`: The Python package containing this row's AIQ toolkit component.
-- `version`: The version of the Python package containing the AIQ toolkit component.
-- `component_type`: The type of AIQ toolkit component this row represents
+- `package`: The Python package containing this row's NeMo Agent toolkit component.
+- `version`: The version of the Python package containing the NeMo Agent toolkit component.
+- `component_type`: The type of NeMo Agent toolkit component this row represents
 (e.g. `front_end`, `function`, `tool_wrapper`, `llm_provider`, `llm_client`, `embedder_provider`, `embedder_client`,
 `evaluator`, `memory`, `retriever_provider`, `retriever_client`, `registry_handler`, `package`).
-- `component_name`: The name of the AIQ toolkit component to be specified in the `_type` field of the component's section
+- `component_name`: The name of the NeMo Agent toolkit component to be specified in the `_type` field of the component's section
 of the configuration file.
 - `description`: A description of the component's uses, configuration parameters, and any default values. These
 parameters are what will need to be specified in the configuration object.
@@ -486,17 +486,17 @@ Options:
 
 ## Configuration Commands
 
-An AIQ toolkit developer may want to configure persistent settings for their development environment. These settings would
+An NeMo Agent toolkit developer may want to configure persistent settings for their development environment. These settings would
 be configured once to setup their development environment so they can focus on software development from that point
-forward. This section discusses the various configuration settings available for AIQ toolkit developers.
+forward. This section discusses the various configuration settings available for NeMo Agent toolkit developers.
 
 ### Remote Registry Configuration
 
-One of the core value propositions of the AIQ toolkit library is the redistribution of components with other developers.
+One of the core value propositions of the NeMo Agent toolkit library is the redistribution of components with other developers.
 Being able to package and distribute packages such that other developers can leverage them is critical to accelerating
 developer velocity. Similarly, being able to discover and install components built by others will improve the
-current developer's velocity. To facilitate this process, AIQ toolkit implements a remote registry `channel` concept that
-allows AIQ toolkit developers to subscribe to registries that store published AIQ toolkit packages, each container containing
+current developer's velocity. To facilitate this process, NeMo Agent toolkit implements a remote registry `channel` concept that
+allows NeMo Agent toolkit developers to subscribe to registries that store published NeMo Agent toolkit packages, each container containing
 usable components. A `channel` is analogous to a Conda channel for Anaconda users or a PyPI registry for pip users.
 
 
@@ -508,7 +508,7 @@ Currently, there are two channel types that facilitate remote discovery and reus
 Invoking the `aiq info components` command provides a description of the available channel settings.
 
 Here we provide a example that configures a remote rest channel. To use this channel, there must exists a remote
-registry that adheres to the contracts defined in the rest handler in AIQ toolkit.
+registry that adheres to the contracts defined in the rest handler in NeMo Agent toolkit.
 
 ```console
 $ aiq configure channel add rest
@@ -567,10 +567,10 @@ Note, once a channel is removed, it will no longer be able to support `aiq regis
 
 ## Remote Registry Interactions
 
-AIQ toolkit is designed to be a community oriented library. This means that developer productivity is maximized when others
-distribute AIQ toolkit plugin packages that will benefit others. This section will introduce the mechanisms the AIQ toolkit CLI
-exposes to facilitate publishing, discovering, downloading, and removing AIQ toolkit packages from a configured remote
-registry. Here we define a remote registry as a centralized location that stores plugin wheel packages and AIQ toolkit
+NeMo Agent toolkit is designed to be a community oriented library. This means that developer productivity is maximized when others
+distribute NeMo Agent toolkit plugin packages that will benefit others. This section will introduce the mechanisms the NeMo Agent toolkit CLI
+exposes to facilitate publishing, discovering, downloading, and removing NeMo Agent toolkit packages from a configured remote
+registry. Here we define a remote registry as a centralized location that stores plugin wheel packages and NeMo Agent toolkit
 specific metadata to that describes its usage details. Before these commands can be used, a remote registry must be
 available and a developer must have configured the corresponding channel using the `aiq configure channel add` command.
 Refer to [Adding a Remote Registry Channel](#adding-a-remote-registry-channel) for more details on adding a remote registry channels.
@@ -593,13 +593,13 @@ Commands:
   search   Search for AIQ toolkit artifacts from remote registry.
 ```
 
-#### Publishing AIQ Toolkit Components
+#### Publishing NeMo Agent Toolkit Components
 
-AIQ toolkit developers may want to distribute their components with the broader ecosystem. The AIQ toolkit publish CLI utility
-provides a mechanism to publish an AIQ toolkit plugin package to a remote registry channel so that other developers can
+NeMo Agent toolkit developers may want to distribute their components with the broader ecosystem. The NeMo Agent toolkit publish CLI utility
+provides a mechanism to publish an NeMo Agent toolkit plugin package to a remote registry channel so that other developers can
 benefit from it's implemented components. Invoking the `aiq registry publish` command will build a package wheel, gather
 all component metadata, and transmit to the specified remote registry by channel name. Note, a package must be first
-installed locally so the discovery hooks can pull in necessary AIQ toolkit component metadata.
+installed locally so the discovery hooks can pull in necessary NeMo Agent toolkit component metadata.
 
 The `aiq registry publish --help` utility provides an overview of its usage:
 
@@ -618,11 +618,11 @@ Options:
 
 ```
 
-#### Discovering AIQ Toolkit Components
+#### Discovering NeMo Agent Toolkit Components
 
-When developing and deploying AIQ toolkit workflows, it is most efficient to leverage pre-built components. When using
+When developing and deploying NeMo Agent toolkit workflows, it is most efficient to leverage pre-built components. When using
 pre-built components will, only configuration settings are required to integration with the rest of a workflow. These
-pre-built exist in the core library, as well as, within other AIQ toolkit plugin packages. Remote registry channels are the
+pre-built exist in the core library, as well as, within other NeMo Agent toolkit plugin packages. Remote registry channels are the
 formal mechanism to publish reusable components to the community. The `aiq registry search` command allows developers
 to search relevant pre-built components that might benefit their application. The search command is usually followed up
 by an `aiq registry pull` command, once a useful package has been identified.
@@ -651,10 +651,10 @@ Options:
   --help                          Show this message and exit.
 ```
 
-#### Pulling in AIQ Toolkit Components
-Once a useful AIQ toolkit component has been discovered using the `aiq registry search` command, the containing package can be
-pulled in and installed from a configured remote registry, so that it can be used withing the local AIQ toolkit environment.
-Once installed, all components in the package can be referenced by name in an AIQ toolkit workflow YAML configuration file.
+#### Pulling in NeMo Agent Toolkit Components
+Once a useful NeMo Agent toolkit component has been discovered using the `aiq registry search` command, the containing package can be
+pulled in and installed from a configured remote registry, so that it can be used withing the local NeMo Agent toolkit environment.
+Once installed, all components in the package can be referenced by name in an NeMo Agent toolkit workflow YAML configuration file.
 In many cases, components can be stitched together in YAML without having to write much integration code.
 
 The `aiq registry pull --help` command provides an overview of its usage:
@@ -675,7 +675,7 @@ Options:
 Note, the supplied package takes the following format: `package_name==version`, where the package version is optional.
 
 
-#### Removing AIQ Toolkit Components
+#### Removing NeMo Agent Toolkit Components
 In rare cases, it might make sense to remove a package from a remote registry over a configured remote registry channel.
 This the `aiq registry remove` command provides support for this feature, assuming the remote registry provides and
 allows this interaction.
