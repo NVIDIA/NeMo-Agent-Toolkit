@@ -1,0 +1,20 @@
+[
+{
+"id": "Adelanto",
+"question": "What is langsmith",
+"answer": "LangSmith is a platform for LLM application development, monitoring, and testing",
+"generated_answer": "LangSmith is a platform for LLM (Large Language Model) application development, monitoring, and testing. It provides features such as tracing, debugging, annotating traces, and adding runs to datasets to help users develop and refine their LLM applications."
+},
+{
+"id": "Agoura Hills",
+"question": "How do I proptotype with langsmith",
+"answer": "LangSmith provides a playground environment for rapid iteration and experimentation.",
+"generated_answer": "To prototype with LangSmith, you can use its tracing feature to rapidly understand how your model is performing and debug where it is failing. You can also use its automations feature to perform actions on traces in near real-time. Additionally, LangSmith provides a threads view that groups traces from a single conversation together, making it easier to track the performance of and annotate your application across multiple turns. However, a more detailed guide on how to prototype with LangSmith is not available in the provided results."
+},
+{
+"id": "Alameda",
+"question": "What are langsmith automations?",
+"answer": "Automations are a powerful feature in LangSmith that allow you to perform actions on traces in near real-time. This can be used to automatically score traces, send them to annotation queues, or send them to datasets.",
+"generated_answer": "LangSmith automations are a feature that allows users to perform actions on traces in near real-time, such as automatically scoring traces, sending them to annotation queues, or sending them to datasets. They can be defined by providing a filter condition, a sampling rate, and an action to perform, and are particularly helpful for processing traces at production scale."
+}
+]

@@ -64,11 +64,13 @@ llama-index = ["aiqtoolkit-llama-index"]
 mem0ai = ["aiqtoolkit-mem0ai"]
 opentelemetry = ["aiqtoolkit-opentelemetry"]
 phoenix = ["aiqtoolkit-phoenix"]
+ragaai = ["aiqtoolkit-ragaai"]
 semantic-kernel = ["aiqtoolkit-semantic-kernel"]
 telemetry = [
   "aiqtoolkit-opentelemetry",
   "aiqtoolkit-phoenix",
   "aiqtoolkit-weave",
+  "aiqtoolkit-ragaai",
 ]
 weave = ["aiqtoolkit-weave"]
 zep-cloud = ["aiqtoolkit-zep-cloud"]
@@ -124,6 +126,7 @@ aiqtoolkit-agno = { workspace = true }
 aiqtoolkit-weave = { workspace = true }
 aiqtoolkit-opentelemetry = { workspace = true }
 aiqtoolkit-phoenix = { workspace = true }
+aiqtoolkit-ragaai = { workspace = true }
 
 # All examples here
 aiq_alert_triage_agent = { path = "examples/advanced/alert_triage_agent", editable = true }

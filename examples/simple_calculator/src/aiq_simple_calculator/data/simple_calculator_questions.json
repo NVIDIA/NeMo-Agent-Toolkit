@@ -1,0 +1,252 @@
+[
+    {
+        "id": 1,
+        "question": "What is the product of 3 and 7, and is it greater than the current hour?",
+        "answer": null
+    },
+    {
+        "id": 2,
+        "question": "Multiply 5 by 9 and compare it to the current time's minute value.",
+        "answer": null
+    },
+    {
+        "id": 3,
+        "question": "Is the sum of 12 and 8 greater than the current day of the week in number form?",
+        "answer": null
+    },
+    {
+        "id": 4,
+        "question": "Calculate the product of 6 and 4 and determine if it exceeds the current hour of the day.",
+        "answer": null
+    },
+    {
+        "id": 5,
+        "question": "What is the difference between 50 and 35, and is it smaller than the current minute of the hour?",
+        "answer": null
+    },
+    {
+        "id": 6,
+        "question": "Find the result of multiplying 14 by 3 and compare it with the current second.",
+        "answer": null
+    },
+    {
+        "id": 7,
+        "question": "Calculate 9 times 11 and check if the result is greater than the current year\u2019s last digit.",
+        "answer": null
+    },
+    {
+        "id": 8,
+        "question": "How much is 16 multiplied by 3, and is it greater than the number of hours since midnight?",
+        "answer": null
+    },
+    {
+        "id": 9,
+        "question": "What is the result of 20 multiplied by 5, and is it larger than the current minute of the day?",
+        "answer": null
+    },
+    {
+        "id": 10,
+        "question": "Multiply 15 by 2 and check if it exceeds the hour value of the current time.",
+        "answer": null
+    },
+    {
+        "id": 11,
+        "question": "Is the product of 8 and 7 greater than the current second of the minute?",
+        "answer": null
+    },
+    {
+        "id": 12,
+        "question": "Compare the sum of 25 and 15 to the number of seconds since the hour began.",
+        "answer": null
+    },
+    {
+        "id": 13,
+        "question": "Calculate the product of 3 and 12, and check if it exceeds the current hour of the day.",
+        "answer": null
+    },
+    {
+        "id": 14,
+        "question": "Multiply 18 by 5 and compare the result with the current month number.",
+        "answer": null
+    },
+    {
+        "id": 15,
+        "question": "What is 7 multiplied by 6, and is it smaller than the current day of the week?",
+        "answer": null
+    },
+    {
+        "id": 16,
+        "question": "Find the product of 24 and 4, and check if it exceeds the current hour of the day.",
+        "answer": null
+    },
+    {
+        "id": 17,
+        "question": "Calculate 9 multiplied by 5, and compare the result with the current day number.",
+        "answer": null
+    },
+    {
+        "id": 18,
+        "question": "Is the product of 6 and 8 larger than the current second of the minute?",
+        "answer": null
+    },
+    {
+        "id": 19,
+        "question": "What is the sum of 50 and 40, and is it greater than the current year?",
+        "answer": null
+    },
+    {
+        "id": 20,
+        "question": "Multiply 3 by 14 and check if it exceeds the current hour in 24-hour format.",
+        "answer": null
+    },
+    {
+        "id": 21,
+        "question": "How much is 7 times 6, and is it larger than the number of minutes in the current hour?",
+        "answer": null
+    },
+    {
+        "id": 22,
+        "question": "Calculate the product of 13 and 3, and compare it with the current minute of the hour.",
+        "answer": null
+    },
+    {
+        "id": 23,
+        "question": "Compare 11 times 4 with the current day of the month number.",
+        "answer": null
+    },
+    {
+        "id": 24,
+        "question": "What is the result of 25 multiplied by 6, and is it greater than the current minute?",
+        "answer": null
+    },
+    {
+        "id": 25,
+        "question": "Find the product of 8 and 9 and compare it with the current second of the day.",
+        "answer": null
+    },
+    {
+        "id": 26,
+        "question": "Is the result of 17 times 2 greater than the current hour of the day?",
+        "answer": null
+    },
+    {
+        "id": 27,
+        "question": "What is 8 multiplied by 6, and does it exceed the current number of seconds past the minute?",
+        "answer": null
+    },
+    {
+        "id": 28,
+        "question": "Multiply 19 by 3, and is it greater than the current time's minute value?",
+        "answer": null
+    },
+    {
+        "id": 29,
+        "question": "What is the product of 10 and 11, and is it smaller than the current hour of the day?",
+        "answer": null
+    },
+    {
+        "id": 30,
+        "question": "Compare the sum of 25 and 35 to the number of seconds elapsed in the current minute.",
+        "answer": null
+    },
+    {
+        "id": 31,
+        "question": "Multiply 2 by 18, and check if the result exceeds the current year number.",
+        "answer": null
+    },
+    {
+        "id": 32,
+        "question": "Calculate 6 times 7, and check if it is greater than the current time\u2019s second value.",
+        "answer": null
+    },
+    {
+        "id": 33,
+        "question": "What is 15 multiplied by 7, and is it larger than the current hour in 24-hour time?",
+        "answer": null
+    },
+    {
+        "id": 34,
+        "question": "Find the result of multiplying 4 by 12, and is it greater than the current second?",
+        "answer": null
+    },
+    {
+        "id": 35,
+        "question": "What is the product of 11 and 5, and does it exceed the current minute value?",
+        "answer": null
+    },
+    {
+        "id": 36,
+        "question": "Multiply 13 by 6 and check if it exceeds the current time\u2019s second number.",
+        "answer": null
+    },
+    {
+        "id": 37,
+        "question": "What is the result of 20 times 3, and does it compare to the current day of the week?",
+        "answer": null
+    },
+    {
+        "id": 38,
+        "question": "Multiply 3 by 9, and check if it is larger than the current hour value.",
+        "answer": null
+    },
+    {
+        "id": 39,
+        "question": "Calculate 8 times 9, and is it greater than the current minute value?",
+        "answer": null
+    },
+    {
+        "id": 40,
+        "question": "Compare 12 multiplied by 8 to the current year\u2019s last digit.",
+        "answer": null
+    },
+    {
+        "id": 41,
+        "question": "Multiply 10 by 15, and check if it exceeds the number of minutes since midnight.",
+        "answer": null
+    },
+    {
+        "id": 42,
+        "question": "What is 14 times 3, and is it greater than the current second?",
+        "answer": null
+    },
+    {
+        "id": 43,
+        "question": "Multiply 11 by 5, and check if the result is larger than the current minute number.",
+        "answer": null
+    },
+    {
+        "id": 44,
+        "question": "Find the product of 7 and 11, and check if it exceeds the current day of the month.",
+        "answer": null
+    },
+    {
+        "id": 45,
+        "question": "What is 9 times 7, and is it greater than the current number of seconds since midnight?",
+        "answer": null
+    },
+    {
+        "id": 46,
+        "question": "Multiply 13 by 2, and check if it exceeds the number of minutes in the current hour.",
+        "answer": null
+    },
+    {
+        "id": 47,
+        "question": "What is 18 times 5, and does it exceed the current second?",
+        "answer": null
+    },
+    {
+        "id": 48,
+        "question": "Compare the product of 8 and 10 to the current minute value of the day.",
+        "answer": null
+    },
+    {
+        "id": 49,
+        "question": "Multiply 3 by 14 and check if the result exceeds the current day of the month.",
+        "answer": null
+    },
+    {
+        "id": 50,
+        "question": "What is the result of 17 multiplied by 2, and is it larger than the current second of the minute?",
+        "answer": null
+    }
+]
