@@ -30,6 +30,16 @@ from aiq.observability.processor.intermediate_step_serializer import Intermediat
 from aiq.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
 
+def create_test_intermediate_step(parent_id="root",
+                                  function_name="test_function",
+                                  function_id="test_id",
+                                  **payload_kwargs):
+    """Helper function to create IntermediateStep with proper structure for tests."""
+    payload = IntermediateStepPayload(**payload_kwargs)
+    function_ancestry = InvocationNode(function_name=function_name, function_id=function_id, parent_id=None)
+    return IntermediateStep(parent_id=parent_id, function_ancestry=function_ancestry, payload=payload)
+
+
 class TestIntermediateStepSerializerBasicFunctionality:
     """Test basic functionality of the IntermediateStepSerializer."""
 
@@ -52,10 +62,9 @@ class TestIntermediateStepSerializerBasicFunctionality:
     async def test_basic_serialization(self):
         """Test basic serialization of an IntermediateStep."""
         # Create a simple IntermediateStep
-        payload = IntermediateStepPayload(event_type=IntermediateStepType.LLM_START,
-                                          framework=LLMFrameworkEnum.LANGCHAIN,
-                                          name="test_llm")
-        step = IntermediateStep(payload=payload)
+        step = create_test_intermediate_step(event_type=IntermediateStepType.LLM_START,
+                                             framework=LLMFrameworkEnum.LANGCHAIN,
+                                             name="test_llm")
 
         serializer = IntermediateStepSerializer()
         result = await serializer.process(step)
@@ -81,8 +90,7 @@ class TestIntermediateStepSerializerWithDifferentData:
     async def test_serialization_with_stream_event_data(self):
         """Test serialization with StreamEventData."""
         stream_data = StreamEventData(input="test input", output="test output", chunk="test chunk")
-        payload = IntermediateStepPayload(event_type=IntermediateStepType.LLM_NEW_TOKEN, data=stream_data)
-        step = IntermediateStep(payload=payload)
+        step = create_test_intermediate_step(event_type=IntermediateStepType.LLM_NEW_TOKEN, data=stream_data)
 
         serializer = IntermediateStepSerializer()
         result = await serializer.process(step)
@@ -99,8 +107,7 @@ class TestIntermediateStepSerializerWithDifferentData:
         metadata = TraceMetadata(chat_responses=["response1", "response2"],
                                  chat_inputs=["input1", "input2"],
                                  provided_metadata={"key": "value"})
-        payload = IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START, metadata=metadata)
-        step = IntermediateStep(payload=payload)
+        step = create_test_intermediate_step(event_type=IntermediateStepType.TOOL_START, metadata=metadata)
 
         serializer = IntermediateStepSerializer()
         result = await serializer.process(step)
@@ -115,8 +122,7 @@ class TestIntermediateStepSerializerWithDifferentData:
         """Test serialization with UsageInfo."""
         token_usage = TokenUsageBaseModel(prompt_tokens=100, completion_tokens=50, total_tokens=150)
         usage_info = UsageInfo(token_usage=token_usage, num_llm_calls=1, seconds_between_calls=2)
-        payload = IntermediateStepPayload(event_type=IntermediateStepType.LLM_END, usage_info=usage_info)
-        step = IntermediateStep(payload=payload)
+        step = create_test_intermediate_step(event_type=IntermediateStepType.LLM_END, usage_info=usage_info)
 
         serializer = IntermediateStepSerializer()
         result = await serializer.process(step)
@@ -133,7 +139,7 @@ class TestIntermediateStepSerializerWithDifferentData:
                                          function_id="test_id_123",
                                          parent_id="parent_id_456")
         payload = IntermediateStepPayload(event_type=IntermediateStepType.FUNCTION_START)
-        step = IntermediateStep(function_ancestry=invocation_node, payload=payload)
+        step = IntermediateStep(parent_id="root", function_ancestry=invocation_node, payload=payload)
 
         serializer = IntermediateStepSerializer()
         result = await serializer.process(step)
@@ -165,12 +171,11 @@ class TestIntermediateStepSerializerWithDifferentData:
                                          "y": 2
                                      }]
                                  })
-        payload = IntermediateStepPayload(event_type=IntermediateStepType.WORKFLOW_START,
-                                          name="complex_workflow",
-                                          tags=["tag1", "tag2"],
-                                          data=complex_data,
-                                          metadata=metadata)
-        step = IntermediateStep(payload=payload)
+        step = create_test_intermediate_step(event_type=IntermediateStepType.WORKFLOW_START,
+                                             name="complex_workflow",
+                                             tags=["tag1", "tag2"],
+                                             data=complex_data,
+                                             metadata=metadata)
 
         serializer = IntermediateStepSerializer()
         result = await serializer.process(step)
@@ -187,8 +192,7 @@ class TestIntermediateStepSerializerEdgeCases:
     @pytest.mark.asyncio
     async def test_serialization_with_minimal_data(self):
         """Test serialization with minimal required data."""
-        payload = IntermediateStepPayload(event_type=IntermediateStepType.CUSTOM_START)
-        step = IntermediateStep(payload=payload)
+        step = create_test_intermediate_step(event_type=IntermediateStepType.CUSTOM_START)
 
         serializer = IntermediateStepSerializer()
         result = await serializer.process(step)
@@ -210,13 +214,16 @@ class TestIntermediateStepSerializerEdgeCases:
                                           metadata=None,
                                           data=None,
                                           usage_info=None)
-        step = IntermediateStep(function_ancestry=None, payload=payload)
+        # function_ancestry cannot be None, so provide a minimal InvocationNode
+        function_ancestry = InvocationNode(function_name="test_function", function_id="test_id", parent_id=None)
+        step = IntermediateStep(parent_id="root", function_ancestry=function_ancestry, payload=payload)
 
         serializer = IntermediateStepSerializer()
         result = await serializer.process(step)
 
         parsed = json.loads(result)
-        assert parsed['function_ancestry'] is None
+        assert parsed['function_ancestry']['function_name'] == 'test_function'
+        assert parsed['function_ancestry']['function_id'] == 'test_id'
         assert parsed['payload']['framework'] is None
         assert parsed['payload']['name'] is None
 
@@ -227,8 +234,7 @@ class TestIntermediateStepSerializerErrorHandling:
     @pytest.mark.asyncio
     async def test_serialization_with_mock_error_handling(self):
         """Test that serialization falls back to string representation on errors."""
-        payload = IntermediateStepPayload(event_type=IntermediateStepType.LLM_START)
-        step = IntermediateStep(payload=payload)
+        step = create_test_intermediate_step(event_type=IntermediateStepType.LLM_START)
 
         serializer = IntermediateStepSerializer()
 
@@ -274,31 +280,31 @@ class TestIntermediateStepSerializerRealWorldScenarios:
         steps = []
 
         # LLM Start
-        start_payload = IntermediateStepPayload(event_type=IntermediateStepType.LLM_START,
-                                                framework=LLMFrameworkEnum.LANGCHAIN,
-                                                name="gpt-4",
-                                                data=StreamEventData(input="What is the weather today?"))
-        steps.append(IntermediateStep(payload=start_payload))
+        steps.append(
+            create_test_intermediate_step(event_type=IntermediateStepType.LLM_START,
+                                          framework=LLMFrameworkEnum.LANGCHAIN,
+                                          name="gpt-4",
+                                          data=StreamEventData(input="What is the weather today?")))
 
         # LLM Tokens
         for i in range(3):
-            token_payload = IntermediateStepPayload(event_type=IntermediateStepType.LLM_NEW_TOKEN,
-                                                    framework=LLMFrameworkEnum.LANGCHAIN,
-                                                    name="gpt-4",
-                                                    data=StreamEventData(chunk=f"Token_{i}"))
-            steps.append(IntermediateStep(payload=token_payload))
-
-        # LLM End
-        end_payload = IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
+            steps.append(
+                create_test_intermediate_step(event_type=IntermediateStepType.LLM_NEW_TOKEN,
                                               framework=LLMFrameworkEnum.LANGCHAIN,
                                               name="gpt-4",
-                                              data=StreamEventData(input="What is the weather today?",
-                                                                   output="I'll need to check the weather for you."),
-                                              usage_info=UsageInfo(token_usage=TokenUsageBaseModel(prompt_tokens=20,
-                                                                                                   completion_tokens=15,
-                                                                                                   total_tokens=35),
-                                                                   num_llm_calls=1))
-        steps.append(IntermediateStep(payload=end_payload))
+                                              data=StreamEventData(chunk=f"Token_{i}")))
+
+        # LLM End
+        steps.append(
+            create_test_intermediate_step(event_type=IntermediateStepType.LLM_END,
+                                          framework=LLMFrameworkEnum.LANGCHAIN,
+                                          name="gpt-4",
+                                          data=StreamEventData(input="What is the weather today?",
+                                                               output="I'll need to check the weather for you."),
+                                          usage_info=UsageInfo(token_usage=TokenUsageBaseModel(prompt_tokens=20,
+                                                                                               completion_tokens=15,
+                                                                                               total_tokens=35),
+                                                               num_llm_calls=1)))
 
         serializer = IntermediateStepSerializer()
 
@@ -319,22 +325,21 @@ class TestIntermediateStepSerializerRealWorldScenarios:
     async def test_tool_execution_serialization(self):
         """Test serialization of tool execution steps."""
         # Tool Start
-        tool_start = IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START,
-                                                                      name="weather_tool",
-                                                                      data=StreamEventData(input={
-                                                                          "location": "New York", "units": "fahrenheit"
-                                                                      })))
+        tool_start = create_test_intermediate_step(event_type=IntermediateStepType.TOOL_START,
+                                                   name="weather_tool",
+                                                   data=StreamEventData(input={
+                                                       "location": "New York", "units": "fahrenheit"
+                                                   }))
 
         # Tool End
-        tool_end = IntermediateStep(
-            payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END,
-                                            name="weather_tool",
-                                            data=StreamEventData(input={
-                                                "location": "New York", "units": "fahrenheit"
-                                            },
-                                                                 output={
-                                                                     "temperature": 72, "condition": "sunny"
-                                                                 })))
+        tool_end = create_test_intermediate_step(event_type=IntermediateStepType.TOOL_END,
+                                                 name="weather_tool",
+                                                 data=StreamEventData(input={
+                                                     "location": "New York", "units": "fahrenheit"
+                                                 },
+                                                                      output={
+                                                                          "temperature": 72, "condition": "sunny"
+                                                                      }))
 
         serializer = IntermediateStepSerializer()
 
@@ -354,6 +359,7 @@ class TestIntermediateStepSerializerRealWorldScenarios:
         child_node = InvocationNode(function_name="sub_task", function_id="sub_456", parent_id="main_123")
 
         workflow_step = IntermediateStep(
+            parent_id="root",
             function_ancestry=child_node,
             payload=IntermediateStepPayload(
                 event_type=IntermediateStepType.WORKFLOW_START,
@@ -415,9 +421,8 @@ class TestIntermediateStepSerializerPerformance:
         large_input = {"data": list(range(1000))}
         large_output = {"results": [{"id": i, "value": f"item_{i}"} for i in range(100)]}
 
-        payload = IntermediateStepPayload(event_type=IntermediateStepType.FUNCTION_END,
-                                          data=StreamEventData(input=large_input, output=large_output))
-        step = IntermediateStep(payload=payload)
+        step = create_test_intermediate_step(event_type=IntermediateStepType.FUNCTION_END,
+                                             data=StreamEventData(input=large_input, output=large_output))
 
         serializer = IntermediateStepSerializer()
         result = await serializer.process(step)
@@ -436,10 +441,10 @@ class TestIntermediateStepSerializerPerformance:
         # Create multiple different steps
         steps = []
         for i in range(10):
-            payload = IntermediateStepPayload(event_type=IntermediateStepType.CUSTOM_START,
+            steps.append(
+                create_test_intermediate_step(event_type=IntermediateStepType.CUSTOM_START,
                                               name=f"step_{i}",
-                                              data=StreamEventData(input=f"input_{i}", output=f"output_{i}"))
-            steps.append(IntermediateStep(payload=payload))
+                                              data=StreamEventData(input=f"input_{i}", output=f"output_{i}")))
 
         # Serialize all steps
         results = []

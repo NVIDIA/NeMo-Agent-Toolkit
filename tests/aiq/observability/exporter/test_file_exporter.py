@@ -24,6 +24,7 @@ from aiq.builder.context import AIQContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
+from aiq.data_models.invocation_node import InvocationNode
 from aiq.observability.exporter.file_exporter import FileExporter
 from aiq.observability.exporter.raw_exporter import RawExporter
 from aiq.observability.mixin.file_mixin import FileExportMixin
@@ -44,7 +45,9 @@ def sample_intermediate_step():
                                       name="test_tool",
                                       tags=["test"],
                                       UUID="test-uuid-123")
-    return IntermediateStep(payload=payload)
+    return IntermediateStep(parent_id="root",
+                            function_ancestry=InvocationNode(function_name="test_tool", function_id="test-function-id"),
+                            payload=payload)
 
 
 @pytest.fixture

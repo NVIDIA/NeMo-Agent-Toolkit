@@ -34,6 +34,29 @@ from aiq.observability.exporter.span_exporter import SpanExporter
 from aiq.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
 
+def create_test_intermediate_step(parent_id="root",
+                                  function_name="test_function",
+                                  function_id="test_id",
+                                  **payload_kwargs):
+    """Helper function to create IntermediateStep with proper structure for tests."""
+    payload = IntermediateStepPayload(**payload_kwargs)
+    function_ancestry = InvocationNode(function_name=function_name, function_id=function_id, parent_id=None)
+    return IntermediateStep(parent_id=parent_id, function_ancestry=function_ancestry, payload=payload)
+
+
+def create_intermediate_step(parent_id="root", function_name="test_function", function_id="test_id", **payload_kwargs):
+    """Helper function to create IntermediateStep with proper structure."""
+    # Set defaults for InvocationNode
+    function_id = payload_kwargs.get("UUID", "test-function-id")
+    function_name = payload_kwargs.get("name") or "test_function"
+
+    return IntermediateStep(parent_id=parent_id,
+                            payload=IntermediateStepPayload(**payload_kwargs),
+                            function_ancestry=InvocationNode(function_id=function_id,
+                                                             function_name=function_name,
+                                                             parent_id=None))
+
+
 class ConcreteSpanExporter(SpanExporter[Span, Span]):
     """Concrete implementation of SpanExporter for testing."""
 
@@ -57,7 +80,8 @@ class TestSpanExporterFunctionality:
     @pytest.fixture
     def sample_start_event(self):
         """Create a sample START event."""
-        return IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_START,
+        return IntermediateStep(parent_id="root",
+                                payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_START,
                                                                 framework=LLMFrameworkEnum.LANGCHAIN,
                                                                 name="test_llm_call",
                                                                 event_timestamp=datetime.now().timestamp(),
@@ -71,6 +95,7 @@ class TestSpanExporterFunctionality:
     def sample_end_event(self):
         """Create a sample END event."""
         return IntermediateStep(
+            parent_id="root",
             payload=IntermediateStepPayload(
                 event_type=IntermediateStepType.LLM_END,
                 framework=LLMFrameworkEnum.LANGCHAIN,
@@ -119,7 +144,8 @@ class TestSpanExporterFunctionality:
     def test_process_start_event_with_parent(self, span_exporter):
         """Test processing START event with parent span."""
         # Create parent event first
-        parent_event = IntermediateStep(payload=IntermediateStepPayload(UUID="parent_id",
+        parent_event = IntermediateStep(parent_id="root",
+                                        payload=IntermediateStepPayload(UUID="parent_id",
                                                                         event_type=IntermediateStepType.FUNCTION_START,
                                                                         framework=LLMFrameworkEnum.LANGCHAIN,
                                                                         name="parent_call",
@@ -134,7 +160,8 @@ class TestSpanExporterFunctionality:
         span_exporter.export(parent_event)
 
         # Create child event
-        child_event = IntermediateStep(payload=IntermediateStepPayload(UUID="child_id",
+        child_event = IntermediateStep(parent_id="parent_id",
+                                       payload=IntermediateStepPayload(UUID="child_id",
                                                                        event_type=IntermediateStepType.LLM_START,
                                                                        framework=LLMFrameworkEnum.LANGCHAIN,
                                                                        name="child_call",
@@ -162,16 +189,16 @@ class TestSpanExporterFunctionality:
         dummy_span = Span(name="dummy", attributes={}, start_time=0)
         span_exporter._span_stack["dummy_id"] = dummy_span
 
-        event = IntermediateStep(payload=IntermediateStepPayload(UUID="child_id",
-                                                                 event_type=IntermediateStepType.LLM_START,
-                                                                 framework=LLMFrameworkEnum.LANGCHAIN,
-                                                                 name="child_call",
-                                                                 event_timestamp=datetime.now().timestamp(),
-                                                                 data=StreamEventData(input="Child input"),
-                                                                 metadata={"child_key": "child_value"}),
-                                 function_ancestry=InvocationNode(function_id="child_func",
-                                                                  function_name="child_function",
-                                                                  parent_id="missing_parent_id"))
+        event = create_intermediate_step(parent_id="missing_parent_id",
+                                         function_name="child_function",
+                                         function_id="child_func",
+                                         UUID="child_id",
+                                         event_type=IntermediateStepType.LLM_START,
+                                         framework=LLMFrameworkEnum.LANGCHAIN,
+                                         name="child_call",
+                                         event_timestamp=datetime.now().timestamp(),
+                                         data=StreamEventData(input="Child input"),
+                                         metadata={"child_key": "child_value"})
 
         with patch('aiq.observability.exporter.span_exporter.logger') as mock_logger:
             span_exporter.export(event)
@@ -180,16 +207,12 @@ class TestSpanExporterFunctionality:
     def test_process_start_event_input_parsing(self, span_exporter):
         """Test processing START event with different input formats."""
         # Test with Human: Question: format
-        event = IntermediateStep(payload=IntermediateStepPayload(
-            event_type=IntermediateStepType.LLM_START,
-            framework=LLMFrameworkEnum.LANGCHAIN,
-            name="test_llm_call",
-            event_timestamp=datetime.now().timestamp(),
-            data=StreamEventData(input="Human: Question: What is the capital of France?"),
-            metadata={"key": "value"}),
-                                 function_ancestry=InvocationNode(function_id="func_123",
-                                                                  function_name="test_function",
-                                                                  parent_id=None))
+        event = create_intermediate_step(event_type=IntermediateStepType.LLM_START,
+                                         framework=LLMFrameworkEnum.LANGCHAIN,
+                                         name="test_llm_call",
+                                         event_timestamp=datetime.now().timestamp(),
+                                         data=StreamEventData(input="Human: Question: What is the capital of France?"),
+                                         metadata={"key": "value"})
 
         span_exporter.export(event)
         span = span_exporter._outstanding_spans[event.payload.UUID]
@@ -239,35 +262,27 @@ class TestSpanExporterFunctionality:
         event_id = str(uuid.uuid4())
 
         # Start event with metadata
-        start_event = IntermediateStep(payload=IntermediateStepPayload(UUID=event_id,
-                                                                       event_type=IntermediateStepType.LLM_START,
-                                                                       framework=LLMFrameworkEnum.LANGCHAIN,
-                                                                       name="test_call",
-                                                                       event_timestamp=datetime.now().timestamp(),
-                                                                       data=StreamEventData(input="Test input"),
-                                                                       metadata={
-                                                                           "start_key": "start_value",
-                                                                           "common_key": "start_common"
-                                                                       }),
-                                       function_ancestry=InvocationNode(function_id="func_123",
-                                                                        function_name="test_function",
-                                                                        parent_id=None))
+        start_event = create_intermediate_step(UUID=event_id,
+                                               event_type=IntermediateStepType.LLM_START,
+                                               framework=LLMFrameworkEnum.LANGCHAIN,
+                                               name="test_call",
+                                               event_timestamp=datetime.now().timestamp(),
+                                               data=StreamEventData(input="Test input"),
+                                               metadata={
+                                                   "start_key": "start_value", "common_key": "start_common"
+                                               })
 
         # End event with metadata
-        end_event = IntermediateStep(payload=IntermediateStepPayload(UUID=event_id,
-                                                                     event_type=IntermediateStepType.LLM_END,
-                                                                     framework=LLMFrameworkEnum.LANGCHAIN,
-                                                                     name="test_call",
-                                                                     event_timestamp=datetime.now().timestamp(),
-                                                                     span_event_timestamp=datetime.now().timestamp(),
-                                                                     data=StreamEventData(output="Test output"),
-                                                                     metadata={
-                                                                         "end_key": "end_value",
-                                                                         "common_key": "end_common"
-                                                                     }),
-                                     function_ancestry=InvocationNode(function_id="func_123",
-                                                                      function_name="test_function",
-                                                                      parent_id=None))
+        end_event = create_intermediate_step(UUID=event_id,
+                                             event_type=IntermediateStepType.LLM_END,
+                                             framework=LLMFrameworkEnum.LANGCHAIN,
+                                             name="test_call",
+                                             event_timestamp=datetime.now().timestamp(),
+                                             span_event_timestamp=datetime.now().timestamp(),
+                                             data=StreamEventData(output="Test output"),
+                                             metadata={
+                                                 "end_key": "end_value", "common_key": "end_common"
+                                             })
 
         # Start the exporter to enable async export using proper context manager
         async with span_exporter.start():
@@ -287,35 +302,27 @@ class TestSpanExporterFunctionality:
         event_id = str(uuid.uuid4())
 
         # Start event
-        start_event = IntermediateStep(payload=IntermediateStepPayload(
-            UUID=event_id,
-            event_type=IntermediateStepType.LLM_START,
-            framework=LLMFrameworkEnum.LANGCHAIN,
-            name="test_call",
-            event_timestamp=datetime.now().timestamp(),
-            data=StreamEventData(input="Test input"),
-            metadata=TraceMetadata(provided_metadata={
-                "workflow_id": "workflow_123", "session_id": "session_456"
-            })),
-                                       function_ancestry=InvocationNode(function_id="func_123",
-                                                                        function_name="test_function",
-                                                                        parent_id=None))
+        start_event = create_intermediate_step(UUID=event_id,
+                                               event_type=IntermediateStepType.LLM_START,
+                                               framework=LLMFrameworkEnum.LANGCHAIN,
+                                               name="test_call",
+                                               event_timestamp=datetime.now().timestamp(),
+                                               data=StreamEventData(input="Test input"),
+                                               metadata=TraceMetadata(provided_metadata={
+                                                   "workflow_id": "workflow_123", "session_id": "session_456"
+                                               }))
 
         # End event
-        end_event = IntermediateStep(payload=IntermediateStepPayload(
-            UUID=event_id,
-            event_type=IntermediateStepType.LLM_END,
-            framework=LLMFrameworkEnum.LANGCHAIN,
-            name="test_call",
-            event_timestamp=datetime.now().timestamp(),
-            span_event_timestamp=datetime.now().timestamp(),
-            data=StreamEventData(output="Test output"),
-            metadata=TraceMetadata(provided_metadata={
-                "workflow_id": "workflow_123", "session_id": "session_456"
-            })),
-                                     function_ancestry=InvocationNode(function_id="func_123",
-                                                                      function_name="test_function",
-                                                                      parent_id=None))
+        end_event = create_intermediate_step(UUID=event_id,
+                                             event_type=IntermediateStepType.LLM_END,
+                                             framework=LLMFrameworkEnum.LANGCHAIN,
+                                             name="test_call",
+                                             event_timestamp=datetime.now().timestamp(),
+                                             span_event_timestamp=datetime.now().timestamp(),
+                                             data=StreamEventData(output="Test output"),
+                                             metadata=TraceMetadata(provided_metadata={
+                                                 "workflow_id": "workflow_123", "session_id": "session_456"
+                                             }))
 
         # Start the exporter to enable async export using proper context manager
         async with span_exporter.start():
@@ -336,16 +343,13 @@ class TestSpanExporterFunctionality:
         event_id = str(uuid.uuid4())
 
         # Start event
-        start_event = IntermediateStep(payload=IntermediateStepPayload(UUID=event_id,
-                                                                       event_type=IntermediateStepType.LLM_START,
-                                                                       framework=LLMFrameworkEnum.LANGCHAIN,
-                                                                       name="test_call",
-                                                                       event_timestamp=datetime.now().timestamp(),
-                                                                       data=StreamEventData(input="Test input"),
-                                                                       metadata={"valid": "metadata"}),
-                                       function_ancestry=InvocationNode(function_id="func_123",
-                                                                        function_name="test_function",
-                                                                        parent_id=None))
+        start_event = create_intermediate_step(UUID=event_id,
+                                               event_type=IntermediateStepType.LLM_START,
+                                               framework=LLMFrameworkEnum.LANGCHAIN,
+                                               name="test_call",
+                                               event_timestamp=datetime.now().timestamp(),
+                                               data=StreamEventData(input="Test input"),
+                                               metadata={"valid": "metadata"})
 
         # Process start event
         span_exporter.export(start_event)
@@ -371,17 +375,14 @@ class TestSpanExporterFunctionality:
         # Don't add to metadata_stack to simulate missing metadata
 
         # End event
-        end_event = IntermediateStep(payload=IntermediateStepPayload(UUID=event_id,
-                                                                     event_type=IntermediateStepType.LLM_END,
-                                                                     framework=LLMFrameworkEnum.LANGCHAIN,
-                                                                     name="test_call",
-                                                                     event_timestamp=datetime.now().timestamp(),
-                                                                     span_event_timestamp=datetime.now().timestamp(),
-                                                                     data=StreamEventData(output="Test output"),
-                                                                     metadata={"end_key": "end_value"}),
-                                     function_ancestry=InvocationNode(function_id="func_123",
-                                                                      function_name="test_function",
-                                                                      parent_id=None))
+        end_event = create_intermediate_step(UUID=event_id,
+                                             event_type=IntermediateStepType.LLM_END,
+                                             framework=LLMFrameworkEnum.LANGCHAIN,
+                                             name="test_call",
+                                             event_timestamp=datetime.now().timestamp(),
+                                             span_event_timestamp=datetime.now().timestamp(),
+                                             data=StreamEventData(output="Test output"),
+                                             metadata={"end_key": "end_value"})
 
         # The KeyError is expected because metadata is missing - this is a legitimate runtime error
         # Instead of mocking logger, we check that the exception happens and span processing stops
@@ -432,31 +433,24 @@ class TestSpanExporterFunctionality:
     def test_span_name_generation(self, span_exporter):
         """Test span name generation logic."""
         # Test with name provided
-        event_with_name = IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_START,
-                                                                           framework=LLMFrameworkEnum.LANGCHAIN,
-                                                                           name="custom_name",
-                                                                           event_timestamp=datetime.now().timestamp(),
-                                                                           data=StreamEventData(input="Test input"),
-                                                                           metadata={"key": "value"}),
-                                           function_ancestry=InvocationNode(function_id="func_123",
-                                                                            function_name="test_function",
-                                                                            parent_id=None))
+        event_with_name = create_intermediate_step(event_type=IntermediateStepType.LLM_START,
+                                                   framework=LLMFrameworkEnum.LANGCHAIN,
+                                                   name="custom_name",
+                                                   event_timestamp=datetime.now().timestamp(),
+                                                   data=StreamEventData(input="Test input"),
+                                                   metadata={"key": "value"})
 
         span_exporter.export(event_with_name)
         span = span_exporter._outstanding_spans[event_with_name.payload.UUID]
         assert span.name == "custom_name"
 
         # Test without name (should use event_type string representation)
-        event_without_name = IntermediateStep(payload=IntermediateStepPayload(
-            event_type=IntermediateStepType.TOOL_START,
-            framework=LLMFrameworkEnum.LANGCHAIN,
-            name=None,
-            event_timestamp=datetime.now().timestamp(),
-            data=StreamEventData(input="Test input"),
-            metadata={"key": "value"}),
-                                              function_ancestry=InvocationNode(function_id="func_123",
-                                                                               function_name="test_function",
-                                                                               parent_id=None))
+        event_without_name = create_intermediate_step(event_type=IntermediateStepType.TOOL_START,
+                                                      framework=LLMFrameworkEnum.LANGCHAIN,
+                                                      name=None,
+                                                      event_timestamp=datetime.now().timestamp(),
+                                                      data=StreamEventData(input="Test input"),
+                                                      metadata={"key": "value"})
 
         span_exporter.export(event_without_name)
         span = span_exporter._outstanding_spans[event_without_name.payload.UUID]
@@ -466,16 +460,13 @@ class TestSpanExporterFunctionality:
     def test_span_context_propagation(self, span_exporter):
         """Test that span context and trace IDs are properly propagated."""
         # Create parent event
-        parent_event = IntermediateStep(payload=IntermediateStepPayload(UUID="parent_id",
-                                                                        event_type=IntermediateStepType.FUNCTION_START,
-                                                                        framework=LLMFrameworkEnum.LANGCHAIN,
-                                                                        name="parent_call",
-                                                                        event_timestamp=datetime.now().timestamp(),
-                                                                        data=StreamEventData(input="Parent input"),
-                                                                        metadata={"parent_key": "parent_value"}),
-                                        function_ancestry=InvocationNode(function_id="parent_func",
-                                                                         function_name="parent_function",
-                                                                         parent_id=None))
+        parent_event = create_intermediate_step(UUID="parent_id",
+                                                event_type=IntermediateStepType.FUNCTION_START,
+                                                framework=LLMFrameworkEnum.LANGCHAIN,
+                                                name="parent_call",
+                                                event_timestamp=datetime.now().timestamp(),
+                                                data=StreamEventData(input="Parent input"),
+                                                metadata={"parent_key": "parent_value"})
 
         # Process parent event
         span_exporter.export(parent_event)
@@ -486,16 +477,14 @@ class TestSpanExporterFunctionality:
         parent_trace_id = parent_span.context.trace_id
 
         # Create child event with proper parent relationship
-        child_event = IntermediateStep(payload=IntermediateStepPayload(UUID="child_id",
-                                                                       event_type=IntermediateStepType.LLM_START,
-                                                                       framework=LLMFrameworkEnum.LANGCHAIN,
-                                                                       name="child_call",
-                                                                       event_timestamp=datetime.now().timestamp(),
-                                                                       data=StreamEventData(input="Child input"),
-                                                                       metadata={"child_key": "child_value"}),
-                                       function_ancestry=InvocationNode(function_id="child_func",
-                                                                        function_name="child_function",
-                                                                        parent_id="parent_id"))
+        child_event = create_intermediate_step(parent_id="parent_id",
+                                               UUID="child_id",
+                                               event_type=IntermediateStepType.LLM_START,
+                                               framework=LLMFrameworkEnum.LANGCHAIN,
+                                               name="child_call",
+                                               event_timestamp=datetime.now().timestamp(),
+                                               data=StreamEventData(input="Child input"),
+                                               metadata={"child_key": "child_value"})
 
         # Process child event
         span_exporter.export(child_event)
@@ -534,33 +523,28 @@ class TestSpanExporterFunctionality:
         event_id = str(uuid.uuid4())
 
         # Start event
-        start_event = IntermediateStep(payload=IntermediateStepPayload(UUID=event_id,
-                                                                       event_type=IntermediateStepType.LLM_START,
-                                                                       framework=LLMFrameworkEnum.LANGCHAIN,
-                                                                       name="test_call",
-                                                                       event_timestamp=datetime.now().timestamp(),
-                                                                       data=StreamEventData(input="Test input"),
-                                                                       metadata={"key": "value"}),
-                                       function_ancestry=InvocationNode(function_id="func_123",
-                                                                        function_name="test_function",
-                                                                        parent_id=None))
+        start_event = create_intermediate_step(UUID=event_id,
+                                               event_type=IntermediateStepType.LLM_START,
+                                               framework=LLMFrameworkEnum.LANGCHAIN,
+                                               name="test_call",
+                                               event_timestamp=datetime.now().timestamp(),
+                                               data=StreamEventData(input="Test input"),
+                                               metadata={"key": "value"})
 
         # End event with usage info and minimal token usage (all zeros)
-        end_event = IntermediateStep(
-            payload=IntermediateStepPayload(UUID=event_id,
-                                            event_type=IntermediateStepType.LLM_END,
-                                            framework=LLMFrameworkEnum.LANGCHAIN,
-                                            name="test_call",
-                                            event_timestamp=datetime.now().timestamp(),
-                                            span_event_timestamp=datetime.now().timestamp(),
-                                            data=StreamEventData(output="Test output"),
-                                            metadata={"end_key": "end_value"},
-                                            usage_info=UsageInfo(num_llm_calls=2,
-                                                                 seconds_between_calls=5,
-                                                                 token_usage=TokenUsageBaseModel(prompt_tokens=0,
-                                                                                                 completion_tokens=0,
-                                                                                                 total_tokens=0))),
-            function_ancestry=InvocationNode(function_id="func_123", function_name="test_function", parent_id=None))
+        end_event = create_intermediate_step(UUID=event_id,
+                                             event_type=IntermediateStepType.LLM_END,
+                                             framework=LLMFrameworkEnum.LANGCHAIN,
+                                             name="test_call",
+                                             event_timestamp=datetime.now().timestamp(),
+                                             span_event_timestamp=datetime.now().timestamp(),
+                                             data=StreamEventData(output="Test output"),
+                                             metadata={"end_key": "end_value"},
+                                             usage_info=UsageInfo(num_llm_calls=2,
+                                                                  seconds_between_calls=5,
+                                                                  token_usage=TokenUsageBaseModel(prompt_tokens=0,
+                                                                                                  completion_tokens=0,
+                                                                                                  total_tokens=0)))
 
         # Start the exporter to enable async export using proper context manager
         async with span_exporter.start():
