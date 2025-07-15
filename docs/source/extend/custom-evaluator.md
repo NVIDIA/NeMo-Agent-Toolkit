@@ -65,7 +65,7 @@ async def register_similarity_evaluator(config: SimilarityEvaluatorConfig, build
 ```
 
 - The `SimilarityEvaluatorConfig` class defines evaluator-specific settings, including the `similarity_type` parameter.
-- The `register_similarity_evaluator` function uses the `@register_evaluator` decorator to register the evaluator with NeMo Agent Toolkit.
+- The `register_similarity_evaluator` function uses the `@register_evaluator` decorator to register the evaluator with NeMo Agent toolkit.
 - The evaluator yields an `EvaluatorInfo` object, which binds the config, evaluation function, and a human-readable description.
 
 The evaluator logic is implemented in the `SimilarityEvaluator` class described in the [Similarity Evaluator](#similarity-evaluator-custom-evaluator-example) section.
@@ -78,7 +78,7 @@ from .evaluator_register import register_similarity_evaluator  # pylint: disable
 ```
 
 ### Understanding `EvalInputItem` and `EvalOutputItem`
-Custom evaluators in NeMo Agent Toolkit implement an asynchronous `evaluate_item` method, which receives an `EvalInputItem` as input and returns an `EvalOutputItem` as output.
+Custom evaluators in NeMo Agent toolkit implement an asynchronous `evaluate_item` method, which receives an `EvalInputItem` as input and returns an `EvalOutputItem` as output.
 
 **EvalInputItem**
 

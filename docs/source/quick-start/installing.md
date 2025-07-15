@@ -39,7 +39,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `aiqtoolkit[llama-index]` or `aiqtoolkit-llama-index` - [LlamaIndex](https://www.llamaindex.ai/) specific plugins
 - `aiqtoolkit[mem0ai]` or `aiqtoolkit-mem0ai` - [Mem0](https://mem0.ai/) specific plugins
 - `aiqtoolkit[semantic-kernel]` or `aiqtoolkit-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/) specific plugins
-- `aiqtoolkit[test]` or `aiqtoolkit-test` - NeMo Agent toolkit Test specific plugins
+- `aiqtoolkit[test]` or `aiqtoolkit-test` - NeMo Agent toolkit test specific plugins
 - `aiqtoolkit[weave]` or `aiqtoolkit-weave` - [Weights & Biases Weave](https://weave-docs.wandb.ai) specific plugins
 - `aiqtoolkit[zep-cloud]` or `aiqtoolkit-zep-cloud` - [Zep](https://www.getzep.com/) specific plugins
 

@@ -142,8 +142,7 @@ NeMo Agent toolkit provides the following built-in evaluator:
 
 ### RAGAS Evaluator
 [RAGAS](https://docs.ragas.io/) is an OSS evaluation framework that enables end-to-end
-evaluation of RAG workflows. NeMo Agent toolkit provides an interface to RAGAS to evaluate the performance
-of RAG-like NeMo Agent toolkit workflows.
+evaluation of RAG workflows. NeMo Agent toolkit provides an interface to RAGAS to evaluate the performance of RAG-like workflows.
 
 RAGAS provides a set of evaluation metrics to configure in the `config.yml` file
 by adding an evaluator section with type`ragas`.

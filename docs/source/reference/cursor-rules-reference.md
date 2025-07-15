@@ -28,7 +28,7 @@ This document provides a comprehensive reference for all available Cursor rules 
 
 **Prompt**:
 ```
-Create a new Python function with proper type hints, docstrings, and formatting that follows NeMo Agent Toolkit coding standards.
+Create a new Python function with proper type hints, docstrings, and formatting that follows NeMo Agent toolkit coding standards.
 ```
 
 **Capabilities**:
@@ -68,7 +68,7 @@ Create a new Cursor rule for creating a new NeMo Agent workflow
 
 **Prompt**:
 ```
-Help me set up NeMo Agent Toolkit development environment with all required dependencies and configurations.
+Help me set up NeMo Agent toolkit development environment with all required dependencies and configurations.
 ```
 
 **Capabilities**:
@@ -88,7 +88,7 @@ Help me set up NeMo Agent Toolkit development environment with all required depe
 
 **Prompt**:
 ```
-Install NeMo Agent Toolkit with all plugins and verify the installation is working correctly.
+Install NeMo Agent toolkit with all plugins and verify the installation is working correctly.
 ```
 
 
@@ -234,7 +234,7 @@ Integrate a web search tool into my workflow that can fetch and process search r
 
 ## Agent Rules
 
-### NeMo Agent Agents Integration and Selection
+### Agent Integration and Selection
 
 **Cursor Rule file**: `.cursor/rules/aiq-agents/general.mdc`  
 **Purpose**: Guidelines for integrating or selecting ReAct, Tool-Calling, Reasoning, or ReWOO agents within NeMo Agent workflows.
