@@ -15,8 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Evaluating NVIDIA Agent Intelligence Toolkit Workflows
-AIQ toolkit provides a set of evaluators to run and evaluate the AIQ toolkit workflows. In addition to the built-in evaluators, AIQ toolkit provides a plugin system to add custom evaluators.
+# Evaluating NVIDIA NeMo Agent Toolkit Workflows
+NeMo Agent toolkit provides a set of evaluators to run and evaluate workflows. In addition to the built-in evaluators, the toolkit provides a plugin system to add custom evaluators.
 
 ## Evaluating a Workflow
 To evaluate a workflow, you can use the `aiq eval` command. The `aiq eval` command takes a workflow configuration file as input. It runs the workflow using the dataset specified in the configuration file. The workflow output is then evaluated using the evaluators specified in the configuration file.
@@ -76,8 +76,8 @@ aiq info components -t evaluator
 
 ### Ragas Evaluator
 [RAGAS](https://docs.ragas.io/) is an OSS evaluation framework that enables end-to-end
-evaluation of RAG workflows. AIQ toolkit provides an interface to RAGAS to evaluate the performance
-of RAG-like AIQ toolkit workflows.
+evaluation of RAG workflows. NeMo Agent toolkit provides an interface to RAGAS to evaluate the performance
+of RAG-like NeMo Agent toolkit workflows.
 
 `examples/basic/functions/simple/configs/eval_config.yml`:
 ```yaml
@@ -288,7 +288,7 @@ Note: Plotting metrics for individual dataset entries is only available across t
 ## Evaluating Remote Workflows
 You can evaluate remote workflows by using the `aiq eval` command with the `--endpoint` flag. In this mode the workflow is run on the remote server specified in the `--endpoint` configuration and evaluation is done on the local server.
 
-Launch AIQ toolkit on the remote server with the configuration file:
+Launch NeMo Agent toolkit on the remote server with the configuration file:
 ```bash
 aiq serve --config_file=examples/basic/functions/simple/configs/config.yml
 ```
@@ -299,11 +299,11 @@ aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml -
 ```
 
 ## Evaluation Endpoint
-You can also evaluate workflows using the AIQ toolkit evaluation endpoint. The evaluation endpoint is a REST API that allows you to evaluate workflows using the same configuration file as the `aiq eval` command. The evaluation endpoint is available at `/evaluate` on the AIQ toolkit server. For more information, refer to the [AIQ toolkit Evaluation Endpoint](../reference/evaluate-api.md) documentation.
+You can also evaluate workflows using the NeMo Agent toolkit evaluation endpoint. The evaluation endpoint is a REST API that allows you to evaluate workflows using the same configuration file as the `aiq eval` command. The evaluation endpoint is available at `/evaluate` on the NeMo Agent toolkit server. For more information, refer to the [NeMo Agent toolkit Evaluation Endpoint](../reference/evaluate-api.md) documentation.
 
 
 ## Adding Custom Evaluators
-You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the AIQ toolkit evaluator system. See the [Custom Evaluator](../extend/custom-evaluator.md) documentation for more information.
+You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the NeMo Agent toolkit evaluator system. See the [Custom Evaluator](../extend/custom-evaluator.md) documentation for more information.
 
 ## Overriding Evaluation Configuration
 You can override the configuration in the `eval_config.yml` file using the `--override` command line flag. The following is an example of overriding the configuration:
@@ -314,7 +314,7 @@ aiq eval --config_file examples/basic/functions/simple/configs/eval_config.yml \
 ```
 
 ## Additional Evaluation Options
-For details on other evaluators and evaluation options, refer to [AIQ toolkit Evaluation Concepts](../reference/evaluate.md) for more information.
+For details on other evaluators and evaluation options, refer to [NeMo Agent toolkit Evaluation Concepts](../reference/evaluate.md) for more information.
 
-##  Profiling and Performance Monitoring of AIQ Toolkit Workflows
-You can profile workflows via the AIQ toolkit evaluation system. For more information, refer to the [Profiler](profiler.md) documentation.
+##  Profiling and Performance Monitoring of NeMo Agent Toolkit Workflows
+You can profile workflows using the NeMo Agent toolkit evaluation system. For more information, refer to the [Profiler](profiler.md) documentation.

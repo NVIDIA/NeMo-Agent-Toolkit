@@ -17,10 +17,10 @@ limitations under the License.
 
 # Evaluate API Endpoints
 :::{note}
-It is recommended that the [Evaluating AIQ toolkit Workflows](./evaluate.md) guide be read before proceeding with this detailed documentation.
+It is recommended that the [Evaluating NeMo Agent toolkit Workflows](./evaluate.md) guide be read before proceeding with this detailed documentation.
 :::
 
-The evaluation endpoint can be used to start evaluation jobs on a remote AIQ toolkit server.
+The evaluation endpoint can be used to start evaluation jobs on a remote NeMo Agent toolkit server.
 
 ## Evaluation Endpoint Overview
 ```{mermaid}
@@ -31,8 +31,8 @@ graph TD
   B --> E["GET /evaluate/jobs"]
 ```
 
-## Start AIQ Toolkit API Server
-See AIQ toolkit [UI and Server](./../quick-start/launching-ui.md) guide for instructions on starting the AIQ toolkit server.
+## Start NeMo Agent Toolkit API Server
+See NeMo Agent toolkit [UI and Server](./../quick-start/launching-ui.md) guide for instructions on starting the NeMo Agent toolkit server.
 Sample Usage:
 ```bash
 aiq serve --config_file=examples/basic/functions/simple/configs/config.yml
