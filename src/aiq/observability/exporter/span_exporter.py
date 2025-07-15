@@ -111,9 +111,13 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
         parent_span = None
         span_ctx = None
 
-        if len(self._span_stack) > 0 and event.function_ancestry and event.function_ancestry.parent_id:  # type: ignore
+        # Look up the parent span to establish hierarchy
+        # event.parent_id is the UUID of the last START step with a different UUID from current step
+        # This maintains proper parent-child relationships in the span tree
+        # Skip lookup if parent_id is "root" (indicates this is a top-level span)
+        if len(self._span_stack) > 0 and event.parent_id and event.parent_id != "root":
 
-            parent_span = self._span_stack.get(event.function_ancestry.parent_id, None)  # type: ignore
+            parent_span = self._span_stack.get(event.parent_id, None)
             if parent_span is None:
                 logger.warning("No parent span found for step %s", event.UUID)
                 return
