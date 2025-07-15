@@ -15,20 +15,23 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Installing NVIDIA Agent Intelligence Toolkit
+# Installing NVIDIA NeMo Agent Toolkit
 
-This guide will help you set up your NVIDIA Agent Intelligence (AIQ) toolkit development environment, run existing workflows, and create your own custom workflows using the `aiq` command-line interface.
+This guide will help you set up your NVIDIA NeMo Agent toolkit development environment, run existing workflows, and create your own custom workflows using the `aiq` command-line interface.
 
-## Supported LLM APIs:
+## Supported LLM APIs
+
+The following LLM APIs are supported:
+
 - NIM (such as Llama-3.1-70b-instruct and Llama-3.3-70b-instruct)
 - OpenAI
 - AWS Bedrock
 
 ## Framework Integrations
 
-To keep the library lightweight, many of the first party plugins supported by AIQ toolkit are located in separate distribution packages. For example, the `aiqtoolkit-langchain` distribution contains all the LangChain specific plugins and the `aiqtoolkit-mem0ai` distribution contains the Mem0 specific plugins.
+To keep the library lightweight, many of the first-party plugins supported by NeMo Agent toolkit are located in separate distribution packages. For example, the `aiqtoolkit-langchain` distribution contains all the LangChain-specific plugins and the `aiqtoolkit-mem0ai` distribution contains the Mem0-specific plugins.
 
-To install these first-party plugin libraries, you can use the full distribution name (for example, `aiqtoolkit-langchain`) or use the `aiqtoolkit[langchain]` extra distribution. A full list of the supported extras is listed below:
+To install these first-party plugin libraries, you can use the full distribution name (for example, `aiqtoolkit-langchain`) or use the `aiqtoolkit[langchain]` extra distribution. The following extras are supported:
 
 - `aiqtoolkit[agno]` or `aiqtoolkit-agno` - [Agno](https://agno.com/) specific plugins
 - `aiqtoolkit[crewai]` or `aiqtoolkit-crewai` - [CrewAI](https://www.crewai.com/) specific plugins
@@ -36,17 +39,17 @@ To install these first-party plugin libraries, you can use the full distribution
 - `aiqtoolkit[llama-index]` or `aiqtoolkit-llama-index` - [LlamaIndex](https://www.llamaindex.ai/) specific plugins
 - `aiqtoolkit[mem0ai]` or `aiqtoolkit-mem0ai` - [Mem0](https://mem0.ai/) specific plugins
 - `aiqtoolkit[semantic-kernel]` or `aiqtoolkit-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/) specific plugins
-- `aiqtoolkit[test]` or `aiqtoolkit-test` - AIQ toolkit Test specific plugins
+- `aiqtoolkit[test]` or `aiqtoolkit-test` - NeMo Agent toolkit test specific plugins
 - `aiqtoolkit[weave]` or `aiqtoolkit-weave` - [Weights & Biases Weave](https://weave-docs.wandb.ai) specific plugins
 - `aiqtoolkit[zep-cloud]` or `aiqtoolkit-zep-cloud` - [Zep](https://www.getzep.com/) specific plugins
 
 
 ## Prerequisites
 
-NVIDIA Agent Intelligence (AIQ) toolkit is a Python library that doesn't require a GPU to run the workflow by default. You can deploy the core workflows using one of the following:
+NVIDIA NeMo Agent toolkit is a Python library that doesn't require a GPU to run the workflow by default. You can deploy the core workflows using one of the following:
 - Ubuntu or other Linux distributions, including WSL, in a Python virtual environment.
 
-Before you begin using AIQ toolkit, ensure that you meet the following software prerequisites.
+Before you begin using NeMo Agent toolkit, ensure that you meet the following software prerequisites:
 
 - Install [Git](https://git-scm.com/)
 - Install [Git Large File Storage](https://git-lfs.github.com/) (LFS)
@@ -54,7 +57,7 @@ Before you begin using AIQ toolkit, ensure that you meet the following software 
 
 ## Install From Source
 
-1. Clone the AIQ toolkit repository to your local machine.
+1. Clone the NeMo Agent toolkit repository to your local machine.
     ```bash
     git clone git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit
     cd aiqtoolkit
@@ -78,13 +81,13 @@ Before you begin using AIQ toolkit, ensure that you meet the following software 
     source .venv/bin/activate
     ```
 
-1. Install the AIQ toolkit library.
-    To install the AIQ toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
+1. Install the NeMo Agent toolkit library.
+    To install the NeMo Agent toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
     ```bash
     uv sync --all-groups --all-extras
     ```
 
-    Alternatively to install just the core AIQ toolkit without any plugins, run the following:
+    Alternatively to install just the core NeMo Agent toolkit without any plugins, run the following:
     ```bash
     uv sync
     ```
@@ -103,7 +106,7 @@ Before you begin using AIQ toolkit, ensure that you meet the following software 
     ```bash
     uv pip install -e '.[profiling]'
     ```
-1. Verify that you've installed the AIQ toolkit library.
+1. Verify that you've installed the NeMo Agent toolkit library.
 
      ```bash
      aiq --help
@@ -114,11 +117,11 @@ Before you begin using AIQ toolkit, ensure that you meet the following software 
 
 
 ## Obtaining API Keys
-Depending on which workflows you are running, you may need to obtain API keys from the respective services. Most AIQ toolkit workflows require an NVIDIA API key defined with the `NVIDIA_API_KEY` environment variable. An API key can be obtained by visiting [`build.nvidia.com`](https://build.nvidia.com/) and creating an account.
+Depending on which workflows you are running, you may need to obtain API keys from the respective services. Most NeMo Agent toolkit workflows require an NVIDIA API key defined with the `NVIDIA_API_KEY` environment variable. An API key can be obtained by visiting [`build.nvidia.com`](https://build.nvidia.com/) and creating an account.
 
 ## Running Example Workflows
 
-Before running any of the AIQ toolkit examples, set your NVIDIA API key as an
+Before running any of the NeMo Agent toolkit examples, set your NVIDIA API key as an
 environment variable to access NVIDIA AI services.
 
 ```bash
@@ -151,12 +154,12 @@ Replace `<YOUR_API_KEY>` with your actual NVIDIA API key.
     ```
 
 
-## AIQ Toolkit Packages
-Once an AIQ toolkit workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `aiqtoolkit` package, along with the needed plugins. When declaring a dependency on AIQ toolkit it is recommended to use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `1.0`.
+## NeMo Agent Toolkit Packages
+Once an NeMo Agent toolkit workflow is ready for deployment to production, the deployed workflow will need to declare a dependency on the `aiqtoolkit` package, along with the needed plugins. When declaring a dependency on NeMo Agent toolkit it is recommended to use the first two digits of the version number. For example if the version is `1.0.0` then the dependency would be `1.0`.
 
 For more information on the available plugins, refer to [Framework Integrations](#framework-integrations).
 
-Example dependency for AIQ toolkit using the `langchain` plugin for projects using a `pyproject.toml` file:
+Example dependency for NeMo Agent toolkit using the `langchain` plugin for projects using a `pyproject.toml` file:
 ```toml
 dependencies = [
 "aiqtoolkit[langchain]~=1.0",
@@ -171,5 +174,5 @@ aiqtoolkit[langchain]==1.0.*
 
 ## Next Steps
 
-* AIQ toolkit contains several examples which demonstrate how AIQ toolkit can be used to build custom workflows and tools. These examples are located in the `examples` directory of the AIQ toolkit repository.
-* Refer to the AIQ toolkit tutorials for more detailed information on how to use AIQ toolkit.
+* Explore the examples in the `examples` directory to learn how to build custom workflows and tools with NeMo Agent toolkit.
+* Review the NeMo Agent toolkit tutorials for detailed guidance on using the toolkit.

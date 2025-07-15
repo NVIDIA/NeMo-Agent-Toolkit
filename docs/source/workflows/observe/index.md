@@ -17,12 +17,12 @@ limitations under the License.
 
 # Observe Workflows
 
-The AIQ toolkit Observability Module provides support for configuring logging, tracing, and metrics for AIQ toolkit workflows. Users can configure telemetry options from a predefined list based on their preferences. The logging and tracing exporters:
+The NeMo Agent toolkit Observability Module provides support for configuring logging, tracing, and metrics for NeMo Agent toolkit workflows. Users can configure telemetry options from a predefined list based on their preferences. The logging and tracing exporters:
 
 - Listen for usage statistics pushed by `IntermediateStepManager`.
 - Translate the usage statistics to OpenTelemetry format and push to the configured provider/method. (e.g., phoenix, OTelCollector, console, file)
 
-These features enable AIQ toolkit developers to test their workflows locally and integrate observability seamlessly.
+These features enable NeMo Agent toolkit developers to test their workflows locally and integrate observability seamlessly.
 
 ## Installation
 
@@ -158,20 +158,20 @@ The `tracing` section contains one or more tracing providers. Each provider has 
 To see the complete list of configuration fields for each provider, utilize the `aiq info -t tracing` command which will display the configuration fields for each provider.
 
 
-### AIQ Toolkit Observability Components
+### NeMo Agent Toolkit Observability Components
 
-The Observability components `AsyncOtelSpanListener`, leverage the Subject-Observer pattern to subscribe to the `IntermediateStep` event stream pushed by `IntermediateStepManager`. Acting as an asynchronous event listener, `AsyncOtelSpanListener` listens for AIQ toolkit intermediate step events, collects and efficiently translates them into OpenTelemetry spans, enabling seamless tracing and monitoring.
+The Observability components `AsyncOtelSpanListener`, leverage the Subject-Observer pattern to subscribe to the `IntermediateStep` event stream pushed by `IntermediateStepManager`. Acting as an asynchronous event listener, `AsyncOtelSpanListener` listens for NeMo Agent toolkit intermediate step events, collects and efficiently translates them into OpenTelemetry spans, enabling seamless tracing and monitoring.
 
 - **Process events asynchronously** using a dedicated event loop.
 - **Transform function execution boundaries** (`FUNCTION_START`, `FUNCTION_END`) and intermediate operations (`LLM_END`, `TOOL_END`) into OpenTelemetry spans.
 - **Maintain function ancestry context** using `InvocationNode` objects, ensuring **distributed tracing across nested function calls**, while preserving execution hierarchy.
 - **{py:class}`aiq.profiler.decorators`**: Defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
-- **{py:class}`~aiq.profiler.callbacks`**: Directory that implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the AIQ toolkit usage stats queue. AIQ toolkit profiling supports callback handlers for LangChain, LLama Index, CrewAI, and Semantic Kernel.
+- **{py:class}`~aiq.profiler.callbacks`**: Directory that implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent toolkit usage stats queue. NeMo Agent toolkit profiling supports callback handlers for LangChain, LLama Index, CrewAI, and Semantic Kernel.
 
 
 ### Registering a New Telemetry Provider as a Plugin
 
-AIQ toolkit allows users to register custom telemetry providers using the `@register_telemetry_exporter` decorator in {py:class}`aiq.observability.register`.
+NeMo Agent toolkit allows users to register custom telemetry providers using the `@register_telemetry_exporter` decorator in {py:class}`aiq.observability.register`.
 
 Example:
 ```bash

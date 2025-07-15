@@ -15,8 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Launching the NVIDIA Agent Intelligence Toolkit API Server and User Interface
-NVIDIA Agent Intelligence (AIQ) toolkit provides a user interface for interacting with your running workflow.
+# Launching the NVIDIA NeMo Agent Toolkit API Server and User Interface
+NVIDIA NeMo Agent toolkit provides a user interface for interacting with your running workflow. This guide walks you through starting the API server and launching the web-based user interface to interact with your workflows.
 
 ## User Interface Features
 - Chat history
@@ -27,17 +27,23 @@ NVIDIA Agent Intelligence (AIQ) toolkit provides a user interface for interactin
 - Override intermediate steps with the same ID
 
 ## Walk-through
-This walk-through guides you through the steps to set up and configure the AIQ toolkit user interface. Refer to `examples/basic/functions/simple_calculator/README.md` to set up the simple calculator workflow demonstrated in the following walk-through properly.
+This walk-through guides you through the steps to set up and configure the NeMo Agent toolkit user interface. 
+
+### Prerequisites
+Before starting, ensure you have:
+- NeMo Agent toolkit installed and configured
+- Set up the simple calculator workflow by following the instructions in `examples/basic/functions/simple_calculator/README.md`
+- Node.js v18+ installed (required for the web interface)
 
 
-The AIQ toolkit UI is located in a git submodule at `external/aiqtoolkit-opensource-ui`. Ensure you have checked out all of the
+The NeMo Agent toolkit UI is located in a git submodule at `external/aiqtoolkit-opensource-ui`. Ensure you have checked out all of the
 git submodules by running the following:
 ```bash
 git submodule update --init --recursive
 ```
 
-### Start the AIQ Toolkit Server
-You can start the AIQ toolkit server using the `aiq serve` command with the appropriate configuration file.
+### Start the NeMo Agent Toolkit Server
+You can start the NeMo Agent toolkit server using the `aiq serve` command with the appropriate configuration file.
 
 ```bash
 aiq serve --config_file=examples/basic/functions/simple_calculator/configs/config.yml
@@ -65,8 +71,8 @@ INFO:     Application startup complete.
 INFO:     Uvicorn running on http://localhost:8000 (Press CTRL+C to quit)
 ```
 
-### Verify the AIQ Toolkit Server is Running
-After the server is running, you can make HTTP requests to interact with the workflow.
+### Verify the NeMo Agent Toolkit Server is Running
+After the server is running, you can make HTTP requests to interact with the workflow. This step confirms that the server is properly configured and can process requests.
 
 ```bash
 curl --request POST \
@@ -86,8 +92,8 @@ Running this command will produce the following expected output:
 }
 ```
 
-### Launch the AIQ Toolkit User Interface
-After the AIQ toolkit server starts, launch the web user interface. Launching the UI requires that Node.js v18+ is installed. Instructions for downloading and installing Node.js can be found in the official [Node.js documentation](https://nodejs.org/en/download).
+### Launch the NeMo Agent Toolkit User Interface
+After the NeMo Agent toolkit server starts, launch the web user interface. Launching the UI requires that Node.js v18+ is installed. Instructions for downloading and installing Node.js can be found in the official [Node.js documentation](https://nodejs.org/en/download).
 
 ```bash
 cd external/aiqtoolkit-opensource-ui
@@ -97,26 +103,26 @@ npm run dev
 After the web development server starts, open a web browser and navigate to [`http://localhost:3000/`](http://localhost:3000/).
 Port `3001` is an alternative port if port `3000` (default) is in use.
 
-![AIQ toolkit Web User Interface](../_static/ui_home_page.png)
+![NeMo Agent toolkit Web User Interface](../_static/ui_home_page.png)
 
-### Connect the User Interface to the AIQ Toolkit Server Using HTTP API
-Configure the settings by selecting the `Settings` icon located on the bottom left corner of the home page.
+### Connect the User Interface to the NeMo Agent Toolkit Server Using HTTP API
+Configure the settings by selecting the *Settings* icon located on the bottom left corner of the home page.
 
-![AIQ toolkit Web UI Settings](../_static/ui_generate_example_settings.png)
+![NeMo Agent toolkit Web UI Settings](../_static/ui_generate_example_settings.png)
 
 #### Settings Options
-**Note:** It is recommended to select /chat/stream for intermediate results streaming.
+**Note:** It's recommended to select `/chat/stream` for intermediate results streaming.
 - `Theme`: Light or Dark Theme.
 - `HTTP URL for Chat Completion`: REST API enpoint.
   - /generate
   - /generate/stream
   - /chat
   - /chat/stream
-- `WebSocket URL for Completion`: WebSocket URL to connect to running AIQ toolkit server.
-- `WebSocket Schema` - Workflow schema type over WebSocket connection.
+- `WebSocket URL for Completion`: WebSocket URL to connect to running NeMo Agent toolkit server.
+- `WebSocket Schema`: Workflow schema type over WebSocket connection.
 
 ### Simple Calculator Example Conversation
 Interact with the chat interface by prompting the Agent with the
 message: `Is 4 + 4 greater than the current hour of the day?`
 
-![AIQ toolkit Web UI Workflow Result](../_static/ui_generate_example.png)
+![NeMo Agent Toolkit Web UI Workflow Result](../_static/ui_generate_example.png)
