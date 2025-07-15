@@ -157,7 +157,7 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
                                   shutdown_timeout=config.shutdown_timeout)
 
 
-class GalileoTelemetryExporter(TelemetryExporterBaseConfig, name="galileo"):
+class GalileoTelemetryExporter(TelemetryExporterBaseConfig, name="galileo"):  # pylint: disable=W0613
     """A telemetry exporter to transmit traces to externally hosted galileo service."""
 
     endpoint: str = Field(description="The galileo endpoint to export telemetry traces.",
@@ -173,7 +173,7 @@ class GalileoTelemetryExporter(TelemetryExporterBaseConfig, name="galileo"):
 
 
 @register_telemetry_exporter(config_type=GalileoTelemetryExporter)
-async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: Builder):
+async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: Builder):  # pylint: disable=W0613
     """Create a Galileo telemetry exporter."""
 
     from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
