@@ -15,17 +15,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Build a Demo Agent Workflow Using Cursor Rules for AIQ Toolkit
+# Build a Demo Agent Workflow Using Cursor Rules for NVIDIA NeMo Agent Toolkit
 
-Learn how to use Cursor rules for AIQ toolkit development to create and run a demo agent workflow.
+Learn how to use Cursor rules for NeMo Agent toolkit development to create and run a demo agent workflow.
 
 ## About Cursor Rules
-Cursor rules in AIQ toolkit act as an intelligent development that offers structured assistance for developers at all experience levels. The key functionalities of Cursor rules are as follows:
-* Streamline AIQ workflow creation with intelligent prompts: You can build complete agent workflows, integrate functions, and configure tools through natural language commands. It allows you to transform complex development tasks into simple conversational interactions.
-* Accelerate AIQ development workflows: You can use Cursor rules to develop AIQ toolkit efficiently and consistently as it provides streamlined workflows with established and tested patterns. It also enhances productivity by minimizing routine tasks, while applying best practices for coding, documentation, and configuration.
-* Learn and understand AIQ quickly and simply: For less experienced developers, Cursor rules provide an interactive approach to mastering AIQ Toolkit through contextual assistance and comprehensive examples for typical development workflows.
+Cursor rules in NeMo Agent toolkit act as an intelligent development that offers structured assistance for developers at all experience levels. The key functionalities of Cursor rules are as follows:
+* Streamline workflow creation with intelligent prompts: You can build complete agent workflows, integrate functions, and configure tools through natural language commands. It allows you to transform complex development tasks into simple conversational interactions.
+* Accelerate development workflows: You can use Cursor rules to develop NeMo Agent toolkit efficiently and consistently as it provides streamlined workflows with established and tested patterns. It also enhances productivity by minimizing routine tasks, while applying best practices for coding, documentation, and configuration.
+* Learn and understand NeMo Agent toolkit quickly and simply: For less experienced developers, Cursor rules provide an interactive approach to mastering NeMo Agent toolkit through contextual assistance and comprehensive examples for typical development workflows.
 * Standardization: Ensures uniform development standards, such as formatting, type annotations, and documentation requirements, across development teams and projects. Thus, decreasing code review overhead during submissions.
-
 
 ## Common Prompts
 
@@ -35,7 +34,7 @@ For optimal Cursor rules experience, avoid using the `Auto` mode for LLM model s
 
 The following are frequently used prompts to begin development:
 
-**Installing AIQ Toolkit:**
+**Installing NeMo Agent Toolkit:**
 ```
 Install AIQ Toolkit with all dependencies and verify the installation is working correctly.
 ```
@@ -66,7 +65,7 @@ For complete documentation with all available rules, prompts, and examples, refe
 
 Follow the steps below for a comprehensive example that demonstrates creating and running a functional agent workflow using Cursor rules:
 
-### Install AIQ Toolkit
+### Install NeMo Agent Toolkit
 
 Prompt:
 ```
@@ -152,11 +151,11 @@ Keep your prompts specific and concise. For instance, rather than stating "Creat
 
 ## Cursor Rules Organization
 
-AIQ Toolkit offers a comprehensive collection of Cursor rules organized into four primary categories:
+NeMo Agent toolkit offers a comprehensive collection of Cursor rules organized into four primary categories:
 
 - **[Foundation Rules](../reference/cursor-rules-reference.md#foundation-rules)**: Core code quality standards and cursor rules management
 - **[Setup and Installation Rules](../reference/cursor-rules-reference.md#setup-and-installation-rules)**: Environment configuration and toolkit installation procedures
-- **[CLI Command Rules](../reference/cursor-rules-reference.md#cli-command-rules)**: Complete AIQ CLI operations and command handling
+- **[CLI Command Rules](../reference/cursor-rules-reference.md#cli-command-rules)**: Complete CLI operations and command handling
 - **[Workflow Development Rules](../reference/cursor-rules-reference.md#workflow-development-rules)**: Function and tool development for workflow creation
 
 For a **comprehensive overview of all supported tasks**, including detailed prompts, examples, and capabilities for each rule, refer to the **[Cursor Rules Reference](../reference/cursor-rules-reference.md)**.

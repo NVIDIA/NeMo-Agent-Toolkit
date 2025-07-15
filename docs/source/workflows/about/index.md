@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# About NVIDIA Agent Intelligence Toolkit Workflows
+# About NVIDIA NeMo Agent Toolkit Workflows
 
-Workflows are the heart of AIQ toolkit because they define which agentic tools and models are used to perform a given task or series of tasks.
+Workflows are the heart of NeMo Agent toolkit because they define which agentic tools and models are used to perform a given task or series of tasks.
 
 ## Understanding the Workflow Configuration File
 

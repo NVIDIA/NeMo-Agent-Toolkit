@@ -17,12 +17,12 @@ limitations under the License.
 
 # Adding a Memory Provider
 
-This documentation presumes familiarity with the AIQ toolkit plugin architecture, the concept of "function registration" using `@register_function`, and how we define tool/workflow configurations in the AIQ toolkit config described in the [Creating a New Tool and Workflow](../tutorials/create-a-new-workflow.md) tutorial.
+This documentation presumes familiarity with the NeMo Agent toolkit plugin architecture, the concept of "function registration" using `@register_function`, and how we define tool/workflow configurations in the NeMo Agent toolkit config described in the [Creating a New Tool and Workflow](../tutorials/create-a-new-workflow.md) tutorial.
 
 ## Key Memory Module Components
 
 * **Memory Data Models**
-   - **{py:class}`~aiq.data_models.memory.MemoryBaseConfig`**: A Pydantic base class that all memory config classes must extend. This is used for specifying memory registration in the AIQ toolkit config file.
+   - **{py:class}`~aiq.data_models.memory.MemoryBaseConfig`**: A Pydantic base class that all memory config classes must extend. This is used for specifying memory registration in the NeMo Agent toolkit config file.
    - **{py:class}`~aiq.data_models.memory.MemoryBaseConfigT`**: A generic type alias for memory config classes.
 
 * **Memory Interfaces**
@@ -44,7 +44,7 @@ This documentation presumes familiarity with the AIQ toolkit plugin architecture
 
 ## Adding a Memory Module
 
-In the AIQ toolkit system, anything that extends {py:class}`~aiq.data_models.memory.MemoryBaseConfig` and is declared with a `name="some_memory"` can be discovered as a *Memory type* by the AIQ toolkit global type registry. This allows you to define a custom memory class to handle your own backends (Redis, custom database, a vector store, etc.). Then your memory class can be selected in the AIQ toolkit config YAML via `_type: <your memory type>`.
+In the NeMo Agent toolkit system, anything that extends {py:class}`~aiq.data_models.memory.MemoryBaseConfig` and is declared with a `name="some_memory"` can be discovered as a *Memory type* by the NeMo Agent toolkit global type registry. This allows you to define a custom memory class to handle your own backends (Redis, custom database, a vector store, etc.). Then your memory class can be selected in the NeMo Agent toolkit config YAML via `_type: <your memory type>`.
 
 ### Basic Steps
 
@@ -57,7 +57,7 @@ In the AIQ toolkit system, anything that extends {py:class}`~aiq.data_models.mem
        connection_url: str
        api_key: str
    ```
-   > **Note**: The `name="my_custom_memory"` ensures that AIQ toolkit can recognize it when the user places `_type: my_custom_memory` in the memory config.
+   > **Note**: The `name="my_custom_memory"` ensures that NeMo Agent toolkit can recognize it when the user places `_type: my_custom_memory` in the memory config.
 
 2. **Implement a {py:class}`~aiq.memory.interfaces.MemoryEditor`** that uses your backend**:
    ```python
@@ -81,10 +81,10 @@ In the AIQ toolkit system, anything that extends {py:class}`~aiq.data_models.mem
            # Implement your deletion logic
            ...
    ```
-3. **Tell AIQ toolkit how to build your MemoryEditor**. Typically, you do this by hooking into the builder system so that when `builder.get_memory_client("my_custom_memory")` is called, it returns an instance of `MyCustomMemoryEditor`.
+3. **Tell NeMo Agent toolkit how to build your MemoryEditor**. Typically, you do this by hooking into the builder system so that when `builder.get_memory_client("my_custom_memory")` is called, it returns an instance of `MyCustomMemoryEditor`.
    - For example, you might define a `@register_memory` or do it manually with the global type registry. (The standard pattern is to see how `mem0_memory` or `zep` memory is integrated in the code under `aiq/memory/<provider>`.)
 
-4. **Use in config**: Now in your AIQ toolkit config, you can do something like:
+4. **Use in config**: Now in your NeMo Agent toolkit config, you can do something like:
    ```yaml
    memory:
      my_store:
@@ -138,7 +138,7 @@ class MyCustomMemoryEditor(MemoryEditor):
 
 Then either:
 - Write a small plugin method that `@register_memory` or `@register_function` with `framework_wrappers`, or
-- Add a snippet to your plugin's `__init__.py` that calls the AIQ toolkit TypeRegistry, passing your config.
+- Add a snippet to your plugin's `__init__.py` that calls the NeMo Agent toolkit TypeRegistry, passing your config.
 
 ---
 
@@ -209,7 +209,7 @@ workflow:
 Explanation:
 
 - We define a memory entry named `saas_memory` with `_type: mem0_memory`, using the [Mem0](https://mem0.ai/) provider included in the [`aiqtoolkit-mem0ai`](https://pypi.org/project/aiqtoolkit-mem0ai/) plugin.
-- Then we define two tools (functions in AIQ toolkit terminology) that reference `saas_memory`: `add_memory` and `get_memory`.
+- Then we define two tools (functions in NeMo Agent toolkit terminology) that reference `saas_memory`: `add_memory` and `get_memory`.
 - Finally, the `agent_memory` workflow references these two tool names.
 
 ---
@@ -221,7 +221,7 @@ To **bring your own memory**:
 
 1. **Implement** a custom {py:class}`~aiq.data_models.memory.MemoryBaseConfig` (with a unique `_type`).
 2. **Implement** a custom {py:class}`~aiq.memory.interfaces.MemoryEditor` that can handle `add_items`, `search`, `remove_items` calls.
-3. **Register** your config class so that the AIQ toolkit type registry is aware of `_type: <your memory>`.
+3. **Register** your config class so that the NeMo Agent toolkit type registry is aware of `_type: <your memory>`.
 4. In your `.yml` config, specify:
    ```yaml
    memory:
@@ -235,13 +235,13 @@ To **bring your own memory**:
 
 ## Summary
 
-- The **Memory** module in AIQ toolkit revolves around the {py:class}`~aiq.memory.interfaces.MemoryEditor` interface and {py:class}`~aiq.memory.models.MemoryItem` model.
+- The **Memory** module in NeMo Agent toolkit revolves around the {py:class}`~aiq.memory.interfaces.MemoryEditor` interface and {py:class}`~aiq.memory.models.MemoryItem` model.
 - **Configuration** is done via a subclass of {py:class}`~aiq.data_models.memory.MemoryBaseConfig` that is *discriminated* by the `_type` field in the YAML config.
-- **Registration** can be as simple as adding `name="my_custom_memory"` to your config class and letting AIQ toolkit discover it.
+- **Registration** can be as simple as adding `name="my_custom_memory"` to your config class and letting NeMo Agent toolkit discover it.
 - Tools and workflows then seamlessly **read/write** user memory by calling `builder.get_memory_client(...)`.
 
 This modular design allows any developer to **plug in** a new memory backend—like `Zep`, a custom embedding store, or even a simple dictionary-based store—by following these steps. Once integrated, your **agent** (or tools) will treat it just like any other memory in the system.
 
 ---
 
-**That's it!** You now know how to create, register, and use a **custom memory client** in AIQ toolkit. Feel free to explore the existing memory clients in the `aiq/memory` directory for reference and see how they are integrated into the overall framework.
+**That's it!** You now know how to create, register, and use a **custom memory client** in NeMo Agent toolkit. Feel free to explore the existing memory clients in the `aiq/memory` directory for reference and see how they are integrated into the overall framework.
