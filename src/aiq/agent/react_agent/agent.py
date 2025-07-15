@@ -41,6 +41,7 @@ from aiq.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
 from aiq.agent.base import TOOL_RESPONSE_LOG_MESSAGE
 from aiq.agent.base import AgentDecision
 from aiq.agent.dual_node import DualNodeAgent
+from aiq.agent.llm_retry import retry_llm_astream, LLMRetryConfig
 from aiq.agent.react_agent.output_parser import ReActOutputParser
 from aiq.agent.react_agent.output_parser import ReActOutputParserException
 from aiq.agent.react_agent.prompt import SYSTEM_PROMPT
@@ -58,8 +59,8 @@ class ReActGraphState(BaseModel):
 
 
 class ReActAgentGraph(DualNodeAgent):
-    """Configurable LangGraph ReAct Agent. A ReAct Agent performs reasoning inbetween tool calls, and utilizes the tool
-    names and descriptions to select the optimal tool.  Supports retrying on output parsing errors.  Argument
+    """Configurable LangGraph ReAct Agent. A ReAct Agent performs reasoning inbetween tool calls, and utilizes the
+    tool names and descriptions to select the optimal tool. Supports retrying on output parsing errors. Argument
     "detailed_logs" toggles logging of inputs, outputs, and intermediate steps."""
 
     def __init__(self,
@@ -70,10 +71,16 @@ class ReActAgentGraph(DualNodeAgent):
                  callbacks: list[AsyncCallbackHandler] = None,
                  detailed_logs: bool = False,
                  retry_parsing_errors: bool = True,
-                 max_retries: int = 1):
+                 max_retries: int = 1,
+                 llm_retry_config: LLMRetryConfig = None):
         super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs)
+
+        # enable retrying parsing errors according to the config
         self.retry_parsing_errors = retry_parsing_errors
         self.max_tries = (max_retries + 1) if retry_parsing_errors else 1
+
+        self.llm_retry_config = llm_retry_config or LLMRetryConfig()
+
         logger.debug(
             "%s Filling the prompt variables 'tools' and 'tool_names', using the tools provided in the config.",
             AGENT_LOG_PREFIX)
@@ -89,6 +96,7 @@ class ReActAgentGraph(DualNodeAgent):
                 for tool in tools[:-1]
             ]) + "\n" + (f"{tools[-1].name}: {tools[-1].description}. "
                          f"{INPUT_SCHEMA_MESSAGE.format(schema=tools[-1].input_schema.model_fields)}")
+
         prompt = prompt.partial(tools=tool_names_and_descriptions, tool_names=tool_names)
         # construct the ReAct Agent
         llm = llm.bind(stop=["Observation:"])
@@ -126,10 +134,16 @@ class ReActAgentGraph(DualNodeAgent):
                         return state
                     question = state.messages[0].content
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
-                    output_message = ""
-                    async for event in self.agent.astream({"question": question},
-                                                          config=RunnableConfig(callbacks=self.callbacks)):
-                        output_message += event.content
+
+                    # Use retry wrapper for LLM streaming calls
+                    output_message = await retry_llm_astream(
+                        llm_stream_call=self.agent.astream,
+                        input_data={"question": question},
+                        config=RunnableConfig(callbacks=self.callbacks),
+                        retry_config=self.llm_retry_config,
+                        agent_prefix=f"{AGENT_LOG_PREFIX} ReAct Agent"
+                    )
+
                     output_message = AIMessage(content=output_message)
                     if self.detailed_logs:
                         logger.info(AGENT_RESPONSE_LOG_MESSAGE, question, output_message.content)
@@ -146,12 +160,16 @@ class ReActAgentGraph(DualNodeAgent):
                     agent_scratchpad += working_state
                     question = state.messages[0].content
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
-                    output_message = ""
-                    async for event in self.agent.astream({
-                            "question": question, "agent_scratchpad": agent_scratchpad
-                    },
-                                                          config=RunnableConfig(callbacks=self.callbacks)):
-                        output_message += event.content
+
+                    # Use retry wrapper for LLM streaming calls
+                    output_message = await retry_llm_astream(
+                        llm_stream_call=self.agent.astream,
+                        input_data={"question": question, "agent_scratchpad": agent_scratchpad},
+                        config=RunnableConfig(callbacks=self.callbacks),
+                        retry_config=self.llm_retry_config,
+                        agent_prefix=f"{AGENT_LOG_PREFIX} ReAct Agent"
+                    )
+
                     output_message = AIMessage(content=output_message)
                     if self.detailed_logs:
                         logger.info(AGENT_RESPONSE_LOG_MESSAGE, question, output_message.content)

@@ -27,6 +27,7 @@ from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.utils.type_converter import GlobalTypeConverter
+from aiq.agent.llm_retry import LLMRetryConfig
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,11 @@ class ReWOOAgentWorkflowConfig(FunctionBaseConfig, name="rewoo_agent"):
                                               "If False, strings will be used."))
     additional_instructions: str | None = Field(
         default=None, description="Additional instructions to provide to the agent in addition to the base prompt.")
+    # LLM retry configuration
+    llm_max_retries: int = Field(default=10, description="Maximum number of retries for LLM calls on failure.")
+    llm_retry_base_delay: float = Field(default=1.0, description="Base delay in seconds for exponential backoff.")
+    llm_retry_max_delay: float = Field(default=60.0, description="Maximum delay in seconds between retries.")
+    allow_empty_response: bool = Field(default=False, description="Allow LLM to return empty responses without retrying.")
 
 
 @register_function(config_type=ReWOOAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -109,13 +115,22 @@ async def ReWOO_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
     if not tools:
         raise ValueError(f"No tools specified for ReWOO Agent '{config.llm_name}'")
 
+    # Create retry configuration from config parameters
+    llm_retry_config = LLMRetryConfig(
+        max_retries=config.llm_max_retries,
+        base_delay=config.llm_retry_base_delay,
+        max_delay=config.llm_retry_max_delay,
+        allow_empty_response=config.allow_empty_response
+    )
+
     # construct the ReWOO Agent Graph from the configured llm, prompt, and tools
     graph: CompiledGraph = await ReWOOAgentGraph(llm=llm,
                                                  planner_prompt=planner_prompt,
                                                  solver_prompt=solver_prompt,
                                                  tools=tools,
                                                  use_tool_schema=config.include_tool_input_schema_in_tool_description,
-                                                 detailed_logs=config.verbose).build_graph()
+                                                 detailed_logs=config.verbose,
+                                                 llm_retry_config=llm_retry_config).build_graph()
 
     async def _response_fn(input_message: AIQChatRequest) -> AIQChatResponse:
         try:

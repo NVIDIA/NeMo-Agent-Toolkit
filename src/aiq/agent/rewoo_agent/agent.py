@@ -38,6 +38,7 @@ from aiq.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
 from aiq.agent.base import TOOL_RESPONSE_LOG_MESSAGE
 from aiq.agent.base import AgentDecision
 from aiq.agent.base import BaseAgent
+from aiq.agent.llm_retry import retry_llm_astream, LLMRetryConfig
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +67,11 @@ class ReWOOAgentGraph(BaseAgent):
                  tools: list[BaseTool],
                  use_tool_schema: bool = True,
                  callbacks: list[AsyncCallbackHandler] = None,
-                 detailed_logs: bool = False):
+                 detailed_logs: bool = False,
+                 llm_retry_config: LLMRetryConfig = None):
         super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs)
+
+        self.llm_retry_config = llm_retry_config or LLMRetryConfig()
 
         logger.debug(
             "%s Filling the prompt variables 'tools' and 'tool_names', using the tools provided in the config.",
@@ -185,9 +189,13 @@ class ReWOOAgentGraph(BaseAgent):
                 logger.error("%s No task provided to the ReWOO Agent. Please provide a valid task.", AGENT_LOG_PREFIX)
                 return {"result": NO_INPUT_ERROR_MESSAGE}
 
-            plan = ""
-            async for event in planner.astream({"task": task}, config=RunnableConfig(callbacks=self.callbacks)):
-                plan += event.content
+            plan = await retry_llm_astream(
+                llm_stream_call=planner.astream,
+                input_data={"task": task},
+                config=RunnableConfig(callbacks=self.callbacks),
+                retry_config=self.llm_retry_config,
+                agent_prefix=f"{AGENT_LOG_PREFIX} ReWOO Agent Planner"
+            )
 
             steps = self._parse_planner_output(plan)
 
@@ -311,9 +319,14 @@ class ReWOOAgentGraph(BaseAgent):
             task = state.task.content
             solver_prompt = self.solver_prompt.partial(plan=plan)
             solver = solver_prompt | self.llm
-            output_message = ""
-            async for event in solver.astream({"task": task}, config=RunnableConfig(callbacks=self.callbacks)):
-                output_message += event.content
+
+            output_message = await retry_llm_astream(
+                llm_stream_call=solver.astream,
+                input_data={"task": task},
+                config=RunnableConfig(callbacks=self.callbacks),
+                retry_config=self.llm_retry_config,
+                agent_prefix=f"{AGENT_LOG_PREFIX} ReWOO Agent Solver"
+            )
 
             output_message = AIMessage(content=output_message)
             if self.detailed_logs:

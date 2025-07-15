@@ -25,6 +25,7 @@ from aiq.cli.register_workflow import register_function
 from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
+from aiq.agent.llm_retry import LLMRetryConfig
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,11 @@ class ToolCallAgentWorkflowConfig(FunctionBaseConfig, name="tool_calling_agent")
     handle_tool_errors: bool = Field(default=True, description="Specify ability to handle tool calling errors.")
     description: str = Field(default="Tool Calling Agent Workflow", description="Description of this functions use.")
     max_iterations: int = Field(default=15, description="Number of tool calls before stoping the tool calling agent.")
+    # LLM retry configuration
+    llm_max_retries: int = Field(default=10, description="Maximum number of retries for LLM calls on failure.")
+    llm_retry_base_delay: float = Field(default=1.0, description="Base delay in seconds for exponential backoff.")
+    llm_retry_max_delay: float = Field(default=60.0, description="Maximum delay in seconds between retries.")
+    allow_empty_response: bool = Field(default=False, description="Allow LLM to return empty responses without retrying.")
 
 
 @register_function(config_type=ToolCallAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -69,11 +75,20 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
         logger.error("%s Failed to bind tools: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
         raise ex
 
+    # Create retry configuration from config parameters
+    llm_retry_config = LLMRetryConfig(
+        max_retries=config.llm_max_retries,
+        base_delay=config.llm_retry_base_delay,
+        max_delay=config.llm_retry_max_delay,
+        allow_empty_response=config.allow_empty_response
+    )
+
     # construct the Tool Calling Agent Graph from the configured llm, and tools
     graph: CompiledGraph = await ToolCallAgentGraph(llm=llm,
                                                     tools=tools,
                                                     detailed_logs=config.verbose,
-                                                    handle_tool_errors=config.handle_tool_errors).build_graph()
+                                                    handle_tool_errors=config.handle_tool_errors,
+                                                    llm_retry_config=llm_retry_config).build_graph()
 
     async def _response_fn(input_message: str) -> str:
         try:

@@ -30,6 +30,7 @@ from aiq.agent.base import AGENT_RESPONSE_LOG_MESSAGE
 from aiq.agent.base import TOOL_RESPONSE_LOG_MESSAGE
 from aiq.agent.base import AgentDecision
 from aiq.agent.dual_node import DualNodeAgent
+from aiq.agent.llm_retry import retry_llm_ainvoke, LLMRetryConfig
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +50,11 @@ class ToolCallAgentGraph(DualNodeAgent):
                  tools: list[BaseTool],
                  callbacks: list[AsyncCallbackHandler] = None,
                  detailed_logs: bool = False,
-                 handle_tool_errors: bool = True):
+                 handle_tool_errors: bool = True,
+                 llm_retry_config: LLMRetryConfig = None):
         super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs)
         self.tool_caller = ToolNode(tools, handle_tool_errors=handle_tool_errors)
+        self.llm_retry_config = llm_retry_config or LLMRetryConfig()
         logger.debug("%s Initialized Tool Calling Agent Graph", AGENT_LOG_PREFIX)
 
     async def agent_node(self, state: ToolCallAgentGraphState):
@@ -59,7 +62,16 @@ class ToolCallAgentGraph(DualNodeAgent):
             logger.debug('%s Starting the Tool Calling Agent Node', AGENT_LOG_PREFIX)
             if len(state.messages) == 0:
                 raise RuntimeError('No input received in state: "messages"')
-            response = await self.llm.ainvoke(state.messages, config=RunnableConfig(callbacks=self.callbacks))
+
+            # Use retry wrapper for LLM calls
+            response = await retry_llm_ainvoke(
+                llm_call=self.llm.ainvoke,
+                messages=state.messages,
+                config=RunnableConfig(callbacks=self.callbacks),
+                retry_config=self.llm_retry_config,
+                agent_prefix=f"{AGENT_LOG_PREFIX} Tool Calling Agent"
+            )
+
             if self.detailed_logs:
                 agent_input = "\n".join(str(message.content) for message in state.messages)
                 logger.info(AGENT_RESPONSE_LOG_MESSAGE, agent_input, response)
