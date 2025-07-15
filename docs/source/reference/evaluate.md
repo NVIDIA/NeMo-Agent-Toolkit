@@ -37,7 +37,7 @@ Download and use datasets provided by NeMo Agent toolkit examples by running the
 git lfs fetch
 git lfs pull
 ```
- The dataset used for evaluation is specified in the configuration file  via `eval.general.dataset`. For example, to use the `langsmith.json` dataset, the configuration is as follows:
+ The dataset used for evaluation is specified in the configuration file through the `eval.general.dataset`. For example, to use the `langsmith.json` dataset, the configuration is as follows:
 ```yaml
 eval:
   general:
@@ -452,7 +452,7 @@ When `append_job_id_to_output_dir` is set to `true`, a unique job ID (`job_{UUID
 - Local output path: `./.tmp/aiq/examples/basic/functions/simple/jobs/job_{unique-job-id}/`
 - Remote output path (if S3 is configured): `output/jobs/job_{unique-job-id}/`
 
-The `cleanup` option is used to control the cleanup of the output directory. If `cleanup` is set to `true`, the entire output directory and all job `sub-directories` are deleted at the beginning of the evaluation. So `cleanup` must be set to `false` if you want to preserve the output directory and job `sub-directories`.
+The `cleanup` option is used to control the cleanup of the output directory. If `cleanup` is set to `true`, the entire output directory and all job `sub-directories` are deleted at the beginning of the evaluation. Therefore, `cleanup` must be set to `false` if you want to preserve the output directory and job `sub-directories`.
 
 ### Uploading output directory to remote storage
 You can upload the contents of the entire output directory to remote storage by providing the information needed to upload the output directory in the `eval.general.output` section of the `config.yml` file. The following is an example configuration to upload the output directory to remote storage.
