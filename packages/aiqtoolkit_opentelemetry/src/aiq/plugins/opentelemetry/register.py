@@ -160,7 +160,8 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
 class GalileoTelemetryExporter(TelemetryExporterBaseConfig, name="galileo"):
     """A telemetry exporter to transmit traces to externally hosted galileo service."""
 
-    endpoint: str = Field(description="The galileo endpoint to export telemetry traces.")
+    endpoint: str = Field(description="The galileo endpoint to export telemetry traces.",
+                          default="https://app.galileo.ai/api/galileo/otel/traces")
     project: str = Field(description="The project name to group the telemetry traces.")
     logstream: str = Field(description="The logstream name to group the telemetry traces.")
     api_key: str = Field(description="The api key to authenticate with the galileo service.")
