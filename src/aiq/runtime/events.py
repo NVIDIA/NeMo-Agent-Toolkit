@@ -26,9 +26,6 @@ from collections.abc import Callable
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -55,8 +52,8 @@ class ConfigChangeEvent(BaseModel):
     event_type: ConfigEventType = Field(description="Type of the configuration change event")
     file_path: Path = Field(description="Path to the changed configuration file")
     timestamp: datetime = Field(default_factory=datetime.now, description="When the event occurred")
-    old_path: Optional[Path] = Field(default=None, description="Previous path for move events")
-    checksum: Optional[str] = Field(default=None, description="File checksum for duplicate detection")
+    old_path: Path | None = Field(default=None, description="Previous path for move events")
+    checksum: str | None = Field(default=None, description="File checksum for duplicate detection")
 
     class Config:
         arbitrary_types_allowed = True
@@ -75,15 +72,15 @@ class ConfigEventManager:
     """
 
     def __init__(self) -> None:
-        self._handlers: Dict[ConfigEventType, List[ConfigEventHandler]] = {
+        self._handlers: dict[ConfigEventType, list[ConfigEventHandler]] = {
             event_type: []
             for event_type in ConfigEventType
         }
-        self._global_handlers: List[ConfigEventHandler] = []
-        self._recent_events: List[ConfigChangeEvent] = []
+        self._global_handlers: list[ConfigEventHandler] = []
+        self._recent_events: list[ConfigChangeEvent] = []
         self._max_recent_events: int = 100
 
-    def register_handler(self, handler: ConfigEventHandler, event_type: Optional[ConfigEventType] = None) -> None:
+    def register_handler(self, handler: ConfigEventHandler, event_type: ConfigEventType | None = None) -> None:
         """
         Register an event handler for configuration changes.
 
@@ -103,7 +100,7 @@ class ConfigEventManager:
             handler_name = getattr(handler, '__name__', str(handler))
             logger.debug("Registered configuration event handler for %s: %s", event_type, handler_name)
 
-    def unregister_handler(self, handler: ConfigEventHandler, event_type: Optional[ConfigEventType] = None) -> None:
+    def unregister_handler(self, handler: ConfigEventHandler, event_type: ConfigEventType | None = None) -> None:
         """
         Unregister an event handler.
 
@@ -157,7 +154,7 @@ class ConfigEventManager:
                 handler_name = getattr(handler, '__name__', str(handler))
                 logger.error("Error in global configuration event handler %s: %s", handler_name, e, exc_info=True)
 
-    def get_recent_events(self, limit: Optional[int] = None) -> List[ConfigChangeEvent]:
+    def get_recent_events(self, limit: int | None = None) -> list[ConfigChangeEvent]:
         """
         Get recent configuration change events.
 
@@ -181,7 +178,7 @@ class ConfigEventManager:
         self._recent_events.clear()
         logger.debug("Cleared recent configuration events history")
 
-    def get_handler_count(self, event_type: Optional[ConfigEventType] = None) -> int:
+    def get_handler_count(self, event_type: ConfigEventType | None = None) -> int:
         """
         Get the number of registered handlers.
 
@@ -202,7 +199,7 @@ class ConfigEventManager:
 
 
 # Global event manager instance
-_event_manager: Optional[ConfigEventManager] = None
+_event_manager: ConfigEventManager | None = None
 
 
 def get_event_manager() -> ConfigEventManager:

@@ -27,10 +27,6 @@ import logging
 import threading
 import time
 from pathlib import Path
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Set
 
 from watchdog.events import FileSystemEvent
 from watchdog.events import FileSystemEventHandler
@@ -52,13 +48,13 @@ class ConfigFileHandler(FileSystemEventHandler):
     change events that are dispatched through the event system.
     """
 
-    def __init__(self, watched_files: Set[Path], debounce_delay: float = 0.1) -> None:
+    def __init__(self, watched_files: set[Path], debounce_delay: float = 0.1) -> None:
         """
         Initialize the configuration file handler.
 
         Parameters
         ----------
-        watched_files : Set[Path]
+        watched_files : set[Path]
             Set of file paths to monitor for changes
         debounce_delay : float, optional
             Delay in seconds to debounce rapid file changes, by default 0.1
@@ -66,10 +62,10 @@ class ConfigFileHandler(FileSystemEventHandler):
         super().__init__()
         self.watched_files = watched_files
         self.debounce_delay = debounce_delay
-        self._pending_events: Dict[Path, float] = {}
-        self._file_checksums: Dict[Path, str] = {}
+        self._pending_events: dict[Path, float] = {}
+        self._file_checksums: dict[Path, str] = {}
         self._lock = threading.Lock()
-        self._debounce_timer: Optional[threading.Timer] = None
+        self._debounce_timer: threading.Timer | None = None
 
         # Initialize file checksums
         self._update_file_checksums()
@@ -259,9 +255,9 @@ class ConfigWatcher:
             Delay in seconds to debounce rapid file changes, by default 0.1
         """
         self.debounce_delay = debounce_delay
-        self._observer: Optional[Observer] = None
-        self._watched_files: Set[Path] = set()
-        self._watched_directories: Dict[Path, ConfigFileHandler] = {}
+        self._observer: Observer | None = None
+        self._watched_files: set[Path] = set()
+        self._watched_directories: dict[Path, ConfigFileHandler] = {}
         self._is_running = False
         self._lock = threading.Lock()
 
@@ -372,7 +368,7 @@ class ConfigWatcher:
             self._observer = Observer()
 
             # Group files by directory and set up monitoring
-            directories: Dict[Path, Set[Path]] = {}
+            directories: dict[Path, set[Path]] = {}
             for file_path in self._watched_files:
                 directory = file_path.parent
                 if directory not in directories:
@@ -423,7 +419,7 @@ class ConfigWatcher:
         with self._lock:
             return self._is_running
 
-    def get_watched_files(self) -> List[Path]:
+    def get_watched_files(self) -> list[Path]:
         """
         Get the list of files being watched.
 

@@ -396,5 +396,3 @@ This configuration watcher provides the foundation for hot-reloading functionali
 1. **Configuration Hot-Reload**: Automatic configuration reloading with validation
 2. **CLI Development Mode**: Integration with `aiq run` and `aiq serve` commands
 3. **Plugin Hot-Reload**: Dynamic plugin loading and unloading
-
-For more information about these upcoming features, see the [Hot-Reload Roadmap](hot-reload-roadmap.md).
