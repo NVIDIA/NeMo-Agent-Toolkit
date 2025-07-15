@@ -111,7 +111,12 @@ async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builde
 
     from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
-    yield OTLPSpanAdapterExporter(endpoint=config.endpoint)
+    yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
+                                  batch_size=config.batch_size,
+                                  flush_interval=config.flush_interval,
+                                  max_queue_size=config.max_queue_size,
+                                  drop_on_overflow=config.drop_on_overflow,
+                                  shutdown_timeout=config.shutdown_timeout)
 
 
 class PatronusTelemetryExporter(TelemetryExporterBaseConfig, name="patronus"):
@@ -143,7 +148,13 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
         "x-api-key": api_key,
         "pat-project-name": config.project,
     }
-    yield OTLPSpanAdapterExporter(endpoint=config.endpoint, headers=headers)
+    yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
+                                  headers=headers,
+                                  batch_size=config.batch_size,
+                                  flush_interval=config.flush_interval,
+                                  max_queue_size=config.max_queue_size,
+                                  drop_on_overflow=config.drop_on_overflow,
+                                  shutdown_timeout=config.shutdown_timeout)
 
 
 class GalileoTelemetryExporter(TelemetryExporterBaseConfig, name="galileo"):
@@ -153,7 +164,11 @@ class GalileoTelemetryExporter(TelemetryExporterBaseConfig, name="galileo"):
     project: str = Field(description="The project name to group the telemetry traces.")
     logstream: str = Field(description="The logstream name to group the telemetry traces.")
     api_key: str = Field(description="The api key to authenticate with the galileo service.")
-    session_id: str = Field(description="The session id to group the telemetry traces.", default=None)
+    batch_size: int = Field(default=100, description="The batch size for the telemetry exporter.")
+    flush_interval: float = Field(default=5.0, description="The flush interval for the telemetry exporter.")
+    max_queue_size: int = Field(default=1000, description="The maximum queue size for the telemetry exporter.")
+    drop_on_overflow: bool = Field(default=False, description="Whether to drop on overflow for the telemetry exporter.")
+    shutdown_timeout: float = Field(default=10.0, description="The shutdown timeout for the telemetry exporter.")
 
 
 @register_telemetry_exporter(config_type=GalileoTelemetryExporter)
@@ -168,29 +183,12 @@ async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: 
         "project": config.project,
     }
 
-    if config.session_id:
-        headers["sessionid"] = config.session_id
-
-    yield OTLPSpanAdapterExporter(endpoint=config.endpoint, headers=headers)
-
-    # try:
-    #     # If the dependencies are not installed, a TelemetryOptionalImportError will be raised
-    #     phoenix = try_import_phoenix()  # noqa: F841
-    #     from phoenix.otel import HTTPSpanExporter
-
-    #     headers = {
-    #         "Galileo-API-Key": config.api_key,
-    #         "logstream": config.logstream,
-    #         "project": config.project,
-    #     }
-
-    #     if config.session_id:
-    #         headers["sessionid"] = config.session_id
-
-    #     yield HTTPSpanExporter(config.endpoint, headers=headers)
-    # except ConnectionError as ex:
-    #     logger.warning(
-    #         f"Unable to connect to Galileo. Are you sure {config.endpoint} is correct?\n %s",
-    #         ex,
-    #         exc_info=True,
-    #     )
+    yield OTLPSpanAdapterExporter(
+        endpoint=config.endpoint,
+        headers=headers,
+        batch_size=config.batch_size,
+        flush_interval=config.flush_interval,
+        max_queue_size=config.max_queue_size,
+        drop_on_overflow=config.drop_on_overflow,
+        shutdown_timeout=config.shutdown_timeout,
+    )
