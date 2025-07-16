@@ -22,6 +22,7 @@ from contextlib import asynccontextmanager
 from enum import IntFlag
 from enum import auto
 from functools import reduce
+from typing import TYPE_CHECKING
 
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.cli.type_registry import GlobalTypeRegistry
@@ -33,6 +34,9 @@ from aiq.utils.io.yaml_tools import yaml_load
 from aiq.utils.type_utils import StrPath
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from aiq.runtime.config_manager import ConfigManager
 
 
 class PluginTypes(IntFlag):
@@ -186,3 +190,70 @@ def discover_and_register_plugins(plugin_type: PluginTypes):
 
             finally:
                 count += 1
+
+
+def reload_config(config_file: StrPath, validate_only: bool = False) -> AIQConfig:
+    """
+    Reload configuration from file with validation.
+
+    This function provides a simple interface for reloading configuration
+    without managing state. For more advanced features like rollback and
+    override preservation, use ConfigManager directly.
+
+    Parameters
+    ----------
+    config_file : StrPath
+        The path to the configuration file
+    validate_only : bool, optional
+        If True, only validate the configuration without applying changes, by default False
+
+    Returns
+    -------
+    AIQConfig
+        The reloaded and validated configuration
+
+    Raises
+    ------
+    ConfigValidationError
+        If the configuration is invalid
+    ConfigReloadError
+        If reload fails for other reasons
+    """
+    from aiq.runtime.config_manager import ConfigManager
+    from aiq.runtime.config_manager import ConfigReloadError
+    from aiq.runtime.config_manager import ConfigValidationError
+
+    try:
+        # Create a temporary config manager for reloading
+        with ConfigManager(config_file) as manager:
+            return manager.reload_config(validate_only=validate_only)
+    except (ConfigValidationError, ConfigReloadError):
+        # Re-raise config-specific errors as-is
+        raise
+    except Exception as e:
+        # Wrap other exceptions in ConfigReloadError
+        from aiq.runtime.config_manager import ConfigReloadError
+        raise ConfigReloadError(f"Failed to reload configuration: {e}") from e
+
+
+def create_config_manager(config_file: StrPath, config: AIQConfig | None = None) -> ConfigManager:
+    """
+    Create a configuration manager for advanced configuration lifecycle management.
+
+    This provides access to features like configuration snapshots, rollback,
+    override preservation, and event-driven reloading.
+
+    Parameters
+    ----------
+    config_file : StrPath
+        The path to the configuration file
+    config : AIQConfig, optional
+        Pre-loaded configuration. If None, will load from file.
+
+    Returns
+    -------
+    ConfigManager
+        A configuration manager instance
+    """
+    from aiq.runtime.config_manager import ConfigManager
+    return ConfigManager(config_file, config)
