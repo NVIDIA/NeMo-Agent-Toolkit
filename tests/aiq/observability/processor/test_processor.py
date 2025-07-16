@@ -26,7 +26,7 @@ class TestProcessorAbstractBehavior:
     def test_processor_cannot_be_instantiated_directly(self):
         """Test that Processor cannot be instantiated directly due to abstract method."""
         with pytest.raises(TypeError, match="Can't instantiate abstract class Processor"):
-            Processor()
+            Processor()  # pylint: disable=abstract-class-instantiated
 
     def test_processor_with_unimplemented_process_method_fails(self):
         """Test that a class inheriting from Processor without implementing process() fails."""
@@ -35,7 +35,7 @@ class TestProcessorAbstractBehavior:
             class IncompleteProcessor(Processor[str, int]):
                 pass
 
-            IncompleteProcessor()
+            IncompleteProcessor()  # pylint: disable=abstract-class-instantiated
 
 
 class TestProcessorTypeIntrospection:
@@ -327,15 +327,14 @@ class TestProcessorEdgeCases:
 
     def test_processor_with_none_types(self):
         """Test processor that can handle None types."""
-        from typing import Optional
 
-        class OptionalProcessor(Processor[Optional[str], str]):
+        class OptionalProcessor(Processor[str | None, str]):
 
-            async def process(self, item: Optional[str]) -> str:
+            async def process(self, item: str | None) -> str:
                 return item if item is not None else "None"
 
         processor = OptionalProcessor()
-        assert processor.input_type == Optional[str]
+        assert processor.input_type == str | None
         assert processor.output_type == str
 
     async def test_processor_with_same_input_output_type(self):
@@ -379,19 +378,18 @@ class TestProcessorEdgeCases:
 
     def test_processor_with_union_types(self):
         """Test processor with Union types."""
-        from typing import Union
         from typing import get_origin
 
-        class UnionProcessor(Processor[Union[str, int], str]):
+        class UnionProcessor(Processor[str | int, str]):
 
-            async def process(self, item: Union[str, int]) -> str:
+            async def process(self, item: str | int) -> str:
                 return str(item)
 
         processor = UnionProcessor()
-        assert processor.input_type == Union[str, int]
+        assert processor.input_type == str | int
         assert processor.output_type == str
-        # Union types have Union as their origin, not the full Union[str, int]
-        assert processor.input_class == get_origin(Union[str, int])  # This is just Union
+        # Union types have Union as their origin, not the full str | int
+        assert processor.input_class == get_origin(str | int)  # This is just Union
         assert processor.output_class == str
 
     async def test_processor_with_empty_string(self):

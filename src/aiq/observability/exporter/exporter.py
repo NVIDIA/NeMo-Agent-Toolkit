@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class Exporter(ABC):
 
     @abstractmethod
-    async def start(self) -> AsyncGenerator[None, None]:
+    async def start(self) -> AsyncGenerator[None]:
         """Subscribes to event stream and starts the exporter.
 
         This is an async context manager that should be used with 'async with'.

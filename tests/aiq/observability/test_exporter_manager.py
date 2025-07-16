@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=redefined-outer-name  # pytest fixtures
+
 import asyncio
 import gc
 import logging
@@ -143,7 +145,7 @@ class TestExporterManagerInit:
         manager = ExporterManager()
         assert manager._shutdown_timeout == 120
         assert manager._running is False
-        assert manager._tasks == {}
+        assert not manager._tasks
         assert manager._exporter_registry == {}
         assert manager._is_registry_shared is False
 
@@ -161,7 +163,7 @@ class TestExporterManagerInit:
         assert manager._exporter_registry is shared_registry  # Same object reference
         assert manager._is_registry_shared is True
         assert manager._running is False
-        assert manager._tasks == {}
+        assert not manager._tasks
 
 
 class TestCopyOnWriteFunctionality:
@@ -480,7 +482,7 @@ class TestExporterManagerLifecycle:
             async def start(self):
                 self._ready_event.set()
                 raise RuntimeError("Test exception")
-                yield  # Never reached
+                yield  # Needed for proper async context manager  # pylint: disable=unreachable
 
         failing_exporter = FailingExporter("failing")
         exporter_manager.add_exporter("failing", failing_exporter)
@@ -798,7 +800,7 @@ class TestMemoryLeakImprovements:
 
         # Simulate high traffic with sequential workflow runs (not concurrent due to manager lock)
         num_workflows = 5  # Reduced for faster test
-        for run_id in range(num_workflows):
+        for _ in range(num_workflows):
             isolated_context = AIQContextState()
             manager = ExporterManager()  # Create fresh manager for each run
             manager.add_exporter("traffic_test", base_exporter)
@@ -829,7 +831,7 @@ class TestMemoryLeakImprovements:
 
         # Create several isolated instances manually (simulating potential leaks)
         isolated_instances = []
-        for i in range(3):
+        for _ in range(3):
             isolated = base_exporter.create_isolated_instance(AIQContextState())
             isolated_instances.append(isolated)
             assert isolated.is_isolated_instance
@@ -842,7 +844,6 @@ class TestMemoryLeakImprovements:
         # Test that proper cleanup reduces counts
         for isolated in isolated_instances:
             await isolated.stop()  # Proper cleanup
-            del isolated
 
         isolated_instances.clear()
         # Clean up the base exporter too
@@ -880,7 +881,7 @@ class TestMemoryLeakImprovements:
         initial_counts = get_exporter_counts()
 
         # Use the manager with isolated context multiple times
-        for i in range(3):
+        for _ in range(3):
             isolated_context = AIQContextState()
             async with manager.start(context_state=isolated_context):
                 await asyncio.sleep(0.01)  # Simulate work

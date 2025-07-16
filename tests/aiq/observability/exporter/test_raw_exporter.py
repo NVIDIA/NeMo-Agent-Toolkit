@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=redefined-outer-name  # pytest fixtures
+
 import asyncio
 import logging
 from unittest.mock import Mock
@@ -198,7 +200,7 @@ class TestRawExporterCoreLogic:
             pass
 
         with pytest.raises(TypeError, match="Can't instantiate abstract class"):
-            IncompleteExporter()  # type: ignore[misc]
+            IncompleteExporter()  # type: ignore[misc]  # pylint: disable=abstract-class-instantiated
 
     def test_initialization_patterns(self, mock_context_state):
         """Test different initialization patterns."""
@@ -394,7 +396,7 @@ class TestRawExporterEdgeCases:
         class FakeIntermediateStep:
 
             def __init__(self):
-                self.UUID = "fake-uuid"
+                self.UUID = "fake-uuid"  # pylint: disable=invalid-name  # Matches real IntermediateStep API
                 self.payload = Mock()
 
         fake_step = FakeIntermediateStep()

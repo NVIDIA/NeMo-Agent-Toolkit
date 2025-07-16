@@ -24,7 +24,7 @@ from aiq.observability.processor.intermediate_step_serializer import Intermediat
 logger = logging.getLogger(__name__)
 
 
-class FileExporter(FileExportMixin, RawExporter[IntermediateStep, str]):
+class FileExporter(FileExportMixin, RawExporter[IntermediateStep, str]):  # pylint: disable=R0901
     """A File exporter that exports telemetry traces to a local file."""
 
     def __init__(self, context_state: AIQContextState | None = None, **file_kwargs):

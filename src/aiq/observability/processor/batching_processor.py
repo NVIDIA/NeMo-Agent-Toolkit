@@ -142,15 +142,14 @@ class BatchingProcessor(Processor[T, list[T]], Generic[T]):
                     self._items_dropped += 1
                     logger.warning("Dropping item due to queue overflow (dropped: %d)", self._items_dropped)
                     return []
-                else:
-                    # Force flush to make space, then add item
-                    logger.warning("Queue overflow, forcing flush of %d items", len(self._batch_queue))
-                    forced_batch = await self._create_batch()
-                    if forced_batch:
-                        # Add current item to queue and return the forced batch
-                        self._batch_queue.append(item)
-                        self._items_processed += 1
-                        return forced_batch
+                # Force flush to make space, then add item
+                logger.warning("Queue overflow, forcing flush of %d items", len(self._batch_queue))
+                forced_batch = await self._create_batch()
+                if forced_batch:
+                    # Add current item to queue and return the forced batch
+                    self._batch_queue.append(item)
+                    self._items_processed += 1
+                    return forced_batch
 
             # Add item to batch queue
             self._batch_queue.append(item)
@@ -162,11 +161,10 @@ class BatchingProcessor(Processor[T, list[T]], Generic[T]):
 
             if should_flush:
                 return await self._create_batch()
-            else:
-                # Schedule a time-based flush if not already scheduled
-                if self._flush_task is None or self._flush_task.done():
-                    self._flush_task = asyncio.create_task(self._schedule_flush())
-                return []
+            # Schedule a time-based flush if not already scheduled
+            if self._flush_task is None or self._flush_task.done():
+                self._flush_task = asyncio.create_task(self._schedule_flush())
+            return []
 
     def set_done_callback(self, callback: Callable[[list[T]], Awaitable[None]]):
         """Set callback function for immediate export of scheduled batches."""

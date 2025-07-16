@@ -291,7 +291,7 @@ class StepAdaptor:
 
         return event
 
-    def process(self, step: IntermediateStep) -> AIQResponseSerializable | None:
+    def process(self, step: IntermediateStep) -> AIQResponseSerializable | None:  # pylint: disable=R1710
 
         if not isinstance(step, IntermediateStep):
             return

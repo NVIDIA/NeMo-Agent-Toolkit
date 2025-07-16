@@ -29,7 +29,7 @@ class TestExporter:
     def test_cannot_instantiate_abstract_class(self):
         """Test that the abstract Exporter class cannot be instantiated directly."""
         with pytest.raises(TypeError, match="Can't instantiate abstract class Exporter"):
-            Exporter()
+            Exporter()  # pylint: disable=abstract-class-instantiated
 
     def test_abstract_methods_exist(self):
         """Test that all expected abstract methods are defined."""
@@ -43,7 +43,7 @@ class TestExporter:
         # Missing one method should fail
         class IncompleteExporter(Exporter):
 
-            async def start(self) -> AsyncGenerator[None, None]:
+            async def start(self) -> AsyncGenerator[None]:
                 yield
 
             async def stop(self) -> None:
@@ -58,7 +58,7 @@ class TestExporter:
             # Missing on_complete
 
         with pytest.raises(TypeError, match="Can't instantiate abstract class IncompleteExporter"):
-            IncompleteExporter()
+            IncompleteExporter()  # pylint: disable=abstract-class-instantiated
 
 
 class ConcreteExporter(Exporter):
@@ -72,7 +72,7 @@ class ConcreteExporter(Exporter):
         self.completed = False
 
     @asynccontextmanager
-    async def start(self) -> AsyncGenerator[None, None]:
+    async def start(self) -> AsyncGenerator[None]:
         """Start the exporter and yield control."""
         self.started = True
         try:

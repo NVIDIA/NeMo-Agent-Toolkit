@@ -38,6 +38,7 @@ async def catalyst_telemetry_exporter(config: CatalystTelemetryExporter, builder
     """Create a Catalyst telemetry exporter."""
 
     import os
+
     import ragaai_catalyst
     from ragaai_catalyst.tracers import exporters
 

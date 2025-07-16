@@ -315,7 +315,7 @@ class BaseExporter(Exporter):
 
     @override
     @asynccontextmanager
-    async def start(self) -> AsyncGenerator[None, None]:
+    async def start(self) -> AsyncGenerator[None]:
         """Start the exporter and yield control to the caller."""
         try:
             await self._pre_start()

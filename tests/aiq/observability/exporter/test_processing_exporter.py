@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=redefined-outer-name  # pytest fixtures
+
 import asyncio
 import logging
 from unittest.mock import Mock
@@ -149,7 +151,7 @@ class TestProcessingExporterInitialization:
         """Test initialization with provided context state."""
         exporter = ConcreteProcessingExporter(mock_context_state)
         assert exporter._context_state is mock_context_state
-        assert exporter._processors == []
+        assert not exporter._processors
         assert hasattr(exporter, '_running')  # Inherited from BaseExporter
 
     @patch('aiq.observability.exporter.processing_exporter.AIQContextState.get')
@@ -160,7 +162,7 @@ class TestProcessingExporterInitialization:
 
         exporter = ConcreteProcessingExporter()
         assert exporter._context_state is mock_context
-        assert exporter._processors == []
+        assert not exporter._processors
         mock_get_context.assert_called_once()
 
     def test_inheritance(self, processing_exporter):
@@ -414,7 +416,7 @@ class TestExportWithProcessing:
         assert len(processing_exporter.exported_items) == 1
         assert processing_exporter.exported_items[0] == 5  # len("hello")
 
-    async def test_export_with_processing_list_item_non_empty(self):
+    async def test_export_with_processing_list_item_non_empty(self, mock_context_state):
         """Test exporting non-empty list from batch processor."""
 
         # Create a specialized exporter for list output
@@ -428,12 +430,6 @@ class TestExportWithProcessing:
             async def export_processed(self, item: list[int] | list[list[int]]) -> None:
                 self.export_processed_called = True
                 self.exported_items.append(item)
-
-        mock_context_state = Mock(spec=AIQContextState)
-        mock_subject = Mock(spec=Subject)
-        mock_event_stream = Mock()
-        mock_event_stream.get.return_value = mock_subject
-        mock_context_state.event_stream = mock_event_stream
 
         exporter = ListProcessingExporter(mock_context_state)
         processor1 = MockProcessor("proc1")
@@ -449,7 +445,7 @@ class TestExportWithProcessing:
         assert len(exporter.exported_items) == 1
         assert exporter.exported_items[0] == [4, 4, 4, 4]  # [len("test")] * len("test")
 
-    async def test_export_with_processing_list_item_empty_skipped(self):
+    async def test_export_with_processing_list_item_empty_skipped(self, mock_context_state):
         """Test that empty lists from batch processors are skipped."""
 
         # Create a specialized exporter for list output
@@ -463,12 +459,6 @@ class TestExportWithProcessing:
             async def export_processed(self, item: list[int] | list[list[int]]) -> None:
                 self.export_processed_called = True
                 self.exported_items.append(item)
-
-        mock_context_state = Mock(spec=AIQContextState)
-        mock_subject = Mock(spec=Subject)
-        mock_event_stream = Mock()
-        mock_event_stream.get.return_value = mock_subject
-        mock_context_state.event_stream = mock_event_stream
 
         exporter = ListProcessingExporter(mock_context_state)
         processor1 = MockProcessor("proc1")
@@ -501,14 +491,8 @@ class TestExportWithProcessing:
         with pytest.raises(ValueError, match="is not a valid output type"):
             await processing_exporter._export_with_processing(input_item)
 
-    async def test_export_with_processing_export_error_propagates(self):
+    async def test_export_with_processing_export_error_propagates(self, mock_context_state):
         """Test that export errors are properly propagated."""
-        mock_context_state = Mock(spec=AIQContextState)
-        mock_subject = Mock(spec=Subject)
-        mock_event_stream = Mock()
-        mock_event_stream.get.return_value = mock_subject
-        mock_context_state.event_stream = mock_event_stream
-
         exporter = ConcreteProcessingExporterWithError(mock_context_state)
         processor = MockProcessor("proc1")
         exporter.add_processor(processor)
@@ -679,7 +663,10 @@ class TestCleanup:
                     result = await task
                     results.append(result)
                 except Exception as e:
-                    results.append(e)
+                    if return_exceptions:
+                        results.append(e)
+                    else:
+                        raise
             return results
 
         with patch('aiq.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup, \

@@ -22,7 +22,7 @@ from aiq.plugins.phoenix.mixin.phoenix_mixin import PhoenixMixin
 logger = logging.getLogger(__name__)
 
 
-class PhoenixOtelExporter(PhoenixMixin, OtelSpanExporter):
+class PhoenixOtelExporter(PhoenixMixin, OtelSpanExporter):  # pylint: disable=R0901
     """Phoenix exporter for AI workflow observability.
 
     Exports OpenTelemetry-compatible traces to Phoenix for visualization

@@ -36,7 +36,7 @@ class ConcreteExporter(BaseExporter):
         super().__init__(context_state)
         self.exported_events = []
 
-        def default_callback(x):
+        def default_callback(x):  # pylint: disable=W0613
             pass
 
         self.export_callback = export_callback or default_callback
@@ -70,7 +70,7 @@ class TestIsolatedAttribute:
     def test_get_from_class(self):
         """Test __get__ when called on the class."""
         attr = IsolatedAttribute(set)
-        result = attr.__get__(None, BaseExporter)
+        result = attr.__get__(None, BaseExporter)  # pylint: disable=unnecessary-dunder-call
         assert result is attr
 
     def test_get_from_instance_first_time(self):
@@ -79,7 +79,7 @@ class TestIsolatedAttribute:
         attr.__set_name__(BaseExporter, "test_attr")
 
         exporter = ConcreteExporter()
-        result = attr.__get__(exporter, BaseExporter)
+        result = attr.__get__(exporter, BaseExporter)  # pylint: disable=unnecessary-dunder-call
 
         assert isinstance(result, set)
         assert hasattr(exporter, "__test_attr_isolated")
@@ -90,8 +90,8 @@ class TestIsolatedAttribute:
         attr.__set_name__(BaseExporter, "test_attr")
 
         exporter = ConcreteExporter()
-        result1 = attr.__get__(exporter, BaseExporter)
-        result2 = attr.__get__(exporter, BaseExporter)
+        result1 = attr.__get__(exporter, BaseExporter)  # pylint: disable=unnecessary-dunder-call
+        result2 = attr.__get__(exporter, BaseExporter)  # pylint: disable=unnecessary-dunder-call
 
         assert result1 is result2
 
@@ -102,7 +102,7 @@ class TestIsolatedAttribute:
 
         exporter = ConcreteExporter()
         test_set = {1, 2, 3}
-        attr.__set__(exporter, test_set)
+        attr.__set__(exporter, test_set)  # pylint: disable=unnecessary-dunder-call
 
         assert getattr(exporter, "__test_attr_isolated") is test_set
 
@@ -113,7 +113,7 @@ class TestIsolatedAttribute:
 
         exporter = ConcreteExporter()
         # Access the attribute to create it
-        _ = attr.__get__(exporter, BaseExporter)
+        _ = attr.__get__(exporter, BaseExporter)  # pylint: disable=unnecessary-dunder-call
         assert hasattr(exporter, "__test_attr_isolated")
 
         # Reset for copy
@@ -133,7 +133,7 @@ class TestIsolatedAttribute:
         assert not hasattr(exporter, "__test_attr_isolated")
 
 
-class TestBaseExporter:
+class TestBaseExporter:  # pylint: disable=too-many-public-methods
     """Test the BaseExporter class."""
 
     @pytest.fixture
@@ -274,7 +274,7 @@ class TestBaseExporter:
         # Capture the callback passed to subscribe
         captured_callback = None
 
-        def capture_subscribe(*args, **kwargs):
+        def capture_subscribe(*_args, **kwargs):
             nonlocal captured_callback
             captured_callback = kwargs.get('on_next')
             return Mock()
@@ -286,7 +286,7 @@ class TestBaseExporter:
         # Call the captured callback
         assert captured_callback is not None
         assert callable(captured_callback)
-        captured_callback(mock_event)
+        captured_callback(mock_event)  # pylint: disable=not-callable
 
         # Verify the event was exported
         assert mock_event in exporter.exported_events
@@ -547,7 +547,7 @@ class TestBaseExporter:
 
         # Patch the logger to verify the warning is called
         with patch('aiq.observability.exporter.base_exporter.logger') as mock_logger:
-            exporter.__del__()
+            exporter.__del__()  # pylint: disable=unnecessary-dunder-call
 
         # Check that warning was called with the expected message
         mock_logger.warning.assert_called()
@@ -562,7 +562,7 @@ class TestBaseExporter:
 
         # Patch the logger to verify the warning is called
         with patch('aiq.observability.exporter.base_exporter.logger') as mock_logger:
-            exporter.__del__()
+            exporter.__del__()  # pylint: disable=unnecessary-dunder-call
 
         # Check that warning was called with the expected message
         mock_logger.warning.assert_called()

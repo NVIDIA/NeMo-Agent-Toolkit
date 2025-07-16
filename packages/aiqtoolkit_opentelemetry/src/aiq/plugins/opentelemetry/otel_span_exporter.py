@@ -45,7 +45,7 @@ class OtelSpanBatchProcessor(BatchingProcessor[OtelSpan]):
     pass
 
 
-class OtelSpanExporter(SpanExporter[Span, OtelSpan]):
+class OtelSpanExporter(SpanExporter[Span, OtelSpan]):  # pylint: disable=R0901
     """Abstract base class for OpenTelemetry exporters.
 
     This class provides a specialized implementation for OpenTelemetry exporters.

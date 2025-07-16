@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=redefined-outer-name
+
 import asyncio
 from unittest.mock import AsyncMock
 from unittest.mock import Mock
@@ -166,7 +168,7 @@ class TestFileExporterFunctionality:
         await exporter.export_processed(test_string)
 
         # Verify file content
-        with open(temp_file, 'r') as f:
+        with open(temp_file, 'r', encoding='utf-8') as f:
             content = f.read()
             assert content == test_string + '\n'
 
@@ -178,7 +180,7 @@ class TestFileExporterFunctionality:
         await exporter.export_processed(test_strings)
 
         # Verify file content
-        with open(temp_file, 'r') as f:
+        with open(temp_file, 'r', encoding='utf-8') as f:
             lines = f.readlines()
             assert len(lines) == 2
             assert lines[0].strip() == test_strings[0]
@@ -192,7 +194,7 @@ class TestFileExporterFunctionality:
         await exporter.export_processed('{"line": 2}')
 
         # Verify file content
-        with open(temp_file, 'r') as f:
+        with open(temp_file, 'r', encoding='utf-8') as f:
             lines = f.readlines()
             assert len(lines) == 2
             assert lines[0].strip() == '{"line": 1}'
@@ -300,7 +302,7 @@ class TestFileExporterEdgeCases:
         await exporter.export_processed('')
 
         # Verify file content
-        with open(temp_file, 'r') as f:
+        with open(temp_file, 'r', encoding='utf-8') as f:
             content = f.read()
             assert content == '\n'
 
@@ -311,7 +313,7 @@ class TestFileExporterEdgeCases:
         await exporter.export_processed([])
 
         # Verify file is empty (no writes for empty list)
-        with open(temp_file, 'r') as f:
+        with open(temp_file, 'r', encoding='utf-8') as f:
             content = f.read()
             assert content == ''
 
@@ -325,7 +327,7 @@ class TestFileExporterEdgeCases:
         await asyncio.gather(*tasks)
 
         # Verify all lines were written
-        with open(temp_file, 'r') as f:
+        with open(temp_file, 'r', encoding='utf-8') as f:
             lines = f.readlines()
             assert len(lines) == 5
             # All lines should be valid (no corruption from concurrent writes)

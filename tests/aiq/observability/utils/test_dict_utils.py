@@ -395,7 +395,7 @@ def test_merge_dicts_empty_dicts():
     dict1 = {}
     dict2 = {}
     result = merge_dicts(dict1, dict2)
-    assert result == {}
+    assert not result
 
 
 def test_merge_dicts_one_empty():

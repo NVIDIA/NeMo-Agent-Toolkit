@@ -439,8 +439,7 @@ class DecomposedType:
         if expected_param_count is not None:
             raise ValueError(
                 f"Could not find generic parameters with count {expected_param_count} for class {target_class}")
-        else:
-            raise ValueError(f"Could not find any generic parameters for class {target_class}")
+        raise ValueError(f"Could not find any generic parameters for class {target_class}")
 
     @staticmethod
     def is_type_compatible(source_type: type, target_type: type) -> bool:

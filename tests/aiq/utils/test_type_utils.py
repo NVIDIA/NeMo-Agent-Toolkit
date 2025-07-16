@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import typing
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 from typing import Generic
 from typing import TypeVar
 
@@ -105,11 +105,11 @@ class TestExtractGenericParametersFromClass:
         class MyGeneric(Generic[T]):
             pass
 
-        class MyClass(MyGeneric[AsyncGenerator[str, None]]):
+        class MyClass(MyGeneric[AsyncGenerator[str]]):
             pass
 
         result = DecomposedType.extract_generic_parameters_from_class(MyClass)
-        assert result == (AsyncGenerator[str, None], )
+        assert result == (AsyncGenerator[str], )
 
     def test_inheritance_chain(self):
         """Test with inheritance chain."""
@@ -183,7 +183,7 @@ class TestIsTypeCompatible:
     def test_generic_type_edge_cases(self):
         """Test edge cases with generic types."""
         # Generic types that can't use issubclass should fall back gracefully
-        assert DecomposedType.is_type_compatible(typing.List[int], typing.List[int]) is False  # Generic aliases
+        assert DecomposedType.is_type_compatible(list[int], list[int]) is False  # Generic aliases
 
     def test_complex_batch_scenarios(self):
         """Test complex batch compatibility scenarios."""
