@@ -30,28 +30,32 @@ class CatalystTelemetryExporter(TelemetryExporterBaseConfig, name="catalyst"):
     access_key: str = Field(description="The RagaAI Catalyst API access key", default="")
     secret_key: str = Field(description="The RagaAI Catalyst API secret key", default="")
     project: str = Field(description="The RagaAI Catalyst project name")
-    dataset: str = Field(description="The RagaAI Catalyst dataset name")
+    dataset: str | None = Field(description="The RagaAI Catalyst dataset name", default=None)
 
 
 @register_telemetry_exporter(config_type=CatalystTelemetryExporter)
 async def catalyst_telemetry_exporter(config: CatalystTelemetryExporter, builder: Builder):  # pylint: disable=W0613
     """Create a Catalyst telemetry exporter."""
 
-    import os
+    try:
+        import os
 
-    import ragaai_catalyst
-    from ragaai_catalyst.tracers import exporters
+        from aiq.plugins.ragaai.ragaai_catalyst_exporter import RagaAICatalystExporter
 
-    access_key = config.access_key or os.environ.get("CATALYST_ACCESS_KEY")
-    secret_key = config.secret_key or os.environ.get("CATALYST_SECRET_KEY")
-    endpoint = config.endpoint or os.environ.get("CATALYST_ENDPOINT")
-    project = config.project
-    dataset = config.dataset
+        access_key = config.access_key or os.environ.get("CATALYST_ACCESS_KEY")
+        secret_key = config.secret_key or os.environ.get("CATALYST_SECRET_KEY")
+        endpoint = config.endpoint or os.environ.get("CATALYST_ENDPOINT")
+        project = config.project
+        dataset = config.dataset
 
-    assert endpoint is not None, "catalyst endpoint is not set"
-    assert access_key is not None, "catalyst access key is not set"
-    assert secret_key is not None, "catalyst secret key is not set"
+        assert endpoint is not None, "catalyst endpoint is not set"
+        assert access_key is not None, "catalyst access key is not set"
+        assert secret_key is not None, "catalyst secret key is not set"
 
-    ragaai_catalyst.RagaAICatalyst(access_key=access_key, secret_key=secret_key, base_url=endpoint)
-
-    yield exporters.DynamicTraceExporter(project, dataset, endpoint, "agentic/nemo-framework")
+        yield RagaAICatalystExporter(base_url=endpoint,
+                                     access_key=access_key,
+                                     secret_key=secret_key,
+                                     project=project,
+                                     dataset=dataset)
+    except Exception as e:
+        logger.warning("Error creating catalyst telemetry exporter: %s", e, exc_info=True)

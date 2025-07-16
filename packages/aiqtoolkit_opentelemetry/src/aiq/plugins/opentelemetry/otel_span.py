@@ -13,15 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import time
 import traceback
 import uuid
+from collections.abc import Sequence
 from enum import Enum
 from typing import Any
 
 from openinference.semconv.trace import OpenInferenceSpanKindValues
+from opentelemetry import trace as trace_api
+from opentelemetry.sdk import util
 from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import Event
 from opentelemetry.sdk.trace import InstrumentationScope
 from opentelemetry.trace import Context
 from opentelemetry.trace import Link
@@ -31,6 +36,7 @@ from opentelemetry.trace import Status
 from opentelemetry.trace import StatusCode
 from opentelemetry.trace import TraceFlags
 from opentelemetry.trace.span import Span
+from opentelemetry.util import types
 
 logger = logging.getLogger(__name__)
 
@@ -483,3 +489,67 @@ class OtelSpan(Span):  # pylint: disable=too-many-public-methods
             resource=self._resource,
             instrumentation_scope=self._instrumentation_scope,
         )
+
+    @staticmethod
+    def _format_context(context: SpanContext) -> dict[str, str]:
+        return {
+            "trace_id": f"0x{trace_api.format_trace_id(context.trace_id)}",
+            "span_id": f"0x{trace_api.format_span_id(context.span_id)}",
+            "trace_state": repr(context.trace_state),
+        }
+
+    @staticmethod
+    def _format_attributes(attributes: types.Attributes, ) -> dict[str, Any] | None:
+        if attributes is not None and not isinstance(attributes, dict):
+            return dict(attributes)
+        return attributes
+
+    @staticmethod
+    def _format_events(events: Sequence[Event]) -> list[dict[str, Any]]:
+        return [{
+            "name": event.name,
+            "timestamp": util.ns_to_iso_str(event.timestamp),
+            "attributes": OtelSpan._format_attributes(event.attributes),
+        } for event in events]
+
+    @staticmethod
+    def _format_links(links: Sequence[trace_api.Link]) -> list[dict[str, Any]]:
+        return [{
+            "context": OtelSpan._format_context(link.context),
+            "attributes": OtelSpan._format_attributes(link.attributes),
+        } for link in links]
+
+    def to_json(self, indent: int | None = 4):
+        parent_id = None
+        if self.parent is not None:
+            parent_id = f"0x{trace_api.format_span_id(self.parent.span_id)}"  # type: ignore
+
+        start_time = None
+        if self._start_time:
+            start_time = util.ns_to_iso_str(self._start_time)
+
+        end_time = None
+        if self._end_time:
+            end_time = util.ns_to_iso_str(self._end_time)
+
+        status = {
+            "status_code": str(self._status.status_code.name),
+        }
+        if self._status.description:
+            status["description"] = self._status.description
+
+        f_span = {
+            "name": self._name,
+            "context": (self._format_context(self._context) if self._context else None),
+            "kind": str(self.kind),
+            "parent_id": parent_id,
+            "start_time": start_time,
+            "end_time": end_time,
+            "status": status,
+            "attributes": self._format_attributes(self._attributes),
+            "events": self._format_events(self._events),
+            "links": self._format_links(self._links),
+            "resource": json.loads(self.resource.to_json()),
+        }
+
+        return json.dumps(f_span, indent=indent)
