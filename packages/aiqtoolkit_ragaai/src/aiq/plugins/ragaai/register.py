@@ -32,6 +32,11 @@ class CatalystTelemetryExporter(TelemetryExporterBaseConfig, name="catalyst"):
     project: str = Field(description="The RagaAI Catalyst project name")
     dataset: str | None = Field(description="The RagaAI Catalyst dataset name", default=None)
 
+    # Local file control options
+    disable_local_file: bool = Field(description="Disable creation of local rag_agent_traces.json file", default=True)
+    local_file_path: str | None = Field(
+        description="Custom path to save local trace files instead of current directory", default=None)
+
 
 @register_telemetry_exporter(config_type=CatalystTelemetryExporter)
 async def catalyst_telemetry_exporter(config: CatalystTelemetryExporter, builder: Builder):  # pylint: disable=W0613
@@ -56,6 +61,8 @@ async def catalyst_telemetry_exporter(config: CatalystTelemetryExporter, builder
                                      access_key=access_key,
                                      secret_key=secret_key,
                                      project=project,
-                                     dataset=dataset)
+                                     dataset=dataset,
+                                     disable_local_file=config.disable_local_file,
+                                     local_file_path=config.local_file_path)
     except Exception as e:
         logger.warning("Error creating catalyst telemetry exporter: %s", e, exc_info=True)

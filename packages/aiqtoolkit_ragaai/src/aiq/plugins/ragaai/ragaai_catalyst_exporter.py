@@ -41,6 +41,8 @@ class RagaAICatalystExporter(RagaAICatalystMixin, OtelSpanExporter):  # pylint: 
         secret_key: RagaAI Catalyst secret key
         project: Project name for trace grouping
         dataset: Dataset name for trace organization
+        disable_local_file: Disable local file creation
+        local_file_path: Custom path to save local trace files instead of current directory
         batch_size: Batch size for exporting
         flush_interval: Flush interval for exporting
         max_queue_size: Maximum queue size for exporting
