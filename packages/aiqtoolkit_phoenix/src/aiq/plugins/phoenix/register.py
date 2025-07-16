@@ -30,6 +30,8 @@ class PhoenixTelemetryExporter(TelemetryExporterBaseConfig, name="phoenix"):
     endpoint: str = Field(
         description="Phoenix server endpoint for trace export (e.g., 'http://localhost:6006/v1/traces'")
     project: str = Field(description="The project name to group the telemetry traces.")
+
+    # Batch size control options
     batch_size: int = Field(default=100, description="The batch size for the telemetry exporter.")
     flush_interval: float = Field(default=5.0, description="The flush interval for the telemetry exporter.")
     max_queue_size: int = Field(default=1000, description="The maximum queue size for the telemetry exporter.")

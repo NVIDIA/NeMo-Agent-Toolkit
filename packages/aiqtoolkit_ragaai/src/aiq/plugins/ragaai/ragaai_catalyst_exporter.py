@@ -32,7 +32,7 @@ class RagaAICatalystExporter(RagaAICatalystMixin, OtelSpanExporter):  # pylint: 
     - Automatic span conversion from AIQ events
     - RagaAI Catalyst-specific authentication
     - Project and dataset-based trace organization
-    - Integration with RagaAI Catalyst's DynamicTraceExporter
+    - Integration with custom DynamicTraceExporter for optimal local file control
 
     Args:
         context_state: Execution context for isolation
@@ -41,8 +41,9 @@ class RagaAICatalystExporter(RagaAICatalystMixin, OtelSpanExporter):  # pylint: 
         secret_key: RagaAI Catalyst secret key
         project: Project name for trace grouping
         dataset: Dataset name for trace organization
-        disable_local_file: Disable local file creation
-        local_file_path: Custom path to save local trace files instead of current directory
+        tracer_type: RagaAI Catalyst tracer type.
+        debug_mode: When False (default), creates local rag_agent_traces.json file.
+                   When True, skips local file creation for cleaner operation.
         batch_size: Batch size for exporting
         flush_interval: Flush interval for exporting
         max_queue_size: Maximum queue size for exporting

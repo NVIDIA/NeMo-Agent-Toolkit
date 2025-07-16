@@ -33,6 +33,8 @@ class LangfuseTelemetryExporter(TelemetryExporterBaseConfig, name="langfuse"):
     secret_key: str = Field(description="The Langfuse secret key", default="")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
+
+    # Batch size control options
     batch_size: int = Field(default=100, description="The batch size for the telemetry exporter.")
     flush_interval: float = Field(default=5.0, description="The flush interval for the telemetry exporter.")
     max_queue_size: int = Field(default=1000, description="The maximum queue size for the telemetry exporter.")
@@ -56,7 +58,13 @@ async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder
     auth_header = base64.b64encode(credentials).decode("utf-8")
     headers = {"Authorization": f"Basic {auth_header}"}
 
-    yield OTLPSpanAdapterExporter(endpoint=config.endpoint, headers=headers)
+    yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
+                                  headers=headers,
+                                  batch_size=config.batch_size,
+                                  flush_interval=config.flush_interval,
+                                  max_queue_size=config.max_queue_size,
+                                  drop_on_overflow=config.drop_on_overflow,
+                                  shutdown_timeout=config.shutdown_timeout)
 
 
 class LangsmithTelemetryExporter(TelemetryExporterBaseConfig, name="langsmith"):
@@ -70,6 +78,7 @@ class LangsmithTelemetryExporter(TelemetryExporterBaseConfig, name="langsmith"):
     project: str = Field(description="The project name to group the telemetry traces.")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
+    # Batch size control options
     batch_size: int = Field(default=100, description="The batch size for the telemetry exporter.")
     flush_interval: float = Field(default=5.0, description="The flush interval for the telemetry exporter.")
     max_queue_size: int = Field(default=1000, description="The maximum queue size for the telemetry exporter.")
@@ -88,7 +97,13 @@ async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, build
         raise ValueError("API key is required for langsmith")
 
     headers = {"x-api-key": api_key, "Langsmith-Project": config.project}
-    yield OTLPSpanAdapterExporter(endpoint=config.endpoint, headers=headers)
+    yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
+                                  headers=headers,
+                                  batch_size=config.batch_size,
+                                  flush_interval=config.flush_interval,
+                                  max_queue_size=config.max_queue_size,
+                                  drop_on_overflow=config.drop_on_overflow,
+                                  shutdown_timeout=config.shutdown_timeout)
 
 
 class OtelCollectorTelemetryExporter(TelemetryExporterBaseConfig, name="otelcollector"):
@@ -98,6 +113,8 @@ class OtelCollectorTelemetryExporter(TelemetryExporterBaseConfig, name="otelcoll
     project: str = Field(description="The project name to group the telemetry traces.")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
+
+    # Batch size control options
     batch_size: int = Field(default=100, description="The batch size for the telemetry exporter.")
     flush_interval: float = Field(default=5.0, description="The flush interval for the telemetry exporter.")
     max_queue_size: int = Field(default=1000, description="The maximum queue size for the telemetry exporter.")
@@ -127,6 +144,8 @@ class PatronusTelemetryExporter(TelemetryExporterBaseConfig, name="patronus"):
     project: str = Field(description="The project name to group the telemetry traces.")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
+
+    # Batch size control options
     batch_size: int = Field(default=100, description="The batch size for the telemetry exporter.")
     flush_interval: float = Field(default=5.0, description="The flush interval for the telemetry exporter.")
     max_queue_size: int = Field(default=1000, description="The maximum queue size for the telemetry exporter.")

@@ -31,11 +31,20 @@ class CatalystTelemetryExporter(TelemetryExporterBaseConfig, name="catalyst"):
     secret_key: str = Field(description="The RagaAI Catalyst API secret key", default="")
     project: str = Field(description="The RagaAI Catalyst project name")
     dataset: str | None = Field(description="The RagaAI Catalyst dataset name", default=None)
+    tracer_type: str = Field(description="The RagaAI Catalyst tracer type", default="agentic/nemo-framework")
 
-    # Local file control options
-    disable_local_file: bool = Field(description="Disable creation of local rag_agent_traces.json file", default=True)
-    local_file_path: str | None = Field(
-        description="Custom path to save local trace files instead of current directory", default=None)
+    # Debug mode control options
+    debug_mode: bool = Field(description="When False (default), creates local rag_agent_traces.json file. "
+                             "When True, skips local file creation for cleaner operation.",
+                             default=False)
+
+    # Batch size control options
+    batch_size: int = Field(description="The batch size for the RagaAI Catalyst exporter", default=100)
+    flush_interval: float = Field(description="The flush interval for the RagaAI Catalyst exporter", default=5.0)
+    max_queue_size: int = Field(description="The maximum queue size for the RagaAI Catalyst exporter", default=1000)
+    drop_on_overflow: bool = Field(description="Whether to drop on overflow for the RagaAI Catalyst exporter",
+                                   default=False)
+    shutdown_timeout: float = Field(description="The shutdown timeout for the RagaAI Catalyst exporter", default=10.0)
 
 
 @register_telemetry_exporter(config_type=CatalystTelemetryExporter)
@@ -62,7 +71,12 @@ async def catalyst_telemetry_exporter(config: CatalystTelemetryExporter, builder
                                      secret_key=secret_key,
                                      project=project,
                                      dataset=dataset,
-                                     disable_local_file=config.disable_local_file,
-                                     local_file_path=config.local_file_path)
+                                     tracer_type=config.tracer_type,
+                                     debug_mode=config.debug_mode,
+                                     batch_size=config.batch_size,
+                                     flush_interval=config.flush_interval,
+                                     max_queue_size=config.max_queue_size,
+                                     drop_on_overflow=config.drop_on_overflow,
+                                     shutdown_timeout=config.shutdown_timeout)
     except Exception as e:
         logger.warning("Error creating catalyst telemetry exporter: %s", e, exc_info=True)
