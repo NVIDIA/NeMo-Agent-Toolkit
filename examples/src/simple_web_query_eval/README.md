@@ -32,7 +32,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 This example builds upon the [basic Simple LangSmith-Documentation Agent](../../../basic/functions/simple/). Install it first:
 
 ```bash
-uv pip install -e examples/basic/functions/simple
+uv pip install -e examples/getting_started/simple_web_query
 ```
 
 ## Installation
