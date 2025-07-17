@@ -408,7 +408,7 @@ eval:
       dir: ./.tmp/aiq/examples/simple_output/
       custom_scripts:
         convert_workflow_to_csv:
-          script: examples/basic/functions/simple/src/aiq_simple/scripts/workflow_to_csv.py
+          script: examples/basic/functions/simple/src/aiq_simple_web_query/scripts/workflow_to_csv.py
           kwargs:
             # The input and output are relative to the output directory
             input: workflow_output.json

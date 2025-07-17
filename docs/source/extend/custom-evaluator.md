@@ -40,7 +40,7 @@ The evaluator configuration defines the evaluator name and any evaluator-specifi
 
 The following example shows how to define and register a custom evaluator. The code is added to a new `evaluator_register.py` file in the simple example directory for testing purposes.
 
-`examples/basic/functions/simple/src/aiq_simple/evaluator_register.py`:
+`examples/basic/functions/simple/src/aiq_simple_web_query/evaluator_register.py`:
 ```python
 from pydantic import Field
 
@@ -72,7 +72,7 @@ The evaluator logic is implemented in the `SimilarityEvaluator` class described 
 
 ### Importing for registration
 To ensure the evaluator is registered at runtime, import the evaluator function in the example project's register.py file — even if the function is not called directly.
-`examples/basic/functions/simple/src/aiq_simple/register.py`:
+`examples/basic/functions/simple/src/aiq_simple_web_query/register.py`:
 ```python
 from .evaluator_register import register_similarity_evaluator  # pylint: disable=unused-import
 ```
@@ -109,7 +109,7 @@ To create a custom evaluator, subclass `BaseEvaluator` and implement the `evalua
 The following example defines a SimilarityEvaluator that computes the cosine similarity between a generated output and an expected reference using TF-IDF embeddings. This is useful for evaluating natural language generation tasks such as Q&A, summarization, or text rewriting.
 
 We define the evaluator in the `similarity_evaluator.py` file:
-`examples/basic/functions/simple/src/aiq_simple/similarity_evaluator.py`:
+`examples/basic/functions/simple/src/aiq_simple_web_query/similarity_evaluator.py`:
 ```python
 from typing import override
 from sklearn.feature_extraction.text import TfidfVectorizer
