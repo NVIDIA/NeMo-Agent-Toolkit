@@ -153,29 +153,6 @@ The repository includes a comprehensive test suite with 13 different scenarios:
 ./test_code_execution_sandbox.sh -h
 ```
 
-### Test Categories
-
-1. **Basic Operations**
-   - Simple print statements
-   - Arithmetic operations
-   - String manipulation
-
-2. **Library Testing**
-   - Numpy array operations
-   - Pandas DataFrame operations
-   - Plotly visualization creation
-
-3. **Error Handling**
-   - Syntax errors
-   - Runtime exceptions
-   - Import errors
-
-4. **Advanced Features**
-   - Mixed stdout/stderr output
-   - Long-running code execution
-   - File system operations
-   - Input format variations
-
 ### Specific Test Examples
 
 Run specific test scenarios:
@@ -318,7 +295,3 @@ test_code_execution "New Feature Test" \
     "your_test_code_here" \
     "expected_status"
 ```
-
-## License
-
-This project is licensed under the Apache License 2.0. See the LICENSE file for details.
