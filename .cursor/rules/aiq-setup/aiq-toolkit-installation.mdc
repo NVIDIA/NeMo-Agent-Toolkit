@@ -233,5 +233,5 @@ uv venv --seed .venv && source .venv/bin/activate
 uv sync
 uv pip install -e examples/simple
 export NVIDIA_API_KEY=<your_key>
-aiq run --config_file=examples/basic/functions/simple/configs/config.yml --input "What is LangSmith"
+aiq run --config_file=examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith"
 ```

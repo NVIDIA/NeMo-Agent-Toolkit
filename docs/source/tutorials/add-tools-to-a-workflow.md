@@ -37,7 +37,7 @@ functions:
 
 However, the workflow is unaware of some related technologies, such as LangGraph, if you run:
 ```bash
-aiq run --config_file examples/basic/functions/simple/configs/config.yml --input "How does LangSmith interact with tools like LangGraph?"
+aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "How does LangSmith interact with tools like LangGraph?"
 ```
 
 The output will be similar to the following:

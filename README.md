@@ -123,7 +123,7 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
    ```
 
    > [!NOTE]
-   > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/basic/functions/simple/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
+   > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
 
 
 

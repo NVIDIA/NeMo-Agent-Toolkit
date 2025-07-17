@@ -51,13 +51,13 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_AIQ_SIMPLE=${AIQ_VERSION} && \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     uv sync --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
-    uv pip install --link-mode=copy ./examples/basic/functions/simple
+    uv pip install --link-mode=copy ./examples/getting_started/simple_web_query
 
 # Set the config file environment variable
-ENV AIQ_CONFIG_FILE=/workspace/examples/basic/functions/simple/configs/eval_config.yml
+ENV AIQ_CONFIG_FILE=/workspace/examples/getting_started/simple_web_query/configs/eval_config.yml
 
 # Enivronment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"
 
 # Define the entry point to start the server
-ENTRYPOINT ["aiq", "serve", "--config_file=/workspace/examples/basic/functions/simple/configs/eval_config.yml", "--host", "0.0.0.0"]
+ENTRYPOINT ["aiq", "serve", "--config_file=/workspace/examples/getting_started/simple_web_query/configs/eval_config.yml", "--host", "0.0.0.0"]

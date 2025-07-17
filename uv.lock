@@ -383,7 +383,7 @@ requires-dist = [
 
 [[package]]
 name = "aiq-simple"
-source = { editable = "examples/basic/functions/simple" }
+source = { editable = "examples/getting_started/simple_web_query" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain"] },
     { name = "faiss-cpu" },
@@ -641,7 +641,7 @@ requires-dist = [
     { name = "aiq-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced/profiler_agent" },
     { name = "aiq-redact-pii", marker = "extra == 'examples'", editable = "examples/intermediate/observability/redact_pii" },
     { name = "aiq-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/basic/frameworks/semantic_kernel_demo" },
-    { name = "aiq-simple", marker = "extra == 'examples'", editable = "examples/basic/functions/simple" },
+    { name = "aiq-simple", marker = "extra == 'examples'", editable = "examples/getting_started/simple_web_query" },
     { name = "aiq-simple-calculator", marker = "extra == 'examples'", editable = "examples/basic/functions/simple_calculator" },
     { name = "aiq-simple-calculator-custom-routes", marker = "extra == 'examples'", editable = "examples/intermediate/custom_routes/simple_calculator_custom_routes" },
     { name = "aiq-simple-calculator-eval", marker = "extra == 'examples'", editable = "examples/intermediate/evaluation_and_profiling/simple_calculator_eval" },

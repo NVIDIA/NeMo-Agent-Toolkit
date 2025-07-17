@@ -31,11 +31,11 @@ llms:
 eval:
   general:
     output:
-      dir: ./.tmp/aiq/examples/basic/functions/simple/
+      dir: ./.tmp/aiq/examples/getting_started/simple_web_query/
       cleanup: true
     dataset:
       _type: json
-      file_path: examples/basic/functions/simple/data/langsmith.json
+      file_path: examples/getting_started/simple_web_query/data/langsmith.json
     profiler:
       # Compute inter query token uniqueness
       token_uniqueness_forecast: true
