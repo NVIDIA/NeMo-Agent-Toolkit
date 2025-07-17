@@ -34,7 +34,7 @@ class RawExporter(ProcessingExporter[InputT, OutputT]):
     work directly with IntermediateStep objects. It can optionally process
     them through a pipeline before export.
 
-    The flow is: IntermediateStep -> [Processing Pipeline] -> Export
+    The flow is: IntermediateStep -> [Processing Pipeline] -> OutputT -> Export
 
     Args:
         context_state (AIQContextState, optional): The context state to use for the exporter. Defaults to None.
