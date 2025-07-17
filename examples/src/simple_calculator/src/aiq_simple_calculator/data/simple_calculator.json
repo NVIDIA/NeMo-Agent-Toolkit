@@ -1,0 +1,52 @@
+[
+    {
+        "id": 1,
+        "question": "What is the product of 3 and 7, and is it greater than the current hour?",
+        "answer": "Answer must have the answer of product of 3 and 7 and whether it is greater than the current hour"
+    },
+    {
+        "id": 2,
+        "question": "Multiply 5 by 9 and compare it to the current time's minute value.",
+        "answer": "Answer must have the answer of product of 5 and 9 and whether it is greater than the current time's minute value"
+    },
+    {
+        "id": 3,
+        "question": "Is the sum of 12 and 8 greater than the current day of the week in number form?",
+        "answer": "Answer must have the answer of sum of 12 and 8 and whether it is greater than the current day of the week in number form"
+    },
+    {
+        "id": 4,
+        "question": "Calculate the product of 6 and 4 and determine if it exceeds the current hour of the day.",
+        "answer": "Answer must have the answer of product of 6 and 4 and whether it exceeds the current hour of the day"
+    },
+    {
+        "id": 5,
+        "question": "What is the difference between 50 and 35, and is it smaller than the current minute of the hour?",
+        "answer": "Answer must have the answer of difference between 50 and 35 and whether it is smaller than the current minute of the hour"
+    },
+    {
+        "id": 6,
+        "question": "Find the result of multiplying 14 by 3 and compare it with the current second.",
+        "answer": "Answer must have the answer of product of 14 and 3 and a comparison to the current second"
+    },
+    {
+        "id": 7,
+        "question": "Calculate 9 times 11 and check if the result is greater than the current year\u2019s last digit.",
+        "answer": "Answer must have the answer of product of 9 and 11 and whether it is greater than the current year's last digit"
+    },
+    {
+        "id": 8,
+        "question": "How much is 16 multiplied by 3, and is it greater than the number of hours since midnight?",
+        "answer": "Answer must have the answer of product of 16 and 3 and whether it is greater than the number of hours since midnight"
+    },
+    {
+        "id": 9,
+        "question": "What is the result of 20 multiplied by 5, and is it larger than the current minute of the day?",
+        "answer": "Answer must have the answer of product of 20 and 5 and whether it is larger than the current minute of the day"
+    },
+    {
+        "id": 10,
+        "question": "Multiply 15 by 2 and check if it exceeds the hour value of the current time.",
+        "answer": "Answer must have the answer of product of 15 and 2 and whether the result is greater than the current hour value"
+    }
+]
