@@ -74,13 +74,19 @@ class StartCommandGroup(click.Group):
                 multiple=True,
                 help="Override config values using dot notation (e.g., --override llms.nim_llm.temperature 0.7)"))
 
+        # Add development mode flag
+        params.append(
+            click.Option(param_decls=["--dev"],
+                         is_flag=True,
+                         default=False,
+                         help="Enable development mode with automatic configuration reloading on file changes"))
+
         fields = front_end.config_type.model_fields
         for name, field in fields.items():
 
-            if (name in ("override", "config_file")):
-                raise ValueError(
-                    "Cannot have a field named 'override' or 'config_file' in the front end config. These are reserved."
-                )
+            if (name in ("override", "config_file", "dev")):
+                raise ValueError("Cannot have a field named 'override', 'config_file', or 'dev' "
+                                 "in the front end config. These are reserved.")
 
             # Skip init-only fields since we dont want to set them in the constructor. Must check for False explicitly
             if (field.init == False):  # noqa: E712, pylint: disable=singleton-comparison
@@ -167,6 +173,7 @@ class StartCommandGroup(click.Group):
                           cmd_name: str,
                           config_file: Path,
                           override: tuple[tuple[str, str], ...],
+                          dev: bool = False,
                           **kwargs) -> int | None:
 
         from aiq.runtime.loader import PluginTypes
@@ -179,6 +186,9 @@ class StartCommandGroup(click.Group):
         discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
 
         logger.info("Starting AIQ Toolkit from config file: '%s'", config_file)
+
+        if dev:
+            logger.info("Development mode enabled - automatic reloading active")
 
         config_dict = load_and_override_config(config_file, override)
 
@@ -214,19 +224,38 @@ class StartCommandGroup(click.Group):
         schema_validator.validate_python(front_end_config.__dict__)
 
         try:
+            if dev:
+                # Run with development mode
+                async def run_with_dev():
+                    from aiq.runtime.dev_mode_manager import run_with_dev_mode
 
-            async def run_plugin():
+                    async def workflow_runner(config: AIQConfig) -> None:
+                        # From the config, get the registered front end plugin
+                        front_end_info = GlobalTypeRegistry.get().get_front_end(
+                            config_type=type(config.general.front_end))
 
-                # From the config, get the registered front end plugin
-                front_end_info = GlobalTypeRegistry.get().get_front_end(config_type=type(front_end_config))
+                        # Create the front end plugin
+                        async with front_end_info.build_fn(config.general.front_end, config) as front_end_plugin:
+                            # Run the front end plugin
+                            await front_end_plugin.run()
 
-                # Create the front end plugin
-                async with front_end_info.build_fn(front_end_config, config) as front_end_plugin:
+                    await run_with_dev_mode(config_file, override, workflow_runner)
 
-                    # Run the front end plugin
-                    await front_end_plugin.run()
+                return asyncio.run(run_with_dev())
+            else:
+                # Run in normal mode
+                async def run_plugin():
 
-            return asyncio.run(run_plugin())
+                    # From the config, get the registered front end plugin
+                    front_end_info = GlobalTypeRegistry.get().get_front_end(config_type=type(front_end_config))
+
+                    # Create the front end plugin
+                    async with front_end_info.build_fn(front_end_config, config) as front_end_plugin:
+
+                        # Run the front end plugin
+                        await front_end_plugin.run()
+
+                return asyncio.run(run_plugin())
 
         except Exception as e:
             logger.error("Failed to initialize workflow", exc_info=True)

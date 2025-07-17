@@ -66,17 +66,17 @@ def reload(ctx: click.Context, validate_only: bool) -> None:
     config_file = ctx.obj['config_file']
 
     try:
-        click.echo(f"🔄 {'Validating' if validate_only else 'Reloading'} configuration from {config_file}")
+        click.echo(f"{'Validating' if validate_only else 'Reloading'} configuration from {config_file}")
 
         new_config = reload_config(config_file, validate_only=validate_only)
 
         if validate_only:
-            click.echo("✅ Configuration validation successful!")
+            click.echo("Configuration validation successful!")
         else:
-            click.echo("✅ Configuration reload successful!")
+            click.echo("Configuration reload successful!")
 
         # Show basic config info
-        click.echo("📊 Configuration summary:")
+        click.echo("Configuration summary:")
 
         config_dict = new_config.model_dump()
         if 'llms' in config_dict:
@@ -92,13 +92,13 @@ def reload(ctx: click.Context, validate_only: bool) -> None:
             click.echo(f"   - Workflows: {workflow_count}")
 
     except ConfigValidationError as e:
-        click.echo(f"❌ Configuration validation failed: {e}", err=True)
+        click.echo(f"Configuration validation failed: {e}", err=True)
         sys.exit(1)
     except ConfigReloadError as e:
-        click.echo(f"❌ Configuration reload failed: {e}", err=True)
+        click.echo(f"Configuration reload failed: {e}", err=True)
         sys.exit(1)
     except Exception as e:
-        click.echo(f"❌ Unexpected error: {e}", err=True)
+        click.echo(f"Unexpected error: {e}", err=True)
         sys.exit(1)
 
 
@@ -118,156 +118,165 @@ def interactive(ctx: click.Context, overrides: tuple[str, ...]) -> None:
         override_dict = {}
         for override in overrides:
             if '=' not in override:
-                click.echo(f"❌ Invalid override format: {override}. Use key=value format.", err=True)
-                sys.exit(1)
+                click.echo(f"Invalid override format: {override}. Use key=value format.", err=True)
+                return
             key, value = override.split('=', 1)
-            override_dict[key] = value
+            override_dict[key.strip()] = value.strip()
 
-        click.echo(f"🚀 Starting interactive configuration manager for {config_file}")
+        click.echo(f"Starting interactive configuration manager for {config_file}")
 
         with ConfigManager(config_file) as manager:
             if override_dict:
                 manager.set_overrides(override_dict)
-                click.echo(f"📝 Applied {len(override_dict)} configuration overrides")
+                click.echo(f"Applied {len(override_dict)} configuration overrides")
 
-            click.echo("📍 Interactive session started. Available commands:")
-            click.echo("   r - Reload configuration")
-            click.echo("   v - Validate configuration")
-            click.echo("   s - Show snapshots")
-            click.echo("   b [steps] - Rollback configuration")
-            click.echo("   c - Clear snapshots")
-            click.echo("   i - Show current config info")
-            click.echo("   q - Quit")
-            click.echo()
+            click.echo("\nInteractive Configuration Manager")
+            click.echo("Commands:")
+            click.echo("  r | reload     - Reload configuration")
+            click.echo("  v | validate   - Validate configuration without reloading")
+            click.echo("  s | snapshots  - Show configuration snapshots")
+            click.echo("  b [steps]      - Rollback configuration (default: 1 step)")
+            click.echo("  c | clear      - Clear configuration snapshots")
+            click.echo("  i | info       - Show configuration info")
+            click.echo("  q | quit       - Quit interactive mode")
+            click.echo("-" * 50)
 
             while True:
                 try:
-                    command = click.prompt("Command", type=str).strip().lower()
+                    command = click.prompt("\nConfig", default="info").strip().lower()
 
-                    if command == 'q':
-                        click.echo("👋 Goodbye!")
+                    if command in ('q', 'quit'):
                         break
-                    elif command == 'r':
-                        _handle_reload(manager)
-                    elif command == 'v':
-                        _handle_validate(manager)
-                    elif command == 's':
-                        _handle_show_snapshots(manager)
-                    elif command.startswith('b'):
-                        _handle_rollback(manager, command)
-                    elif command == 'c':
-                        _handle_clear_snapshots(manager)
-                    elif command == 'i':
-                        _handle_show_info(manager)
+                    elif command in ('r', 'reload'):
+                        handle_reload_command(manager)
+                    elif command in ('v', 'validate'):
+                        handle_validate_command(manager)
+                    elif command.startswith('b') or command == 'rollback':
+                        handle_rollback_command(manager, command)
+                    elif command in ('s', 'snapshots'):
+                        handle_snapshots_command(manager)
+                    elif command in ('c', 'clear'):
+                        handle_clear_command(manager)
+                    elif command in ('i', 'info'):
+                        handle_info_command(manager)
                     else:
-                        click.echo("❓ Unknown command. Type 'q' to quit.")
+                        click.echo("Unknown command. Type 'q' to quit or see commands above.")
 
                 except KeyboardInterrupt:
-                    click.echo("\n👋 Goodbye!")
+                    click.echo("\nInterrupted")
                     break
                 except Exception as e:
-                    click.echo(f"❌ Error: {e}", err=True)
+                    click.echo(f"Error: {e}", err=True)
 
     except Exception as e:
-        click.echo(f"❌ Failed to start interactive session: {e}", err=True)
+        click.echo(f"Failed to start interactive session: {e}", err=True)
         sys.exit(1)
 
 
-def _handle_reload(manager: ConfigManager) -> None:
-    """Handle reload command in interactive mode."""
+def handle_reload_command(manager: ConfigManager) -> None:
+    """Handle the reload command."""
     try:
-        click.echo("🔄 Reloading configuration...")
-        new_config = manager.reload_config()
-        click.echo(f"✅ Configuration reloaded successfully (reload #{manager.reload_count})")
-        _show_config_summary(new_config)
+        click.echo("Reloading configuration...")
+        manager.reload_config()
+        click.echo(f"Configuration reloaded successfully (reload #{manager.reload_count})")
     except ConfigValidationError as e:
-        click.echo(f"❌ Configuration validation failed: {e}", err=True)
+        click.echo(f"Configuration validation failed: {e}", err=True)
     except ConfigReloadError as e:
-        click.echo(f"❌ Configuration reload failed: {e}", err=True)
+        click.echo(f"Configuration reload failed: {e}", err=True)
 
 
-def _handle_validate(manager: ConfigManager) -> None:
-    """Handle validate command in interactive mode."""
+def handle_validate_command(manager: ConfigManager) -> None:
+    """Handle the validate command."""
     try:
-        click.echo("🔍 Validating configuration...")
         manager.reload_config(validate_only=True)
-        click.echo("✅ Configuration validation successful!")
+        click.echo("Configuration validation successful!")
     except ConfigValidationError as e:
-        click.echo(f"❌ Configuration validation failed: {e}", err=True)
+        click.echo(f"Configuration validation failed: {e}", err=True)
 
 
-def _handle_show_snapshots(manager: ConfigManager) -> None:
-    """Handle show snapshots command in interactive mode."""
+def handle_rollback_command(manager: ConfigManager, command: str) -> None:
+    """Handle the rollback command."""
+    try:
+        # Parse steps from command (e.g., "b 2" or "rollback 3")
+        parts = command.split()
+        steps = 1
+        if len(parts) > 1:
+            try:
+                steps = int(parts[1])
+            except ValueError:
+                click.echo("Invalid rollback steps. Use: b [number]", err=True)
+                return
+
+        if steps <= 0:
+            click.echo("Invalid rollback steps. Use: b [number]", err=True)
+            return
+
+        for _ in range(steps):
+            manager.rollback_config()
+
+        click.echo(f"Rollback completed (reload #{manager.reload_count})")
+
+    except Exception as e:
+        if "No snapshots available" in str(e):
+            click.echo("No configuration snapshots available for rollback", err=True)
+        else:
+            click.echo(f"Rollback failed: {e}", err=True)
+
+
+def handle_clear_command(manager: ConfigManager) -> None:
+    """Handle the clear snapshots command."""
+    manager.clear_snapshots()
+    click.echo("Configuration snapshots cleared")
+
+
+def handle_snapshots_command(manager: ConfigManager) -> None:
+    """Handle the snapshots command."""
     snapshots = manager.get_snapshots()
     if not snapshots:
-        click.echo("📸 No configuration snapshots available")
+        click.echo("No configuration snapshots available")
         return
 
-    click.echo(f"📸 Configuration snapshots ({len(snapshots)} total):")
+    click.echo(f"Configuration snapshots ({len(snapshots)} total):")
     for i, snapshot in enumerate(snapshots):
-        marker = "📍" if i == 0 else "  "
+        marker = "*" if i == 0 else " "
         click.echo(f"{marker} {i+1}. {snapshot.timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
         if snapshot.overrides:
             click.echo(f"     Overrides: {len(snapshot.overrides)} applied")
 
 
-def _handle_rollback(manager: ConfigManager, command: str) -> None:
-    """Handle rollback command in interactive mode."""
-    try:
-        parts = command.split()
-        steps = int(parts[1]) if len(parts) > 1 else 1
-
-        click.echo(f"⏪ Rolling back {steps} step{'s' if steps != 1 else ''}...")
-        config = manager.rollback_config(steps)
-        click.echo(f"✅ Rollback completed (reload #{manager.reload_count})")
-        _show_config_summary(config)
-
-    except ValueError:
-        click.echo("❌ Invalid rollback steps. Use: b [number]", err=True)
-    except ConfigReloadError as e:
-        click.echo(f"❌ Rollback failed: {e}", err=True)
-
-
-def _handle_clear_snapshots(manager: ConfigManager) -> None:
-    """Handle clear snapshots command in interactive mode."""
-    manager.clear_snapshots()
-    click.echo("🗑️ Configuration snapshots cleared")
-
-
-def _handle_show_info(manager: ConfigManager) -> None:
-    """Handle show info command in interactive mode."""
+def handle_info_command(manager: ConfigManager) -> None:
+    """Handle the info command."""
     config = manager.current_config
     overrides = manager.config_overrides
 
-    click.echo("📊 Current configuration info:")
+    click.echo("Current configuration info:")
     click.echo(f"   Config file: {manager.config_file}")
     click.echo(f"   Reload count: {manager.reload_count}")
-    click.echo(f"   Overrides: {len(overrides)} applied")
+    click.echo(f"   Active overrides: {len(overrides)}")
 
-    if overrides:
-        click.echo("   Active overrides:")
-        for key, value in overrides.items():
-            click.echo(f"     - {key} = {value}")
-
-    _show_config_summary(config)
-
-
-def _show_config_summary(config) -> None:
-    """Show a summary of the configuration."""
+    # Show configuration summary
     config_dict = config.model_dump()
 
-    click.echo("📋 Configuration summary:")
+    click.echo("Configuration summary:")
     if 'llms' in config_dict:
         llm_count = len(config_dict['llms'])
-        click.echo(f"   - LLMs: {llm_count}")
+        click.echo(f"   LLMs: {llm_count} configured")
 
     if 'tools' in config_dict:
         tool_count = len(config_dict['tools'])
-        click.echo(f"   - Tools: {tool_count}")
+        click.echo(f"   Tools: {tool_count} configured")
 
     if 'workflows' in config_dict:
         workflow_count = len(config_dict['workflows'])
-        click.echo(f"   - Workflows: {workflow_count}")
+        click.echo(f"   Workflows: {workflow_count} configured")
+
+    front_end_type = config_dict.get('general', {}).get('front_end', {}).get('_type', 'unknown')
+    click.echo(f"   Front end: {front_end_type}")
+
+    if overrides:
+        click.echo("Active overrides:")
+        for key, value in overrides.items():
+            click.echo(f"   {key}: {value}")
 
 
 if __name__ == '__main__':

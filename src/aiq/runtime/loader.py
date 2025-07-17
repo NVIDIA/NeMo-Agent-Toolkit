@@ -232,7 +232,6 @@ def reload_config(config_file: StrPath, validate_only: bool = False) -> AIQConfi
         raise
     except Exception as e:
         # Wrap other exceptions in ConfigReloadError
-        from aiq.runtime.config_manager import ConfigReloadError
         raise ConfigReloadError(f"Failed to reload configuration: {e}") from e
 
 
