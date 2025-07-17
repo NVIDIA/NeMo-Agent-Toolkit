@@ -82,7 +82,7 @@ examples = [
   "aiq_profiler_agent",
   "aiq_redact_pii",
   "aiq_semantic_kernel_demo",
-  "aiq_simple",
+  "aiq_simple_web_query",
   "aiq_simple_calculator",
   "aiq_simple_calculator_custom_routes",
   "aiq_simple_calculator_eval",
@@ -128,7 +128,7 @@ aiq_multi_frameworks = { path = "examples/basic/frameworks/multi_frameworks", ed
 aiq_plot_charts = { path = "examples/basic/functions/plot_charts", editable = true }
 aiq_redact_pii = { path = "examples/intermediate/observability/redact_pii", editable = true }
 aiq_semantic_kernel_demo = { path = "examples/basic/frameworks/semantic_kernel_demo", editable = true }
-aiq_simple = { path = "examples/basic/functions/simple", editable = true }
+aiq_simple_web_query = { path = "examples/basic/functions/simple", editable = true }
 aiq_simple_calculator = { path = "examples/basic/functions/simple_calculator", editable = true }
 aiq_simple_calculator_custom_routes = { path = "examples/intermediate/custom_routes/simple_calculator_custom_routes", editable = true }
 aiq_simple_calculator_eval = { path = "examples/intermediate/evaluation_and_profiling/simple_calculator_eval", editable = true }

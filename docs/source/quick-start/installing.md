@@ -134,21 +134,21 @@ Replace `<YOUR_API_KEY>` with your actual NVIDIA API key.
 
 ### Running the Simple Workflow
 
-1. Install the `aiq_simple` Workflow
+1. Install the `aiq_simple_web_query` Workflow
 
     ```bash
     uv pip install -e examples/basic/functions/simple
     ```
 
-2. Run the `aiq_simple` Workflow
+2. Run the `aiq_simple_web_query` Workflow
 
     ```bash
     aiq run --config_file=examples/basic/functions/simple/configs/config.yml --input "What is LangSmith"
     ```
 
-3. **Run and evaluate the `aiq_simple` Workflow**
+3. **Run and evaluate the `aiq_simple_web_query` Workflow**
 
-    The `eval_config.yml` YAML is a super-set of the `config.yml` containing additional fields for evaluation. To evaluate the `aiq_simple` workflow, run the following command:
+    The `eval_config.yml` YAML is a super-set of the `config.yml` containing additional fields for evaluation. To evaluate the `aiq_simple_web_query` workflow, run the following command:
     ```bash
     aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml
     ```

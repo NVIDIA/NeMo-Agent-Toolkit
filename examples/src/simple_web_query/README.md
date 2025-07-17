@@ -73,7 +73,7 @@ $ aiq run --config_file examples/basic/functions/simple/configs/config.yml --inp
 2025-04-23 15:53:16,197 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-04-23 15:53:16,243 - aiq.profiler.utils - WARNING - Discovered frameworks: {<LLMFrameworkEnum.LANGCHAIN: 'langchain'>} in function webquery_tool by inspecting source. It is recommended and more reliable to instead add the used LLMFrameworkEnum types in the framework_wrappers argument when calling @register_function.
 2025-04-23 15:53:16,251 - langchain_community.utils.user_agent - WARNING - USER_AGENT environment variable not set, consider setting it to identify your requests.
-2025-04-23 15:53:16,262 - aiq_simple.register - INFO - Generating docs for the webpage: https://docs.smith.langchain.com
+2025-04-23 15:53:16,262 - aiq_simple_web_query.register - INFO - Generating docs for the webpage: https://docs.smith.langchain.com
 Fetching pages: 100%|#########################################################################################| 1/1 [00:00<00:00, 13.51it/s]
 2025-04-23 15:53:16,769 - faiss.loader - INFO - Loading faiss with AVX2 support.
 2025-04-23 15:53:16,873 - faiss.loader - INFO - Successfully loaded faiss with AVX2 support.

@@ -16,7 +16,7 @@
 import platform
 
 import pytest
-from aiq_simple.register import WebQueryToolConfig
+from aiq_simple_web_query.register import WebQueryToolConfig
 
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.test.embedder import EmbedderTestConfig
