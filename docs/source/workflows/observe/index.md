@@ -151,6 +151,16 @@ The `tracing` section contains one or more tracing providers. Each provider has 
         dataset: "aiqtoolkit-dataset"
     ```
   - See [Observing with Catalyst](./observe-workflow-with-catalyst.md) for more information
+- [**Generic OTEL Collector, eg for DataDog export**]
+  - Example configuration:
+  ```yaml 
+  tracing:
+    otelcollector:
+      _type: otelcollector
+      project: "aiqtoolkit-demo"
+      endpoint: "http://localhost:4318
+  ```
+  - See [Observing with OTEL Collector](./observe-workflow-with-otel-collector) for more information
 - **Custom providers**
   - See [Registering a New Telemetry Provider as a Plugin](#registering-a-new-telemetry-provider-as-a-plugin) for more information
 
