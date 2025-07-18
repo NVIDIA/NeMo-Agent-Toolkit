@@ -147,13 +147,13 @@ export NVIDIA_API_KEY="your_nvidia_api_key"
 From the git repository root, run the following command to build AIQ toolkit and the simple agent into a Docker image.
 
 ```bash
-docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -f examples/src/simple_web_query/Dockerfile -t simple-agent .
+docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -f examples/src/simple_web_query/Dockerfile -t simple-web-query-agent .
 ```
 
 Then, run the following command to run the simple agent.
 
 ```bash
-docker run -p 8000:8000 -e NVIDIA_API_KEY simple-agent
+docker run -p 8000:8000 -e NVIDIA_API_KEY simple-web-query-agent
 ```
 
 After the container starts, you can access the agent at http://localhost:8000.

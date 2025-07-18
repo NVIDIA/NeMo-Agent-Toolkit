@@ -83,6 +83,7 @@ examples = [
   "aiq_redact_pii",
   "aiq_semantic_kernel_demo",
   "aiq_simple_web_query",
+  "aiq_simple_web_query_eval",
   "aiq_simple_calculator",
   "aiq_simple_calculator_custom_routes",
   "aiq_simple_calculator_eval",
@@ -129,6 +130,7 @@ aiq_plot_charts = { path = "examples/src/plot_charts", editable = true }
 aiq_redact_pii = { path = "examples/src/redact_pii", editable = true }
 aiq_semantic_kernel_demo = { path = "examples/src/semantic_kernel_demo", editable = true }
 aiq_simple_web_query = { path = "examples/src/simple_web_query", editable = true }
+aiq_simple_web_query_eval = { path = "examples/src/simple_web_query_eval", editable = true }
 aiq_simple_calculator = { path = "examples/src/simple_calculator", editable = true }
 aiq_simple_calculator_custom_routes = { path = "examples/src/simple_calculator_custom_routes", editable = true }
 aiq_simple_calculator_eval = { path = "examples/src/simple_calculator_eval", editable = true }
