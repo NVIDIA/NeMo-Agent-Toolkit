@@ -57,7 +57,7 @@ workflow:
 eval:
   general:
     output:
-      dir: ./.tmp/aiq/examples/getting_started/simple_web_query/
+      dir: ./.tmp/aiq/examples/getting_started/simple_web_query/eval/
       cleanup: true
     dataset:
       _type: json
