@@ -39,11 +39,11 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the AIQ too
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AIQ toolkit library tools.
-- **Custom Plugin System:** Developers can bring in new tools using plugins.
-- **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
-- **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
-- **Ease of Use:** Simplifies developer experience and deployment.
+- **Custom Calculator Tools:** Demonstrates five mathematical tools - `calculator_multiply`, `calculator_inequality`, `calculator_divide`, `calculator_subtract`, and `current_datetime` for mathematical operations and time-based comparisons.
+- **ReAct Agent Integration:** Uses a `react_agent` that performs reasoning between tool calls to solve complex mathematical queries requiring multiple steps.
+- **Multi-step Problem Solving:** Shows how an agent can break down complex questions like "Is the product of 2 * 4 greater than the current hour?" into sequential tool calls.
+- **Custom Function Registration:** Demonstrates the AIQ toolkit plugin system for registering custom mathematical functions with proper validation and error handling.
+- **YAML-based Configuration:** Fully configurable workflow that showcases how to orchestrate multiple tools through simple configuration.
 
 ---
 

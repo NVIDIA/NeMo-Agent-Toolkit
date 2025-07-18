@@ -26,13 +26,11 @@ An example of a Mixture of Agents (naive Mixture of Experts / naive Agent Hyperv
 
 ## Key Features
 
-- **Pre-built Tools and Agents:** Leverages core AIQ toolkit library agents and tools.
-- **ReAct Agent:** Performs reasoning between agent / tool call; utilizes agent / tool names and descriptions to appropriately route to the correct agent or tool.
-- **Tool Calling Agent** The "Expert Agents" are Tool Calling Agents.  They leverages tool / function input schema to appropriately route to the correct tool.
-- **Custom Plugin System:** Developers can bring in new agents and tools using plugins.
-- **High-level API:** Enables defining functions that transform agents and tools into asynchronous LangChain tools.
-- **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity. Customize agents, agent's tools, prompts, and more.
-- **Ease of Use:** Simplifies developer experience and deployment.
+- **Hierarchical Agent Architecture:** Demonstrates a `react_agent` serving as a master orchestrator that routes queries to specialized `tool_calling_agent` experts based on query content and agent descriptions.
+- **Multiple Specialized Agents:** Includes distinct expert agents for different domains - an `internet_agent` for web searches, a `code_agent` for programming tasks, and additional specialized agents.
+- **Agent-as-Tool Integration:** Shows how complete agent workflows can be wrapped and used as tools by other agents, enabling complex multi-agent orchestration.
+- **Mixed Agent Types:** Combines ReAct agents (for orchestration and reasoning) with Tool Calling agents (for specialized execution), demonstrating interoperability between different agent frameworks.
+- **Scalable Expert System:** Provides a pattern for building systems where a reasoning agent can delegate work to multiple domain-specific expert agents, each with their own specialized tool sets.
 
 ## Graph Structure
 

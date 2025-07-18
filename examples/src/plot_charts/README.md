@@ -33,12 +33,11 @@ A simple and reusable example that demonstrates creating charts from data using 
 
 ## Key Features
 
-- **Simple Configuration:** All parameters configurable through YAML files
-- **Multiple Chart Types:** Supports line charts, bar charts, and scatter plots
-- **Flexible Data Sources:** Configurable data file paths for different datasets
-- **LLM Integration:** Uses configured LLM to generate intelligent chart descriptions
-- **Reusable Design:** Follows standard AIQ Toolkit patterns for easy customization
-- **Output Control:** Configurable output directory and chart sizing
+- **Data Visualization Workflow:** Demonstrates a custom `plot_charts` workflow type that generates line charts, bar charts, and scatter plots from JSON data files based on natural language requests.
+- **Python Plotting Integration:** Shows how to integrate Python's `matplotlib` library for chart generation within the AIQ toolkit framework.
+- **JSON Data Processing:** Demonstrates parsing and visualization of structured JSON data with configurable x-values and multiple y-value series with labels.
+- **LLM-Enhanced Descriptions:** Uses configured LLMs to generate intelligent, contextual descriptions of the created charts for better user understanding.
+- **Configurable Chart Parameters:** Shows how to customize chart types, data sources, output directories, figure sizes, and data point limits through YAML configuration.
 
 ## Installation and Setup
 
