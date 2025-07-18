@@ -175,8 +175,8 @@ class AsyncOtelSpanListener:
         # Skip processing if OpenTelemetry is not properly installed (using dummy implementations)
         if self._is_using_dummy_implementations:
             if not self._skip_warning_logged:
-                logger.debug("Skipping OpenTelemetry event processing because OpenTelemetry is not installed. "
-                             "Install with: pip install opentelemetry-api opentelemetry-sdk")
+                logger.warning("Skipping OpenTelemetry event processing because OpenTelemetry is not installed. "
+                               "Install with: pip install opentelemetry-api opentelemetry-sdk")
                 self._skip_warning_logged = True
             return
 
