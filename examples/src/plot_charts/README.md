@@ -121,9 +121,30 @@ aiq run --config_file examples/src/plot_charts/src/aiq_plot_charts/configs/confi
 **Expected Output**
 
 ```console
-Successfully created line chart saved to: outputs/line_chart_1703123456.png
+aiq run --config_file examples/src/plot_charts/src/aiq_plot_charts/configs/config.yml --input "create a line chart"
 
-Chart description: The line chart shows performance trends for USA and EMEA regions from 2020 to 2024, with both regions showing growth patterns over the time period.
+
+Configuration Summary:
+--------------------
+Workflow Type: plot_charts
+Number of Functions: 0
+Number of LLMs: 1
+Number of Embedders: 0
+Number of Memory: 0
+Number of Retrievers: 0
+
+2025-07-18 14:48:28,247 - aiq_plot_charts.register - INFO - Processing chart request: create a line chart
+2025-07-18 14:48:28,249 - aiq_plot_charts.register - INFO - Successfully loaded data from /Users/yuchenz/Desktop/Work/Project/AgentIQ/examples/src/plot_charts/src/aiq_plot_charts/../../example_data.json
+2025-07-18 14:48:28,249 - aiq_plot_charts.register - INFO - Selected chart type: line
+2025-07-18 14:48:28,522 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2025-07-18 14:48:28,523 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2025-07-18 14:48:28,523 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2025-07-18 14:48:28,523 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2025-07-18 14:48:30,092 - aiq_plot_charts.register - INFO - Successfully created chart: outputs/line_chart_1752875308.png
+2025-07-18 14:48:30,093 - aiq.front_ends.console.console_front_end_plugin - INFO -
+--------------------------------------------------
+Workflow Result:
+['Successfully created line chart saved to: outputs/line_chart_1752875308.png\n\nChart description: The line chart shows the trend of two regions, USA and EMEA, over a 5-year period from 2020 to 2024, with both regions experiencing fluctuations in their values. The USA region appears to have a more stable trend, while the EMEA region shows a more significant increase in 2021 and 2023, followed by a sharp decline in 2024.']
 ```
 
 ### Different Chart Types
