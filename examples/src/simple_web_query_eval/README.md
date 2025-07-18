@@ -47,7 +47,7 @@ uv pip install -e examples/evaluation_and_profiling/simple_web_query_eval
 
 ### Set Up API Keys
 
-Follow the [Obtaining API Keys](../../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to set up your API keys:
+Follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to set up your API keys:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
