@@ -27,6 +27,23 @@ This example demonstrates how to use A configurable [ReWOO](https://arxiv.org/ab
 - **Calculator and Internet Search Integration:** Includes `calculator_inequality` and `internet_search` tools to demonstrate multi-step reasoning that requires both mathematical computation and web research.
 - **Plan-Execute-Solve Pattern:** Demonstrates the ReWOO approach of complete upfront planning followed by systematic execution and final result synthesis.
 
+## Graph Structure
+
+The ReWOO agent uses a unique three-node graph architecture that separates planning, execution, and solving into distinct phases. The following diagram illustrates the agent's workflow:
+
+<div align="center">
+<img src="../../../docs/source/_static/rewoo_agent.png" alt="ReWOO Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
+</div>
+
+**Workflow Overview:**
+- **Start**: The agent begins processing with user input
+- **Planner Node**: Creates a complete execution plan with all necessary steps upfront
+- **Executor Node**: Executes tools according to the plan, looping until all steps are completed
+- **Solver Node**: Takes all execution results and generates the final answer
+- **End**: Process completes with the final response
+
+This architecture differs from other agents by separating reasoning (planning) from execution, allowing for more systematic and predictable tool usage patterns. The ReWOO approach first plans all steps, then executes them systematically, and finally synthesizes the results.
+
 ## Installation and Setup
 
 If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
