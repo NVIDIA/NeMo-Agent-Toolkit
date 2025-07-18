@@ -160,7 +160,7 @@ The `tracing` section contains one or more tracing providers. Each provider has 
       project: "aiqtoolkit-demo"
       endpoint: "http://localhost:4318
   ```
-  - See [Observing with OTel Collector](./observe-workflow-with-otel-collector) for more information
+  - See [Observing with OTel Collector](./observe-workflow-with-otel-collector.md) for more information
 - **Custom providers**
   - See [Registering a New Telemetry Provider as a Plugin](#registering-a-new-telemetry-provider-as-a-plugin) for more information
 
