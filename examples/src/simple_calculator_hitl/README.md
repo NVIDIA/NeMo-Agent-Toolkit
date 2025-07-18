@@ -23,7 +23,7 @@ This example demonstrates **human in the loop capabilities** of the AIQ toolkit 
 
 - **Human-in-the-Loop Integration:** Demonstrates the `hitl_approval_function` that requests user approval before allowing the agent to increase iteration limits and make additional tool calls.
 - **Dynamic Recursion Limit Management:** Shows how to handle agent recursion limits by prompting users for permission to extend maximum iterations when the agent needs more steps to complete a task.
-- **User Interaction Manager:** Demonstrates the AIQ toolkit's `user_input_manager` for prompting user input and processing responses during workflow execution.
+- **User Interaction Manager:** Demonstrates the AIQ toolkit `user_input_manager` for prompting user input and processing responses during workflow execution.
 - **Conditional Workflow Continuation:** Shows how agent behavior can be gated based on user responses, allowing workflows to stop or continue based on human approval.
 - **Retry ReAct Agent:** Uses a custom `retry_react_agent` workflow that can recover from recursion limits with user permission and increased iteration capacity.
 

@@ -45,7 +45,7 @@ This personal financial planner was revised based on the [Awesome-LLM-App](https
 
 - **Agno Framework Integration:** Demonstrates seamless integration between the lightweight Agno multimodal agent library and AIQ toolkit for building sophisticated agent workflows with minimal overhead.
 - **Personal Financial Planning Workflow:** Creates personalized financial plans including budgets, investment strategies, and savings goals using NVIDIA NIM models with automated research and planning capabilities.
-- **Multi-Framework Agent Architecture:** Shows how to combine Agno's lightning-fast, model-agnostic capabilities with AIQ toolkit's workflow management and tool integration system.
+- **Multi-Framework Agent Architecture:** Shows how to combine Agno's lightning-fast, model-agnostic capabilities with AIQ toolkit workflow management and tool integration system.
 - **Automated Financial Research:** Integrates SERP API for real-time financial data gathering and market research to inform personalized financial planning recommendations.
 - **Docker-Ready Deployment:** Provides complete containerization setup for deploying personal finance planning agents in production environments with API access.
 
