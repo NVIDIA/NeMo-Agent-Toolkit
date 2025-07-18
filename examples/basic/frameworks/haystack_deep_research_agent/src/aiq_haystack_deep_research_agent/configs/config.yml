@@ -1,0 +1,40 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+general:
+  use_uvloop: true
+
+llms:
+  openai_llm:
+    _type: openai
+    model_name: gpt-4o-mini
+    temperature: 0.0
+    max_tokens: 4000
+
+workflow:
+  _type: haystack_deep_research_agent
+  llm: openai_llm
+  system_prompt: |
+    You are a deep research assistant.
+    You create comprehensive research reports to answer the user's questions.
+    You use the 'search' tool to answer any questions by using web search.
+    You use the 'rag' tool to answer any questions by using retrieval augmented generation on your internal document database.
+    You perform multiple searches until you have the information you need to answer the question.
+    Make sure you research different aspects of the question.
+    Use markdown to format your response.
+    When you use information from the websearch results, cite your sources using markdown links.
+    When you use information from the document database, cite the text used from the source document.
+    It is important that you cite accurately.
+  max_agent_steps: 20
