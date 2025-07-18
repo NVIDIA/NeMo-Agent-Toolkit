@@ -19,10 +19,8 @@ import json
 import logging
 from pathlib import Path
 
-import pytest
-from aiq_simple_web_query.register import WebQueryToolConfig
 import aiq_simple_web_query_eval
-
+import pytest
 
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
