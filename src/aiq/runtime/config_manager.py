@@ -142,7 +142,7 @@ class ConfigManager:
 
             logger.info("Applied %d configuration overrides", len(overrides))
 
-    def reload_config(self, validate_only: bool = False) -> AIQConfig:
+    def reload_config(self, validate_only: bool = False) -> Path:
         """
         Reload configuration from file with validation and rollback support.
 
@@ -153,8 +153,8 @@ class ConfigManager:
 
         Returns
         -------
-        AIQConfig
-            The new configuration if validation succeeds
+        Path
+            The config file path if validation succeeds
 
         Raises
         ------
@@ -176,7 +176,7 @@ class ConfigManager:
 
                 if validate_only:
                     logger.info("Configuration validation successful")
-                    return new_config
+                    return self.config_file
 
                 # Apply the new configuration
                 self._current_config = new_config
@@ -188,7 +188,7 @@ class ConfigManager:
 
                 logger.info("Configuration reload successful (reload #%d)", self._reload_count)
 
-                return new_config
+                return self.config_file
 
             except Exception as e:
                 if validate_only:
@@ -198,7 +198,7 @@ class ConfigManager:
                     logger.error("Configuration reload failed: %s", e)
                     raise ConfigReloadError(f"Configuration reload failed: {e}") from e
 
-    def rollback_config(self, steps: int = 1) -> AIQConfig:
+    def rollback_config(self, steps: int = 1) -> Path:
         """
         Rollback configuration to a previous snapshot.
 
@@ -209,8 +209,8 @@ class ConfigManager:
 
         Returns
         -------
-        AIQConfig
-            The configuration after rollback
+        Path
+            The config file path after rollback
 
         Raises
         ------
@@ -249,7 +249,7 @@ class ConfigManager:
             self._snapshots = self._snapshots[:-(steps)]
 
             logger.info("Configuration rollback completed")
-            return deepcopy(self._current_config)
+            return self.config_file
 
     def get_snapshots(self) -> list[ConfigSnapshot]:
         """

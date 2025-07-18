@@ -226,7 +226,8 @@ def reload_config(config_file: StrPath, validate_only: bool = False) -> AIQConfi
     try:
         # Create a temporary config manager for reloading
         with ConfigManager(config_file) as manager:
-            return manager.reload_config(validate_only=validate_only)
+            manager.reload_config(validate_only=validate_only)
+            return manager.current_config
     except (ConfigValidationError, ConfigReloadError):
         # Re-raise config-specific errors as-is
         raise

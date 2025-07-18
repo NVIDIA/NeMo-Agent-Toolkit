@@ -51,7 +51,7 @@ class DevModeManager:
                  config_file: Path,
                  override: tuple[tuple[str, str], ...] = (),
                  watch_additional_files: set[Path] | None = None,
-                 reload_delay: float = 0.5,
+                 reload_delay: float = 0.1,
                  max_reload_attempts: int = 3):
         """
         Initialize the development mode manager.
@@ -80,14 +80,14 @@ class DevModeManager:
         self._last_successful_config: AIQConfig | None = None
 
         # Event handling
-        self._reload_callbacks: list[Callable[[AIQConfig], None]] = []
+        self._reload_callbacks: list[Callable[[Path], None]] = []
         self._error_callbacks: list[Callable[[Exception], None]] = []
 
         # Signal handling for graceful shutdown
         self._original_sigint_handler = None
         self._original_sigterm_handler = None
 
-    def add_reload_callback(self, callback: Callable[[AIQConfig], None]) -> None:
+    def add_reload_callback(self, callback: Callable[[Path], None]) -> None:
         """Add a callback to be called when configuration is successfully reloaded."""
         self._reload_callbacks.append(callback)
 
@@ -219,18 +219,18 @@ class DevModeManager:
             logger.info("Reloading configuration...")
 
             # Attempt to reload the configuration
-            new_config = self.config_manager.reload_config()
+            config_file_path = self.config_manager.reload_config()
 
             # Reset reload attempts on success
             self._reload_attempts = 0
-            self._last_successful_config = new_config
+            self._last_successful_config = self.config_manager.current_config
 
             logger.info("Configuration reloaded successfully")
 
             # Notify callbacks
             for callback in self._reload_callbacks:
                 try:
-                    callback(new_config)
+                    callback(config_file_path)
                 except Exception as e:
                     logger.error("Error in reload callback: %s", e)
 
@@ -252,14 +252,14 @@ class DevModeManager:
             if self._reload_attempts >= self.max_reload_attempts:
                 logger.warning("Maximum reload attempts exceeded, attempting rollback...")
                 try:
-                    rollback_config = self.config_manager.rollback_config()
+                    rollback_config_path = self.config_manager.rollback_config()
                     self._reload_attempts = 0  # Reset after successful rollback
                     logger.info("Configuration rolled back successfully")
 
                     # Notify callbacks about rollback
                     for callback in self._reload_callbacks:
                         try:
-                            callback(rollback_config)
+                            callback(rollback_config_path)
                         except Exception as callback_error:
                             logger.error("Error in rollback callback: %s", callback_error)
 
@@ -333,7 +333,7 @@ class DevModeManager:
 
 async def run_with_dev_mode(config_file: Path,
                             override: tuple[tuple[str, str], ...],
-                            workflow_runner: Callable[[AIQConfig], Any],
+                            workflow_runner: Callable[[], Any],
                             watch_additional_files: set[Path] | None = None) -> None:
     """
     Run a workflow with development mode enabled.
@@ -352,8 +352,11 @@ async def run_with_dev_mode(config_file: Path,
     current_workflow_task: asyncio.Task | None = None
     workflow_shutdown_event = asyncio.Event()
 
-    async def start_workflow(config: AIQConfig) -> None:
-        """Start or restart the workflow with the given configuration."""
+    # Get the current event loop for thread-safe scheduling
+    main_loop = asyncio.get_running_loop()
+
+    async def start_workflow(config_file_path: Path) -> None:
+        """Start or restart the workflow with the given configuration file path."""
         nonlocal current_workflow_task
 
         # Stop existing workflow if running
@@ -368,36 +371,49 @@ async def run_with_dev_mode(config_file: Path,
         # Start new workflow
         logger.info("Starting workflow with updated configuration...")
         workflow_shutdown_event.clear()
-        current_workflow_task = asyncio.create_task(workflow_runner(config))
+        current_workflow_task = asyncio.create_task(workflow_runner())
 
-    async def handle_reload(config: AIQConfig) -> None:
+    async def handle_reload(config_file_path: Path) -> None:
         """Handle configuration reload."""
-        await start_workflow(config)
+        await start_workflow(config_file_path)
 
     def handle_error(error: Exception) -> None:
         """Handle reload errors."""
         logger.warning("Workflow continues with previous configuration due to reload error")
 
     # Set up callbacks with proper async handling
-    def sync_reload_callback(config: AIQConfig) -> None:
+    def sync_reload_callback(config_file_path: Path) -> None:
         """Synchronous wrapper for async reload callback."""
-        asyncio.create_task(handle_reload(config))
+        try:
+            # Schedule the coroutine to run in the main event loop from background thread
+            asyncio.run_coroutine_threadsafe(handle_reload(config_file_path), main_loop)
+        except Exception as e:
+            logger.error("Failed to schedule reload callback: %s", e)
 
     dev_manager.add_reload_callback(sync_reload_callback)
     dev_manager.add_error_callback(handle_error)
 
     try:
         # Start development mode and get initial config
-        async with dev_manager as initial_config:
+        async with dev_manager as _:
             # Start the initial workflow
-            await start_workflow(initial_config)
+            await start_workflow(config_file)
 
-            # Wait for workflow or shutdown
-            if current_workflow_task:
-                try:
-                    await current_workflow_task
-                except asyncio.CancelledError:
-                    logger.info("Workflow stopped")
+            # Keep running and waiting for workflow tasks (including reloaded ones)
+            while True:
+                if current_workflow_task:
+                    try:
+                        await current_workflow_task
+                        # If workflow completed normally, break out of the loop
+                        break
+                    except asyncio.CancelledError:
+                        logger.info("Workflow stopped for reload")
+                        # Wait a bit for the reload callback to create a new task
+                        await asyncio.sleep(0.1)
+                        continue
+                else:
+                    # No current task, wait a bit and check again
+                    await asyncio.sleep(0.1)
 
     except KeyboardInterrupt:
         logger.info("Received interrupt, shutting down...")

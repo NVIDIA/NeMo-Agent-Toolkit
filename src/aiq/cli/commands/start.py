@@ -168,27 +168,23 @@ class StartCommandGroup(click.Group):
 
         return self._commands
 
-    def invoke_subcommand(self,
-                          ctx: click.Context,
-                          cmd_name: str,
-                          config_file: Path,
-                          override: tuple[tuple[str, str], ...],
-                          dev: bool = False,
-                          **kwargs) -> int | None:
+    def _process_config_and_get_front_end(self,
+                                          ctx: click.Context,
+                                          cmd_name: str,
+                                          config_file: Path,
+                                          override: tuple[tuple[str, str], ...],
+                                          **kwargs) -> tuple[AIQConfig, RegisteredFrontEndInfo]:
+        """
+        Process configuration file and return the config and front end info.
 
+        This method encapsulates all the config processing logic that needs to be
+        executed both during initial load and during reloads in development mode.
+        """
         from aiq.runtime.loader import PluginTypes
         from aiq.runtime.loader import discover_and_register_plugins
 
-        if (config_file is None):
-            raise click.ClickException("No config file provided.")
-
-        # Here we need to ensure all objects are loaded before we try to create the config object
+        # Ensure all objects are loaded before creating the config object
         discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
-
-        logger.info("Starting AIQ Toolkit from config file: '%s'", config_file)
-
-        if dev:
-            logger.info("Development mode enabled - automatic reloading active")
 
         config_dict = load_and_override_config(config_file, override)
 
@@ -223,19 +219,42 @@ class StartCommandGroup(click.Group):
         schema_validator = SchemaValidator(schema=front_end_config.__pydantic_core_schema__)
         schema_validator.validate_python(front_end_config.__dict__)
 
+        return config, front_end
+
+    def invoke_subcommand(self,
+                          ctx: click.Context,
+                          cmd_name: str,
+                          config_file: Path,
+                          override: tuple[tuple[str, str], ...],
+                          dev: bool = False,
+                          **kwargs) -> int | None:
+
+        if (config_file is None):
+            raise click.ClickException("No config file provided.")
+
+        logger.info("Starting AIQ Toolkit from config file: '%s'", config_file)
+
+        if dev:
+            logger.info("Development mode enabled - automatic reloading active")
+
         try:
             if dev:
                 # Run with development mode
                 async def run_with_dev():
                     from aiq.runtime.dev_mode_manager import run_with_dev_mode
 
-                    async def workflow_runner(config: AIQConfig) -> None:
+                    async def workflow_runner() -> None:
+                        # Process configuration file to get config and front end info
+                        config, front_end = self._process_config_and_get_front_end(
+                            ctx, cmd_name, config_file, override, **kwargs)
+
+                        front_end_config = config.general.front_end
+
                         # From the config, get the registered front end plugin
-                        front_end_info = GlobalTypeRegistry.get().get_front_end(
-                            config_type=type(config.general.front_end))
+                        front_end_info = GlobalTypeRegistry.get().get_front_end(config_type=type(front_end_config))
 
                         # Create the front end plugin
-                        async with front_end_info.build_fn(config.general.front_end, config) as front_end_plugin:
+                        async with front_end_info.build_fn(front_end_config, config) as front_end_plugin:
                             # Run the front end plugin
                             await front_end_plugin.run()
 
@@ -245,6 +264,11 @@ class StartCommandGroup(click.Group):
             else:
                 # Run in normal mode
                 async def run_plugin():
+                    # Process configuration file to get config and front end info
+                    config, front_end = self._process_config_and_get_front_end(
+                        ctx, cmd_name, config_file, override, **kwargs)
+
+                    front_end_config = config.general.front_end
 
                     # From the config, get the registered front end plugin
                     front_end_info = GlobalTypeRegistry.get().get_front_end(config_type=type(front_end_config))
