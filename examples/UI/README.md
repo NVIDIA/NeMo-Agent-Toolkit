@@ -29,4 +29,4 @@ This example demonstrates how to integrate and use the web-based user interface 
 
 ## Quick Start
 
-For complete setup and usage instructions, refer to the comprehensive guide: [Launching the UI](../../../docs/source/quick-start/launching-ui.md).
+For complete setup and usage instructions, refer to the comprehensive guide: [Launching the UI](../../docs/source/quick-start/launching-ui.md).
