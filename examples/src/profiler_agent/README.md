@@ -28,7 +28,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/advanced/profiler_agent
+uv pip install -e examples/advanced_agents/profiler_agent
 ```
 
 ### Set Up API Keys
@@ -48,20 +48,20 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 2. Ensure that there are traces in the Phoenix server. You can use the simple calculator example to generate traces.
    > Note: This requires installing both the optional `telemetry` dependencies along with the simple calculator. You can do this by running the following commands:
    > ```bash
-   > uv pip install -e examples/intermediate/observability/simple_calculator_observability
+   > uv pip install -e examples/src/simple_calculator_observability
    > ```
 
    Then, run the simple calculator example to generate traces:
    ```bash
-   aiq run --config_file examples/intermediate/observability/simple_calculator_observability/configs/config-tracing.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
-   aiq run --config_file examples/intermediate/observability/simple_calculator_observability/configs/config-tracing.yml --input "Is the product of 33 * 4 greater than the current hour of the day?"
-   aiq run --config_file examples/intermediate/observability/simple_calculator_observability/configs/config-tracing.yml --input "Is the sum of 44 and 55 greater than the current hour of the day?"
-   aiq run --config_file examples/intermediate/observability/simple_calculator_observability/configs/config-tracing.yml --input "Is the difference between 7 and 5 less than the current hour of the day?"
+   aiq run --config_file examples/src/simple_calculator_observability/configs/config-tracing.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+   aiq run --config_file examples/src/simple_calculator_observability/configs/config-tracing.yml --input "Is the product of 33 * 4 greater than the current hour of the day?"
+   aiq run --config_file examples/src/simple_calculator_observability/configs/config-tracing.yml --input "Is the sum of 44 and 55 greater than the current hour of the day?"
+   aiq run --config_file examples/src/simple_calculator_observability/configs/config-tracing.yml --input "Is the difference between 7 and 5 less than the current hour of the day?"
    ```
 
 3. Run the profiler agent:
    ```
-   aiq serve --config_file=examples/advanced/profiler_agent/configs/config.yml
+   aiq serve --config_file=examples/advanced_agents/profiler_agent/configs/config.yml
    ```
 
 4. Launch the NeMo Agent Toolkit User Interface by using the instructions in the [Launching the User Interface](../../../docs/source/quick-start/launching-ui.md#launch-the-nemo-agent-toolkit-user-interface) guide.
