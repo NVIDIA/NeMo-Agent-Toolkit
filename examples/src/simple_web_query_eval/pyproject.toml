@@ -10,7 +10,6 @@ name = "aiq_simple_web_query_eval"
 dynamic = ["version"]
 dependencies = [
   "aiqtoolkit[langchain]~=1.2",
-  "aiqtoolkit[telemetry]~=1.2",
   "aiq_simple_web_query",
 ]
 requires-python = ">=3.11,<3.13"
