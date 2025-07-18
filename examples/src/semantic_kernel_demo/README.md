@@ -28,7 +28,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/basic/frameworks/semantic_kernel_demo
+uv pip install -e examples/frameworks/semantic_kernel_demo
 ```
 
 ### Set Up API Keys
@@ -54,7 +54,7 @@ export MEM0_API_KEY=<YOUR_MEM0_API_KEY>
 Then, you can run the workflow with the LTM configuration as follows:
 
 ```bash
-aiq run --config_file examples/basic/frameworks/semantic_kernel_demo/configs/config.yml --input "Create a 3-day travel itinerary for Tokyo in April, suggest hotels  within a USD 2000 budget. I like staying at expensive hotels and am vegan"
+aiq run --config_file examples/frameworks/semantic_kernel_demo/configs/config.yml --input "Create a 3-day travel itinerary for Tokyo in April, suggest hotels  within a USD 2000 budget. I like staying at expensive hotels and am vegan"
 ```
 
 **Expected Output**
@@ -71,7 +71,7 @@ Please note that it is normal to see the LLM produce some errors on occasion as 
 Assuming we've successfully added our preference for vegan restaurants in the last prompt to the agent, let us attempt to retrieve a more personalized itinerary with vegan dining options:
 
 ```bash
-aiq run --config_file examples/basic/frameworks/semantic_kernel_demo/configs/config.yml --input "On a 1-day travel itinerary for Tokyo in April, suggest restaurants I would enjoy."
+aiq run --config_file examples/frameworks/semantic_kernel_demo/configs/config.yml --input "On a 1-day travel itinerary for Tokyo in April, suggest restaurants I would enjoy."
 ```
 
 **Expected Output**

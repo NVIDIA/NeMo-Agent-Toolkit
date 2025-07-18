@@ -84,7 +84,7 @@ export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
 **Install the `multi_frameworks` Workflow**
 
 ```bash
-uv pip install -e examples/basic/frameworks/multi_frameworks
+uv pip install -e examples/frameworks/multi_frameworks
 ```
 
 **Run the `multi_frameworks` Workflow**
@@ -92,18 +92,18 @@ uv pip install -e examples/basic/frameworks/multi_frameworks
 note: the below is an example command to use and query this and trigger `rag_agent`
 
 ```bash
-aiq run --config_file=examples/basic/frameworks/multi_frameworks/configs/config.yml --input "tell me about this workflow"
+aiq run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "tell me about this workflow"
 ```
 **expected output:**
 
 ```
-(.venv) (base) coder ➜ ~/dev/ai-query-engine $ aiq run --config_file=examples/basic/frameworks/multi_frameworks/configs/config.yml --input "tell me about this workflow"
+(.venv) (base) coder ➜ ~/dev/ai-query-engine $ aiq run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "tell me about this workflow"
 /home/coder/dev/ai-query-engine/.venv/lib/python3.12/site-packages/pydantic/_internal/_config.py:341: UserWarning: Valid config keys have changed in V2:
 * 'allow_population_by_field_name' has been renamed to 'populate_by_name'
   warnings.warn(message, UserWarning)
-2025-01-16 18:53:33,577 - aiq.cli.run - INFO - Loading configuration from: examples/basic/frameworks/multi_frameworks/configs/config.yml
+2025-01-16 18:53:33,577 - aiq.cli.run - INFO - Loading configuration from: examples/frameworks/multi_frameworks/configs/config.yml
 None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
-##### processing data from ingesting files in this folder : /home/coder/dev/ai-query-engine/examples/basic/frameworks/multi_frameworks/data/README.md
+##### processing data from ingesting files in this folder : /home/coder/dev/ai-query-engine/examples/frameworks/multi_frameworks/data/README.md
 2025-01-16 18:53:37,559 - httpx - INFO - HTTP Request: POST https://integrate.api.nvidia.com/v1/embeddings "HTTP/1.1 200 OK"
 /opt/conda/lib/python3.12/contextlib.py:210: LangChainDeprecationWarning: As of langchain-core 0.3.0, LangChain uses pydantic v2 internally. The langchain_core.pydantic_v1 module was a compatibility shim for pydantic v1, and should no longer be used. Please update the code to import from Pydantic directly.
 
@@ -112,7 +112,7 @@ with: `from pydantic import BaseModel`
 or the v1 compatibility namespace if you are working in a code base that has not been fully upgraded to pydantic 2 yet.         from pydantic.v1 import BaseModel
 
   return await anext(self.gen)
-workflow config =  llm_name='meta/llama-3.1-405b-instruct' llm='nim_llm' embedding_name='nvidia/nv-embed-v1' tool_names=['llama_index_rag'] data_dir='/home/coder/dev/ai-query-engine/examples/basic/frameworks/multi_frameworks/data/README.md'
+workflow config =  llm_name='meta/llama-3.1-405b-instruct' llm='nim_llm' embedding_name='nvidia/nv-embed-v1' tool_names=['llama_index_rag'] data_dir='/home/coder/dev/ai-query-engine/examples/frameworks/multi_frameworks/data/README.md'
  <llama_index.core.tools.function_tool.FunctionTool object at 0x7f5d8552b290> <class 'llama_index.core.tools.function_tool.FunctionTool'>
 
 Configuration Summary:
@@ -135,11 +135,11 @@ Number of Memory: 0
 2025-01-16 18:53:41,528 - httpx - INFO - HTTP Request: POST https://integrate.api.nvidia.com/v1/embeddings "HTTP/1.1 200 OK"
 2025-01-16 18:53:45,816 - httpx - INFO - HTTP Request: POST https://integrate.api.nvidia.com/v1/chat/completions "HTTP/1.1 200 OK"
  **using rag_tool via llama_index_rag_tool >>> output:
- This workflow is a multi-frameworks example that can be installed locally and run using specific commands. To install the workflow, you need to run `uv pip install -e examples/basic/frameworks/multi_frameworks`. After installation, you can run the workflow using the command `aiq run --config_file=examples/basic/frameworks/multi_frameworks/configs/config.yml --input "your query here"`. You can replace "your query here" with any input you want to query the workflow with.
- <class 'str'> This workflow is a multi-frameworks example that can be installed locally and run using specific commands. To install the workflow, you need to run `uv pip install -e examples/basic/frameworks/multi_frameworks`. After installation, you can run the workflow using the command `aiq run --config_file=examples/basic/frameworks/multi_frameworks/configs/config.yml --input "your query here"`. You can replace "your query here" with any input you want to query the workflow with.
+ This workflow is a multi-frameworks example that can be installed locally and run using specific commands. To install the workflow, you need to run `uv pip install -e examples/frameworks/multi_frameworks`. After installation, you can run the workflow using the command `aiq run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "your query here"`. You can replace "your query here" with any input you want to query the workflow with.
+ <class 'str'> This workflow is a multi-frameworks example that can be installed locally and run using specific commands. To install the workflow, you need to run `uv pip install -e examples/frameworks/multi_frameworks`. After installation, you can run the workflow using the command `aiq run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "your query here"`. You can replace "your query here" with any input you want to query the workflow with.
 2025-01-16 18:53:45,821 - aiq.cli.run - INFO - --------------------------------------------------
 Workflow Result:
-['This workflow is a multi-frameworks example that can be installed locally and run using specific commands. To install the workflow, you need to run `uv pip install -e examples/basic/frameworks/multi_frameworks`. After installation, you can run the workflow using the command `aiq run --config_file=examples/basic/frameworks/multi_frameworks/configs/config.yml --input "your query here"`. You can replace "your query here" with any input you want to query the workflow with.']
+['This workflow is a multi-frameworks example that can be installed locally and run using specific commands. To install the workflow, you need to run `uv pip install -e examples/frameworks/multi_frameworks`. After installation, you can run the workflow using the command `aiq run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "your query here"`. You can replace "your query here" with any input you want to query the workflow with.']
 --------------------------------------------------
 Cleaning up multi_frameworks workflow.
 2025-01-16 18:53:45,822 - aiq.cli.entrypoint - INFO - Total time: 12.25 sec
@@ -148,20 +148,20 @@ Cleaning up multi_frameworks workflow.
 note: the below is an example command to use and query this and trigger `research_agent`
 
 ```bash
-aiq run --config_file=examples/basic/frameworks/multi_frameworks/configs/config.yml --input "what is RAG?"
+aiq run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "what is RAG?"
 ```
 **expected output:**
 ```
-(.venv) AgentIQ % aiq run --config_file=examples/basic/frameworks/multi_frameworks/configs/config.yml --input "what is RAG?"
+(.venv) AgentIQ % aiq run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "what is RAG?"
 2025-05-14 15:19:32,924 - aiq.runtime.loader - WARNING - Loading module 'aiq_profiler_agent.register' from entry point 'aiq_profiler_agent' took a long time (1747.276783 ms). Ensure all imports are inside your registered functions.
 2025-05-14 15:19:33,092 - aiq.runtime.loader - WARNING - Loading module 'aiq.plugins.agno.register' from entry point 'aiq_agno' took a long time (141.694069 ms). Ensure all imports are inside your registered functions.
 2025-05-14 15:19:33,305 - aiq.runtime.loader - WARNING - Loading module 'aiq_multi_frameworks.register' from entry point 'aiq_multi_frameworks' took a long time (212.839842 ms). Ensure all imports are inside your registered functions.
 2025-05-14 15:19:33,848 - aiq.runtime.loader - WARNING - Loading module 'aiq_alert_triage_agent.register' from entry point 'aiq_alert_triage_agent' took a long time (303.922176 ms). Ensure all imports are inside your registered functions.
-2025-05-14 15:19:34,080 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/basic/frameworks/multi_frameworks/configs/config.yml'
+2025-05-14 15:19:34,080 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/frameworks/multi_frameworks/configs/config.yml'
 2025-05-14 15:19:34,082 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
-2025-05-14 15:19:41,048 - aiq_multi_frameworks.llama_index_rag_tool - INFO - ##### processing data from ingesting files in this folder : ./examples/basic/frameworks/multi_frameworks/README.md
+2025-05-14 15:19:41,048 - aiq_multi_frameworks.llama_index_rag_tool - INFO - ##### processing data from ingesting files in this folder : ./examples/frameworks/multi_frameworks/README.md
 None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
-2025-05-14 15:19:51,208 - aiq_multi_frameworks.register - INFO - workflow config = llm='nim_llm' data_dir='./examples/basic/frameworks/multi_frameworks/README.md' research_tool='langchain_researcher_tool' rag_tool='llama_index_rag' chitchat_agent='haystack_chitchat_agent'
+2025-05-14 15:19:51,208 - aiq_multi_frameworks.register - INFO - workflow config = llm='nim_llm' data_dir='./examples/frameworks/multi_frameworks/README.md' research_tool='langchain_researcher_tool' rag_tool='llama_index_rag' chitchat_agent='haystack_chitchat_agent'
 
 Configuration Summary:
 --------------------

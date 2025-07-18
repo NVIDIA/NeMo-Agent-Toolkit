@@ -27,12 +27,12 @@ NVIDIA NeMo Agent toolkit provides a user interface for interacting with your ru
 - Override intermediate steps with the same ID
 
 ## Walk-through
-This walk-through guides you through the steps to set up and configure the NeMo Agent toolkit user interface. 
+This walk-through guides you through the steps to set up and configure the NeMo Agent toolkit user interface.
 
 ### Prerequisites
 Before starting, ensure you have:
 - NeMo Agent toolkit installed and configured
-- Set up the simple calculator workflow by following the instructions in `examples/basic/functions/simple_calculator/README.md`
+- Set up the simple calculator workflow by following the instructions in `examples/getting_started/simple_web_query/README.md`
 - Node.js v18+ installed (required for the web interface)
 
 
@@ -46,11 +46,11 @@ git submodule update --init --recursive
 You can start the NeMo Agent toolkit server using the `aiq serve` command with the appropriate configuration file.
 
 ```bash
-aiq serve --config_file=examples/basic/functions/simple_calculator/configs/config.yml
+aiq serve --config_file=examples/getting_started/simple_web_query/configs/config.yml
 ```
 Running this command will produce the expected output as shown below:
 ```bash
-2025-03-07 12:54:20,394 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/basic/functions/simple_calculator/configs/config.yml'
+2025-03-07 12:54:20,394 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/getting_started/simple_web_query/configs/config.yml'
 WARNING:  Current configuration will not reload as not all conditions are met, please refer to documentation.
 INFO:     Started server process [47250]
 INFO:     Waiting for application startup.

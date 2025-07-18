@@ -31,7 +31,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 This example builds upon the [basic Simple Calculator](../../../basic/functions/simple_calculator/). Install it first:
 
 ```bash
-uv pip install -e examples/basic/functions/simple_calculator
+uv pip install -e examples/getting_started/simple_web_query
 ```
 
 ## Installation
@@ -39,7 +39,7 @@ uv pip install -e examples/basic/functions/simple_calculator
 Install this evaluation example:
 
 ```bash
-uv pip install -e examples/intermediate/evaluation_and_profiling/simple_calculator_eval
+uv pip install -e examples/evaluation_and_profiling/simple_calculator_eval
 ```
 
 ## Usage
@@ -49,13 +49,13 @@ uv pip install -e examples/intermediate/evaluation_and_profiling/simple_calculat
 Evaluate the Simple Calculator agent's accuracy against a test dataset:
 
 ```bash
-aiq eval --config_file examples/intermediate/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml
+aiq eval --config_file examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml
 ```
 
 This command:
-- Uses the test dataset from `examples/basic/functions/simple_calculator/data/simple_calculator.json`
+- Uses the test dataset from `examples/getting_started/simple_web_query/data/simple_calculator.json`
 - Applies the Tunable RAG Evaluator to measure response accuracy
-- Saves detailed results to `.tmp/aiq/examples/basic/functions/simple_calculator/tuneable_eval_output.json`
+- Saves detailed results to `.tmp/aiq/examples/getting_started/simple_web_query/tuneable_eval_output.json`
 
 ### Understanding Results
 

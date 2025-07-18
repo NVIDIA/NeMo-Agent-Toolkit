@@ -42,13 +42,13 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_AIQ_EMAIL_PHISHING_ANALYZER=${AIQ_VERSION} && \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     uv sync --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
-    uv pip install --link-mode=copy ./examples/intermediate/evaluation_and_profiling/email_phishing_analyzer
+    uv pip install --link-mode=copy ./examples/evaluation_and_profiling/email_phishing_analyzer
 
 # Set the config file environment variable
-ENV AIQ_CONFIG_FILE=/workspace/examples/intermediate/evaluation_and_profiling/email_phishing_analyzer/configs/config.yml
+ENV AIQ_CONFIG_FILE=/workspace/examples/evaluation_and_profiling/email_phishing_analyzer/configs/config.yml
 
 # Enivronment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"
 
 # Define the entry point to start the server
-ENTRYPOINT ["aiq", "serve", "--config_file=/workspace/examples/intermediate/evaluation_and_profiling/email_phishing_analyzer/configs/config.yml", "--host", "0.0.0.0"]
+ENTRYPOINT ["aiq", "serve", "--config_file=/workspace/examples/evaluation_and_profiling/email_phishing_analyzer/configs/config.yml", "--host", "0.0.0.0"]

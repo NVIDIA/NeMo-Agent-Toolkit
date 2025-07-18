@@ -40,13 +40,13 @@ Model Context Protocol (MCP) is a standard protocol that enables AI applications
 Install the basic Simple Calculator example first:
 
 ```bash
-uv pip install -e examples/basic/functions/simple_calculator
+uv pip install -e examples/getting_started/simple_web_query
 ```
 
 ## Installation
 
 ```bash
-uv pip install -e examples/intermediate/MCP/simple_calculator_mcp
+uv pip install -e examples/MCP/simple_calculator_mcp
 ```
 
 ## Usage

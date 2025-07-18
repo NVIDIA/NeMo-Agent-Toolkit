@@ -49,7 +49,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/basic/functions/plot_charts
+uv pip install -e examples/custom_functions/plot_charts
 ```
 
 ### Set Up API Keys
@@ -66,14 +66,14 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file examples/basic/functions/plot_charts/configs/config.yml  --input "make a line chart for me"
+aiq run --config_file examples/custom_functions/plot_charts/configs/config.yml  --input "make a line chart for me"
 ```
 
 **Expected Output**
 
 ```console
 /home/coder/dev/ai-query-engine
-/home/coder/dev/ai-query-engine/examples/basic/functions/plot_charts/example_data.json
+/home/coder/dev/ai-query-engine/examples/custom_functions/plot_charts/example_data.json
 routed_output= line_chart
 **line_chart** xValues=['2020', '2021', '2022', '2023', '2024'] yValues=[{'data': [2, 5, 2.2, 7.5, 3], 'label': 'USA'}, {'data': [2, 5.5, 2, 8.5, 1.5], 'label': 'EMEA'}] chart_name='USA vs EMEA Data by Year'
 y=
@@ -113,10 +113,10 @@ Note: in this run, the image is saved to **./USA vs EMEA Data by Year.png** in t
 
 Note: this is a multi-agents system, you can also try out some other examples listed below :
 ```bash
-aiq run --config_file examples/basic/functions/plot_charts/configs/config.yml  --input "no I change my mind, make a bar chart instead"
+aiq run --config_file examples/custom_functions/plot_charts/configs/config.yml  --input "no I change my mind, make a bar chart instead"
 ```
 ```bash
-aiq run --config_file examples/basic/functions/plot_charts/configs/config.yml  --input "tell me a joke"
+aiq run --config_file examples/custom_functions/plot_charts/configs/config.yml  --input "tell me a joke"
 ```
 
 
@@ -125,7 +125,7 @@ aiq run --config_file examples/basic/functions/plot_charts/configs/config.yml  -
 Run the following command from the root of the AIQ toolkit repo to serve this workflow:
 
 ```bash
-aiq serve --config_file examples/basic/functions/plot_charts/configs/config.yml
+aiq serve --config_file examples/custom_functions/plot_charts/configs/config.yml
 ```
 
 **Expected Output**
@@ -134,7 +134,7 @@ aiq serve --config_file examples/basic/functions/plot_charts/configs/config.yml
 INFO:     Started server process [162278]
 INFO:     Waiting for application startup.
 Starting up
-/home/coder/dev/ai-query-engine/examples/basic/functions/plot_charts/src/aiq_plot_charts/create_plot.py:10: LangChainDeprecationWarning: As of langchain-core 0.3.0, LangChain uses pydantic v2 internally. The langchain_core.pydantic_v1 module was a compatibility shim for pydantic v1, and should no longer be used. Please update the code to import from Pydantic directly.
+/home/coder/dev/ai-query-engine/examples/custom_functions/plot_charts/src/aiq_plot_charts/create_plot.py:10: LangChainDeprecationWarning: As of langchain-core 0.3.0, LangChain uses pydantic v2 internally. The langchain_core.pydantic_v1 module was a compatibility shim for pydantic v1, and should no longer be used. Please update the code to import from Pydantic directly.
 
 For example, replace imports like: `from langchain_core.pydantic_v1 import BaseModel`
 with: `from pydantic import BaseModel`

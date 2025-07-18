@@ -42,7 +42,7 @@ class MaintenanceCheckToolConfig(FunctionBaseConfig, name="maintenance_check"):
     prompt: str = Field(default=MaintenanceCheckPrompts.PROMPT,
                         description="Main prompt for the maintenance check task.")
     static_data_path: str | None = Field(
-        default="examples/advanced/alert_triage_agent/data/maintenance_static_dataset.csv",
+        default="examples/advanced_agents/alert_triage_agent/data/maintenance_static_dataset.csv",
         description=(
             "Path to the static maintenance data CSV file. If not provided, the tool will not check for maintenance."))
 
