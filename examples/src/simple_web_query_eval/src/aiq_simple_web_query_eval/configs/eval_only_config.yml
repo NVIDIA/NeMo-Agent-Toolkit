@@ -16,26 +16,8 @@
 
 general:
   use_uvloop: true
-  telemetry:
-    tracing:
-      weave:
-        _type: weave
-        project: "nat-simple"
-
-functions:
-  webpage_query:
-    _type: webpage_query
-    webpage_url: https://docs.smith.langchain.com
-    description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
-    embedder_name: nv-embedqa-e5-v5
-  current_datetime:
-    _type: current_datetime
 
 llms:
-  nim_llm:
-    _type: nim
-    model_name: meta/llama-3.3-70b-instruct
-    temperature: 0.0
   nim_rag_eval_llm:
     _type: nim
     model_name: meta/llama-3.1-70b-instruct
@@ -46,30 +28,33 @@ llms:
     temperature: 0.0
     max_tokens: 1024
 
-embedders:
-  nv-embedqa-e5-v5:
-    _type: nim
-    model_name: nvidia/nv-embedqa-e5-v5
-
-workflow:
-  _type: react_agent
-  tool_names: [webpage_query, current_datetime]
-  llm_name: nim_llm
-  verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
-
 eval:
   general:
-    workflow_alias: nat-simple-llama-33-70b
     output:
-      dir: ./.tmp/aiq/examples/getting_started/simple_web_query/llama-33-70b
+      dir: ./.tmp/aiq/examples/src/simple_web_query_eval/eval_only/
       cleanup: true
     dataset:
       _type: json
-      file_path: examples/getting_started/simple_web_query/data/langsmith.json
+      file_path: examples/src/simple_web_query_eval/data/langsmith.json
     profiler:
-      base_metrics: true
+      # Compute inter query token uniqueness
+      token_uniqueness_forecast: true
+      # Compute expected workflow runtime
+      workflow_runtime_forecast: true
+      # Compute inference optimization metrics
+      compute_llm_metrics: true
+      # Avoid dumping large text into the output CSV (helpful to not break structure)
+      csv_exclude_io_text: true
+      # Idenitfy common prompt prefixes
+      prompt_caching_prefixes:
+        enable: true
+        min_frequency: 0.1
+      bottleneck_analysis:
+        # Can also be simple_stack
+        enable_nested_stack: true
+      concurrency_spike_analysis:
+        enable: true
+        spike_threshold: 7
 
   evaluators:
     rag_accuracy:

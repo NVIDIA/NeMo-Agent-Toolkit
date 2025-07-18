@@ -37,18 +37,14 @@ This example demonstrates how to evaluate and profile AI agent performance using
 
 ## Prerequisites
 
-This example builds upon the [basic Simple LangSmith-Documentation Agent](../simple_web_query/). Install it first:
-
-```bash
-uv pip install -e examples/getting_started/simple_web_query
-```
+This example builds upon the [basic Simple LangSmith-Documentation Agent](../simple_web_query/).
 
 ## Installation
 
 Install this evaluation example:
 
 ```bash
-uv pip install -e examples/evaluation_and_profiling/simple_web_query_eval
+uv pip install -e examples/src/simple_web_query_eval
 ```
 
 ## Usage
@@ -68,32 +64,32 @@ Evaluate the Simple LangSmith-Documentation agent's accuracy using different con
 
 #### Basic Evaluation
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
+aiq eval --config_file examples/src/simple_web_query_eval/configs/eval_config.yml
 ```
 
 #### OpenAI Model Evaluation
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_openai.yml
+aiq eval --config_file examples/src/simple_web_query_eval/configs/eval_config_openai.yml
 ```
 
 #### Llama 3.1 Model Evaluation
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_llama31.yml
+aiq eval --config_file examples/src/simple_web_query_eval/configs/eval_config_llama31.yml
 ```
 
 #### Llama 3.3 Model Evaluation
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_llama33.yml
+aiq eval --config_file examples/src/simple_web_query_eval/configs/eval_config_llama33.yml
 ```
 
 #### Evaluation-Only Mode
 ```bash
-aiq eval --skip_workflow --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml --dataset ./.tmp/aiq/examples/getting_started/simple_web_query/eval/workflow_output.json
+aiq eval --skip_workflow --config_file examples/src/simple_web_query_eval/configs/eval_only_config.yml --dataset ./.tmp/aiq/examples/src/simple_web_query_eval/eval/workflow_output.json
 ```
 
 #### Evaluation with Upload
 ```bash
-aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_upload.yml
+aiq eval --config_file examples/src/simple_web_query_eval/configs/eval_upload.yml
 ```
 
 ### Understanding Results
