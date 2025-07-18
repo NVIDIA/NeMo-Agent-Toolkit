@@ -24,6 +24,14 @@ limitations under the License.
 
 This example demonstrates how to use Weights & Biases (W&B) Weave with PII redaction in your AIQ workflows.
 
+## Key Features
+
+- **PII Redaction Integration:** Demonstrates automatic redaction of Personally Identifiable Information (PII) using Microsoft Presidio within AIQ toolkit workflows for data privacy compliance.
+- **Weave Observability Platform:** Shows integration with Weights & Biases Weave for detailed workflow tracking and visualization with privacy-preserving telemetry.
+- **Configurable Entity Detection:** Supports redaction of multiple PII types including email addresses, phone numbers, credit cards, Social Security Numbers, and person names through configurable entity type selection.
+- **Custom Key Redaction:** Demonstrates redaction of custom sensitive keys like API keys, auth tokens, and other application-specific secrets beyond standard PII entities.
+- **Privacy-Preserving Monitoring:** Shows how to maintain comprehensive observability while ensuring sensitive data is automatically redacted from traces and logs.
+
 ## Prerequisites
 
 1. Install the required dependencies:

@@ -29,11 +29,11 @@ A minimal example demonstrating a simple LangSmith-Documentation agent. This age
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AIQ toolkit library tools.
-- **Custom Plugin System:** Developers can bring in new tools using plugins.
-- **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
-- **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
-- **Ease of Use:** Simplifies developer experience and deployment.
+- **Webpage Query Tool:** Demonstrates a `webpage_query` tool that retrieves and processes documentation from LangSmith's website (https://docs.smith.langchain.com) using web scraping and vector search.
+- **ReAct Agent Integration:** Uses a `react_agent` that reasons about user queries and determines when to retrieve relevant documentation from the web.
+- **Document Retrieval and Embedding:** Shows how to automatically generate embeddings from web content and perform semantic search to answer questions about LangSmith.
+- **End-to-End Web RAG:** Complete example of Retrieval-Augmented Generation (RAG) using web-scraped content as the knowledge source.
+- **YAML-based Configuration:** Fully configurable workflow demonstrating integration of web scraping, embeddings, and agent reasoning through simple configuration.
 
 ---
 

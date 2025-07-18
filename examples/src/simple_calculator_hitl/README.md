@@ -21,12 +21,11 @@ This example demonstrates **human in the loop capabilities** of the AIQ toolkit 
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AIQ toolkit library tools.
-- **Custom Plugin System:** Developers can bring in new tools using plugins.
-- **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
-- **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
-- **Ease of Use:** Simplifies developer experience and deployment.
-- **Human in the Loop:** Solicits approval from the user before allowing the agent to make additional tool calls.
+- **Human-in-the-Loop Integration:** Demonstrates the `hitl_approval_function` that requests user approval before allowing the agent to increase iteration limits and make additional tool calls.
+- **Dynamic Recursion Limit Management:** Shows how to handle agent recursion limits by prompting users for permission to extend maximum iterations when the agent needs more steps to complete a task.
+- **User Interaction Manager:** Demonstrates the AIQ toolkit `user_input_manager` for prompting user input and processing responses during workflow execution.
+- **Conditional Workflow Continuation:** Shows how agent behavior can be gated based on user responses, allowing workflows to stop or continue based on human approval.
+- **Retry ReAct Agent:** Uses a custom `retry_react_agent` workflow that can recover from recursion limits with user permission and increased iteration capacity.
 
 
 ## Installation and Setup
