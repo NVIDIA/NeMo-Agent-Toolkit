@@ -68,7 +68,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file=examples/intermediate/agents/mixture_of_agents/configs/config.yml --input "who was Djikstra?"
+aiq run --config_file=examples/agents/mixture_of_agents/configs/config.yml --input "who was Djikstra?"
 ```
 
 **Expected Output**
@@ -145,7 +145,7 @@ You can start the AIQ toolkit server using the `aiq serve` command with the appr
 **Starting the Mixture of Agents Example Workflow**
 
 ```bash
-aiq serve --config_file=examples/intermediate/agents/mixture_of_agents/configs/config.yml
+aiq serve --config_file=examples/agents/mixture_of_agents/configs/config.yml
 ```
 
 ### Making Requests to the AIQ Toolkit Server

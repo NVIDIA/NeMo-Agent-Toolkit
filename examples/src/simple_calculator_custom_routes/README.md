@@ -28,7 +28,7 @@ This example demonstrates how to extend NVIDIA NeMo Agent toolkit applications w
 
 ## Prerequisites
 
-This example extends the [basic Simple Calculator](../../../basic/functions/simple_calculator/). Install it first:
+This example extends the [basic Simple Calculator](../simple_calculator/). Install it first:
 
 ```bash
 uv pip install -e examples/getting_started/simple_web_query

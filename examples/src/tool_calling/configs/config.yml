@@ -49,7 +49,7 @@ eval:
     output_dir: ./.tmp/aiq/examples/tool_calling_agent/
     dataset:
       _type: json
-      file_path: examples/intermediate/agents/data/wikipedia.json
+      file_path: examples/agents/data/wikipedia.json
   evaluators:
     rag_accuracy:
       _type: ragas

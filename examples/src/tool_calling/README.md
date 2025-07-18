@@ -71,15 +71,15 @@ For more details, refer to the [ReAct Agent documentation](../../../../docs/sour
 Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file=examples/intermediate/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
+aiq run --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
 ```
 
 **Expected Output**
 
 ```console
-$ aiq run --config_file=examples/intermediate/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
+$ aiq run --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
 2025-04-23 15:03:46,312 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (499.885559 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:03:46,573 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/intermediate/agents/tool_calling/configs/config.yml'
+2025-04-23 15:03:46,573 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/agents/tool_calling/configs/config.yml'
 2025-04-23 15:03:46,581 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-04-23 15:03:46,613 - aiq.profiler.utils - WARNING - Discovered frameworks: {<LLMFrameworkEnum.LANGCHAIN: 'langchain'>} in function code_generation_tool by inspecting source. It is recommended and more reliable to instead add the used LLMFrameworkEnum types in the framework_wrappers argument when calling @register_function.
 2025-04-23 15:03:46,614 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Initializing code generation tool
@@ -139,7 +139,7 @@ You can start the AIQ toolkit server using the `aiq serve` command with the appr
 **Starting the Tool Calling Agent Example Workflow**
 
 ```bash
-aiq serve --config_file=examples/intermediate/agents/tool_calling/configs/config.yml
+aiq serve --config_file=examples/agents/tool_calling/configs/config.yml
 ```
 
 ### Making Requests to the AIQ Toolkit Server
@@ -172,6 +172,6 @@ curl --request POST \
 **Run and evaluate the `tool_calling_agent` example Workflow**
 
 ```bash
-aiq eval --config_file=examples/intermediate/agents/tool_calling/configs/config.yml
+aiq eval --config_file=examples/agents/tool_calling/configs/config.yml
 ```
 ---

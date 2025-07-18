@@ -39,7 +39,7 @@ It will install the `presidio-analyzer` and `presidio-anonymizer` packages along
 ## Example Files
 
 - `weave_redact_pii_config.yaml`: Workflow configuration that enables Weave telemetry with PII redaction
-- `examples/intermediate/redact_pii/src/redact_pii/register.py`: Contains the `pii_redaction_test` function that generates sample PII data
+- `examples/observability/redact_pii/src/redact_pii/register.py`: Contains the `pii_redaction_test` function that generates sample PII data
 
 ## Running the Example
 
@@ -67,7 +67,7 @@ telemetry:
 2. Run the workflow:
 
 ```bash
-aiq run --config_file examples/intermediate/redact_pii/configs/weave_redact_pii_config.yml --input "Test query"
+aiq run --config_file examples/observability/redact_pii/configs/weave_redact_pii_config.yml --input "Test query"
 ```
 
 3. Go to your Weights & Biases dashboard (https://wandb.ai) and navigate to the "aiqtoolkit-pii" project.
