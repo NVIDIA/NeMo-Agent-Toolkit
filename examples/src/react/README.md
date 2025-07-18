@@ -27,6 +27,23 @@ A configurable ReAct agent. This agent leverages the AIQ toolkit plugin system a
 - **Dual-Node Graph Architecture:** Implements the characteristic ReAct pattern that alternates between reasoning (Agent Node) and tool execution (Tool Node) until reaching a final answer.
 - **YAML-based Agent Configuration:** Fully configurable via YAML, allowing easy customization of tools, prompts, and agent behavior for different use cases.
 
+## Graph Structure
+
+The ReAct agent uses a dual-node graph architecture that alternates between reasoning and tool execution. The following diagram illustrates the agent's workflow:
+
+<div align="center">
+<img src="../../../docs/source/_static/dual_node_agent.png" alt="ReAct Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
+</div>
+
+**Workflow Overview:**
+- **Start**: The agent begins processing with user input
+- **Agent Node**: Performs reasoning and decides whether to use a tool or provide a final answer
+- **Conditional Edge**: Routes the flow based on the agent's decision
+- **Tool Node**: Executes the selected tool when needed
+- **Cycle**: The agent can loop between reasoning and tool execution until it reaches a final answer
+
+This architecture allows the ReAct agent to think step-by-step, use tools when necessary, and provide well-reasoned responses based on the available information.
+
 ## Installation and Setup
 
 If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.

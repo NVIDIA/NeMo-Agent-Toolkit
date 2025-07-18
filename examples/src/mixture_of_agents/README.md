@@ -32,6 +32,23 @@ An example of a Mixture of Agents (naive Mixture of Experts / naive Agent Hyperv
 - **Mixed Agent Types:** Combines ReAct agents (for orchestration and reasoning) with Tool Calling agents (for specialized execution), demonstrating interoperability between different agent frameworks.
 - **Scalable Expert System:** Provides a pattern for building systems where a reasoning agent can delegate work to multiple domain-specific expert agents, each with their own specialized tool sets.
 
+## Graph Structure
+
+Both the ReAct agent and Tool Calling agents in this mixture follow the same dual-node graph architecture that alternates between reasoning and tool execution. The following diagram illustrates the shared workflow pattern:
+
+<div align="center">
+<img src="../../../docs/source/_static/dual_node_agent.png" alt="Dual Node Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
+</div>
+
+**Shared Workflow Pattern:**
+- **Start**: Each agent begins processing with input
+- **Agent Node**: Performs reasoning and decides whether to use a tool or provide a final answer
+- **Conditional Edge**: Routes the flow based on the agent's decision
+- **Tool Node**: Executes the selected tool when needed
+- **Cycle**: Agents can loop between reasoning and tool execution until reaching a final answer
+
+This consistent architecture allows both ReAct and Tool Calling agents to work seamlessly together in the mixture, each contributing their specialized capabilities while following the same operational pattern.
+
 ## Installation and Setup
 
 If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
