@@ -64,6 +64,7 @@ try:
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.trace import Span
     from opentelemetry.trace.propagation import set_span_in_context
+    OPENTELEMETRY_AVAILABLE = True
 except TelemetryOptionalImportError:
     from aiq.utils.optional_imports import DummySpan  # pylint: disable=ungrouped-imports
     from aiq.utils.optional_imports import DummyTrace  # pylint: disable=ungrouped-imports
@@ -74,6 +75,7 @@ except TelemetryOptionalImportError:
     TracerProvider = DummyTracerProvider
     Span = DummySpan
     set_span_in_context = dummy_set_span_in_context
+    OPENTELEMETRY_AVAILABLE = False
 
 
 def merge_dicts(dict1: dict, dict2: dict) -> dict:
@@ -133,10 +135,15 @@ class AsyncOtelSpanListener:
 
         self._running = False
 
+        # Track if we've already logged the skip warning to avoid spam
+        self._skip_warning_logged = False
+
         # Prepare the tracer (optionally you might already have done this)
-        if trace.get_tracer_provider() is None or not isinstance(trace.get_tracer_provider(), TracerProvider):
-            tracer_provider = TracerProvider()
-            trace.set_tracer_provider(tracer_provider)
+        # Only set up real tracer provider if OpenTelemetry is available
+        if OPENTELEMETRY_AVAILABLE:
+            if trace.get_tracer_provider() is None or not isinstance(trace.get_tracer_provider(), TracerProvider):
+                tracer_provider = TracerProvider()
+                trace.set_tracer_provider(tracer_provider)  # type: ignore[arg-type]
 
         # We'll optionally attach exporters if you want (out of scope to do it here).
         # Example: tracer_provider.add_span_processor(BatchSpanProcessor(your_exporter))
@@ -154,10 +161,25 @@ class AsyncOtelSpanListener:
                 # Weave is not initialized, so we don't do anything
                 pass
 
+    @property
+    def _is_using_dummy_implementations(self) -> bool:
+        """
+        Check if we're using dummy implementations because OpenTelemetry is not installed.
+        """
+        return not OPENTELEMETRY_AVAILABLE
+
     def _on_next(self, step: IntermediateStep) -> None:
         """
         The main logic that reacts to each IntermediateStep.
         """
+        # Skip processing if OpenTelemetry is not properly installed (using dummy implementations)
+        if self._is_using_dummy_implementations:
+            if not self._skip_warning_logged:
+                logger.warning("Skipping OpenTelemetry event processing because OpenTelemetry is not installed. "
+                               "Install with: pip install opentelemetry-api opentelemetry-sdk")
+                self._skip_warning_logged = True
+            return
+
         if (step.event_state == IntermediateStepState.START):
 
             self._process_start_event(step)

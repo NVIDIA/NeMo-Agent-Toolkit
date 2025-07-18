@@ -19,6 +19,15 @@ limitations under the License.
 
 The profiler agent is a tool that allows you to analyze the performance of AIQ toolkit workflows. It uses the Phoenix server to store and retrieve traces of workflow runs.
 
+
+## Key Features
+
+- **Workflow Performance Analysis:** Demonstrates a specialized agent that analyzes AIQ toolkit workflow performance using Phoenix server traces for comprehensive performance monitoring.
+- **Token Usage Tracking:** Shows how to retrieve and analyze token consumption patterns across multiple workflow runs, providing insights into LLM resource utilization.
+- **Trace Visualization:** Generates flowcharts and visual representations of workflow execution patterns from stored Phoenix traces using natural language queries.
+- **Phoenix Server Integration:** Demonstrates integration with Phoenix observability platform for storing, retrieving, and analyzing workflow telemetry data.
+- **Natural Language Interface:** Provides a conversational interface for querying performance metrics, making complex trace analysis accessible through simple questions.
+
 ## Installation and Setup
 
 If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md) to create the development environment and install AIQ toolkit.
