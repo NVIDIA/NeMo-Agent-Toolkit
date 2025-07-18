@@ -70,7 +70,7 @@ the instructions in the `simple_rag` example of AIQ toolkit [here](../../../inte
 
 If you have a different Milvus database you would like to use, please modify the `./configs/config.yml` with the appropriate URLs to your database instance.
 
-To use this example, you will also need to create a `wikipedia_docs` and a `cuda_docs` collection in your Milvus database. You can do this by following the instructions in the `simple_rag` example of AIQ toolkit [here](../../../intermediate/RAG/simple_rag/README.md) and running the following command:
+To use this example, you will also need to create a `wikipedia_docs` and a `cuda_docs` collection in your Milvus database. You can do this by following the instructions in the `simple_rag` example of AIQ toolkit [here](../simple_rag/README.md) and running the following command:
 
 ```bash
 python scripts/langchain_web_ingest.py
