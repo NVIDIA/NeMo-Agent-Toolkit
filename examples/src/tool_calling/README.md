@@ -33,6 +33,23 @@ A configurable Tool Calling Agent. This agent leverages the AIQ toolkit plugin s
 - **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
 - **Ease of Use:** Simplifies developer experience and deployment.
 
+## Graph Structure
+
+The Tool Calling agent uses the same dual-node graph architecture as other agents in the AIQ toolkit, alternating between reasoning and tool execution. The following diagram illustrates the agent's workflow:
+
+<div align="center">
+<img src="../../../docs/source/_static/dual_node_agent.png" alt="Tool Calling Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
+</div>
+
+**Workflow Overview:**
+- **Start**: The agent begins processing with user input
+- **Agent Node**: Leverages tool/function input schemas to decide which tool to call or provide a final answer
+- **Conditional Edge**: Routes the flow based on the agent's decision
+- **Tool Node**: Executes the selected tool using structured input schemas
+- **Cycle**: The agent can loop between reasoning and tool execution until it reaches a final answer
+
+This architecture enables the Tool Calling agent to make precise tool selections based on input schemas while maintaining the same operational pattern as other agents in the toolkit.
+
 ## Installation and Setup
 
 If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
