@@ -107,7 +107,7 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
    For example, install the Simple Calculator example with the following command.
 
      ```bash
-     uv pip install -e ./examples/basic/functions/simple_calculator
+     uv pip install -e ./examples/getting_started/simple_web_query
      ```
 
 2. Verify that you've installed the NeMo Agent toolkit library.
@@ -226,4 +226,3 @@ The spelling of a project name should use the casing of the project, for example
   - Use for situations where capitalization will be preserved like the GitHub URL, directories, etc.
   - Do not use dashes or underscores
   - Note that the 't' is lowercase in toolkit unless used in a title or heading
-

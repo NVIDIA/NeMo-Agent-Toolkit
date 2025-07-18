@@ -41,6 +41,7 @@ In your YAML file, to use the Calling Agent as a workflow:
 workflow:
   _type: reasoning_agent
   llm_name: deepseek_r1_model
+  # The augmented_fn is the aiq Function that the execution plan is passed to. Usually an agent entry point. 
   augmented_fn: react_agent
   verbose: true
 ```

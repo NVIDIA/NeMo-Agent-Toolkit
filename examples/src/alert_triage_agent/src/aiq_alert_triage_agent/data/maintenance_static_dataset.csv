@@ -1,0 +1,4 @@
+entry_id,host_id,maintenance_start,maintenance_end
+0,test-instance-1.example.com,2025-04-10 01:00:00,2025-04-10 03:30:00
+1,test-instance-1.example.com,2025-04-11 22:15:00,2025-04-12 02:45:00
+3,test-instance-3.example.com,2025-04-29 14:30:00,nan
