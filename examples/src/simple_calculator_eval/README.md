@@ -28,7 +28,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 
 ## Prerequisites
 
-This example builds upon the [basic Simple Calculator](../../../basic/functions/simple_calculator/). Install it first:
+This example builds upon the [basic Simple Calculator](../simple_calculator/). Install it first:
 
 ```bash
 uv pip install -e examples/getting_started/simple_web_query

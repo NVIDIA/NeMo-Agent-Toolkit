@@ -40,7 +40,7 @@ uv pip install -e examples/getting_started/simple_web_query
 Install this evaluation example:
 
 ```bash
-uv pip install -e examples/intermediate/evaluation_and_profiling/simple_eval
+uv pip install -e examples/evaluation_and_profiling/simple_web_query_eval
 ```
 
 ## Usage
@@ -60,32 +60,32 @@ Evaluate the Simple LangSmith-Documentation agent's accuracy using different con
 
 #### Basic Evaluation
 ```bash
-aiq eval --config_file examples/intermediate/evaluation_and_profiling/simple_eval/configs/eval_config.yml
+aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 
 #### OpenAI Model Evaluation
 ```bash
-aiq eval --config_file examples/intermediate/evaluation_and_profiling/simple_eval/configs/eval_config_openai.yml
+aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_openai.yml
 ```
 
 #### Llama 3.1 Model Evaluation
 ```bash
-aiq eval --config_file examples/intermediate/evaluation_and_profiling/simple_eval/configs/eval_config_llama31.yml
+aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_llama31.yml
 ```
 
 #### Llama 3.3 Model Evaluation
 ```bash
-aiq eval --config_file examples/intermediate/evaluation_and_profiling/simple_eval/configs/eval_config_llama33.yml
+aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_llama33.yml
 ```
 
 #### Evaluation-Only Mode
 ```bash
-aiq eval --config_file examples/intermediate/evaluation_and_profiling/simple_eval/configs/eval_only_config.yml
+aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml
 ```
 
 #### Evaluation with Upload
 ```bash
-aiq eval --config_file examples/intermediate/evaluation_and_profiling/simple_eval/configs/eval_upload.yml
+aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_upload.yml
 ```
 
 ### Understanding Results

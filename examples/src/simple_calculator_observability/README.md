@@ -31,7 +31,7 @@ This example demonstrates how to implement **observability and tracing capabilit
 
 Before starting this example, you need:
 
-1. **Base workflow**: Install the [Simple Calculator](../../../basic/functions/simple_calculator/) example first
+1. **Base workflow**: Install the [Simple Calculator](../simple_calculator/) example first
 2. **Agent toolkit**: Ensure you have the Agent toolkit installed
 3. **Observability platform**: Access to at least one of the supported platforms (Phoenix, Langfuse, LangSmith, Weave, or Patronus)
 

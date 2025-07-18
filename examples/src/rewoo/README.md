@@ -48,15 +48,15 @@ export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
 Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file=examples/intermediate/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
+aiq run --config_file=examples/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
 ```
 
 **Expected Output**
 
 ```console
-$ aiq run --config_file=examples/intermediate/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
+$ aiq run --config_file=examples/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
 2025-04-23 15:02:08,778 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (498.780251 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:02:09,024 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/intermediate/agents/rewoo/configs/config.yml'
+2025-04-23 15:02:09,024 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/agents/rewoo/configs/config.yml'
 2025-04-23 15:02:09,032 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-04-23 15:02:09,088 - haystack.tracing.tracer - INFO - Auto-enabled tracing for 'OpenTelemetryTracer'
 
@@ -151,7 +151,7 @@ You can start the AIQ toolkit server using the `aiq serve` command with the appr
 **Starting the ReWOO Agent Example Workflow**
 
 ```bash
-aiq serve --config_file=examples/intermediate/agents/rewoo/configs/config.yml
+aiq serve --config_file=examples/agents/rewoo/configs/config.yml
 ```
 
 ### Making Requests to the AIQ Toolkit Server
@@ -185,5 +185,5 @@ curl --request POST \
 **Run and evaluate the `rewoo_agent` example Workflow**
 
 ```bash
-aiq eval --config_file=examples/intermediate/agents/rewoo/configs/config.yml
+aiq eval --config_file=examples/agents/rewoo/configs/config.yml
 ```

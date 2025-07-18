@@ -6,7 +6,7 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 packages = []
 
 [tool.setuptools_scm]
-root = "../../../.."
+root = "../../.."
 
 [project]
 name = "aiq_simple_calculator_observability"
@@ -21,5 +21,5 @@ keywords = ["ai", "observability", "tracing", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../../..", editable = true }
-aiq_simple_calculator = { path = "../../../basic/functions/simple_calculator", editable = true }
+aiqtoolkit = { path = "../../..", editable = true }
+aiq_simple_calculator = { path = "../simple_calculator", editable = true }

@@ -3,7 +3,6 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools_scm]
-# intentionally empty, the section is required for setuptools_scm to work but we don't need to set anything
 root = "../../.."
 
 [project]

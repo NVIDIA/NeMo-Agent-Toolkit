@@ -3,7 +3,7 @@ build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
 [tool.setuptools_scm]
-root = "../../../.."
+root = "../../.."
 
 [project]
 name = "aiq_simple_calculator_hitl"
@@ -19,9 +19,9 @@ keywords = ["ai", "hitl", "human in the loop", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../../..", editable = true }
-aiq_simple_calculator = { path = "../../../basic/functions/simple_calculator", editable = true }
-aiq_por_to_jiratickets = { path = "../../../intermediate/HITL/por_to_jiratickets", editable = true }
+aiqtoolkit = { path = "../../..", editable = true }
+aiq_simple_calculator = { path = "../simple_calculator", editable = true }
+aiq_por_to_jiratickets = { path = "../por_to_jiratickets", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_simple_calculator_hitl = "aiq_simple_calculator_hitl.register"
