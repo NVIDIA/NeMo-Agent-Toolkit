@@ -54,12 +54,12 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
 
     from langgraph.errors import GraphRecursionError
 
-    from aiq.agent.react_agent.register import ReActAgentWorkflowConfig
     from aiq.builder.function import Function
 
     # Get references to the underlying React agent and approval function
     react_agent: Function = builder.get_function(config.react_agent_fn)
-    react_agent_config: ReActAgentWorkflowConfig = builder.get_function_config(config.react_agent_fn)
+    react_agent_config: FunctionBaseConfig = builder.get_function_config(
+        config.react_agent_fn)  # ReActAgentWorkflowConfig
     hitl_approval_fn: Function = builder.get_function(config.hitl_approval_fn)
 
     # Regex pattern to detect GraphRecursionError message
@@ -108,10 +108,9 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
                 await temp_builder.add_function(tool_name, tool_config)
 
             # Create the retry agent with the original configuration
-            retry_agent = await temp_builder.add_function("retry_agent", retry_config)
-            retry_agent_config = temp_builder.get_function_config("retry_agent")
+            temp_retry_agent = await temp_builder.add_function("retry_agent", retry_config)
 
-            return retry_agent, retry_agent_config
+            return temp_retry_agent, retry_config
 
     async def handle_recursion_error(input_message: AIQChatRequest) -> AIQChatResponse:
         """
