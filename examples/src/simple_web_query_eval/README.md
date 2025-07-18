@@ -29,7 +29,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 
 ## Prerequisites
 
-This example builds upon the [basic Simple LangSmith-Documentation Agent](../../../basic/functions/simple/). Install it first:
+This example builds upon the [basic Simple LangSmith-Documentation Agent](../simple_web_query/). Install it first:
 
 ```bash
 uv pip install -e examples/getting_started/simple_web_query
@@ -47,7 +47,7 @@ uv pip install -e examples/evaluation_and_profiling/simple_web_query_eval
 
 ### Set Up API Keys
 
-Follow the [Obtaining API Keys](../../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to set up your API keys:
+Follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to set up your API keys:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>

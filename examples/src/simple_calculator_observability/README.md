@@ -124,7 +124,7 @@ export WANDB_API_KEY=<your_api_key>
 aiq run --config_file examples/observability/simple_calculator_observability/configs/config-weave.yml --input "What's the sum of 7 and 8?"
 ```
 
-For detailed Weave setup instructions, see the [Fine-grained Tracing with Weave](../../../../docs/source/workflows/observe/observe-workflow-with-weave.md) guide.
+For detailed Weave setup instructions, see the [Fine-grained Tracing with Weave](../../../docs/source/workflows/observe/observe-workflow-with-weave.md) guide.
 
 #### AI Safety Monitoring with Patronus
 
