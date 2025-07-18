@@ -52,10 +52,10 @@ uv pip install -e examples/MCP/simple_calculator_mcp
 ## Usage
 
 ### AIQ Toolkit as an MCP Client
-You can run the simple calculator workflow using Remote MCP tools. In this case, the workflow acts as a MCP client and connects to the MCP server running on the specified URL. Details are provided in the [MCP Client Guide](../../../../docs/source/workflows/mcp/mcp-client.md).
+You can run the simple calculator workflow using Remote MCP tools. In this case, the workflow acts as a MCP client and connects to the MCP server running on the specified URL. Details are provided in the [MCP Client Guide](../../../docs/source/workflows/mcp/mcp-client.md).
 
 ### AIQ Toolkit as an MCP Server
-You can publish the simple calculator tools via MCP using the `aiq mcp` command. Details are provided in the [MCP Server Guide](../../../../docs/source/workflows/mcp/mcp-server.md).
+You can publish the simple calculator tools via MCP using the `aiq mcp` command. Details are provided in the [MCP Server Guide](../../../docs/source/workflows/mcp/mcp-server.md).
 
 ## Configuration Examples
 
