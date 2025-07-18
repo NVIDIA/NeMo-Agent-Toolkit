@@ -26,12 +26,11 @@ A configurable Tool Calling Agent. This agent leverages the AIQ toolkit plugin s
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AIQ toolkit library agent and tools.
-- **Tool Calling / Function calling Agent:** Leverages tool / function input schema to appropriately route to the correct tool
-- **Custom Plugin System:** Developers can bring in new tools using plugins.
-- **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
-- **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
-- **Ease of Use:** Simplifies developer experience and deployment.
+- **Tool Calling Agent Framework:** Demonstrates a `tool_calling_agent` that leverages tool/function input schemas to make precise tool selections and structured function calls.
+- **Wikipedia Search Integration:** Shows integration with the `wikipedia_search` tool for retrieving factual information from Wikipedia sources.
+- **Code Generation Capabilities:** Includes the `code_generation_tool` for generating code examples and technical content.
+- **Schema-Driven Tool Selection:** Uses structured input schemas to appropriately route to the correct tool, providing more deterministic tool calling compared to name/description-based routing.
+- **Dual-Node Graph Architecture:** Implements the same operational pattern as other AIQ agents, alternating between reasoning and tool execution while using schema-based tool selection.
 
 ## Installation and Setup
 

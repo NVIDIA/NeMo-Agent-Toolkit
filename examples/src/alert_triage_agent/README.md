@@ -17,6 +17,14 @@ limitations under the License.
 # Alert Triage using Agent Intelligence Toolkit
 This example demonstrates how to build an intelligent alert triage system using AIQ toolkit and LangGraph. The system analyzes system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization. It showcases how to combine LLMs with domain-specific diagnostic tools to create an automated troubleshooting workflow.
 
+## Key Features
+
+- **Automated Alert Triage System:** Demonstrates an `alert_triage_agent` that autonomously investigates system monitoring alerts and generates structured triage reports with root cause analysis.
+- **Multi-Tool Diagnostic Framework:** Integrates hardware checks (IPMI), network connectivity tests, host performance monitoring, process checks, and telemetry analysis for comprehensive system diagnosis.
+- **Dynamic Tool Selection:** Shows how the agent intelligently selects appropriate diagnostic tools based on alert type and context, demonstrating adaptive troubleshooting workflows.
+- **Structured Report Generation:** Produces markdown-formatted reports with alert summaries, collected metrics, analysis, recommended actions, and root cause categorization.
+- **Maintenance-Aware Processing:** Includes maintenance database integration to distinguish between actual issues and scheduled maintenance events.
+
 ## Table of contents
 - [Alert Triage using Agent Intelligence toolkit](#alert-triage-using-agent-intelligence-toolkit)
   - [Table of contents](#table-of-contents)
