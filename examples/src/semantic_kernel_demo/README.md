@@ -19,6 +19,14 @@ limitations under the License.
 
 A minimal example using Semantic Kernel showcasing a multi-agent travel planning system where an Itinerary Agent creates a travel schedule, a Budget Agent ensures cost compliance, and a Summarizer Agent formats the final itinerary. **Please note that we only support OpenAI models currently**.
 
+## Key Features
+
+- **Semantic Kernel Framework Integration:** Demonstrates the AIQ toolkit's support for Microsoft's Semantic Kernel framework alongside other frameworks like LangChain.
+- **Multi-Agent Travel Planning:** Shows three specialized agents working together - an Itinerary Agent for schedule creation, a Budget Agent for cost management, and a Summarizer Agent for final formatting.
+- **Cross-Agent Coordination:** Demonstrates how different agents can collaborate on a complex task, with each agent contributing its specialized capabilities to the overall workflow.
+- **Long-Term Memory Integration:** Includes optional Mem0 platform integration for persistent memory, allowing agents to remember user preferences (like vegan dining or luxury hotel preferences) across sessions.
+- **OpenAI Model Support:** Showcases AIQ toolkit's compatibility with OpenAI models through the Semantic Kernel framework integration.
+
 ## Installation and Setup
 
 If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.

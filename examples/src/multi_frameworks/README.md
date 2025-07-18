@@ -46,11 +46,11 @@ Then, using LangChain and LangGraph, we unify these frameworks into a single wor
 
 ## Key Features
 
-- **Custom-plug-in Tools:** with a basic llama-index RAG ingesting README from within this workflow
-- **Custom Plugin System:** Developers can bring in new tools using plugins.
-- **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
-- **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
-- **Ease of Use:** Simplifies developer experience and deployment.
+- **Multi-Framework Integration:** Demonstrates seamless integration of LangChain, LlamaIndex, and Haystack frameworks within a single AIQ toolkit workflow.
+- **Framework-Agnostic Agent Architecture:** Shows a supervisor agent that routes queries to specialized worker agents built with different underlying frameworks (LlamaIndex RAG, LangChain research, Haystack chitchat).
+- **Cross-Framework Tool Wrapping:** Demonstrates how the AIQ toolkit Builder can dynamically wrap any Python function from any framework and convert it into LangChain tools for unified orchestration.
+- **Specialized Agent Workers:** Includes three distinct agents - a `rag_agent` using LlamaIndex for document Q&A, a `research_agent` using LangChain for arXiv research, and a chitchat agent using Haystack pipelines.
+- **Dynamic Framework Selection:** Shows how different AI frameworks can be selected automatically based on query type, leveraging each framework's specific strengths without vendor lock-in.
 
 There is a supervisor agent that will assign/route incoming user query to one of the worker agents.
 the 3 worker agents are :

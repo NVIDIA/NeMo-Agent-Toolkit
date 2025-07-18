@@ -19,6 +19,14 @@ limitations under the License.
 
 This example demonstrates how to extend NVIDIA NeMo Agent toolkit applications with custom API routes and HTTP request metadata access. Build sophisticated APIs that capture rich request context for authentication, routing, and specialized business logic.
 
+## Key Features
+
+- **Custom API Route Registration:** Demonstrates how to define and register custom endpoints through YAML configuration that are dynamically added to the FastAPI server alongside standard Agent toolkit endpoints.
+- **HTTP Request Metadata Access:** Shows comprehensive capture of HTTP request context including method, URL path, headers, query parameters, client information, and cookies through the AIQContext system.
+- **Context Management Integration:** Uses the `aiq.builder.context.AIQContext.get()` method to access request metadata throughout function execution, enabling sophisticated request-aware business logic.
+- **Production API Extension Patterns:** Provides patterns for building production-ready APIs with specialized endpoints for authentication, routing, and custom business logic while maintaining Agent toolkit workflow capabilities.
+- **FastAPI Integration:** Demonstrates seamless integration with FastAPI framework features while leveraging Agent toolkit's workflow execution and function registration system.
+
 ## What You'll Learn
 
 - **Custom API routes**: Define and register custom endpoints through configuration

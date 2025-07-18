@@ -35,12 +35,11 @@ The documentation will also cover configuration considerations and how to set up
 
 ## Key Features
 
-The automated description generation workflow is responsible for intelligently generating descriptions from collections within a given VectorDB. This is useful for generating feature rich descriptions that are representative of the documents present within a given collection, reducing the need for human generated descriptions which may not fully capture general nature of the collection. The workflow is able to achieve this by performing the following steps:
-
-1. Take an input collection name - the collection is expected to be present within the VectorDB with documents already ingested.
-2. Using a dummy embedding vector, perform retrieval and return the top K entries within the target collection.
-3. Using retrieved documents, an LLM is used to generate a set of local summaries.
-4. Using an LLM and a map reduce approach, the local summaries are leveraged to generate a final description for the target collection.
+- **VectorDB Collection Analysis:** Demonstrates automated generation of intelligent descriptions for VectorDB collections using document retrieval and LLM-based summarization to capture the essence of stored documents.
+- **Multi-Query Collection Enhancement:** Shows how to enhance multi-query collection workflows by automatically generating feature-rich descriptions that improve retrieval accuracy across multiple collections.
+- **Map-Reduce Summarization:** Implements a sophisticated approach using dummy embeddings for document retrieval, LLM-generated local summaries, and map-reduce techniques for final description generation.
+- **Milvus Integration with Extensible Design:** Currently focused on Milvus vector database with plans for extension to other VectorDBs, demonstrating how to work with the AIQ toolkit retriever interface.
+- **RAG Service Enhancement:** Provides a foundation for improving RAG (Retrieval-Augmented Generation) services by automatically generating more accurate collection metadata for better document retrieval.
 
 ## Installation and Setup
 

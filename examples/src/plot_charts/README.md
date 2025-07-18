@@ -32,11 +32,11 @@ A minimal example demonstrating an E2E chart plotting agentic workflow fully con
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AIQ toolkit library tools.
-- **Custom Plugin System:** Developers can bring in new tools using plugins.
-- **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
-- **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
-- **Ease of Use:** Simplifies developer experience and deployment.
+- **Data Visualization Workflow:** Demonstrates a custom `plot_charts` workflow type that generates line charts, bar charts, and scatter plots from JSON data files based on natural language requests.
+- **Matplotlib Integration:** Shows how to integrate Python's Matplotlib library for chart generation within the AIQ toolkit framework.
+- **JSON Data Processing:** Demonstrates parsing and visualization of structured JSON data with configurable x-values and multiple y-value series with labels.
+- **LLM-Enhanced Descriptions:** Uses configured LLMs to generate intelligent, contextual descriptions of the created charts for better user understanding.
+- **Configurable Chart Parameters:** Shows how to customize chart types, data sources, output directories, figure sizes, and data point limits through YAML configuration.
 
 ## Installation and Setup
 
