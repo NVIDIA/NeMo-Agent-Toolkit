@@ -22,4 +22,4 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
 aiqtoolkit = { path = "../../..", editable = true }
-aiq_simple_calculator = { path = "../simple_calculator", editable = true }
+aiq_simple_calculator = { path = "../../src/simple_calculator", editable = true }
