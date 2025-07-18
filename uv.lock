@@ -494,14 +494,13 @@ name = "aiq-simple-web-query-eval"
 source = { editable = "examples/src/simple_web_query_eval" }
 dependencies = [
     { name = "aiq-simple-web-query" },
-    { name = "aiqtoolkit", extra = ["langchain", "telemetry"] },
+    { name = "aiqtoolkit", extra = ["langchain"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "aiq-simple-web-query", editable = "examples/src/simple_web_query" },
     { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
-    { name = "aiqtoolkit", extras = ["telemetry"], editable = "." },
 ]
 
 [[package]]
