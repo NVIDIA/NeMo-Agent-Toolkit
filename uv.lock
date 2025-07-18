@@ -229,7 +229,7 @@ wheels = [
 
 [[package]]
 name = "aiq-agno-personal-finance"
-source = { editable = "examples/basic/frameworks/agno_personal_finance" }
+source = { editable = "examples/frameworks/agno_personal_finance" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["agno"] },
     { name = "litellm" },
@@ -245,7 +245,7 @@ requires-dist = [
 
 [[package]]
 name = "aiq-alert-triage-agent"
-source = { editable = "examples/advanced/alert_triage_agent" }
+source = { editable = "examples/advanced_agents/alert_triage_agent" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain"] },
     { name = "ansible-runner" },
@@ -267,7 +267,7 @@ requires-dist = [
 
 [[package]]
 name = "aiq-automated-description-generation"
-source = { editable = "examples/basic/functions/automated_description_generation" }
+source = { editable = "examples/custom_functions/automated_description_generation" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["ingestion", "langchain"] },
 ]
@@ -277,7 +277,7 @@ requires-dist = [{ name = "aiqtoolkit", extras = ["ingestion", "langchain"], edi
 
 [[package]]
 name = "aiq-email-phishing-analyzer"
-source = { editable = "examples/intermediate/evaluation_and_profiling/email_phishing_analyzer" }
+source = { editable = "examples/evaluation_and_profiling/email_phishing_analyzer" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain"] },
     { name = "arize-phoenix" },
@@ -297,7 +297,7 @@ requires-dist = [
 
 [[package]]
 name = "aiq-multi-frameworks"
-source = { editable = "examples/basic/frameworks/multi_frameworks" }
+source = { editable = "examples/frameworks/multi_frameworks" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain", "llama-index"] },
     { name = "arxiv" },
@@ -319,7 +319,7 @@ requires-dist = [
 
 [[package]]
 name = "aiq-plot-charts"
-source = { editable = "examples/basic/functions/plot_charts" }
+source = { editable = "examples/custom_functions/plot_charts" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain"] },
     { name = "matplotlib" },
@@ -335,7 +335,7 @@ requires-dist = [
 
 [[package]]
 name = "aiq-por-to-jiratickets"
-source = { editable = "examples/intermediate/HITL/por_to_jiratickets" }
+source = { editable = "examples/custom_functions/por_to_jiratickets" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain"] },
 ]
@@ -345,7 +345,7 @@ requires-dist = [{ name = "aiqtoolkit", extras = ["langchain"], editable = "." }
 
 [[package]]
 name = "aiq-profiler-agent"
-source = { editable = "examples/advanced/profiler_agent" }
+source = { editable = "examples/advanced_agents/profiler_agent" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain", "profiling", "telemetry"] },
     { name = "pydantic" },
@@ -359,7 +359,7 @@ requires-dist = [
 
 [[package]]
 name = "aiq-redact-pii"
-source = { editable = "examples/intermediate/observability/redact_pii" }
+source = { editable = "examples/observability/redact_pii" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["weave"] },
 ]
@@ -369,7 +369,7 @@ requires-dist = [{ name = "aiqtoolkit", extras = ["weave"], editable = "." }]
 
 [[package]]
 name = "aiq-semantic-kernel-demo"
-source = { editable = "examples/basic/frameworks/semantic_kernel_demo" }
+source = { editable = "examples/frameworks/semantic_kernel_demo" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain", "semantic-kernel"] },
     { name = "faiss-cpu" },
@@ -397,7 +397,7 @@ requires-dist = [
 
 [[package]]
 name = "aiq-simple-calculator"
-source = { editable = "examples/basic/functions/simple_calculator" }
+source = { editable = "examples/getting_started/simple_web_query" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain"] },
 ]
@@ -407,7 +407,7 @@ requires-dist = [{ name = "aiqtoolkit", extras = ["langchain"], editable = "." }
 
 [[package]]
 name = "aiq-simple-calculator-custom-routes"
-source = { editable = "examples/intermediate/custom_routes/simple_calculator_custom_routes" }
+source = { editable = "examples/front_ends/simple_calculator_custom_routes" }
 dependencies = [
     { name = "aiq-simple-calculator" },
     { name = "aiqtoolkit", extra = ["langchain"] },
@@ -415,13 +415,13 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiq-simple-calculator", editable = "examples/basic/functions/simple_calculator" },
+    { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_web_query" },
     { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
 ]
 
 [[package]]
 name = "aiq-simple-calculator-eval"
-source = { editable = "examples/intermediate/evaluation_and_profiling/simple_calculator_eval" }
+source = { editable = "examples/evaluation_and_profiling/simple_calculator_eval" }
 dependencies = [
     { name = "aiq-simple-calculator" },
     { name = "aiqtoolkit", extra = ["langchain"] },
@@ -429,13 +429,13 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiq-simple-calculator", editable = "examples/basic/functions/simple_calculator" },
+    { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_web_query" },
     { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
 ]
 
 [[package]]
 name = "aiq-simple-calculator-hitl"
-source = { editable = "examples/intermediate/HITL/simple_calculator_hitl" }
+source = { editable = "examples/HITL/simple_calculator_hitl" }
 dependencies = [
     { name = "aiq-por-to-jiratickets" },
     { name = "aiq-simple-calculator" },
@@ -444,14 +444,14 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiq-por-to-jiratickets", editable = "examples/intermediate/HITL/por_to_jiratickets" },
-    { name = "aiq-simple-calculator", editable = "examples/basic/functions/simple_calculator" },
+    { name = "aiq-por-to-jiratickets", editable = "examples/custom_functions/por_to_jiratickets" },
+    { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_web_query" },
     { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
 ]
 
 [[package]]
 name = "aiq-simple-calculator-mcp"
-source = { editable = "examples/intermediate/MCP/simple_calculator_mcp" }
+source = { editable = "examples/MCP/simple_calculator_mcp" }
 dependencies = [
     { name = "aiq-simple-calculator" },
     { name = "aiqtoolkit", extra = ["langchain"] },
@@ -459,13 +459,13 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiq-simple-calculator", editable = "examples/basic/functions/simple_calculator" },
+    { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_web_query" },
     { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
 ]
 
 [[package]]
 name = "aiq-simple-calculator-observability"
-source = { editable = "examples/intermediate/observability/simple_calculator_observability" }
+source = { editable = "examples/observability/simple_calculator_observability" }
 dependencies = [
     { name = "aiq-simple-calculator" },
     { name = "aiqtoolkit", extra = ["langchain"] },
@@ -473,13 +473,13 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiq-simple-calculator", editable = "examples/basic/functions/simple_calculator" },
+    { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_web_query" },
     { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
 ]
 
 [[package]]
 name = "aiq-simple-rag"
-source = { editable = "examples/intermediate/RAG/simple_rag" }
+source = { editable = "examples/RAG/simple_rag" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["ingestion", "langchain", "mem0ai"] },
 ]
@@ -489,7 +489,7 @@ requires-dist = [{ name = "aiqtoolkit", extras = ["ingestion", "langchain", "mem
 
 [[package]]
 name = "aiq-swe-bench"
-source = { editable = "examples/intermediate/evaluation_and_profiling/swe_bench" }
+source = { editable = "examples/evaluation_and_profiling/swe_bench" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain"] },
     { name = "swebench" },
@@ -631,25 +631,25 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "aioboto3", specifier = ">=11.0.0" },
-    { name = "aiq-agno-personal-finance", marker = "extra == 'examples'", editable = "examples/basic/frameworks/agno_personal_finance" },
-    { name = "aiq-alert-triage-agent", marker = "extra == 'examples'", editable = "examples/advanced/alert_triage_agent" },
-    { name = "aiq-automated-description-generation", marker = "extra == 'examples'", editable = "examples/basic/functions/automated_description_generation" },
-    { name = "aiq-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/intermediate/evaluation_and_profiling/email_phishing_analyzer" },
-    { name = "aiq-multi-frameworks", marker = "extra == 'examples'", editable = "examples/basic/frameworks/multi_frameworks" },
-    { name = "aiq-plot-charts", marker = "extra == 'examples'", editable = "examples/basic/functions/plot_charts" },
-    { name = "aiq-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/intermediate/HITL/por_to_jiratickets" },
-    { name = "aiq-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced/profiler_agent" },
-    { name = "aiq-redact-pii", marker = "extra == 'examples'", editable = "examples/intermediate/observability/redact_pii" },
-    { name = "aiq-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/basic/frameworks/semantic_kernel_demo" },
+    { name = "aiq-agno-personal-finance", marker = "extra == 'examples'", editable = "examples/frameworks/agno_personal_finance" },
+    { name = "aiq-alert-triage-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/alert_triage_agent" },
+    { name = "aiq-automated-description-generation", marker = "extra == 'examples'", editable = "examples/custom_functions/automated_description_generation" },
+    { name = "aiq-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/email_phishing_analyzer" },
+    { name = "aiq-multi-frameworks", marker = "extra == 'examples'", editable = "examples/frameworks/multi_frameworks" },
+    { name = "aiq-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },
+    { name = "aiq-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/custom_functions/por_to_jiratickets" },
+    { name = "aiq-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },
+    { name = "aiq-redact-pii", marker = "extra == 'examples'", editable = "examples/observability/redact_pii" },
+    { name = "aiq-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/frameworks/semantic_kernel_demo" },
     { name = "aiq-simple", marker = "extra == 'examples'", editable = "examples/getting_started/simple_web_query" },
-    { name = "aiq-simple-calculator", marker = "extra == 'examples'", editable = "examples/basic/functions/simple_calculator" },
-    { name = "aiq-simple-calculator-custom-routes", marker = "extra == 'examples'", editable = "examples/intermediate/custom_routes/simple_calculator_custom_routes" },
-    { name = "aiq-simple-calculator-eval", marker = "extra == 'examples'", editable = "examples/intermediate/evaluation_and_profiling/simple_calculator_eval" },
-    { name = "aiq-simple-calculator-hitl", marker = "extra == 'examples'", editable = "examples/intermediate/HITL/simple_calculator_hitl" },
-    { name = "aiq-simple-calculator-mcp", marker = "extra == 'examples'", editable = "examples/intermediate/MCP/simple_calculator_mcp" },
-    { name = "aiq-simple-calculator-observability", marker = "extra == 'examples'", editable = "examples/intermediate/observability/simple_calculator_observability" },
-    { name = "aiq-simple-rag", marker = "extra == 'examples'", editable = "examples/intermediate/RAG/simple_rag" },
-    { name = "aiq-swe-bench", marker = "extra == 'examples'", editable = "examples/intermediate/evaluation_and_profiling/swe_bench" },
+    { name = "aiq-simple-calculator", marker = "extra == 'examples'", editable = "examples/getting_started/simple_web_query" },
+    { name = "aiq-simple-calculator-custom-routes", marker = "extra == 'examples'", editable = "examples/front_ends/simple_calculator_custom_routes" },
+    { name = "aiq-simple-calculator-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_calculator_eval" },
+    { name = "aiq-simple-calculator-hitl", marker = "extra == 'examples'", editable = "examples/HITL/simple_calculator_hitl" },
+    { name = "aiq-simple-calculator-mcp", marker = "extra == 'examples'", editable = "examples/MCP/simple_calculator_mcp" },
+    { name = "aiq-simple-calculator-observability", marker = "extra == 'examples'", editable = "examples/observability/simple_calculator_observability" },
+    { name = "aiq-simple-rag", marker = "extra == 'examples'", editable = "examples/RAG/simple_rag" },
+    { name = "aiq-swe-bench", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/swe_bench" },
     { name = "aiqtoolkit-agno", marker = "extra == 'agno'", editable = "packages/aiqtoolkit_agno" },
     { name = "aiqtoolkit-crewai", marker = "extra == 'crewai'", editable = "packages/aiqtoolkit_crewai" },
     { name = "aiqtoolkit-langchain", marker = "extra == 'langchain'", editable = "packages/aiqtoolkit_langchain" },

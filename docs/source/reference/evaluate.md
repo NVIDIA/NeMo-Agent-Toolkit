@@ -81,7 +81,7 @@ eval:
   general:
     dataset:
       _type: json
-      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
+      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true
@@ -104,7 +104,7 @@ and `sympy__sympy-21055`. The evaluation iteratively develops and debugs the wor
 eval:
     dataset:
       _type: json
-      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
+      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
       id_key: instance_id
       structure:
         disable: true
@@ -122,7 +122,7 @@ You can also skip entries from the dataset. Here is an example configuration to 
 eval:
     dataset:
       _type: json
-      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
+      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
       id_key: instance_id
       structure:
         disable: true
@@ -198,7 +198,7 @@ eval:
   general:
     dataset:
       _type: json
-      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
+      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true
@@ -270,7 +270,7 @@ Note: In your evaluation dataset, make sure that the `answer` field is a descrip
 
 **Sample Usage:**
 ```bash
-aiq eval --config_file=examples/basic/functions/simple_calculator/configs/config-tunable-rag-eval.yml
+aiq eval --config_file=examples/getting_started/simple_web_query/configs/config-tunable-rag-eval.yml
 ```
 
 ## Adding Custom Evaluators

@@ -31,7 +31,7 @@ This example demonstrates how to extend NVIDIA NeMo Agent toolkit applications w
 This example extends the [basic Simple Calculator](../../../basic/functions/simple_calculator/). Install it first:
 
 ```bash
-uv pip install -e examples/basic/functions/simple_calculator
+uv pip install -e examples/getting_started/simple_web_query
 ```
 
 ## Installation
@@ -39,7 +39,7 @@ uv pip install -e examples/basic/functions/simple_calculator
 Install this example:
 
 ```bash
-uv pip install -e examples/intermediate/custom_routes/simple_calculator_custom_routes
+uv pip install -e examples/front_ends/simple_calculator_custom_routes
 ```
 
 ## Quick Start
@@ -47,7 +47,7 @@ uv pip install -e examples/intermediate/custom_routes/simple_calculator_custom_r
 ### Start the API Server
 
 ```bash
-aiq serve --config_file examples/intermediate/custom_routes/simple_calculator_custom_routes/configs/config-metadata.yml
+aiq serve --config_file examples/front_ends/simple_calculator_custom_routes/configs/config-metadata.yml
 ```
 
 The server starts with both standard and custom endpoints:

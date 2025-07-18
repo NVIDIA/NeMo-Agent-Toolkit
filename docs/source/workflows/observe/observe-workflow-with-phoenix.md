@@ -57,7 +57,7 @@ From the root directory of the NeMo Agent toolkit library, install dependencies 
 
 **Example:**
 ```bash
-uv pip install -e examples/basic/functions/simple_calculator
+uv pip install -e examples/getting_started/simple_web_query
 ```
 As the workflow runs, telemetry data will start showing up in Phoenix and the console.
 

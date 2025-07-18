@@ -70,11 +70,11 @@ workflow:
 
 eval:
   general:
-    output_dir: ./.tmp/eval/examples/intermediate/evaluation_and_profiling/email_phishing_analyzer/test_models/llama-3.1-8b-instruct
+    output_dir: ./.tmp/eval/examples/evaluation_and_profiling/email_phishing_analyzer/test_models/llama-3.1-8b-instruct
     verbose: true
     dataset:
         _type: csv
-        file_path: examples/intermediate/evaluation_and_profiling/email_phishing_analyzer/data/smaller_test.csv
+        file_path: examples/evaluation_and_profiling/email_phishing_analyzer/data/smaller_test.csv
         id_key: "subject"
         structure:
           question_key: body

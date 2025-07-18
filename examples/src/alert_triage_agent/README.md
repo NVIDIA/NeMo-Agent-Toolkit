@@ -227,10 +227,10 @@ The `eval` section defines how the system evaluates pipeline outputs using prede
 ```yaml
 eval:
   general:
-    output_dir: .tmp/aiq/examples/advanced/alert_triage_agent/output/
+    output_dir: .tmp/aiq/examples/advanced_agents/alert_triage_agent/output/
     dataset:
       _type: json
-      file_path: examples/advanced/alert_triage_agent/data/offline_data.json
+      file_path: examples/advanced_agents/alert_triage_agent/data/offline_data.json
   evaluators:
     rag_accuracy:
       _type: ragas
@@ -273,7 +273,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
-uv pip install -e ./examples/advanced/alert_triage_agent
+uv pip install -e ./examples/advanced_agents/alert_triage_agent
 ```
 
 ### Set up environment variables
@@ -318,7 +318,7 @@ To run the agent live, follow these steps:
    Provide a live alert in JSON format and invoke the agent using:
 
    ```bash
-   aiq run --config_file=examples/advanced/alert_triage_agent/configs/config_live_mode.yml --input {your_alert_in_json_format}
+   aiq run --config_file=examples/advanced_agents/alert_triage_agent/configs/config_live_mode.yml --input {your_alert_in_json_format}
    ```
 This will trigger a full end-to-end triage process using live data sources.
 
@@ -334,10 +334,10 @@ To use this mode, first ensure you have configured your live environment as desc
 
    From the root directory of the AIQ toolkit library, run:
    ```bash
-   python examples/advanced/alert_triage_agent/src/aiq_alert_triage_agent/run.py \
+   python examples/advanced_agents/alert_triage_agent/src/aiq_alert_triage_agent/run.py \
      --host 0.0.0.0 \
      --port 5000 \
-     --env_file examples/advanced/alert_triage_agent/.your_custom_env
+     --env_file examples/advanced_agents/alert_triage_agent/.your_custom_env
    ```
 
    The server will start and display:
@@ -345,7 +345,7 @@ To use this mode, first ensure you have configured your live environment as desc
    ---------------[ Alert Triage HTTP Server ]-----------------
    Protocol   : HTTP
    Listening  : 0.0.0.0:5000
-   Env File   : examples/advanced/alert_triage_agent/.your_custom_env
+   Env File   : examples/advanced_agents/alert_triage_agent/.your_custom_env
    Endpoint   : POST /alerts with JSON payload
    ```
 
@@ -434,7 +434,7 @@ To run in offline mode:
 
    Run the agent with:
    ```bash
-   aiq eval --config_file=examples/advanced/alert_triage_agent/configs/config_offline_mode.yml
+   aiq eval --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml
    ```
 
     The agent will:

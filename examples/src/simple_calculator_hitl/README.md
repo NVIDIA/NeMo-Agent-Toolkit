@@ -38,7 +38,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/intermediate/HITL/simple_calculator_hitl
+uv pip install -e examples/HITL/simple_calculator_hitl
 ```
 
 ### Set Up API Keys
@@ -51,7 +51,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 ### Human in the Loop (HITL) Configuration
 It is often helpful, or even required, to have human input during the execution of an agent workflow. For example, to ask about preferences, confirmations, or to provide additional information.
 The AIQ toolkit library provides a way to add HITL interaction to any tool or function, allowing for the dynamic collection of information during the workflow execution, without the need for coding it
-into the agent itself. For instance, this example asks for user approval to increase the maximum iterations of the ReAct agent to allow additional tool calling. This is enabled by leveraging a reusable plugin developed in the `examples/intermediate/HITL/por_to_jiratickets` example. We can view the implementation in the
+into the agent itself. For instance, this example asks for user approval to increase the maximum iterations of the ReAct agent to allow additional tool calling. This is enabled by leveraging a reusable plugin developed in the `examples/custom_functions/por_to_jiratickets` example. We can view the implementation in the
 `aiq_por_to_jiratickets.hitl_approval_tool.py` file. The implementation is shown below:
 
 ```python
@@ -88,19 +88,19 @@ This can occur in any tool or function in the workflow, allowing for dynamic int
 Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file examples/intermediate/HITL/simple_calculator_hitl/configs/config-hitl.yml  --input "Is 2 * 4 greater than 5?"
+aiq run --config_file examples/HITL/simple_calculator_hitl/configs/config-hitl.yml  --input "Is 2 * 4 greater than 5?"
 ```
 
 **Expected Output When Giving Permission**
 
 ```console
-$ aiq run --config_file examples/intermediate/HITL/simple_calculator_hitl/configs/config-hitl.yml --input "Is 2 * 4 greater than 5?"
+$ aiq run --config_file examples/HITL/simple_calculator_hitl/configs/config-hitl.yml --input "Is 2 * 4 greater than 5?"
 2025-07-03 17:04:50,605 - aiq.runtime.loader - WARNING - Loading module 'aiq_profiler_agent.register' from entry point 'aiq_profiler_agent' took a long time (336.575270 ms). Ensure all imports are inside your registered functions.
 2025-07-03 17:04:50,714 - aiq.runtime.loader - WARNING - Loading module 'aiq_multi_frameworks.register' from entry point 'aiq_multi_frameworks' took a long time (104.676008 ms). Ensure all imports are inside your registered functions.
 2025-07-03 17:04:51,306 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (573.463202 ms). Ensure all imports are inside your registered functions.
 2025-07-03 17:04:51,585 - aiq.runtime.loader - WARNING - Loading module 'aiq_por_to_jiratickets.register' from entry point 'aiq_por_to_jiratickets' took a long time (259.028673 ms). Ensure all imports are inside your registered functions.
 2025-07-03 17:04:51,780 - aiq.runtime.loader - WARNING - Loading module 'aiq_alert_triage_agent.register' from entry point 'aiq_alert_triage_agent' took a long time (107.508183 ms). Ensure all imports are inside your registered functions.
-2025-07-03 17:04:51,996 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/intermediate/HITL/simple_calculator_hitl/configs/config-hitl.yml'
+2025-07-03 17:04:51,996 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/HITL/simple_calculator_hitl/configs/config-hitl.yml'
 2025-07-03 17:04:52,000 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 
 Configuration Summary:
@@ -112,39 +112,39 @@ Number of Embedders: 0
 Number of Memory: 0
 Number of Retrievers: 0
 
-2025-07-03 17:04:53,694 - aiq.agent.react_agent.agent - INFO - 
+2025-07-03 17:04:53,694 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: Is 2 * 4 greater than 5?
-Agent's thoughts: 
+Agent's thoughts:
 Thought: To answer this question, I need to first calculate the product of 2 and 4, and then compare it to 5.
 Action: calculator_multiply
 Action Input: {'text': '2 * 4'}
 
 ------------------------------
-2025-07-03 17:04:53,706 - aiq.agent.react_agent.agent - INFO - 
+2025-07-03 17:04:53,706 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Calling tools: calculator_multiply
 Tool's input: {"text": "2 * 4"}
-Tool's response: 
+Tool's response:
 The product of 2 * 4 is 8
 ------------------------------
-2025-07-03 17:04:54,683 - aiq.agent.react_agent.agent - INFO - 
+2025-07-03 17:04:54,683 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: Is 2 * 4 greater than 5?
-Agent's thoughts: 
+Agent's thoughts:
 Thought: Now that I have the product of 2 and 4, I can compare it to 5 to determine if it's greater.
 Action: calculator_inequality
 Action Input: {'text': '8 > 5'}
 ------------------------------
-2025-07-03 17:04:54,691 - aiq.agent.react_agent.agent - INFO - 
+2025-07-03 17:04:54,691 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Calling tools: calculator_inequality
 Tool's input: {"text": "8 > 5"}
-Tool's response: 
+Tool's response:
 First number 8 is greater than the second number 5
 ------------------------------
 2025-07-03 17:04:54,693 - aiq.agent.react_agent.register - ERROR - [AGENT] ReAct Agent failed with exception: Recursion limit of 4 reached without hitting a stop condition. You can increase the limit by setting the `recursion_limit` config key.
@@ -164,51 +164,51 @@ You have reached the maximum number of iterations.
 Please confirm if you would like to proceed with more iterations.
  Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: yes
 2025-07-03 17:04:56,267 - aiq_simple_calculator_hitl.register - INFO - Attempt 2: Increasing max_iterations to 2
-2025-07-03 17:04:57,239 - aiq.agent.react_agent.agent - INFO - 
+2025-07-03 17:04:57,239 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: Is 2 * 4 greater than 5?
-Agent's thoughts: 
+Agent's thoughts:
 Thought: To answer this question, I need to first calculate the product of 2 and 4, and then compare it to 5.
 Action: calculator_multiply
 Action Input: {'text': '2 * 4'}
 
 ------------------------------
-2025-07-03 17:04:57,247 - aiq.agent.react_agent.agent - INFO - 
+2025-07-03 17:04:57,247 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Calling tools: calculator_multiply
 Tool's input: {"text": "2 * 4"}
-Tool's response: 
+Tool's response:
 The product of 2 * 4 is 8
 ------------------------------
-2025-07-03 17:04:58,358 - aiq.agent.react_agent.agent - INFO - 
+2025-07-03 17:04:58,358 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: Is 2 * 4 greater than 5?
-Agent's thoughts: 
+Agent's thoughts:
 Thought: Now that I have the product of 2 and 4, I can compare it to 5 to determine if it's greater.
 Action: calculator_inequality
 Action Input: {'text': '8 > 5'}
 ------------------------------
-2025-07-03 17:04:58,368 - aiq.agent.react_agent.agent - INFO - 
+2025-07-03 17:04:58,368 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Calling tools: calculator_inequality
 Tool's input: {"text": "8 > 5"}
-Tool's response: 
+Tool's response:
 First number 8 is greater than the second number 5
 ------------------------------
-2025-07-03 17:04:59,018 - aiq.agent.react_agent.agent - INFO - 
+2025-07-03 17:04:59,018 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: Is 2 * 4 greater than 5?
-Agent's thoughts: 
+Agent's thoughts:
 Thought: I now know the final answer
 Final Answer: Yes, 2 * 4 is greater than 5.
 ------------------------------
 2025-07-03 17:04:59,021 - aiq.utils.type_converter - WARNING - Indirect type conversion used to convert <class 'str'> to <class 'str'>, which may lead to unintended conversions. Consider adding a direct converter from <class 'str'> to <class 'str'> to ensure correctness.
-2025-07-03 17:04:59,021 - aiq.front_ends.console.console_front_end_plugin - INFO - 
+2025-07-03 17:04:59,021 - aiq.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
 Workflow Result:
 ['Yes, 2 * 4 is greater than 5.']
@@ -218,10 +218,10 @@ Workflow Result:
 **Expected Output When Not Giving Permission**
 
 ```console
-$ aiq run --config_file examples/intermediate/HITL/simple_calculator_hitl/configs/config-hitl.yml --input "Is 2 * 4 greater than 5?"
+$ aiq run --config_file examples/HITL/simple_calculator_hitl/configs/config-hitl.yml --input "Is 2 * 4 greater than 5?"
 2025-07-03 17:07:00,827 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (581.382036 ms). Ensure all imports are inside your registered functions.
 2025-07-03 17:07:01,093 - aiq.runtime.loader - WARNING - Loading module 'aiq_por_to_jiratickets.register' from entry point 'aiq_por_to_jiratickets' took a long time (245.827675 ms). Ensure all imports are inside your registered functions.
-2025-07-03 17:07:01,482 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/intermediate/HITL/simple_calculator_hitl/configs/config-hitl.yml'
+2025-07-03 17:07:01,482 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/HITL/simple_calculator_hitl/configs/config-hitl.yml'
 2025-07-03 17:07:01,486 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 
 Configuration Summary:
@@ -233,39 +233,39 @@ Number of Embedders: 0
 Number of Memory: 0
 Number of Retrievers: 0
 
-2025-07-03 17:07:03,057 - aiq.agent.react_agent.agent - INFO - 
+2025-07-03 17:07:03,057 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: Is 2 * 4 greater than 5?
-Agent's thoughts: 
+Agent's thoughts:
 Thought: To answer this question, I need to first calculate the product of 2 and 4, and then compare it to 5.
 Action: calculator_multiply
 Action Input: {'text': '2 * 4'}
 
 ------------------------------
-2025-07-03 17:07:03,076 - aiq.agent.react_agent.agent - INFO - 
+2025-07-03 17:07:03,076 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Calling tools: calculator_multiply
 Tool's input: {"text": "2 * 4"}
-Tool's response: 
+Tool's response:
 The product of 2 * 4 is 8
 ------------------------------
-2025-07-03 17:07:04,091 - aiq.agent.react_agent.agent - INFO - 
+2025-07-03 17:07:04,091 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: Is 2 * 4 greater than 5?
-Agent's thoughts: 
+Agent's thoughts:
 Thought: Now that I have the product of 2 and 4, I can compare it to 5 to determine if it's greater.
 Action: calculator_inequality
 Action Input: {'text': '8 > 5'}
 ------------------------------
-2025-07-03 17:07:04,099 - aiq.agent.react_agent.agent - INFO - 
+2025-07-03 17:07:04,099 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Calling tools: calculator_inequality
 Tool's input: {"text": "8 > 5"}
-Tool's response: 
+Tool's response:
 First number 8 is greater than the second number 5
 ------------------------------
 2025-07-03 17:07:04,101 - aiq.agent.react_agent.register - ERROR - [AGENT] ReAct Agent failed with exception: Recursion limit of 4 reached without hitting a stop condition. You can increase the limit by setting the `recursion_limit` config key.
@@ -284,7 +284,7 @@ For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/er
 You have reached the maximum number of iterations.
 Please confirm if you would like to proceed with more iterations.
  Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: no
-2025-07-03 17:07:08,193 - aiq.front_ends.console.console_front_end_plugin - INFO - 
+2025-07-03 17:07:08,193 - aiq.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
 Workflow Result:
 ['I seem to be having a problem.']

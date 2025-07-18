@@ -38,7 +38,7 @@ Before starting this example, you need:
 Install the base workflow:
 
 ```bash
-uv pip install -e examples/basic/functions/simple_calculator
+uv pip install -e examples/getting_started/simple_web_query
 ```
 
 ## Installation
@@ -46,7 +46,7 @@ uv pip install -e examples/basic/functions/simple_calculator
 Install this observability example:
 
 ```bash
-uv pip install -e examples/intermediate/observability/simple_calculator_observability
+uv pip install -e examples/observability/simple_calculator_observability
 ```
 
 ## Getting Started
@@ -64,7 +64,7 @@ phoenix serve
 2. Run the workflow with tracing enabled:
 
 ```bash
-aiq run --config_file examples/intermediate/observability/simple_calculator_observability/configs/config-tracing.yml --input "What is 2 * 4?"
+aiq run --config_file examples/observability/simple_calculator_observability/configs/config-tracing.yml --input "What is 2 * 4?"
 ```
 
 3. Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI.
@@ -88,7 +88,7 @@ export LANGFUSE_HOST=<your_host>
 2. Run the workflow:
 
 ```bash
-aiq run --config_file examples/intermediate/observability/simple_calculator_observability/configs/config-langfuse.yml --input "Calculate 15 + 23"
+aiq run --config_file examples/observability/simple_calculator_observability/configs/config-langfuse.yml --input "Calculate 15 + 23"
 ```
 
 #### LangSmith Integration
@@ -105,7 +105,7 @@ export LANGCHAIN_PROJECT=<your_project>
 2. Run the workflow:
 
 ```bash
-aiq run --config_file examples/intermediate/observability/simple_calculator_observability/configs/config-langsmith.yml --input "Is 100 > 50?"
+aiq run --config_file examples/observability/simple_calculator_observability/configs/config-langsmith.yml --input "Is 100 > 50?"
 ```
 
 #### Weave Integration
@@ -121,7 +121,7 @@ export WANDB_API_KEY=<your_api_key>
 2. Run the workflow:
 
 ```bash
-aiq run --config_file examples/intermediate/observability/simple_calculator_observability/configs/config-weave.yml --input "What's the sum of 7 and 8?"
+aiq run --config_file examples/observability/simple_calculator_observability/configs/config-weave.yml --input "What's the sum of 7 and 8?"
 ```
 
 For detailed Weave setup instructions, see the [Fine-grained Tracing with Weave](../../../../docs/source/workflows/observe/observe-workflow-with-weave.md) guide.
@@ -139,7 +139,7 @@ export PATRONUS_API_KEY=<your_api_key>
 2. Run the workflow:
 
 ```bash
-aiq run --config_file examples/intermediate/observability/simple_calculator_observability/configs/config-patronus.yml --input "Divide 144 by 12"
+aiq run --config_file examples/observability/simple_calculator_observability/configs/config-patronus.yml --input "Divide 144 by 12"
 ```
 
 #### RagAI Catalyst Integration
@@ -157,7 +157,7 @@ export CATALYST_ENDPOINT=<your_endpoint>
 2. Run the workflow:
 
 ```bash
-aiq run --config_file examples/intermediate/observability/simple_calculator_observability/configs/config-catalyst.yml --input "Divide 144 by 12"
+aiq run --config_file examples/observability/simple_calculator_observability/configs/config-catalyst.yml --input "Divide 144 by 12"
 ```
 
 

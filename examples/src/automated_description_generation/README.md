@@ -51,7 +51,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
-uv pip install -e ./examples/basic/functions/automated_description_generation
+uv pip install -e ./examples/custom_functions/automated_description_generation
 ```
 
 ### Set Up API Keys
@@ -126,7 +126,7 @@ from Wikipedia, but the agent may not know that because the description is inacc
 Let us explore the output of running the agent without an automated description generation tool:
 
 ```bash
-aiq run --config_file examples/basic/functions/automated_description_generation/configs/config_no_auto.yml --input "List 5 subspecies of Aardvark?"
+aiq run --config_file examples/custom_functions/automated_description_generation/configs/config_no_auto.yml --input "List 5 subspecies of Aardvark?"
 ```
 
 The expected output is as follows:
@@ -211,16 +211,16 @@ Here, we're searching for information about Wikipedia in a collection using a to
 If we run the updated configuration, we see the following output:
 
 ```bash
-aiq run --config_file examples/basic/functions/automated_description_generation/configs/config.yml --input "List 5 subspecies of Aardvark?"
+aiq run --config_file examples/custom_functions/automated_description_generation/configs/config.yml --input "List 5 subspecies of Aardvark?"
 ```
 
 The expected output is as follows:
 
 ```console
-$ aiq run --config_file examples/basic/functions/automated_description_generation/configs/config.yml --input "List 5 subspecies of Aardvark?"
+$ aiq run --config_file examples/custom_functions/automated_description_generation/configs/config.yml --input "List 5 subspecies of Aardvark?"
 2025-05-16 11:07:32,969 - aiq.runtime.loader - WARNING - Loading module 'aiq_profiler_agent.register' from entry point 'aiq_profiler_agent' took a long time (317.265034 ms). Ensure all imports are inside your registered functions.
 2025-05-16 11:07:33,468 - aiq.runtime.loader - WARNING - Loading module 'aiq.agent.register' from entry point 'aiq_agents' took a long time (366.579533 ms). Ensure all imports are inside your registered functions.
-2025-05-16 11:07:33,675 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/basic/functions/automated_description_generation/configs/config.yml'
+2025-05-16 11:07:33,675 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/custom_functions/automated_description_generation/configs/config.yml'
 2025-05-16 11:07:33,687 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-05-16 11:07:33,898 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
 2025-05-16 11:07:33,900 - aiq_automated_description_generation.register - INFO - Building necessary components for the Automated Description Generation Workflow
