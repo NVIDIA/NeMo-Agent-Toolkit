@@ -50,7 +50,7 @@ functions:
     llm_name: nim_llm
     retriever_name: retriever
     retrieval_tool_name: cuda_tool
-    collection_name: cuda_docs
+    collection_name: wikipedia_docs
 
 workflow:
   _type: react_agent
