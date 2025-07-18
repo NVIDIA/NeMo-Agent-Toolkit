@@ -24,6 +24,14 @@ This is a simple example RAG application to showcase how one can configure and u
 
  This example is intended to be illustrative and demonstrate how someone could build a simple RAG application using the retriever component and use it with an agent without any additional code required!
 
+## Key Features
+
+- **Milvus Vector Database Integration:** Demonstrates the `milvus_retriever` component for storing and retrieving document embeddings from CUDA and MCP documentation.
+- **ReAct Agent with RAG:** Shows how a `react_agent` can use retriever tools to answer questions by searching through indexed documentation.
+- **Long-term Memory with Mem0:** Includes integration with Mem0 platform for persistent memory, allowing the agent to remember user preferences across sessions.
+- **Multi-Collection Retrieval:** Demonstrates multiple retriever tools (`cuda_retriever_tool` and `mcp_retriever_tool`) for searching different knowledge bases.
+- **Additional Tool Integration:** Shows how to extend the RAG system with complementary tools like `tavily_internet_search` and `code_generation` for comprehensive question answering.
+
 ## Quickstart: RAG with Milvus
 
 ### Installation and Setup
@@ -383,14 +391,14 @@ For Windows:
 - Graphical Installation: Execute the CUDA installer and follow the on-screen prompts 📺.
 - Silent Installation: Execute the package with the -s flag 🗣️.
 For Linux:
-- Package Manager Installation: Install using RPM or Debian packages, which interface with your system’s package management system 📦.
+- Package Manager Installation: Install using RPM or Debian packages, which interface with your system's package management system 📦.
 - Runfile Installation: Install using the standalone installer, a .run file that is completely self-contained 📁.
 After installation, perform the post-installation actions 📝. 🎉👍
 ------------------------------
 2025-04-23 16:56:51,642 - aiq.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
 Workflow Result:
-['🎉👍 To install CUDA, follow these steps: 📝\n1. Verify you have a CUDA-capable GPU 🖥️.\n2. Download the NVIDIA CUDA Toolkit from https://developer.nvidia.com/cuda-downloads 📊.\n3. Install the NVIDIA CUDA Toolkit 📈.\nFor Windows: \n- Graphical Installation: Execute the CUDA installer and follow the on-screen prompts 📺.\n- Silent Installation: Execute the package with the -s flag 🗣️.\nFor Linux: \n- Package Manager Installation: Install using RPM or Debian packages, which interface with your system’s package management system 📦.\n- Runfile Installation: Install using the standalone installer, a .run file that is completely self-contained 📁.\nAfter installation, perform the post-installation actions 📝. 🎉👍']
+['🎉👍 To install CUDA, follow these steps: 📝\n1. Verify you have a CUDA-capable GPU 🖥️.\n2. Download the NVIDIA CUDA Toolkit from https://developer.nvidia.com/cuda-downloads 📊.\n3. Install the NVIDIA CUDA Toolkit 📈.\nFor Windows: \n- Graphical Installation: Execute the CUDA installer and follow the on-screen prompts 📺.\n- Silent Installation: Execute the package with the -s flag 🗣️.\nFor Linux: \n- Package Manager Installation: Install using RPM or Debian packages, which interface with your system's package management system 📦.\n- Runfile Installation: Install using the standalone installer, a .run file that is completely self-contained 📁.\nAfter installation, perform the post-installation actions 📝. 🎉👍']
 --------------------------------------------------
 ```
 

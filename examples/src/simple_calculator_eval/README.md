@@ -19,6 +19,14 @@ limitations under the License.
 
 This example demonstrates how to evaluate and profile AI agent performance using the NVIDIA NeMo Agent toolkit. You'll learn to systematically measure your agent's accuracy and analyze its behavior using the Simple Calculator workflow.
 
+## Key Features
+
+- **Tunable RAG Evaluator Integration:** Demonstrates the `aiq eval` command with Tunable RAG Evaluator to measure agent response accuracy against ground truth datasets.
+- **Performance Analysis Framework:** Shows systematic evaluation of agent behavior, accuracy, and response quality using standardized test datasets.
+- **Question-by-Question Analysis:** Provides detailed breakdown of individual responses with comprehensive metrics for identifying failure patterns and areas for improvement.
+- **Evaluation Dataset Management:** Demonstrates how to work with structured evaluation datasets (`simple_calculator.json`) for consistent and reproducible testing.
+- **Results Interpretation:** Shows how to analyze evaluation metrics and generate comprehensive performance reports for agent optimization.
+
 ## What You'll Learn
 
 - **Accuracy Evaluation**: Measure and validate agent responses using the Tunable RAG Evaluator

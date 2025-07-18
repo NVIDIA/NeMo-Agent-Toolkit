@@ -20,23 +20,24 @@ limitations under the License.
   SPDX-License-Identifier: Apache-2.0
 -->
 
-# A Simple Plot Chart Agent
+# Plot Charts Agent
 
-A minimal example demonstrating an E2E chart plotting agentic workflow fully configured by a YAML file. This workflow leverages the AIQ toolkit plugin system and `Builder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
+A simple and reusable example that demonstrates creating charts from data using the AIQ Toolkit. This workflow can generate line charts, bar charts, and scatter plots from JSON data files based on user requests. The implementation follows AIQ Toolkit best practices for configuration-driven, reusable workflows.
 
 ## Table of Contents
 
 * [Key Features](#key-features)
 * [Installation and Usage](#installation-and-setup)
+* [Configuration](#configuration)
 * [Example Usage](#example-usage)
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AIQ toolkit library tools.
-- **Custom Plugin System:** Developers can bring in new tools using plugins.
-- **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
-- **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
-- **Ease of Use:** Simplifies developer experience and deployment.
+- **Data Visualization Workflow:** Demonstrates a custom `plot_charts` workflow type that generates line charts, bar charts, and scatter plots from JSON data files based on natural language requests.
+- **Python Plotting Integration:** Shows how to integrate Python's `matplotlib` library for chart generation within the AIQ toolkit framework.
+- **JSON Data Processing:** Demonstrates parsing and visualization of structured JSON data with configurable x-values and multiple y-value series with labels.
+- **LLM-Enhanced Descriptions:** Uses configured LLMs to generate intelligent, contextual descriptions of the created charts for better user understanding.
+- **Configurable Chart Parameters:** Shows how to customize chart types, data sources, output directories, figure sizes, and data point limits through YAML configuration.
 
 ## Installation and Setup
 
@@ -49,113 +50,172 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/custom_functions/plot_charts
+uv pip install -e examples/src/plot_charts
 ```
 
 ### Set Up API Keys
+
 If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
+## Configuration
+
+The workflow is fully configurable through the `config.yml` file. Here are the available configuration options:
+
+### Data Configuration
+- **`data_file_path`**: Path to the JSON data file (default: `"example_data.json"`)
+- **`output_directory`**: Directory where charts will be saved (default: `"outputs"`)
+
+### Chart Configuration
+- **`chart_types`**: List of supported chart types (default: `["line", "bar", "scatter"]`)
+- **`max_data_points`**: Maximum number of data points to prevent excessive processing (default: `100`)
+- **`figure_size`**: Chart dimensions as [width, height] (default: `[10, 6]`)
+
+### Example Configuration
+
+```yaml
+workflow:
+  _type: plot_charts
+  llm_name: nim_llm
+  data_file_path: "my_custom_data.json"
+  output_directory: "my_charts"
+  chart_types: ["line", "bar"]
+  max_data_points: 50
+  figure_size: [12, 8]
+```
+
+### Data Format
+
+The data file should be in JSON format with the following structure:
+
+```json
+{
+  "xValues": ["2020", "2021", "2022", "2023", "2024"],
+  "yValues": [
+    {
+      "data": [2, 5, 2.2, 7.5, 3],
+      "label": "USA"
+    },
+    {
+      "data": [2, 5.5, 2, 8.5, 1.5],
+      "label": "EMEA"
+    }
+  ]
+}
+```
+
 ## Example Usage
 
 ### Run the Workflow
 
-Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
+Run the following command from the root of the AIQ toolkit repo to execute this workflow:
 
 ```bash
-aiq run --config_file examples/custom_functions/plot_charts/configs/config.yml  --input "make a line chart for me"
+aiq run --config_file examples/src/plot_charts/src/aiq_plot_charts/configs/config.yml --input "create a line chart"
 ```
 
 **Expected Output**
 
 ```console
-/home/coder/dev/ai-query-engine
-/home/coder/dev/ai-query-engine/examples/custom_functions/plot_charts/example_data.json
-routed_output= line_chart
-**line_chart** xValues=['2020', '2021', '2022', '2023', '2024'] yValues=[{'data': [2, 5, 2.2, 7.5, 3], 'label': 'USA'}, {'data': [2, 5.5, 2, 8.5, 1.5], 'label': 'EMEA'}] chart_name='USA vs EMEA Data by Year'
-y=
- {'data': [2, 5, 2.2, 7.5, 3], 'label': 'USA'}
-label=
- USA
-y_data_points=
- [2, 5, 2.2, 7.5, 3]
-2024-11-19 17:13:35,104 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
-2024-11-19 17:13:35,109 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
-2024-11-19 17:13:35,133 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
-2024-11-19 17:13:35,136 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
-y=
- {'data': [2, 5.5, 2, 8.5, 1.5], 'label': 'EMEA'}
-label=
- EMEA
-y_data_points=
- [2, 5.5, 2, 8.5, 1.5]
-2024-11-19 17:13:35,148 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
-2024-11-19 17:13:35,151 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
-2024-11-19 17:13:35,164 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
-2024-11-19 17:13:35,167 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
-**bot_message** line chart is generated, the image path can be found here : ./USA vs EMEA Data by Year.png
-------------------------------
-plotting agent output {'input': 'make a line chart for me', 'invoked_chain': 'line_chart', 'chat_history': [], 'bot_message': 'line chart is generated, the image path can be found here : ./USA vs EMEA Data by Year.png', 'img_path': './USA vs EMEA Data by Year.png'}
-2024-11-19 17:13:35,244 - aiq.cli.run - INFO - --------------------------------------------------
-Workflow Result:
-['Saved output to ./USA vs EMEA Data by Year.png']
+aiq run --config_file examples/src/plot_charts/src/aiq_plot_charts/configs/config.yml --input "create a line chart"
+
+
+Configuration Summary:
+--------------------
+Workflow Type: plot_charts
+Number of Functions: 0
+Number of LLMs: 1
+Number of Embedders: 0
+Number of Memory: 0
+Number of Retrievers: 0
+
+2025-07-18 14:48:28,247 - aiq_plot_charts.register - INFO - Processing chart request: create a line chart
+2025-07-18 14:48:28,249 - aiq_plot_charts.register - INFO - Successfully loaded data from /Users/yuchenz/Desktop/Work/Project/AgentIQ/examples/src/plot_charts/src/aiq_plot_charts/../../example_data.json
+2025-07-18 14:48:28,249 - aiq_plot_charts.register - INFO - Selected chart type: line
+2025-07-18 14:48:28,522 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2025-07-18 14:48:28,523 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2025-07-18 14:48:28,523 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2025-07-18 14:48:28,523 - matplotlib.category - INFO - Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2025-07-18 14:48:30,092 - aiq_plot_charts.register - INFO - Successfully created chart: outputs/line_chart_1752875308.png
+2025-07-18 14:48:30,093 - aiq.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
-2024-11-19 17:13:35,244 - aiq.cli.entrypoint - INFO - Total time: 114.49 sec
-2024-11-19 17:13:35,244 - aiq.cli.entrypoint - INFO - Pipeline runtime: 114.41 sec
+Workflow Result:
+['Successfully created line chart saved to: outputs/line_chart_1752875308.png\n\nChart description: The line chart shows the trend of two regions, USA and EMEA, over a 5-year period from 2020 to 2024, with both regions experiencing fluctuations in their values. The USA region appears to have a more stable trend, while the EMEA region shows a more significant increase in 2021 and 2023, followed by a sharp decline in 2024.']
 ```
 
-Note: in this run, the image is saved to **./USA vs EMEA Data by Year.png** in the root folder of the AIQ toolkit repository. Depending on the input, your run might have a different image name, please check the **`bot_message`** output to find the image.
+### Different Chart Types
 
+You can request different chart types:
 
-
-Note: this is a multi-agents system, you can also try out some other examples listed below :
 ```bash
-aiq run --config_file examples/custom_functions/plot_charts/configs/config.yml  --input "no I change my mind, make a bar chart instead"
-```
-```bash
-aiq run --config_file examples/custom_functions/plot_charts/configs/config.yml  --input "tell me a joke"
-```
+# Bar chart
+aiq run --config_file examples/src/plot_charts/src/aiq_plot_charts/configs/config.yml --input "create a bar chart comparing the data"
 
+# Scatter plot
+aiq run --config_file examples/src/plot_charts/src/aiq_plot_charts/configs/config.yml --input "show me a scatter plot"
+```
 
 ### Launch the Workflow Server
 
 Run the following command from the root of the AIQ toolkit repo to serve this workflow:
 
 ```bash
-aiq serve --config_file examples/custom_functions/plot_charts/configs/config.yml
-```
-
-**Expected Output**
-
-```console
-INFO:     Started server process [162278]
-INFO:     Waiting for application startup.
-Starting up
-/home/coder/dev/ai-query-engine/examples/custom_functions/plot_charts/src/aiq_plot_charts/create_plot.py:10: LangChainDeprecationWarning: As of langchain-core 0.3.0, LangChain uses pydantic v2 internally. The langchain_core.pydantic_v1 module was a compatibility shim for pydantic v1, and should no longer be used. Please update the code to import from Pydantic directly.
-
-For example, replace imports like: `from langchain_core.pydantic_v1 import BaseModel`
-with: `from pydantic import BaseModel`
-or the v1 compatibility namespace if you are working in a code base that has not been fully upgraded to pydantic 2 yet.         from pydantic.v1 import BaseModel
-
-  from .plot_chain_agent import PlotChartAgents
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+aiq serve --config_file examples/src/plot_charts/src/aiq_plot_charts/configs/config.yml
 ```
 
 **Triggering the Workflow Server**
 
-The workflow server can be triggered using the following curl command from another terminal:
+The workflow server can be triggered using the following curl command:
 
 ```bash
-curl --request POST   --url http://localhost:8000/generate   --header 'Content-Type: application/json'   --data '{"input_message": "make a trend chart for me"}'
+curl --request POST \
+  --url http://localhost:8000/generate \
+  --header 'Content-Type: application/json' \
+  --data '{"input_message": "create a line chart showing trends over time"}'
 ```
 
 **Expected Output**
 ```json
-{"value":"Saved output to ./USA vs EMEA Performance Over Time.png"}
+{
+  "value": "Successfully created line chart saved to: outputs/line_chart_1703123456.png\n\nChart description: The line chart displays comparative performance data for USA and EMEA regions across a five-year period."
+}
 ```
 
-Find the image in the root folder of the AIQ toolkit repository with the image name displayed above
+## Customization Examples
+
+### Using Different Data Sources
+
+1. Create your own data file following the JSON format above
+2. Update the configuration:
+
+```yaml
+workflow:
+  _type: plot_charts
+  llm_name: nim_llm
+  data_file_path: "path/to/your/data.json"
+```
+
+### Customizing Chart Types
+
+To support only specific chart types:
+
+```yaml
+workflow:
+  _type: plot_charts
+  llm_name: nim_llm
+  chart_types: ["bar"]  # Only bar charts
+```
+
+### Changing Output Location
+
+To save charts to a specific directory:
+
+```yaml
+workflow:
+  _type: plot_charts
+  llm_name: nim_llm
+  output_directory: "/path/to/your/charts"
+```

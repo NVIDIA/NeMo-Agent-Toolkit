@@ -29,3 +29,13 @@ llms:
 workflow:
   _type: plot_charts
   llm_name: nim_llm
+  # Configurable data file path (relative to the current working directory)
+  data_file_path: "example_data.json"
+  # Output directory for generated charts
+  output_directory: "outputs"
+  # Supported chart types
+  chart_types: ["line", "bar", "scatter"]
+  # Maximum number of data points to prevent excessive processing
+  max_data_points: 100
+  # Figure size for generated charts (width, height)
+  figure_size: [10, 6]
