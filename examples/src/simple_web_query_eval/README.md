@@ -63,6 +63,9 @@ export OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>  # For OpenAI evaluations
 Evaluate the Simple LangSmith-Documentation agent's accuracy using different configurations:
 
 #### Basic Evaluation
+
+The configuration files specified below contain configurations for the toolkit's `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/workflows/profiler.md).
+
 ```bash
 aiq eval --config_file examples/src/simple_web_query_eval/configs/eval_config.yml
 ```
