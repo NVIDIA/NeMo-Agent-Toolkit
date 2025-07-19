@@ -52,7 +52,7 @@ uv pip install -e examples/evaluation_and_profiling/swe_bench
 aiq eval --config_file examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
 ```
 
-The configuration file specified above contains configurations for the toolkit's `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/workflows/profiler.md).
+The configuration file specified above contains configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/workflows/profiler.md).
 
 
 ## Datasets
