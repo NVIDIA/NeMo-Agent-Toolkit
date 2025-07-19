@@ -19,8 +19,8 @@ import json
 import logging
 from pathlib import Path
 
+import aiq_simple_web_query_eval
 import pytest
-from aiq_simple_web_query_web_query.register import WebQueryToolConfig
 
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
@@ -111,7 +111,7 @@ async def test_eval():
        b. the trajectory score (if present)
     """
     # Get package dynamically
-    package_name = inspect.getmodule(WebQueryToolConfig).__package__
+    package_name = inspect.getmodule(aiq_simple_web_query_eval).__package__
     config_file: Path = importlib.resources.files(package_name).joinpath("configs", "eval_config.yml").absolute()
 
     # Create the configuration object for running the evaluation, single rep using the eval config in eval_config.yml

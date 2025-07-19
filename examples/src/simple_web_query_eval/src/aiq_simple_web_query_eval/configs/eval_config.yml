@@ -13,11 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Sample config for using remote storage for the evaluation dataset
-# and output.
-# This config file will NOT work as-is as the S3 config is an inactive sample.
-# To activate it you need to change the config in eval.general.dataset.s3 and
-# eval.general.output.s3
 
 general:
   use_uvloop: true
@@ -62,31 +57,11 @@ workflow:
 eval:
   general:
     output:
-      dir: ./.tmp/aiq/examples/simple_output/
-      remote_dir: output
-      # Whether to cleanup the output directory before running the workflow
+      dir: ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/eval/
       cleanup: true
-      custom_scripts:
-        convert_workflow_to_csv:
-          script: examples/getting_started/simple_web_query/src/aiq_simple_web_query/scripts/workflow_to_csv.py
-          kwargs:
-            # input and output files here are relative to the output dir
-            input: workflow_output.json
-            output: workflow.csv
-      s3:
-        endpoint_url: http://10.185.X.X:9000
-        bucket: aiq-simple-bucket
-        access_key: fake-access-key
-        secret_key: fake-secret-key
     dataset:
       _type: json
-      remote_file_path: input/langsmith.json
-      file_path: ./.tmp/aiq/examples/simple_input/langsmith.json
-      s3:
-        endpoint_url: http://10.185.X.X:9000
-        bucket: aiq-simple-bucket
-        access_key: fake-access-key
-        secret_key: fake-secret-key
+      file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
     profiler:
       # Compute inter query token uniqueness
       token_uniqueness_forecast: true

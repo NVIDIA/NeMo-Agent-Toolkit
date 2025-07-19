@@ -16,6 +16,11 @@
 
 general:
   use_uvloop: true
+  telemetry:
+    tracing:
+      weave:
+        _type: weave
+        project: "nat-simple"
 
 functions:
   webpage_query:
@@ -27,17 +32,17 @@ functions:
     _type: current_datetime
 
 llms:
-  nim_llm:
-    _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+  openai_llm:
+    _type: openai
+    model_name: gpt-4o-mini
     temperature: 0.0
-  nim_rag_eval_llm:
-    _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+  openai_rag_eval_llm:
+    _type: openai
+    model_name: gpt-4o-mini
     max_tokens: 8
-  nim_trajectory_eval_llm:
-    _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+  openai_trajectory_eval_llm:
+    _type: openai
+    model_name: gpt-4o-mini
     temperature: 0.0
     max_tokens: 1024
 
@@ -49,19 +54,20 @@ embedders:
 workflow:
   _type: react_agent
   tool_names: [webpage_query, current_datetime]
-  llm_name: nim_llm
-  verbose: true
+  llm_name: openai_llm
+  verbose: false
   retry_parsing_errors: true
   max_retries: 3
 
 eval:
   general:
+    workflow_alias: nat-simple-gpt-4o-mini
     output:
-      dir: ./.tmp/aiq/examples/getting_started/simple_web_query/eval/
+      dir: ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/openai/
       cleanup: true
     dataset:
       _type: json
-      file_path: examples/getting_started/simple_web_query/data/langsmith.json
+      file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
     profiler:
       # Compute inter query token uniqueness
       token_uniqueness_forecast: true
@@ -86,15 +92,15 @@ eval:
     rag_accuracy:
       _type: ragas
       metric: AnswerAccuracy
-      llm_name: nim_rag_eval_llm
+      llm_name: openai_rag_eval_llm
     rag_groundedness:
       _type: ragas
       metric: ResponseGroundedness
-      llm_name: nim_rag_eval_llm
+      llm_name: openai_rag_eval_llm
     rag_relevance:
       _type: ragas
       metric: ContextRelevance
-      llm_name: nim_rag_eval_llm
+      llm_name: openai_rag_eval_llm
     trajectory_accuracy:
       _type: trajectory
-      llm_name: nim_trajectory_eval_llm
+      llm_name: openai_trajectory_eval_llm

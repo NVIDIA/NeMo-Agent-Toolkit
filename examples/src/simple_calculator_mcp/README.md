@@ -19,6 +19,14 @@ limitations under the License.
 
 This example demonstrates how to integrate the NVIDIA NeMo Agent toolkit with Model Context Protocol (MCP) servers. You'll learn to use remote tools through MCP and publish Agent toolkit functions as MCP services.
 
+## Key Features
+
+- **MCP Client Integration:** Demonstrates how to use AIQ toolkit as an MCP client to connect to remote MCP servers and access distributed tools like date/time services and advanced mathematical operations.
+- **MCP Server Publishing:** Shows how to publish AIQ toolkit functions as MCP services using the `aiq mcp` command, making calculator tools available to other AI systems through the standardized MCP protocol.
+- **Distributed AI Tool Networks:** Enables building networks of interconnected AI tools where different capabilities can be hosted on separate systems and accessed remotely through MCP.
+- **Cross-System Interoperability:** Demonstrates integration with the broader MCP ecosystem, allowing AIQ toolkit workflows to both consume and provide tools in a standardized manner.
+- **Remote Tool Access:** Shows how to securely connect to external data sources and tools through the MCP protocol while maintaining security and access control.
+
 ## What is MCP?
 
 Model Context Protocol (MCP) is a standard protocol that enables AI applications to securely connect to external data sources and tools. It allows you to:

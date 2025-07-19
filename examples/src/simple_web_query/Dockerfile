@@ -54,10 +54,10 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     uv pip install --link-mode=copy ./examples/getting_started/simple_web_query
 
 # Set the config file environment variable
-ENV AIQ_CONFIG_FILE=/workspace/examples/getting_started/simple_web_query/configs/eval_config.yml
+ENV AIQ_CONFIG_FILE=/workspace/examples/getting_started/simple_web_query/configs/config.yml
 
 # Enivronment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"
 
 # Define the entry point to start the server
-ENTRYPOINT ["aiq", "serve", "--config_file=/workspace/examples/getting_started/simple_web_query/configs/eval_config.yml", "--host", "0.0.0.0"]
+ENTRYPOINT ["sh", "-c", "exec aiq serve --config_file=$AIQ_CONFIG_FILE --host 0.0.0.0"]

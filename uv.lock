@@ -476,16 +476,31 @@ requires-dist = [{ name = "aiqtoolkit", extras = ["ingestion", "langchain", "mem
 
 [[package]]
 name = "aiq-simple-web-query"
-source = { editable = "examples/src/simple_web_query" }
+source = { editable = "examples/getting_started/simple_web_query" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain"] },
+    { name = "aiqtoolkit", extra = ["langchain", "telemetry"] },
     { name = "faiss-cpu" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
+    { name = "aiqtoolkit", extras = ["telemetry"], editable = "." },
     { name = "faiss-cpu", specifier = "==1.9.0" },
+]
+
+[[package]]
+name = "aiq-simple-web-query-eval"
+source = { editable = "examples/src/simple_web_query_eval" }
+dependencies = [
+    { name = "aiq-simple-web-query" },
+    { name = "aiqtoolkit", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiq-simple-web-query", editable = "examples/getting_started/simple_web_query" },
+    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
 ]
 
 [[package]]
@@ -557,6 +572,7 @@ examples = [
     { name = "aiq-simple-calculator-observability" },
     { name = "aiq-simple-rag" },
     { name = "aiq-simple-web-query" },
+    { name = "aiq-simple-web-query-eval" },
     { name = "aiq-swe-bench" },
 ]
 gunicorn = [
@@ -650,6 +666,7 @@ requires-dist = [
     { name = "aiq-simple-calculator-observability", marker = "extra == 'examples'", editable = "examples/src/simple_calculator_observability" },
     { name = "aiq-simple-rag", marker = "extra == 'examples'", editable = "examples/src/simple_rag" },
     { name = "aiq-simple-web-query", marker = "extra == 'examples'", editable = "examples/src/simple_web_query" },
+    { name = "aiq-simple-web-query-eval", marker = "extra == 'examples'", editable = "examples/src/simple_web_query_eval" },
     { name = "aiq-swe-bench", marker = "extra == 'examples'", editable = "examples/src/swe_bench" },
     { name = "aiqtoolkit-agno", marker = "extra == 'agno'", editable = "packages/aiqtoolkit_agno" },
     { name = "aiqtoolkit-crewai", marker = "extra == 'crewai'", editable = "packages/aiqtoolkit_crewai" },

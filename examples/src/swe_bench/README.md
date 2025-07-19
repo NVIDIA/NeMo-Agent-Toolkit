@@ -18,6 +18,14 @@ limitations under the License.
 # Solving problems in a SWE bench dataset using AIQ Toolkit
 This example provides a skeleton workflow which can be used to implement predictors to solve problems in a SWE bench dataset.
 
+## Key Features
+
+- **SWE-bench Dataset Integration:** Demonstrates how to use AIQ toolkit with Software Engineering benchmark datasets including SWE-bench_Lite and SWE-bench_Verified for systematic code problem solving evaluation.
+- **Docker-based Evaluation Environment:** Shows containerized evaluation setup ensuring consistent and isolated environments for running code modifications and testing solutions against benchmark problems.
+- **Multi-Dataset Support:** Supports multiple SWE-bench dataset formats including JSON and Parquet files from HuggingFace datasets, with both local and remote dataset loading capabilities.
+- **Configurable Problem Filtering:** Provides filtering mechanisms to limit dataset entries for focused evaluation and testing, enabling iterative development and debugging of solutions.
+- **Pydantic Model Integration:** Uses structured `SWEBenchInput` data models for type-safe processing of software engineering problems with clear input/output specifications.
+
 # Pre-requisites
 SWE bench evaluations run inside a Docker container. Ensure that Docker is installed and the Docker service is running before proceeding.
 

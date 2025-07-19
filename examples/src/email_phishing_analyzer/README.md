@@ -35,12 +35,11 @@ limitations under the License.
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AIQ toolkit library agent and tools.
-- **ReAct Agent:** Performs reasoning between tool call; utilizes tool names and descriptions to appropriately route to the correct tool
-- **Custom Plugin System:** Developers can bring in new tools using plugins.
-- **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
-- **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
-- **Ease of Use:** Simplifies developer experience and deployment.
+- **Email Security Analysis:** Demonstrates an `email_phishing_analyzer` tool that examines email content for suspicious patterns, social engineering tactics, and phishing indicators using LLM-based analysis.
+- **ReAct Agent Integration:** Uses a `react_agent` that can reason about email content and determine when to invoke the phishing analysis tool based on suspicious characteristics.
+- **Phishing Detection Workflow:** Shows how to analyze emails for common phishing techniques including requests for sensitive information, urgency tactics, and suspicious sender patterns.
+- **Security-Focused LLM Application:** Demonstrates how to apply AI reasoning to cybersecurity use cases with specialized prompting and analysis workflows.
+- **Threat Assessment Pipeline:** Provides a foundation for building automated email security screening systems that can classify potential threats.
 
 
 ## Installation and Setup

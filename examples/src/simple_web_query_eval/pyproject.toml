@@ -2,14 +2,11 @@
 build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
-[tool.setuptools]
-packages = []
-
 [tool.setuptools_scm]
 root = "../../.."
 
 [project]
-name = "aiq_simple_eval"
+name = "aiq_simple_web_query_eval"
 dynamic = ["version"]
 dependencies = [
   "aiqtoolkit[langchain]~=1.2",
@@ -22,4 +19,4 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
 aiqtoolkit = { path = "../../..", editable = true }
-aiq_simple_web_query = { path = "../../../basic/functions/simple", editable = true }
+aiq_simple_web_query = { path = "../../getting_started/simple_web_query", editable = true }

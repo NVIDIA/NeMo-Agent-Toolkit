@@ -34,7 +34,7 @@ functions:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.1-8b-instruct
+    model_name: meta/llama-3.3-70b-instruct
     temperature: 0.0
   nim_rag_eval_llm:
     _type: nim
@@ -61,13 +61,13 @@ workflow:
 
 eval:
   general:
-    workflow_alias: nat-simple-llama-31-8b
+    workflow_alias: nat-simple-llama-33-70b
     output:
-      dir: ./.tmp/aiq/examples/getting_started/simple_web_query/llama-31-8b
+      dir: ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/llama-33-70b
       cleanup: true
     dataset:
       _type: json
-      file_path: examples/getting_started/simple_web_query/data/langsmith.json
+      file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
     profiler:
       base_metrics: true
 

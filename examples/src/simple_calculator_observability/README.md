@@ -19,6 +19,14 @@ limitations under the License.
 
 This example demonstrates how to implement **observability and tracing capabilities** using the NVIDIA NeMo Agent toolkit. You'll learn to monitor, trace, and analyze your AI agent's behavior in real-time using the Simple Calculator workflow.
 
+## Key Features
+
+- **Multi-Platform Observability Integration:** Demonstrates integration with multiple observability platforms including Phoenix (local), Langfuse, LangSmith, Weave, Patronus, and RagAI Catalyst for comprehensive monitoring options.
+- **Distributed Tracing Implementation:** Shows how to track agent execution flow across components with detailed trace visualization including agent reasoning, tool calls, and LLM interactions.
+- **Performance Monitoring:** Demonstrates capturing latency metrics, token usage, resource consumption, and error tracking for production-ready AI system monitoring.
+- **Development and Production Patterns:** Provides examples for both local development tracing (Phoenix) and production monitoring setups with various enterprise observability platforms.
+- **Comprehensive Telemetry Collection:** Shows automatic capture of agent thought processes, function invocations, model calls, error events, and custom metadata for complete workflow visibility.
+
 ## What You'll Learn
 
 - **Distributed tracing**: Track agent execution flow across components

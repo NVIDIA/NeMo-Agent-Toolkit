@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Sample config for using remote storage for the evaluation dataset
+# and output.
+# This config file will NOT work as-is as the S3 config is an inactive sample.
+# To activate it you need to change the config in eval.general.dataset.s3 and
+# eval.general.output.s3
 
 general:
   use_uvloop: true
-  telemetry:
-    tracing:
-      weave:
-        _type: weave
-        project: "nat-simple"
 
 functions:
   webpage_query:
@@ -34,7 +34,7 @@ functions:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
   nim_rag_eval_llm:
     _type: nim
@@ -61,15 +61,51 @@ workflow:
 
 eval:
   general:
-    workflow_alias: nat-simple-llama-33-70b
     output:
-      dir: ./.tmp/aiq/examples/getting_started/simple_web_query/llama-33-70b
+      dir: ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/upload/
+      remote_dir: output
+      # Whether to cleanup the output directory before running the workflow
       cleanup: true
+      custom_scripts:
+        convert_workflow_to_csv:
+          script: examples/evaluation_and_profiling/simple_web_query_eval/src/aiq_simple_web_query_eval/scripts/workflow_to_csv.py
+          kwargs:
+            # input and output files here are relative to the output dir
+            input: workflow_output.json
+            output: workflow.csv
+      s3:
+        endpoint_url: http://10.185.X.X:9000
+        bucket: aiq-simple-bucket
+        access_key: fake-access-key
+        secret_key: fake-secret-key
     dataset:
       _type: json
-      file_path: examples/getting_started/simple_web_query/data/langsmith.json
+      remote_file_path: input/langsmith.json
+      file_path: ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
+      s3:
+        endpoint_url: http://10.185.X.X:9000
+        bucket: aiq-simple-bucket
+        access_key: fake-access-key
+        secret_key: fake-secret-key
     profiler:
-      base_metrics: true
+      # Compute inter query token uniqueness
+      token_uniqueness_forecast: true
+      # Compute expected workflow runtime
+      workflow_runtime_forecast: true
+      # Compute inference optimization metrics
+      compute_llm_metrics: true
+      # Avoid dumping large text into the output CSV (helpful to not break structure)
+      csv_exclude_io_text: true
+      # Idenitfy common prompt prefixes
+      prompt_caching_prefixes:
+        enable: true
+        min_frequency: 0.1
+      bottleneck_analysis:
+        # Can also be simple_stack
+        enable_nested_stack: true
+      concurrency_spike_analysis:
+        enable: true
+        spike_threshold: 7
 
   evaluators:
     rag_accuracy:

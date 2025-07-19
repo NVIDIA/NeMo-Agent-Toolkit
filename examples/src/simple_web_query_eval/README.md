@@ -19,6 +19,14 @@ limitations under the License.
 
 This example demonstrates how to evaluate and profile AI agent performance using the NVIDIA AIQ toolkit. You'll learn to systematically measure your agent's accuracy and analyze its behavior using the Simple LangSmith-Documentation Agent workflow.
 
+## Key Features
+
+- **Web Query Agent Evaluation:** Demonstrates comprehensive evaluation of the `simple_web_query` agent that retrieves and processes LangSmith documentation using `webpage_query` tools and `react_agent` reasoning.
+- **Multi-Model Performance Testing:** Shows systematic comparison across different LLM providers including OpenAI models, Llama 3.1, and Llama 3.3 to identify optimal configurations for documentation retrieval tasks.
+- **Evaluation Framework Integration:** Uses the AIQ toolkit `aiq eval` command with various evaluation configurations to measure response quality, accuracy scores, and documentation retrieval effectiveness.
+- **Question-by-Question Analysis:** Provides detailed breakdown of individual agent responses with comprehensive metrics for identifying failure patterns in LangSmith documentation queries.
+- **Dataset Management Workflow:** Demonstrates working with evaluation datasets for consistent testing and performance tracking over time, including evaluation-only modes and result upload capabilities.
+
 ## What You'll Learn
 
 - **Accuracy Evaluation**: Measure and validate agent responses using various evaluation methods
@@ -29,11 +37,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 
 ## Prerequisites
 
-This example builds upon the [basic Simple LangSmith-Documentation Agent](../simple_web_query/). Install it first:
-
-```bash
-uv pip install -e examples/getting_started/simple_web_query
-```
+This example builds upon the [basic Simple LangSmith-Documentation Agent](../simple_web_query/).
 
 ## Installation
 
@@ -80,7 +84,7 @@ aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/c
 
 #### Evaluation-Only Mode
 ```bash
-aiq eval --skip_workflow --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml --dataset ./.tmp/aiq/examples/getting_started/simple_web_query/eval/workflow_output.json
+aiq eval --skip_workflow --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml --dataset ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/eval/workflow_output.json
 ```
 
 #### Evaluation with Upload

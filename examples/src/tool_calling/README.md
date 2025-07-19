@@ -26,12 +26,28 @@ A configurable Tool Calling Agent. This agent leverages the AIQ toolkit plugin s
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AIQ toolkit library agent and tools.
-- **Tool Calling / Function calling Agent:** Leverages tool / function input schema to appropriately route to the correct tool
-- **Custom Plugin System:** Developers can bring in new tools using plugins.
-- **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
-- **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
-- **Ease of Use:** Simplifies developer experience and deployment.
+- **Tool Calling Agent Framework:** Demonstrates a `tool_calling_agent` that leverages tool/function input schemas to make precise tool selections and structured function calls.
+- **Wikipedia Search Integration:** Shows integration with the `wikipedia_search` tool for retrieving factual information from Wikipedia sources.
+- **Code Generation Capabilities:** Includes the `code_generation_tool` for generating code examples and technical content.
+- **Schema-Driven Tool Selection:** Uses structured input schemas to appropriately route to the correct tool, providing more deterministic tool calling compared to name/description-based routing.
+- **Dual-Node Graph Architecture:** Implements the same operational pattern as other AIQ agents, alternating between reasoning and tool execution while using schema-based tool selection.
+
+## Graph Structure
+
+The Tool Calling agent uses the same dual-node graph architecture as other agents in the AIQ toolkit, alternating between reasoning and tool execution. The following diagram illustrates the agent's workflow:
+
+<div align="center">
+<img src="../../../docs/source/_static/dual_node_agent.png" alt="Tool Calling Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
+</div>
+
+**Workflow Overview:**
+- **Start**: The agent begins processing with user input
+- **Agent Node**: Leverages tool/function input schemas to decide which tool to call or provide a final answer
+- **Conditional Edge**: Routes the flow based on the agent's decision
+- **Tool Node**: Executes the selected tool using structured input schemas
+- **Cycle**: The agent can loop between reasoning and tool execution until it reaches a final answer
+
+This architecture enables the Tool Calling agent to make precise tool selections based on input schemas while maintaining the same operational pattern as other agents in the toolkit.
 
 ## Installation and Setup
 
