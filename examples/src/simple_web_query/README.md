@@ -46,7 +46,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/src/simple_web_query
+uv pip install -e examples/getting_started/simple_web_query
 ```
 
 ### Set Up API Keys
@@ -61,15 +61,15 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file examples/src/simple_web_query/configs/config.yml --input "What is LangSmith?"
+aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"
 ```
 
 **Expected Output**
 
 ```console
-aiq run --config_file examples/src/simple_web_query/configs/config.yml --input "What is LangSmith?"
+aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"
 2025-07-18 13:54:37,355 - aiq.runtime.loader - WARNING - Loading module 'aiq.agent.register' from entry point 'aiq_agents' took a long time (474.130869 ms). Ensure all imports are inside your registered functions.
-2025-07-18 13:54:37,503 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/src/simple_web_query/configs/config.yml'
+2025-07-18 13:54:37,503 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/getting_started/simple_web_query/configs/config.yml'
 2025-07-18 13:54:37,506 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-07-18 13:54:37,524 - aiq.profiler.utils - WARNING - Discovered frameworks: {<LLMFrameworkEnum.LANGCHAIN: 'langchain'>} in function webquery_tool by inspecting source. It is recommended and more reliable to instead add the used LLMFrameworkEnum types in the framework_wrappers argument when calling @register_function.
 2025-07-18 13:54:37,566 - langchain_community.utils.user_agent - WARNING - USER_AGENT environment variable not set, consider setting it to identify your requests.
@@ -147,7 +147,7 @@ export NVIDIA_API_KEY="your_nvidia_api_key"
 From the git repository root, run the following command to build AIQ toolkit and the simple agent into a Docker image.
 
 ```bash
-docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -f examples/src/simple_web_query/Dockerfile -t simple-web-query-agent .
+docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -f examples/getting_started/simple_web_query/Dockerfile -t simple-web-query-agent .
 ```
 
 Then, run the following command to run the simple agent.

@@ -476,7 +476,7 @@ requires-dist = [{ name = "aiqtoolkit", extras = ["ingestion", "langchain", "mem
 
 [[package]]
 name = "aiq-simple-web-query"
-source = { editable = "examples/src/simple_web_query" }
+source = { editable = "examples/getting_started/simple_web_query" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain", "telemetry"] },
     { name = "faiss-cpu" },
@@ -499,7 +499,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiq-simple-web-query", editable = "examples/src/simple_web_query" },
+    { name = "aiq-simple-web-query", editable = "examples/getting_started/simple_web_query" },
     { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
 ]
 

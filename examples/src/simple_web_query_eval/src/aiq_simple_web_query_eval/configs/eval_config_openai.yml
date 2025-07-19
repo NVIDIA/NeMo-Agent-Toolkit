@@ -63,11 +63,11 @@ eval:
   general:
     workflow_alias: nat-simple-gpt-4o-mini
     output:
-      dir: ./.tmp/aiq/examples/src/simple_web_query_eval/openai/
+      dir: ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/openai/
       cleanup: true
     dataset:
       _type: json
-      file_path: examples/src/simple_web_query_eval/data/langsmith.json
+      file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
     profiler:
       # Compute inter query token uniqueness
       token_uniqueness_forecast: true
