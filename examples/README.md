@@ -25,13 +25,13 @@ Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular f
 - **[`scaffolding`](getting_started/scaffolding/)**: Workflow scaffolding and project generation using automated commands and intelligent code generation
 - **[`simple_web_query`](getting_started/simple_web_query/)**: Basic LangSmith documentation agent that searches the internet to answer questions about LangSmith.
 - **[`simple_calculator`](getting_started/simple_calculator/)**: Mathematical agent with tools for arithmetic operations, time comparison, and complex calculations
-- **[`simple_rag`](getting_started/simple_rag/)**: Simple demonstration of using Retrieval Augmented Generation (RAG) with a vector database and document ingestion.
+- **[`simple_rag`](rag/simple_rag/)**: Simple demonstration of using Retrieval Augmented Generation (RAG) with a vector database and document ingestion.
 
 ### Custom Functions ([`custom_functions`](custom_functions/))
 - **[`automated_description_generation`](custom_functions/automated_description_generation/)**: Intelligent system that automatically generates descriptions for vector database collections by sampling and summarizing documents
 - **[`plot_charts`](custom_functions/plot_charts/)**: Multi-agent chart plotting system that routes requests to create different chart types (line, bar, etc.) from data
-- **[`simple_calculator`](custom_functions/simple_calculator/)**: Mathematical agent with tools for arithmetic operations, time comparison, and complex calculations
-- **[`por_to_jiratickets`](custom_functions/por_to_jiratickets/)**: Project requirements to Jira ticket conversion with human oversight
+- **[`simple_calculator`](getting_started/simple_calculator/)**: Mathematical agent with tools for arithmetic operations, time comparison, and complex calculations
+- **[`por_to_jiratickets`](HITL/por_to_jiratickets/)**: Project requirements to Jira ticket conversion with human oversight
 
 ### Frameworks ([`frameworks`](frameworks/))
 - **[`agno_personal_finance`](frameworks/agno_personal_finance/)**: Personal finance planning agent built with Agno framework that researches and creates tailored financial plans
@@ -48,7 +48,7 @@ Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular f
 - **[`simple_calculator_custom_routes`](front_ends/simple_calculator_custom_routes/)**: Simple calculator example with custom API routing and endpoint configuration
 
 ### Human In The Loop (HITL) ([`HITL`](HITL/))
-- **[`por_to_jiratickets`](custom_functions/por_to_jiratickets/)**: Project requirements to Jira ticket conversion with human oversight
+- **[`por_to_jiratickets`](HITL/por_to_jiratickets/)**: Project requirements to Jira ticket conversion with human oversight
 - **[`simple_calculator_hitl`](HITL/simple_calculator_hitl/)**: Human-in-the-loop version of the basic simple calculator that requests approval from the user before allowing the agent to make additional tool calls.
 
 ### MCP ([`MCP`](MCP/))
@@ -57,14 +57,14 @@ Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular f
 ### Observability ([`observability`](observability/))
 - **[`redact_pii`](observability/redact_pii/)**: Demonstrates how to use Weights & Biases (W&B) Weave with PII redaction
 - **[`simple_calculator_observability`](observability/simple_calculator_observability/)**: Basic simple calculator with integrated monitoring, telemetry, and observability features
-- **[`alert_triage_agent`](observability/alert_triage_agent/)**: Production-ready intelligent alert triage system using LangGraph that automates system monitoring diagnostics with tools for hardware checks, network connectivity, performance analysis, and generates structured triage reports with root cause categorization
-- **[`profiler_agent`](observability/profiler_agent/)**: Performance profiling agent for analyzing AIQ toolkit workflow performance and bottlenecks using Phoenix observability server with comprehensive metrics collection and analysis
-- **[`email_phishing_analyzer`](observability/email_phishing_analyzer/)**: Security-focused email analysis system that detects phishing attempts using multiple LLMs, including its evaluation and profiling configurations
-- **[`text_file_ingest`](observability/text_file_ingest/)**: Text file processing and ingestion pipeline for document workflows
+- **[`alert_triage_agent`](advanced_agents/alert_triage_agent/)**: Production-ready intelligent alert triage system using LangGraph that automates system monitoring diagnostics with tools for hardware checks, network connectivity, performance analysis, and generates structured triage reports with root cause categorization
+- **[`profiler_agent`](advanced_agents/profiler_agent/)**: Performance profiling agent for analyzing AIQ toolkit workflow performance and bottlenecks using Phoenix observability server with comprehensive metrics collection and analysis
+- **[`email_phishing_analyzer`](evaluation_and_profiling/email_phishing_analyzer/)**: Security-focused email analysis system that detects phishing attempts using multiple LLMs, including its evaluation and profiling configurations
+- **[`text_file_ingest`](documentation_guides/workflows/text_file_ingest/)**: Text file processing and ingestion pipeline for document workflows
 
 ### Memory ([`memory`](memory/))
-- **[`simple_rag`](memory/simple_rag/)**: Complete RAG system with Milvus vector database, document ingestion, and long-term memory using Mem0 platform
-- **[`semantic_kernel_demo`](memory/semantic_kernel_demo/)**: Multi-agent travel planning system using Microsoft Semantic Kernel with specialized agents for itinerary creation, budget management, and report formatting, including long-term memory for user preferences
+- **[`simple_rag`](RAG/simple_rag/)**: Complete RAG system with Milvus vector database, document ingestion, and long-term memory using Mem0 platform
+- **[`semantic_kernel_demo`](frameworks/semantic_kernel_demo/)**: Multi-agent travel planning system using Microsoft Semantic Kernel with specialized agents for itinerary creation, budget management, and report formatting, including long-term memory for user preferences
 
 ### RAG ([`RAG`](RAG/))
 - **[`simple_rag`](RAG/simple_rag/)**: Complete RAG system with Milvus vector database, document ingestion, and long-term memory using Mem0 platform
@@ -73,9 +73,9 @@ Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular f
 - **[`swe_bench`](evaluation_and_profiling/swe_bench/)**: Software engineering benchmark system for evaluating AI models on real-world coding tasks
 - **[`simple_calculator_eval`](evaluation_and_profiling/simple_calculator_eval/)**: Evaluation and profiling configurations based on the basic simple calculator example
 - **[`simple_web_query_eval`](evaluation_and_profiling/simple_web_query_eval/)**: Evaluation and profiling configurations based on the basic simple web query example
-- **[`alert_triage_agent`](evaluation_and_profiling/alert_triage_agent/)**: Evaluation and profiling configurations for the alert triage agent example
+- **[`alert_triage_agent`](advanced_agents/alert_triage_agent/)**: Evaluation and profiling configurations for the alert triage agent example
 - **[`email_phishing_analyzer`](evaluation_and_profiling/email_phishing_analyzer/)**: Evaluation and profiling configurations for the email phishing analyzer example
-- **[`text_file_ingest`](evaluation_and_profiling/text_file_ingest/)**: Evaluation and profiling configurations for the text file ingestion example
+- **[`text_file_ingest`](documentation_guides/workflows/text_file_ingest/)**: Evaluation and profiling configurations for the text file ingestion example
 
 ## Advanced Agents ([`advanced_agents`](advanced_agents/))
 - **[`alert_triage_agent`](advanced_agents/alert_triage_agent/)**: Production-ready intelligent alert triage system using LangGraph that automates system monitoring diagnostics with tools for hardware checks, network connectivity, performance analysis, and generates structured triage reports with root cause categorization
@@ -85,7 +85,7 @@ Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular f
 ### Documentation Guides ([`documentation_guides`](documentation_guides/))
 - **[`locally_hosted_llms`](documentation_guides/locally_hosted_llms/)**: Configuration examples for the basic simple LangSmith agent using locally hosted LLM models (NIM and vLLM configurations)
 - **[`workflows`](documentation_guides/workflows/)**: Workflow examples for documentation and tutorials:
-  - [`custom_workflow`](documentation_guides/workflows/custom_workflow/): Extended version of the basic simple example with multiple documentation sources (LangSmith and LangGraph)
-  - [`text_file_ingest`](documentation_guides/workflows/text_file_ingest/): Text file processing and ingestion pipeline for document workflows
+  - **[`custom_workflow`](documentation_guides/workflows/custom_workflow/)**: Extended version of the basic simple example with multiple documentation sources (LangSmith and LangGraph)
+  - **[`text_file_ingest`](documentation_guides/workflows/text_file_ingest/)**: Text file processing and ingestion pipeline for document workflows
 
 To run the examples, install the AIQ toolkit from source, if you haven't already done so, by following the instructions in  [Install From Source](../docs/source/quick-start/installing.md#install-from-source) .
