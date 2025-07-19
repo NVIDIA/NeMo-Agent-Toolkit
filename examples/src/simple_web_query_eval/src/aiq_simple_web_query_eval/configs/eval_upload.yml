@@ -62,13 +62,13 @@ workflow:
 eval:
   general:
     output:
-      dir: ./.tmp/aiq/examples/src/simple_web_query_eval/upload/
+      dir: ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/upload/
       remote_dir: output
       # Whether to cleanup the output directory before running the workflow
       cleanup: true
       custom_scripts:
         convert_workflow_to_csv:
-          script: examples/src/simple_web_query_eval/src/aiq_simple_web_query_eval/scripts/workflow_to_csv.py
+          script: examples/evaluation_and_profiling/simple_web_query_eval/src/aiq_simple_web_query_eval/scripts/workflow_to_csv.py
           kwargs:
             # input and output files here are relative to the output dir
             input: workflow_output.json
@@ -81,7 +81,7 @@ eval:
     dataset:
       _type: json
       remote_file_path: input/langsmith.json
-      file_path: ./.tmp/aiq/examples/simple_input/langsmith.json
+      file_path: ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
       s3:
         endpoint_url: http://10.185.X.X:9000
         bucket: aiq-simple-bucket
