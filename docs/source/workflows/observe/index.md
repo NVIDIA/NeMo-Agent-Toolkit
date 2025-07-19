@@ -151,6 +151,16 @@ The `tracing` section contains one or more tracing providers. Each provider has 
         dataset: "aiqtoolkit-dataset"
     ```
   - See [Observing with Catalyst](./observe-workflow-with-catalyst.md) for more information
+- [**Generic OTel Collector**]
+  - Example configuration:
+  ```yaml
+  tracing:
+    otelcollector:
+      _type: otelcollector
+      project: "aiqtoolkit-demo"
+      endpoint: "http://localhost:4318
+  ```
+  - See [Observing with OTel Collector](./observe-workflow-with-otel-collector.md) for more information
 - **Custom providers**
   - See [Registering a New Telemetry Provider as a Plugin](#registering-a-new-telemetry-provider-as-a-plugin) for more information
 
@@ -199,7 +209,8 @@ async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: 
 :caption: Observe Workflows
 
 Observing with Catalyst <./observe-workflow-with-catalyst.md>
-Observing with Phoenix <./observe-workflow-with-phoenix.md>
 Observing with Galileo <./observe-workflow-with-galileo.md>
+Observing with OTEL Collector <./observe-workflow-with-otel-collector.md>
+Observing with Phoenix <./observe-workflow-with-phoenix.md>
 Observing with W&B Weave <./observe-workflow-with-weave.md>
 ```
