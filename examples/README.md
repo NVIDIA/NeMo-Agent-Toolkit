@@ -25,7 +25,7 @@ Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular f
 - **[`scaffolding`](getting_started/scaffolding/)**: Workflow scaffolding and project generation using automated commands and intelligent code generation
 - **[`simple_web_query`](getting_started/simple_web_query/)**: Basic LangSmith documentation agent that searches the internet to answer questions about LangSmith.
 - **[`simple_calculator`](getting_started/simple_calculator/)**: Mathematical agent with tools for arithmetic operations, time comparison, and complex calculations
-- **[`simple_rag`](rag/simple_rag/)**: Simple demonstration of using Retrieval Augmented Generation (RAG) with a vector database and document ingestion.
+- **[`simple_rag`](RAG/simple_rag/)**: Simple demonstration of using Retrieval Augmented Generation (RAG) with a vector database and document ingestion.
 
 ### Custom Functions ([`custom_functions`](custom_functions/))
 - **[`automated_description_generation`](custom_functions/automated_description_generation/)**: Intelligent system that automatically generates descriptions for vector database collections by sampling and summarizing documents
