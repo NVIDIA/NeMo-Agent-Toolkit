@@ -212,7 +212,7 @@ tags
 
 # Vector db files
 deploy/compose/volumes
-examples/src/simple_rag/deploy/volumes
+examples/RAG/simple_rag/deploy/volumes
 examples/rag/compose/volumes
 
 # Mac Metadata
