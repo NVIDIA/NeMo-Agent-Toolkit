@@ -62,7 +62,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass
-class ConfiguredExporter:
+class ConfiguredTelemetryExporter:
     config: TelemetryExporterBaseConfig
     instance: BaseExporter
 
@@ -113,7 +113,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._registry = registry
 
         self._logging_handlers: dict[str, logging.Handler] = {}
-        self._exporters: dict[str, ConfiguredExporter] = {}
+        self._telemetry_exporters: dict[str, ConfiguredTelemetryExporter] = {}
 
         self._functions: dict[str, ConfiguredFunction] = {}
         self._workflow: ConfiguredFunction | None = None
@@ -124,7 +124,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._retrievers: dict[str, ConfiguredRetriever] = {}
 
         # Locks for thread-safe access to shared data structures
-        self._exporters_lock = asyncio.Lock()
+        self._telemetry_exporters_lock = asyncio.Lock()
 
         self._context_state = AIQContextState.get()
 
@@ -138,7 +138,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         self._exit_stack = AsyncExitStack()
 
-        # Get the exporter info from the config
+        # Get the telemetry info from the config
         telemetry_config = self.general_config.telemetry
 
         for key, logging_config in telemetry_config.logging.items():
@@ -156,10 +156,10 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Now attach to AIQ Toolkit's root logger
             logging.getLogger().addHandler(handler)
 
-        # Add the trace exporters
+        # Add the telemetry exporters
         await asyncio.gather(*[
-            self.add_exporter(key, trace_exporter_config)
-            for key, trace_exporter_config in telemetry_config.tracing.items()
+            self.add_telemetry_exporter(key, telemetry_exporter_config)
+            for key, telemetry_exporter_config in telemetry_config.tracing.items()
         ])
 
         return self
@@ -244,9 +244,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                                               k: v.instance
                                               for k, v in self._memory_clients.items()
                                           },
-                                          exporters={
+                                          telemetry_exporters={
                                               k: v.instance
-                                              for k, v in self._exporters.items()
+                                              for k, v in self._telemetry_exporters.items()
                                           },
                                           retrievers={
                                               k: v.instance
@@ -562,12 +562,12 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     def get_user_manager(self):
         return UserManagerHolder(context=AIQContext(self._context_state))
 
-    async def add_exporter(self, name: str, config: TelemetryExporterBaseConfig) -> None:
-        """Add an configured exporter to the builder.
+    async def add_telemetry_exporter(self, name: str, config: TelemetryExporterBaseConfig) -> None:
+        """Add an configured telemetry exporter to the builder.
 
         Args:
-            name: The name of the exporter
-            config: The configuration for the exporter
+            name (str): The name of the telemetry exporter
+            config (TelemetryExporterBaseConfig): The configuration for the exporter
         """
         exporter_info = self._registry.get_telemetry_exporter(type(config))
 
@@ -575,9 +575,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         exporter_context_manager = exporter_info.build_fn(config, self)
 
         # Only protect the shared state modifications (serialized)
-        async with self._exporters_lock:
+        async with self._telemetry_exporters_lock:
             exporter = await self._get_exit_stack().enter_async_context(exporter_context_manager)
-            self._exporters[name] = ConfiguredExporter(config=config, instance=exporter)
+            self._telemetry_exporters[name] = ConfiguredTelemetryExporter(config=config, instance=exporter)
 
     async def populate_builder(self, config: AIQConfig, skip_workflow: bool = False):
         """
