@@ -116,21 +116,51 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
             remaining_evaluators: List of evaluator names still to be built
             original_error: The original exception that caused the failure
         """
-        logger.error("Failed to initialize %s (evaluator)", failing_evaluator_name)
+        # Convert evaluator names to (name, type) tuples for consistent logging
+        completed_components = [(name, "evaluator") for name in completed_evaluators]
+        remaining_components = [(name, "evaluator") for name in remaining_evaluators]
 
-        if completed_evaluators:
-            logger.error("Successfully built evaluators:")
-            for name in completed_evaluators:
-                logger.error("- %s (evaluator)", name)
-        else:
-            logger.error("No evaluators were successfully built before this failure")
+        # Use the same common logging pattern as WorkflowBuilder
+        self._log_build_failure_common(failing_evaluator_name,
+                                       "evaluator",
+                                       completed_components,
+                                       remaining_components,
+                                       original_error)
 
-        if remaining_evaluators:
-            logger.error("Remaining evaluators to build:")
-            for name in remaining_evaluators:
-                logger.error("- %s (evaluator)", name)
+    def _log_build_failure_common(self,
+                                  component_name,
+                                  component_type,
+                                  completed_components,
+                                  remaining_components,
+                                  original_error):
+        """
+        Common method to log comprehensive build failure information.
+
+        Args:
+            component_name: The name of the component that failed to build
+            component_type: The type of the component that failed to build
+            completed_components: List of (name, type) tuples for successfully built components
+            remaining_components: List of (name, type) tuples for components still to be built
+            original_error: The original exception that caused the failure
+        """
+        logger.error("Failed to initialize %s (%s)", component_name, component_type)
+
+        # Determine the appropriate plural form for the component type
+        entity_plural = "evaluators" if component_type == "evaluator" else "components"
+
+        if completed_components:
+            logger.error("Successfully built %s:", entity_plural)
+            for name, comp_type in completed_components:
+                logger.error("- %s (%s)", name, comp_type)
         else:
-            logger.error("No remaining evaluators to build")
+            logger.error("No %s were successfully built before this failure", entity_plural)
+
+        if remaining_components:
+            logger.error("Remaining %s to build:", entity_plural)
+            for name, comp_type in remaining_components:
+                logger.error("- %s (%s)", name, comp_type)
+        else:
+            logger.error("No remaining %s to build", entity_plural)
 
         logger.error("Original error:", exc_info=original_error)
 

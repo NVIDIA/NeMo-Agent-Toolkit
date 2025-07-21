@@ -601,20 +601,22 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     def get_user_manager(self):
         return UserManagerHolder(context=AIQContext(self._context_state))
 
-    def _log_build_failure(self, failing_component, completed_components, remaining_components, original_error):
+    def _log_build_failure_common(self,
+                                  component_name,
+                                  component_type,
+                                  completed_components,
+                                  remaining_components,
+                                  original_error):
         """
-        Log comprehensive component build failure information.
+        Common method to log comprehensive build failure information.
 
         Args:
-            failing_component: The ComponentInstanceData that failed to build
+            component_name: The name of the component that failed to build
+            component_type: The type of the component that failed to build
             completed_components: List of (name, type) tuples for successfully built components
             remaining_components: List of (name, type) tuples for components still to be built
             original_error: The original exception that caused the failure
         """
-
-        component_name = failing_component.name
-        component_type = failing_component.component_group.value
-
         logger.error("Failed to initialize %s (%s)", component_name, component_type)
 
         if completed_components:
@@ -633,6 +635,25 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         logger.error("Original error:", exc_info=original_error)
 
+    def _log_build_failure(self, failing_component, completed_components, remaining_components, original_error):
+        """
+        Log comprehensive component build failure information.
+
+        Args:
+            failing_component: The ComponentInstanceData that failed to build
+            completed_components: List of (name, type) tuples for successfully built components
+            remaining_components: List of (name, type) tuples for components still to be built
+            original_error: The original exception that caused the failure
+        """
+        component_name = failing_component.name
+        component_type = failing_component.component_group.value
+
+        self._log_build_failure_common(component_name,
+                                       component_type,
+                                       completed_components,
+                                       remaining_components,
+                                       original_error)
+
     def _log_build_failure_workflow(self, completed_components, remaining_components, original_error):
         """
         Log comprehensive workflow build failure information.
@@ -642,24 +663,11 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             remaining_components: List of (name, type) tuples for components still to be built
             original_error: The original exception that caused the failure
         """
-
-        logger.error("Failed to initialize <workflow> (workflow)")
-
-        if completed_components:
-            logger.error("Successfully built components:")
-            for name, comp_type in completed_components:
-                logger.error("- %s (%s)", name, comp_type)
-        else:
-            logger.error("No components were successfully built before this failure")
-
-        if remaining_components:
-            logger.error("Remaining components to build:")
-            for name, comp_type in remaining_components:
-                logger.error("- %s (%s)", name, comp_type)
-        else:
-            logger.error("No remaining components to build")
-
-        logger.error("Original error:", exc_info=original_error)
+        self._log_build_failure_common("<workflow>",
+                                       "workflow",
+                                       completed_components,
+                                       remaining_components,
+                                       original_error)
 
     async def populate_builder(self, config: AIQConfig, skip_workflow: bool = False):
         """
