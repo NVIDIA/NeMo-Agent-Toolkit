@@ -165,6 +165,47 @@ def test_ragas_to_eval_output_unexpected_entries(rag_evaluator,
     assert round(eval_output.average_score, 4) == round(expected_avg_score, 4)
 
 
+def test_ragas_to_eval_output_nan_handling(rag_evaluator, rag_eval_input, metric_name):
+    """
+    Ensure that NaN or None scores are coerced to 0.0 for both the
+    per‑item scores and the computed average score.
+    """
+    # fmt: off
+    test_cases = [
+        # (scores list, expected per‑item scores list, expected average)
+        ([{metric_name: float("nan")}],            [0.0],           0.0),
+        ([{metric_name: None}],                   [0.0],           0.0),
+        ([{metric_name: float("nan")},
+          {metric_name: 0.9}],                    [0.0, 0.9],      0.45),
+        ([{metric_name: None},
+          {metric_name: 0.9},
+          {metric_name: float("nan")}],           [0.0, 0.9, 0.0], 0.3),
+    ]
+    # fmt: on
+
+    for scores, expected_item_scores, expected_avg in test_cases:
+        # Mock ragas results
+        mock_results_dataset = MagicMock()
+        mock_results_dataset.scores = scores
+
+        # Build the mocked pandas DataFrame using the raw (possibly NaN/None) values
+        mock_data = pd.DataFrame([{
+            "user_input": f"Question {i+1}", metric_name: score[metric_name]
+        } for i, score in enumerate(scores)])
+        mock_results_dataset.to_pandas.return_value = mock_data
+
+        # Invoke the method under test
+        eval_output = rag_evaluator.ragas_to_eval_output(rag_eval_input, mock_results_dataset)
+
+        # --- Assertions ---
+        # Average score should match the expected value (with small tolerance for float ops)
+        assert round(eval_output.average_score, 4) == round(expected_avg, 4)
+
+        # Each individual item score should match the expected coercion results
+        actual_item_scores = [item.score for item in eval_output.eval_output_items]
+        assert actual_item_scores == expected_item_scores
+
+
 async def test_rag_evaluate_success(rag_evaluator, rag_eval_input, ragas_judge_llm, ragas_metrics):
     """
     Test evaluate function to verify the following functions are called
