@@ -102,7 +102,7 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
 
         return tools
 
-    def _log_evaluator_build_failure(self,
+    def _log_build_failure_evaluator(self,
                                      failing_evaluator_name,
                                      completed_evaluators,
                                      remaining_evaluators,
@@ -120,49 +120,12 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
         completed_components = [(name, "evaluator") for name in completed_evaluators]
         remaining_components = [(name, "evaluator") for name in remaining_evaluators]
 
-        # Use the same common logging pattern as WorkflowBuilder
-        self._log_build_failure_common(failing_evaluator_name,
-                                       "evaluator",
-                                       completed_components,
-                                       remaining_components,
-                                       original_error)
-
-    def _log_build_failure_common(self,
-                                  component_name,
-                                  component_type,
-                                  completed_components,
-                                  remaining_components,
-                                  original_error):
-        """
-        Common method to log comprehensive build failure information.
-
-        Args:
-            component_name: The name of the component that failed to build
-            component_type: The type of the component that failed to build
-            completed_components: List of (name, type) tuples for successfully built components
-            remaining_components: List of (name, type) tuples for components still to be built
-            original_error: The original exception that caused the failure
-        """
-        logger.error("Failed to initialize %s (%s)", component_name, component_type)
-
-        # Determine the appropriate plural form for the component type
-        entity_plural = "evaluators" if component_type == "evaluator" else "components"
-
-        if completed_components:
-            logger.error("Successfully built %s:", entity_plural)
-            for name, comp_type in completed_components:
-                logger.error("- %s (%s)", name, comp_type)
-        else:
-            logger.error("No %s were successfully built before this failure", entity_plural)
-
-        if remaining_components:
-            logger.error("Remaining %s to build:", entity_plural)
-            for name, comp_type in remaining_components:
-                logger.error("- %s (%s)", name, comp_type)
-        else:
-            logger.error("No remaining %s to build", entity_plural)
-
-        logger.error("Original error:", exc_info=original_error)
+        # Use the inherited common logging method from WorkflowBuilder
+        self._log_build_failure(failing_evaluator_name,
+                                "evaluator",
+                                completed_components,
+                                remaining_components,
+                                original_error)
 
     async def populate_builder(self, config: AIQConfig):
         # Skip setting workflow if workflow config is EmptyFunctionConfig
@@ -186,7 +149,7 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
                 completed_evaluators.append(name)
 
             except Exception as e:
-                self._log_evaluator_build_failure(name, completed_evaluators, remaining_evaluators, e)
+                self._log_build_failure_evaluator(name, completed_evaluators, remaining_evaluators, e)
                 raise
 
     @classmethod

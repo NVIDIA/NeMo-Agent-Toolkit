@@ -624,7 +624,10 @@ def test_log_build_failure_helper_method(caplog_fixture, mock_component_data):
     original_error = ValueError("Test error message")
 
     # Call the helper method
-    builder._log_build_failure(mock_component_data, completed_components, remaining_components, original_error)
+    builder._log_build_failure_component(mock_component_data,
+                                         completed_components,
+                                         remaining_components,
+                                         original_error)
 
     # Verify error logging content
     log_text = caplog_fixture.text
@@ -668,7 +671,10 @@ def test_log_build_failure_no_completed_components(caplog_fixture, mock_componen
     remaining_components = [("comp1", "embedders"), ("comp2", "functions")]
     original_error = ValueError("First component failed")
 
-    builder._log_build_failure(mock_component_data, completed_components, remaining_components, original_error)
+    builder._log_build_failure_component(mock_component_data,
+                                         completed_components,
+                                         remaining_components,
+                                         original_error)
 
     log_text = caplog_fixture.text
     assert "Failed to initialize test_component (llms)" in log_text
@@ -686,7 +692,10 @@ def test_log_build_failure_no_remaining_components(caplog_fixture, mock_componen
     remaining_components = []
     original_error = ValueError("Last component failed")
 
-    builder._log_build_failure(mock_component_data, completed_components, remaining_components, original_error)
+    builder._log_build_failure_component(mock_component_data,
+                                         completed_components,
+                                         remaining_components,
+                                         original_error)
 
     log_text = caplog_fixture.text
     assert "Failed to initialize test_component (llms)" in log_text
@@ -711,7 +720,7 @@ async def test_populate_builder_error_handling_integration(mock_build_sequence, 
     async with WorkflowBuilder() as builder:
         # Mock the add_llm method to raise an exception
         with patch.object(builder, 'add_llm', side_effect=ValueError("LLM build failed")):
-            with patch.object(builder, '_log_build_failure') as mock_log_failure:
+            with patch.object(builder, '_log_build_failure_component') as mock_log_failure:
 
                 config = AIQConfig()
 
@@ -722,7 +731,7 @@ async def test_populate_builder_error_handling_integration(mock_build_sequence, 
                 mock_log_failure.assert_called_once()
                 call_args = mock_log_failure.call_args[0]
 
-                # Check the arguments passed to _log_build_failure
+                # Check the arguments passed to _log_build_failure_component
                 assert call_args[0] == mock_component  # failing_component
                 assert isinstance(call_args[1], list)  # completed_components
                 assert isinstance(call_args[2], list)  # remaining_components
@@ -769,7 +778,7 @@ def test_log_evaluator_build_failure_helper_method(caplog_fixture):
     original_error = ValueError("Evaluator build failed")
 
     # Call the helper method
-    builder._log_evaluator_build_failure("failing_evaluator",
+    builder._log_build_failure_evaluator("failing_evaluator",
                                          completed_evaluators,
                                          remaining_evaluators,
                                          original_error)
@@ -796,7 +805,7 @@ def test_log_evaluator_build_failure_no_completed(caplog_fixture):
     remaining_evaluators = ["eval1", "eval2"]
     original_error = ValueError("First evaluator failed")
 
-    builder._log_evaluator_build_failure("failing_evaluator",
+    builder._log_build_failure_evaluator("failing_evaluator",
                                          completed_evaluators,
                                          remaining_evaluators,
                                          original_error)
@@ -819,7 +828,7 @@ def test_log_evaluator_build_failure_no_remaining(caplog_fixture):
     remaining_evaluators = []
     original_error = ValueError("Last evaluator failed")
 
-    builder._log_evaluator_build_failure("failing_evaluator",
+    builder._log_build_failure_evaluator("failing_evaluator",
                                          completed_evaluators,
                                          remaining_evaluators,
                                          original_error)

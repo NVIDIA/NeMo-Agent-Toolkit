@@ -601,12 +601,12 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     def get_user_manager(self):
         return UserManagerHolder(context=AIQContext(self._context_state))
 
-    def _log_build_failure_common(self,
-                                  component_name,
-                                  component_type,
-                                  completed_components,
-                                  remaining_components,
-                                  original_error):
+    def _log_build_failure(self,
+                           component_name,
+                           component_type,
+                           completed_components,
+                           remaining_components,
+                           original_error):
         """
         Common method to log comprehensive build failure information.
 
@@ -619,23 +619,30 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         """
         logger.error("Failed to initialize %s (%s)", component_name, component_type)
 
+        # Determine the appropriate plural form for the component type
+        entity_plural = "evaluators" if component_type == "evaluator" else "components"
+
         if completed_components:
-            logger.error("Successfully built components:")
+            logger.error("Successfully built %s:", entity_plural)
             for name, comp_type in completed_components:
                 logger.error("- %s (%s)", name, comp_type)
         else:
-            logger.error("No components were successfully built before this failure")
+            logger.error("No %s were successfully built before this failure", entity_plural)
 
         if remaining_components:
-            logger.error("Remaining components to build:")
+            logger.error("Remaining %s to build:", entity_plural)
             for name, comp_type in remaining_components:
                 logger.error("- %s (%s)", name, comp_type)
         else:
-            logger.error("No remaining components to build")
+            logger.error("No remaining %s to build", entity_plural)
 
         logger.error("Original error:", exc_info=original_error)
 
-    def _log_build_failure(self, failing_component, completed_components, remaining_components, original_error):
+    def _log_build_failure_component(self,
+                                     failing_component,
+                                     completed_components,
+                                     remaining_components,
+                                     original_error):
         """
         Log comprehensive component build failure information.
 
@@ -648,11 +655,11 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         component_name = failing_component.name
         component_type = failing_component.component_group.value
 
-        self._log_build_failure_common(component_name,
-                                       component_type,
-                                       completed_components,
-                                       remaining_components,
-                                       original_error)
+        self._log_build_failure(component_name,
+                                component_type,
+                                completed_components,
+                                remaining_components,
+                                original_error)
 
     def _log_build_failure_workflow(self, completed_components, remaining_components, original_error):
         """
@@ -663,11 +670,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             remaining_components: List of (name, type) tuples for components still to be built
             original_error: The original exception that caused the failure
         """
-        self._log_build_failure_common("<workflow>",
-                                       "workflow",
-                                       completed_components,
-                                       remaining_components,
-                                       original_error)
+        self._log_build_failure("<workflow>", "workflow", completed_components, remaining_components, original_error)
 
     async def populate_builder(self, config: AIQConfig, skip_workflow: bool = False):
         """
@@ -722,7 +725,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                         (str(component_instance.name), component_instance.component_group.value))
 
             except Exception as e:
-                self._log_build_failure(component_instance, completed_components, remaining_components, e)
+                self._log_build_failure_component(component_instance, completed_components, remaining_components, e)
                 raise
 
         # Instantiate the workflow
