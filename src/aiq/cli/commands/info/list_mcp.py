@@ -15,7 +15,6 @@
 
 import json
 import logging
-from builtins import ExceptionGroup
 from typing import Any
 
 import anyio
