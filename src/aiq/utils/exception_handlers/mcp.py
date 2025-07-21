@@ -15,6 +15,7 @@
 
 import logging
 import ssl
+import sys
 from collections.abc import Callable
 from functools import wraps
 from typing import Any
@@ -31,6 +32,29 @@ from aiq.tool.mcp.exceptions import MCPTimeoutError
 from aiq.tool.mcp.exceptions import MCPToolNotFoundError
 
 logger = logging.getLogger(__name__)
+
+
+def format_mcp_error(error: MCPError, include_traceback: bool = False) -> None:
+    """Format MCP errors for CLI display with structured logging and user guidance.
+
+    Logs structured error information for debugging and displays user-friendly
+    error messages with actionable suggestions to stderr.
+
+    Args:
+        error (MCPError): MCPError instance containing:
+            - message: User-friendly error description
+            - url: MCP server URL that failed
+            - category: Error category enum (CONNECTION, TIMEOUT, etc.)
+            - suggestions: List of actionable next steps
+            - original_exception: Low-level exception for debugging
+        include_traceback (bool, optional): Whether to include the traceback in the error message. Defaults to False.
+    """
+    # Log structured error information for debugging
+    logger.error("MCP operation failed: %s", error, exc_info=include_traceback)
+
+    # Display user-friendly suggestions
+    for suggestion in error.suggestions:
+        print(f"  → {suggestion}", file=sys.stderr)
 
 
 def _extract_url(args: tuple, kwargs: dict[str, Any], url_param: str, func_name: str) -> str:
@@ -161,7 +185,7 @@ def handle_mcp_exceptions(url_param: str = "url"):
                 url = _extract_url(args, kwargs, url_param, func.__name__)
 
                 # Handle ExceptionGroup by extracting most relevant exception
-                if isinstance(e, ExceptionGroup):
+                if isinstance(e, ExceptionGroup):  # noqa: F821
                     primary_exception = extract_primary_exception(list(e.exceptions))
                     mcp_error = convert_to_mcp_error(primary_exception, url)
                 else:

@@ -22,6 +22,7 @@ import click
 
 from aiq.tool.mcp.exceptions import MCPError
 from aiq.tool.mcp.mcp_client import MCPBuilder
+from aiq.utils.exception_handlers.mcp import format_mcp_error
 
 # Suppress verbose logs from mcp.client.sse and httpx
 logging.getLogger("mcp.client.sse").setLevel(logging.WARNING)
@@ -85,29 +86,6 @@ def print_tool(tool_dict: dict[str, str | None], detail: bool = False) -> None:
         else:
             click.echo("Input Schema: None")
         click.echo("-" * 60)
-
-
-def format_mcp_error(error: MCPError, include_traceback: bool = False) -> None:
-    """Format MCP errors for CLI display with structured logging and user guidance.
-
-    Logs structured error information for debugging and displays user-friendly
-    error messages with actionable suggestions to stderr.
-
-    Args:
-        error (MCPError): MCPError instance containing:
-            - message: User-friendly error description
-            - url: MCP server URL that failed
-            - category: Error category enum (CONNECTION, TIMEOUT, etc.)
-            - suggestions: List of actionable next steps
-            - original_exception: Low-level exception for debugging
-        include_traceback (bool, optional): Whether to include the traceback in the error message. Defaults to False.
-    """
-    # Log structured error information for debugging
-    logger.error("MCP operation failed: %s", error, exc_info=include_traceback)
-
-    # Display user-friendly suggestions
-    for suggestion in error.suggestions:
-        click.echo(f"  → {suggestion}", err=True)
 
 
 async def list_tools_and_schemas(url: str, tool_name: str | None = None) -> list[dict[str, str | None]]:
@@ -188,7 +166,7 @@ async def list_tools_direct(url: str, tool_name: str | None = None) -> list[dict
         from aiq.utils.exception_handlers.mcp import convert_to_mcp_error
         from aiq.utils.exception_handlers.mcp import extract_primary_exception
 
-        if isinstance(e, ExceptionGroup):
+        if isinstance(e, ExceptionGroup):  # noqa: F821
             primary_exception = extract_primary_exception(list(e.exceptions))
             mcp_error = convert_to_mcp_error(primary_exception, url)
         else:
