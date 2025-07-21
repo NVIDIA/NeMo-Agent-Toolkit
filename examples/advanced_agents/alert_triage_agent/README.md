@@ -26,7 +26,8 @@ This example demonstrates how to build an intelligent alert triage system using 
 - **Maintenance-Aware Processing:** Includes maintenance database integration to distinguish between actual issues and scheduled maintenance events.
 
 ## Table of contents
-- [Alert Triage using Agent Intelligence toolkit](#alert-triage-using-agent-intelligence-toolkit)
+- [Alert Triage using Agent Intelligence Toolkit](#alert-triage-using-agent-intelligence-toolkit)
+  - [Key Features](#key-features)
   - [Table of contents](#table-of-contents)
   - [Use case description](#use-case-description)
     - [Why use an agentic design?](#why-use-an-agentic-design)
@@ -50,7 +51,7 @@ This example demonstrates how to build an intelligent alert triage system using 
     - [Set up environment variables](#set-up-environment-variables)
   - [Example Usage](#example-usage)
     - [Running in a live environment](#running-in-a-live-environment)
-      - [Note on credentials and access](#note-on-credentials-and-access)
+      - [Credentials and Access](#credentials-and-access)
     - [Running live with a HTTP server listening for alerts](#running-live-with-a-http-server-listening-for-alerts)
     - [Running in offline mode](#running-in-offline-mode)
 
@@ -165,10 +166,11 @@ Each entry in the `functions` section defines a tool or sub-agent that can be in
 Example:
 
 ```yaml
-hardware_check:
-  _type: hardware_check
-  llm_name: tool_reasoning_llm
-  offline_mode: true
+functions:
+  hardware_check:
+    _type: hardware_check
+    llm_name: tool_reasoning_llm
+    offline_mode: true
 ```
 
 * `_type`: Identifies the name of the tool (matching the names in the tools' python files.)
@@ -194,11 +196,14 @@ workflow:
   _type: alert_triage_agent
   tool_names:
     - hardware_check
-    - ...
+    - host_performance_check
+    - monitoring_process_check
+    - network_connectivity_check
+    - telemetry_metrics_analysis_agent
   llm_name: ata_agent_llm
   offline_mode: true
-  offline_data_path: ...
-  benign_fallback_data_path: ...
+  offline_data_path: examples/advanced/alert_triage_agent/data/offline_data.csv
+  benign_fallback_data_path: examples/advanced/alert_triage_agent/data/benign_fallback_offline_data.json
 ```
 
 * `_type`: The name of the agent (matching the agent's name in `register.py`).
@@ -215,11 +220,12 @@ The `llms` section defines the available LLMs for various parts of the system.
 Example:
 
 ```yaml
-ata_agent_llm:
-  _type: nim
-  model_name: meta/llama-3.3-70b-instruct
-  temperature: 0.2
-  max_tokens: 2048
+llms:
+  ata_agent_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.2
+    max_tokens: 2048
 ```
 
 * `_type`: Backend type (e.g., `nim` for NVIDIA Inference Microservice).
@@ -293,7 +299,7 @@ export $(grep -v '^#' .env | xargs)
 ```
 
 ## Example Usage
-You can run the agent in [offline mode](#running-in-offline-mode) or [live mode](#running-live-with-a-http-server-listening-for-alerts). offline mode allows you to evaluate the agent in a controlled, offline environment using synthetic data. Live mode allows you to run the agent in a real environment.
+You can run the agent in [offline mode](#running-in-offline-mode) or [live mode](#running-live-with-a-http-server-listening-for-alerts). Offline mode allows you to evaluate the agent in a controlled, offline environment using synthetic data. Live mode allows you to run the agent in a real environment.
 
 ### Running in a live environment
 In live mode, each tool used by the triage agent connects to real systems to collect data. These systems can include:
@@ -330,9 +336,9 @@ To run the agent live, follow these steps:
    ```
 This will trigger a full end-to-end triage process using live data sources.
 
-#### Note on credentials and access
+#### Credentials and Access
 
-We recommend managing secrets (for example, API keys, SSH keys) using a secure method such as environment variables, secret management tools, or encrypted `.env` files. Never hard-code sensitive values into the source code.
+> **Note:** We recommend managing secrets (for example, API keys, SSH keys) using a secure method such as environment variables, secret management tools, or encrypted `.env` files. Never hard-code sensitive values into the source code.
 
 ### Running live with a HTTP server listening for alerts
 The example includes a Flask-based HTTP server ([`run.py`](./src/aiq_alert_triage_agent/run.py)) that can continuously listen for and process alerts. This allows integration with monitoring systems that send alerts via HTTP POST requests.
@@ -425,27 +431,113 @@ To use this mode, first ensure you have configured your live environment as desc
    You can monitor the progress of the triage process through these logs and the generated reports.
 
 ### Running in offline mode
-offline mode lets you evaluate the triage agent in a controlled, offline environment using synthetic data. Instead of calling real systems, the agent uses predefined inputs to simulate alerts and tool outputs, ideal for development, debugging, and tuning.
+Offline mode lets you evaluate the triage agent in a controlled, offline environment using synthetic data. Instead of calling real systems, the agent uses predefined inputs to simulate alerts and tool outputs, ideal for development, debugging, and tuning.
 
 To run in offline mode:
 1. **Set required environment variables**
 
    Make sure `offline_mode: true` is set in both the `workflow` section and individual tool sections of your config file (see [Understanding the config](#understanding-the-config) section).
 
-2. **How it works**
-- The **main CSV offline dataset** (`offline_data_path`) provides both alert details and a mock environment. For each alert, expected tool return values are included. These simulate how the environment would behave if the alert occurred on a real system.
+2. **How offline mode works:**
+
+   - The **main CSV offline dataset** (`offline_data_path`) provides both alert details and a mock environment. For each alert, expected tool return values are included. These simulate how the environment would behave if the alert occurred on a real system.
    - The **JSON offline dataset** (`eval.general.dataset.filepath` in the config) contains a subset of the information from the main CSV: the alert inputs and their associated ground truth root causes. It is used to run `aiq eval`, focusing only on the essential data needed for running the workflow, while the full CSV retains the complete mock environment context.
    - At runtime, the system links each alert in the JSON dataset to its corresponding context in the CSV using the unique host IDs included in both datasets.
-- The **benign fallback dataset** fills in tool responses when the agent calls a tool not explicitly defined in the alert's offline data. These fallback responses mimic healthy system behavior and help provide the "background scenery" without obscuring the true root cause.
+   - The **benign fallback dataset** fills in tool responses when the agent calls a tool not explicitly defined in the alert's offline data. These fallback responses mimic healthy system behavior and help provide the "background scenery" without obscuring the true root cause.
 
 3. **Run the agent in offline mode**
 
-   Run the agent with:
+    To run the agent in offline mode with a test question, use the following command structure. Test questions can be found in `examples/advanced_agents/alert_triage_agent/data/offline_data.json`.
+
+   ```bash
+   aiq run --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml --input "{your_alert_in_json_format}"
+   ```
+   **Example:** To run the agent with a test question, use the following command:
+   ```bash
+   aiq run \
+     --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml \
+     --input '{
+       "alert_id": 0,
+       "alert_name": "InstanceDown",
+       "host_id": "test-instance-0.example.com",
+       "severity": "critical",
+       "description": "Instance test-instance-0.example.com is not available for scrapping for the last 5m. Please check: - instance is up and running; - monitoring service is in place and running; - network connectivity is ok",
+       "summary": "Instance test-instance-0.example.com is down",
+       "timestamp": "2025-04-28T05:00:00.000000"
+     }'
+   ```
+   **Expected output:**
+   ```
+   2025-07-21 17:12:47,944 - aiq_alert_triage_agent - INFO - Preloaded test data from: examples/advanced_agents/alert_triage_agent/data/offline_data.csv
+   2025-07-21 17:12:47,945 - aiq_alert_triage_agent - INFO - Preloaded benign fallback data from: examples/advanced_agents/alert_triage_agent/data/benign_fallback_offline_data.json
+   2025-07-21 17:12:47,945 - aiq_alert_triage_agent - INFO - ================================================Running in offline mode=================================================
+
+   Configuration Summary:
+   --------------------
+   Workflow Type: alert_triage_agent
+   Number of Functions: 9
+   Number of LLMs: 6
+   Number of Embedders: 0
+   Number of Memory: 0
+   Number of Retrievers: 0
+
+   2025-07-21 17:12:47,960 - aiq_alert_triage_agent - INFO - Host: [test-instance-0.example.com] is NOT under maintenance according to the maintenance database
+   2025-07-21 17:14:45,234 - aiq_alert_triage_agent - INFO - Finished agent execution
+   2025-07-21 17:14:45,234 - aiq.front_ends.console.console_front_end_plugin - INFO -
+   --------------------------------------------------
+   Workflow Result:
+   ## Step 1: Analyze the Alert
+   The alert received is of type "InstanceDown" for the host "test-instance-0.example.com" with a critical severity. The description mentions that the instance is not available for scraping for the last 5 minutes.
+
+   ## Step 2: Select and Use Diagnostic Tools
+   Based on the alert type, the following diagnostic tools were chosen:
+   - `network_connectivity_check` to verify if the host is reachable over the network.
+   - `monitoring_process_check` to ensure critical monitoring processes are running on the host.
+   - `hardware_check` to assess the hardware health of the host.
+   - `telemetry_metrics_analysis_agent` to analyze CPU usage patterns and host heartbeat data.
+
+   ## Step 3: Correlate Data and Determine Root Cause
+   After analyzing the outputs from the diagnostic tools:
+   - The `network_connectivity_check` showed successful ping and telnet connections, indicating no network connectivity issues.
+   - The `monitoring_process_check` confirmed that critical processes like telegraf are running, ensuring monitoring data is being collected.
+   - The `hardware_check` revealed normal hardware health with all components in a nominal state and no anomalies detected.
+   - The `telemetry_metrics_analysis_agent` found the host to be up and running with normal CPU usage patterns, suggesting no significant issues.
+
+   Given the results, it appears there is no clear indication of a real problem that would explain the "InstanceDown" alert. All diagnostic checks suggest the host is operational, and its hardware and software components are functioning as expected.
+
+   ## Step 4: Generate a Structured Triage Report
+   ### Alert Summary
+   The alert "InstanceDown" for host "test-instance-0.example.com" was received, indicating the instance was not available for scraping.
+
+   ### Collected Metrics
+   - Network connectivity: Successful.
+   - Monitoring processes: Running normally.
+   - Hardware health: Normal.
+   - Telemetry metrics: Host is up, and CPU usage is within normal ranges.
+
+   ### Analysis
+   All diagnostic checks indicate the host is operational and healthy. There is no evidence to support the "InstanceDown" alert being a true indication of a problem.
+
+   ### Recommended Actions
+   - Review monitoring system configuration to prevent false positives.
+   - Verify the alerting mechanism to ensure it is not malfunctioning.
+
+   ### Alert Status
+   False alarm.
+
+   ### Root Cause Category
+   false_positive
+
+   The diagnostic checks, including network connectivity, monitoring processes, hardware health, and telemetry metrics analysis, all indicate that the host is operational and healthy, with no evidence to support the "InstanceDown" alert being a true indication of a problem.
+   --------------------------------------------------
+   2025-07-21 17:14:45,234 - aiq_alert_triage_agent - INFO - Cleaning up
+   ```
+   To evaluate the agent, use the following command:
    ```bash
    aiq eval --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml
    ```
 
-    The agent will:
+  The agent will:
    - Load alerts from the JSON dataset specified in the config `eval.general.dataset.filepath`
    - Investigate the alerts using predefined tool responses in the CSV file (path set in the config `workflow.offline_data_path`)
    - Process all alerts in the dataset in parallel
@@ -456,7 +548,7 @@ To run in offline mode:
 
    The output file will contain a new column named `output`, which includes the markdown report generated by the agent for each data point (i.e., each row in the CSV). Navigate to that rightmost `output` column to view the report for each test entry.
 
-   Sample output snippet:
+   **Sample output snippet:**
 ```
 ## Alert Summary
 The alert received was for an "InstanceDown" event, indicating that the instance "test-instance-0.example.com" was not available for scraping for the last 5 minutes.
