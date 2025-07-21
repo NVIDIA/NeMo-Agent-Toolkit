@@ -246,9 +246,10 @@ def patch_with_retry(
                 object.__setattr__(obj, name, types.MethodType(wrapped, obj))
                 continue  # succeed, go to next attribute
             except Exception as exc:  # noqa: BLE001
-                logger.debug(
+                logger.info(
                     "Instance‑level patch failed for %s.%s (%s); "
-                    "falling back to class‑level patch",
+                    "falling back to class‑level patch. This will affect every instance if the class, "
+                    "and all objects created will retry on failure for this method.",
                     cls.__name__,
                     name,
                     exc,
