@@ -13,11 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
 import pytest
 from openai import BaseModel
 from pydantic import ConfigDict
 
 from aiq.builder.builder import Builder
+from aiq.builder.component_utils import ComponentInstanceData
 from aiq.builder.embedder import EmbedderProviderInfo
 from aiq.builder.function import Function
 from aiq.builder.function_info import FunctionInfo
@@ -34,6 +39,8 @@ from aiq.cli.register_workflow import register_memory
 from aiq.cli.register_workflow import register_retriever_client
 from aiq.cli.register_workflow import register_retriever_provider
 from aiq.cli.register_workflow import register_tool_wrapper
+from aiq.data_models.component import ComponentGroup
+from aiq.data_models.config import AIQConfig
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
@@ -585,3 +592,164 @@ async def test_built_config():
         assert workflow_config.embedders == {"embedder1": embedder_config}
         assert workflow_config.memory == {"memory1": memory_config}
         assert workflow_config.retrievers == {"retriever1": retriever_config}
+
+
+# Error Logging Tests
+
+
+@pytest.fixture
+def caplog_fixture(caplog):
+    """Configure caplog to capture ERROR level logs."""
+    caplog.set_level(logging.ERROR)
+    return caplog
+
+
+@pytest.fixture
+def mock_component_data():
+    """Create mock component data for testing."""
+    # Create a mock failing component
+    failing_component = MagicMock()
+    failing_component.name = "test_component"
+    failing_component.component_group.value = "llms"
+
+    return failing_component
+
+
+def test_log_build_failure_helper_method(caplog_fixture, mock_component_data):
+    """Test the _log_build_failure helper method directly."""
+    builder = WorkflowBuilder()
+
+    completed_components = [("comp1", "llms"), ("comp2", "embedders")]
+    remaining_components = [("comp3", "functions"), ("comp4", "memory")]
+    original_error = ValueError("Test error message")
+
+    # Call the helper method
+    builder._log_build_failure(mock_component_data, completed_components, remaining_components, original_error)
+
+    # Verify error logging content
+    log_text = caplog_fixture.text
+    assert "Failed to initialize test_component (llms)" in log_text
+    assert "Successfully built components:" in log_text
+    assert "comp1 (llms)" in log_text
+    assert "comp2 (embedders)" in log_text
+    assert "Remaining components to build:" in log_text
+    assert "comp3 (functions)" in log_text
+    assert "comp4 (memory)" in log_text
+    assert "Original error:" in log_text
+
+
+def test_log_build_failure_workflow_helper_method(caplog_fixture):
+    """Test the _log_build_failure_workflow helper method directly."""
+    builder = WorkflowBuilder()
+
+    completed_components = [("comp1", "llms"), ("comp2", "embedders")]
+    remaining_components = [("comp3", "functions")]
+    original_error = ValueError("Workflow build failed")
+
+    # Call the helper method
+    builder._log_build_failure_workflow(completed_components, remaining_components, original_error)
+
+    # Verify error logging content
+    log_text = caplog_fixture.text
+    assert "Failed to initialize <workflow> (workflow)" in log_text
+    assert "Successfully built components:" in log_text
+    assert "comp1 (llms)" in log_text
+    assert "comp2 (embedders)" in log_text
+    assert "Remaining components to build:" in log_text
+    assert "comp3 (functions)" in log_text
+    assert "Original error:" in log_text
+
+
+def test_log_build_failure_no_completed_components(caplog_fixture, mock_component_data):
+    """Test error logging when no components have been successfully built."""
+    builder = WorkflowBuilder()
+
+    completed_components = []
+    remaining_components = [("comp1", "embedders"), ("comp2", "functions")]
+    original_error = ValueError("First component failed")
+
+    builder._log_build_failure(mock_component_data, completed_components, remaining_components, original_error)
+
+    log_text = caplog_fixture.text
+    assert "Failed to initialize test_component (llms)" in log_text
+    assert "No components were successfully built before this failure" in log_text
+    assert "Remaining components to build:" in log_text
+    assert "comp1 (embedders)" in log_text
+    assert "comp2 (functions)" in log_text
+
+
+def test_log_build_failure_no_remaining_components(caplog_fixture, mock_component_data):
+    """Test error logging when no components remain to be built."""
+    builder = WorkflowBuilder()
+
+    completed_components = [("comp1", "llms"), ("comp2", "embedders")]
+    remaining_components = []
+    original_error = ValueError("Last component failed")
+
+    builder._log_build_failure(mock_component_data, completed_components, remaining_components, original_error)
+
+    log_text = caplog_fixture.text
+    assert "Failed to initialize test_component (llms)" in log_text
+    assert "Successfully built components:" in log_text
+    assert "comp1 (llms)" in log_text
+    assert "comp2 (embedders)" in log_text
+    assert "No remaining components to build" in log_text
+
+
+@patch('aiq.builder.workflow_builder.build_dependency_sequence')
+async def test_populate_builder_error_handling_integration(mock_build_sequence, caplog_fixture):
+    """Test that populate_builder properly calls error logging on failures."""
+    # Create a mock component that will fail
+    mock_component = MagicMock(spec=ComponentInstanceData)
+    mock_component.name = "failing_llm"
+    mock_component.component_group = ComponentGroup.LLMS
+    mock_component.is_root = False
+    mock_component.config = MagicMock()
+
+    mock_build_sequence.return_value = [mock_component]
+
+    async with WorkflowBuilder() as builder:
+        # Mock the add_llm method to raise an exception
+        with patch.object(builder, 'add_llm', side_effect=ValueError("LLM build failed")):
+            with patch.object(builder, '_log_build_failure') as mock_log_failure:
+
+                config = AIQConfig()
+
+                with pytest.raises(ValueError, match="LLM build failed"):
+                    await builder.populate_builder(config)
+
+                # Verify that the error logging method was called
+                mock_log_failure.assert_called_once()
+                call_args = mock_log_failure.call_args[0]
+
+                # Check the arguments passed to _log_build_failure
+                assert call_args[0] == mock_component  # failing_component
+                assert isinstance(call_args[1], list)  # completed_components
+                assert isinstance(call_args[2], list)  # remaining_components
+                assert isinstance(call_args[3], ValueError)  # original_error
+
+
+@patch('aiq.builder.workflow_builder.build_dependency_sequence')
+async def test_workflow_setup_error_handling_integration(mock_build_sequence, caplog_fixture):
+    """Test that workflow setup properly calls error logging on failures."""
+    # Setup with no components to build, only workflow
+    mock_build_sequence.return_value = []
+
+    async with WorkflowBuilder() as builder:
+        # Mock set_workflow to raise an exception
+        with patch.object(builder, 'set_workflow', side_effect=ValueError("Workflow build failed")):
+            with patch.object(builder, '_log_build_failure_workflow') as mock_log_workflow_failure:
+
+                config = AIQConfig()
+
+                with pytest.raises(ValueError, match="Workflow build failed"):
+                    await builder.populate_builder(config, skip_workflow=False)
+
+                # Verify that the workflow error logging method was called
+                mock_log_workflow_failure.assert_called_once()
+                call_args = mock_log_workflow_failure.call_args[0]
+
+                # Check the arguments passed to _log_build_failure_workflow
+                assert isinstance(call_args[0], list)  # completed_components
+                assert isinstance(call_args[1], list)  # remaining_components
+                assert isinstance(call_args[2], ValueError)  # original_error

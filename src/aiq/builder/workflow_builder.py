@@ -601,6 +601,66 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     def get_user_manager(self):
         return UserManagerHolder(context=AIQContext(self._context_state))
 
+    def _log_build_failure(self, failing_component, completed_components, remaining_components, original_error):
+        """
+        Log comprehensive component build failure information.
+
+        Args:
+            failing_component: The ComponentInstanceData that failed to build
+            completed_components: List of (name, type) tuples for successfully built components
+            remaining_components: List of (name, type) tuples for components still to be built
+            original_error: The original exception that caused the failure
+        """
+
+        component_name = failing_component.name
+        component_type = failing_component.component_group.value
+
+        logger.error("Failed to initialize %s (%s)", component_name, component_type)
+
+        if completed_components:
+            logger.error("Successfully built components:")
+            for name, comp_type in completed_components:
+                logger.error("- %s (%s)", name, comp_type)
+        else:
+            logger.error("No components were successfully built before this failure")
+
+        if remaining_components:
+            logger.error("Remaining components to build:")
+            for name, comp_type in remaining_components:
+                logger.error("- %s (%s)", name, comp_type)
+        else:
+            logger.error("No remaining components to build")
+
+        logger.error("Original error:", exc_info=original_error)
+
+    def _log_build_failure_workflow(self, completed_components, remaining_components, original_error):
+        """
+        Log comprehensive workflow build failure information.
+
+        Args:
+            completed_components: List of (name, type) tuples for successfully built components
+            remaining_components: List of (name, type) tuples for components still to be built
+            original_error: The original exception that caused the failure
+        """
+
+        logger.error("Failed to initialize <workflow> (workflow)")
+
+        if completed_components:
+            logger.error("Successfully built components:")
+            for name, comp_type in completed_components:
+                logger.error("- %s (%s)", name, comp_type)
+        else:
+            logger.error("No components were successfully built before this failure")
+
+        if remaining_components:
+            logger.error("Remaining components to build:")
+            for name, comp_type in remaining_components:
+                logger.error("- %s (%s)", name, comp_type)
+        else:
+            logger.error("No remaining components to build")
+
+        logger.error("Original error:", exc_info=original_error)
+
     async def populate_builder(self, config: AIQConfig, skip_workflow: bool = False):
         """
         Populate the builder with components and optionally set up the workflow.
@@ -613,31 +673,60 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Generate the build sequence
         build_sequence = build_dependency_sequence(config)
 
+        # Initialize progress tracking
+        completed_components = []
+        remaining_components = [(str(comp.name), comp.component_group.value) for comp in build_sequence
+                                if not comp.is_root]
+        if not skip_workflow:
+            remaining_components.append(("<workflow>", "workflow"))
+
         # Loop over all objects and add to the workflow builder
         for component_instance in build_sequence:
-            # Instantiate a the llm
-            if component_instance.component_group == ComponentGroup.LLMS:
-                await self.add_llm(component_instance.name, component_instance.config)
-            # Instantiate a the embedder
-            elif component_instance.component_group == ComponentGroup.EMBEDDERS:
-                await self.add_embedder(component_instance.name, component_instance.config)
-            # Instantiate a memory client
-            elif component_instance.component_group == ComponentGroup.MEMORY:
-                await self.add_memory_client(component_instance.name, component_instance.config)
-            # Instantiate a retriever client
-            elif component_instance.component_group == ComponentGroup.RETRIEVERS:
-                await self.add_retriever(component_instance.name, component_instance.config)
-            # Instantiate a function
-            elif component_instance.component_group == ComponentGroup.FUNCTIONS:
-                # If the function is the root, set it as the workflow later
-                if (not component_instance.is_root):
-                    await self.add_function(component_instance.name, component_instance.config)
-            else:
-                raise ValueError(f"Unknown component group {component_instance.component_group}")
+            try:
+                # Remove from remaining as we start building (if not root)
+                if not component_instance.is_root:
+                    remaining_components.remove(
+                        (str(component_instance.name), component_instance.component_group.value))
+
+                # Instantiate a the llm
+                if component_instance.component_group == ComponentGroup.LLMS:
+                    await self.add_llm(component_instance.name, component_instance.config)  # type: ignore
+                # Instantiate a the embedder
+                elif component_instance.component_group == ComponentGroup.EMBEDDERS:
+                    await self.add_embedder(component_instance.name, component_instance.config)  # type: ignore
+                # Instantiate a memory client
+                elif component_instance.component_group == ComponentGroup.MEMORY:
+                    await self.add_memory_client(component_instance.name, component_instance.config)  # type: ignore
+                # Instantiate a retriever client
+                elif component_instance.component_group == ComponentGroup.RETRIEVERS:
+                    await self.add_retriever(component_instance.name, component_instance.config)  # type: ignore
+                # Instantiate a function
+                elif component_instance.component_group == ComponentGroup.FUNCTIONS:
+                    # If the function is the root, set it as the workflow later
+                    if (not component_instance.is_root):
+                        await self.add_function(component_instance.name, component_instance.config)  # type: ignore
+                else:
+                    raise ValueError(f"Unknown component group {component_instance.component_group}")
+
+                # Add to completed after successful build (if not root)
+                if not component_instance.is_root:
+                    completed_components.append(
+                        (str(component_instance.name), component_instance.component_group.value))
+
+            except Exception as e:
+                self._log_build_failure(component_instance, completed_components, remaining_components, e)
+                raise
 
         # Instantiate the workflow
         if not skip_workflow:
-            await self.set_workflow(config.workflow)
+            try:
+                # Remove workflow from remaining as we start building
+                remaining_components.remove(("<workflow>", "workflow"))
+                await self.set_workflow(config.workflow)
+                completed_components.append(("<workflow>", "workflow"))
+            except Exception as e:
+                self._log_build_failure_workflow(completed_components, remaining_components, e)
+                raise
 
     @classmethod
     @asynccontextmanager
