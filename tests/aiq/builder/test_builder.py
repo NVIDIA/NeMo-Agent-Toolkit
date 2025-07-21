@@ -631,11 +631,11 @@ def test_log_build_failure_helper_method(caplog_fixture, mock_component_data):
 
     # Verify error logging content
     log_text = caplog_fixture.text
-    assert "Failed to initialize test_component (llms)" in log_text
-    assert "Successfully built llms:" in log_text
+    assert "Failed to initialize component test_component (llms)" in log_text
+    assert "Successfully built components:" in log_text
     assert "- comp1 (llms)" in log_text
     assert "- comp2 (embedders)" in log_text
-    assert "Remaining llms to build:" in log_text
+    assert "Remaining components to build:" in log_text
     assert "- comp3 (functions)" in log_text
     assert "- comp4 (memory)" in log_text
     assert "Original error:" in log_text
@@ -655,11 +655,11 @@ def test_log_build_failure_workflow_helper_method(caplog_fixture):
 
     # Verify error logging content
     log_text = caplog_fixture.text
-    assert "Failed to initialize <workflow> (workflow)" in log_text
-    assert "Successfully built workflow:" in log_text
+    assert "Failed to initialize component <workflow> (workflow)" in log_text
+    assert "Successfully built components:" in log_text
     assert "- comp1 (llms)" in log_text
     assert "- comp2 (embedders)" in log_text
-    assert "Remaining workflow to build:" in log_text
+    assert "Remaining components to build:" in log_text
     assert "- comp3 (functions)" in log_text
     assert "Original error:" in log_text
 
@@ -678,9 +678,9 @@ def test_log_build_failure_no_completed_components(caplog_fixture, mock_componen
                                          original_error)
 
     log_text = caplog_fixture.text
-    assert "Failed to initialize test_component (llms)" in log_text
-    assert "No llms were successfully built before this failure" in log_text
-    assert "Remaining llms to build:" in log_text
+    assert "Failed to initialize component test_component (llms)" in log_text
+    assert "No components were successfully built before this failure" in log_text
+    assert "Remaining components to build:" in log_text
     assert "- comp1 (embedders)" in log_text
     assert "- comp2 (functions)" in log_text
     assert "Original error:" in log_text
@@ -700,11 +700,11 @@ def test_log_build_failure_no_remaining_components(caplog_fixture, mock_componen
                                          original_error)
 
     log_text = caplog_fixture.text
-    assert "Failed to initialize test_component (llms)" in log_text
-    assert "Successfully built llms:" in log_text
+    assert "Failed to initialize component test_component (llms)" in log_text
+    assert "Successfully built components:" in log_text
     assert "- comp1 (llms)" in log_text
     assert "- comp2 (embedders)" in log_text
-    assert "No remaining llms to build" in log_text
+    assert "No remaining components to build" in log_text
     assert "Original error:" in log_text
 
 
@@ -788,11 +788,11 @@ def test_log_evaluator_build_failure_helper_method(caplog_fixture):
 
     # Verify error logging content
     log_text = caplog_fixture.text
-    assert "Failed to initialize failing_evaluator (evaluator)" in log_text
-    assert "Successfully built evaluator:" in log_text
+    assert "Failed to initialize component failing_evaluator (evaluator)" in log_text
+    assert "Successfully built components:" in log_text
     assert "- eval1 (evaluator)" in log_text
     assert "- eval2 (evaluator)" in log_text
-    assert "Remaining evaluator to build:" in log_text
+    assert "Remaining components to build:" in log_text
     assert "- eval3 (evaluator)" in log_text
     assert "- eval4 (evaluator)" in log_text
     assert "Original error:" in log_text
@@ -814,9 +814,9 @@ def test_log_evaluator_build_failure_no_completed(caplog_fixture):
                                          original_error)
 
     log_text = caplog_fixture.text
-    assert "Failed to initialize failing_evaluator (evaluator)" in log_text
-    assert "No evaluator were successfully built before this failure" in log_text
-    assert "Remaining evaluator to build:" in log_text
+    assert "Failed to initialize component failing_evaluator (evaluator)" in log_text
+    assert "No components were successfully built before this failure" in log_text
+    assert "Remaining components to build:" in log_text
     assert "- eval1 (evaluator)" in log_text
     assert "- eval2 (evaluator)" in log_text
     assert "Original error:" in log_text
@@ -838,9 +838,9 @@ def test_log_evaluator_build_failure_no_remaining(caplog_fixture):
                                          original_error)
 
     log_text = caplog_fixture.text
-    assert "Failed to initialize failing_evaluator (evaluator)" in log_text
-    assert "Successfully built evaluator:" in log_text
+    assert "Failed to initialize component failing_evaluator (evaluator)" in log_text
+    assert "Successfully built components:" in log_text
     assert "- eval1 (evaluator)" in log_text
     assert "- eval2 (evaluator)" in log_text
-    assert "No remaining evaluator to build" in log_text
+    assert "No remaining components to build" in log_text
     assert "Original error:" in log_text

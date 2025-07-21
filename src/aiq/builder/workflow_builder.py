@@ -618,21 +618,21 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             remaining_components: List of (name, type) tuples for components still to be built
             original_error: The original exception that caused the failure
         """
-        logger.error("Failed to initialize %s (%s)", component_name, component_type)
+        logger.error("Failed to initialize component %s (%s)", component_name, component_type)
 
         if completed_components:
-            logger.error("Successfully built %s:", component_type)
+            logger.error("Successfully built components:")
             for name, comp_type in completed_components:
                 logger.error("- %s (%s)", name, comp_type)
         else:
-            logger.error("No %s were successfully built before this failure", component_type)
+            logger.error("No components were successfully built before this failure")
 
         if remaining_components:
-            logger.error("Remaining %s to build:", component_type)
+            logger.error("Remaining components to build:")
             for name, comp_type in remaining_components:
                 logger.error("- %s (%s)", name, comp_type)
         else:
-            logger.error("No remaining %s to build", component_type)
+            logger.error("No remaining components to build")
 
         logger.error("Original error:", exc_info=original_error)
 
