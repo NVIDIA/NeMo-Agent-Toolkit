@@ -569,6 +569,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             name (str): The name of the telemetry exporter
             config (TelemetryExporterBaseConfig): The configuration for the exporter
         """
+        if (name in self._telemetry_exporters):
+            raise ValueError(f"Telemetry exporter '{name}' already exists in the list of telemetry exporters")
+
         exporter_info = self._registry.get_telemetry_exporter(type(config))
 
         # Build the exporter outside the lock (parallel)

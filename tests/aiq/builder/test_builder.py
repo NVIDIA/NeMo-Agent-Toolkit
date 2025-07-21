@@ -33,15 +33,19 @@ from aiq.cli.register_workflow import register_llm_provider
 from aiq.cli.register_workflow import register_memory
 from aiq.cli.register_workflow import register_retriever_client
 from aiq.cli.register_workflow import register_retriever_provider
+from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.cli.register_workflow import register_tool_wrapper
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
+from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
+from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.memory.interfaces import MemoryEditor
 from aiq.memory.models import MemoryItem
+from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.retriever.interface import AIQRetriever
 from aiq.retriever.models import AIQDocument
 from aiq.retriever.models import RetrieverOutput
@@ -72,6 +76,10 @@ class TMemoryConfig(MemoryBaseConfig, name="test_memory"):
 
 
 class TRetrieverProviderConfig(RetrieverBaseConfig, name="test_retriever"):
+    raise_error: bool = False
+
+
+class TTelemetryExporterConfig(TelemetryExporterBaseConfig, name="test_telemetry_exporter"):
     raise_error: bool = False
 
 
@@ -159,6 +167,20 @@ async def _register():
             raise ValueError("Error")
 
         yield RetrieverProviderInfo(config=config, description="Mock retriever to test the registration process")
+
+    # Register mock telemetry exporter
+    @register_telemetry_exporter(config_type=TTelemetryExporterConfig)
+    async def register8(config: TTelemetryExporterConfig, builder: Builder):
+
+        if (config.raise_error):
+            raise ValueError("Error")
+
+        class TestTelemetryExporter(BaseExporter):
+
+            def export(self, event: IntermediateStep):
+                pass
+
+        yield TestTelemetryExporter()
 
 
 async def test_build():
@@ -585,3 +607,25 @@ async def test_built_config():
         assert workflow_config.embedders == {"embedder1": embedder_config}
         assert workflow_config.memory == {"memory1": memory_config}
         assert workflow_config.retrievers == {"retriever1": retriever_config}
+
+
+async def test_add_telemetry_exporter():
+
+    workflow_config = FunctionReturningFunctionConfig()
+    telemetry_exporter_config = TTelemetryExporterConfig()
+
+    async with WorkflowBuilder() as builder:
+
+        await builder.set_workflow(workflow_config)
+
+        await builder.add_telemetry_exporter("exporter1", telemetry_exporter_config)
+
+        with pytest.raises(ValueError):
+            await builder.add_telemetry_exporter("exporter2", TTelemetryExporterConfig(raise_error=True))
+
+        with pytest.raises(ValueError):
+            await builder.add_telemetry_exporter("exporter1", TTelemetryExporterConfig())
+
+        workflow = builder.build()
+
+        assert "exporter1" in workflow.telemetry_exporters.keys()
