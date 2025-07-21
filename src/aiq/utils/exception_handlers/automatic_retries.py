@@ -248,7 +248,7 @@ def patch_with_retry(
             except Exception as exc:  # noqa: BLE001
                 logger.info(
                     "Instance‑level patch failed for %s.%s (%s); "
-                    "falling back to class‑level patch. This will affect every instance if the class, "
+                    "falling back to class‑level patch. This will affect every instance of the class, "
                     "and all objects created will retry on failure for this method.",
                     cls.__name__,
                     name,
