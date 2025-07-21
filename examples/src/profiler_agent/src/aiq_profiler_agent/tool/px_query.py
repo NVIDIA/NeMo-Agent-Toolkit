@@ -22,6 +22,7 @@ from datetime import datetime
 from aiq_profiler_agent.tool.utils import first_valid_query
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import field_validator
 
 from aiq.builder.builder import Builder
 from aiq.builder.function_info import FunctionInfo
@@ -42,6 +43,15 @@ class PxQueryConfig(FunctionBaseConfig, name="px_query"):
         600,
         description="The time window in seconds for each trace, used for last-n queries",
     )
+    default_project_name: str = Field(
+        description="Default project name to use if no project name is explicitly mentioned in user query.", )
+
+    @field_validator('default_project_name')
+    @classmethod
+    def validate_default_project_name(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("default_project_name must be explicitly set in PxQueryConfig.")
+        return value
 
 
 class PxQueryOutput(BaseModel):
@@ -115,6 +125,10 @@ async def px_query(config: PxQueryConfig, builder: Builder):
             px_api_input,
         )
 
+        # Check LLM-specified project name and apply fallback logic if no project name is specified in user query.
+        if px_api_input.project_name == "default":
+            px_api_input.project_name = config.default_project_name
+
         logger.info("Phoenix query px_api_input: %s", px_api_input)
         logger.info("Querying Phoenix server for traces between %s and %s",
                     px_api_input.start_time,
@@ -122,7 +136,7 @@ async def px_query(config: PxQueryConfig, builder: Builder):
 
         # filter out last n traces based, sorted by start time
         if px_api_input.last_n:
-            df = px_client.get_spans_dataframe(project_name=px_api_input.project_name, )
+            df = px_client.get_spans_dataframe(project_name=px_api_input.project_name)
             trace_latest_times = (df.groupby("context.trace_id")["start_time"].min().sort_values(
                 ascending=False).reset_index())
             if len(trace_latest_times) < px_api_input.last_n:
