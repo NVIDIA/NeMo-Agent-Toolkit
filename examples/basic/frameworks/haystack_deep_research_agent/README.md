@@ -17,7 +17,7 @@ limitations under the License.
 
 # Haystack Deep Research Agent
 
-This example demonstrates how to build a comprehensive research agent using Haystack AI that combines web search and Retrieval-Augmented Generation (RAG) capabilities within the AIQ toolkit framework.
+This example demonstrates how to build a deep research agent using Haystack framework  that combines web search and Retrieval Augmented Generation (RAG) capabilities using the NeMo-Agent-Toolkit.
 
 ## Overview
 
@@ -158,16 +158,16 @@ You can customize the workflow by:
 3. **No Documents Found**: Check that PDF files are placed in the data directory and the path is correct
 4. **Web Search Fails**: Verify your SerperDev API key is valid and has remaining quota
 
-**Logs**: Check the AIQ logs for detailed error information and debugging.
+**Logs**: Check the NeMo-Agent-Toolkit logs for detailed error information and debugging.
 
 ## Architecture Details
 
-The workflow demonstrates several key AIQ patterns:
+The workflow demonstrates several key NeMo-Agent-Toolkit patterns:
 
 - **Function Registration**: Each tool is registered as a function with its own configuration
-- **Builder Pattern**: The AIQ Builder is used to create and manage tools and LLMs
-- **Component Integration**: Haystack components are wrapped as AIQ functions
+- **Builder Pattern**: The NeMo-Agent-Toolkit Builder is used to create and manage tools and LLMs
+- **Component Integration**: Haystack components are wrapped as NeMo-Agent-Toolkit functions
 - **Error Handling**: Robust error handling with fallback behaviors
 - **Async Operations**: All operations are asynchronous for better performance
 
-This example showcases how different AI frameworks (Haystack) can be seamlessly integrated into AIQ workflows while maintaining the flexibility and power of the underlying frameworks.
+This example showcases how the Haystack AI framework can be seamlessly integrated into NeMo-Agent-Toolkit workflows while maintaining the flexibility and power of the underlying architecture.
