@@ -753,3 +753,80 @@ async def test_workflow_setup_error_handling_integration(mock_build_sequence, ca
                 assert isinstance(call_args[0], list)  # completed_components
                 assert isinstance(call_args[1], list)  # remaining_components
                 assert isinstance(call_args[2], ValueError)  # original_error
+
+
+# Evaluator Error Logging Tests
+
+
+def test_log_evaluator_build_failure_helper_method(caplog_fixture):
+    """Test the _log_evaluator_build_failure helper method directly."""
+    from aiq.builder.eval_builder import WorkflowEvalBuilder
+
+    builder = WorkflowEvalBuilder()
+
+    completed_evaluators = ["eval1", "eval2"]
+    remaining_evaluators = ["eval3", "eval4"]
+    original_error = ValueError("Evaluator build failed")
+
+    # Call the helper method
+    builder._log_evaluator_build_failure("failing_evaluator",
+                                         completed_evaluators,
+                                         remaining_evaluators,
+                                         original_error)
+
+    # Verify error logging content
+    log_text = caplog_fixture.text
+    assert "Failed to initialize failing_evaluator (evaluator)" in log_text
+    assert "Successfully built evaluators:" in log_text
+    assert "eval1 (evaluator)" in log_text
+    assert "eval2 (evaluator)" in log_text
+    assert "Remaining evaluators to build:" in log_text
+    assert "eval3 (evaluator)" in log_text
+    assert "eval4 (evaluator)" in log_text
+    assert "Original error:" in log_text
+
+
+def test_log_evaluator_build_failure_no_completed(caplog_fixture):
+    """Test evaluator error logging when no evaluators have been successfully built."""
+    from aiq.builder.eval_builder import WorkflowEvalBuilder
+
+    builder = WorkflowEvalBuilder()
+
+    completed_evaluators = []
+    remaining_evaluators = ["eval1", "eval2"]
+    original_error = ValueError("First evaluator failed")
+
+    builder._log_evaluator_build_failure("failing_evaluator",
+                                         completed_evaluators,
+                                         remaining_evaluators,
+                                         original_error)
+
+    log_text = caplog_fixture.text
+    assert "Failed to initialize failing_evaluator (evaluator)" in log_text
+    assert "No evaluators were successfully built before this failure" in log_text
+    assert "Remaining evaluators to build:" in log_text
+    assert "eval1 (evaluator)" in log_text
+    assert "eval2 (evaluator)" in log_text
+
+
+def test_log_evaluator_build_failure_no_remaining(caplog_fixture):
+    """Test evaluator error logging when no evaluators remain to be built."""
+    from aiq.builder.eval_builder import WorkflowEvalBuilder
+
+    builder = WorkflowEvalBuilder()
+
+    completed_evaluators = ["eval1", "eval2"]
+    remaining_evaluators = []
+    original_error = ValueError("Last evaluator failed")
+
+    builder._log_evaluator_build_failure("failing_evaluator",
+                                         completed_evaluators,
+                                         remaining_evaluators,
+                                         original_error)
+
+    log_text = caplog_fixture.text
+    assert "Failed to initialize failing_evaluator (evaluator)" in log_text
+    assert "Successfully built evaluators:" in log_text
+    assert "eval1 (evaluator)" in log_text
+    assert "eval2 (evaluator)" in log_text
+    assert "No remaining evaluators to build" in log_text
