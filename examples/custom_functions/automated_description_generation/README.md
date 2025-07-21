@@ -65,11 +65,11 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 This example uses a Milvus vector database to demonstrate how descriptions can be generated for collections. However, because this workflow uses the built-in AIQ toolkit abstractions for retrievers, this example will work for any database that implements the required methods of the AIQ toolkit `retriever` interface.
 
 The rest of this example assumes you have a running instance of Milvus at `localhost:19530`. If you would like a guide on setting up the database used in this example, please follow
-the instructions in the `simple_rag` example of AIQ toolkit [here](../simple_rag/README.md).
+the instructions in the `simple_rag` example of AIQ toolkit [here](../../RAG/simple_rag/README.md).
 
 If you have a different Milvus database you would like to use, please modify the `./configs/config.yml` with the appropriate URLs to your database instance.
 
-To use this example, you will also need to create a `wikipedia_docs` and a `cuda_docs` collection in your Milvus database. You can do this by following the instructions in the `simple_rag` example of AIQ toolkit [here](../simple_rag/README.md) and running the following command:
+To use this example, you will also need to create a `wikipedia_docs` and a `cuda_docs` collection in your Milvus database. You can do this by following the instructions in the `simple_rag` example of AIQ toolkit [here](../../RAG/simple_rag/README.md) and running the following command:
 
 ```bash
 python scripts/langchain_web_ingest.py --collection_name=cuda_docs

@@ -37,7 +37,9 @@ This example demonstrates how to evaluate and profile AI agent performance using
 
 ## Prerequisites
 
-This example builds upon the [basic Simple LangSmith-Documentation Agent](../simple_web_query/).
+1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
+2. **Base workflow**: This example builds upon the Getting Started [Simple Web Query](../../getting_started/simple_web_query/) example. Make sure you are familiar with the example before proceeding.
+
 
 ## Installation
 

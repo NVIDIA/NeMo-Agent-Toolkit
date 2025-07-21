@@ -39,15 +39,9 @@ This example demonstrates how to implement **observability and tracing capabilit
 
 Before starting this example, you need:
 
-1. **Base workflow**: Install the [Simple Calculator](../simple_calculator/) example first
-2. **Agent toolkit**: Ensure you have the Agent toolkit installed
+1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
+2. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
 3. **Observability platform**: Access to at least one of the supported platforms (Phoenix, Langfuse, LangSmith, Weave, or Patronus)
-
-Install the base workflow:
-
-```bash
-uv pip install -e examples/getting_started/simple_web_query
-```
 
 ## Installation
 

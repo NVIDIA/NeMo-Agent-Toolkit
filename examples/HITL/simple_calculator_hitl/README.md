@@ -27,14 +27,14 @@ This example demonstrates **human in the loop capabilities** of the AIQ toolkit 
 - **Conditional Workflow Continuation:** Shows how agent behavior can be gated based on user responses, allowing workflows to stop or continue based on human approval.
 - **Retry ReAct Agent:** Uses a custom `retry_react_agent` workflow that can recover from recursion limits with user permission and increased iteration capacity.
 
+## Prerequisites
+
+1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
+2. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
-
-### Install this Workflow:
-
-From the root directory of the AIQ toolkit library, run the following commands:
+Install this example:
 
 ```bash
 uv pip install -e examples/HITL/simple_calculator_hitl
