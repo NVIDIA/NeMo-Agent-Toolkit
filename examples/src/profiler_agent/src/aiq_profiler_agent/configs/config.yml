@@ -30,8 +30,7 @@ functions:
     _type: flow_chart
   token_usage:
     _type: token_usage
-  # response_composer is used as the final step of the ReWOO agent
-  response_composer:
+  response_composer: # response_composer is used as the final step of the ReWOO agent
     _type: response_composer
 
 llms:
