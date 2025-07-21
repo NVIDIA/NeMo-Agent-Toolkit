@@ -20,12 +20,12 @@ general:
       endpoint: http://localhost:6006/v1/traces
       project: profiler_agent
 
-
 functions:
   px_query:
     _type: px_query
     phoenix_url: http://localhost:6006
     time_window_seconds: 600000
+    default_project_name: simple_calculator
   flow_chart:
     _type: flow_chart
   token_usage:
