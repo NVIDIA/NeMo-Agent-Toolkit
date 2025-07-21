@@ -41,10 +41,7 @@ def format_tool(tool: Any) -> dict[str, str | None]:
         tool (Any): MCPToolClient or raw MCP Tool object (uses Any due to different types)
 
     Returns:
-        dict[str, str | None]: Dictionary with keys:
-            - "name": Tool name or None if not found
-            - "description": Tool description or empty string if not available
-            - "input_schema": JSON schema as string or None if not available
+        dict[str, str | None]: Dictionary with name, description, and input_schema as keys
     """
     name = getattr(tool, 'name', None)
     description = getattr(tool, 'description', '')
@@ -71,10 +68,8 @@ def print_tool(tool_dict: dict[str, str | None], detail: bool = False) -> None:
     or when description/schema are available, shows full information with separator.
 
     Args:
-        tool_dict (dict[str, str | None]): Dictionary containing tool information with keys:
-            - "name": Tool name
-            - "description": Tool description
-            - "input_schema": JSON schema as string
+        tool_dict (dict[str, str | None]): Dictionary containing tool information with name, description, and
+            input_schema as keys
         detail (bool, optional): Whether to force detailed output. Defaults to False.
     """
     click.echo(f"Tool: {tool_dict.get('name', 'Unknown')}")
@@ -97,10 +92,8 @@ async def list_tools_and_schemas(url: str, tool_name: str | None = None) -> list
             If None, retrieves all available tools. Defaults to None.
 
     Returns:
-        list[dict[str, str | None]]: List of formatted tool dictionaries, each containing:
-            - "name": Tool name
-            - "description": Tool description
-            - "input_schema": JSON schema string
+        list[dict[str, str | None]]: List of formatted tool dictionaries, each containing name, description, and
+            input_schema as keys
             Returns empty list on connection/error failures.
 
     Raises:
@@ -132,11 +125,8 @@ async def list_tools_direct(url: str, tool_name: str | None = None) -> list[dict
             If None, retrieves all available tools. Defaults to None.
 
     Returns:
-        list[dict[str, str | None]]: List of formatted tool dictionaries, each containing:
-            - "name": Tool name
-            - "description": Tool description
-            - "input_schema": JSON schema string
-            Returns empty list on connection/error failures.
+        list[dict[str, str | None]]: List of formatted tool dictionaries, each containing name, description, and
+            input_schema as keys
 
     Note:
         This function handles ExceptionGroup by extracting the most relevant exception

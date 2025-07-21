@@ -41,12 +41,7 @@ def format_mcp_error(error: MCPError, include_traceback: bool = False) -> None:
     error messages with actionable suggestions to stderr.
 
     Args:
-        error (MCPError): MCPError instance containing:
-            - message: User-friendly error description
-            - url: MCP server URL that failed
-            - category: Error category enum (CONNECTION, TIMEOUT, etc.)
-            - suggestions: List of actionable next steps
-            - original_exception: Low-level exception for debugging
+        error (MCPError): MCPError instance containing message, url, category, suggestions, and original_exception
         include_traceback (bool, optional): Whether to include the traceback in the error message. Defaults to False.
     """
     # Log structured error information for debugging
