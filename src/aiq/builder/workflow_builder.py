@@ -702,21 +702,21 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
                 # Instantiate a the llm
                 if component_instance.component_group == ComponentGroup.LLMS:
-                    await self.add_llm(component_instance.name, component_instance.config)  # type: ignore
+                    await self.add_llm(component_instance.name, component_instance.config)
                 # Instantiate a the embedder
                 elif component_instance.component_group == ComponentGroup.EMBEDDERS:
-                    await self.add_embedder(component_instance.name, component_instance.config)  # type: ignore
+                    await self.add_embedder(component_instance.name, component_instance.config)
                 # Instantiate a memory client
                 elif component_instance.component_group == ComponentGroup.MEMORY:
-                    await self.add_memory_client(component_instance.name, component_instance.config)  # type: ignore
+                    await self.add_memory_client(component_instance.name, component_instance.config)
                 # Instantiate a retriever client
                 elif component_instance.component_group == ComponentGroup.RETRIEVERS:
-                    await self.add_retriever(component_instance.name, component_instance.config)  # type: ignore
+                    await self.add_retriever(component_instance.name, component_instance.config)
                 # Instantiate a function
                 elif component_instance.component_group == ComponentGroup.FUNCTIONS:
                     # If the function is the root, set it as the workflow later
                     if (not component_instance.is_root):
-                        await self.add_function(component_instance.name, component_instance.config)  # type: ignore
+                        await self.add_function(component_instance.name, component_instance.config)
                 else:
                     raise ValueError(f"Unknown component group {component_instance.component_group}")
 
