@@ -23,6 +23,7 @@ from contextlib import asynccontextmanager
 
 from aiq.builder.builder import Builder
 from aiq.builder.builder import UserManagerHolder
+from aiq.builder.component_utils import ComponentInstanceData
 from aiq.builder.component_utils import build_dependency_sequence
 from aiq.builder.context import AIQContext
 from aiq.builder.context import AIQContextState
@@ -601,6 +602,77 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
     def get_user_manager(self):
         return UserManagerHolder(context=AIQContext(self._context_state))
 
+    def _log_build_failure(self,
+                           component_name: str,
+                           component_type: str,
+                           completed_components: list[tuple[str, str]],
+                           remaining_components: list[tuple[str, str]],
+                           original_error: Exception) -> None:
+        """
+        Common method to log comprehensive build failure information.
+
+        Args:
+            component_name (str): The name of the component that failed to build
+            component_type (str): The type of the component that failed to build
+            completed_components (list[tuple[str, str]]): List of (name, type) tuples for successfully built components
+            remaining_components (list[tuple[str, str]]): List of (name, type) tuples for components still to be built
+            original_error (Exception): The original exception that caused the failure
+        """
+        logger.error("Failed to initialize component %s (%s)", component_name, component_type)
+
+        if completed_components:
+            logger.error("Successfully built components:")
+            for name, comp_type in completed_components:
+                logger.error("- %s (%s)", name, comp_type)
+        else:
+            logger.error("No components were successfully built before this failure")
+
+        if remaining_components:
+            logger.error("Remaining components to build:")
+            for name, comp_type in remaining_components:
+                logger.error("- %s (%s)", name, comp_type)
+        else:
+            logger.error("No remaining components to build")
+
+        logger.error("Original error:", exc_info=original_error)
+
+    def _log_build_failure_component(self,
+                                     failing_component: ComponentInstanceData,
+                                     completed_components: list[tuple[str, str]],
+                                     remaining_components: list[tuple[str, str]],
+                                     original_error: Exception) -> None:
+        """
+        Log comprehensive component build failure information.
+
+        Args:
+            failing_component (ComponentInstanceData): The ComponentInstanceData that failed to build
+            completed_components (list[tuple[str, str]]): List of (name, type) tuples for successfully built components
+            remaining_components (list[tuple[str, str]]): List of (name, type) tuples for components still to be built
+            original_error (Exception): The original exception that caused the failure
+        """
+        component_name = failing_component.name
+        component_type = failing_component.component_group.value
+
+        self._log_build_failure(component_name,
+                                component_type,
+                                completed_components,
+                                remaining_components,
+                                original_error)
+
+    def _log_build_failure_workflow(self,
+                                    completed_components: list[tuple[str, str]],
+                                    remaining_components: list[tuple[str, str]],
+                                    original_error: Exception) -> None:
+        """
+        Log comprehensive workflow build failure information.
+
+        Args:
+            completed_components (list[tuple[str, str]]): List of (name, type) tuples for successfully built components
+            remaining_components (list[tuple[str, str]]): List of (name, type) tuples for components still to be built
+            original_error (Exception): The original exception that caused the failure
+        """
+        self._log_build_failure("<workflow>", "workflow", completed_components, remaining_components, original_error)
+
     async def populate_builder(self, config: AIQConfig, skip_workflow: bool = False):
         """
         Populate the builder with components and optionally set up the workflow.
@@ -613,31 +685,60 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Generate the build sequence
         build_sequence = build_dependency_sequence(config)
 
+        # Initialize progress tracking
+        completed_components = []
+        remaining_components = [(str(comp.name), comp.component_group.value) for comp in build_sequence
+                                if not comp.is_root]
+        if not skip_workflow:
+            remaining_components.append(("<workflow>", "workflow"))
+
         # Loop over all objects and add to the workflow builder
         for component_instance in build_sequence:
-            # Instantiate a the llm
-            if component_instance.component_group == ComponentGroup.LLMS:
-                await self.add_llm(component_instance.name, component_instance.config)
-            # Instantiate a the embedder
-            elif component_instance.component_group == ComponentGroup.EMBEDDERS:
-                await self.add_embedder(component_instance.name, component_instance.config)
-            # Instantiate a memory client
-            elif component_instance.component_group == ComponentGroup.MEMORY:
-                await self.add_memory_client(component_instance.name, component_instance.config)
-            # Instantiate a retriever client
-            elif component_instance.component_group == ComponentGroup.RETRIEVERS:
-                await self.add_retriever(component_instance.name, component_instance.config)
-            # Instantiate a function
-            elif component_instance.component_group == ComponentGroup.FUNCTIONS:
-                # If the function is the root, set it as the workflow later
-                if (not component_instance.is_root):
-                    await self.add_function(component_instance.name, component_instance.config)
-            else:
-                raise ValueError(f"Unknown component group {component_instance.component_group}")
+            try:
+                # Remove from remaining as we start building (if not root)
+                if not component_instance.is_root:
+                    remaining_components.remove(
+                        (str(component_instance.name), component_instance.component_group.value))
+
+                # Instantiate a the llm
+                if component_instance.component_group == ComponentGroup.LLMS:
+                    await self.add_llm(component_instance.name, component_instance.config)
+                # Instantiate a the embedder
+                elif component_instance.component_group == ComponentGroup.EMBEDDERS:
+                    await self.add_embedder(component_instance.name, component_instance.config)
+                # Instantiate a memory client
+                elif component_instance.component_group == ComponentGroup.MEMORY:
+                    await self.add_memory_client(component_instance.name, component_instance.config)
+                # Instantiate a retriever client
+                elif component_instance.component_group == ComponentGroup.RETRIEVERS:
+                    await self.add_retriever(component_instance.name, component_instance.config)
+                # Instantiate a function
+                elif component_instance.component_group == ComponentGroup.FUNCTIONS:
+                    # If the function is the root, set it as the workflow later
+                    if (not component_instance.is_root):
+                        await self.add_function(component_instance.name, component_instance.config)
+                else:
+                    raise ValueError(f"Unknown component group {component_instance.component_group}")
+
+                # Add to completed after successful build (if not root)
+                if not component_instance.is_root:
+                    completed_components.append(
+                        (str(component_instance.name), component_instance.component_group.value))
+
+            except Exception as e:
+                self._log_build_failure_component(component_instance, completed_components, remaining_components, e)
+                raise
 
         # Instantiate the workflow
         if not skip_workflow:
-            await self.set_workflow(config.workflow)
+            try:
+                # Remove workflow from remaining as we start building
+                remaining_components.remove(("<workflow>", "workflow"))
+                await self.set_workflow(config.workflow)
+                completed_components.append(("<workflow>", "workflow"))
+            except Exception as e:
+                self._log_build_failure_workflow(completed_components, remaining_components, e)
+                raise
 
     @classmethod
     @asynccontextmanager
