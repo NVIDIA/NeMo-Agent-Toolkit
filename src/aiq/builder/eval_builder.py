@@ -103,10 +103,10 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
         return tools
 
     def _log_build_failure_evaluator(self,
-                                     failing_evaluator_name,
-                                     completed_evaluators,
-                                     remaining_evaluators,
-                                     original_error):
+                                     failing_evaluator_name: str,
+                                     completed_evaluators: list[str],
+                                     remaining_evaluators: list[str],
+                                     original_error: Exception) -> None:
         """
         Log comprehensive evaluator build failure information.
 
