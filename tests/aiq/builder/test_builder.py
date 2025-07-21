@@ -628,4 +628,7 @@ async def test_add_telemetry_exporter():
 
         workflow = builder.build()
 
-        assert "exporter1" in workflow.telemetry_exporters.keys()
+        exporter1_instance = workflow.telemetry_exporters.get("exporter1", None)
+
+        assert exporter1_instance is not None
+        assert issubclass(type(exporter1_instance), BaseExporter)
