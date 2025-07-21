@@ -11,7 +11,6 @@ from aiq.builder.builder import Builder
 from aiq.data_models.component_ref import LLMRef
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from pydantic import Field
-from typing import Optional
 
 
 class ChatCompletionConfig(FunctionBaseConfig, name="chat_completion"):
@@ -24,18 +23,6 @@ class ChatCompletionConfig(FunctionBaseConfig, name="chat_completion"):
     
     llm_name: LLMRef = Field(
         description="The LLM to use for generating responses."
-    )
-    
-    max_tokens: Optional[int] = Field(
-        None,
-        description="Maximum number of tokens to generate in the response."
-    )
-    
-    temperature: float = Field(
-        0.7,
-        description="Temperature for response generation (0.0 = deterministic, 1.0 = creative).",
-        ge=0.0,
-        le=1.0
     )
 
 
