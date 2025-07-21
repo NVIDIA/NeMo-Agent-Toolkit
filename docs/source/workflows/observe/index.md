@@ -67,7 +67,7 @@ The `logging` section contains one or more logging providers. Each provider has 
 - `console`: Writes logs to the console.
 - `file`: Writes logs to a file.
 
-To see the complete list of configuration fields for each provider, utilize the `aiq info -t logging` command which will display the configuration fields for each provider. For example:
+To see the complete list of configuration fields for each provider, utilize the `aiq info components -t logging` command which will display the configuration fields for each provider. For example:
 
 ```bash
 $ aiq info -t logging
