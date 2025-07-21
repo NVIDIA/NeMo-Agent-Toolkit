@@ -111,10 +111,10 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
         Log comprehensive evaluator build failure information.
 
         Args:
-            failing_evaluator_name: The name of the evaluator that failed to build
-            completed_evaluators: List of evaluator names that were successfully built
-            remaining_evaluators: List of evaluator names still to be built
-            original_error: The original exception that caused the failure
+            failing_evaluator_name (str): The name of the evaluator that failed to build
+            completed_evaluators (list[str]): List of evaluator names that were successfully built
+            remaining_evaluators (list[str]): List of evaluator names still to be built
+            original_error (Exception): The original exception that caused the failure
         """
         # Convert evaluator names to (name, type) tuples for consistent logging
         completed_components = [(name, "evaluator") for name in completed_evaluators]

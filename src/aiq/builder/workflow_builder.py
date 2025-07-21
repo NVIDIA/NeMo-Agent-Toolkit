@@ -612,11 +612,11 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         Common method to log comprehensive build failure information.
 
         Args:
-            component_name: The name of the component that failed to build
-            component_type: The type of the component that failed to build
-            completed_components: List of (name, type) tuples for successfully built components
-            remaining_components: List of (name, type) tuples for components still to be built
-            original_error: The original exception that caused the failure
+            component_name (str): The name of the component that failed to build
+            component_type (str): The type of the component that failed to build
+            completed_components (list[tuple[str, str]]): List of (name, type) tuples for successfully built components
+            remaining_components (list[tuple[str, str]]): List of (name, type) tuples for components still to be built
+            original_error (Exception): The original exception that caused the failure
         """
         logger.error("Failed to initialize component %s (%s)", component_name, component_type)
 
@@ -645,10 +645,10 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         Log comprehensive component build failure information.
 
         Args:
-            failing_component: The ComponentInstanceData that failed to build
-            completed_components: List of (name, type) tuples for successfully built components
-            remaining_components: List of (name, type) tuples for components still to be built
-            original_error: The original exception that caused the failure
+            failing_component (ComponentInstanceData): The ComponentInstanceData that failed to build
+            completed_components (list[tuple[str, str]]): List of (name, type) tuples for successfully built components
+            remaining_components (list[tuple[str, str]]): List of (name, type) tuples for components still to be built
+            original_error (Exception): The original exception that caused the failure
         """
         component_name = failing_component.name
         component_type = failing_component.component_group.value
@@ -667,9 +667,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         Log comprehensive workflow build failure information.
 
         Args:
-            completed_components: List of (name, type) tuples for successfully built components
-            remaining_components: List of (name, type) tuples for components still to be built
-            original_error: The original exception that caused the failure
+            completed_components (list[tuple[str, str]]): List of (name, type) tuples for successfully built components
+            remaining_components (list[tuple[str, str]]): List of (name, type) tuples for components still to be built
+            original_error (Exception): The original exception that caused the failure
         """
         self._log_build_failure("<workflow>", "workflow", completed_components, remaining_components, original_error)
 
