@@ -47,7 +47,7 @@ async def test_multiply_tool():
 
 ### Testing Error Handling
 
-Verify that your tools handle invalid input gracefully:
+Verify that your tools handle invalid input:
 
 ```python
 async def test_tool_error_handling():
@@ -121,6 +121,7 @@ mock_builder.mock_function("function_name", "function result")
 ```
 
 ## Troubleshooting
+The following are common errors and their troubleshooting solutions.
 
 ### Tool Not Found Error
 
@@ -140,7 +141,7 @@ from my_package.register import MyToolConfig
 
 ### Mock Not Working
 
-If mocked dependencies aren't being used, check your setup order.
+If mocked dependencies are not being used, check your setup order.
 
 **Incorrect approach**:
 ```python
