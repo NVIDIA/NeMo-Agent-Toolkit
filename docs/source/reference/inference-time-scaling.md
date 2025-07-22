@@ -136,40 +136,21 @@ Your strategy is now discoverable by `TypeRegistry` and can be referenced in `AI
 
 ## Composing Strategies in an `AIQConfig`
 
-Run the following to compose strategies in an `AIQConfig`.
+ITS Strategies can be part of workflow configurations, just like other components such as `LLMs`. For example, the following configuration excerpt shows how an ITS strategy can be 
+configured in a `config.yml` file and used in a workflow function:
 
-```python
-from aiq.experimental.inference_time_scaling.models.search_config import SingleShotMultiPlanConfig
-from aiq.experimental.inference_time_scaling.models.selection_config import BestOfNSelectionConfig
-from aiq.experimental.inference_time_scaling.functions.execute_score_select_function import (
-    ExecuteScoreSelectFunctionConfig,
-)
+```yaml
+its_strategies:
+  selection_strategy:
+    _type: llm_based_agent_output_merging
+    selection_llm: nim_llm
 
-cfg = AIQConfig(
-    its_strategies = {
-        "planner": SingleShotMultiPlanConfig(
-            num_plans=5,
-            planning_llm="nim_llm",
-        ),
-        "selector": BestOfNSelectionConfig(),
-    },
-    functions = {
-        "qa": ExecuteScoreSelectFunctionConfig(
-            augmented_fn="my_domain.llm_chat",
-            scorer=None,
-            selector="selector",
-            num_executions=3,
-        ),
-    },
-    workflow = ...,
-)
+workflow:
+  _type: execute_score_select_function
+  selector: selection_strategy
+  augmented_fn: react_agent_executor
+  num_executions: 3
 ```
-
-The builder will:
-
-1. Instantiate `planner` and `selector`.
-2. Inject them into the function that needs them.
-3. Guarantee type compatibility at build‑time.
 
 ## Extending Tools and Pipelines
 
