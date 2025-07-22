@@ -62,7 +62,7 @@ def _extract_url(args: tuple, kwargs: dict[str, Any], url_param: str, func_name:
         func_name (str): Function name for logging
 
     Returns:
-        URL string or "unknown" if extraction fails
+        str: URL string or "unknown" if extraction fails
     """
     # Try keyword arguments first
     if url_param in kwargs:
@@ -90,7 +90,7 @@ def extract_primary_exception(exceptions: list[Exception]) -> Exception:
         exceptions (list[Exception]): List of exceptions from ExceptionGroup
 
     Returns:
-        Most relevant exception for user feedback
+        Exception: Most relevant exception for user feedback
     """
     # Prioritize connection errors
     for exc in exceptions:
@@ -119,7 +119,7 @@ def convert_to_mcp_error(exception: Exception, url: str) -> MCPError:
         url (str): MCP server URL for context
 
     Returns:
-        Appropriate MCPError subclass
+        MCPError: Appropriate MCPError subclass
     """
     match exception:
         case httpx.ConnectError() | ConnectionError():
@@ -144,7 +144,7 @@ def convert_to_mcp_error(exception: Exception, url: str) -> MCPError:
             return MCPError(f"Unexpected error: {exception}", url, original_exception=exception)
 
 
-def handle_mcp_exceptions(url_param: str = "url"):
+def handle_mcp_exceptions(url_param: str = "url") -> Callable[..., Any]:
     """Decorator that handles exceptions and converts them to MCPErrors.
 
     This decorator wraps MCP client methods and converts low-level exceptions
@@ -154,18 +154,20 @@ def handle_mcp_exceptions(url_param: str = "url"):
         url_param (str): Name of the parameter or attribute containing the MCP server URL
 
     Returns:
-        Decorator function
+        Callable[..., Any]: Decorated function
 
     Example:
-        @handle_mcp_exceptions("url")
-        async def get_tools(self, url: str):
-            # Method implementation
-            pass
+        .. code-block:: python
 
-        @handle_mcp_exceptions("url")  # Uses self.url
-        async def get_tool(self):
-            # Method implementation
-            pass
+            @handle_mcp_exceptions("url")
+            async def get_tools(self, url: str):
+                # Method implementation
+                pass
+
+            @handle_mcp_exceptions("url")  # Uses self.url
+            async def get_tool(self):
+                # Method implementation
+                pass
     """
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:

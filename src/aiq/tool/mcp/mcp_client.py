@@ -27,9 +27,8 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import create_model
 
+from aiq.tool.mcp.exceptions import MCPToolNotFoundError
 from aiq.utils.exception_handlers.mcp import mcp_exception_handler
-
-from .exceptions import MCPToolNotFoundError
 
 logger = logging.getLogger(__name__)
 
