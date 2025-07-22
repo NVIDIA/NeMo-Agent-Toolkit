@@ -92,7 +92,37 @@ aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/c
 aiq eval --skip_workflow --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml --dataset ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/eval/workflow_output.json
 ```
 
+
 #### Evaluation with Upload
+
+#### Setting up S3 Bucket for Upload
+
+To enable the `eval_upload.yml` workflow, you must configure an S3-compatible bucket for both dataset input and result output. You can use AWS S3, MinIO, or another S3-compatible service.
+
+**Using AWS S3**
+1. Create a bucket by following instructions [here](https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html).
+2. Configure your AWS credentials:
+   ```bash
+   export AWS_ACCESS_KEY_ID=<YOUR_ACCESS_KEY_ID>
+   export AWS_SECRET_ACCESS_KEY=<YOUR_SECRET_ACCESS_KEY>
+   export AWS_DEFAULT_REGION=<your-region>
+   ```
+3. In `eval_upload.yml`, update the `bucket`, `endpoint_url` (if using a custom endpoint), and credentials under both `eval.general.output.s3` and `eval.general.dataset.s3`.
+
+**Using MinIO**
+1. Start a local MinIO server or cloud instance.
+2. Create a bucket via the MinIO console or client by following instructions [here](https://min.io/docs/minio/linux/reference/minio-mc/mc-mb.html).
+3. Set environment variables:
+   ```bash
+   export AWS_ACCESS_KEY_ID=<MINIO_ACCESS_KEY>
+   export AWS_SECRET_ACCESS_KEY=<MINIO_SECRET_KEY>
+   export S3_ENDPOINT=http://<minio-host>:<port>
+   ```
+4. In `eval_upload.yml`, configure `endpoint_url` to point to `$S3_ENDPOINT`, and set the `bucket`, `access_key`, and `secret_key` accordingly.
+
+For more information about using remote files for evaluation, refer to the [evaluation guide](../../../docs/source/reference/evaluate.md).
+
+#### Running Evaluation
 ```bash
 aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_upload.yml
 ```
