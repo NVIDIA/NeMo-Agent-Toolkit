@@ -27,6 +27,9 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import create_model
 
+from aiq.tool.mcp.exceptions import MCPToolNotFoundError
+from aiq.utils.exception_handlers.mcp import mcp_exception_handler
+
 logger = logging.getLogger(__name__)
 
 
@@ -138,9 +141,16 @@ class MCPBuilder(MCPSSEClient):
         super().__init__(url)
         self._tools = None
 
+    @mcp_exception_handler
     async def get_tools(self):
         """
         Retrieve a dictionary of all tools served by the MCP server.
+
+        Returns:
+            Dict of tool name to MCPToolClient
+
+        Raises:
+            MCPError: If connection or tool retrieval fails
         """
         async with self.connect_to_sse_server() as session:
             response = await session.list_tools()
@@ -150,6 +160,7 @@ class MCPBuilder(MCPSSEClient):
             for tool in response.tools
         }
 
+    @mcp_exception_handler
     async def get_tool(self, tool_name: str) -> MCPToolClient:
         """
         Get an MCP Tool by name.
@@ -160,17 +171,19 @@ class MCPBuilder(MCPSSEClient):
         Returns:
             MCPToolClient for the configured tool.
 
-        Raise:
-            ValueError if no tool is available with that name.
+        Raises:
+            MCPToolNotFoundError: If no tool is available with that name
+            MCPError: If connection fails
         """
         if not self._tools:
             self._tools = await self.get_tools()
 
         tool = self._tools.get(tool_name)
         if not tool:
-            raise ValueError(f"Tool {tool_name} not available at {self.url}")
+            raise MCPToolNotFoundError(tool_name, self.url)
         return tool
 
+    @mcp_exception_handler
     async def call_tool(self, tool_name: str, tool_args: dict | None):
         async with self.connect_to_sse_server() as session:
             result = await session.call_tool(tool_name, tool_args)
@@ -221,6 +234,7 @@ class MCPToolClient(MCPSSEClient):
         """
         self._tool_description = description
 
+    @mcp_exception_handler
     async def acall(self, tool_args: dict) -> str:
         """
         Call the MCP tool with the provided arguments.
