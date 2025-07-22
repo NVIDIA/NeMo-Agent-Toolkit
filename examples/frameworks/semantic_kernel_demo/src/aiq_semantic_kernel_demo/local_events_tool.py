@@ -32,28 +32,19 @@ class LocalEventsResponse(BaseModel):
 
 
 class LocalEventsToolConfig(FunctionBaseConfig, name="local_events"):
-    pass
+    data_path: str = "examples/frameworks/semantic_kernel_demo/data/local_events.json"
 
 
 @register_function(config_type=LocalEventsToolConfig)
 async def local_events(tool_config: LocalEventsToolConfig, builder: Builder):
 
+    import json
+
+    with open(tool_config.data_path, "r") as f:
+        events = LocalEventsResponse.model_validate({"events": json.load(f)}).events
+
     async def _local_events(city: str) -> LocalEventsResponse:
-        events_data = [{
-            "event": "Cherry Blossom Tour", "cost": 40
-        }, {
-            "event": "Modern Art Expo", "cost": 30
-        }, {
-            "event": "Sushi Making Workshop", "cost": 50
-        }, {
-            "event": "Vegan Food Festival", "cost": 20
-        }, {
-            "event": "Vegan Michelin Star Restaurant", "cost": 100
-        }]
-        events = []
-        for event in events_data:
-            events.append(LocalEvent(name=event["event"], cost=event["cost"], city=city))
-        return LocalEventsResponse(events=events)
+        return LocalEventsResponse(events=[e for e in events if e.city == city])
 
     yield FunctionInfo.from_fn(
         _local_events,
