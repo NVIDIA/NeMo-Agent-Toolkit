@@ -284,11 +284,11 @@ When implementing your object store provider, follow these error handling guidel
 
 When developing your object store provider, consider testing:
 
-1. **Basic operations**: Test all four main operations (put, upsert, get, delete)
-2. **Error conditions**: Test with non-existent keys, duplicate keys, and invalid data
-3. **Concurrent access**: Test with multiple concurrent operations
-4. **Large objects**: Test with objects of various sizes
-5. **Metadata handling**: Test with and without metadata and content types
+- **Basic operations**: Test all four main operations (put, upsert, get, delete)
+- **Error conditions**: Test with non-existent keys, duplicate keys, and invalid data
+- **Concurrent access**: Test with multiple concurrent operations
+- **Large objects**: Test with objects of various sizes
+- **Metadata handling**: Test with and without metadata and content types
 
 ## Plugin Integration
 
