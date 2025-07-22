@@ -111,36 +111,37 @@ def extract_primary_exception(exceptions: list[Exception]) -> Exception:
     return exceptions[0]
 
 
-def convert_to_mcp_error(e: Exception, url: str) -> MCPError:
+def convert_to_mcp_error(exception: Exception, url: str) -> MCPError:
     """Convert single exception to appropriate MCPError.
 
     Args:
-        e (Exception): Single exception to convert
+        exception (Exception): Single exception to convert
         url (str): MCP server URL for context
 
     Returns:
         Appropriate MCPError subclass
     """
-    match e:
+    match exception:
         case httpx.ConnectError() | ConnectionError():
-            return MCPConnectionError(url, e)
+            return MCPConnectionError(url, exception)
         case httpx.TimeoutException():
-            return MCPTimeoutError(url, e)
+            return MCPTimeoutError(url, exception)
         case ssl.SSLError():
-            return MCPSSLError(url, e)
+            return MCPSSLError(url, exception)
         case httpx.RequestError():
-            return MCPRequestError(url, e)
-        case ValueError() if "Tool" in str(e) and "not available" in str(e):
+            return MCPRequestError(url, exception)
+        case ValueError() if "Tool" in str(exception) and "not available" in str(exception):
             # Extract tool name from error message if possible
-            tool_name = str(e).split("Tool ")[1].split(" not available")[0] if "Tool " in str(e) else "unknown"
-            return MCPToolNotFoundError(tool_name, url, e)
+            tool_name = str(exception).split("Tool ")[1].split(" not available")[0] if "Tool " in str(
+                exception) else "unknown"
+            return MCPToolNotFoundError(tool_name, url, exception)
         case _:
             # Handle TaskGroup error message specifically
-            if "unhandled errors in a TaskGroup" in str(e):
-                return MCPProtocolError(url, "Failed to connect to MCP server", e)
-            if "unauthorized" in str(e).lower() or "forbidden" in str(e).lower():
-                return MCPAuthenticationError(url, e)
-            return MCPError(f"Unexpected error: {e}", url, original_exception=e)
+            if "unhandled errors in a TaskGroup" in str(exception):
+                return MCPProtocolError(url, "Failed to connect to MCP server", exception)
+            if "unauthorized" in str(exception).lower() or "forbidden" in str(exception).lower():
+                return MCPAuthenticationError(url, exception)
+            return MCPError(f"Unexpected error: {exception}", url, original_exception=exception)
 
 
 def handle_mcp_exceptions(url_param: str = "url"):

@@ -69,7 +69,7 @@ def print_tool(tool_dict: dict[str, str | None], detail: bool = False) -> None:
 
     Args:
         tool_dict (dict[str, str | None]): Dictionary containing tool information with name, description, and
-            input_schema as keys
+        input_schema as keys
         detail (bool, optional): Whether to force detailed output. Defaults to False.
     """
     click.echo(f"Tool: {tool_dict.get('name', 'Unknown')}")
@@ -89,12 +89,11 @@ async def list_tools_and_schemas(url: str, tool_name: str | None = None) -> list
     Args:
         url (str): MCP server URL to connect to
         tool_name (str | None, optional): Specific tool name to retrieve.
-            If None, retrieves all available tools. Defaults to None.
+        If None, retrieves all available tools. Defaults to None.
 
     Returns:
         list[dict[str, str | None]]: List of formatted tool dictionaries, each containing name, description, and
-            input_schema as keys
-            Returns empty list on connection/error failures.
+        input_schema as keys
 
     Raises:
         MCPError: Caught internally and logged, returns empty list instead
@@ -122,11 +121,11 @@ async def list_tools_direct(url: str, tool_name: str | None = None) -> list[dict
     Args:
         url (str): MCP server URL to connect to
         tool_name (str | None, optional): Specific tool name to retrieve.
-            If None, retrieves all available tools. Defaults to None.
+        If None, retrieves all available tools. Defaults to None.
 
     Returns:
         list[dict[str, str | None]]: List of formatted tool dictionaries, each containing name, description, and
-            input_schema as keys
+        input_schema as keys
 
     Note:
         This function handles ExceptionGroup by extracting the most relevant exception
