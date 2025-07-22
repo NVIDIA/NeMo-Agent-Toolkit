@@ -38,7 +38,7 @@ export SERVICE_NAME=mcp-server-time
 # This can be any name you want to give to your service.
 export SERVICE_BRIEF_NAME=time
 # Any arguments to pass to the service. Example: `mcp-server-time` requires --local-timezone if the container's timezone hasn't been configured.
-export SERVICE_ARGS=--local-timezone "America/New_York"
+export SERVICE_ARGS=--"local-timezone \"America/New_York\""
 
 ```
 
@@ -54,7 +54,7 @@ export SERVER_PORT=8080
 
 ```bash
 mkdir -p ${SERVICE_DIR}
-cp examples/getting_started/simple_calculator/deploy_external_mcp/Dockerfile ${SERVICE_DIR}/
+cp examples/MCP/simple_calculator_mcp/deploy_external_mcp/Dockerfile ${SERVICE_DIR}/
 ```
 
 4. Create the run script:

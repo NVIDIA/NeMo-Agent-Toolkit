@@ -70,4 +70,10 @@ You can publish the simple calculator tools via MCP using the `aiq mcp` command.
 |-------------------|-----------------|-----------------|
 | `config-mcp-date.yml` | Date Server | Current time, date formatting |
 | `config-mcp-math.yml` | Math Server | Advanced mathematical operations |
-| `demo_config_mcp.yml` | Multiple Servers | Combined demonstration |
+| `config-combined.yml` | Multiple Servers | Combined demonstration |
+
+**Note**: To run the `config-combined.yml` example successfully, you need to keep both MCP servers running:
+- **Docker container MCP server**: Follow the setup instructions in `deploy_external_mcp/README.md` to start the containerized time server on port 8080
+- **NeMo Agent Toolkit MCP server**: Use `aiq mcp --config_file examples/getting_started/simple_calculator/configs/config.yml` to serve calculator tools on port 9901
+
+Both servers must be active simultaneously for the combined workflow to access all the required tools.

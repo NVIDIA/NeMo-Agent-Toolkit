@@ -13,14 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This config file shows how to use the mcp_tool_wrapper to access the `math` tools.
-# Here the workflow acts as a MCP client and connects to the MCP server running
-# on the specified URL (defaults to `http://localhost:9901/sse`).
+# This config file demonstrates how to use multiple MCP tools from different servers
+# in a single workflow. The workflow acts as an MCP client and connects to:
+# - Calculator tools from an MCP server on port 9901 (toolkit-deployed)
+# - Time tool from an external containerized MCP server on port 8080
 
 general:
   use_uvloop: true
 
 functions:
+  # These tools are from the MCP server deployed by the toolkit
   calculator_multiply:
     _type: mcp_tool_wrapper
     url: "http://localhost:9901/sse"
@@ -36,13 +38,17 @@ functions:
     url: "http://localhost:9901/sse"
     mcp_tool_name: calculator_divide
     description: "Returns the quotient of two numbers"
-  current_datetime:
-    _type: current_datetime
   calculator_subtract:
     _type: mcp_tool_wrapper
     url: "http://localhost:9901/sse"
     mcp_tool_name: calculator_subtract
     description: "Returns the difference of two numbers"
+  # This tool is from the containerized MCP server not deployed by the toolkit
+  mcp_time_tool:
+    _type: mcp_tool_wrapper
+    url: "http://localhost:8080/sse"
+    mcp_tool_name: get_current_time
+    description: "Returns the current date and time from the MCP server"
 
 llms:
   nim_llm:
@@ -60,10 +66,7 @@ workflow:
   tool_names:
     - calculator_multiply
     - calculator_inequality
-    - current_datetime
     - calculator_divide
     - calculator_subtract
+    - mcp_time_tool
   llm_name: nim_llm
-  verbose: true
-  retry_parsing_errors: true
-  max_retries: 3

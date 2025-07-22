@@ -29,18 +29,23 @@ Tools served by remote MCP servers can be leveraged as NeMo Agent toolkit functi
 ```python
 class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
     """
-    Function which connects to a Model Context Protocol (MCP) server and wraps the selected tool as an AIQ function.
+    Function which connects to a Model Context Protocol (MCP) server and wraps the selected tool as a NeMo Agent toolkit
+    function.
     """
     # Add your custom configuration parameters here
     url: HttpUrl = Field(description="The URL of the MCP server")
     mcp_tool_name: str = Field(description="The name of the tool served by the MCP Server that you want to use")
-    description: str | None = Field(
-        default=None,
-        description="""
+    description: str | None = Field(default=None,
+                                    description="""
         Description for the tool that will override the description provided by the MCP server. Should only be used if
         the description provided by the server is poor or nonexistent
-        """
-    )
+        """)
+    return_exception: bool = Field(default=True,
+                                   description="""
+        If true, the tool will return the exception message if the tool call fails.
+        If false, raise the exception.
+        """)
+
 ```
 In addition to the URL of the server, the configuration also takes as a parameter the name of the MCP tool you want to use as an NeMo Agent toolkit function. This is required because MCP servers can serve multiple tools, and for this wrapper we want to maintain a one-to-one relationship between NeMo Agent toolkit functions and MCP tools. This means that if you want to include multiple tools from an MCP server you will configure multiple `mcp_tool_wrappers`.
 
@@ -85,7 +90,7 @@ functions:
 ```
 
 To run the simple calculator workflow using remote MCP tools, follow these steps:
-1. Start the remote MCP server, `mcp-server-time`, by following the instructions in the `examples/getting_started/simple_calculator/deploy_external_mcp/README.md` file. Check that the server is running by running the following command:
+1. Start the remote MCP server, `mcp-server-time`, by following the instructions in the `examples/MCP/simple_calculator_mcp/deploy_external_mcp/README.md` file. Check that the server is running by running the following command:
 ```bash
 docker ps --filter "name=mcp-proxy-aiq-time"
 ```
