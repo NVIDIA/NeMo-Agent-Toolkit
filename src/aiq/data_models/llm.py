@@ -20,6 +20,7 @@ from .common import TypedBaseModel
 
 
 class LLMBaseConfig(TypedBaseModel, BaseModelRegistryTag):
+    """Base configuration for LLM providers."""
     pass
 
 
