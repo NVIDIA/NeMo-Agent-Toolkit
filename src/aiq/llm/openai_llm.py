@@ -21,9 +21,10 @@ from aiq.builder.builder import Builder
 from aiq.builder.llm import LLMProviderInfo
 from aiq.cli.register_workflow import register_llm_provider
 from aiq.data_models.llm import LLMBaseConfig
+from aiq.data_models.retry_mixin import RetryMixin
 
 
-class OpenAIModelConfig(LLMBaseConfig, name="openai"):
+class OpenAIModelConfig(LLMBaseConfig, RetryMixin, name="openai"):
     """An OpenAI LLM provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
