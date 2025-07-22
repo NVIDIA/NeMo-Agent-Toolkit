@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Report Tool
+# Report Tool for NVIDIA NeMo Agent Toolkit
 
 And example tool in the AIQ toolkit that makes use of an Object Store to retrieve data.
 
@@ -36,6 +36,7 @@ If you want to run this example in a local setup without creating a bucket in AW
 For the up-to-date installation instructions of MinIO, see [MinIO Page](https://github.com/minio/minio) and MinIO client see [MinIO Client Page](https://github.com/minio/mc)
 
 #### MacOS
+To install MinIO on your MacOS machine, run the following commands:
 ```
 brew install minio/stable/mc
 mc --help
@@ -45,6 +46,7 @@ brew install minio/stable/minio
 ```
 
 #### Linux
+To install MinIO on your Linux machine, run the following commands:
 ```
 curl https://dl.min.io/client/mc/release/linux-amd64/mc \
   --create-dirs \
@@ -60,6 +62,7 @@ sudo dpkg -i minio.deb
 ```
 
 ### Start the MinIO Server
+To start the MinIO server, run the following command:
 ```
 minio server ~/.minio
 ```
@@ -84,7 +87,7 @@ cd examples/object_store/user_report/
 ./upload_to_minio.sh data/object_store myminio my-bucket
 ```
 
-### Setting up MySQL server (Optional)
+### Setting up the MySQL Server (Optional)
 
 #### Linux (Ubuntu)
 
@@ -101,12 +104,12 @@ sudo systemctl status mysql
 
 Make sure that the service is `active (running)`.
 
-3. The default installation of the MySQL server only allows root access only if you’re the system user "root" (socket-based authentication). To be able to connect using the root user and password:
+3. The default installation of the MySQL server allows root access only if you’re the system user "root" (socket-based authentication). To be able to connect using the root user and password, run the following command:
 ```
 sudo mysql
 ```
 
-4. Inside the MySQL console (you can choose any password but make sure it matches the one used in the config):
+4. Inside the MySQL console, run the following command (you can choose any password but make sure it matches the one used in the config):
 ```
 ALTER USER 'root'@'localhost'
   IDENTIFIED WITH mysql_native_password BY 'my_password';
@@ -114,7 +117,7 @@ FLUSH PRIVILEGES;
 quit
 ```
 
-Note: This is not a secure configuration and not supposed to be used in production systems.
+Note: This is not a secure configuration and should not to be used in production systems.
 
 5. Back in the terminal:
 ```
@@ -154,7 +157,7 @@ cd examples/object_store/user_report/
 ./upload_to_mysql.sh root my_password data/object_store my-bucket
 ```
 
-## AIQ File Server
+## NeMo Agent Toolkit File Server
 
 By adding the `object_store` field in the `general.front_end` block of the configuration, clients directly download and
 upload files to the connected object store. An example configuration looks like:
@@ -175,7 +178,7 @@ You can start the server by running:
 aiq serve --config_file examples/intermediate/object_store/user_report/configs/config_s3.yml
 ```
 
-### Using the Object Store backed File Server
+### Using the Object Store Backed File Server
 
 - Downloading an object: `curl -X GET http://<hostname>:<port>/static/{file_path}`
 - Uploading an object: `curl -X POST http://<hostname>:<port>/static/{file_path}`
