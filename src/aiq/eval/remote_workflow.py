@@ -24,6 +24,7 @@ from tqdm import tqdm
 from aiq.data_models.api_server import AIQResponseIntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
+from aiq.data_models.invocation_node import InvocationNode
 from aiq.eval.config import EvaluationRunConfig
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
@@ -81,8 +82,12 @@ class EvaluationRemoteWorkflowHandler:
                             step_data = json.loads(line[len(INTERMEDIATE_DATA_PREFIX):])
                             response_intermediate = AIQResponseIntermediateStep.model_validate(step_data)
                             # The payload is expected to be IntermediateStepPayload
-                            intermediate_step = IntermediateStep(
-                                payload=IntermediateStepPayload.model_validate_json(response_intermediate.payload))
+                            payload = IntermediateStepPayload.model_validate_json(response_intermediate.payload)
+                            intermediate_step = IntermediateStep(parent_id="remote",
+                                                                 function_ancestry=InvocationNode(
+                                                                     function_name=payload.name or "remote_function",
+                                                                     function_id=payload.UUID or "remote_function_id"),
+                                                                 payload=payload)
                             intermediate_steps.append(intermediate_step)
                         except (json.JSONDecodeError, ValidationError) as e:
                             logger.error("Failed to parse intermediate step: %s", e)

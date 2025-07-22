@@ -15,15 +15,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# About NVIDIA Agent Intelligence Toolkit Workflows
+# About NVIDIA NeMo Agent Toolkit Workflows
 
-Workflows are the heart of AIQ toolkit because they define which agentic tools and models are used to perform a given task or series of tasks.
+Workflows are the heart of NeMo Agent toolkit because they define which agentic tools and models are used to perform a given task or series of tasks.
 
 ## Understanding the Workflow Configuration File
 
-The workflow configuration file is a YAML file that specifies the tools and models to use in a workflow, along with general configuration settings. This section examines the configuration of the `examples/simple` workflow to show how they're organized.
+The workflow configuration file is a YAML file that specifies the tools and models to use in a workflow, along with general configuration settings. This section examines the configuration of the `examples/basic/functions/simple` workflow to show how they're organized.
 
-`examples/simple/configs/config.yml`:
+`examples/basic/functions/simple/configs/config.yml`:
 ```yaml
 functions:
   webpage_query:

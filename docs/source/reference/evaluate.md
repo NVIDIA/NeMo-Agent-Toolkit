@@ -15,35 +15,35 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Evaluating NVIDIA Agent Intelligence Toolkit Workflows Details
+# Evaluating NVIDIA NeMo Agent Toolkit Workflows Details
 
 :::{note}
-It is recommended that the [Evaluating AIQ toolkit Workflows](../workflows/evaluate.md) guide be read before proceeding with this detailed documentation.
+We recommend reading the [Evaluating NeMo Agent Toolkit Workflows](../workflows/evaluate.md) guide before proceeding with this detailed documentation.
 :::
 
-AIQ toolkit provides a set of evaluators to run and evaluate the AIQ toolkit workflows. In addition to the built-in evaluators, AIQ toolkit provides a plugin system to add custom evaluators.
+NeMo Agent toolkit provides a set of evaluators to run and evaluate the workflows. In addition to the built-in evaluators, the toolkit provides a plugin system to add custom evaluators.
 
 Example:
 ```bash
-aiq eval --config_file=examples/simple/configs/eval_config.yml
+aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml
 ```
 
 ## Using Datasets
 Run and evaluate the workflow on a specified dataset. The dataset files types are `json`, `jsonl`, `csv`, `xls`, or `parquet`.
 
-Download and use datasets provided by AIQ toolkit examples by running the following.
+Download and use datasets provided by NeMo Agent toolkit examples by running the following.
 
 ```bash
 git lfs fetch
 git lfs pull
 ```
- The dataset used for evaluation is specified in the configuration file  via `eval.general.dataset`. For example, to use the `langsmith.json` dataset, the configuration is as follows:
+ The dataset used for evaluation is specified in the configuration file through the `eval.general.dataset`. For example, to use the `langsmith.json` dataset, the configuration is as follows:
 ```yaml
 eval:
   general:
     dataset:
       _type: json
-      file_path: examples/simple/data/langsmith.json
+      file_path: examples/basic/functions/simple/data/langsmith.json
 ```
 
 ### Dataset Format
@@ -81,7 +81,7 @@ eval:
   general:
     dataset:
       _type: json
-      file_path: examples/swe_bench/data/test_dataset_lite.json
+      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true
@@ -104,7 +104,7 @@ and `sympy__sympy-21055`. The evaluation iteratively develops and debugs the wor
 eval:
     dataset:
       _type: json
-      file_path: examples/swe_bench/data/test_dataset_verified.json
+      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
       id_key: instance_id
       structure:
         disable: true
@@ -122,7 +122,7 @@ You can also skip entries from the dataset. Here is an example configuration to 
 eval:
     dataset:
       _type: json
-      file_path: examples/swe_bench/data/test_dataset_verified.json
+      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
       id_key: instance_id
       structure:
         disable: true
@@ -134,16 +134,15 @@ eval:
               - sympy__sympy-21055
 ```
 
-## AIQ Toolkit Built-in Evaluators
-AIQ toolkit provides the following built-in evaluator:
+## NeMo Agent Toolkit Built-in Evaluators
+NeMo Agent toolkit provides the following built-in evaluator:
 - `ragas` - An evaluator to run and evaluate RAG-like workflows using the public RAGAS API.
 - `trajectory` - An evaluator to run and evaluate the LangChain agent trajectory.
 - `swe_bench` - An evaluator to run and evaluate the workflow on the SWE-Bench dataset.
 
 ### RAGAS Evaluator
 [RAGAS](https://docs.ragas.io/) is an OSS evaluation framework that enables end-to-end
-evaluation of RAG workflows. AIQ toolkit provides an interface to RAGAS to evaluate the performance
-of RAG-like AIQ toolkit workflows.
+evaluation of RAG workflows. NeMo Agent toolkit provides an interface to RAGAS to evaluate the performance of RAG-like workflows.
 
 RAGAS provides a set of evaluation metrics to configure in the `config.yml` file
 by adding an evaluator section with type`ragas`.
@@ -199,7 +198,7 @@ eval:
   general:
     dataset:
       _type: json
-      file_path: examples/swe_bench/data/test_dataset_lite.json
+      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true
@@ -271,17 +270,17 @@ Note: In your evaluation dataset, make sure that the `answer` field is a descrip
 
 **Sample Usage:**
 ```bash
-aiq eval --config_file=examples/simple_calculator/configs/config-tunable-rag-eval.yml
+aiq eval --config_file=examples/basic/functions/simple_calculator/configs/config-tunable-rag-eval.yml
 ```
 
 ## Adding Custom Evaluators
-You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the AIQ toolkit evaluator system. See the [Custom Evaluator](../extend/custom-evaluator.md) documentation for more information.
+You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the NeMo Agent toolkit evaluator system. See the [Custom Evaluator](../extend/custom-evaluator.md) documentation for more information.
 
 
 ## Running multiple repetitions
 You can run multiple repetitions of the evaluation by running a command line option `--reps`. For example, to run the evaluation 5 times, run the following command:
 ```bash
-aiq eval --config_file=examples/simple/configs/eval_config.yml --reps=5
+aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml --reps=5
 ```
 This will allow you to get an average score across multiple runs and analyze the variation in the generated outputs.
 
@@ -300,33 +299,33 @@ You can then re-run evaluation on that output file along with `--skip_completed_
 
 Pass-1:
 ```
-aiq eval --config_file=examples/simple/configs/eval_config.yml
+aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml
 ```
 This pass results in workflow interrupted warning. You can then do another pass.
 
 Pass-2:
 ```bash
-cp .tmp/aiq/examples/simple/workflow_output.json .tmp/simple_workflow_output.json
-aiq eval --config_file=examples/simple/configs/eval_config.yml --skip_completed_entries --dataset=.tmp/simple_workflow_output.json
+cp .tmp/aiq/examples/basic/functions/simple/workflow_output.json .tmp/simple_workflow_output.json
+aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml --skip_completed_entries --dataset=.tmp/simple_workflow_output.json
 ```
 
 ## Running evaluation offline
 You can evaluate a dataset with previously generated answers via the `--skip_workflow` option. In this case the dataset has both the expected `answer` and the `generated_answer`.
 ```bash
-cp .tmp/aiq/examples/simple/workflow_output.json .tmp/simple_workflow_output.json
-aiq eval --config_file=examples/simple/configs/eval_config.yml --skip_workflow --dataset=.tmp/simple_workflow_output.json
+cp .tmp/aiq/examples/basic/functions/simple/workflow_output.json .tmp/simple_workflow_output.json
+aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml --skip_workflow --dataset=.tmp/simple_workflow_output.json
 ```
-This assumes that the workflow output was previously generated and stored in `.tmp/aiq/examples/simple/workflow_output.json`
+This assumes that the workflow output was previously generated and stored in `.tmp/aiq/examples/basic/functions/simple/workflow_output.json`
 
 ## Running the workflow over a dataset without evaluation
 You can do this by running `aiq eval` with a workflow configuration file that includes an `eval` section with no `evaluators`.
 ```yaml
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/simple/
+    output_dir: ./.tmp/aiq/examples/basic/functions/simple/
     dataset:
       _type: json
-      file_path: examples/simple/data/langsmith.json
+      file_path: examples/basic/functions/simple/data/langsmith.json
 ```
 
 ## Evaluation output
@@ -334,7 +333,7 @@ The output of the workflow is stored as `workflow_output.json` in the `output_di
 ```yaml
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/simple/
+    output_dir: ./.tmp/aiq/examples/basic/functions/simple/
 ```
 Here is a sample workflow output snipped generated by running evaluation on the `simple` example workflow -
 ```
@@ -386,7 +385,7 @@ The output of the evaluators are stored in distinct files in the same `output_di
 The workflow_output.json file contains the intermediate steps for each entry in the dataset. The intermediate steps are filtered using the `eval.general.output.workflow_output_step_filter` parameter in the `config.yml` file. The default value for the filter is `[LLM_END, TOOL_END]`. You can customize the filter by providing a list of intermediate step types to include in the output file.
 
 **Example:**
-`examples/simple/configs/eval_config.yml` can be modified to include the intermediate steps in the output by adding the following configuration:
+`examples/basic/functions/simple/configs/eval_config.yml` can be modified to include the intermediate steps in the output by adding the following configuration:
 ```yaml
 eval:
   general:
@@ -409,7 +408,7 @@ eval:
       dir: ./.tmp/aiq/examples/simple_output/
       custom_scripts:
         convert_workflow_to_csv:
-          script: examples/simple/src/aiq_simple/scripts/workflow_to_csv.py
+          script: examples/basic/functions/simple/src/aiq_simple/scripts/workflow_to_csv.py
           kwargs:
             # The input and output are relative to the output directory
             input: workflow_output.json
@@ -449,10 +448,10 @@ eval:
 ```
 
 When `append_job_id_to_output_dir` is set to `true`, a unique job ID (`job_{UUID}`) is automatically generated for each evaluation run and appended to the output directory path. This results in:
-- Local output path: `./.tmp/aiq/examples/simple/jobs/job_{unique-job-id}/`
+- Local output path: `./.tmp/aiq/examples/basic/functions/simple/jobs/job_{unique-job-id}/`
 - Remote output path (if S3 is configured): `output/jobs/job_{unique-job-id}/`
 
-The `cleanup` option is used to control the cleanup of the output directory. If `cleanup` is set to `true`, the entire output directory and all job `sub-directories` are deleted at the beginning of the evaluation. So `cleanup` must be set to `false` if you want to preserve the output directory and job `sub-directories`.
+The `cleanup` option is used to control the cleanup of the output directory. If `cleanup` is set to `true`, the entire output directory and all job `sub-directories` are deleted at the beginning of the evaluation. Therefore, `cleanup` must be set to `false` if you want to preserve the output directory and job `sub-directories`.
 
 ### Uploading output directory to remote storage
 You can upload the contents of the entire output directory to remote storage by providing the information needed to upload the output directory in the `eval.general.output` section of the `config.yml` file. The following is an example configuration to upload the output directory to remote storage.
@@ -514,5 +513,5 @@ Configuration notes:
 - `max_jobs` sets the maximum number of job directories to keep. The oldest ones will be evicted based on the selected policy. Default is 0, which means no limit.
 - `eviction_policy` controls how "oldest" is determined—either by creation time (TIME_CREATED) or last modification time (TIME_MODIFIED). Default is TIME_CREATED.
 
-## Profiling and Performance Monitoring of AIQ Toolkit Workflows
-You can profile workflows using the AIQ toolkit evaluation system. For more information, see the [Profiler](../workflows/profiler.md) documentation.
+## Profiling and Performance Monitoring of NeMo Agent Toolkit Workflows
+You can profile workflows using the NeMo Agent toolkit evaluation system. For more information, see the [Profiler](../workflows/profiler.md) documentation.

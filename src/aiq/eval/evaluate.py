@@ -99,12 +99,34 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             max_timestamp = max(step.event_timestamp for step in item.trajectory)
             runtime = max_timestamp - min_timestamp
         else:
+            min_timestamp = 0.0
+            max_timestamp = 0.0
             runtime = 0.0
+
+        # find llm latency by calculating p95 of all llm calls
+        llm_latencies = []
+        previous_llm_start_time = None
+        for step in steps:
+            if step.event_type == "LLM_START":
+                previous_llm_start_time = step.event_timestamp
+            elif step.event_type == "LLM_END" and previous_llm_start_time is not None:
+                llm_latencies.append(step.event_timestamp - previous_llm_start_time)
+                previous_llm_start_time = None
+
+        # Calculate p95 LLM latency (or 0 if no LLM calls)
+        if llm_latencies:
+            import numpy as np
+            llm_latency = float(np.percentile(llm_latencies, 95))
+        else:
+            llm_latency = 0.0
 
         # add the usage stats to the usage stats dict
         self.usage_stats.usage_stats_items[item.id] = UsageStatsItem(usage_stats_per_llm=usage_stats_per_llm,
                                                                      runtime=runtime,
-                                                                     total_tokens=total_tokens)
+                                                                     total_tokens=total_tokens,
+                                                                     min_timestamp=min_timestamp,
+                                                                     max_timestamp=max_timestamp,
+                                                                     llm_latency=llm_latency)
         return self.usage_stats.usage_stats_items[item.id]
 
     async def run_workflow_local(self, session_manager: AIQSessionManager):
@@ -221,7 +243,9 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         for input_item in self.eval_input.eval_input_items:
             all_stats.append(input_item.trajectory)
 
-        profiler_runner = ProfilerRunner(self.eval_config.general.profiler, self.eval_config.general.output_dir)
+        profiler_runner = ProfilerRunner(self.eval_config.general.profiler,
+                                         self.eval_config.general.output_dir,
+                                         write_output=self.config.write_output)
 
         return await profiler_runner.run(all_stats)
 
@@ -307,6 +331,11 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                 f.write(output)
             self.evaluator_output_files.append(output_file)
             logger.info("Evaluation results written to %s", output_file)
+
+    def publish_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):
+        """Publish the output"""
+        if self.config.write_output:
+            self.write_output(dataset_handler, profiler_results)
 
         if self.workflow_interrupted:
             # Issue a warning if the workflow was not completed on all datasets
@@ -415,7 +444,11 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                 workflow_interrupted=self.workflow_interrupted,
             )
 
-        dataset_handler = DatasetHandler(dataset_config=dataset_config, reps=self.config.reps)
+        dataset_handler = DatasetHandler(dataset_config=dataset_config,
+                                         reps=self.config.reps,
+                                         concurrency=self.eval_config.general.max_concurrency,
+                                         num_passes=self.config.num_passes,
+                                         adjust_dataset_size=self.config.adjust_dataset_size)
         self.eval_input = dataset_handler.get_eval_input_from_dataset(self.config.dataset)
         if not self.eval_input.eval_input_items:
             logger.info("Dataset is empty. Nothing to evaluate.")
@@ -447,8 +480,16 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         # Profile the workflow
         profiler_results = await self.profile_workflow()
 
-        # Write the results to the output directory
-        self.write_output(dataset_handler, profiler_results)
+        # compute total runtime
+        if self.usage_stats.usage_stats_items:
+            self.usage_stats.total_runtime = max(self.usage_stats.usage_stats_items.values(),
+                                                 key=lambda x: x.max_timestamp).max_timestamp - \
+                min(self.usage_stats.usage_stats_items.values(), key=lambda x: x.min_timestamp).min_timestamp
+        else:
+            self.usage_stats.total_runtime = 0.0
+
+        # Publish the results
+        self.publish_output(dataset_handler, profiler_results)
 
         # Run custom scripts and upload evaluation outputs to S3
         if self.eval_config.general.output:
@@ -456,8 +497,10 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             output_uploader.run_custom_scripts()
             await output_uploader.upload_directory()
 
-        return EvaluationRunOutput(
-            workflow_output_file=self.workflow_output_file,
-            evaluator_output_files=self.evaluator_output_files,
-            workflow_interrupted=self.workflow_interrupted,
-        )
+        return EvaluationRunOutput(workflow_output_file=self.workflow_output_file,
+                                   evaluator_output_files=self.evaluator_output_files,
+                                   workflow_interrupted=self.workflow_interrupted,
+                                   eval_input=self.eval_input,
+                                   evaluation_results=self.evaluation_results,
+                                   usage_stats=self.usage_stats,
+                                   profiler_results=profiler_results)

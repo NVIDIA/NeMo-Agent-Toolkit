@@ -15,16 +15,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# AIQ Toolkit as an MCP Client
+# NeMo Agent Toolkit as an MCP Client
 
 Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
-You can use AIQ toolkit as an MCP Client to connect to and use tools served by remote MCP servers.
+You can use NeMo Agent toolkit as an MCP Client to connect to and use tools served by remote MCP servers.
 
-This guide will cover how to use AIQ toolkit as an MCP Client. For more information on how to use AIQ toolkit as an MCP Server, please refer to the [MCP Server](./mcp-server.md) documentation.
+This guide will cover how to use NeMo Agent toolkit as an MCP Client. For more information on how to use NeMo Agent toolkit as an MCP Server, please refer to the [MCP Server](./mcp-server.md) documentation.
 
 ## Usage
-Tools served by remote MCP servers can be leveraged as AIQ toolkit functions through configuration of an `mcp_tool_wrapper`.
+Tools served by remote MCP servers can be leveraged as NeMo Agent toolkit functions through configuration of an `mcp_tool_wrapper`.
 
 ```python
 class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
@@ -42,7 +42,7 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
         """
     )
 ```
-In addition to the URL of the server, the configuration also takes as a parameter the name of the MCP tool you want to use as an AIQ toolkit function. This is required because MCP servers can serve multiple tools, and for this wrapper we want to maintain a one-to-one relationship between AIQ toolkit functions and MCP tools. This means that if you want to include multiple tools from an MCP server you will configure multiple `mcp_tool_wrappers`.
+In addition to the URL of the server, the configuration also takes as a parameter the name of the MCP tool you want to use as an NeMo Agent toolkit function. This is required because MCP servers can serve multiple tools, and for this wrapper we want to maintain a one-to-one relationship between NeMo Agent toolkit functions and MCP tools. This means that if you want to include multiple tools from an MCP server you will configure multiple `mcp_tool_wrappers`.
 
 For example:
 
@@ -74,7 +74,7 @@ Once configured, a Pydantic input schema will be generated based on the input sc
 ## Example
 The simple calculator workflow can be configured to use remote MCP tools. Sample configuration is provided in the `config-mcp-date.yml` file.
 
-`examples/simple_calculator/configs/config-mcp-date.yml`:
+`examples/basic/functions/simple_calculator/configs/config-mcp-date.yml`:
 ```yaml
 functions:
   mcp_time_tool:
@@ -85,7 +85,7 @@ functions:
 ```
 
 To run the simple calculator workflow using remote MCP tools, follow these steps:
-1. Start the remote MCP server, `mcp-server-time`, by following the instructions in the `examples/simple_calculator/deploy_external_mcp/README.md` file. Check that the server is running by running the following command:
+1. Start the remote MCP server, `mcp-server-time`, by following the instructions in the `examples/basic/functions/simple_calculator/deploy_external_mcp/README.md` file. Check that the server is running by running the following command:
 ```bash
 docker ps --filter "name=mcp-proxy-aiq-time"
 ```
@@ -97,7 +97,7 @@ CONTAINER ID   IMAGE                      COMMAND                  CREATED      
 
 2. Run the workflow using the `aiq run` command.
 ```bash
-aiq run --config_file examples/simple_calculator/configs/config-mcp-date.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+aiq run --config_file examples/basic/functions/simple_calculator/configs/config-mcp-date.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 This will use the `mcp_time_tool` function to get the current hour of the day from the MCP server.
 

@@ -53,6 +53,42 @@ async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: 
         )
 
 
+class GalileoTelemetryExporter(TelemetryExporterBaseConfig, name="galileo"):
+    """A telemetry exporter to transmit traces to externally hosted galileo service."""
+
+    endpoint: str = Field(description="The galileo endpoint to export telemetry traces.")
+    project: str = Field(description="The project name to group the telemetry traces.")
+    logstream: str = Field(description="The logstream name to group the telemetry traces.")
+    api_key: str = Field(description="The api key to authenticate with the galileo service.")
+    session_id: str = Field(description="The session id to group the telemetry traces.", default=None)
+
+
+@register_telemetry_exporter(config_type=GalileoTelemetryExporter)
+async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: Builder):
+    """Create a Galileo telemetry exporter."""
+    try:
+        # If the dependencies are not installed, a TelemetryOptionalImportError will be raised
+        phoenix = try_import_phoenix()  # noqa: F841
+        from phoenix.otel import HTTPSpanExporter
+
+        headers = {
+            "Galileo-API-Key": config.api_key,
+            "logstream": config.logstream,
+            "project": config.project,
+        }
+
+        if config.session_id:
+            headers["sessionid"] = config.session_id
+
+        yield HTTPSpanExporter(config.endpoint, headers=headers)
+    except ConnectionError as ex:
+        logger.warning(
+            f"Unable to connect to Galileo. Are you sure {config.endpoint} is correct?\n %s",
+            ex,
+            exc_info=True,
+        )
+
+
 class LangfuseTelemetryExporter(TelemetryExporterBaseConfig, name="langfuse"):
     """A telemetry exporter to transmit traces to externally hosted langfuse service."""
 
@@ -178,3 +214,28 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
         "pat-project-name": config.project,
     }
     yield trace_exporter.OTLPSpanExporter(endpoint=config.endpoint, headers=headers)
+
+
+class CatalystTelemetryExporter(TelemetryExporterBaseConfig, name="catalyst"):
+    """A telemetry exporter to transmit traces to RagaAI catalyst."""
+    endpoint: str = Field(description="The RagaAI Catalyst endpoint", default="")
+    access_key: str = Field(description="The RagaAI Catalyst API access key", default="")
+    secret_key: str = Field(description="The RagaAI Catalyst API secret key", default="")
+    project: str = Field(description="The RagaAI Catalyst project name")
+    dataset: str = Field(description="The RagaAI Catalyst dataset name")
+
+
+@register_telemetry_exporter(config_type=CatalystTelemetryExporter)
+async def catalyst_telemetry_exporter(config: CatalystTelemetryExporter, builder: Builder):
+    """Create a Catalyst telemetry exporter."""
+    catalyst = telemetry_optional_import("ragaai_catalyst")
+    trace_exporter = telemetry_optional_import("ragaai_catalyst.tracers.exporters")
+
+    access_key = config.access_key or os.environ.get("CATALYST_ACCESS_KEY")
+    secret_key = config.secret_key or os.environ.get("CATALYST_SECRET_KEY")
+    endpoint = config.endpoint or os.environ.get("CATALYST_ENDPOINT")
+    project = config.project
+    dataset = config.dataset
+
+    catalyst.RagaAICatalyst(access_key=access_key, secret_key=secret_key, base_url=endpoint)
+    yield trace_exporter.DynamicTraceExporter(project, dataset, endpoint, "agentic/nemo-framework")
