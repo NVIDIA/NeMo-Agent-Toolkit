@@ -25,12 +25,24 @@ WARNING_MESSAGE = "This function is experimental and the API may change in futur
 warning_issued = set()
 
 
-def issue_warning(function_name: str):
+def issue_warning(function_name: str, metadata: dict[str, Any] | None = None):
     """
-    Logger.warn warning message if the function has not been warned about before.
+    Log a warning message that the function is experimental.
+
+    A warning is emitted only once per function.  When a ``metadata`` dict
+    is supplied, it is appended to the log entry to provide extra context
+    (e.g., version, author, feature flag).
     """
     if function_name not in warning_issued:
-        logger.warning(f"{WARNING_MESSAGE} Function: {function_name}")
+        if metadata:
+            logger.warning(
+                "%s Function: %s | Metadata: %s",
+                WARNING_MESSAGE,
+                function_name,
+                metadata,
+            )
+        else:
+            logger.warning("%s Function: %s", WARNING_MESSAGE, function_name)
         warning_issued.add(function_name)
 
 
@@ -43,8 +55,14 @@ def aiq_experimental(func: Any = None, *, metadata: dict[str, Any] | None = None
     - If the function is a generator, it will be wrapped in a generator function.
     - If the function is an async generator, it will be wrapped in an async generator function.
     - If the function is sync, it will be wrapped in a sync function.
+
+    Args:
+        func: The function to be decorated.
+        metadata: Optional dictionary of metadata to log with the warning.
+            This can include information like version, author, etc.
+            If provided, the metadata will be logged alongside the experimental warning.
     """
-    function_name: str = func.__name__ if func else "<unknown_function>"
+    function_name: str = f"{func.__module__}.{func.__qualname__}" if func else "<unknown_function>"
 
     # If called as @track_function(...) but not immediately passed a function
     if func is None:
@@ -69,7 +87,7 @@ def aiq_experimental(func: Any = None, *, metadata: dict[str, Any] | None = None
 
         @functools.wraps(func)
         async def async_gen_wrapper(*args, **kwargs):
-            issue_warning(function_name)
+            issue_warning(function_name, metadata)
             async for item in func(*args, **kwargs):
                 yield item  # yield the original item
 
@@ -81,7 +99,7 @@ def aiq_experimental(func: Any = None, *, metadata: dict[str, Any] | None = None
         # ---------------------
         @functools.wraps(func)
         async def async_wrapper(*args, **kwargs):
-            issue_warning(function_name)
+            issue_warning(function_name, metadata)
             result = await func(*args, **kwargs)
             return result
 
@@ -93,7 +111,7 @@ def aiq_experimental(func: Any = None, *, metadata: dict[str, Any] | None = None
         # ---------------------
         @functools.wraps(func)
         def sync_gen_wrapper(*args, **kwargs):
-            issue_warning(function_name)
+            issue_warning(function_name, metadata)
             for item in func(*args, **kwargs):
                 yield item  # yield the original item
 
@@ -101,7 +119,7 @@ def aiq_experimental(func: Any = None, *, metadata: dict[str, Any] | None = None
 
     @functools.wraps(func)
     def sync_wrapper(*args, **kwargs):
-        issue_warning(function_name)
+        issue_warning(function_name, metadata)
         result = func(*args, **kwargs)
         return result
 

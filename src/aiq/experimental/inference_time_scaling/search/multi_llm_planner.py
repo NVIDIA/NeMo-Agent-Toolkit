@@ -25,7 +25,7 @@ from aiq.experimental.inference_time_scaling.models.search_config import MultiLL
 from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
 from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
 from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
-from aiq.utils.io.think_tags import remove_r1_think_tags
+from aiq.utils.io.model_processing import remove_r1_think_tags
 
 logger = logging.getLogger(__name__)
 

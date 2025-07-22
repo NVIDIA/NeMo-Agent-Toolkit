@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import logging
-from typing import Any
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -27,6 +26,7 @@ from aiq.cli.register_workflow import register_function
 from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
+from aiq.utils.string_utils import convert_to_str
 
 logger = logging.getLogger(__name__)
 
@@ -64,26 +64,6 @@ class ITSToolWrapperFunctionConfig(FunctionBaseConfig, name="its_tool_wrapper"):
                                          default=None)
 
 
-def convert_to_str(value: Any) -> str:
-    """
-    Convert a value to a string representation.
-    Handles various types including lists, dictionaries, and other objects.
-    """
-    if isinstance(value, str):
-        return value
-
-    if isinstance(value, list):
-        return ", ".join(map(str, value))
-    elif isinstance(value, BaseModel):
-        return value.model_dump_json(exclude_none=True, exclude_unset=True)
-    elif isinstance(value, dict):
-        return ", ".join(f"{k}: {v}" for k, v in value.items())
-    elif hasattr(value, '__str__'):
-        return str(value)
-    else:
-        raise ValueError(f"Unsupported type for conversion to string: {type(value)}")
-
-
 @register_function(config_type=ITSToolWrapperFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def register_its_tool_wrapper_function(
     config: ITSToolWrapperFunctionConfig,
@@ -102,6 +82,9 @@ async def register_its_tool_wrapper_function(
 
     augmented_function: Function = builder.get_function(config.augmented_fn)
     input_llm: BaseChatModel = await builder.get_llm(config.input_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+
+    if not augmented_function.has_single_output:
+        raise ValueError("ITSToolWrapperFunction only supports functions with a single output.")
 
     if not augmented_function.has_single_output:
         raise ValueError("ITSToolWrapperFunction only supports functions with a single output.")
@@ -130,7 +113,7 @@ async def register_its_tool_wrapper_function(
                             f"the tool should do.  The tool requires information about "
                             f"{fn_input_schema.model_fields}")
 
-    async def single_inner(input_message: str) -> str:
+    async def single_inner(input_message: str) -> fn_output_schema:
         """
         Inner function to handle the streaming output of the ITSToolWrapperFunction.
         It generates structured input for the augmented function based on the input message.
@@ -158,6 +141,6 @@ async def register_its_tool_wrapper_function(
         # Call the augmented function with the structured input
         result = await augmented_function.acall_invoke(llm_parsed)
 
-        return convert_to_str(result)
+        return result
 
-    yield FunctionInfo.from_fn(fn=single_inner, description=function_description)
+    yield FunctionInfo.from_fn(fn=single_inner, description=function_description, converters=[convert_to_str])
