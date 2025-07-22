@@ -67,7 +67,7 @@ functions:
     mcp_tool_name: tool_c
 ```
 
-The final configuration parameter (the `description`) is optional, and should only be used if the description provided by the MCP server is not sufficient, or if there is no description provided by the server.
+The optional configuration parameters (`description` and `return_exception`) provide additional control over the tool behavior. The `description` parameter should only be used if the description provided by the MCP server is not sufficient, or if there is no description provided by the server. The `return_exception` parameter controls whether exceptions are returned as messages or raised directly.
 
 Once configured, a Pydantic input schema will be generated based on the input schema provided by the MCP server. This input schema is included with the configured function and is accessible by any agent or function calling the configured `mcp_tool_wrapper` function. The `mcp_tool_wrapper` function can accept the following type of arguments as long as they satisfy the input schema:
  * a validated instance of it's input schema
