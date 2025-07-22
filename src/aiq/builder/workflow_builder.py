@@ -754,9 +754,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 # Instantiate a memory client
                 elif component_instance.component_group == ComponentGroup.MEMORY:
                     await self.add_memory_client(component_instance.name, component_instance.config)
-	            # Instantiate a object store client
-	            elif component_instance.component_group == ComponentGroup.OBJECT_STORES:
-	                await self.add_object_store(component_instance.name, component_instance.config)
+            # Instantiate a object store client
+                elif component_instance.component_group == ComponentGroup.OBJECT_STORES:
+                    await self.add_object_store(component_instance.name, component_instance.config)
                 # Instantiate a retriever client
                 elif component_instance.component_group == ComponentGroup.RETRIEVERS:
                     await self.add_retriever(component_instance.name, component_instance.config)

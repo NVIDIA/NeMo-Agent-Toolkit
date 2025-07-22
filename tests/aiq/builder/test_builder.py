@@ -656,6 +656,7 @@ async def test_built_config():
         assert workflow_config.retrievers == {"retriever1": retriever_config}
         assert workflow_config.object_stores == {"object_store1": object_store_config}
 
+
 # Error Logging Tests
 
 

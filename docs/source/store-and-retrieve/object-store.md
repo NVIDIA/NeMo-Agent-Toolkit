@@ -32,9 +32,9 @@ The object store module is extensible, which allows developers to create custom 
 ### ObjectStoreItem
 The `ObjectStoreItem` model represents an object in the store with the following attributes:
 
-- **data**: The binary data to store
-- **content_type**: The MIME type of the data (optional)
-- **metadata**: Custom key-value metadata for the object (optional)
+- **`data`**: The binary data to store
+- **`content_type`**: The MIME type of the data (optional)
+- **`metadata`**: Custom key-value metadata for the object (optional)
 
 ### ObjectStore Interface
 The `ObjectStore` abstract interface defines the standard operations:
