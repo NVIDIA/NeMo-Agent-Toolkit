@@ -664,7 +664,7 @@ You can also use the toolkit's experimental `inference_time_scaling` feature to 
 executions of the retrieval agent with a higher LLM temperature to encourage diversity. We then merge the outputs of the multiple runs with another LLM call to synthesize one comprehensive answer from multiple searches.
 
 An example configuration can be found in the `configs/milvus_rag_config_its.yml` file. Notably, it has a few additions to the standard configuration: 
-- An `its_strategies` section of the configuration that details which inference time scaling techniques wil be used in the workflow
+- An `its_strategies` section of the configuration that details which inference time scaling techniques will be used in the workflow
 - A `selection_strategy` called `llm_based_agent_output_merging` selection, that takes the output of multiple workflow runs and combines them using a single LLM call. 
 - A new `workflow` entrypoint called the `execute_score_select` function. The function executes the `augmented_fn` (the ReAct agent here) `num_iterations` times, and then passes the outputs to the selector. 
 

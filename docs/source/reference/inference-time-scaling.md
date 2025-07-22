@@ -16,7 +16,7 @@ limitations under the License.
 -->
 
 # Inference‑Time Scaling With NVIDIA NeMo Agent Toolkit
-Inference‑time scaling reallocates compute after a model has been trained, trading extra inference cycles for much better reasoning, factuality, and robustness, often without any additional training data. The new **`aiq.experimental.inference_time_scaling`** package codifies this idea as four pluggable strategy types (Search ▶ Editing ▶ Scoring ▶ Selection) that operate on a lightweight `ITSItem` record.  Developers can compose these strategies manually or use several **pre‑built ITS functions** that wire everything up automatically. To add your own strategy, you can simply follow these steps:
+Inference‑time scaling reallocates compute after a model has been trained, trading extra inference cycles for much better reasoning, factuality, and robustness, often without any additional training data. The new **`aiq.experimental.inference_time_scaling`** package codifies this idea as four strategy types (Search ▶ Editing ▶ Scoring ▶ Selection) that operate on a lightweight `ITSItem` record.  Developers can compose these strategies manually or use several **pre‑built ITS functions** that wire everything up automatically. To add your own strategy, you can simply follow these steps:
 1. Write a config subclass.
 2. Implement a `StrategyBase` child. 
 3. Register it with the `@register_its_strategy` decorator.  
@@ -73,7 +73,7 @@ A **single, interoperable record** passed between stages.
 
 | Field      | Meaning                             |
 | ---------- | ----------------------------------- |
-| `input`    | Raw user task / tool args           |
+| `input`    | Raw user task / tool `args`           |
 | `output`   | Generated answer / tool result      |
 | `plan`     | Execution plan (planning pipelines) |
 | `feedback` | Review comments from editing stages |
@@ -87,7 +87,7 @@ Because it is a `pydantic.BaseModel`, you get `.model_dump()` and validation for
 
 Below is a non‑exhaustive catalog you can use immediately; refer to the inline doc‑strings for full parameter lists.
 
-| Category  | Config class                                                    | One‑liner                                                                 |
+| Category  | `Config` class                                                    | One‑liner                                                                 |
 | --------- | --------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | Search    | `SingleShotMultiPlanConfig`                                     | Few‑shot prompt that emits *n* candidate plans at different temperatures. |
 |           | `MultiLLMPlanConfig`                                            | Query multiple LLMs in parallel, then concatenate plans.                  |
@@ -120,7 +120,7 @@ These are declared in `aiq.experimental.inference_time_scaling.functions.*` and 
 
 Follow the steps below to create and register a new strategy.
 
-1. Define a config model.
+1. Define a `config` model.
 
    ```python
    class MyStrategyConfig(ITSStrategyBaseConfig, name="my_strategy"):
