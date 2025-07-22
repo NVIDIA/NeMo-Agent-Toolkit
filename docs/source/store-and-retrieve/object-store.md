@@ -15,17 +15,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Object Store
+# Object Store for NVIDIA NeMo Agent Toolkit
 
-The AIQ toolkit Object Store subsystem provides a standardized interface for storing and retrieving binary data with associated metadata. This is particularly useful for building applications that need to manage files, documents, images, or any other binary content within AIQ workflows.
+The NeMo Agent toolkit Object Store subsystem provides a standardized interface for storing and retrieving binary data with associated metadata. This is particularly useful for building applications that need to manage files, documents, images, or any other binary content within these workflows.
 
-The object store module is designed to be extensible, allowing developers to create custom object store backends, providers in AIQ toolkit terminology, to support different storage systems.
+The object store module is extensible, which allows developers to create custom object store backends. The providers in NeMo Agent toolkit terminology supports different storage systems.
 
 ## Features
 - **Standard Interface**: Object stores implement a standard key-value interface, allowing for compatibility across different storage implementations.
 - **Metadata Support**: Objects can be stored with content type and custom metadata for better management and organization.
 - **Extensible Via Plugins**: Additional object stores can be added as plugins by developers to support more storage systems.
-- **File Server Integration**: Object stores can be integrated with the AIQ file server for direct HTTP access to stored objects.
+- **File Server Integration**: Object stores can be integrated with the NeMo Agent file server for direct HTTP access to stored objects.
 
 ## Core Components
 
@@ -54,7 +54,7 @@ The AIQ toolkit includes several object store providers:
 ## Usage
 
 ### Configuration
-Object stores are configured similarly to other AIQ toolkit components. Each object store provider has a Pydantic config object which defines its configurable parameters. These parameters can then be configured in the config file under the `object_stores` section.
+Object stores are configured similarly to other NeMo Agent toolkit components. Each object store provider has a Pydantic config object that defines its configurable parameters. These parameters can then be configured in the config file under the `object_stores` section.
 
 Below is an example configuration for the in-memory object store:
 ```yaml

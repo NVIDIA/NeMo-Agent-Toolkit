@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Adding an Object Store Provider
+# Adding an Object Store Provider With NVIDIA NeMo Agent Toolkit
 
-This documentation presumes familiarity with the AIQ toolkit plugin architecture, the concept of "function registration" using `@register_function`, and how we define tool/workflow configurations in the AIQ toolkit config described in the [Creating a New Tool and Workflow](../tutorials/create-a-new-workflow.md) tutorial.
+This documentation presumes familiarity with the NeMo Agent toolkit plugin architecture, the concept of "function registration" using `@register_function`, and how we define tool/workflow configurations in the NeMo Agent toolkit config described in the [Creating a New Tool and Workflow](../tutorials/create-a-new-workflow.md) tutorial.
 
 ## Key Object Store Module Components
 
@@ -26,7 +26,7 @@ This documentation presumes familiarity with the AIQ toolkit plugin architecture
    - **{py:class}`~aiq.data_models.object_store.ObjectStoreBaseConfigT`**: A generic type alias for object store config classes.
 
 * **Object Store Interfaces**
-   - **{py:class}`~aiq.object_store.interfaces.ObjectStore`** (abstract interface): The core interface for object store operations including put, upsert, get, and delete operations.
+   - **{py:class}`~aiq.object_store.interfaces.ObjectStore`** (abstract interface): The core interface for object store operations, including put, upsert, get, and delete operations.
 
 * **Object Store Models**
    - **{py:class}`~aiq.object_store.models.ObjectStoreItem`**: The main object representing an item in the object store. It includes:
@@ -42,7 +42,7 @@ This documentation presumes familiarity with the AIQ toolkit plugin architecture
 
 ## Adding an Object Store Provider
 
-In the AIQ toolkit system, anything that extends {py:class}`~aiq.data_models.object_store.ObjectStoreBaseConfig` and is declared with a `name="some_object_store"` can be discovered as an *Object Store type* by the AIQ toolkit global type registry. This allows you to define a custom object store class to handle your own backends (Redis, custom database, cloud storage, etc.). Then your object store class can be selected in the AIQ toolkit config YAML via `_type: <your object store type>`.
+In the NeMo Agent toolkit system, anything that extends {py:class}`~aiq.data_models.object_store.ObjectStoreBaseConfig` and is declared with a `name="some_object_store"` can be discovered as an *Object Store type* by the NeMo Agent toolkit global type registry. This allows you to define a custom object store class to handle your own backends (for example, Redis, custom database, or cloud storage). Then your object store class can be selected in the NeMo Agent toolkit config YAML using `_type: <your object store type>`.
 
 ### Basic Steps
 
@@ -123,7 +123,7 @@ In the AIQ toolkit system, anything that extends {py:class}`~aiq.data_models.obj
        yield MyCustomObjectStore(config)
    ```
 
-4. **Use in config**: Now in your AIQ toolkit config, you can do something like:
+4. **Use in config**: In your NeMo Agent toolkit config, you can do something like:
    ```yaml
    object_stores:
      my_store:
@@ -272,13 +272,13 @@ functions:
 
 When implementing your object store provider, follow these error handling guidelines:
 
-1. **Use the provided exceptions**: Always use `KeyAlreadyExistsError` and `NoSuchKeyError` for the appropriate scenarios.
+- **Use the provided exceptions**: Always use `KeyAlreadyExistsError` and `NoSuchKeyError` for the appropriate scenarios.
 
-2. **Handle backend-specific errors**: Wrap backend-specific exceptions and convert them to the appropriate AIQ toolkit exceptions.
+- **Handle backend-specific errors**: Wrap backend-specific exceptions and convert them to the appropriate NeMo Agent toolkit exceptions.
 
-3. **Provide meaningful error messages**: Include context in your error messages to help with debugging.
+- **Provide meaningful error messages**: Include context in your error messages to help with debugging.
 
-4. **Implement idempotent operations**: Ensure that `upsert_object` can be called multiple times with the same key without causing issues.
+- **Implement idempotent operations**: Ensure that `upsert_object` can be called multiple times with the same key without causing issues.
 
 ## Testing Your Object Store Provider
 
