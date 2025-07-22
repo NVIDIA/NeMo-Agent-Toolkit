@@ -19,7 +19,7 @@ FROM ubuntu:22.04
 RUN apt-get update && apt-get upgrade -y && apt install -y python3 python3-pip
 
 # Install MCP proxy and tools
-RUN pip3 install uv uvx
+RUN pip3 install uv uvenv
 
 RUN pip3 install "mcp==1.5.0"
 RUN pip3 install "mcp-proxy==0.5.1"
