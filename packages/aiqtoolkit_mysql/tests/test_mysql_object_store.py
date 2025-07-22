@@ -21,6 +21,10 @@ from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.plugins.mysql.object_store import MySQLObjectStoreClientConfig
 from aiq.test.object_store_tests import ObjectStoreTests
 
+# NOTE: This test requires a MySQL server to be running locally.
+# To launch a local server using docker, run the following command:
+# docker run --rm -ti --name test-mysql -e MYSQL_ROOT_PASSWORD=my-secret-pw -d -p 3306:3306 mysql:9.3
+
 
 @pytest.mark.integration
 class TestMySQLObjectStore(ObjectStoreTests):

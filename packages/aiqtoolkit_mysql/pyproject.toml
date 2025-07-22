@@ -23,7 +23,7 @@ dependencies = [
   "aiomysql>=0.2.0",
 ]
 requires-python = ">=3.12"
-description = "Subpackage for MySQL-based object store integration in AgentIQ"
+description = "Subpackage for MySQL-based object store integration in AIQ toolkit"
 readme = "src/aiq/meta/pypi.md"
 keywords = ["ai", "agents", "memory", "data store"]
 classifiers = ["Programming Language :: Python"]

@@ -15,29 +15,17 @@
 
 from contextlib import asynccontextmanager
 
-import pytest
-
 from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.plugins.s3.object_store import S3ObjectStoreClientConfig
+from aiq.plugins.sqlite.object_store import SQLiteObjectStoreClientConfig
 from aiq.test.object_store_tests import ObjectStoreTests
 
-# NOTE: This test requires a local S3 server to be running.
-# To launch a local server using docker, run the following command:
-# docker run --rm -ti -p 9000:9000 -p 9001:9001 minio/minio:RELEASE.2025-07-18T21-56-31Z \
-#     server /data --console-address ":9001"
 
-
-@pytest.mark.integration
-class TestS3ObjectStore(ObjectStoreTests):
+class TestSQLiteObjectStore(ObjectStoreTests):
 
     @asynccontextmanager
     async def _get_store(self):
         async with WorkflowBuilder() as builder:
-            await builder.add_object_store(
-                "object_store_name",
-                S3ObjectStoreClientConfig(bucket_name="test",
-                                          endpoint_url="http://localhost:9000",
-                                          access_key="minioadmin",
-                                          secret_key="minioadmin"))
+            await builder.add_object_store("object_store_name",
+                                           SQLiteObjectStoreClientConfig(database=":memory:", bucket_name="test"))
 
             yield await builder.get_object_store_client("object_store_name")

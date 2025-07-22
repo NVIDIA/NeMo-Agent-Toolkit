@@ -65,7 +65,6 @@ mem0ai = ["aiqtoolkit-mem0ai"]
 mysql = ["aiqtoolkit-mysql"]
 s3 = ["aiqtoolkit-s3"]
 semantic-kernel = ["aiqtoolkit-semantic-kernel"]
-sqlite = ["aiqtoolkit-sqlite"]
 telemetry = [
   "arize-phoenix~=6.1",
   "opentelemetry-api~=1.2",
@@ -122,7 +121,6 @@ aiqtoolkit-mem0ai = { workspace = true }
 aiqtoolkit-mysql = { workspace = true }
 aiqtoolkit-s3 = { workspace = true }
 aiqtoolkit-semantic-kernel = { workspace = true }
-aiqtoolkit-sqlite = { workspace = true }
 aiqtoolkit-test = { workspace = true }
 aiqtoolkit-zep-cloud = { workspace = true }
 aiqtoolkit-agno = { workspace = true }

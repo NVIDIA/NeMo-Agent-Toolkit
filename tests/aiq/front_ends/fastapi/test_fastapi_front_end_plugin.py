@@ -329,9 +329,9 @@ async def test_static_file_endpoints():
         response = await client.delete(f"/static/{file_path}")
         assert response.status_code == 204
 
-        # DELETE: Delete again (idempotent)
+        # DELETE: Delete again (idempotent but should still result in a 404)
         response = await client.delete(f"/static/{file_path}")
-        assert response.status_code == 204
+        assert response.status_code == 404
 
         # GET: Should now 404
         response = await client.get(f"/static/{file_path}")

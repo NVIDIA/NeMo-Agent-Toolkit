@@ -12,7 +12,7 @@ dependencies = [
   "aiqtoolkit[s3]", "aiqtoolkit[mysql]"
 ]
 requires-python = ">=3.12"
-description = "AgentIQ example that uses an Object Store"
+description = "AIQ toolkit example that uses an Object Store"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 

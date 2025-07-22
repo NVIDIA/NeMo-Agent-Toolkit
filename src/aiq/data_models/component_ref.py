@@ -126,7 +126,7 @@ class MemoryRef(ComponentRef):
 
 class ObjectStoreRef(ComponentRef):
     """
-    A reference to an object store in an AgentIQ configuration object.
+    A reference to an object store in an AIQ toolkit configuration object.
     """
 
     @property

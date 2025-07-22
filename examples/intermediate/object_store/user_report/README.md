@@ -17,17 +17,17 @@ limitations under the License.
 
 # Report Tool
 
-AgentIQ tool that makes use of an Object Store to retrieve data.
+And example tool in the AIQ toolkit that makes use of an Object Store to retrieve data.
 
 ## Installation and Setup
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/intro/install.md) to create the development environment and install AgentIQ.
+If you have not already done so, follow the instructions in the [Install Guide](../../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit, and follow the [Obtaining API Keys](../../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
 
 ### Install this Workflow:
 
-From the root directory of the AgentIQ library, run the following commands:
+From the root directory of the AIQ toolkit repository, run the following commands:
 
 ```bash
-uv pip install -e examples/object_store/user_report
+uv pip install -e examples/intermediate/object_store/user_report
 ```
 
 ### Setting up MinIO (Optional)
@@ -190,7 +190,7 @@ If any of the loading scripts were run and the files are in the object store, ex
 
 ## Run the Workflow
 
-Run the following command from the root of the AgentIQ repo to execute this workflow with the specified input:
+Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ### Example 1
 ```
@@ -214,29 +214,29 @@ Number of Memory: 0
 Number of Object Stores: 1
 Number of Retrievers: 0
 
-2025-07-02 14:21:56,879 - aiq.agent.react_agent.agent - INFO - 
+2025-07-02 14:21:56,879 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: Give me the latest report of user 67890
-Agent's thoughts: 
+Agent's thoughts:
 Thought: I need to fetch the latest report for user 67890.
 Action: get_user_report
 Action Input: {"user_id": "67890", "date": null}
 ------------------------------
 2025-07-02 14:21:56,886 - aiq_user_report.register - INFO - Fetching report from /reports/67890/latest.json
-2025-07-02 14:21:56,935 - aiq.agent.react_agent.agent - INFO - 
+2025-07-02 14:21:56,935 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Calling tools: get_user_report
 Tool's input: {"user_id": "67890", "date": null}
-Tool's response: 
+Tool's response:
 {'user_id': '67890', 'timestamp': '2025-04-21T15:40:00Z', 'system': {'os': 'macOS 14.1', 'cpu_usage': '43%', 'memory_usage': '8.1 GB / 16 GB', 'disk_space': '230 GB free of 512 GB'}, 'network': {'latency_ms': 95, 'packet_loss': '0%', 'vpn_connected': True}, 'errors': [], 'recommendations': ['System operating normally', 'No action required']}
 ------------------------------
-2025-07-02 14:21:58,901 - aiq.agent.react_agent.agent - INFO - 
+2025-07-02 14:21:58,901 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: Give me the latest report of user 67890
-Agent's thoughts: 
+Agent's thoughts:
 Thought: I now have the latest report for user 67890.
 
 Final Answer: The latest report for user 67890 is as follows:
@@ -253,7 +253,7 @@ Final Answer: The latest report for user 67890 is as follows:
 - Errors: None
 - Recommendations: System operating normally, No action required.
 ------------------------------
-2025-07-02 14:21:58,905 - aiq.front_ends.console.console_front_end_plugin - INFO - 
+2025-07-02 14:21:58,905 - aiq.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
 Workflow Result:
 ['The latest report for user 67890 is as follows:\n- Timestamp: 2025-04-21T15:40:00Z\n- System:\n  - OS: macOS 14.1\n  - CPU Usage: 43%\n  - Memory Usage: 8.1 GB / 16 GB\n  - Disk Space: 230 GB free of 512 GB\n- Network:\n  - Latency: 95 ms\n  - Packet Loss: 0%\n  - VPN Connected: True\n- Errors: None\n- Recommendations: System operating normally, No action required.']
@@ -282,29 +282,29 @@ Number of Memory: 0
 Number of Object Stores: 1
 Number of Retrievers: 0
 
-2025-07-02 14:25:22,486 - aiq.agent.react_agent.agent - INFO - 
+2025-07-02 14:25:22,486 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: Give me the latest report of user 12345 on April 15th 2025
-Agent's thoughts: 
+Agent's thoughts:
 Thought: I need to fetch the user diagnostic report for user ID 12345 on April 15th, 2025.
 Action: get_user_report
 Action Input: {"user_id": "12345", "date": "2025-04-15"}
 ------------------------------
 2025-07-02 14:25:22,490 - aiq_user_report.register - INFO - Fetching report from /reports/12345/2025-04-15.json
-2025-07-02 14:25:22,539 - aiq.agent.react_agent.agent - INFO - 
+2025-07-02 14:25:22,539 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Calling tools: get_user_report
 Tool's input: {"user_id": "12345", "date": "2025-04-15"}
-Tool's response: 
+Tool's response:
 {'user_id': '12345', 'timestamp': '2025-04-15T10:22:30Z', 'system': {'os': 'Windows 11', 'cpu_usage': '82%', 'memory_usage': '6.3 GB / 8 GB', 'disk_space': '120 GB free of 500 GB'}, 'network': {'latency_ms': 240, 'packet_loss': '0.5%', 'vpn_connected': False}, 'errors': [{'timestamp': '2025-04-15T10:21:59Z', 'message': "App crash detected: 'PhotoEditorPro.exe' exited unexpectedly", 'severity': 'high'}], 'recommendations': ['Update graphics driver', 'Check for overheating hardware', 'Enable automatic crash reporting']}
 ------------------------------
-2025-07-02 14:25:25,463 - aiq.agent.react_agent.agent - INFO - 
+2025-07-02 14:25:25,463 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: Give me the latest report of user 12345 on April 15th 2025
-Agent's thoughts: 
+Agent's thoughts:
 Thought: I now have the latest report for user 12345 on April 15th, 2025.
 
 Final Answer: The latest report for user 12345 on April 15th, 2025, is as follows:
@@ -330,7 +330,7 @@ Final Answer: The latest report for user 12345 on April 15th, 2025, is as follow
   - Check for overheating hardware
   - Enable automatic crash reporting
 ------------------------------
-2025-07-02 14:25:25,466 - aiq.front_ends.console.console_front_end_plugin - INFO - 
+2025-07-02 14:25:25,466 - aiq.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
 Workflow Result:
 ['The latest report for user 12345 on April 15th, 2025, is as follows:\n\n- **System Information:**\n  - OS: Windows 11\n  - CPU Usage: 82%\n  - Memory Usage: 6.3 GB / 8 GB\n  - Disk Space: 120 GB free of 500 GB\n\n- **Network Information:**\n  - Latency: 240 ms\n  - Packet Loss: 0.5%\n  - VPN Connected: False\n\n- **Errors:**\n  - Timestamp: 2025-04-15T10:21:59Z\n  - Message: "App crash detected: \'PhotoEditorPro.exe\' exited unexpectedly"\n  - Severity: High\n\n- **Recommendations:**\n  - Update graphics driver\n  - Check for overheating hardware\n  - Enable automatic crash reporting']
@@ -376,7 +376,7 @@ Number of Memory: 0
 Number of Object Stores: 1
 Number of Retrievers: 0
 
-2025-07-02 14:28:21,202 - aiq.agent.react_agent.agent - INFO - 
+2025-07-02 14:28:21,202 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: Create a latest report for user 6789 with the following JSON contents:
@@ -388,21 +388,21 @@ Agent input: Create a latest report for user 6789 with the following JSON conten
         ]
     }
 
-Agent's thoughts: 
+Agent's thoughts:
 Thought: I need to use the `put_user_report` tool to create a latest report for user 6789 with the provided JSON contents.
 Action: put_user_report
 Action Input: {"report": "{\"recommendations\": [\"Update graphics driver\", \"Check for overheating hardware\", \"Enable automatic crash reporting\"]}", "user_id": "6789", "date": null}
 ------------------------------
 2025-07-02 14:28:21,209 - aiq_user_report.register - INFO - Fetching report from /reports/6789/latest.json
-2025-07-02 14:28:21,260 - aiq.agent.react_agent.agent - INFO - 
+2025-07-02 14:28:21,260 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Calling tools: put_user_report
 Tool's input: {"report": "{\"recommendations\": [\"Update graphics driver\", \"Check for overheating hardware\", \"Enable automatic crash reporting\"]}", "user_id": "6789", "date": null}
-Tool's response: 
+Tool's response:
 None
 ------------------------------
-2025-07-02 14:28:22,258 - aiq.agent.react_agent.agent - INFO - 
+2025-07-02 14:28:22,258 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: Create a latest report for user 6789 with the following JSON contents:
@@ -414,12 +414,12 @@ Agent input: Create a latest report for user 6789 with the following JSON conten
         ]
     }
 
-Agent's thoughts: 
-Thought: The empty response indicates that the report was successfully created for user 6789. 
+Agent's thoughts:
+Thought: The empty response indicates that the report was successfully created for user 6789.
 
 Final Answer: The latest report for user 6789 has been successfully created with the specified recommendations.
 ------------------------------
-2025-07-02 14:28:22,262 - aiq.front_ends.console.console_front_end_plugin - INFO - 
+2025-07-02 14:28:22,262 - aiq.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
 Workflow Result:
 ['The latest report for user 6789 has been successfully created with the specified recommendations.']
@@ -448,36 +448,36 @@ Number of Memory: 0
 Number of Object Stores: 1
 Number of Retrievers: 0
 
-2025-07-02 14:29:39,099 - aiq.agent.react_agent.agent - INFO - 
+2025-07-02 14:29:39,099 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: Get the latest report for user 6789
-Agent's thoughts: 
+Agent's thoughts:
 Thought: I need to fetch the latest report for user 6789 using the appropriate tool.
 Action: get_user_report
 Action Input: {"user_id": "6789", "date": null}
 ------------------------------
 2025-07-02 14:29:39,106 - aiq_user_report.register - INFO - Fetching report from /reports/6789/latest.json
-2025-07-02 14:29:39,156 - aiq.agent.react_agent.agent - INFO - 
+2025-07-02 14:29:39,156 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Calling tools: get_user_report
 Tool's input: {"user_id": "6789", "date": null}
-Tool's response: 
+Tool's response:
 {'recommendations': ['Update graphics driver', 'Check for overheating hardware', 'Enable automatic crash reporting']}
 ------------------------------
-2025-07-02 14:29:40,345 - aiq.agent.react_agent.agent - INFO - 
+2025-07-02 14:29:40,345 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: Get the latest report for user 6789
-Agent's thoughts: 
+Agent's thoughts:
 Thought: I have obtained the latest report for user 6789.
 Final Answer: The latest report for user 6789 includes the following recommendations:
 1. Update graphics driver
 2. Check for overheating hardware
 3. Enable automatic crash reporting
 ------------------------------
-2025-07-02 14:29:40,349 - aiq.front_ends.console.console_front_end_plugin - INFO - 
+2025-07-02 14:29:40,349 - aiq.front_ends.console.console_front_end_plugin - INFO -
 --------------------------------------------------
 Workflow Result:
 ['The latest report for user 6789 includes the following recommendations:\n1. Update graphics driver\n2. Check for overheating hardware\n3. Enable automatic crash reporting']
