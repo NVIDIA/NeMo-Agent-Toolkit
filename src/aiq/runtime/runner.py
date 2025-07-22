@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
 import typing
 from enum import Enum
@@ -37,6 +38,7 @@ class AIQRunnerState(Enum):
     RUNNING = 2
     COMPLETED = 3
     FAILED = 4
+    CANCELLED = 5
 
 
 _T = typing.TypeVar("_T")
@@ -108,7 +110,11 @@ class AIQRunner:
 
         self._context_state.input_message.reset(self._input_message_token)
 
-        if (self._state not in (AIQRunnerState.COMPLETED, AIQRunnerState.FAILED)):
+        # If we're exiting due to cancellation, mark the state as cancelled
+        if exc_type is not None and issubclass(exc_type, asyncio.CancelledError):
+            self._state = AIQRunnerState.CANCELLED
+
+        if (self._state not in (AIQRunnerState.COMPLETED, AIQRunnerState.FAILED, AIQRunnerState.CANCELLED)):
             raise ValueError("Cannot exit the context without completing the workflow")
 
     @typing.overload
