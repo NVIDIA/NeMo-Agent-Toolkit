@@ -30,13 +30,16 @@ This example uses the `mcp-server-time` service. For a list of available public 
 
 ## Setup
 
-1. Change the service name and brief name to the service you want to use.
+1. Change the service name and brief name to the service you want to use. Additionally specify any optional service arguments.
 
 ```bash
 # This should be the name of the MCP service you want to use.
 export SERVICE_NAME=mcp-server-time
 # This can be any name you want to give to your service.
 export SERVICE_BRIEF_NAME=time
+# Any arguments to pass to the service. Example: `mcp-server-time` requires --local-timezone if the container's timezone hasn't been configured.
+export SERVICE_ARGS=--local-timezone "America/New_York"
+
 ```
 
 2. Set the service directory, server port, and container name.
@@ -51,7 +54,7 @@ export SERVER_PORT=8080
 
 ```bash
 mkdir -p ${SERVICE_DIR}
-cp examples/getting_started/simple_web_query/deploy_external_mcp/Dockerfile ${SERVICE_DIR}/
+cp examples/getting_started/simple_calculator/deploy_external_mcp/Dockerfile ${SERVICE_DIR}/
 ```
 
 4. Create the run script:
@@ -59,7 +62,7 @@ cp examples/getting_started/simple_web_query/deploy_external_mcp/Dockerfile ${SE
 ```bash
 cat > ${SERVICE_DIR}/run_service.sh <<EOF
 #!/bin/bash
-uvx run ${SERVICE_NAME}
+uvx ${SERVICE_NAME} ${SERVICE_ARGS}
 EOF
 
 chmod +x ${SERVICE_DIR}/run_service.sh
