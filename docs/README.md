@@ -36,6 +36,6 @@ firefox build/html/index.html
 Outputs to `build/docs/html`
 
 ## Contributing
-Refer to the [Contributing to AIQ toolkit](./source/resources/contributing.md) guide.
+Refer to the [Contributing to NeMo Agent toolkit](./source/resources/contributing.md) guide.
 
 When you create your pull request, CI will perform a documentation build as part of the pipeline. If successful, the documentation will be available for download as an artifact.

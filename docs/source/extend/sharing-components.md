@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Sharing NVIDIA Agent Intelligence Toolkit Components
+# Sharing NVIDIA NeMo Agent Toolkit Components
 
-Every AIQ toolkit component is packaged inside of an AIQ toolkit plugin and is designed to be sharable with the community of AIQ toolkit  developers. Functions are by far the most common AIQ toolkit component type. In fact, AIQ components include all pieces that leverage an AIQ toolkit registration decorator (e.g. `register_function`, `register_llm_client`, `register_evaluator`, etc.). This guide will discuss the requirements for developing registered components that can be shared, discovered, and integrated leveraged with any AIQ toolkit application.
+Every NeMo Agent toolkit component is packaged inside of an NeMo Agent toolkit plugin and is designed to be sharable with the community of NeMo Agent toolkit  developers. Functions are by far the most common NeMo Agent toolkit component type. In fact, NeMo Agent components include all pieces that leverage an NeMo Agent toolkit registration decorator (e.g. `register_function`, `register_llm_client`, `register_evaluator`, etc.). This guide will discuss the requirements for developing registered components that can be shared, discovered, and integrated leveraged with any NeMo Agent toolkit application.
 
 ## Enabling Local and Remote Discovery
 To begin building a sharable component, do the following:
@@ -26,23 +26,23 @@ To begin building a sharable component, do the following:
 
 This section emphasizes the details of configuration objects that facilitate component discovery.
 
-After installing the AIQ toolkit library, and potentially other AIQ toolkit plugin packages, a developer may want to know what
+After installing the NeMo Agent toolkit library, and potentially other NeMo Agent toolkit plugin packages, a developer may want to know what
 components are available for workflow development or evaluation. A great tool for this is the `aiq info components` CLI
 utility described in [Components Information](../reference/cli.md#components-information). This command produces a
-table containing information dynamically accumulated from each AIQ toolkit component. The `details` column is sourced from
+table containing information dynamically accumulated from each NeMo Agent toolkit component. The `details` column is sourced from
 each configuration object's docstring and field descriptions. Behind the scenes, these data (and others) are aggregated
 into a component's `DiscoveryMetadata` to enable local and remote discovery. This object includes the following key
 fields:
 
-- `package`: The name of the package containing the AIQ toolkit component.
-- `version`: The version number of the package containing the AIQ toolkit component.
-- `component_type`: The type of AIQ toolkit component this metadata represents (e.g. `function`, `llm`, `embedder`, etc.)
-- `component_name`: The registered name of the AIQ toolkit component to be used in the `_type` field when configuring a
+- `package`: The name of the package containing the NeMo Agent toolkit component.
+- `version`: The version number of the package containing the NeMo Agent toolkit component.
+- `component_type`: The type of NeMo Agent toolkit component this metadata represents (e.g. `function`, `llm`, `embedder`, etc.)
+- `component_name`: The registered name of the NeMo Agent toolkit component to be used in the `_type` field when configuring a
 workflow configuration object.
-- `description`: Description of the AIQ toolkit component pulled from its config objects docstrings and field metadata.
+- `description`: Description of the NeMo Agent toolkit component pulled from its config objects docstrings and field metadata.
 - `developer_notes`: Other notes to a developers to aid in the use of the component.
 
-For this feature to provide useful information, there are a few hygiene requirements placed on AIQ toolkit component configuration object implementations.
+For this feature to provide useful information, there are a few hygiene requirements placed on NeMo Agent toolkit component configuration object implementations.
 
 * Specify a name: This will be pulled into the `component_name` column and will be used in the `_type` field of a
 workflow's configuration object.
@@ -87,21 +87,21 @@ when it should be used and its configuration options. This significantly reduces
 
 ## Package Distribution
 
-After completing AIQ toolkit development of component plugin, the next step is to create a package that will allow the
-plugin to be installed and registered with the AIQ toolkit environment. Because each AIQ toolkit plugin package is a pip
+After completing NeMo Agent toolkit development of component plugin, the next step is to create a package that will allow the
+plugin to be installed and registered with the NeMo Agent toolkit environment. Because each NeMo Agent toolkit plugin package is a pip
 installable package, this process it is straightforward, and follows standard Python `pyproject.toml` packaging steps.
 If you are unfamiliar with this process, consider reviewing the [Python Packaging User Guide](https://packaging.python.org/en/latest/guides/writing-pyproject-toml/).
 
 When building the `pyproject.toml` file, there are two critical sections:
 
-* Dependencies: Ensure you include the necessary AIQ toolkit dependencies. An example is provided below:
+* Dependencies: Ensure you include the necessary NeMo Agent toolkit dependencies. An example is provided below:
 
     ```
     dependencies = [
     "aiq[langchain]",
     ]
     ```
-* Entrypoints: Provide the path to your plugins so they are registered with AIQ toolkit when installed.
+* Entrypoints: Provide the path to your plugins so they are registered with NeMo Agent toolkit when installed.
 An example is provided below:
     ```
     [project.entry-points.'aiq.components']
@@ -119,16 +119,16 @@ While simple, this process does not take advantage of the `DiscoveryMetadata` to
 
 ### Publish to a Remote Registry
 
-Alternatively, AIQ toolkit provides an extensible interface that allows developers to publish packages and their
+Alternatively, NeMo Agent toolkit provides an extensible interface that allows developers to publish packages and their
 `DiscoveryMetadata`  arbitrary remote registries. The benefit of this approach comes from improved utilization of
 captured `DiscoveryMetadata` to improve discovery of useful components.
 
 By including this additional metadata, registry owners are empowered to extend their search interface and accelerate the
-process of discovering useful components and development of AIQ toolkit based applications.
+process of discovering useful components and development of NeMo Agent toolkit based applications.
 
 ### Share Source Code
 
-The last option for distribution is through source code. Since each AIQ toolkit package is a pip installable Python package,
+The last option for distribution is through source code. Since each NeMo Agent toolkit package is a pip installable Python package,
 each can be installed directly from source. Examples of this installation path are provided in the
 [Get Started](../quick-start/installing.md) guide.
 
@@ -136,5 +136,5 @@ each can be installed directly from source. Examples of this installation path a
 
 There are several methods for component distribution, each of which depends on constructing a pip installable Python
 packages that point to the hygienic implementations of component plugins. This lightweight, but extensible approach
-provides a straightforward path for distributing AIQ toolkit agentic applications and their components to the developer
+provides a straightforward path for distributing NeMo Agent toolkit agentic applications and their components to the developer
 community.

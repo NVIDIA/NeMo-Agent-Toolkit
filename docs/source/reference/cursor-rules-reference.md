@@ -17,7 +17,7 @@ limitations under the License.
 
 # Cursor Rules Reference
 
-This document provides a comprehensive reference for all available Cursor rules in AIQ Toolkit. Each rule includes a purpose description, usage prompt, and practical examples.
+This document provides a comprehensive reference for all available Cursor rules in NeMo Agent toolkit. Each rule includes a purpose description, usage prompt, and practical examples.
 
 ## Foundation Rules
 
@@ -28,7 +28,7 @@ This document provides a comprehensive reference for all available Cursor rules 
 
 **Prompt**:
 ```
-Create a new Python function with proper type hints, docstrings, and formatting that follows AIQ Toolkit coding standards.
+Create a new Python function with proper type hints, docstrings, and formatting that follows NeMo Agent toolkit coding standards.
 ```
 
 **Capabilities**:
@@ -48,7 +48,7 @@ Create a new Python function with proper type hints, docstrings, and formatting 
 
 **Prompt**:
 ```
-Create a new Cursor rule for creating a new AIQ workflow
+Create a new Cursor rule for creating a new NeMo Agent workflow
 ```
 
 **Capabilities**:
@@ -64,11 +64,11 @@ Create a new Cursor rule for creating a new AIQ workflow
 ### General Setup Guidelines
 
 **Cursor Rule file**: `.cursor/rules/aiq-setup/general.mdc`  
-**Purpose**: Guidance for AIQ toolkit installation, setup, and environment configuration.
+**Purpose**: Guidance for NeMo Agent toolkit installation, setup, and environment configuration.
 
 **Prompt**:
 ```
-Help me set up AIQ Toolkit development environment with all required dependencies and configurations.
+Help me set up NeMo Agent toolkit development environment with all required dependencies and configurations.
 ```
 
 **Capabilities**:
@@ -81,14 +81,14 @@ Help me set up AIQ Toolkit development environment with all required dependencie
 
 ---
 
-### AIQ Toolkit Installation
+### NeMo Agent Toolkit Installation
 
 **Cursor Rule file**: `.cursor/rules/aiq-setup/aiq-toolkit-installation.mdc`  
 **Purpose**: Detailed installation procedures and setup guidance.
 
 **Prompt**:
 ```
-Install AIQ Toolkit with all plugins and verify the installation is working correctly.
+Install NeMo Agent toolkit with all plugins and verify the installation is working correctly.
 ```
 
 
@@ -102,11 +102,11 @@ Install AIQ Toolkit with all plugins and verify the installation is working corr
 ### General CLI Guidelines
 
 **Cursor Rule file**: `.cursor/rules/aiq-cli/general.mdc`  
-**Purpose**: Guidance for all AIQ CLI commands, operations, and functionality.
+**Purpose**: Guidance for all NeMo Agent CLI commands, operations, and functionality.
 
 **Prompt**:
 ```
-Show me how to use AIQ CLI commands to manage workflows
+Show me how to use CLI commands to manage workflows
 ```
 
 **Capabilities**:
@@ -119,10 +119,10 @@ Show me how to use AIQ CLI commands to manage workflows
 
 ---
 
-### AIQ Workflow Commands
+### NeMo Agent Workflow Commands
 
 **Cursor Rule file**: `.cursor/rules/aiq-cli/aiq-workflow.mdc`  
-**Purpose**: Creating, reinstalling, and deleting AIQ workflows.
+**Purpose**: Creating, reinstalling, and deleting NeMo Agent workflows.
 
 **Prompt**:
 ```
@@ -135,10 +135,10 @@ Create a workflow named demo_workflow in examples directory with description "De
 
 ---
 
-### AIQ Run and Serve Commands
+### NeMo Agent Run and Serve Commands
 
 **Cursor Rule file**: `.cursor/rules/aiq-cli/aiq-run-serve.mdc`  
-**Purpose**: Running, serving, and executing AIQ workflows.
+**Purpose**: Running, serving, and executing NeMo Agent workflows.
 
 **Prompt**:
 ```
@@ -153,7 +153,7 @@ Run my workflow locally for testing and then serve it as an API endpoint on port
 
 ---
 
-### AIQ Evaluation Commands
+### NeMo Agent Evaluation Commands
 
 **Cursor Rule file**: `.cursor/rules/aiq-cli/aiq-eval.mdc`  
 **Purpose**: Evaluating workflow performance and quality.
@@ -169,14 +169,14 @@ Evaluate my workflow performance using a test dataset with accuracy and precisio
 
 ---
 
-### AIQ Info Commands
+### NeMo Agent Info Commands
 
 **Cursor Rule file**: `.cursor/rules/aiq-cli/aiq-info.mdc`  
-**Purpose**: Getting information about AIQ components and system status.
+**Purpose**: Getting information about NeMo Agent components and system status.
 
 **Prompt**:
 ```
-Show me system information and list all available AIQ components with their details.
+Show me system information and list all available NeMo Agent components with their details.
 ```
 
 **Related Documentation**: [CLI Reference - Info Commands](./cli.md#information-commands)
@@ -188,7 +188,7 @@ Show me system information and list all available AIQ components with their deta
 ### General Workflow Guidelines
 
 **Cursor Rule file**: `.cursor/rules/aiq-workflows/general.mdc`
-**Purpose**: Guidance for AIQ workflows, functions, and tools.
+**Purpose**: Guidance for NeMo Agent workflows, functions, and tools.
 
 **Capabilities**:
 - Workflow architecture patterns
@@ -205,7 +205,7 @@ Show me system information and list all available AIQ components with their deta
 ### Adding Functions to Workflows
 
 **Cursor Rule file**: `.cursor/rules/aiq-workflows/add-functions.mdc`  
-**Purpose**: Implementing, adding, creating, or modifying functions within AIQ workflows.
+**Purpose**: Implementing, adding, creating, or modifying functions within NeMo Agent workflows.
 
 **Prompt**:
 ```
@@ -221,7 +221,7 @@ Add a text processing function to my workflow that splits text into sentences an
 ### Adding Tools to Workflows
 
 **Cursor Rule file**: `.cursor/rules/aiq-workflows/add-tools.mdc`  
-**Purpose**: Adding, integrating, implementing, or configuring tools for AIQ workflows.
+**Purpose**: Adding, integrating, implementing, or configuring tools for NeMo Agent workflows.
 
 **Prompt**:
 ```
@@ -234,10 +234,10 @@ Integrate a web search tool into my workflow that can fetch and process search r
 
 ## Agent Rules
 
-### AIQ Agents Integration and Selection
+### Agent Integration and Selection
 
 **Cursor Rule file**: `.cursor/rules/aiq-agents/general.mdc`  
-**Purpose**: Guidelines for integrating or selecting ReAct, Tool-Calling, Reasoning, or ReWOO agents within AIQ workflows.
+**Purpose**: Guidelines for integrating or selecting ReAct, Tool-Calling, Reasoning, or ReWOO agents within NeMo Agent workflows.
 
 **Prompt**:
 ```
@@ -274,4 +274,4 @@ Integrate ReAct agent to the workflow
 * **Reference Documentation**: Follow the "Related Documentation" links for deeper understanding
 * **Test Incrementally**: Apply one rule at a time and test the results
 
-For tutorials and examples on using these rules, see [Build a Demo Agent Workflow Using Cursor Rules for AIQ Toolkit](../tutorials/build-a-demo-agent-workflow-using-cursor-rules.md). 
+For tutorials and examples on using these rules, see [Build a Demo Agent Workflow Using Cursor Rules for NeMo Agent Toolkit](../tutorials/build-a-demo-agent-workflow-using-cursor-rules.md). 

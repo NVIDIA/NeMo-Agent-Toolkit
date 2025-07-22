@@ -16,10 +16,10 @@ limitations under the License.
 -->
 # Code Execution
 
-AIQ toolkit supports python code execution in a remote sandbox environment through use of the `code_execution` function. This function sends a string of python code to a remote code execution server where code is executed, and the result, status, and any errors are returned
+NeMo Agent toolkit supports python code execution in a remote sandbox environment through use of the `code_execution` function. This function sends a string of python code to a remote code execution server where code is executed, and the result, status, and any errors are returned
 
 ## Usage
-Currently AIQ toolkit supports code execution through the included `local_sandbox` (a locally run code execution docker container) and via a remote [Piston Server](https://github.com/engineer-man/piston). In order to utilize `code_execution` as part of your workflow this server must be running and accepting requests.
+Currently NeMo Agent toolkit supports code execution through the included `local_sandbox` (a locally run code execution docker container) and via a remote [Piston Server](https://github.com/engineer-man/piston). In order to utilize `code_execution` as part of your workflow this server must be running and accepting requests.
 
 To start the `local_sandbox`you must have docker installed. If docker is not installed on your machine, follow the appropriate instructions [here](https://docs.docker.com/get-started/get-docker/) to install docker on your machine. Once docker is installed and running, navigate to the `local_sandbox` directory and run the `start_local_sandbox.sh` script.
 
