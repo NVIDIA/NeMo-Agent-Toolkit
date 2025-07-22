@@ -15,24 +15,13 @@
 
 import typing
 
-from pydantic import Field
-
 from .common import BaseModelRegistryTag
 from .common import TypedBaseModel
 
 
 class MemoryBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     """ The base level config object for a memory object. Memories provide an interface for storing and retrieving. """
-    do_auto_retry: bool = Field(default=True,
-                                description="Whether to automatically retry method calls"
-                                " that fail with a retryable error.")
-    num_retries: int = Field(default=5,
-                             description="Number of times to retry a method call that fails"
-                             " with a retryable error.")
-    retry_on_status_codes: list[int | str] = Field(default_factory=lambda: [429, 500, 502, 503, 504],
-                                                   description="List of HTTP status codes that should trigger a retry.")
-    retry_on_errors: list[str] | None = Field(default_factory=lambda: ["Too Many Requests"],
-                                              description="List of error substrings that should trigger a retry.")
+    pass
 
 
 MemoryBaseConfigT = typing.TypeVar("MemoryBaseConfigT", bound=MemoryBaseConfig)

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import asyncio
+import copy
 import functools
 import inspect
 import logging
@@ -118,6 +119,7 @@ def _retry_decorator(
     retry_on: Exc = (Exception, ),
     retry_codes: Sequence[CodePattern] | None = None,
     retry_on_messages: Sequence[str] | None = None,
+    deepcopy: bool = False,
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """
     Build a decorator that retries with exponential back-off *iff*:
@@ -126,15 +128,22 @@ def _retry_decorator(
       • AND `_want_retry()` returns True (i.e. matches codes/messages filters)
 
     If both `retry_codes` and `retry_on_messages` are None, all exceptions are retried.
+
+    deepcopy:
+        If True, each retry receives deep‑copied *args and **kwargs* to avoid
+        mutating shared state between attempts.
     """
 
     def decorate(fn: Callable[..., T]) -> Callable[..., T]:
+        use_deepcopy = deepcopy
 
         async def _call_with_retry_async(*args, **kw) -> T:
             delay = base_delay
             for attempt in range(retries):
+                call_args = copy.deepcopy(args) if use_deepcopy else args
+                call_kwargs = copy.deepcopy(kw) if use_deepcopy else kw
                 try:
-                    return await fn(*args, **kw)
+                    return await fn(*call_args, **call_kwargs)
                 except retry_on as exc:
                     if (not _want_retry(exc, code_patterns=retry_codes, msg_substrings=retry_on_messages)
                             or attempt == retries - 1):
@@ -145,8 +154,10 @@ def _retry_decorator(
         async def _agen_with_retry(*args, **kw):
             delay = base_delay
             for attempt in range(retries):
+                call_args = copy.deepcopy(args) if use_deepcopy else args
+                call_kwargs = copy.deepcopy(kw) if use_deepcopy else kw
                 try:
-                    async for item in fn(*args, **kw):
+                    async for item in fn(*call_args, **call_kwargs):
                         yield item
                     return
                 except retry_on as exc:
@@ -159,8 +170,10 @@ def _retry_decorator(
         def _gen_with_retry(*args, **kw) -> Iterable[Any]:
             delay = base_delay
             for attempt in range(retries):
+                call_args = copy.deepcopy(args) if use_deepcopy else args
+                call_kwargs = copy.deepcopy(kw) if use_deepcopy else kw
                 try:
-                    yield from fn(*args, **kw)
+                    yield from fn(*call_args, **call_kwargs)
                     return
                 except retry_on as exc:
                     if (not _want_retry(exc, code_patterns=retry_codes, msg_substrings=retry_on_messages)
@@ -172,8 +185,10 @@ def _retry_decorator(
         def _sync_with_retry(*args, **kw) -> T:
             delay = base_delay
             for attempt in range(retries):
+                call_args = copy.deepcopy(args) if use_deepcopy else args
+                call_kwargs = copy.deepcopy(kw) if use_deepcopy else kw
                 try:
-                    return fn(*args, **kw)
+                    return fn(*call_args, **call_kwargs)
                 except retry_on as exc:
                     if (not _want_retry(exc, code_patterns=retry_codes, msg_substrings=retry_on_messages)
                             or attempt == retries - 1):
@@ -208,6 +223,7 @@ def patch_with_retry(
     retry_on: Exc = (Exception, ),
     retry_codes: Sequence[CodePattern] | None = None,
     retry_on_messages: Sequence[str] | None = None,
+    deepcopy: bool = False,
 ) -> Any:
     """
     Patch *obj* instance-locally so **every public method** retries on failure.
@@ -219,6 +235,9 @@ def patch_with_retry(
     retry_on_messages
         List of *substring* patterns.  We retry only if **any** pattern
         appears (case-insensitive) in `str(exc)`.
+    deepcopy:
+        If True, each retry receives deep‑copied *args and **kwargs* to avoid
+        mutating shared state between attempts.
     """
     deco = _retry_decorator(
         retries=retries,
@@ -227,6 +246,7 @@ def patch_with_retry(
         retry_on=retry_on,
         retry_codes=retry_codes,
         retry_on_messages=retry_on_messages,
+        deepcopy=deepcopy,
     )
 
     # Choose attribute source: the *class* to avoid triggering __getattr__

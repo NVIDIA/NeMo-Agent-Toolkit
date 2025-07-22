@@ -16,9 +16,11 @@
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_llm_client
+from aiq.data_models.retry_mixin import RetryMixin
 from aiq.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
+from aiq.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
@@ -32,6 +34,12 @@ async def nim_llama_index(llm_config: NIMModelConfig, builder: Builder):
         del kwargs["base_url"]
 
     llm = NVIDIA(**kwargs)
+
+    if isinstance(llm_config, RetryMixin):
+        llm = patch_with_retry(llm,
+                               retries=llm_config.num_retries,
+                               retry_codes=llm_config.retry_on_status_codes,
+                               retry_on_messages=llm_config.retry_on_errors)
 
     yield llm
 
@@ -48,6 +56,12 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, builder: Builder):
 
     llm = OpenAI(**kwargs)
 
+    if isinstance(llm_config, RetryMixin):
+        llm = patch_with_retry(llm,
+                               retries=llm_config.num_retries,
+                               retry_codes=llm_config.retry_on_status_codes,
+                               retry_on_messages=llm_config.retry_on_errors)
+
     yield llm
 
 
@@ -59,5 +73,11 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, builder: Bu
     kwargs = llm_config.model_dump(exclude={"type", "max_tokens"}, by_alias=True)
 
     llm = Bedrock(**kwargs)
+
+    if isinstance(llm_config, RetryMixin):
+        llm = patch_with_retry(llm,
+                               retries=llm_config.num_retries,
+                               retry_codes=llm_config.retry_on_status_codes,
+                               retry_on_messages=llm_config.retry_on_errors)
 
     yield llm
