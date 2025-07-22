@@ -517,7 +517,7 @@ async def test_get_object_store():
 
         object_store = await builder.add_object_store("object_store_name", TObjectStoreConfig())
 
-        assert object_store == builder.get_object_store_client("object_store_name")
+        assert object_store == await builder.get_object_store_client("object_store_name")
 
         with pytest.raises(ValueError):
             await builder.get_object_store_client("object_store_name_not_exist")

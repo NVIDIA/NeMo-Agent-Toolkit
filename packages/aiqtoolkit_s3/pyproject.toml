@@ -25,7 +25,7 @@ dependencies = [
 requires-python = ">=3.12"
 description = "Subpackage for S3-compatible object store integration in AgentIQ"
 readme = "src/aiq/meta/pypi.md"
-keywords = ["ai", "agents", "memory"]
+keywords = ["ai", "agents", "memory", "data store"]
 classifiers = ["Programming Language :: Python"]
 
 
@@ -38,4 +38,4 @@ aiqtoolkit = { workspace = true }
 
 
 [project.entry-points.'aiq.components']
-aiq_s3_object_store = "aiq.plugins.s3_object_store.register"
+aiq_s3_object_store = "aiq.plugins.s3.register"

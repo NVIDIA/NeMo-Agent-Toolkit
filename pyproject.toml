@@ -62,9 +62,10 @@ ingestion = ["lxml~=5.4"]
 langchain = ["aiqtoolkit-langchain"]
 llama-index = ["aiqtoolkit-llama-index"]
 mem0ai = ["aiqtoolkit-mem0ai"]
-mysql-object-store = ["aiqtoolkit-mysql"]
-s3-object-store = ["aiqtoolkit-s3"]
+mysql = ["aiqtoolkit-mysql"]
+s3 = ["aiqtoolkit-s3"]
 semantic-kernel = ["aiqtoolkit-semantic-kernel"]
+sqlite = ["aiqtoolkit-sqlite"]
 telemetry = [
   "arize-phoenix~=6.1",
   "opentelemetry-api~=1.2",
@@ -121,6 +122,7 @@ aiqtoolkit-mem0ai = { workspace = true }
 aiqtoolkit-mysql = { workspace = true }
 aiqtoolkit-s3 = { workspace = true }
 aiqtoolkit-semantic-kernel = { workspace = true }
+aiqtoolkit-sqlite = { workspace = true }
 aiqtoolkit-test = { workspace = true }
 aiqtoolkit-zep-cloud = { workspace = true }
 aiqtoolkit-agno = { workspace = true }
@@ -194,12 +196,12 @@ docs = [
 [project.entry-points.'aiq.components']
 aiq_agents = "aiq.agent.register"
 aiq_embedders = "aiq.embedder.register"
-aiq_llms = "aiq.llm.register"
-aiq_retrievers = "aiq.retriever.register"
-aiq_tools = "aiq.tool.register"
 aiq_evaluators = "aiq.eval.register"
+aiq_llms = "aiq.llm.register"
 aiq_object_stores = "aiq.object_store.register"
 aiq_observability = "aiq.observability.register"
+aiq_retrievers = "aiq.retriever.register"
+aiq_tools = "aiq.tool.register"
 
 
 [project.entry-points.'aiq.front_ends']

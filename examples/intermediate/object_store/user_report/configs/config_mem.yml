@@ -22,7 +22,7 @@ general:
 
 object_stores:
   report_object_store:
-    _type: memory
+    _type: in_memory
     bucket_name: my-bucket
 
 llms:
@@ -58,4 +58,3 @@ workflow:
   verbose: true
   handle_parsing_errors: true
   max_retries: 2
-

@@ -17,6 +17,7 @@ members = [
     "aiqtoolkit-mysql",
     "aiqtoolkit-s3",
     "aiqtoolkit-semantic-kernel",
+    "aiqtoolkit-sqlite",
     "aiqtoolkit-test",
     "aiqtoolkit-weave",
     "aiqtoolkit-zep-cloud",
@@ -501,7 +502,7 @@ requires-dist = [
 name = "aiq-user-report"
 source = { editable = "examples/intermediate/object_store/user_report" }
 dependencies = [
-    { name = "aiqtoolkit" },
+    { name = "aiqtoolkit", extra = ["mysql", "s3"] },
 ]
 
 [package.metadata]
@@ -583,7 +584,7 @@ llama-index = [
 mem0ai = [
     { name = "aiqtoolkit-mem0ai" },
 ]
-mysql-object-store = [
+mysql = [
     { name = "aiqtoolkit-mysql" },
 ]
 profiling = [
@@ -591,11 +592,14 @@ profiling = [
     { name = "prefixspan" },
     { name = "scikit-learn" },
 ]
-s3-object-store = [
+s3 = [
     { name = "aiqtoolkit-s3" },
 ]
 semantic-kernel = [
     { name = "aiqtoolkit-semantic-kernel" },
+]
+sqlite = [
+    { name = "aiqtoolkit-sqlite" },
 ]
 telemetry = [
     { name = "arize-phoenix" },
@@ -672,9 +676,10 @@ requires-dist = [
     { name = "aiqtoolkit-langchain", marker = "extra == 'langchain'", editable = "packages/aiqtoolkit_langchain" },
     { name = "aiqtoolkit-llama-index", marker = "extra == 'llama-index'", editable = "packages/aiqtoolkit_llama_index" },
     { name = "aiqtoolkit-mem0ai", marker = "extra == 'mem0ai'", editable = "packages/aiqtoolkit_mem0ai" },
-    { name = "aiqtoolkit-mysql", marker = "extra == 'mysql-object-store'", editable = "packages/aiqtoolkit_mysql" },
-    { name = "aiqtoolkit-s3", marker = "extra == 's3-object-store'", editable = "packages/aiqtoolkit_s3" },
+    { name = "aiqtoolkit-mysql", marker = "extra == 'mysql'", editable = "packages/aiqtoolkit_mysql" },
+    { name = "aiqtoolkit-s3", marker = "extra == 's3'", editable = "packages/aiqtoolkit_s3" },
     { name = "aiqtoolkit-semantic-kernel", marker = "extra == 'semantic-kernel'", editable = "packages/aiqtoolkit_semantic_kernel" },
+    { name = "aiqtoolkit-sqlite", marker = "extra == 'sqlite'", editable = "packages/aiqtoolkit_sqlite" },
     { name = "aiqtoolkit-weave", marker = "extra == 'weave'", editable = "packages/aiqtoolkit_weave" },
     { name = "aiqtoolkit-zep-cloud", marker = "extra == 'zep-cloud'", editable = "packages/aiqtoolkit_zep_cloud" },
     { name = "arize-phoenix", marker = "extra == 'telemetry'", specifier = "~=6.1" },
@@ -708,7 +713,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["agno", "crewai", "ingestion", "langchain", "llama-index", "mem0ai", "mysql-object-store", "s3-object-store", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "profiling", "gunicorn"]
+provides-extras = ["agno", "crewai", "ingestion", "langchain", "llama-index", "mem0ai", "mysql", "s3", "semantic-kernel", "sqlite", "telemetry", "weave", "zep-cloud", "examples", "profiling", "gunicorn"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -846,14 +851,12 @@ source = { editable = "packages/aiqtoolkit_mysql" }
 dependencies = [
     { name = "aiomysql" },
     { name = "aiqtoolkit" },
-    { name = "mysql-connector-python" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "aiomysql", specifier = ">=0.2.0" },
     { name = "aiqtoolkit", editable = "." },
-    { name = "mysql-connector-python", specifier = ">=9.1.0" },
 ]
 
 [[package]]
@@ -882,6 +885,20 @@ dependencies = [
 requires-dist = [
     { name = "aiqtoolkit", editable = "." },
     { name = "semantic-kernel", specifier = "~=1.24.0" },
+]
+
+[[package]]
+name = "aiqtoolkit-sqlite"
+source = { editable = "packages/aiqtoolkit_sqlite" }
+dependencies = [
+    { name = "aiosqlite" },
+    { name = "aiqtoolkit" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiosqlite", specifier = "~=0.21.0" },
+    { name = "aiqtoolkit", editable = "." },
 ]
 
 [[package]]
@@ -4048,20 +4065,6 @@ wheels = [
 ]
 
 [[package]]
-name = "mysql-connector-python"
-version = "9.3.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/82/5e/55b265cb95938e271208e5692d7e615c53f2aeea894ab72a9f14ab198e9a/mysql-connector-python-9.3.0.tar.gz", hash = "sha256:8b16d51447e3603f18478fb5a19b333bfb73fb58f872eb055a105635f53d2345", size = 942579, upload-time = "2025-05-07T18:50:34.339Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bf/73/b42061ea4c0500edad4f92834ed7d75b1a740d11970e531c5be4dc1af5cd/mysql_connector_python-9.3.0-cp312-cp312-macosx_14_0_arm64.whl", hash = "sha256:2589af070babdff9c920ee37f929218d80afa704f4e2a99f1ddcb13d19de4450", size = 15151288, upload-time = "2025-04-15T18:43:17.762Z" },
-    { url = "https://files.pythonhosted.org/packages/27/87/9cd7e803c762c5098683c83837d2258c2f83cf82d33fabd1d0eaadae06ee/mysql_connector_python-9.3.0-cp312-cp312-macosx_14_0_x86_64.whl", hash = "sha256:1916256ecd039f4673715550d28138416bac5962335e06d36f7434c47feb5232", size = 15967397, upload-time = "2025-04-15T18:43:20.799Z" },
-    { url = "https://files.pythonhosted.org/packages/5a/5d/cd63f31bf5d0536ee1e4216fb2f3f57175ca1e0dd37e1e8139083d2156e8/mysql_connector_python-9.3.0-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:d33e2f88e1d4b15844cfed2bb6e90612525ba2c1af2fb10b4a25b2c89a1fe49a", size = 33457025, upload-time = "2025-04-15T18:43:24.09Z" },
-    { url = "https://files.pythonhosted.org/packages/76/65/9609a96edc0d015d1017176974c42b955cf87ba92cd31765f99cba835715/mysql_connector_python-9.3.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:0aedee809e1f8dbab6b2732f51ee1619b54a56d15b9070655bc31fb822c1a015", size = 33853427, upload-time = "2025-04-15T18:43:28.441Z" },
-    { url = "https://files.pythonhosted.org/packages/c2/da/f81eeb5b63dea3ebe035fbbbdc036ae517155ad73f2e9640ee7c9eace09d/mysql_connector_python-9.3.0-cp312-cp312-win_amd64.whl", hash = "sha256:3853799f4b719357ea25eba05f5f278a158a85a5c8209b3d058947a948bc9262", size = 16358560, upload-time = "2025-04-15T18:43:32.281Z" },
-    { url = "https://files.pythonhosted.org/packages/23/1d/8c2c6672094b538f4881f7714e5332fdcddd05a7e196cbc9eb4a9b5e9a45/mysql_connector_python-9.3.0-py2.py3-none-any.whl", hash = "sha256:8ab7719d614cf5463521082fab86afc21ada504b538166090e00eeaa1ff729bc", size = 399302, upload-time = "2025-04-15T18:44:10.046Z" },
-]
-
-[[package]]
 name = "myst-parser"
 version = "4.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -5895,8 +5898,8 @@ name = "secretstorage"
 version = "3.3.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cryptography" },
-    { name = "jeepney" },
+    { name = "cryptography", marker = "sys_platform == 'linux'" },
+    { name = "jeepney", marker = "sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/53/a4/f48c9d79cb507ed1373477dbceaba7401fd8a23af63b837fa61f1dcd3691/SecretStorage-3.3.3.tar.gz", hash = "sha256:2403533ef369eca6d2ba81718576c5e0f564d5cca1b58f73a8b23e7d4eeebd77", size = 19739, upload-time = "2022-08-13T16:22:46.976Z" }
 wheels = [

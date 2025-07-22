@@ -29,12 +29,7 @@ class S3ObjectStoreClientConfig(ObjectStoreBaseConfig, name="s3"):
 @register_object_store(config_type=S3ObjectStoreClientConfig)
 async def s3_object_store_client(config: S3ObjectStoreClientConfig, builder: Builder):
 
-    from aiq.plugins.s3_object_store.s3_object_store import S3ObjectStore
+    from aiq.plugins.s3.s3_object_store import S3ObjectStore
 
-    store = None
-    try:
-        store = S3ObjectStore(config)
+    async with S3ObjectStore(config) as store:
         yield store
-    finally:
-        if store is not None:
-            await store.close()

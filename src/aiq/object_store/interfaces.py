@@ -77,5 +77,8 @@ class ObjectStore(ABC):
 
         Args:
             key (str): The key to delete the item from.
+
+        Raises:
+            NoSuchKeyError: If the item does not exist.
         """
         pass

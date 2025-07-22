@@ -577,7 +577,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return info_obj
 
     @override
-    def get_object_store_client(self, object_store_name: str | ObjectStoreRef) -> ObjectStore:
+    async def get_object_store_client(self, object_store_name: str | ObjectStoreRef) -> ObjectStore:
         if object_store_name not in self._object_stores:
             raise ValueError(f"Object store `{object_store_name}` not found")
 
@@ -802,11 +802,11 @@ class ChildBuilder(Builder):
         return await self._workflow_builder.add_object_store(name, config)
 
     @override
-    def get_object_store_client(self, object_store_name: str) -> ObjectStore:
+    async def get_object_store_client(self, object_store_name: str) -> ObjectStore:
         """
         Return the instantiated object store client for the given name.
         """
-        object_store_client = self._workflow_builder.get_object_store_client(object_store_name)
+        object_store_client = await self._workflow_builder.get_object_store_client(object_store_name)
 
         self._dependencies.add_object_store(object_store_name)
 

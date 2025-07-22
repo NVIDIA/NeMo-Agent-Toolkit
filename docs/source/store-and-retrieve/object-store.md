@@ -47,7 +47,7 @@ The `ObjectStore` abstract interface defines the standard operations:
 ## Included Object Stores
 The AIQ toolkit includes several object store providers:
 
-- **Memory Object Store**: In-memory storage for development and testing
+- **In-Memory Object Store**: In-memory storage for development and testing
 - **S3 Object Store**: Amazon S3 and S3-compatible storage (like MinIO)
 - **MySQL Object Store**: MySQL database-backed storage
 
@@ -56,11 +56,11 @@ The AIQ toolkit includes several object store providers:
 ### Configuration
 Object stores are configured similarly to other AIQ toolkit components. Each object store provider has a Pydantic config object which defines its configurable parameters. These parameters can then be configured in the config file under the `object_stores` section.
 
-Below is an example configuration for the memory object store:
+Below is an example configuration for the in-memory object store:
 ```yaml
 object_stores:
   my_object_store:
-    _type: memory
+    _type: in_memory
     bucket_name: my-bucket
 ```
 
@@ -82,8 +82,8 @@ Object stores can be used as components in custom functions. You can instantiate
 @register_function(config_type=MyFunctionConfig)
 async def my_function(config: MyFunctionConfig, builder: Builder):
     # Get an object store client
-    object_store = builder.get_object_store_client(object_store_name=config.object_store)
-    
+    object_store = await builder.get_object_store_client(object_store_name=config.object_store)
+
     # Store an object
     item = ObjectStoreItem(
         data=b"Hello, World!",
@@ -91,7 +91,7 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
         metadata={"author": "user123"}
     )
     await object_store.put_object("greeting.txt", item)
-    
+
     # Retrieve an object
     retrieved_item = await object_store.get_object("greeting.txt")
     print(retrieved_item.data.decode("utf-8"))
@@ -133,4 +133,4 @@ Object stores may raise specific exceptions:
 - **NoSuchKeyError**: When trying to retrieve or delete an object with a non-existent key
 
 ## Additional Resources
-For information on how to write a new object store provider, see the [Adding an Object Store Provider](../extend/object-store.md) document. 
+For information on how to write a new object store provider, see the [Adding an Object Store Provider](../extend/object-store.md) document.

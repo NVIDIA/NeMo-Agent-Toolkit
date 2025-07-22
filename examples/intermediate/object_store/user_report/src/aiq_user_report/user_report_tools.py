@@ -33,7 +33,7 @@ class GetUserReportConfig(FunctionBaseConfig, name="get_user_report"):
 
 @register_function(config_type=GetUserReportConfig)
 async def get_user_report(config: GetUserReportConfig, builder: Builder):
-    object_store = builder.get_object_store_client(object_store_name=config.object_store)
+    object_store = await builder.get_object_store_client(object_store_name=config.object_store)
 
     async def _inner(user_id: str, date: str | None = None) -> str:
         key = f"/reports/{user_id}/{date}.json" if date else f"/reports/{user_id}/latest.json"
@@ -54,7 +54,7 @@ class PutUserReportConfig(FunctionBaseConfig, name="put_user_report"):
 
 @register_function(config_type=PutUserReportConfig)
 async def put_user_report(config: GetUserReportConfig, builder: Builder):
-    object_store = builder.get_object_store_client(object_store_name=config.object_store)
+    object_store = await builder.get_object_store_client(object_store_name=config.object_store)
 
     async def _inner(report: str, user_id: str, date: str | None = None) -> str:
         key = f"/reports/{user_id}/{date}.json" if date else f"/reports/{user_id}/latest.json"

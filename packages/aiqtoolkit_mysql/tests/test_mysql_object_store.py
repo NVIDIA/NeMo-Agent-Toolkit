@@ -13,21 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_object_store
-from aiq.data_models.object_store import ObjectStoreBaseConfig
+from contextlib import asynccontextmanager
+
+import pytest
+
+from aiq.builder.workflow_builder import WorkflowBuilder
+from aiq.plugins.mysql.object_store import MySQLObjectStoreClientConfig
+from aiq.test.object_store_tests import ObjectStoreTests
 
 
-class MySQLObjectStoreClientConfig(ObjectStoreBaseConfig, name="mysql"):
-    bucket_name: str
-    endpoint_url: str | None = None
-    access_key: str | None = None
-    secret_key: str | None = None
+@pytest.mark.integration
+class TestMySQLObjectStore(ObjectStoreTests):
 
+    @asynccontextmanager
+    async def _get_store(self):
+        async with WorkflowBuilder() as builder:
+            await builder.add_object_store(
+                "object_store_name",
+                MySQLObjectStoreClientConfig(bucket_name="test", user="root", password="my-secret-pw"))
 
-@register_object_store(config_type=MySQLObjectStoreClientConfig)
-async def mysql_object_store_client(config: MySQLObjectStoreClientConfig, builder: Builder):
-
-    from aiq.plugins.mysql_object_store.mysql_object_store import MySQLObjectStore
-
-    yield MySQLObjectStore(config)
+            yield await builder.get_object_store_client("object_store_name")

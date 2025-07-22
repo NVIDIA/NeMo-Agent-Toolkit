@@ -21,12 +21,11 @@ dependencies = [
   # Keep sorted!!!
   "aiqtoolkit",
   "aiomysql>=0.2.0",
-  "mysql-connector-python>=9.1.0",
 ]
 requires-python = ">=3.12"
 description = "Subpackage for MySQL-based object store integration in AgentIQ"
 readme = "src/aiq/meta/pypi.md"
-keywords = ["ai", "agents", "memory"]
+keywords = ["ai", "agents", "memory", "data store"]
 classifiers = ["Programming Language :: Python"]
 
 
@@ -39,4 +38,4 @@ aiqtoolkit = { workspace = true }
 
 
 [project.entry-points.'aiq.components']
-aiq_mem0ai = "aiq.plugins.mysql_object_store.register"
+aiq_mysql = "aiq.plugins.mysql.register"

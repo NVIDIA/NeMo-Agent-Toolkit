@@ -18,43 +18,54 @@ from aiq.cli.register_workflow import register_object_store
 from aiq.data_models.object_store import KeyAlreadyExistsError
 from aiq.data_models.object_store import NoSuchKeyError
 from aiq.data_models.object_store import ObjectStoreBaseConfig
+from aiq.utils.type_utils import override
 
 from .interfaces import ObjectStore
 from .models import ObjectStoreItem
 
 
-class InMemoryObjectStoreConfig(ObjectStoreBaseConfig, name="memory"):
+class InMemoryObjectStoreConfig(ObjectStoreBaseConfig, name="in_memory"):
+    """
+    Object store that stores objects in memory. Objects are not persisted when the process shuts down.
+    """
     pass
 
 
 class InMemoryObjectStore(ObjectStore):
+    """
+    Implementation of ObjectStore that stores objects in memory. Objects are not persisted when the process shuts down.
+    """
 
     def __init__(self) -> None:
         self._store: dict[str, ObjectStoreItem] = {}
 
-    async def put_object(
-        self,
-        key: str,
-        item: ObjectStoreItem,
-    ) -> None:
+    @override
+    async def put_object(self, key: str, item: ObjectStoreItem) -> None:
         if key in self._store:
             raise KeyAlreadyExistsError(key)
 
         self._store[key] = item
         return
 
+    @override
     async def upsert_object(self, key: str, item: ObjectStoreItem) -> None:
         self._store[key] = item
         return
 
+    @override
     async def get_object(self, key: str) -> ObjectStoreItem:
-        try:
-            return self._store[key]
-        except KeyError:
+
+        if key not in self._store:
             raise NoSuchKeyError(key)
 
+        return self._store[key]
+
+    @override
     async def delete_object(self, key: str) -> None:
-        self._store.pop(key, None)
+        if key not in self._store:
+            raise NoSuchKeyError(key)
+
+        self._store.pop(key)
         return
 
 

@@ -75,7 +75,7 @@ In the AIQ toolkit system, anything that extends {py:class}`~aiq.data_models.obj
            # Check if key already exists
            if await self._key_exists(key):
                raise KeyAlreadyExistsError(key)
-           
+
            # Store the object in your backend
            await self._store_object(key, item)
 
@@ -199,7 +199,7 @@ async def my_custom_object_store(config: MyCustomObjectStoreConfig, builder: Bui
 **At runtime**, you typically see code like:
 
 ```python
-object_store_client = builder.get_object_store_client(<object_store_config_name>)
+object_store_client = await builder.get_object_store_client(<object_store_config_name>)
 await object_store_client.put_object("my-key", ObjectStoreItem(data=b"Hello, World!"))
 ```
 
@@ -217,7 +217,7 @@ from aiq.object_store.models import ObjectStoreItem
 from langchain_core.tools import ToolException
 
 async def store_file_tool_action(file_data: bytes, key: str, object_store_name: str):
-    object_store_client = builder.get_object_store_client(object_store_name)
+    object_store_client = await builder.get_object_store_client(object_store_name)
     try:
         item = ObjectStoreItem(
             data=file_data,
@@ -299,4 +299,4 @@ To integrate your object store provider as a plugin, follow the standard AIQ too
 3. Add the necessary dependencies to your plugin's `pyproject.toml`
 4. Ensure your plugin is discoverable by AIQ toolkit
 
-For more information on creating plugins, see the [Plugins](../extend/plugins.md) documentation. 
+For more information on creating plugins, see the [Plugins](../extend/plugins.md) documentation.
