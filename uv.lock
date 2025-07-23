@@ -519,7 +519,7 @@ requires-dist = [
 
 [[package]]
 name = "aiq-user-report"
-source = { editable = "examples/intermediate/object_store/user_report" }
+source = { editable = "examples/object_store/user_report" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["mysql", "s3"] },
 ]

@@ -148,7 +148,7 @@ aiq_simple_rag = { path = "examples/RAG/simple_rag", editable = true }
 aiq_simple_web_query = { path = "examples/getting_started/simple_web_query", editable = true }
 aiq_simple_web_query_eval = { path = "examples/evaluation_and_profiling/simple_web_query_eval", editable = true }
 aiq_swe_bench = { path = "examples/evaluation_and_profiling/swe_bench", editable = true }
-aiq_user_report = { path = "examples/intermediate/object_store/user_report", editable = true }
+aiq_user_report = { path = "examples/object_store/user_report", editable = true }
 
 
 [tool.uv.workspace]

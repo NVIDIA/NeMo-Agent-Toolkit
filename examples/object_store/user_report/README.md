@@ -27,7 +27,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the AIQ toolkit repository, run the following commands:
 
 ```bash
-uv pip install -e examples/intermediate/object_store/user_report
+uv pip install -e examples/object_store/user_report
 ```
 
 ### Setting up MinIO (Optional)
@@ -175,7 +175,7 @@ object_stores:
 
 You can start the server by running:
 ```
-aiq serve --config_file examples/intermediate/object_store/user_report/configs/config_s3.yml
+aiq serve --config_file examples/object_store/user_report/configs/config_s3.yml
 ```
 
 ### Using the Object Store Backed File Server
@@ -197,12 +197,12 @@ Run the following command from the root of the AIQ toolkit repo to execute this 
 
 ### Example 1
 ```
-aiq run --config_file examples/intermediate/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 67890"
+aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 67890"
 ```
 
 **Expected Output**
 ```console
-aiq run --config_file examples/intermediate/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 67890"
+aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 67890"
 2025-07-02 14:21:55,362 - aiq.runtime.loader - WARNING - Loading module 'aiq.agent.register' from entry point 'aiq_agents' took a long time (201.046228 ms). Ensure all imports are inside your registered functions.
 2025-07-02 14:21:55,643 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/object_store/user_report/configs/config_s3.yml'
 2025-07-02 14:21:55,644 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
@@ -265,12 +265,12 @@ Workflow Result:
 
 ### Example 2
 ```
-aiq run --config_file examples/intermediate/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 12345 on April 15th 2025"
+aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 12345 on April 15th 2025"
 ```
 
 **Expected Output**
 ```console
-aiq run --config_file examples/intermediate/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 12345 on April 15th 2025"
+aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 12345 on April 15th 2025"
 2025-07-02 14:25:20,994 - aiq.runtime.loader - WARNING - Loading module 'aiq.agent.register' from entry point 'aiq_agents' took a long time (193.936348 ms). Ensure all imports are inside your registered functions.
 2025-07-02 14:25:21,269 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/object_store/user_report/configs/config_s3.yml'
 2025-07-02 14:25:21,271 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
@@ -343,7 +343,7 @@ Workflow Result:
 
 ### Example 3
 ```
-aiq run --config_file examples/intermediate/object_store/user_report/configs/config_s3.yml --input 'Create a latest report for user 6789 with the following JSON contents:
+aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Create a latest report for user 6789 with the following JSON contents:
     {
         "recommendations": [
             "Update graphics driver",
@@ -356,7 +356,7 @@ aiq run --config_file examples/intermediate/object_store/user_report/configs/con
 
 **Expected Output**
 ```console
-aiq run --config_file examples/intermediate/object_store/user_report/configs/config_s3.yml --input 'Create a latest report for user 6789 with the following JSON contents:
+aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Create a latest report for user 6789 with the following JSON contents:
     {
         "recommendations": [
             "Update graphics driver",
@@ -431,12 +431,12 @@ Workflow Result:
 
 ### Example 4 (Continued from Example 3)
 ```
-aiq run --config_file examples/intermediate/object_store/user_report/configs/config_s3.yml --input 'Get the latest report for user 6789'
+aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Get the latest report for user 6789'
 ```
 
 **Expected Output**
 ```console
-aiq run --config_file examples/intermediate/object_store/user_report/configs/config_s3.yml --input 'Get the latest report for user 6789'
+aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Get the latest report for user 6789'
 2025-07-02 14:29:37,531 - aiq.runtime.loader - WARNING - Loading module 'aiq.agent.register' from entry point 'aiq_agents' took a long time (197.992086 ms). Ensure all imports are inside your registered functions.
 2025-07-02 14:29:37,808 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/object_store/user_report/configs/config_s3.yml'
 2025-07-02 14:29:37,810 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
