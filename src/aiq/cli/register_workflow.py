@@ -26,6 +26,8 @@ from aiq.cli.type_registry import FrontEndBuildCallableT
 from aiq.cli.type_registry import FrontEndRegisteredCallableT
 from aiq.cli.type_registry import FunctionBuildCallableT
 from aiq.cli.type_registry import FunctionRegisteredCallableT
+from aiq.cli.type_registry import ITSStrategyBuildCallableT
+from aiq.cli.type_registry import ITSStrategyRegisterCallableT
 from aiq.cli.type_registry import LLMClientBuildCallableT
 from aiq.cli.type_registry import LLMClientRegisteredCallableT
 from aiq.cli.type_registry import LLMProviderBuildCallableT
@@ -340,6 +342,30 @@ def register_object_store(config_type: type[ObjectStoreBaseConfigT]):
         return context_manager_fn
 
     return register_kv_store_inner
+
+
+def register_its_strategy(config_type: type[ITSStrategyRegisterCallableT]):
+
+    def register_its_strategy_inner(
+        fn: ITSStrategyBuildCallableT[ITSStrategyRegisterCallableT]
+    ) -> ITSStrategyRegisterCallableT[ITSStrategyRegisterCallableT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredITSStrategyInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=AIQComponentEnum.ITS_STRATEGY)
+
+        GlobalTypeRegistry.get().register_its_strategy(
+            RegisteredITSStrategyInfo(full_type=config_type.full_type,
+                                      config_type=config_type,
+                                      build_fn=context_manager_fn,
+                                      discovery_metadata=discovery_metadata))
+
+        return context_manager_fn
+
+    return register_its_strategy_inner
 
 
 def register_retriever_provider(config_type: type[RetrieverBaseConfigT]):

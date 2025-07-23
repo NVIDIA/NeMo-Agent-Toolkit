@@ -197,6 +197,7 @@ docs = [
 aiq_agents = "aiq.agent.register"
 aiq_embedders = "aiq.embedder.register"
 aiq_evaluators = "aiq.eval.register"
+aiq_inference_time_scaling = "aiq.experimental.inference_time_scaling.register"
 aiq_llms = "aiq.llm.register"
 aiq_object_stores = "aiq.object_store.register"
 aiq_observability = "aiq.observability.register"
