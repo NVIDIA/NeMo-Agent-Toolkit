@@ -141,6 +141,6 @@ class ITSStrategyRef(ComponentRef):
     """
 
     @property
-    @typing.override
+    @override
     def component_group(self):
         return ComponentGroup.ITS_STRATEGIES

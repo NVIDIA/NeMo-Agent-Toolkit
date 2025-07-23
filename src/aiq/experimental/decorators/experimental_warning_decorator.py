@@ -51,16 +51,11 @@ def aiq_experimental(func: Any = None, *, metadata: dict[str, Any] | None = None
     Decorator that can wrap any type of function (sync, async, generator,
     async generator) and logs a warning that the function is experimental.
 
-    - If the function is async, it will be wrapped in an async function.
-    - If the function is a generator, it will be wrapped in a generator function.
-    - If the function is an async generator, it will be wrapped in an async generator function.
-    - If the function is sync, it will be wrapped in a sync function.
-
     Args:
         func: The function to be decorated.
-        metadata: Optional dictionary of metadata to log with the warning.
-            This can include information like version, author, etc.
-            If provided, the metadata will be logged alongside the experimental warning.
+        metadata: Optional dictionary of metadata to log with the warning. This can include information
+        like version, author, etc. If provided, the metadata will be
+        logged alongside the experimental warning.
     """
     function_name: str = f"{func.__module__}.{func.__qualname__}" if func else "<unknown_function>"
 
