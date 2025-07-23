@@ -45,6 +45,14 @@ EVENT_TYPE_TO_SPAN_KIND_MAP = {
 
 
 def event_type_to_span_kind(event_type: str) -> SpanKind:
+    """Convert an event type to a span kind.
+
+    Args:
+        event_type (str): The event type to convert.
+
+    Returns:
+        SpanKind: The span kind.
+    """
     return EVENT_TYPE_TO_SPAN_KIND_MAP.get(event_type, SpanKind.UNKNOWN)
 
 
@@ -77,47 +85,73 @@ class SpanStatusCode(Enum):
 
 
 class SpanEvent(BaseModel):
-    timestamp: float = Field(default_factory=lambda: int(time.time() * 1e9))
-    name: str
-    attributes: dict[str, Any] = Field(default_factory=dict)
+    timestamp: float = Field(default_factory=lambda: int(time.time() * 1e9), description="The timestamp of the event.")
+    name: str = Field(description="The name of the event.")
+    attributes: dict[str, Any] = Field(default_factory=dict, description="The attributes of the event.")
 
 
 class SpanStatus(BaseModel):
-    code: SpanStatusCode = SpanStatusCode.OK
-    message: str | None = None
+    code: SpanStatusCode = Field(default=SpanStatusCode.OK, description="The status code of the span.")
+    message: str | None = Field(default=None, description="The status message of the span.")
 
 
 class SpanContext(BaseModel):
-    trace_id: int = Field(default_factory=lambda: uuid.uuid4().int)
-    span_id: int = Field(default_factory=lambda: uuid.uuid4().int & ((1 << 64) - 1))
+    trace_id: int = Field(default_factory=lambda: uuid.uuid4().int, description="The 128-bit trace ID of the span.")
+    span_id: int = Field(default_factory=lambda: uuid.uuid4().int & ((1 << 64) - 1),
+                         description="The 64-bit span ID of the span.")
 
 
 class Span(BaseModel):
-    name: str
-    context: SpanContext | None = None
-    parent: "Span | None" = None
-    start_time: int = Field(default_factory=lambda: int(time.time() * 1e9))
-    end_time: int | None = None
-    attributes: dict[str, Any] = Field(default_factory=dict)
-    events: list[SpanEvent] = Field(default_factory=list)
-    status: SpanStatus = Field(default_factory=SpanStatus)
+    name: str = Field(description="The name of the span.")
+    context: SpanContext | None = Field(default=None, description="The context of the span.")
+    parent: "Span | None" = Field(default=None, description="The parent span of the span.")
+    start_time: int = Field(default_factory=lambda: int(time.time() * 1e9), description="The start time of the span.")
+    end_time: int | None = Field(default=None, description="The end time of the span.")
+    attributes: dict[str, Any] = Field(default_factory=dict, description="The attributes of the span.")
+    events: list[SpanEvent] = Field(default_factory=list, description="The events of the span.")
+    status: SpanStatus = Field(default_factory=SpanStatus, description="The status of the span.")
 
     @field_validator('context', mode='before')
     @classmethod
     def set_default_context(cls, v: SpanContext | None) -> SpanContext:
+        """Set the default context if the context is not provided.
+
+        Args:
+            v (SpanContext | None): The context to set.
+
+        Returns:
+            SpanContext: The context.
+        """
         if v is None:
             return SpanContext()
         return v
 
     def set_attribute(self, key: str, value: Any) -> None:
+        """Set the attribute of the span.
+
+        Args:
+            key (str): The key of the attribute.
+            value (Any): The value of the attribute.
+        """
         self.attributes[key] = value
 
     def add_event(self, name: str, attributes: dict[str, Any] | None = None) -> None:
+        """Add an event to the span.
+
+        Args:
+            name (str): The name of the event.
+            attributes (dict[str, Any] | None): The attributes of the event.
+        """
         if attributes is None:
             attributes = {}
         self.events = self.events + [SpanEvent(name=name, attributes=attributes)]
 
     def end(self, end_time: int | None = None) -> None:
+        """End the span.
+
+        Args:
+            end_time (int | None): The end time of the span.
+        """
         if end_time is None:
             end_time = int(time.time() * 1e9)
         self.end_time = end_time
