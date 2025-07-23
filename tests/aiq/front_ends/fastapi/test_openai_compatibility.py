@@ -46,20 +46,22 @@ async def _build_client(config: AIQConfig,
             yield client
 
 
-def test_fastapi_config_openai_api_compatible_field():
-    """Test that openai_api_compatible field is properly added to config"""
-    # Test default value (False)
+def test_fastapi_config_openai_api_v1_path_field():
+    """Test that openai_api_v1_path field is properly added to config"""
+    # Test default value (None)
     config = FastApiFrontEndConfig.EndpointBase(method="POST", description="test")
-    assert hasattr(config, 'openai_api_compatible')
-    assert config.openai_api_compatible is False
+    assert hasattr(config, 'openai_api_v1_path')
+    assert config.openai_api_v1_path is None
 
-    # Test explicit True
-    config = FastApiFrontEndConfig.EndpointBase(method="POST", description="test", openai_api_compatible=True)
-    assert config.openai_api_compatible is True
+    # Test explicit path
+    config = FastApiFrontEndConfig.EndpointBase(
+        method="POST", description="test", openai_api_v1_path="/v1/chat/completions"
+    )
+    assert config.openai_api_v1_path == "/v1/chat/completions"
 
-    # Test explicit False
-    config = FastApiFrontEndConfig.EndpointBase(method="POST", description="test", openai_api_compatible=False)
-    assert config.openai_api_compatible is False
+    # Test explicit None
+    config = FastApiFrontEndConfig.EndpointBase(method="POST", description="test", openai_api_v1_path=None)
+    assert config.openai_api_v1_path is None
 
 
 def test_aiq_chat_request_openai_fields():
@@ -180,13 +182,13 @@ def test_aiq_chat_response_timestamp_serialization():
     assert chunk_json["created"] == 1704110400
 
 
-@pytest.mark.parametrize("openai_api_compatible", [True, False])
-async def test_legacy_vs_openai_compatible_mode_endpoints(openai_api_compatible: bool):
-    """Test that endpoints are created correctly for both legacy and OpenAI compatible modes"""
+@pytest.mark.parametrize("openai_api_v1_path", ["/v1/chat/completions", None])
+async def test_legacy_vs_openai_v1_mode_endpoints(openai_api_v1_path: str | None):
+    """Test that endpoints are created correctly for both legacy and OpenAI v1 compatible modes"""
 
     # Configure with the specified mode
     front_end_config = FastApiFrontEndConfig()
-    front_end_config.workflow.openai_api_compatible = openai_api_compatible
+    front_end_config.workflow.openai_api_v1_path = openai_api_v1_path
     front_end_config.workflow.openai_api_path = "/v1/chat/completions"
 
     config = AIQConfig(
@@ -197,8 +199,8 @@ async def test_legacy_vs_openai_compatible_mode_endpoints(openai_api_compatible:
     async with _build_client(config) as client:
         base_path = "/v1/chat/completions"
 
-        if openai_api_compatible:
-            # OpenAI Compatible Mode: single endpoint handles both streaming and non-streaming
+        if openai_api_v1_path:
+            # OpenAI v1 Compatible Mode: single endpoint handles both streaming and non-streaming
 
             # Test non-streaming request
             response = await client.post(base_path,
@@ -269,7 +271,7 @@ async def test_openai_compatible_mode_stream_parameter():
     """Test that OpenAI compatible mode correctly handles stream parameter"""
 
     front_end_config = FastApiFrontEndConfig()
-    front_end_config.workflow.openai_api_compatible = True
+    front_end_config.workflow.openai_api_v1_path = "/v1/chat/completions"
     front_end_config.workflow.openai_api_path = "/v1/chat/completions"
 
     # Use streaming config since that's what's available
@@ -308,7 +310,7 @@ async def test_legacy_mode_backward_compatibility():
     """Test that legacy mode maintains exact backward compatibility"""
 
     front_end_config = FastApiFrontEndConfig()
-    front_end_config.workflow.openai_api_compatible = False  # Legacy mode
+    front_end_config.workflow.openai_api_v1_path = None  # Legacy mode
     front_end_config.workflow.openai_api_path = "/v1/chat/completions"
 
     config = AIQConfig(

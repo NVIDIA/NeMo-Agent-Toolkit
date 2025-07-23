@@ -138,12 +138,12 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
             description=("Path for the default workflow using the OpenAI API Specification. "
                          "If None, no workflow endpoint with the OpenAI API Specification is created."),
         )
-        openai_api_compatible: bool = Field(
-            default=False,
-            description=("Enable full OpenAI Chat Completions API compatibility mode. "
-                         "When True, only creates the openai_api_path endpoint that handles both "
-                         "streaming and non-streaming based on the 'stream' parameter. "
-                         "When False, creates separate endpoints for streaming and non-streaming."),
+        openai_api_v1_path: str | None = Field(
+            default=None,
+            description=("Path for the OpenAI v1 Chat Completions API compatible endpoint. "
+                         "If provided, creates a single endpoint that handles both streaming and "
+                         "non-streaming requests based on the 'stream' parameter, following the "
+                         "OpenAI Chat Completions API specification exactly."),
         )
 
     class Endpoint(EndpointBase):
@@ -190,6 +190,7 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         path="/generate",
         websocket_path="/websocket",
         openai_api_path="/chat",
+        openai_api_v1_path="/v1/chat/completions",
         description="Executes the default AIQ Toolkit workflow from the loaded configuration ",
     )
 

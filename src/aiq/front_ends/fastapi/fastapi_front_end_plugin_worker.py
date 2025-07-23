@@ -26,15 +26,12 @@ from pathlib import Path
 
 from fastapi import BackgroundTasks
 from fastapi import Body
-from fastapi import Depends
 from fastapi import FastAPI
 from fastapi import Request
 from fastapi import Response
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from fastapi.security import HTTPAuthorizationCredentials
-from fastapi.security import HTTPBearer
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -78,9 +75,6 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         self._cleanup_tasks: list[str] = []
         self._cleanup_tasks_lock = asyncio.Lock()
 
-        # Initialize security scheme
-        self._security = HTTPBearer(auto_error=False)
-
     @property
     def config(self) -> AIQConfig:
         return self._config
@@ -89,21 +83,6 @@ class FastApiFrontEndPluginWorkerBase(ABC):
     def front_end_config(self) -> FastApiFrontEndConfig:
 
         return self._front_end_config
-
-    def get_security_dependency(self):
-        """Get the security dependency for protected endpoints."""
-
-        async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(self._security)):
-            if credentials is None:
-                # Allow unauthenticated access if configured
-                if getattr(self._front_end_config, 'require_auth', False):
-                    raise HTTPException(status_code=401, detail="Not authenticated")
-                return None
-            # Token validation would go here
-            # For now, we just return the credentials to make them available
-            return credentials
-
-        return verify_token
 
     def build_app(self) -> FastAPI:
 
@@ -135,36 +114,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
             logger.debug("Closing AIQ Toolkit server from process %s", os.getpid())
 
-        # Configure OpenAPI security scheme
-        openapi_security_schemes = {
-            "HTTPBearer": {
-                "type": "http",
-                "scheme": "bearer",
-                "bearerFormat": "JWT",
-                "description": "Enter your Bearer token in the format: Bearer <token>"
-            }
-        }
-
-        aiq_app = FastAPI(lifespan=lifespan, swagger_ui_init_oauth={"usePkceWithAuthorizationCodeGrant": True})
-
-        # Add security schemes to OpenAPI schema
-        from fastapi.openapi.utils import get_openapi
-
-        def custom_openapi():
-            if aiq_app.openapi_schema:
-                return aiq_app.openapi_schema
-            openapi_schema = get_openapi(
-                title=aiq_app.title,
-                version=aiq_app.version,
-                description=aiq_app.description,
-                routes=aiq_app.routes,
-            )
-            openapi_schema["components"] = openapi_schema.get("components", {})
-            openapi_schema["components"]["securitySchemes"] = openapi_security_schemes
-            aiq_app.openapi_schema = openapi_schema
-            return aiq_app.openapi_schema
-
-        aiq_app.openapi = custom_openapi
+        aiq_app = FastAPI(lifespan=lifespan)
 
         self.set_cors_config(aiq_app)
 
@@ -824,17 +774,17 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             elif (endpoint.method == "POST"):
 
-                # Check if OpenAI compatible mode is enabled
-                if getattr(endpoint, 'openai_api_compatible', False):
-                    # OpenAI Compatible Mode: Create single endpoint that handles both streaming and non-streaming
+                # Check if OpenAI v1 compatible endpoint is configured
+                openai_v1_path = getattr(endpoint, 'openai_api_v1_path', None)
+                if openai_v1_path:
+                    # OpenAI v1 Compatible Mode: Create single endpoint that handles both streaming and non-streaming
                     app.add_api_route(
-                        path=endpoint.openai_api_path,
+                        path=openai_v1_path,
                         endpoint=post_openai_api_compatible_endpoint(request_type=AIQChatRequest),
                         methods=[endpoint.method],
                         response_model=AIQChatResponse | AIQChatResponseChunk,
                         description=f"{endpoint.description} (OpenAI Chat Completions API compatible)",
                         responses={500: response_500},
-                        dependencies=[Depends(self.get_security_dependency())],
                     )
                 else:
                     # Legacy Mode: Create separate endpoints for streaming and non-streaming
