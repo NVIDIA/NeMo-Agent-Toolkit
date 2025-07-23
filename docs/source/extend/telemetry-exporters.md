@@ -153,7 +153,7 @@ Telemetry exporters in NeMo Agent toolkit are responsible for:
 
 The telemetry export system routes workflow events through different exporter types to various destinations:
 
-```mermaid
+```{mermaid}
 graph TD
     A[Workflow Events] --> B[Event Stream]
     B --> C[Telemetry Exporter]
@@ -175,7 +175,7 @@ graph TD
 
 NeMo Agent toolkit supports several types of exporters based on the data they handle:
 
-```mermaid
+```{mermaid}
 graph LR
     A["IntermediateStep"] --> B["Raw Exporter"]
     A --> C["Span Exporter"]
@@ -211,7 +211,7 @@ The following table helps you choose the appropriate exporter type for your use 
 
 #### Decision Flow Chart
 
-```mermaid
+```{mermaid}
 flowchart TD
     A[What's your use case?] --> B{Development & Testing}
     A --> C{Production Integration}
