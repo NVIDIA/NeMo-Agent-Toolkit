@@ -24,7 +24,10 @@ from aiq.builder.builder import Builder
 from aiq.builder.function import Function
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.type_registry import GlobalTypeRegistry
+from aiq.data_models.component_ref import ObjectStoreRef
 from aiq.data_models.function import FunctionBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfig
+from aiq.object_store.interfaces import ObjectStore
 from aiq.runtime.loader import PluginTypes
 from aiq.runtime.loader import discover_and_register_plugins
 
@@ -160,6 +163,18 @@ class MockBuilder(Builder):
         raise ValueError(f"Retriever '{retriever_name}' not mocked. Use mock_retriever() to add it.")
 
     async def get_retriever_config(self, retriever_name: str):
+        """Mock implementation."""
+        pass
+
+    async def add_object_store(self, name: str | ObjectStoreRef, config: ObjectStoreBaseConfig):
+        """Mock implementation."""
+        pass
+
+    async def get_object_store_client(self, object_store_name: str | ObjectStoreRef) -> ObjectStore:
+        """Mock implementation."""
+        pass
+
+    def get_object_store_config(self, object_store_name: str | ObjectStoreRef) -> ObjectStoreBaseConfig:
         """Mock implementation."""
         pass
 
