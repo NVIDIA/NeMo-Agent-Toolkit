@@ -15,7 +15,7 @@
 
 import asyncio
 import time
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 import pytest
 
@@ -606,3 +606,85 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
     assert end_event.payload.name == "TestTool"
     assert "result" in end_event.payload.metadata.tool_outputs
     assert end_event.payload.metadata.tool_outputs["result"] == "Tool execution result"
+
+
+async def test_langchain_handler_tool_execution(reactive_stream: Subject):
+    """
+    Test that the LangchainProfilerHandler properly stores and retrieves
+    structured tool inputs for TOOL_START and TOOL_END events.
+    This test verifies the functionality added in the PR that stores
+    copy.deepcopy(inputs) instead of just the string representation.
+    """
+
+    all_stats = []
+    handler = LangchainProfilerHandler()
+    _ = reactive_stream.subscribe(all_stats.append)
+
+    # Simulate a tool start event with structured inputs
+    tool_name = "TestSearchTool"
+    run_id = uuid4()
+
+    # Create structured input data (this is what the PR aims to preserve)
+    structured_inputs = {
+        "query": "test search query",
+        "max_results": 5,
+        "filters": {
+            "date_range": {
+                "start": "2025-01-01", "end": "2025-12-31"
+            }, "category": ["tech", "science"]
+        }
+    }
+
+    await handler.on_tool_start(
+        serialized={},
+        input_str="test search query",  # This was the old format
+        run_id=run_id,
+        inputs=structured_inputs,  # This is the new structured format
+        name=tool_name)
+
+    # Simulate tool processing time
+    await asyncio.sleep(0.1)
+
+    # Create tool output
+    tool_output = {
+        "results": [{
+            "title": "Result 1", "url": "http://example.com/1"
+        }, {
+            "title": "Result 2", "url": "http://example.com/2"
+        }],
+        "count": 2
+    }
+
+    # Simulate tool end event
+    await handler.on_tool_end(output=tool_output, run_id=run_id, name=tool_name)
+
+    # Verify we have the correct number of events
+    assert len(all_stats) == 2, f"Expected 2 events but got {len(all_stats)}"
+
+    tool_start_event = all_stats[0]
+    tool_end_event = all_stats[1]
+
+    # Verify TOOL_START event
+    assert tool_start_event.event_type == IntermediateStepType.TOOL_START
+    assert tool_start_event.name == tool_name
+    assert tool_start_event.framework == LLMFrameworkEnum.LANGCHAIN
+
+    # Verify TOOL_END event
+    assert tool_end_event.event_type == IntermediateStepType.TOOL_END
+    assert tool_end_event.name == tool_name
+    assert tool_end_event.framework == LLMFrameworkEnum.LANGCHAIN
+
+    # Verify that structured inputs are preserved in TOOL_END event
+    # This is the key functionality being tested from the PR
+    assert tool_end_event.metadata.tool_inputs == structured_inputs
+    assert tool_end_event.metadata.tool_outputs == tool_output
+    assert tool_end_event.data.input == structured_inputs
+    assert tool_end_event.data.output == tool_output
+
+        # Verify that the inputs are deep copied (not just referenced)
+    # Modify original inputs and ensure event data is unchanged
+    structured_inputs["query"] = "modified query"
+    assert tool_end_event.metadata.tool_inputs["query"] == "test search query"
+    assert tool_end_event.data.input["query"] == "test search query"
+
+    print("✅ Langchain tool test passed: structured inputs properly stored and retrieved")
