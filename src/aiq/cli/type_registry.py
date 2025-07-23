@@ -60,6 +60,8 @@ from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.logging import LoggingMethodConfigT
 from aiq.data_models.memory import MemoryBaseConfig
 from aiq.data_models.memory import MemoryBaseConfigT
+from aiq.data_models.object_store import ObjectStoreBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfigT
 from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
 from aiq.data_models.registry_handler import RegistryHandlerBaseConfigT
 from aiq.data_models.retriever import RetrieverBaseConfig
@@ -68,6 +70,7 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterConfigT
 from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
+from aiq.object_store.interfaces import ObjectStore
 from aiq.registry_handlers.registry_handler_base import AbstractRegistryHandler
 from aiq.utils.optional_imports import TelemetryOptionalImportError
 from aiq.utils.optional_imports import try_import_opentelemetry
@@ -93,6 +96,8 @@ EmbedderProviderBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncI
 EmbedderClientBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncIterator[typing.Any]]
 EvaluatorBuildCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AsyncIterator[EvaluatorInfo]]
 MemoryBuildCallableT = Callable[[MemoryBaseConfigT, Builder], AsyncIterator[MemoryEditor]]
+ObjectStoreBuildCallableT = Callable[[ObjectStoreBaseConfigT, Builder], AsyncIterator[ObjectStore]]
+
 RetrieverProviderBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], AsyncIterator[RetrieverProviderInfo]]
 RetrieverClientBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], AsyncIterator[typing.Any]]
 RegistryHandlerBuildCallableT = Callable[[RegistryHandlerBaseConfigT], AsyncIterator[AbstractRegistryHandler]]
@@ -111,6 +116,7 @@ EmbedderProviderRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder],
 EmbedderClientRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 EvaluatorRegisteredCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AbstractAsyncContextManager[EvaluatorInfo]]
 MemoryRegisteredCallableT = Callable[[MemoryBaseConfigT, Builder], AbstractAsyncContextManager[MemoryEditor]]
+ObjectStoreRegisteredCallableT = Callable[[ObjectStoreBaseConfigT, Builder], AbstractAsyncContextManager[ObjectStore]]
 RetrieverProviderRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder],
                                                 AbstractAsyncContextManager[RetrieverProviderInfo]]
 RetrieverClientRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
@@ -231,6 +237,14 @@ class RegisteredMemoryInfo(RegisteredInfo[MemoryBaseConfig]):
     build_fn: MemoryRegisteredCallableT = Field(repr=False)
 
 
+class RegisteredObjectStoreInfo(RegisteredInfo[ObjectStoreBaseConfig]):
+    """
+    Represents a registered Object Store object which adheres to the object store interface.
+    """
+
+    build_fn: ObjectStoreRegisteredCallableT = Field(repr=False)
+
+
 class RegisteredITSStrategyInfo(RegisteredInfo[ITSStrategyBaseConfig]):
     """
     Represents a registered Inference Time Scaling (ITS) strategy.
@@ -314,6 +328,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         # Memory
         self._registered_memory_infos: dict[type[MemoryBaseConfig], RegisteredMemoryInfo] = {}
+
+        # Object Stores
+        self._registered_object_store_infos: dict[type[ObjectStoreBaseConfig], RegisteredObjectStoreInfo] = {}
 
         # Retrievers
         self._registered_retriever_provider_infos: dict[type[RetrieverBaseConfig], RegisteredRetrieverProviderInfo] = {}
@@ -596,6 +613,28 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         return list(self._registered_memory_infos.values())
 
+    def register_object_store(self, info: RegisteredObjectStoreInfo):
+
+        if (info.config_type in self._registered_object_store_infos):
+            raise ValueError(f"An Object Store with the same config type `{info.config_type}` has already been "
+                             "registered.")
+
+        self._registered_object_store_infos[info.config_type] = info
+
+        self._registration_changed()
+
+    def get_object_store(self, config_type: type[ObjectStoreBaseConfig]) -> RegisteredObjectStoreInfo:
+
+        try:
+            return self._registered_object_store_infos[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered Object Store for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_object_store_infos.keys())}") from err
+
+    def get_registered_object_stores(self) -> list[RegisteredInfo[ObjectStoreBaseConfig]]:
+
+        return list(self._registered_object_store_infos.values())
+
     def register_retriever_provider(self, info: RegisteredRetrieverProviderInfo):
 
         if (info.config_type in self._registered_retriever_provider_infos):
@@ -761,6 +800,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         if component_type == AIQComponentEnum.MEMORY:
             return self._registered_memory_infos
 
+        if component_type == AIQComponentEnum.OBJECT_STORE:
+            return self._registered_object_store_infos
+
         if component_type == AIQComponentEnum.REGISTRY_HANDLER:
             return self._registered_registry_handler_infos
 
@@ -876,6 +918,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         if issubclass(cls, MemoryBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_memorys())
+
+        if issubclass(cls, ObjectStoreBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_object_stores())
 
         if issubclass(cls, RegistryHandlerBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_registry_handlers())

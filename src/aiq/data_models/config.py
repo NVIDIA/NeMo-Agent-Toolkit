@@ -39,6 +39,7 @@ from .common import TypedBaseModel
 from .embedder import EmbedderBaseConfig
 from .llm import LLMBaseConfig
 from .memory import MemoryBaseConfig
+from .object_store import ObjectStoreBaseConfig
 from .retriever import RetrieverBaseConfig
 
 logger = logging.getLogger(__name__)
@@ -64,6 +65,8 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
                 registered_keys = GlobalTypeRegistry.get().get_registered_embedder_providers()
             elif (info.field_name == "memory"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_memorys()
+            elif (info.field_name == "object_stores"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_object_stores()
             elif (info.field_name == "retrievers"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_retriever_providers()
             elif (info.field_name == "tracing"):
@@ -245,6 +248,9 @@ class AIQConfig(HashableBaseModel):
     # Memory Configuration
     memory: dict[str, MemoryBaseConfig] = {}
 
+    # Object Stores Configuration
+    object_stores: dict[str, ObjectStoreBaseConfig] = {}
+
     # Retriever Configuration
     retrievers: dict[str, RetrieverBaseConfig] = {}
 
@@ -269,6 +275,7 @@ class AIQConfig(HashableBaseModel):
         stream.write(f"Number of LLMs: {len(self.llms)}\n")
         stream.write(f"Number of Embedders: {len(self.embedders)}\n")
         stream.write(f"Number of Memory: {len(self.memory)}\n")
+        stream.write(f"Number of Object Stores: {len(self.object_stores)}\n")
         stream.write(f"Number of Retrievers: {len(self.retrievers)}\n")
         stream.write(f"Number of ITS Strategies: {len(self.its_strategies)}\n")
 
@@ -312,6 +319,10 @@ class AIQConfig(HashableBaseModel):
                                 typing.Annotated[type_registry.compute_annotation(MemoryBaseConfig),
                                                  Discriminator(TypedBaseModel.discriminator)]]
 
+        ObjectStoreAnnotation = dict[str,
+                                     typing.Annotated[type_registry.compute_annotation(ObjectStoreBaseConfig),
+                                                      Discriminator(TypedBaseModel.discriminator)]]
+
         RetrieverAnnotation = dict[str,
                                    typing.Annotated[type_registry.compute_annotation(RetrieverBaseConfig),
                                                     Discriminator(TypedBaseModel.discriminator)]]
@@ -343,6 +354,11 @@ class AIQConfig(HashableBaseModel):
         memory_field = cls.model_fields.get("memory")
         if memory_field is not None and memory_field.annotation != MemoryAnnotation:
             memory_field.annotation = MemoryAnnotation
+            should_rebuild = True
+
+        object_stores_field = cls.model_fields.get("object_stores")
+        if object_stores_field is not None and object_stores_field.annotation != ObjectStoreAnnotation:
+            object_stores_field.annotation = ObjectStoreAnnotation
             should_rebuild = True
 
         retrievers_field = cls.model_fields.get("retrievers")

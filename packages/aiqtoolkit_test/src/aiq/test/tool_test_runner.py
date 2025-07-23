@@ -25,6 +25,8 @@ from aiq.builder.function import Function
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.type_registry import GlobalTypeRegistry
 from aiq.data_models.function import FunctionBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfig
+from aiq.object_store.interfaces import ObjectStore
 from aiq.runtime.loader import PluginTypes
 from aiq.runtime.loader import discover_and_register_plugins
 
@@ -59,6 +61,10 @@ class MockBuilder(Builder):
     def mock_retriever(self, name: str, mock_response: typing.Any):
         """Add a mock retriever that returns a fixed response."""
         self._mocks[f"retriever_{name}"] = mock_response
+
+    def mock_object_store(self, name: str, mock_response: typing.Any):
+        """Add a mock object store that returns a fixed response."""
+        self._mocks[f"object_store_{name}"] = mock_response
 
     def mock_its_strategy(self, name: str, mock_response: typing.Any):
         """Add a mock ITS strategy that returns a fixed response."""
@@ -190,6 +196,26 @@ class MockBuilder(Builder):
 
     async def get_retriever_config(self, retriever_name: str):
         """Mock implementation."""
+        pass
+
+    async def add_object_store(self, name: str, config: ObjectStoreBaseConfig):
+        """Mock implementation for object store."""
+        pass
+
+    async def get_object_store_client(self, object_store_name: str) -> ObjectStore:
+        """Return a mock object store client if one is configured."""
+        key = f"object_store_{object_store_name}"
+        if key in self._mocks:
+            mock_object_store = MagicMock()
+            mock_object_store.put_object = AsyncMock(return_value=self._mocks[key])
+            mock_object_store.get_object = AsyncMock(return_value=self._mocks[key])
+            mock_object_store.delete_object = AsyncMock(return_value=self._mocks[key])
+            mock_object_store.list_objects = AsyncMock(return_value=self._mocks[key])
+            return mock_object_store
+        raise ValueError(f"Object store '{object_store_name}' not mocked. Use mock_object_store() to add it.")
+
+    def get_object_store_config(self, object_store_name: str) -> ObjectStoreBaseConfig:
+        """Mock implementation for object store config."""
         pass
 
     def get_user_manager(self):
