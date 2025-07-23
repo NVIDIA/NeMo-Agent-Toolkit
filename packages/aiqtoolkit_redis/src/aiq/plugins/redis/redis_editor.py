@@ -16,7 +16,6 @@
 import logging
 import secrets
 from typing import Protocol
-from typing import override
 
 import numpy as np
 import redis.asyncio as redis
@@ -56,7 +55,6 @@ class RedisEditor(MemoryEditor):
         self._key_prefix: str = key_prefix
         self._embedder: SupportsEmbedQuery = embedder
 
-    @override
     async def add_items(self, items: list[MemoryItem]) -> None:
         """
         Insert Multiple MemoryItems into Redis.
@@ -109,7 +107,6 @@ class RedisEditor(MemoryEditor):
                 logger.error(f"Redis connection error while storing memory item: {str(e)}")
                 raise
 
-    @override
     async def search(self, query: str, top_k: int = 5, **kwargs) -> list[MemoryItem]:
         """
         Retrieve items relevant to the given query.
@@ -225,7 +222,6 @@ class RedisEditor(MemoryEditor):
                           tags=tags,
                           metadata=memory_data.get("metadata", {}))
 
-    @override
     async def remove_items(self, **kwargs):
         """
         Remove memory items based on provided criteria.
