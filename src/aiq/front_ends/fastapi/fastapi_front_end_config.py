@@ -16,43 +16,105 @@
 import logging
 import typing
 from datetime import datetime
+from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import field_validator
 
+from aiq.data_models.component_ref import ObjectStoreRef
 from aiq.data_models.front_end import FrontEndBaseConfig
 from aiq.data_models.step_adaptor import StepAdaptorConfig
 
 logger = logging.getLogger(__name__)
+
+YAML_EXTENSIONS = (".yaml", ".yml")
 
 
 class AIQEvaluateRequest(BaseModel):
     """Request model for the evaluate endpoint."""
     config_file: str = Field(description="Path to the configuration file for evaluation")
     job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
-    reps: int = Field(default=1, description="Number of repetitions for the evaluation, defaults to 1")
+    reps: int = Field(default=1, gt=0, description="Number of repetitions for the evaluation, defaults to 1")
     expiry_seconds: int = Field(
         default=3600,
+        gt=0,
         description="Optional time (in seconds) before the job expires. Clamped between 600 (10 min) and 86400 (24h).")
 
+    @field_validator('job_id', mode='after')
+    @classmethod
+    def validate_job_id(cls, job_id: str):
+        job_id = job_id.strip()
+        job_id_path = Path(job_id)
+        if len(job_id_path.parts) > 1 or job_id_path.resolve().name != job_id:
+            raise ValueError(
+                f"Job ID '{job_id}' contains invalid characters. Only alphanumeric characters and underscores are"
+                " allowed.")
 
-class AIQEvaluateResponse(BaseModel):
+        if job_id_path.is_reserved():
+            # reserved names is Windows specific
+            raise ValueError(f"Job ID '{job_id}' is a reserved name. Please choose a different name.")
+
+        return job_id
+
+    @field_validator('config_file', mode='after')
+    @classmethod
+    def validate_config_file(cls, config_file: str):
+        config_file = config_file.strip()
+        config_file_path = Path(config_file).resolve()
+
+        # Ensure the config file is a YAML file
+        if config_file_path.suffix.lower() not in YAML_EXTENSIONS:
+            raise ValueError(f"Config file '{config_file}' must be a YAML file with one of the following extensions: "
+                             f"{', '.join(YAML_EXTENSIONS)}")
+
+        if config_file_path.is_reserved():
+            # reserved names is Windows specific
+            raise ValueError(f"Config file '{config_file}' is a reserved name. Please choose a different name.")
+
+        if not config_file_path.exists():
+            raise ValueError(f"Config file '{config_file}' does not exist. Please provide a valid path.")
+
+        return config_file
+
+
+class BaseAsyncResponse(BaseModel):
+    """Base model for async responses."""
+    job_id: str = Field(description="Unique identifier for the job")
+    status: str = Field(description="Current status of the job")
+
+
+class AIQEvaluateResponse(BaseAsyncResponse):
     """Response model for the evaluate endpoint."""
-    job_id: str = Field(description="Unique identifier for the evaluation job")
-    status: str = Field(description="Current status of the evaluation job")
+    pass
 
 
-class AIQEvaluateStatusResponse(BaseModel):
-    """Response model for the evaluate status endpoint."""
+class AIQAsyncGenerateResponse(BaseAsyncResponse):
+    """Response model for the async generation endpoint."""
+    pass
+
+
+class BaseAsyncStatusResponse(BaseModel):
+    """Base model for async status responses."""
     job_id: str = Field(description="Unique identifier for the evaluation job")
     status: str = Field(description="Current status of the evaluation job")
-    config_file: str = Field(description="Path to the configuration file used for evaluation")
     error: str | None = Field(default=None, description="Error message if the job failed")
-    output_path: str | None = Field(default=None,
-                                    description="Path to the output file if the job completed successfully")
     created_at: datetime = Field(description="Timestamp when the job was created")
     updated_at: datetime = Field(description="Timestamp when the job was last updated")
     expires_at: datetime | None = Field(default=None, description="Timestamp when the job will expire")
+
+
+class AIQEvaluateStatusResponse(BaseAsyncStatusResponse):
+    """Response model for the evaluate status endpoint."""
+    config_file: str = Field(description="Path to the configuration file used for evaluation")
+    output_path: str | None = Field(default=None,
+                                    description="Path to the output file if the job completed successfully")
+
+
+class AIQAsyncGenerationStatusResponse(BaseAsyncStatusResponse):
+    output: dict | None = Field(
+        default=None,
+        description="Output of the generate request, this is only available if the job completed successfully.")
 
 
 class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
@@ -112,6 +174,9 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     port: int = Field(default=8000, description="Port to bind the server to", ge=0, le=65535)
     reload: bool = Field(default=False, description="Enable auto-reload for development")
     workers: int = Field(default=1, description="Number of workers to run", ge=1)
+    max_running_async_jobs: int = Field(default=10,
+                                        description="Maximum number of async jobs to run concurrently",
+                                        ge=1)
     step_adaptor: StepAdaptorConfig = StepAdaptorConfig()
 
     workflow: typing.Annotated[EndpointBase, Field(description="Endpoint for the default workflow.")] = EndpointBase(
@@ -148,3 +213,10 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
                      "Each runner is responsible for loading and running the AIQ Toolkit workflow. "
                      "Note: This is different from the worker class used by Gunicorn."),
     )
+
+    object_store: ObjectStoreRef | None = Field(
+        default=None,
+        description=(
+            "Object store reference for the FastAPI app. If present, static files can be uploaded via a POST "
+            "request to '/static' and files will be served from the object store. The files will be served from the "
+            "object store at '/static/{file_name}'."))

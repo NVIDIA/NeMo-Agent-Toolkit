@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+from unittest.mock import MagicMock
+
 import pytest
 from openai import BaseModel
 from pydantic import ConfigDict
@@ -28,20 +31,29 @@ from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.cli.register_workflow import register_embedder_client
 from aiq.cli.register_workflow import register_embedder_provider
 from aiq.cli.register_workflow import register_function
+from aiq.cli.register_workflow import register_its_strategy
 from aiq.cli.register_workflow import register_llm_client
 from aiq.cli.register_workflow import register_llm_provider
 from aiq.cli.register_workflow import register_memory
+from aiq.cli.register_workflow import register_object_store
 from aiq.cli.register_workflow import register_retriever_client
 from aiq.cli.register_workflow import register_retriever_provider
 from aiq.cli.register_workflow import register_tool_wrapper
+from aiq.data_models.config import AIQConfig
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
+from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
+from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
+from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
 from aiq.memory.models import MemoryItem
+from aiq.object_store.in_memory_object_store import InMemoryObjectStore
 from aiq.retriever.interface import AIQRetriever
 from aiq.retriever.models import AIQDocument
 from aiq.retriever.models import RetrieverOutput
@@ -59,20 +71,32 @@ class FunctionReturningDerivedConfig(FunctionBaseConfig, name="fn_return_derived
     pass
 
 
-class TestLLMProviderConfig(LLMBaseConfig, name="test_llm"):
+class TLLMProviderConfig(LLMBaseConfig, name="test_llm"):
     raise_error: bool = False
 
 
-class TestEmbedderProviderConfig(EmbedderBaseConfig, name="test_embedder_provider"):
+class TEmbedderProviderConfig(EmbedderBaseConfig, name="test_embedder_provider"):
     raise_error: bool = False
 
 
-class TestMemoryConfig(MemoryBaseConfig, name="test_memory"):
+class TMemoryConfig(MemoryBaseConfig, name="test_memory"):
     raise_error: bool = False
 
 
-class TestRetrieverProviderConfig(RetrieverBaseConfig, name="test_retriever"):
+class TRetrieverProviderConfig(RetrieverBaseConfig, name="test_retriever"):
     raise_error: bool = False
+
+
+class TObjectStoreConfig(ObjectStoreBaseConfig, name="test_object_store"):
+    raise_error: bool = False
+
+
+class TestITSStrategyConfig(ITSStrategyBaseConfig, name="test_its_strategy"):
+    raise_error: bool = False
+
+
+class FailingFunctionConfig(FunctionBaseConfig, name="failing_function"):
+    pass
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -116,24 +140,30 @@ async def _register():
 
         yield DerivedFunction(config)
 
-    @register_llm_provider(config_type=TestLLMProviderConfig)
-    async def register4(config: TestLLMProviderConfig, b: Builder):
+    @register_function(config_type=FailingFunctionConfig)
+    async def register_failing_function(config: FailingFunctionConfig, b: Builder):
+        # This function always raises an exception during initialization
+        raise ValueError("Function initialization failed")
+        yield  # This line will never be reached, but needed for the AsyncGenerator type
+
+    @register_llm_provider(config_type=TLLMProviderConfig)
+    async def register4(config: TLLMProviderConfig, b: Builder):
 
         if (config.raise_error):
             raise ValueError("Error")
 
         yield LLMProviderInfo(config=config, description="A test client.")
 
-    @register_embedder_provider(config_type=TestEmbedderProviderConfig)
-    async def registe5(config: TestEmbedderProviderConfig, b: Builder):
+    @register_embedder_provider(config_type=TEmbedderProviderConfig)
+    async def register5(config: TEmbedderProviderConfig, b: Builder):
 
         if (config.raise_error):
             raise ValueError("Error")
 
         yield EmbedderProviderInfo(config=config, description="A test client.")
 
-    @register_memory(config_type=TestMemoryConfig)
-    async def register6(config: TestMemoryConfig, b: Builder):
+    @register_memory(config_type=TMemoryConfig)
+    async def register6(config: TMemoryConfig, b: Builder):
 
         if (config.raise_error):
             raise ValueError("Error")
@@ -152,13 +182,44 @@ async def _register():
         yield TestMemoryEditor()
 
     # Register mock provider
-    @register_retriever_provider(config_type=TestRetrieverProviderConfig)
-    async def register7(config: TestRetrieverProviderConfig, builder: Builder):
+    @register_retriever_provider(config_type=TRetrieverProviderConfig)
+    async def register7(config: TRetrieverProviderConfig, builder: Builder):
 
         if (config.raise_error):
             raise ValueError("Error")
 
         yield RetrieverProviderInfo(config=config, description="Mock retriever to test the registration process")
+
+    @register_object_store(config_type=TObjectStoreConfig)
+    async def register8(config: TObjectStoreConfig, builder: Builder):
+        if (config.raise_error):
+            raise ValueError("Error")
+
+        yield InMemoryObjectStore()
+
+    @register_its_strategy(config_type=TestITSStrategyConfig)
+    async def register_its(config: TestITSStrategyConfig, builder: Builder):
+
+        if config.raise_error:
+            raise ValueError("Error")
+
+        class DummyITSStrategy(StrategyBase):
+            """Very small pass-through strategy used only for testing."""
+
+            async def ainvoke(self, items=None, **kwargs):
+                # Do nothing, just return what we got
+                return items
+
+            async def build_components(self, builder: Builder) -> None:
+                pass
+
+            def supported_pipeline_types(self) -> [PipelineTypeEnum]:
+                return [PipelineTypeEnum.AGENT_EXECUTION]
+
+            def stage_type(self) -> StageTypeEnum:
+                return StageTypeEnum.SCORING
+
+        yield DummyITSStrategy(config)
 
 
 async def test_build():
@@ -247,17 +308,22 @@ async def test_set_workflow():
         fn = await builder.set_workflow(FunctionReturningFunctionConfig())
         assert isinstance(fn, Function)
 
-        fn = await builder.set_workflow(FunctionReturningInfoConfig())
+        with pytest.warns(UserWarning, match=r"^Overwriting existing workflow$"):
+            fn = await builder.set_workflow(FunctionReturningInfoConfig())
+
         assert isinstance(fn, Function)
 
-        fn = await builder.set_workflow(FunctionReturningDerivedConfig())
+        with pytest.warns(UserWarning, match=r"^Overwriting existing workflow$"):
+            fn = await builder.set_workflow(FunctionReturningDerivedConfig())
+
         assert isinstance(fn, Function)
 
         with pytest.raises(ValueError):
-            await builder.set_workflow(FunctionReturningBadConfig())
+            with pytest.warns(UserWarning, match=r"^Overwriting existing workflow$"):
+                await builder.set_workflow(FunctionReturningBadConfig())
 
         # Try and add a function with the same name
-        with pytest.warns():
+        with pytest.warns(UserWarning, match=r"^Overwriting existing workflow$"):
             await builder.set_workflow(FunctionReturningFunctionConfig())
 
 
@@ -318,33 +384,33 @@ async def test_add_llm():
 
     async with WorkflowBuilder() as builder:
 
-        await builder.add_llm("llm_name", TestLLMProviderConfig())
+        await builder.add_llm("llm_name", TLLMProviderConfig())
 
         with pytest.raises(ValueError):
-            await builder.add_llm("llm_name2", TestLLMProviderConfig(raise_error=True))
+            await builder.add_llm("llm_name2", TLLMProviderConfig(raise_error=True))
 
         # Try and add a llm with the same name
         with pytest.raises(ValueError):
-            await builder.add_llm("llm_name", TestLLMProviderConfig())
+            await builder.add_llm("llm_name", TLLMProviderConfig())
 
 
 async def test_get_llm():
 
-    @register_llm_client(config_type=TestLLMProviderConfig, wrapper_type="test_framework")
-    async def register(config: TestLLMProviderConfig, b: Builder):
+    @register_llm_client(config_type=TLLMProviderConfig, wrapper_type="test_framework")
+    async def register(config: TLLMProviderConfig, b: Builder):
 
         class TestFrameworkLLM(BaseModel):
 
             model_config = ConfigDict(arbitrary_types_allowed=True)
 
-            config: TestLLMProviderConfig
+            config: TLLMProviderConfig
             builder: Builder
 
         yield TestFrameworkLLM(config=config, builder=b)
 
     async with WorkflowBuilder() as builder:
 
-        config = TestLLMProviderConfig()
+        config = TLLMProviderConfig()
 
         await builder.add_llm("llm_name", config)
 
@@ -360,7 +426,7 @@ async def test_get_llm_config():
 
     async with WorkflowBuilder() as builder:
 
-        config = TestLLMProviderConfig()
+        config = TLLMProviderConfig()
 
         await builder.add_llm("llm_name", config)
 
@@ -374,33 +440,33 @@ async def test_add_embedder():
 
     async with WorkflowBuilder() as builder:
 
-        await builder.add_embedder("embedder_name", TestEmbedderProviderConfig())
+        await builder.add_embedder("embedder_name", TEmbedderProviderConfig())
 
         with pytest.raises(ValueError):
-            await builder.add_embedder("embedder_name2", TestEmbedderProviderConfig(raise_error=True))
+            await builder.add_embedder("embedder_name2", TEmbedderProviderConfig(raise_error=True))
 
         # Try and add the same name
         with pytest.raises(ValueError):
-            await builder.add_embedder("embedder_name", TestEmbedderProviderConfig())
+            await builder.add_embedder("embedder_name", TEmbedderProviderConfig())
 
 
 async def test_get_embedder():
 
-    @register_embedder_client(config_type=TestEmbedderProviderConfig, wrapper_type="test_framework")
-    async def register(config: TestEmbedderProviderConfig, b: Builder):
+    @register_embedder_client(config_type=TEmbedderProviderConfig, wrapper_type="test_framework")
+    async def register(config: TEmbedderProviderConfig, b: Builder):
 
         class TestFrameworkEmbedder(BaseModel):
 
             model_config = ConfigDict(arbitrary_types_allowed=True)
 
-            config: TestEmbedderProviderConfig
+            config: TEmbedderProviderConfig
             builder: Builder
 
         yield TestFrameworkEmbedder(config=config, builder=b)
 
     async with WorkflowBuilder() as builder:
 
-        config = TestEmbedderProviderConfig()
+        config = TEmbedderProviderConfig()
 
         await builder.add_embedder("embedder_name", config)
 
@@ -416,7 +482,7 @@ async def test_get_embedder_config():
 
     async with WorkflowBuilder() as builder:
 
-        config = TestEmbedderProviderConfig()
+        config = TEmbedderProviderConfig()
 
         await builder.add_embedder("embedder_name", config)
 
@@ -430,21 +496,21 @@ async def test_add_memory():
 
     async with WorkflowBuilder() as builder:
 
-        await builder.add_memory_client("memory_name", TestMemoryConfig())
+        await builder.add_memory_client("memory_name", TMemoryConfig())
 
         with pytest.raises(ValueError):
-            await builder.add_memory_client("memory_name2", TestMemoryConfig(raise_error=True))
+            await builder.add_memory_client("memory_name2", TMemoryConfig(raise_error=True))
 
         # Try and add the same name
         with pytest.raises(ValueError):
-            await builder.add_memory_client("memory_name", TestMemoryConfig())
+            await builder.add_memory_client("memory_name", TMemoryConfig())
 
 
 async def test_get_memory():
 
     async with WorkflowBuilder() as builder:
 
-        config = TestMemoryConfig()
+        config = TMemoryConfig()
 
         memory = await builder.add_memory_client("memory_name", config)
 
@@ -458,7 +524,7 @@ async def test_get_memory_config():
 
     async with WorkflowBuilder() as builder:
 
-        config = TestMemoryConfig()
+        config = TMemoryConfig()
 
         await builder.add_memory_client("memory_name", config)
 
@@ -471,31 +537,69 @@ async def test_get_memory_config():
 async def test_add_retriever():
 
     async with WorkflowBuilder() as builder:
-        await builder.add_retriever("retriever_name", TestRetrieverProviderConfig())
+        await builder.add_retriever("retriever_name", TRetrieverProviderConfig())
 
         with pytest.raises(ValueError):
-            await builder.add_retriever("retriever_name2", TestRetrieverProviderConfig(raise_error=True))
+            await builder.add_retriever("retriever_name2", TRetrieverProviderConfig(raise_error=True))
 
         with pytest.raises(ValueError):
-            await builder.add_retriever("retriever_name", TestRetrieverProviderConfig())
+            await builder.add_retriever("retriever_name", TRetrieverProviderConfig())
+
+
+async def test_add_object_store():
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_object_store("object_store_name", TObjectStoreConfig())
+
+        with pytest.raises(ValueError):
+            await builder.add_object_store("object_store_name2", TObjectStoreConfig(raise_error=True))
+
+        with pytest.raises(ValueError):
+            await builder.add_object_store("object_store_name", TObjectStoreConfig())
+
+
+async def test_get_object_store():
+
+    async with WorkflowBuilder() as builder:
+
+        object_store = await builder.add_object_store("object_store_name", TObjectStoreConfig())
+
+        assert object_store == await builder.get_object_store_client("object_store_name")
+
+        with pytest.raises(ValueError):
+            await builder.get_object_store_client("object_store_name_not_exist")
+
+
+async def test_get_object_store_config():
+
+    async with WorkflowBuilder() as builder:
+
+        config = TObjectStoreConfig()
+
+        await builder.add_object_store("object_store_name", config)
+
+        assert builder.get_object_store_config("object_store_name") == config
+
+        with pytest.raises(ValueError):
+            builder.get_object_store_config("object_store_name_not_exist")
 
 
 async def get_retriever():
 
-    @register_retriever_client(config_type=TestRetrieverProviderConfig, wrapper_type="test_framework")
-    async def register(config: TestRetrieverProviderConfig, b: Builder):
+    @register_retriever_client(config_type=TRetrieverProviderConfig, wrapper_type="test_framework")
+    async def register(config: TRetrieverProviderConfig, b: Builder):
 
         class TestFrameworkRetriever(BaseModel):
 
             model_config = ConfigDict(arbitrary_types_allowed=True)
 
-            config: TestRetrieverProviderConfig
+            config: TRetrieverProviderConfig
             builder: Builder
 
         yield TestFrameworkRetriever(config=config, builder=b)
 
-    @register_retriever_client(config_type=TestRetrieverProviderConfig, wrapper_type=None)
-    async def register_no_framework(config: TestRetrieverProviderConfig, builder: Builder):
+    @register_retriever_client(config_type=TRetrieverProviderConfig, wrapper_type=None)
+    async def register_no_framework(config: TRetrieverProviderConfig, builder: Builder):
 
         class TestRetriever(AIQRetriever):
 
@@ -515,7 +619,7 @@ async def get_retriever():
 
     async with WorkflowBuilder() as builder:
 
-        config = TestRetrieverProviderConfig()
+        config = TRetrieverProviderConfig()
 
         await builder.add_retriever("retriever_name", config)
 
@@ -535,7 +639,7 @@ async def get_retriever_config():
 
     async with WorkflowBuilder() as builder:
 
-        config = TestRetrieverProviderConfig()
+        config = TRetrieverProviderConfig()
 
         await builder.add_retriever("retriever_name", config)
 
@@ -545,15 +649,66 @@ async def get_retriever_config():
             builder.get_retriever_config("retriever_name_not_exist")
 
 
+async def test_add_its_strategy():
+
+    async with WorkflowBuilder() as builder:
+        # Normal case
+        await builder.add_its_strategy("its_strategy", TestITSStrategyConfig())
+
+        # Provider raises
+        with pytest.raises(ValueError):
+            await builder.add_its_strategy("its_strategy_err", TestITSStrategyConfig(raise_error=True))
+
+        # Duplicate name
+        with pytest.raises(ValueError):
+            await builder.add_its_strategy("its_strategy", TestITSStrategyConfig())
+
+
+async def test_get_its_strategy_and_config():
+
+    async with WorkflowBuilder() as builder:
+        cfg = TestITSStrategyConfig()
+        await builder.add_its_strategy("its_strategy", cfg)
+
+        strat = await builder.get_its_strategy(
+            "its_strategy",
+            pipeline_type=PipelineTypeEnum.AGENT_EXECUTION,
+            stage_type=StageTypeEnum.SCORING,
+        )
+
+        with pytest.raises(ValueError):
+            await builder.get_its_strategy(
+                "its_strategy",
+                pipeline_type=PipelineTypeEnum.PLANNING,  # Wrong pipeline type
+                stage_type=StageTypeEnum.SCORING,
+            )
+
+        assert strat.config == await builder.get_its_strategy_config(
+            "its_strategy",
+            pipeline_type=PipelineTypeEnum.AGENT_EXECUTION,
+            stage_type=StageTypeEnum.SCORING,
+        )
+
+        # Non-existent name
+        with pytest.raises(ValueError):
+            await builder.get_its_strategy(
+                "does_not_exist",
+                pipeline_type=PipelineTypeEnum.AGENT_EXECUTION,
+                stage_type=StageTypeEnum.SCORING,
+            )
+
+
 async def test_built_config():
 
     general_config = GeneralConfig(cache_dir="Something else")
     function_config = FunctionReturningFunctionConfig()
     workflow_config = FunctionReturningFunctionConfig()
-    llm_config = TestLLMProviderConfig()
-    embedder_config = TestEmbedderProviderConfig()
-    memory_config = TestMemoryConfig()
-    retriever_config = TestRetrieverProviderConfig()
+    llm_config = TLLMProviderConfig()
+    embedder_config = TEmbedderProviderConfig()
+    memory_config = TMemoryConfig()
+    retriever_config = TRetrieverProviderConfig()
+    object_store_config = TObjectStoreConfig()
+    its_config = TestITSStrategyConfig()
 
     async with WorkflowBuilder(general_config=general_config) as builder:
 
@@ -569,6 +724,10 @@ async def test_built_config():
 
         await builder.add_retriever("retriever1", retriever_config)
 
+        await builder.add_object_store("object_store1", object_store_config)
+
+        await builder.add_its_strategy("its_strategy", its_config)
+
         workflow = builder.build()
 
         workflow_config = workflow.config
@@ -580,3 +739,282 @@ async def test_built_config():
         assert workflow_config.embedders == {"embedder1": embedder_config}
         assert workflow_config.memory == {"memory1": memory_config}
         assert workflow_config.retrievers == {"retriever1": retriever_config}
+        assert workflow_config.object_stores == {"object_store1": object_store_config}
+        assert workflow_config.its_strategies == {"its_strategy": its_config}
+
+
+# Error Logging Tests
+
+
+@pytest.fixture
+def caplog_fixture(caplog):
+    """Configure caplog to capture ERROR level logs."""
+    caplog.set_level(logging.ERROR)
+    return caplog
+
+
+@pytest.fixture
+def mock_component_data():
+    """Create mock component data for testing."""
+    # Create a mock failing component
+    failing_component = MagicMock()
+    failing_component.name = "test_component"
+    failing_component.component_group.value = "llms"
+
+    return failing_component
+
+
+def test_log_build_failure_helper_method(caplog_fixture, mock_component_data):
+    """Test the _log_build_failure helper method directly."""
+    builder = WorkflowBuilder()
+
+    completed_components = [("comp1", "llms"), ("comp2", "embedders")]
+    remaining_components = [("comp3", "functions"), ("comp4", "memory")]
+    original_error = ValueError("Test error message")
+
+    # Call the helper method
+    builder._log_build_failure_component(mock_component_data,
+                                         completed_components,
+                                         remaining_components,
+                                         original_error)
+
+    # Verify error logging content
+    log_text = caplog_fixture.text
+    assert "Failed to initialize component test_component (llms)" in log_text
+    assert "Successfully built components:" in log_text
+    assert "- comp1 (llms)" in log_text
+    assert "- comp2 (embedders)" in log_text
+    assert "Remaining components to build:" in log_text
+    assert "- comp3 (functions)" in log_text
+    assert "- comp4 (memory)" in log_text
+    assert "Original error:" in log_text
+    assert "Test error message" in log_text
+
+
+def test_log_build_failure_workflow_helper_method(caplog_fixture):
+    """Test the _log_build_failure_workflow helper method directly."""
+    builder = WorkflowBuilder()
+
+    completed_components = [("comp1", "llms"), ("comp2", "embedders")]
+    remaining_components = [("comp3", "functions")]
+    original_error = ValueError("Workflow build failed")
+
+    # Call the helper method
+    builder._log_build_failure_workflow(completed_components, remaining_components, original_error)
+
+    # Verify error logging content
+    log_text = caplog_fixture.text
+    assert "Failed to initialize component <workflow> (workflow)" in log_text
+    assert "Successfully built components:" in log_text
+    assert "- comp1 (llms)" in log_text
+    assert "- comp2 (embedders)" in log_text
+    assert "Remaining components to build:" in log_text
+    assert "- comp3 (functions)" in log_text
+    assert "Original error:" in log_text
+
+
+def test_log_build_failure_no_completed_components(caplog_fixture, mock_component_data):
+    """Test error logging when no components have been successfully built."""
+    builder = WorkflowBuilder()
+
+    completed_components = []
+    remaining_components = [("comp1", "embedders"), ("comp2", "functions")]
+    original_error = ValueError("First component failed")
+
+    builder._log_build_failure_component(mock_component_data,
+                                         completed_components,
+                                         remaining_components,
+                                         original_error)
+
+    log_text = caplog_fixture.text
+    assert "Failed to initialize component test_component (llms)" in log_text
+    assert "No components were successfully built before this failure" in log_text
+    assert "Remaining components to build:" in log_text
+    assert "- comp1 (embedders)" in log_text
+    assert "- comp2 (functions)" in log_text
+    assert "Original error:" in log_text
+
+
+def test_log_build_failure_no_remaining_components(caplog_fixture, mock_component_data):
+    """Test error logging when no components remain to be built."""
+    builder = WorkflowBuilder()
+
+    completed_components = [("comp1", "llms"), ("comp2", "embedders")]
+    remaining_components = []
+    original_error = ValueError("Last component failed")
+
+    builder._log_build_failure_component(mock_component_data,
+                                         completed_components,
+                                         remaining_components,
+                                         original_error)
+
+    log_text = caplog_fixture.text
+    assert "Failed to initialize component test_component (llms)" in log_text
+    assert "Successfully built components:" in log_text
+    assert "- comp1 (llms)" in log_text
+    assert "- comp2 (embedders)" in log_text
+    assert "No remaining components to build" in log_text
+    assert "Original error:" in log_text
+
+
+# Evaluator Error Logging Tests
+
+
+def test_log_evaluator_build_failure_helper_method(caplog_fixture):
+    """Test the _log_evaluator_build_failure helper method directly."""
+    from aiq.builder.eval_builder import WorkflowEvalBuilder
+
+    builder = WorkflowEvalBuilder()
+
+    completed_evaluators = ["eval1", "eval2"]
+    remaining_evaluators = ["eval3", "eval4"]
+    original_error = ValueError("Evaluator build failed")
+
+    # Call the helper method
+    builder._log_build_failure_evaluator("failing_evaluator",
+                                         completed_evaluators,
+                                         remaining_evaluators,
+                                         original_error)
+
+    # Verify error logging content
+    log_text = caplog_fixture.text
+    assert "Failed to initialize component failing_evaluator (evaluator)" in log_text
+    assert "Successfully built components:" in log_text
+    assert "- eval1 (evaluator)" in log_text
+    assert "- eval2 (evaluator)" in log_text
+    assert "Remaining components to build:" in log_text
+    assert "- eval3 (evaluator)" in log_text
+    assert "- eval4 (evaluator)" in log_text
+    assert "Original error:" in log_text
+
+
+def test_log_evaluator_build_failure_no_completed(caplog_fixture):
+    """Test evaluator error logging when no evaluators have been successfully built."""
+    from aiq.builder.eval_builder import WorkflowEvalBuilder
+
+    builder = WorkflowEvalBuilder()
+
+    completed_evaluators = []
+    remaining_evaluators = ["eval1", "eval2"]
+    original_error = ValueError("First evaluator failed")
+
+    builder._log_build_failure_evaluator("failing_evaluator",
+                                         completed_evaluators,
+                                         remaining_evaluators,
+                                         original_error)
+
+    log_text = caplog_fixture.text
+    assert "Failed to initialize component failing_evaluator (evaluator)" in log_text
+    assert "No components were successfully built before this failure" in log_text
+    assert "Remaining components to build:" in log_text
+    assert "- eval1 (evaluator)" in log_text
+    assert "- eval2 (evaluator)" in log_text
+    assert "Original error:" in log_text
+
+
+def test_log_evaluator_build_failure_no_remaining(caplog_fixture):
+    """Test evaluator error logging when no evaluators remain to be built."""
+    from aiq.builder.eval_builder import WorkflowEvalBuilder
+
+    builder = WorkflowEvalBuilder()
+
+    completed_evaluators = ["eval1", "eval2"]
+    remaining_evaluators = []
+    original_error = ValueError("Last evaluator failed")
+
+    builder._log_build_failure_evaluator("failing_evaluator",
+                                         completed_evaluators,
+                                         remaining_evaluators,
+                                         original_error)
+
+    log_text = caplog_fixture.text
+    assert "Failed to initialize component failing_evaluator (evaluator)" in log_text
+    assert "Successfully built components:" in log_text
+    assert "- eval1 (evaluator)" in log_text
+    assert "- eval2 (evaluator)" in log_text
+    assert "No remaining components to build" in log_text
+    assert "Original error:" in log_text
+
+
+async def test_integration_error_logging_with_failing_function(caplog_fixture):
+    """Integration test: Verify error logging when building a workflow with a function that fails during initialization.
+
+    This test creates a real failing function (not mocked) and attempts to build a workflow,
+    then verifies that the error logging messages are correct.
+    """
+    # Create a config with one successful function and one failing function
+    config_dict = {
+        "functions": {
+            "working_function": FunctionReturningFunctionConfig(),
+            "failing_function": FailingFunctionConfig(),
+            "another_working_function": FunctionReturningInfoConfig()
+        },
+        "workflow": FunctionReturningFunctionConfig()
+    }
+
+    config = AIQConfig.model_validate(config_dict)
+
+    async with WorkflowBuilder() as builder:
+        with pytest.raises(ValueError, match="Function initialization failed"):
+            await builder.populate_builder(config)
+
+    # Verify the error logging output
+    log_text = caplog_fixture.text
+
+    # Should have the main error message with component name and type
+    assert "Failed to initialize component failing_function (functions)" in log_text
+
+    # Should list successfully built components before the failure
+    assert "Successfully built components:" in log_text
+    assert "- working_function (functions)" in log_text
+
+    # Should list remaining components that still need to be built
+    assert "Remaining components to build:" in log_text
+    assert "- another_working_function (functions)" in log_text
+    assert "- <workflow> (workflow)" in log_text
+
+    # Should include the original error
+    assert "Original error:" in log_text
+    assert "Function initialization failed" in log_text
+
+    # Verify the error was propagated (not just logged)
+    assert "ValueError: Function initialization failed" in log_text
+
+
+async def test_integration_error_logging_with_workflow_failure(caplog_fixture):
+    """Integration test: Verify error logging when workflow setup fails.
+
+    This test attempts to build with a failing workflow and verifies the error messages.
+    """
+    # Create a config with successful functions but failing workflow
+    config_dict = {
+        "functions": {
+            "working_function1": FunctionReturningFunctionConfig(), "working_function2": FunctionReturningInfoConfig()
+        },
+        "workflow":
+            FailingFunctionConfig()  # This will fail during workflow setup
+    }
+
+    config = AIQConfig.model_validate(config_dict)
+
+    async with WorkflowBuilder() as builder:
+        with pytest.raises(ValueError, match="Function initialization failed"):
+            await builder.populate_builder(config)
+
+    # Verify the error logging output
+    log_text = caplog_fixture.text
+
+    # Should have the main error message for workflow failure
+    assert "Failed to initialize component <workflow> (workflow)" in log_text
+
+    # Should list all successfully built components (functions should have succeeded)
+    assert "Successfully built components:" in log_text
+    assert "- working_function1 (functions)" in log_text
+    assert "- working_function2 (functions)" in log_text
+
+    # Should show no remaining components to build (since workflow is the last step)
+    assert "No remaining components to build" in log_text
+
+    # Should include the original error
+    assert "Original error:" in log_text
+    assert "Function initialization failed" in log_text

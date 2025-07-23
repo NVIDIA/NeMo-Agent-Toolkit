@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+import io
+import time
 from contextlib import asynccontextmanager
 
 import pytest
@@ -31,12 +34,13 @@ from aiq.data_models.config import AIQConfig
 from aiq.data_models.config import GeneralConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+from aiq.object_store.in_memory_object_store import InMemoryObjectStoreConfig
 from aiq.test.functions import EchoFunctionConfig
 from aiq.test.functions import StreamingEchoFunctionConfig
 from aiq.utils.type_utils import override
 
 
-class TestCustomWorker(FastApiFrontEndPluginWorker):
+class CustomWorker(FastApiFrontEndPluginWorker):
 
     @override
     async def add_routes(self, app: FastAPI, builder: WorkflowBuilder):
@@ -169,7 +173,7 @@ async def test_custom_endpoint():
         workflow=EchoFunctionConfig(),
     )
 
-    async with _build_client(config, worker_class=TestCustomWorker) as client:
+    async with _build_client(config, worker_class=CustomWorker) as client:
         response = await client.get("/custom")
 
         assert response.status_code == 200
@@ -202,3 +206,133 @@ async def test_specified_endpoints():
 
         assert response.status_code == 200
         assert response.json() == {"value": "Hello"}
+
+
+@pytest.mark.parametrize("fn_use_openai_api", [True, False])
+async def test_generate_async(fn_use_openai_api: bool):
+    if (fn_use_openai_api):
+        pytest.skip("Async support for OpenAI API is not implemented yet")
+
+    front_end_config = FastApiFrontEndConfig()
+
+    config = AIQConfig(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(use_openai_api=fn_use_openai_api),
+    )
+
+    workflow_path = f"{front_end_config.workflow.path}/async"
+    # oai_path = front_end_config.workflow.openai_api_path
+    async with _build_client(config) as client:
+
+        # Test both the function accepting OAI and also using the OAI API
+        if (fn_use_openai_api):
+            # response = await client.post(
+            #     workflow_path, json=AIQChatRequest(messages=[Message(content="Hello", role="user")]).model_dump())
+
+            # assert response.status_code == 200
+            # assert AIQChatResponse.model_validate(response.json()).choices[0].message.content == "Hello"
+            assert True  # TODO: Implement async support in the EchoFunctionConfig
+
+        else:
+            response = await client.post(workflow_path, json={"message": "Hello", "job_id": "1"})
+
+            assert response.status_code == 202
+            assert response.json() == {"job_id": "1", "status": "submitted"}
+
+        expected_status_values = ("running", "success", "submitted")
+        status_path = f"{workflow_path}/job/1"
+
+        status = None
+        deadline = time.time() + 10  # Wait for up to 10 seconds
+        while status != "success":
+            response = await client.get(status_path)
+
+            assert response.status_code == 200
+            data = response.json()
+            status = data["status"]
+
+            assert status in expected_status_values
+            assert time.time() < deadline, "Job did not complete in time"
+            if status != "success":
+                await asyncio.sleep(0.1)
+
+
+async def test_async_job_status_not_found():
+    front_end_config = FastApiFrontEndConfig()
+
+    config = AIQConfig(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=EchoFunctionConfig(use_openai_api=False),
+    )
+
+    workflow_path = f"{front_end_config.workflow.path}/async"
+
+    async with _build_client(config) as client:
+        status_path = f"{workflow_path}/job/non_existent_job"
+
+        response = await client.get(status_path)
+
+        assert response.status_code == 404
+
+
+async def test_static_file_endpoints():
+    # Configure the in-memory object store
+    object_store_name = "test_store"
+    file_path = "folder/testfile.txt"
+    file_content = b"Hello, world!"
+    updated_content = b"Updated content!"
+    content_type = "text/plain"
+
+    config = AIQConfig(
+        general=GeneralConfig(front_end=FastApiFrontEndConfig(object_store=object_store_name)),
+        object_stores={object_store_name: InMemoryObjectStoreConfig()},
+        workflow=EchoFunctionConfig(),  # Dummy workflow, not used here
+    )
+
+    async with _build_client(config) as client:
+        # POST: Upload a new file
+        response = await client.post(
+            f"/static/{file_path}",
+            files={"file": ("testfile.txt", io.BytesIO(file_content), content_type)},
+        )
+        assert response.status_code == 200
+        assert response.json()["filename"] == file_path
+
+        # GET: Retrieve the file
+        response = await client.get(f"/static/{file_path}")
+        assert response.status_code == 200
+        assert response.content == file_content
+        assert response.headers["content-type"].startswith(content_type)
+        assert response.headers["content-disposition"].endswith("testfile.txt")
+
+        # POST again: Should fail with 409 (already exists)
+        response = await client.post(
+            f"/static/{file_path}",
+            files={"file": ("testfile.txt", io.BytesIO(file_content), content_type)},
+        )
+        assert response.status_code == 409
+
+        # PUT: Upsert (update) the file
+        response = await client.put(
+            f"/static/{file_path}",
+            files={"file": ("testfile.txt", io.BytesIO(updated_content), content_type)},
+        )
+        assert response.status_code == 200
+        assert response.json()["filename"] == file_path
+
+        # GET: Retrieve the updated file
+        response = await client.get(f"/static/{file_path}")
+        assert response.status_code == 200
+        assert response.content == updated_content
+
+        # DELETE: Remove the file
+        response = await client.delete(f"/static/{file_path}")
+        assert response.status_code == 204
+
+        # DELETE: Delete again (idempotent but should still result in a 404)
+        response = await client.delete(f"/static/{file_path}")
+        assert response.status_code == 404
+
+        # GET: Should now 404
+        response = await client.get(f"/static/{file_path}")
+        assert response.status_code == 404

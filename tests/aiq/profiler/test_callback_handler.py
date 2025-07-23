@@ -333,7 +333,8 @@ async def test_agno_handler_llm_call(reactive_stream: Subject):
             from aiq.data_models.invocation_node import InvocationNode
 
             # Create a proper IntermediateStep object
-            start_event = IntermediateStep(function_ancestry=InvocationNode(function_name="test", function_id="test"),
+            start_event = IntermediateStep(parent_id="root",
+                                           function_ancestry=InvocationNode(function_name="test", function_id="test"),
                                            payload=start_payload)
 
             # Push the start event to the step manager
@@ -360,7 +361,8 @@ async def test_agno_handler_llm_call(reactive_stream: Subject):
                 usage_info=UsageInfo(token_usage=token_usage_obj, num_llm_calls=1, seconds_between_calls=5))
 
             # Create a proper IntermediateStep object
-            end_event = IntermediateStep(function_ancestry=InvocationNode(function_name="test", function_id="test"),
+            end_event = IntermediateStep(parent_id="root",
+                                         function_ancestry=InvocationNode(function_name="test", function_id="test"),
                                          payload=end_payload)
 
             # Push the end event
@@ -502,7 +504,8 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
             usage_info=UsageInfo(token_usage=TokenUsageBaseModel()))
 
         # Create a proper IntermediateStep object
-        start_event = IntermediateStep(function_ancestry=InvocationNode(function_name=tool_name,
+        start_event = IntermediateStep(parent_id="root",
+                                       function_ancestry=InvocationNode(function_name=tool_name,
                                                                         function_id="test_tool"),
                                        payload=start_payload)
 
@@ -529,7 +532,8 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
                                                   usage_info=UsageInfo(token_usage=TokenUsageBaseModel()))
 
             # Create a proper IntermediateStep object
-            end_event = IntermediateStep(function_ancestry=InvocationNode(function_name=tool_name,
+            end_event = IntermediateStep(parent_id="root",
+                                         function_ancestry=InvocationNode(function_name=tool_name,
                                                                           function_id="test_tool"),
                                          payload=end_payload)
 
@@ -549,7 +553,8 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
                                                     metadata=TraceMetadata(tool_outputs={"error": str(e)}),
                                                     usage_info=UsageInfo(token_usage=TokenUsageBaseModel()))
 
-            error_event = IntermediateStep(function_ancestry=InvocationNode(function_name=tool_name,
+            error_event = IntermediateStep(parent_id="root",
+                                           function_ancestry=InvocationNode(function_name=tool_name,
                                                                             function_id="test_tool"),
                                            payload=error_payload)
 

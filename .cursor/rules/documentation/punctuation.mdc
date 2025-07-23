@@ -1,0 +1,172 @@
+---
+description: 
+globs: **/*.md
+alwaysApply: false
+---
+# Punctuation Guidelines
+
+Use punctuation to provide vital clues for reader understanding. If a sentence contains more than a comma or two plus ending punctuation, consider rewriting it for clarity.
+
+## Specific Punctuation Rules
+
+### Ampersand (&)
+- **Don't use** ampersands in place of "and"
+- **Always write out** "and" unless the ampersand is part of a proper name
+- **Exception**: "Search & Reporting app" (proper name)
+
+### Apostrophes (')
+Use apostrophes for:
+
+#### Possessive Case
+- **Singular nouns**: Add apostrophe + s, even if the noun ends in s, x, or z
+  - `insider's guide`
+  - `the box's contents`
+  - `the CSS's flexibility`
+- **Plural nouns ending in s**: Add only an apostrophe
+  - `users' passwords`
+
+#### Contractions
+- `can't`, `don't`, `it's`
+
+#### Don't Use Apostrophes For
+- Possessive form of "it" → use `its`
+- Possessive pronouns → `yours`, `theirs`
+- Plural nouns → `devices` not `device's`
+
+### Brackets
+
+#### Angle Brackets (< >)
+- **Use for**: Placeholder variables users should replace
+  - **Correct**: `https://<user-specified-domain>.nvidia.com`
+  - **Incorrect**: `https://{user-specified domain}.nvidia.com`
+- **Use for**: Navigation sequences
+  - Select *Save As* > *Saved Search* > *Close*
+
+#### Curly Braces ({ })
+- **Use only**: In code samples or string literals
+
+#### Square Brackets ([ ])
+- **Use for**: Configuration file stanza names
+  - Edit the `[clevertap]` stanza
+- **Use in**: Code contexts
+  - `tag=dns query [search tag=malware]`
+- **Don't use for**: Variable placeholders
+
+### Colons (:)
+- **Use to introduce lists**: End the introductory phrase with a colon
+  - "We can create backups of the following:"
+- **Use sparingly** for elaboration: One statement followed by an expansion
+- **Lowercase** the word following a colon unless it's a proper noun or starts a complete sentence
+
+### Commas (,)
+
+#### Serial/Oxford Comma
+- **Always use** a comma before the conjunction in lists of three or more items
+  - "Google includes Mail, Calendar, People, and Tasks"
+  - "Save to a hard drive, external drive, or OneDrive"
+
+#### Other Comma Uses
+- **After introductory phrases**: "With WhatsApp, users can call any phone"
+- **Before conjunctions** joining independent clauses: "Select *Options*, and then select *Enable*"
+- **Consider rewriting** long, complex sentences with multiple commas
+
+### Dashes and Hyphens
+
+#### Em Dash (—)
+- **Use for**: Parenthetical phrases with more emphasis than parentheses
+- **No spaces** around em dashes
+- **Examples**:
+  - "The information—numbers, formulas, and text—is stored in cells"
+  - "Look at the illustrations in the wizard—they can help you"
+
+#### En Dash (–)
+- **Use for**: Ranges of numbers, dates, or pages
+  - `2015–2017`
+  - `pages 112–120`
+- **Use for**: Minus signs
+  - `12–3=9`
+- **Use for**: Negative numbers
+  - `–79`
+- **No spaces** around en dashes (except in complex date/time ranges)
+
+#### Hyphens (-)
+- **Use for**: Compound modifiers before nouns
+  - `built-in drive`
+  - `high-level-language compiler`
+  - `read-only memory`
+- **Use when**: One word is a past or present participle
+  - `left-aligned text`
+  - `well-defined schema`
+
+### Periods (.)
+- **End all sentences** with periods, even short ones
+- **One space** after periods, not two
+- **Don't use** in headlines, headings, UI titles, or simple lists (≤3 words per item)
+
+#### In Lists
+- **Use periods** if list items complete the introductory sentence
+- **Use periods** if any list item is a complete sentence
+- **No periods** if all items are short phrases (≤3 words) and don't form complete sentences
+
+### Quotation Marks (" ")
+
+#### General Rules
+- **Use double quotation marks** (" "), not single (' ')
+- **Use straight quotes** in online content
+- **Use curly quotes** in printed content (except in code)
+
+#### Punctuation Placement
+- **Commas and periods**: Always inside quotation marks
+  - `He said, "I never forget a face."`
+  - `History is stained with blood spilled in the name of "civilization."`
+- **Colons and semicolons**: Always outside quotation marks
+  - `Three elements of her "Olympic journey": family, commitment, coaching`
+- **Question marks and exclamation points**: 
+  - Inside if they apply to the quotation
+  - Outside if they apply to the whole sentence
+
+### Semicolons (;)
+- **Use between** independent clauses not joined by conjunction
+- **Use to separate** complex list items containing commas
+- **Try to avoid**: Rewrite as multiple sentences or a list when possible
+- **Example**: "Select the required *Option*; then select *Automatic* backups"
+
+### Slashes
+
+#### Backslash (\)
+- **Use in**: Windows file paths and code
+
+#### Forward Slash (/)
+- **Use for**: Unix/Linux paths
+- **Use sparingly** to mean "and," "or," "per," or "with"
+- **Acceptable**: "read/write permissions"
+- **Avoid**: "information is written to/stored in" (use "and" instead)
+
+## Punctuation to Avoid in Technical Documentation
+
+### Don't Use These
+- **Ellipses (...)**: Creates uncertainty
+- **Exclamation points (!)**: Too informal for most technical content
+- **Question marks (?)**: Avoid rhetorical questions in instructions
+
+### Exceptions
+- These may be appropriate in user interface text
+- May be used in marketing or introductory content
+- Can be used when quoting actual user input or error messages
+
+## Best Practices
+
+### Clarity First
+- If punctuation makes a sentence confusing, rewrite the sentence
+- Use the minimum punctuation necessary to convey meaning
+- Break complex sentences into multiple simple sentences
+
+### Consistency
+- Follow the same punctuation patterns throughout a document
+- Use parallel punctuation in lists and similar structures
+- Be consistent with spacing and formatting around punctuation
+
+### Accessibility
+- Clear punctuation helps screen readers and translation tools
+- Consistent punctuation improves scannability
+- Simple punctuation reduces cognitive load for readers

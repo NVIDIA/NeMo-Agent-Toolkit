@@ -34,12 +34,23 @@ from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.data_models.intermediate_step import StreamEventData
+from aiq.data_models.intermediate_step import ToolSchema
 from aiq.data_models.intermediate_step import TraceMetadata
 from aiq.data_models.intermediate_step import UsageInfo
 from aiq.profiler.callbacks.base_callback_class import BaseProfilerCallback
 from aiq.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_tools_schema(invocation_params: dict) -> list:
+
+    tools_schema = []
+    if invocation_params is not None:
+        for tool in invocation_params.get("tools", []):
+            tools_schema.append(ToolSchema(**tool))
+
+    return tools_schema
 
 
 class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # pylint: disable=R0901
@@ -138,16 +149,17 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # p
         run_id = str(run_id)
         self._run_id_to_model_name[run_id] = model_name
 
-        stats = IntermediateStepPayload(event_type=IntermediateStepType.LLM_START,
-                                        framework=LLMFrameworkEnum.LANGCHAIN,
-                                        name=model_name,
-                                        UUID=run_id,
-                                        data=StreamEventData(input=copy.deepcopy(messages[0])),
-                                        metadata=TraceMetadata(chat_inputs=copy.deepcopy(messages[0])),
-                                        usage_info=UsageInfo(token_usage=TokenUsageBaseModel(),
-                                                             num_llm_calls=1,
-                                                             seconds_between_calls=int(time.time() -
-                                                                                       self.last_call_ts)))
+        stats = IntermediateStepPayload(
+            event_type=IntermediateStepType.LLM_START,
+            framework=LLMFrameworkEnum.LANGCHAIN,
+            name=model_name,
+            UUID=run_id,
+            data=StreamEventData(input=copy.deepcopy(messages[0])),
+            metadata=TraceMetadata(chat_inputs=copy.deepcopy(messages[0]),
+                                   tools_schema=_extract_tools_schema(kwargs.get("invocation_params", {}))),
+            usage_info=UsageInfo(token_usage=TokenUsageBaseModel(),
+                                 num_llm_calls=1,
+                                 seconds_between_calls=int(time.time() - self.last_call_ts)))
 
         self.step_manager.push_intermediate_step(stats)
         self._run_id_to_llm_input[run_id] = messages[0][-1].content

@@ -78,9 +78,18 @@ class OutputUploader:
 
         session = aioboto3.Session()
         try:
+            if self.s3_config.endpoint_url:
+                region_name = None
+                endpoint_url = self.s3_config.endpoint_url
+            elif self.s3_config.region_name:
+                region_name = self.s3_config.region_name
+                endpoint_url = None
+            else:
+                raise ValueError("No endpoint_url or region_name provided in the config: eval.general.output.s3")
             async with session.client(
                     "s3",
-                    endpoint_url=self.s3_config.endpoint_url,
+                    endpoint_url=endpoint_url,
+                    region_name=region_name,
                     aws_access_key_id=self.s3_config.access_key,
                     aws_secret_access_key=self.s3_config.secret_key,
             ) as s3_client:

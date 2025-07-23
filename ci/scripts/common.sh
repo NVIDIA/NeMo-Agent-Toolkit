@@ -15,7 +15,7 @@
 
 export SCRIPT_DIR=${SCRIPT_DIR:-"$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"}
 
-# The root to the AIQ Toolkit repo
+# The root to the AIQ toolkit repo
 export PROJECT_ROOT=${PROJECT_ROOT:-"$(realpath ${SCRIPT_DIR}/../..)"}
 
 export PY_ROOT="${PROJECT_ROOT}/src"
@@ -131,6 +131,6 @@ trap cleanup EXIT
 # Change directory to the repo root
 pushd "${PROJECT_ROOT}" &> /dev/null
 
-AIQ_EXAMPLES=($(find ./examples/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
+AIQ_EXAMPLES=($(find ./examples/ -maxdepth 4 -name "pyproject.toml" | sort | xargs dirname))
 AIQ_PACKAGES=($(find ./packages/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
 AIQ_COMPAT_PACKAGES=($(find ./packages/compat -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
