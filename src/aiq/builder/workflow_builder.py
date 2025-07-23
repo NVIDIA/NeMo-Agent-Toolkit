@@ -596,7 +596,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         self._object_stores[name] = ConfiguredObjectStore(config=config, instance=info_obj)
 
-        return info_obj.instance
+        return info_obj
 
     @override
     async def get_object_store_client(self, object_store_name: str | ObjectStoreRef) -> ObjectStore:
@@ -1008,7 +1008,7 @@ class ChildBuilder(Builder):
     @override
     def get_object_store_config(self, object_store_name: str) -> ObjectStoreBaseConfig:
         return self._workflow_builder.get_object_store_config(object_store_name)
-		
+
     @override
     async def add_its_strategy(self, name: str, config: ITSStrategyBaseConfig):
         return await self._workflow_builder.add_its_strategy(name, config)

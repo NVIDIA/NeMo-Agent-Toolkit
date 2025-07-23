@@ -32,7 +32,7 @@ class ObjectStoreTests:
     @abstractmethod
     @asynccontextmanager
     async def _get_store(self):
-        pass
+        yield
 
     @pytest_asyncio.fixture(loop_scope="class", scope="class")
     async def store(self):
