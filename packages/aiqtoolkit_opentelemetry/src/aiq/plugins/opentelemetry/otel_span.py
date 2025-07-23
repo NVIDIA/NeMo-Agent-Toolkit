@@ -22,7 +22,6 @@ from collections.abc import Sequence
 from enum import Enum
 from typing import Any
 
-from openinference.semconv.trace import OpenInferenceSpanKindValues
 from opentelemetry import trace as trace_api
 from opentelemetry.sdk import util
 from opentelemetry.sdk.resources import Resource
@@ -40,41 +39,11 @@ from opentelemetry.util import types
 
 logger = logging.getLogger(__name__)
 
-EVENT_TYPE_TO_SPAN_KIND_MAP = {
-    "LLM_START": OpenInferenceSpanKindValues.LLM,
-    "LLM_END": OpenInferenceSpanKindValues.LLM,
-    "LLM_NEW_TOKEN": OpenInferenceSpanKindValues.LLM,
-    "TOOL_START": OpenInferenceSpanKindValues.TOOL,
-    "TOOL_END": OpenInferenceSpanKindValues.TOOL,
-    "FUNCTION_START": OpenInferenceSpanKindValues.CHAIN,
-    "FUNCTION_END": OpenInferenceSpanKindValues.CHAIN,
-}
-
-SPAN_EVENT_TYPE_TO_SPAN_KIND_MAP = {
-    "LLM_START": OpenInferenceSpanKindValues.LLM,
-    "LLM_END": OpenInferenceSpanKindValues.LLM,
-    "LLM_NEW_TOKEN": OpenInferenceSpanKindValues.LLM,
-    "TOOL_START": OpenInferenceSpanKindValues.TOOL,
-    "TOOL_END": OpenInferenceSpanKindValues.TOOL,
-    "FUNCTION_START": OpenInferenceSpanKindValues.CHAIN,
-    "FUNCTION_END": OpenInferenceSpanKindValues.CHAIN,
-}
-
 
 class MimeTypes(Enum):
     """Mime types for the span."""
     TEXT = "text/plain"
     JSON = "application/json"
-
-
-def span_event_type_to_span_kind(event_type: str) -> OpenInferenceSpanKindValues:
-    """Convert a span event type to a span kind."""
-    return SPAN_EVENT_TYPE_TO_SPAN_KIND_MAP.get(event_type, OpenInferenceSpanKindValues.UNKNOWN)
-
-
-def event_type_to_span_kind(event_type: str) -> OpenInferenceSpanKindValues:
-    """Convert an event type to a span kind."""
-    return EVENT_TYPE_TO_SPAN_KIND_MAP.get(event_type, OpenInferenceSpanKindValues.UNKNOWN)
 
 
 class OtelSpan(Span):  # pylint: disable=too-many-public-methods

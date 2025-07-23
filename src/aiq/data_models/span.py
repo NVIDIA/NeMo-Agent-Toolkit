@@ -29,7 +29,17 @@ logger = logging.getLogger(__name__)
 class SpanKind(Enum):
     LLM = "LLM"
     TOOL = "TOOL"
-    CHAIN = "CHAIN"
+    WORKFLOW = "WORKFLOW"
+    TASK = "TASK"
+    FUNCTION = "FUNCTION"
+    CUSTOM = "CUSTOM"
+    SPAN = "SPAN"
+    EMBEDDER = "EMBEDDER"
+    RETRIEVER = "RETRIEVER"
+    AGENT = "AGENT"
+    RERANKER = "RERANKER"
+    GUARDRAIL = "GUARDRAIL"
+    EVALUATOR = "EVALUATOR"
     UNKNOWN = "UNKNOWN"
 
 
@@ -39,8 +49,28 @@ EVENT_TYPE_TO_SPAN_KIND_MAP = {
     "LLM_NEW_TOKEN": SpanKind.LLM,
     "TOOL_START": SpanKind.TOOL,
     "TOOL_END": SpanKind.TOOL,
-    "FUNCTION_START": SpanKind.CHAIN,
-    "FUNCTION_END": SpanKind.CHAIN,
+    "WORKFLOW_START": SpanKind.WORKFLOW,
+    "WORKFLOW_END": SpanKind.WORKFLOW,
+    "TASK_START": SpanKind.TASK,
+    "TASK_END": SpanKind.TASK,
+    "FUNCTION_START": SpanKind.FUNCTION,
+    "FUNCTION_END": SpanKind.FUNCTION,
+    "CUSTOM_START": SpanKind.CUSTOM,
+    "CUSTOM_END": SpanKind.CUSTOM,
+    "SPAN_START": SpanKind.SPAN,
+    "SPAN_END": SpanKind.SPAN,
+    "EMBEDDER_START": SpanKind.EMBEDDER,
+    "EMBEDDER_END": SpanKind.EMBEDDER,
+    "RETRIEVER_START": SpanKind.RETRIEVER,
+    "RETRIEVER_END": SpanKind.RETRIEVER,
+    "AGENT_START": SpanKind.AGENT,
+    "AGENT_END": SpanKind.AGENT,
+    "RERANKER_START": SpanKind.RERANKER,
+    "RERANKER_END": SpanKind.RERANKER,
+    "GUARDRAIL_START": SpanKind.GUARDRAIL,
+    "GUARDRAIL_END": SpanKind.GUARDRAIL,
+    "EVALUATOR_START": SpanKind.EVALUATOR,
+    "EVALUATOR_END": SpanKind.EVALUATOR,
 }
 
 
