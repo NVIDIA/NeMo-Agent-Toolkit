@@ -97,6 +97,7 @@ Sizing Calculator <./workflows/sizing-calc.md>
 
 Memory Module <./store-and-retrieve/memory.md>
 ./store-and-retrieve/retrievers.md
+Object Store <./store-and-retrieve/object-store.md>
 ```
 
 ```{toctree}
@@ -109,6 +110,7 @@ Sharing Components <./extend/sharing-components.md>
 Adding a Custom Evaluator <./extend/custom-evaluator.md>
 ./extend/adding-a-retriever.md
 ./extend/memory.md
+./extend/object-store.md
 Adding an LLM Provider <./extend/adding-an-llm-provider.md>
 Integrating AWS Bedrock Models <./extend/integrating-aws-bedrock-models.md>
 Cursor Rules Developer Guide <./extend/cursor-rules-developer-guide.md>
