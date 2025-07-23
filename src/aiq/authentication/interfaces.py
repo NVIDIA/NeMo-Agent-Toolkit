@@ -141,6 +141,20 @@ class AuthenticationClientBase(ABC):
             successful, or None if credentials are missing or invalid.
         """
 
+    @abstractmethod
+    async def authenticate(self) -> None:
+        """
+        Perform the authentication process for the client.
+
+        This method handles the necessary steps to authenticate the client with the
+        target API service, which may include obtaining tokens, refreshing credentials,
+        or completing multi-step authentication flows.
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses.
+        """
+        pass
+
 
 class OAuthClientBase(AuthenticationClientBase, ABC):
     """
@@ -159,57 +173,24 @@ class OAuthClientBase(AuthenticationClientBase, ABC):
         """
         pass
 
-    @property
     @abstractmethod
-    def consent_prompt_mode(self) -> ConsentPromptMode | None:
+    async def authenticate(self) -> None:
         """
-        Get the consent prompt mode for the OAuth client.
+        Perform the authentication process for the client.
 
-        Returns:
-            ConsentPromptMode | None: The consent prompt mode (BROWSER or FRONTEND), or None if not set.
-        """
-        pass
+        This method handles the necessary steps to authenticate the client with the
+        target API service, which may include obtaining tokens, refreshing credentials,
+        or completing multi-step authentication flows.
 
-    @consent_prompt_mode.setter
-    @abstractmethod
-    def consent_prompt_mode(self, consent_prompt_mode: ConsentPromptMode) -> None:
-        """
-        Set the consent prompt mode for the OAuth client.
-
-        Args:
-            consent_prompt_mode: The consent prompt mode to set.
+        Raises:
+            NotImplementedError: Must be implemented by subclasses.
         """
         pass
 
     @abstractmethod
-    async def initiate_authorization_flow_console(self) -> None:
-        """
-        Starts a lightweight server to initiate and complete the authorization
-        flow for OAuth clients in headless (console-based) environments.
-        """
-        pass
-
-    @abstractmethod
-    async def shut_down_code_flow_console(self) -> None:
-        """
-        Shuts down the lightweight server used to complete the authorization flow
-        for OAuth clients in headless (console-based) environments.
-        """
-        pass
-
-    @abstractmethod
-    async def initiate_authorization_flow_server(self) -> None:
+    async def shut_down_auth_code_flow(self):
         """
         Initiates and completes the authorization flow for OAuth clients
-        running in server-based environments.
-        """
-        pass
-
-    @abstractmethod
-    async def shut_down_code_flow_server(self) -> None:
-        """
-        Cleans up the OAuth client authorization flow in server
-        environments in the event of unexpected errors.
         """
         pass
 
@@ -340,3 +321,29 @@ class OAuthClientBase(AuthenticationClientBase, ABC):
             OAuth2TokenRequest: The constructed token request body for OAuth2 token exchange
         """
         pass
+
+
+class FlowHandlerBase(ABC):
+    """
+    Handles front-end specifc flows for authentication clients.
+
+    Each front end will define a FlowHandler that will implement the authenticate method.
+
+    The `authenticate` method will be stored as the callback in the AIQContextState.user_auth_callback
+    """
+
+    @staticmethod
+    async def authenticate(self, oauth_client: OAuthClientBase) -> OAuthClientBase:
+        """
+        Perform the authentication process for the client.
+
+        This method handles the necessary steps to authenticate the client with the
+        target API service, which may include obtaining tokens, refreshing credentials,
+        or completing multi-step authentication flows.
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses.
+        """
+        pass
+
+
