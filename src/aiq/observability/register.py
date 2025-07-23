@@ -22,36 +22,53 @@ from aiq.cli.register_workflow import register_logging_method
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from aiq.observability.mixin.file_mixin import FileMode
 
 logger = logging.getLogger(__name__)
 
 
-class FileTelemetryExporter(TelemetryExporterBaseConfig, name="file"):
-    """A logger to write runtime logs to the console."""
+class FileTelemetryExporterConfig(TelemetryExporterBaseConfig, name="file"):
+    """A telemetry exporter that writes runtime traces to local files with optional rolling."""
 
-    filepath: str = Field(description="The file path to log traces.")
-    project: str = Field(description="Name to affilite with this application.")
+    output_path: str = Field(description="Output path for logs. When rolling is disabled: exact file path. "
+                             "When rolling is enabled: directory path or file path (directory + base name).")
+    project: str = Field(description="Name to affiliate with this application.")
+    mode: FileMode = Field(
+        default=FileMode.APPEND,
+        description="File write mode: 'append' to add to existing file or 'overwrite' to start fresh.")
+    enable_rolling: bool = Field(default=False, description="Enable rolling log files based on size limits.")
+    max_file_size: int = Field(
+        default=10 * 1024 * 1024,  # 10MB
+        description="Maximum file size in bytes before rolling to a new file.")
+    max_files: int = Field(default=5, description="Maximum number of rolled files to keep.")
+    cleanup_on_init: bool = Field(default=False, description="Clean up old files during initialization.")
 
 
-@register_telemetry_exporter(config_type=FileTelemetryExporter)
-async def file_telemetry_exporter(config: FileTelemetryExporter, builder: Builder):  # pylint: disable=W0613
+@register_telemetry_exporter(config_type=FileTelemetryExporterConfig)
+async def file_telemetry_exporter(config: FileTelemetryExporterConfig, builder: Builder):  # pylint: disable=W0613
     """
-    Build and return a StreamHandler for console-based logging.
+    Build and return a FileExporter for file-based telemetry export with optional rolling.
     """
 
     from aiq.observability.exporter.file_exporter import FileExporter
 
-    yield FileExporter(filepath=config.filepath, project=config.project)
+    yield FileExporter(output_path=config.output_path,
+                       project=config.project,
+                       mode=config.mode,
+                       enable_rolling=config.enable_rolling,
+                       max_file_size=config.max_file_size,
+                       max_files=config.max_files,
+                       cleanup_on_init=config.cleanup_on_init)
 
 
-class ConsoleLoggingMethod(LoggingBaseConfig, name="console"):
+class ConsoleLoggingMethodConfig(LoggingBaseConfig, name="console"):
     """A logger to write runtime logs to the console."""
 
     level: str = Field(description="The logging level of console logger.")
 
 
-@register_logging_method(config_type=ConsoleLoggingMethod)
-async def console_logging_method(config: ConsoleLoggingMethod, builder: Builder):  # pylint: disable=W0613
+@register_logging_method(config_type=ConsoleLoggingMethodConfig)
+async def console_logging_method(config: ConsoleLoggingMethodConfig, builder: Builder):  # pylint: disable=W0613
     """
     Build and return a StreamHandler for console-based logging.
     """

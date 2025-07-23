@@ -42,27 +42,25 @@ def mock_context_state():
 
 @pytest.fixture
 def sample_intermediate_step():
-    """Create a sample IntermediateStep for testing."""
-    payload = IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START,
-                                      name="test_tool",
-                                      tags=["test"],
-                                      UUID="test-uuid-123")
+    """Create a sample intermediate step for testing."""
     return IntermediateStep(parent_id="root",
-                            function_ancestry=InvocationNode(function_name="test_tool", function_id="test-function-id"),
-                            payload=payload)
+                            function_ancestry=InvocationNode(function_name="test_function", function_id="test-id"),
+                            payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START,
+                                                            name="test_tool",
+                                                            tags=["test"],
+                                                            UUID="test-uuid-123"))
 
 
 @pytest.fixture
 def temp_file(tmp_path):
-    """Create a temporary file for testing with automatic cleanup."""
-    temp_file_path = tmp_path / "test_file.jsonl"
-    return temp_file_path
+    """Create a temporary file for testing."""
+    return str(tmp_path / "test_export.jsonl")
 
 
 @pytest.fixture
 def invalid_file_path(tmp_path):
-    """Create a path to a non-existent directory for error testing."""
-    return tmp_path / "nonexistent_dir" / "invalid_file.jsonl"
+    """Create an invalid file path for error testing."""
+    return tmp_path / "nonexistent_dir" / "invalid_file.txt"
 
 
 class TestFileExporterInitialization:
@@ -70,28 +68,30 @@ class TestFileExporterInitialization:
 
     def test_basic_initialization(self, mock_context_state, tmp_path):
         """Test basic initialization with required parameters."""
-        test_filepath = tmp_path / "test.jsonl"
-        exporter = FileExporter(context_state=mock_context_state, filepath=str(test_filepath), project="test_project")
+        test_output_path = tmp_path / "test.jsonl"
+        exporter = FileExporter(context_state=mock_context_state,
+                                output_path=str(test_output_path),
+                                project="test_project")
 
-        assert exporter._filepath == str(test_filepath)
+        assert exporter._filepath == test_output_path
         assert exporter._project == "test_project"
         assert isinstance(exporter._processor, IntermediateStepSerializer)
 
     def test_initialization_without_context_state(self, tmp_path):
         """Test initialization without context state."""
-        test_filepath = tmp_path / "test.jsonl"
-        exporter = FileExporter(filepath=str(test_filepath), project="test_project")
+        test_output_path = tmp_path / "test.jsonl"
+        exporter = FileExporter(output_path=str(test_output_path), project="test_project")
 
-        assert exporter._filepath == str(test_filepath)
+        assert exporter._filepath == test_output_path
         assert exporter._project == "test_project"
         assert isinstance(exporter._processor, IntermediateStepSerializer)
 
     def test_initialization_with_invalid_kwargs_fails(self, mock_context_state, tmp_path):
         """Test initialization fails with invalid kwargs."""
-        test_filepath = tmp_path / "test.jsonl"
+        test_output_path = tmp_path / "test.jsonl"
         with pytest.raises(TypeError):
             FileExporter(context_state=mock_context_state,
-                         filepath=str(test_filepath),
+                         output_path=str(test_output_path),
                          project="test_project",
                          extra_param="extra_value")
 
@@ -100,11 +100,11 @@ class TestFileExporterInitialization:
         """Test that the processor is properly initialized and added."""
         mock_serializer_instance = Mock()
         mock_serializer_class.return_value = mock_serializer_instance
-        test_filepath = tmp_path / "test.jsonl"
+        test_output_path = tmp_path / "test.jsonl"
 
         with patch.object(FileExporter, 'add_processor') as mock_add_processor:
             exporter = FileExporter(context_state=mock_context_state,
-                                    filepath=str(test_filepath),
+                                    output_path=str(test_output_path),
                                     project="test_project")
 
             mock_serializer_class.assert_called_once()
@@ -117,8 +117,10 @@ class TestFileExporterInheritance:
 
     def test_inheritance_from_file_export_mixin(self, mock_context_state, tmp_path):
         """Test that FileExporter properly inherits from FileExportMixin."""
-        test_filepath = tmp_path / "test.jsonl"
-        exporter = FileExporter(context_state=mock_context_state, filepath=str(test_filepath), project="test_project")
+        test_output_path = tmp_path / "test.jsonl"
+        exporter = FileExporter(context_state=mock_context_state,
+                                output_path=str(test_output_path),
+                                project="test_project")
 
         assert isinstance(exporter, FileExportMixin)
         assert hasattr(exporter, 'export_processed')
@@ -128,8 +130,10 @@ class TestFileExporterInheritance:
 
     def test_inheritance_from_raw_exporter(self, mock_context_state, tmp_path):
         """Test that FileExporter properly inherits from RawExporter."""
-        test_filepath = tmp_path / "test.jsonl"
-        exporter = FileExporter(context_state=mock_context_state, filepath=str(test_filepath), project="test_project")
+        test_output_path = tmp_path / "test.jsonl"
+        exporter = FileExporter(context_state=mock_context_state,
+                                output_path=str(test_output_path),
+                                project="test_project")
 
         assert isinstance(exporter, RawExporter)
         assert hasattr(exporter, 'export')
@@ -137,8 +141,10 @@ class TestFileExporterInheritance:
 
     def test_method_resolution_order(self, mock_context_state, tmp_path):
         """Test that method resolution order is correct."""
-        test_filepath = tmp_path / "test.jsonl"
-        exporter = FileExporter(context_state=mock_context_state, filepath=str(test_filepath), project="test_project")
+        test_output_path = tmp_path / "test.jsonl"
+        exporter = FileExporter(context_state=mock_context_state,
+                                output_path=str(test_output_path),
+                                project="test_project")
 
         # FileExportMixin should come before RawExporter in MRO
         mro = type(exporter).__mro__
@@ -147,22 +153,13 @@ class TestFileExporterInheritance:
 
         assert file_mixin_index < raw_exporter_index
 
-    def test_export_processed_method_availability(self, mock_context_state, tmp_path):
-        """Test that export_processed method is available from FileExportMixin."""
-        test_filepath = tmp_path / "test.jsonl"
-        exporter = FileExporter(context_state=mock_context_state, filepath=str(test_filepath), project="test_project")
-
-        # Should have the export_processed method from FileExportMixin
-        assert hasattr(exporter, 'export_processed')
-        assert callable(getattr(exporter, 'export_processed'))
-
 
 class TestFileExporterFunctionality:
     """Test FileExporter core functionality."""
 
     async def test_export_processed_single_string(self, mock_context_state, temp_file):
         """Test exporting a single string."""
-        exporter = FileExporter(context_state=mock_context_state, filepath=temp_file, project="test_project")
+        exporter = FileExporter(context_state=mock_context_state, output_path=temp_file, project="test_project")
 
         test_string = '{"test": "data"}'
         await exporter.export_processed(test_string)
@@ -174,7 +171,7 @@ class TestFileExporterFunctionality:
 
     async def test_export_processed_list_of_strings(self, mock_context_state, temp_file):
         """Test exporting a list of strings."""
-        exporter = FileExporter(context_state=mock_context_state, filepath=temp_file, project="test_project")
+        exporter = FileExporter(context_state=mock_context_state, output_path=temp_file, project="test_project")
 
         test_strings = ['{"test1": "data1"}', '{"test2": "data2"}']
         await exporter.export_processed(test_strings)
@@ -188,7 +185,7 @@ class TestFileExporterFunctionality:
 
     async def test_export_processed_multiple_calls(self, mock_context_state, temp_file):
         """Test multiple calls to export_processed append to file."""
-        exporter = FileExporter(context_state=mock_context_state, filepath=temp_file, project="test_project")
+        exporter = FileExporter(context_state=mock_context_state, output_path=temp_file, project="test_project")
 
         await exporter.export_processed('{"line": 1}')
         await exporter.export_processed('{"line": 2}')
@@ -208,7 +205,7 @@ class TestFileExporterFunctionality:
         mock_aiofiles_open.side_effect = IOError("File write error")
 
         exporter = FileExporter(context_state=mock_context_state,
-                                filepath=str(invalid_file_path),
+                                output_path=str(invalid_file_path),
                                 project="test_project")
 
         # Should not raise exception, but log error
@@ -219,8 +216,10 @@ class TestFileExporterFunctionality:
 
     def test_export_method_inheritance(self, mock_context_state, sample_intermediate_step, tmp_path):
         """Test that export method works through inheritance."""
-        test_filepath = tmp_path / "test.jsonl"
-        exporter = FileExporter(context_state=mock_context_state, filepath=str(test_filepath), project="test_project")
+        test_output_path = tmp_path / "test.jsonl"
+        exporter = FileExporter(context_state=mock_context_state,
+                                output_path=str(test_output_path),
+                                project="test_project")
 
         # Mock the task creation to avoid async complexity
         with patch.object(exporter, '_create_export_task') as mock_create_task:
@@ -246,9 +245,11 @@ class TestFileExporterIntegration:
         # Mock file operations
         mock_file = AsyncMock()
         mock_aiofiles_open.return_value.__aenter__.return_value = mock_file
-        test_filepath = tmp_path / "test.jsonl"
+        test_output_path = tmp_path / "test.jsonl"
 
-        exporter = FileExporter(context_state=mock_context_state, filepath=str(test_filepath), project="test_project")
+        exporter = FileExporter(context_state=mock_context_state,
+                                output_path=str(test_output_path),
+                                project="test_project")
 
         # Mock the serializer to return a known string
         with patch.object(exporter._processor, 'process', return_value='{"serialized": "data"}') as mock_process:
@@ -265,8 +266,10 @@ class TestFileExporterIntegration:
 
     async def test_processor_pipeline_integration(self, mock_context_state, sample_intermediate_step, tmp_path):
         """Test integration with the processing pipeline."""
-        test_filepath = tmp_path / "test.jsonl"
-        exporter = FileExporter(context_state=mock_context_state, filepath=str(test_filepath), project="test_project")
+        test_output_path = tmp_path / "test.jsonl"
+        exporter = FileExporter(context_state=mock_context_state,
+                                output_path=str(test_output_path),
+                                project="test_project")
 
         # Mock the export_processed method to track calls
         with patch.object(exporter, 'export_processed') as mock_export_processed:
@@ -280,24 +283,24 @@ class TestFileExporterIntegration:
 class TestFileExporterEdgeCases:
     """Test FileExporter edge cases and error conditions."""
 
-    def test_initialization_missing_filepath(self, mock_context_state):
-        """Test initialization fails when filepath is missing."""
+    def test_initialization_missing_output_path(self, mock_context_state):
+        """Test initialization fails when output_path is missing."""
         with pytest.raises(TypeError):
             FileExporter(context_state=mock_context_state, project="test_project"
-                         # Missing filepath
+                         # Missing output_path
                          )
 
     def test_initialization_missing_project(self, mock_context_state):
         """Test initialization fails when project is missing."""
         with pytest.raises(TypeError):
             FileExporter(context_state=mock_context_state,
-                         filepath="/tmp/test.jsonl"
-                         # Missing filepath - but this should use tmp_path too
+                         output_path="/tmp/test.jsonl"
+                         # Missing project - but this should use tmp_path too
                          )
 
     async def test_export_processed_empty_string(self, mock_context_state, temp_file):
         """Test exporting an empty string."""
-        exporter = FileExporter(context_state=mock_context_state, filepath=temp_file, project="test_project")
+        exporter = FileExporter(context_state=mock_context_state, output_path=temp_file, project="test_project")
 
         await exporter.export_processed('')
 
@@ -308,7 +311,7 @@ class TestFileExporterEdgeCases:
 
     async def test_export_processed_empty_list(self, mock_context_state, temp_file):
         """Test exporting an empty list."""
-        exporter = FileExporter(context_state=mock_context_state, filepath=temp_file, project="test_project")
+        exporter = FileExporter(context_state=mock_context_state, output_path=temp_file, project="test_project")
 
         await exporter.export_processed([])
 
@@ -319,7 +322,7 @@ class TestFileExporterEdgeCases:
 
     async def test_concurrent_export_calls(self, mock_context_state, temp_file):
         """Test concurrent calls to export_processed use lock correctly."""
-        exporter = FileExporter(context_state=mock_context_state, filepath=temp_file, project="test_project")
+        exporter = FileExporter(context_state=mock_context_state, output_path=temp_file, project="test_project")
 
         # Create multiple concurrent tasks
         tasks = [exporter.export_processed(f'{{"concurrent": {i}}}') for i in range(5)]
@@ -336,15 +339,17 @@ class TestFileExporterEdgeCases:
 
     def test_processor_type_checking(self, mock_context_state):
         """Test that the processor is of the correct type."""
-        exporter = FileExporter(context_state=mock_context_state, filepath="/tmp/test.jsonl", project="test_project")
+        exporter = FileExporter(context_state=mock_context_state, output_path="/tmp/test.jsonl", project="test_project")
 
         assert isinstance(exporter._processor, IntermediateStepSerializer)
         assert hasattr(exporter._processor, 'process')
 
     async def test_export_with_non_intermediate_step(self, mock_context_state, tmp_path):
         """Test export method behavior with non-IntermediateStep objects."""
-        test_filepath = tmp_path / "test.jsonl"
-        exporter = FileExporter(context_state=mock_context_state, filepath=str(test_filepath), project="test_project")
+        test_output_path = tmp_path / "test.jsonl"
+        exporter = FileExporter(context_state=mock_context_state,
+                                output_path=str(test_output_path),
+                                project="test_project")
 
         # Mock task creation to verify it's not called for invalid types
         with patch.object(exporter, '_create_export_task') as mock_create_task:
@@ -369,7 +374,7 @@ class TestFileExporterLogging:
     @patch('aiq.observability.exporter.file_exporter.logger')
     def test_no_unexpected_logging_during_normal_operation(self, mock_logger, mock_context_state, temp_file):
         """Test that normal operations don't produce unexpected log messages."""
-        exporter = FileExporter(context_state=mock_context_state, filepath=str(temp_file), project="test_project")
+        exporter = FileExporter(context_state=mock_context_state, output_path=str(temp_file), project="test_project")
 
         # Verify exporter was created successfully
         assert exporter is not None
