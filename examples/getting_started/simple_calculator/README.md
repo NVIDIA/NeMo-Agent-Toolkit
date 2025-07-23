@@ -64,6 +64,7 @@ If you have not already done so, follow the [Obtaining API Keys](../../../docs/s
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
+export OPENAI_API_KEY=<YOUR_API_KEY>  # OPTIONAL
 ```
 
 ### Run the Workflow
