@@ -88,7 +88,7 @@ class SpanStatus(BaseModel):
 
 
 class SpanContext(BaseModel):
-    trace_id: int = Field(default_factory=lambda: uuid.uuid4().int & ((1 << 128) - 1))
+    trace_id: int = Field(default_factory=lambda: uuid.uuid4().int)
     span_id: int = Field(default_factory=lambda: uuid.uuid4().int & ((1 << 64) - 1))
 
 

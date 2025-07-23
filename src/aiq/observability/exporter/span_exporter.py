@@ -15,7 +15,6 @@
 
 import logging
 import re
-import uuid
 from abc import abstractmethod
 from typing import TypeVar
 
@@ -124,10 +123,7 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
 
             parent_span = parent_span.model_copy() if isinstance(parent_span, Span) else None
             if parent_span and parent_span.context:
-                span_ctx = SpanContext(
-                    trace_id=parent_span.context.trace_id,
-                    span_id=uuid.uuid4().int & ((1 << 64) - 1),
-                )
+                span_ctx = SpanContext(trace_id=parent_span.context.trace_id)
 
         # Extract start/end times from the step
         # By convention, `span_event_timestamp` is the time we started, `event_timestamp` is the time we ended.
