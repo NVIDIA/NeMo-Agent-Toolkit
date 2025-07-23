@@ -25,6 +25,7 @@ from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function import Function
 from aiq.data_models.component_ref import EmbedderRef
 from aiq.data_models.component_ref import FunctionRef
+from aiq.data_models.component_ref import ITSStrategyRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.component_ref import MemoryRef
 from aiq.data_models.component_ref import RetrieverRef
@@ -32,9 +33,12 @@ from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.evaluator import EvaluatorBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.function_dependencies import FunctionDependencies
+from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
+from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
 from aiq.memory.interfaces import MemoryEditor
 from aiq.retriever.interface import AIQRetriever
 
@@ -185,6 +189,24 @@ class Builder(ABC):  # pylint: disable=too-many-public-methods
 
     @abstractmethod
     async def get_retriever_config(self, retriever_name: str | RetrieverRef) -> RetrieverBaseConfig:
+        pass
+
+    @abstractmethod
+    async def add_its_strategy(self, name: str | str, config: ITSStrategyBaseConfig):
+        pass
+
+    @abstractmethod
+    async def get_its_strategy(self,
+                               strategy_name: str | ITSStrategyRef,
+                               pipeline_type: PipelineTypeEnum,
+                               stage_type: StageTypeEnum):
+        pass
+
+    @abstractmethod
+    async def get_its_strategy_config(self,
+                                      strategy_name: str | ITSStrategyRef,
+                                      pipeline_type: PipelineTypeEnum,
+                                      stage_type: StageTypeEnum) -> ITSStrategyBaseConfig:
         pass
 
     @abstractmethod

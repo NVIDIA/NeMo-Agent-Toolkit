@@ -29,6 +29,7 @@ from aiq.data_models.component_ref import generate_instance_id
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
+from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
@@ -42,7 +43,8 @@ _component_group_order = [
     ComponentGroup.LLMS,
     ComponentGroup.MEMORY,
     ComponentGroup.RETRIEVERS,
-    ComponentGroup.FUNCTIONS
+    ComponentGroup.ITS_STRATEGIES,
+    ComponentGroup.FUNCTIONS,
 ]
 
 
@@ -105,6 +107,8 @@ def group_from_component(component: TypedBaseModel) -> ComponentGroup | None:
         return ComponentGroup.MEMORY
     if (isinstance(component, RetrieverBaseConfig)):
         return ComponentGroup.RETRIEVERS
+    if (isinstance(component, ITSStrategyBaseConfig)):
+        return ComponentGroup.ITS_STRATEGIES
 
     return None
 
@@ -142,7 +146,7 @@ def recursive_componentref_discovery(cls: TypedBaseModel, value: typing.Any,
             yield from recursive_componentref_discovery(cls, field_data, field_info.annotation)
     if (decomposed_type.is_union):
         for arg in decomposed_type.args:
-            if (isinstance(value, DecomposedType(arg).root)):
+            if arg is typing.Any or (isinstance(value, DecomposedType(arg).root)):
                 yield from recursive_componentref_discovery(cls, value, arg)
     else:
         for arg in decomposed_type.args:
@@ -243,7 +247,7 @@ def build_dependency_sequence(config: "AIQConfig") -> list[ComponentInstanceData
     """
 
     total_node_count = len(config.embedders) + len(config.functions) + len(config.llms) + len(config.memory) + len(
-        config.retrievers) + 1  # +1 for the workflow
+        config.retrievers) + len(config.its_strategies) + 1  # +1 for the workflow
 
     dependency_map: dict
     dependency_graph: nx.DiGraph

@@ -190,11 +190,12 @@ docs = [
 [project.entry-points.'aiq.components']
 aiq_agents = "aiq.agent.register"
 aiq_embedders = "aiq.embedder.register"
+aiq_evaluators = "aiq.eval.register"
+aiq_inference_time_scaling = "aiq.experimental.inference_time_scaling.register"
 aiq_llms = "aiq.llm.register"
+aiq_observability = "aiq.observability.register"
 aiq_retrievers = "aiq.retriever.register"
 aiq_tools = "aiq.tool.register"
-aiq_evaluators = "aiq.eval.register"
-aiq_observability = "aiq.observability.register"
 
 
 [project.entry-points.'aiq.front_ends']
