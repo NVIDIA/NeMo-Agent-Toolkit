@@ -62,6 +62,8 @@ ingestion = ["lxml~=5.4"]
 langchain = ["aiqtoolkit-langchain"]
 llama-index = ["aiqtoolkit-llama-index"]
 mem0ai = ["aiqtoolkit-mem0ai"]
+mysql = ["aiqtoolkit-mysql"]
+s3 = ["aiqtoolkit-s3"]
 semantic-kernel = ["aiqtoolkit-semantic-kernel"]
 telemetry = [
   "arize-phoenix~=6.1",
@@ -92,6 +94,7 @@ examples = [
   "aiq_simple_calculator_hitl",
   "aiq_simple_rag",
   "aiq_swe_bench",
+  "aiq_user_report",
 ]
 
 profiling = [
@@ -116,6 +119,8 @@ aiqtoolkit-crewai = { workspace = true }
 aiqtoolkit-langchain = { workspace = true }
 aiqtoolkit-llama-index = { workspace = true }
 aiqtoolkit-mem0ai = { workspace = true }
+aiqtoolkit-mysql = { workspace = true }
+aiqtoolkit-s3 = { workspace = true }
 aiqtoolkit-semantic-kernel = { workspace = true }
 aiqtoolkit-test = { workspace = true }
 aiqtoolkit-zep-cloud = { workspace = true }
@@ -143,6 +148,7 @@ aiq_simple_rag = { path = "examples/RAG/simple_rag", editable = true }
 aiq_simple_web_query = { path = "examples/getting_started/simple_web_query", editable = true }
 aiq_simple_web_query_eval = { path = "examples/evaluation_and_profiling/simple_web_query_eval", editable = true }
 aiq_swe_bench = { path = "examples/evaluation_and_profiling/swe_bench", editable = true }
+aiq_user_report = { path = "examples/object_store/user_report", editable = true }
 
 
 [tool.uv.workspace]
@@ -193,6 +199,7 @@ aiq_embedders = "aiq.embedder.register"
 aiq_evaluators = "aiq.eval.register"
 aiq_inference_time_scaling = "aiq.experimental.inference_time_scaling.register"
 aiq_llms = "aiq.llm.register"
+aiq_object_stores = "aiq.object_store.register"
 aiq_observability = "aiq.observability.register"
 aiq_retrievers = "aiq.retriever.register"
 aiq_tools = "aiq.tool.register"

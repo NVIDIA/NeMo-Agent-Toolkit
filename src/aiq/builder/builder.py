@@ -28,6 +28,7 @@ from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.component_ref import ITSStrategyRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.component_ref import MemoryRef
+from aiq.data_models.component_ref import ObjectStoreRef
 from aiq.data_models.component_ref import RetrieverRef
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.evaluator import EvaluatorBaseConfig
@@ -36,10 +37,12 @@ from aiq.data_models.function_dependencies import FunctionDependencies
 from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
 from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
 from aiq.memory.interfaces import MemoryEditor
+from aiq.object_store.interfaces import ObjectStore
 from aiq.retriever.interface import AIQRetriever
 
 
@@ -110,6 +113,24 @@ class Builder(ABC):  # pylint: disable=too-many-public-methods
 
     @abstractmethod
     def get_llm_config(self, llm_name: str | LLMRef) -> LLMBaseConfig:
+        pass
+
+    @abstractmethod
+    async def add_object_store(self, name: str | ObjectStoreRef, config: ObjectStoreBaseConfig):
+        pass
+
+    async def get_object_store_clients(self, object_store_names: Sequence[str | ObjectStoreRef]) -> list[ObjectStore]:
+        """
+        Return a list of all object store clients.
+        """
+        return list(await asyncio.gather(*[self.get_object_store_client(name) for name in object_store_names]))
+
+    @abstractmethod
+    async def get_object_store_client(self, object_store_name: str | ObjectStoreRef) -> ObjectStore:
+        pass
+
+    @abstractmethod
+    def get_object_store_config(self, object_store_name: str | ObjectStoreRef) -> ObjectStoreBaseConfig:
         pass
 
     @abstractmethod

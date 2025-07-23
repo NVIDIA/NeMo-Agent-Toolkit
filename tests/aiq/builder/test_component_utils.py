@@ -44,6 +44,7 @@ from aiq.data_models.component_ref import EmbedderRef
 from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.component_ref import MemoryRef
+from aiq.data_models.component_ref import ObjectStoreRef
 from aiq.data_models.component_ref import RetrieverRef
 from aiq.data_models.component_ref import generate_instance_id
 from aiq.data_models.config import AIQConfig
@@ -51,9 +52,11 @@ from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.embedder.nim_embedder import NIMEmbedderModelConfig
 from aiq.llm.nim_llm import NIMModelConfig
+from aiq.object_store.in_memory_object_store import InMemoryObjectStoreConfig
 from aiq.retriever.nemo_retriever.register import NemoRetrieverConfig
 from aiq.runtime.session import AIQSessionManager
 from aiq.test.memory import DummyMemoryConfig
@@ -68,6 +71,7 @@ def nested_aiq_config_fixture():
         embedder_name: EmbedderRef
         retriever_name: RetrieverRef | None = None
         memory_name: MemoryRef | None = None
+        object_store_name: ObjectStoreRef | None = None
         fn_names: list[FunctionRef] = []
 
     @register_function(FnConfig)
@@ -77,6 +81,8 @@ def nested_aiq_config_fixture():
             await builder.get_llm(llm_name=config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
         if config.embedder_name is not None:
             await builder.get_embedder(embedder_name=config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+        if config.object_store_name is not None:
+            await builder.get_object_store(object_store_name=config.object_store_name)
         if config.retriever_name is not None:
             await builder.get_retriever(retriever_name=config.retriever_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
@@ -126,6 +132,7 @@ def nested_aiq_config_fixture():
     nested_llms_config = {"llm0": NIMModelConfig(model_name="")}
     nested_retrievers_config = {"retriever0": NemoRetrieverConfig(uri="http://retriever.com")}  # type: ignore
     nested_memorys_config = {"memory0": DummyMemoryConfig()}
+    nested_object_stores_config = {"object_store0": InMemoryObjectStoreConfig()}
     nested_workflow_config = FnConfig(
         llm_name=LLMRef("llm0"),
         embedder_name="embedder0",  # type: ignore
@@ -137,6 +144,7 @@ def nested_aiq_config_fixture():
         "llms": nested_llms_config,
         "retrievers": nested_retrievers_config,
         "memory": nested_memorys_config,
+        "object_stores": nested_object_stores_config,
         "workflow": nested_workflow_config
     }
 
@@ -172,6 +180,7 @@ def test_group_from_component():
         FunctionBaseConfig: ComponentGroup.FUNCTIONS,
         LLMBaseConfig: ComponentGroup.LLMS,
         MemoryBaseConfig: ComponentGroup.MEMORY,
+        ObjectStoreBaseConfig: ComponentGroup.OBJECT_STORES,
         RetrieverBaseConfig: ComponentGroup.RETRIEVERS
     }
 
@@ -211,6 +220,7 @@ def test_recursive_componentref_discovery():
         ComponentRefNode(ref_name="function0", component_group=ComponentGroup.FUNCTIONS),  # type: ignore
         ComponentRefNode(ref_name="function1", component_group=ComponentGroup.FUNCTIONS),  # type: ignore
         ComponentRefNode(ref_name="embedder0", component_group=ComponentGroup.EMBEDDERS),  # type: ignore
+        ComponentRefNode(ref_name="object_store0", component_group=ComponentGroup.OBJECT_STORES),  # type: ignore
         ComponentRefNode(ref_name="retriever0", component_group=ComponentGroup.RETRIEVERS)))  # type: ignore
 
     # Validate across each base component type class
@@ -231,6 +241,7 @@ def test_recursive_componentref_discovery():
             embedders_dict: dict[str, EmbedderRef]
             retrievers_list: list[RetrieverRef]
             memory_typed_dict: MemoryTypedDict
+            object_store_name: list[ObjectStoreRef]
             function_union: FunctionRef | None = None
 
         instance_config = TestConfig(
@@ -238,7 +249,9 @@ def test_recursive_componentref_discovery():
             function_from_model=NestedFns(tool_names=["function0", "function1"]),  # type: ignore
             embedders_dict={"embeder_key": "embedder0"},
             retrievers_list=["retriever0"],
-            memory_typed_dict=MemoryTypedDict(memory="memory0"))  # type: ignore
+            memory_typed_dict=MemoryTypedDict(memory="memory0"),  # type: ignore
+            object_store_name=["object_store0"],
+        )
 
         expected_instance_id = generate_instance_id(instance_config)
 
@@ -301,7 +314,8 @@ def test_config_to_dependency_objects(nested_aiq_config: AIQConfig):
     llms_set = set(str(id(value)) for value in nested_aiq_config.llms.values())
     retrievers_set = set(str(id(value)) for value in nested_aiq_config.retrievers.values())
     memory_set = set(str(id(value)) for value in nested_aiq_config.memory.values())
-    expected_instance_ids = functions_set | embedders_set | llms_set | retrievers_set | memory_set
+    object_stores_set = set(str(id(value)) for value in nested_aiq_config.object_stores.values())
+    expected_instance_ids = functions_set | embedders_set | llms_set | retrievers_set | memory_set | object_stores_set
     expected_instance_ids.add(str(id(nested_aiq_config.workflow)))
 
     dependency_map, dependency_graph = config_to_dependency_objects(nested_aiq_config)
@@ -309,7 +323,7 @@ def test_config_to_dependency_objects(nested_aiq_config: AIQConfig):
     # Validate dependency object types
     assert isinstance(dependency_map, dict)
     assert isinstance(dependency_graph, nx.DiGraph)
-    assert len(dependency_map) == 12
+    assert len(dependency_map) == 13
 
     # Check for valid dependency map entries
     for instance_id, component_instance_data in dependency_map.items():
@@ -332,6 +346,9 @@ def test_build_dependency_sequence(nested_aiq_config: AIQConfig):
     expected_dependency_sequence = [
         {
             "component_group": ComponentGroup.MEMORY, "name": "memory0", "is_root": False
+        },
+        {
+            "component_group": ComponentGroup.OBJECT_STORES, "name": "object_store0", "is_root": False
         },
         {
             "component_group": ComponentGroup.FUNCTIONS, "name": "leaf_fn2", "is_root": False
@@ -370,6 +387,7 @@ def test_build_dependency_sequence(nested_aiq_config: AIQConfig):
 
     noref_order = {
         generate_instance_id(nested_aiq_config.memory["memory0"]): -1,
+        generate_instance_id(nested_aiq_config.object_stores["object_store0"]): -1,
         generate_instance_id(nested_aiq_config.functions["leaf_fn2"]): -1,
         generate_instance_id(nested_aiq_config.functions["leaf_fn3"]): -1,
         generate_instance_id(nested_aiq_config.functions["leaf_fn4"]): -1,
