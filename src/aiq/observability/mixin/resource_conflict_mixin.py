@@ -57,7 +57,7 @@ class ResourceConflictMixin(ABC):
             Database: {"table_name": "events", "connection": "postgresql://..."}
 
         Returns:
-            Dict mapping resource type names to unique identifiers for those resources.
+            dict[str, Any]: Dict mapping resource type names to unique identifiers for those resources.
         """
         pass
 
@@ -66,9 +66,9 @@ class ResourceConflictMixin(ABC):
         """Format a user-friendly error message for a resource conflict.
 
         Args:
-            resource_type: The type of resource that conflicts (e.g., "file_path", "project_endpoint")
-            identifier: The identifier for this resource
-            existing_instance: The existing instance that conflicts with this one
+            resource_type (str): The type of resource that conflicts (e.g., "file_path", "project_endpoint")
+            identifier (Any): The identifier for this resource
+            existing_instance (Any): The existing instance that conflicts with this one
 
         Returns:
             A clear error message explaining the conflict and how to resolve it.
@@ -109,7 +109,11 @@ class ResourceConflictMixin(ABC):
         logger.debug("Registered %d resources for %s", len(resources), self.__class__.__name__)
 
     def _cleanup_dead_references(self, registry: dict[str, weakref.ref]):
-        """Remove dead weakref entries from the registry."""
+        """Remove dead weakref entries from the registry.
+
+        Args:
+            registry (dict[str, weakref.ref]): The registry to clean up.
+        """
         dead_keys = [key for key, ref in registry.items() if ref() is None]
         for key in dead_keys:
             registry.pop(key, None)
@@ -119,7 +123,7 @@ class ResourceConflictMixin(ABC):
         """Get the number of active resources registered for this class.
 
         Returns:
-            Number of active resource registrations.
+            int: Number of active resource registrations.
         """
         if cls not in cls._registries:
             return 0
