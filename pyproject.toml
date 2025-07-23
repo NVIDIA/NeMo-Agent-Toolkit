@@ -82,7 +82,8 @@ examples = [
   "aiq_profiler_agent",
   "aiq_redact_pii",
   "aiq_semantic_kernel_demo",
-  "aiq_simple",
+  "aiq_simple_web_query",
+  "aiq_simple_web_query_eval",
   "aiq_simple_calculator",
   "aiq_simple_calculator_custom_routes",
   "aiq_simple_calculator_eval",
@@ -122,25 +123,26 @@ aiqtoolkit-agno = { workspace = true }
 aiqtoolkit-weave = { workspace = true }
 
 # All examples here
-aiq_alert_triage_agent = { path = "examples/advanced/alert_triage_agent", editable = true }
-aiq_email_phishing_analyzer = { path = "examples/intermediate/evaluation_and_profiling/email_phishing_analyzer", editable = true }
-aiq_multi_frameworks = { path = "examples/basic/frameworks/multi_frameworks", editable = true }
-aiq_plot_charts = { path = "examples/basic/functions/plot_charts", editable = true }
-aiq_redact_pii = { path = "examples/intermediate/observability/redact_pii", editable = true }
-aiq_semantic_kernel_demo = { path = "examples/basic/frameworks/semantic_kernel_demo", editable = true }
-aiq_simple = { path = "examples/basic/functions/simple", editable = true }
-aiq_simple_calculator = { path = "examples/basic/functions/simple_calculator", editable = true }
-aiq_simple_calculator_custom_routes = { path = "examples/intermediate/custom_routes/simple_calculator_custom_routes", editable = true }
-aiq_simple_calculator_eval = { path = "examples/intermediate/evaluation_and_profiling/simple_calculator_eval", editable = true }
-aiq_simple_calculator_hitl = { path = "examples/intermediate/HITL/simple_calculator_hitl", editable = true }
-aiq_simple_calculator_mcp = { path = "examples/intermediate/MCP/simple_calculator_mcp", editable = true }
-aiq_simple_calculator_observability = { path = "examples/intermediate/observability/simple_calculator_observability", editable = true }
-aiq_simple_rag = { path = "examples/intermediate/RAG/simple_rag", editable = true }
-aiq_swe_bench = { path = "examples/intermediate/evaluation_and_profiling/swe_bench", editable = true }
-aiq_automated_description_generation = { path = "examples/basic/functions/automated_description_generation", editable = true }
-aiq_agno_personal_finance = { path = "examples/basic/frameworks/agno_personal_finance", editable = true }
-aiq_por_to_jiratickets = { path = "examples/intermediate/HITL/por_to_jiratickets", editable = true }
-aiq_profiler_agent = { path = "examples/advanced/profiler_agent", editable = true }
+aiq_agno_personal_finance = { path = "examples/frameworks/agno_personal_finance", editable = true }
+aiq_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent", editable = true }
+aiq_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
+aiq_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_phishing_analyzer", editable = true }
+aiq_multi_frameworks = { path = "examples/frameworks/multi_frameworks", editable = true }
+aiq_plot_charts = { path = "examples/custom_functions/plot_charts", editable = true }
+aiq_por_to_jiratickets = { path = "examples/HITL/por_to_jiratickets", editable = true }
+aiq_profiler_agent = { path = "examples/advanced_agents/profiler_agent", editable = true }
+aiq_redact_pii = { path = "examples/observability/redact_pii", editable = true }
+aiq_semantic_kernel_demo = { path = "examples/frameworks/semantic_kernel_demo", editable = true }
+aiq_simple_calculator = { path = "examples/getting_started/simple_calculator", editable = true }
+aiq_simple_calculator_custom_routes = { path = "examples/front_ends/simple_calculator_custom_routes", editable = true }
+aiq_simple_calculator_eval = { path = "examples/evaluation_and_profiling/simple_calculator_eval", editable = true }
+aiq_simple_calculator_hitl = { path = "examples/HITL/simple_calculator_hitl", editable = true }
+aiq_simple_calculator_mcp = { path = "examples/MCP/simple_calculator_mcp", editable = true }
+aiq_simple_calculator_observability = { path = "examples/observability/simple_calculator_observability", editable = true }
+aiq_simple_rag = { path = "examples/RAG/simple_rag", editable = true }
+aiq_simple_web_query = { path = "examples/getting_started/simple_web_query", editable = true }
+aiq_simple_web_query_eval = { path = "examples/evaluation_and_profiling/simple_web_query_eval", editable = true }
+aiq_swe_bench = { path = "examples/evaluation_and_profiling/swe_bench", editable = true }
 
 
 [tool.uv.workspace]

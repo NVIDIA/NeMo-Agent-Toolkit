@@ -28,8 +28,8 @@ The NeMo Agent toolkit includes two memory module providers, both of which are a
 
 ## Examples
 The following examples demonstrate how to use the memory module in the NeMo Agent toolkit:
-* `examples/intermediate/RAG/simple_rag`
-* `examples/basic/frameworks/semantic_kernel_demo`
+* `examples/RAG/simple_rag`
+* `examples/frameworks/semantic_kernel_demo`
 
 ## Additional Resources
 For information on how to write a new memory module provider can be found in the [Adding a Memory Provider](../extend/memory.md) document.

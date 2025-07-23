@@ -35,7 +35,7 @@ Each NeMo Agent toolkit tool requires a configuration object which inherits from
 
 The workflow configuration file is a YAML file that specifies the tools and models to use in the workflow, along with general configuration settings. To illustrate how these are organized, we will examine the configuration of the simple workflow.
 
-`examples/basic/functions/simple/configs/config.yml`:
+`examples/getting_started/simple_web_query/configs/config.yml`:
 ```yaml
 functions:
   webpage_query:

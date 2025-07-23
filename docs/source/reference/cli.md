@@ -165,7 +165,7 @@ Options:
 For example, to start an MCP server with a specific workflow and expose only a particular tool:
 
 ```bash
-aiq mcp --config_file examples/intermediate/RAG/simple_rag/configs/milvus_rag_config.yml --tool_names mcp_retriever_tool
+aiq mcp --config_file examples/RAG/simple_rag/configs/milvus_rag_config.yml --tool_names mcp_retriever_tool
 ```
 
 This will start an MCP server exposing the `mcp_retriever_tool` function from the workflow, which can then be accessed by any MCP-compatible client.
