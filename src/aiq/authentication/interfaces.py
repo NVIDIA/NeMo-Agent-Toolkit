@@ -333,6 +333,7 @@ class FlowHandlerBase(ABC):
     The `authenticate` method will be stored as the callback in the AIQContextState.user_auth_callback
     """
 
+    @abstractmethod
     async def authenticate(self, oauth_client: OAuthClientBase) -> OAuthClientBase:
         """
         Perform the authentication process for the client.
@@ -346,6 +347,7 @@ class FlowHandlerBase(ABC):
         """
         pass
 
+    @abstractmethod
     async def shut_down_auth_code_flow(self, oauth_client: OAuthClientBase) -> None:
         """
         Initiates and completes the authorization flow for OAuth clients
