@@ -20,11 +20,12 @@ from pydantic import Field
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from aiq.observability.mixin.batch_telemetry_config_mixin import BatchTelemetryConfigMixin
 
 logger = logging.getLogger(__name__)
 
 
-class CatalystTelemetryExporter(TelemetryExporterBaseConfig, name="catalyst"):
+class CatalystTelemetryExporter(BatchTelemetryConfigMixin, TelemetryExporterBaseConfig, name="catalyst"):
     """A telemetry exporter to transmit traces to RagaAI catalyst."""
     endpoint: str = Field(description="The RagaAI Catalyst endpoint", default="")
     access_key: str = Field(description="The RagaAI Catalyst API access key", default="")
@@ -37,14 +38,6 @@ class CatalystTelemetryExporter(TelemetryExporterBaseConfig, name="catalyst"):
     debug_mode: bool = Field(description="When False (default), creates local rag_agent_traces.json file. "
                              "When True, skips local file creation for cleaner operation.",
                              default=False)
-
-    # Batch size control options
-    batch_size: int = Field(description="The batch size for the RagaAI Catalyst exporter", default=100)
-    flush_interval: float = Field(description="The flush interval for the RagaAI Catalyst exporter", default=5.0)
-    max_queue_size: int = Field(description="The maximum queue size for the RagaAI Catalyst exporter", default=1000)
-    drop_on_overflow: bool = Field(description="Whether to drop on overflow for the RagaAI Catalyst exporter",
-                                   default=False)
-    shutdown_timeout: float = Field(description="The shutdown timeout for the RagaAI Catalyst exporter", default=10.0)
 
 
 @register_telemetry_exporter(config_type=CatalystTelemetryExporter)
@@ -59,8 +52,6 @@ async def catalyst_telemetry_exporter(config: CatalystTelemetryExporter, builder
         access_key = config.access_key or os.environ.get("CATALYST_ACCESS_KEY")
         secret_key = config.secret_key or os.environ.get("CATALYST_SECRET_KEY")
         endpoint = config.endpoint or os.environ.get("CATALYST_ENDPOINT")
-        project = config.project
-        dataset = config.dataset
 
         assert endpoint is not None, "catalyst endpoint is not set"
         assert access_key is not None, "catalyst access key is not set"
@@ -69,8 +60,8 @@ async def catalyst_telemetry_exporter(config: CatalystTelemetryExporter, builder
         yield RagaAICatalystExporter(base_url=endpoint,
                                      access_key=access_key,
                                      secret_key=secret_key,
-                                     project=project,
-                                     dataset=dataset,
+                                     project=config.project,
+                                     dataset=config.dataset,
                                      tracer_type=config.tracer_type,
                                      debug_mode=config.debug_mode,
                                      batch_size=config.batch_size,

@@ -21,11 +21,12 @@ from pydantic import Field
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from aiq.observability.mixin.batch_telemetry_config_mixin import BatchTelemetryConfigMixin
 
 logger = logging.getLogger(__name__)
 
 
-class LangfuseTelemetryExporter(TelemetryExporterBaseConfig, name="langfuse"):
+class LangfuseTelemetryExporter(BatchTelemetryConfigMixin, TelemetryExporterBaseConfig, name="langfuse"):
     """A telemetry exporter to transmit traces to externally hosted langfuse service."""
 
     endpoint: str = Field(description="The langfuse OTEL endpoint (/api/public/otel/v1/traces)")
@@ -33,13 +34,6 @@ class LangfuseTelemetryExporter(TelemetryExporterBaseConfig, name="langfuse"):
     secret_key: str = Field(description="The Langfuse secret key", default="")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
-
-    # Batch size control options
-    batch_size: int = Field(default=100, description="The batch size for the telemetry exporter.")
-    flush_interval: float = Field(default=5.0, description="The flush interval for the telemetry exporter.")
-    max_queue_size: int = Field(default=1000, description="The maximum queue size for the telemetry exporter.")
-    drop_on_overflow: bool = Field(default=False, description="Whether to drop on overflow for the telemetry exporter.")
-    shutdown_timeout: float = Field(default=10.0, description="The shutdown timeout for the telemetry exporter.")
 
 
 @register_telemetry_exporter(config_type=LangfuseTelemetryExporter)
@@ -67,7 +61,7 @@ async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder
                                   shutdown_timeout=config.shutdown_timeout)
 
 
-class LangsmithTelemetryExporter(TelemetryExporterBaseConfig, name="langsmith"):
+class LangsmithTelemetryExporter(BatchTelemetryConfigMixin, TelemetryExporterBaseConfig, name="langsmith"):
     """A telemetry exporter to transmit traces to externally hosted langsmith service."""
 
     endpoint: str = Field(
@@ -78,12 +72,6 @@ class LangsmithTelemetryExporter(TelemetryExporterBaseConfig, name="langsmith"):
     project: str = Field(description="The project name to group the telemetry traces.")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
-    # Batch size control options
-    batch_size: int = Field(default=100, description="The batch size for the telemetry exporter.")
-    flush_interval: float = Field(default=5.0, description="The flush interval for the telemetry exporter.")
-    max_queue_size: int = Field(default=1000, description="The maximum queue size for the telemetry exporter.")
-    drop_on_overflow: bool = Field(default=False, description="Whether to drop on overflow for the telemetry exporter.")
-    shutdown_timeout: float = Field(default=10.0, description="The shutdown timeout for the telemetry exporter.")
 
 
 @register_telemetry_exporter(config_type=LangsmithTelemetryExporter)
@@ -106,20 +94,13 @@ async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, build
                                   shutdown_timeout=config.shutdown_timeout)
 
 
-class OtelCollectorTelemetryExporter(TelemetryExporterBaseConfig, name="otelcollector"):
+class OtelCollectorTelemetryExporter(BatchTelemetryConfigMixin, TelemetryExporterBaseConfig, name="otelcollector"):
     """A telemetry exporter to transmit traces to externally hosted otel collector service."""
 
     endpoint: str = Field(description="The otel endpoint to export telemetry traces.")
     project: str = Field(description="The project name to group the telemetry traces.")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
-
-    # Batch size control options
-    batch_size: int = Field(default=100, description="The batch size for the telemetry exporter.")
-    flush_interval: float = Field(default=5.0, description="The flush interval for the telemetry exporter.")
-    max_queue_size: int = Field(default=1000, description="The maximum queue size for the telemetry exporter.")
-    drop_on_overflow: bool = Field(default=False, description="Whether to drop on overflow for the telemetry exporter.")
-    shutdown_timeout: float = Field(default=10.0, description="The shutdown timeout for the telemetry exporter.")
 
 
 @register_telemetry_exporter(config_type=OtelCollectorTelemetryExporter)
@@ -136,7 +117,7 @@ async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builde
                                   shutdown_timeout=config.shutdown_timeout)
 
 
-class PatronusTelemetryExporter(TelemetryExporterBaseConfig, name="patronus"):
+class PatronusTelemetryExporter(BatchTelemetryConfigMixin, TelemetryExporterBaseConfig, name="patronus"):
     """A telemetry exporter to transmit traces to Patronus service."""
 
     endpoint: str = Field(description="The Patronus OTEL endpoint")
@@ -144,13 +125,6 @@ class PatronusTelemetryExporter(TelemetryExporterBaseConfig, name="patronus"):
     project: str = Field(description="The project name to group the telemetry traces.")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
-
-    # Batch size control options
-    batch_size: int = Field(default=100, description="The batch size for the telemetry exporter.")
-    flush_interval: float = Field(default=5.0, description="The flush interval for the telemetry exporter.")
-    max_queue_size: int = Field(default=1000, description="The maximum queue size for the telemetry exporter.")
-    drop_on_overflow: bool = Field(default=False, description="Whether to drop on overflow for the telemetry exporter.")
-    shutdown_timeout: float = Field(default=10.0, description="The shutdown timeout for the telemetry exporter.")
 
 
 @register_telemetry_exporter(config_type=PatronusTelemetryExporter)
@@ -176,7 +150,7 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
                                   shutdown_timeout=config.shutdown_timeout)
 
 
-class GalileoTelemetryExporter(TelemetryExporterBaseConfig, name="galileo"):  # pylint: disable=W0613
+class GalileoTelemetryExporter(BatchTelemetryConfigMixin, TelemetryExporterBaseConfig, name="galileo"):  # pylint: disable=W0613  # noqa: E501
     """A telemetry exporter to transmit traces to externally hosted galileo service."""
 
     endpoint: str = Field(description="The galileo endpoint to export telemetry traces.",
@@ -184,11 +158,6 @@ class GalileoTelemetryExporter(TelemetryExporterBaseConfig, name="galileo"):  # 
     project: str = Field(description="The project name to group the telemetry traces.")
     logstream: str = Field(description="The logstream name to group the telemetry traces.")
     api_key: str = Field(description="The api key to authenticate with the galileo service.")
-    batch_size: int = Field(default=100, description="The batch size for the telemetry exporter.")
-    flush_interval: float = Field(default=5.0, description="The flush interval for the telemetry exporter.")
-    max_queue_size: int = Field(default=1000, description="The maximum queue size for the telemetry exporter.")
-    drop_on_overflow: bool = Field(default=False, description="Whether to drop on overflow for the telemetry exporter.")
-    shutdown_timeout: float = Field(default=10.0, description="The shutdown timeout for the telemetry exporter.")
 
 
 @register_telemetry_exporter(config_type=GalileoTelemetryExporter)

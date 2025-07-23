@@ -20,23 +20,17 @@ from pydantic import Field
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from aiq.observability.mixin.batch_telemetry_config_mixin import BatchTelemetryConfigMixin
 
 logger = logging.getLogger(__name__)
 
 
-class PhoenixTelemetryExporter(TelemetryExporterBaseConfig, name="phoenix"):
+class PhoenixTelemetryExporter(BatchTelemetryConfigMixin, TelemetryExporterBaseConfig, name="phoenix"):
     """A telemetry exporter to transmit traces to externally hosted phoenix service."""
 
     endpoint: str = Field(
         description="Phoenix server endpoint for trace export (e.g., 'http://localhost:6006/v1/traces'")
     project: str = Field(description="The project name to group the telemetry traces.")
-
-    # Batch size control options
-    batch_size: int = Field(default=100, description="The batch size for the telemetry exporter.")
-    flush_interval: float = Field(default=5.0, description="The flush interval for the telemetry exporter.")
-    max_queue_size: int = Field(default=1000, description="The maximum queue size for the telemetry exporter.")
-    drop_on_overflow: bool = Field(default=False, description="Whether to drop on overflow for the telemetry exporter.")
-    shutdown_timeout: float = Field(default=10.0, description="The shutdown timeout for the telemetry exporter.")
 
 
 @register_telemetry_exporter(config_type=PhoenixTelemetryExporter)
