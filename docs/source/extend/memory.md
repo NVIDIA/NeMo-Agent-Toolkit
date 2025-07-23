@@ -174,7 +174,7 @@ async def add_memory_tool_action(item: MemoryItem, memory_name: str):
 
 ### Example Configuration
 
-Here are the relevant sections from the `examples/intermediate/RAG/simple_rag/configs/milvus_memory_rag_config.yml` in the source code repository:
+Here are the relevant sections from the `examples/RAG/simple_rag/configs/milvus_memory_rag_config.yml` in the source code repository:
 
 ```yaml
 memory:

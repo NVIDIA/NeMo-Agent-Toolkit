@@ -23,7 +23,7 @@ The sizing calculator uses the [evaluation](evaluate.md) and [profiler](./profil
 ## Quick Start
 Set the configuration file and output directory:
 ```
-export CONFIG_FILE=examples/intermediate/evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml
+export CONFIG_FILE=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml
 export CALC_OUTPUT_DIR=.tmp/sizing_calc/
 ```
 ### Step 1: Gather Metrics
@@ -64,7 +64,7 @@ eval:
     output_dir: .tmp/aiq/examples/simple_calculator/eval
     dataset:
       _type: json
-      file_path: examples/basic/functions/simple_calculator/data/simple_calculator.json
+      file_path: examples/getting_started/simple_web_query/data/simple_calculator.json
 ```
 In addition to the dataset you need to specify the `eval.general.output_dir` parameter for storing the evaluation results. Other parameters in the eval section are not used by the calculator. For further details refer to the [Evaluate](./evaluate.md) documentation.
 
