@@ -18,12 +18,12 @@ import secrets
 from typing import Protocol
 
 import numpy as np
+
 import redis.asyncio as redis
 import redis.exceptions as redis_exceptions
-from redis.commands.search.query import Query
-
 from aiq.memory.interfaces import MemoryEditor
 from aiq.memory.models import MemoryItem
+from redis.commands.search.query import Query
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ INDEX_NAME = "memory_idx"
 
 class SupportsEmbedQuery(Protocol):
 
-    def embed_query(self, query: str) -> list[float]:
+    async def aembed_query(self, query: str) -> list[float]:
         ...
 
 
@@ -86,7 +86,7 @@ class RedisEditor(MemoryEditor):
             # If we have memory, compute and store the embedding
             if memory_item.memory:
                 logger.debug("Computing embedding for memory text")
-                search_vector = self._embedder.embed_query(memory_item.memory)
+                search_vector = await self._embedder.aembed_query(memory_item.memory)
                 logger.debug(f"Generated embedding vector of length: {len(search_vector)}")
                 memory_data["embedding"] = search_vector
 
@@ -128,7 +128,7 @@ class RedisEditor(MemoryEditor):
         logger.debug("Using embedder for vector search")
         try:
             logger.debug(f"Generating embedding for query: '{query}'")
-            query_vector = self._embedder.embed_query(query)
+            query_vector = await self._embedder.aembed_query(query)
             logger.debug(f"Generated embedding vector of length: {len(query_vector)}")
         except Exception as e:
             logger.error(f"Failed to generate embedding: {str(e)}")

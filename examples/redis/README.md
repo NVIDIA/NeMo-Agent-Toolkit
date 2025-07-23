@@ -24,7 +24,7 @@ These examples use the redis memory backend.
 Run redis on `localhost:6379` and Redis Insight on `localhost:5540` with:
 
 ```bash
-docker compose -f examples/deploy/docker-compose-redis.yml up
+docker compose -f examples/deploy/docker-compose.redis.yml up
 ```
 
 ## Start phoenix with docker compose

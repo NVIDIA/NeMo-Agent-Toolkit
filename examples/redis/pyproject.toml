@@ -27,7 +27,7 @@ authors = [{ name = "NVIDIA Corporation" }]
 maintainers = [{ name = "NVIDIA Corporation" }]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../", editable = true }
+aiqtoolkit = { path = "../..", editable = true }
 
-[project.entry-points.'aiq.plugins']
+[project.entry-points.'aiq.components']
 aiq_redis = "aiq_redis.register"
