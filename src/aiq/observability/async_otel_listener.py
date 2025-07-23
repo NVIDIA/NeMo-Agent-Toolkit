@@ -13,29 +13,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import re
+import warnings
 from contextlib import asynccontextmanager
 from contextlib import contextmanager
 from typing import Any
 
 from openinference.semconv.trace import OpenInferenceSpanKindValues
 from openinference.semconv.trace import SpanAttributes
-from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.trace import Span
-from opentelemetry.trace.propagation import set_span_in_context
 from pydantic import TypeAdapter
 
 from aiq.builder.context import AIQContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepState
+from aiq.utils.optional_imports import TelemetryOptionalImportError
+from aiq.utils.optional_imports import try_import_opentelemetry
 
 try:
-    from weave.trace.context import weave_client_context
-    from weave.trace.context.call_context import get_current_call
-    from weave.trace.context.call_context import set_call_stack
-    from weave.trace.weave_client import Call
+    with warnings.catch_warnings():
+        # Ignore deprecation warnings being triggered by weave. https://github.com/wandb/weave/issues/3666
+        # and https://github.com/wandb/weave/issues/4533
+        warnings.filterwarnings("ignore", category=DeprecationWarning, message=r"^`sentry_sdk\.Hub` is deprecated")
+        warnings.filterwarnings("ignore",
+                                category=DeprecationWarning,
+                                message=r"^Using extra keyword arguments on `Field` is deprecated")
+        warnings.filterwarnings("ignore",
+                                category=DeprecationWarning,
+                                message=r"^`include` is deprecated and does nothing")
+        from weave.trace.context import weave_client_context
+        from weave.trace.context.call_context import get_current_call
+        from weave.trace.context.call_context import set_call_stack
+        from weave.trace.weave_client import Call
     WEAVE_AVAILABLE = True
 except ImportError:
     WEAVE_AVAILABLE = False
@@ -46,10 +56,49 @@ logger = logging.getLogger(__name__)
 
 OPENINFERENCE_SPAN_KIND = SpanAttributes.OPENINFERENCE_SPAN_KIND
 
+# Try to import OpenTelemetry modules
+# If the dependencies are not installed, use dummy objects here
+try:
+    opentelemetry = try_import_opentelemetry()
+    from opentelemetry import trace
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.trace import Span
+    from opentelemetry.trace.propagation import set_span_in_context
+    OPENTELEMETRY_AVAILABLE = True
+except TelemetryOptionalImportError:
+    from aiq.utils.optional_imports import DummySpan  # pylint: disable=ungrouped-imports
+    from aiq.utils.optional_imports import DummyTrace  # pylint: disable=ungrouped-imports
+    from aiq.utils.optional_imports import DummyTracerProvider  # pylint: disable=ungrouped-imports
+    from aiq.utils.optional_imports import dummy_set_span_in_context  # pylint: disable=ungrouped-imports
+
+    trace = DummyTrace  # pylint: disable=invalid-name
+    TracerProvider = DummyTracerProvider
+    Span = DummySpan
+    set_span_in_context = dummy_set_span_in_context
+    OPENTELEMETRY_AVAILABLE = False
+
+
+def merge_dicts(dict1: dict, dict2: dict) -> dict:
+    """
+    Merge two dictionaries, prioritizing non-null values from the first dictionary.
+
+    Args:
+        dict1 (dict): First dictionary (higher priority)
+        dict2 (dict): Second dictionary (lower priority)
+
+    Returns:
+        dict: Merged dictionary with non-null values from dict1 taking precedence
+    """
+    result = dict2.copy()  # Start with a copy of the second dictionary
+    for key, value in dict1.items():
+        if value is not None:  # Only update if value is not None
+            result[key] = value
+    return result
+
 
 def _ns_timestamp(seconds_float: float) -> int:
     """
-    Convert AIQ Toolkit’s float `event_timestamp` (in seconds) into an integer number
+    Convert AIQ Toolkit's float `event_timestamp` (in seconds) into an integer number
     of nanoseconds, as OpenTelemetry expects.
     """
     return int(seconds_float * 1e9)
@@ -62,7 +111,7 @@ class AsyncOtelSpanListener:
 
     - On FUNCTION_START => open a new top-level span
     - On any other intermediate step => open a child subspan (immediate open/close)
-    - On FUNCTION_END => close the function’s top-level span
+    - On FUNCTION_END => close the function's top-level span
 
     This runs fully independently from the normal AIQ Toolkit workflow, so that
     the workflow is not blocking or entangled by OTel calls.
@@ -86,12 +135,17 @@ class AsyncOtelSpanListener:
 
         self._running = False
 
-        # Prepare the tracer (optionally you might already have done this)
-        if trace.get_tracer_provider() is None or not isinstance(trace.get_tracer_provider(), TracerProvider):
-            tracer_provider = TracerProvider()
-            trace.set_tracer_provider(tracer_provider)
+        # Track if we've already logged the skip warning to avoid spam
+        self._skip_warning_logged = False
 
-        # We’ll optionally attach exporters if you want (out of scope to do it here).
+        # Prepare the tracer (optionally you might already have done this)
+        # Only set up real tracer provider if OpenTelemetry is available
+        if OPENTELEMETRY_AVAILABLE:
+            if trace.get_tracer_provider() is None or not isinstance(trace.get_tracer_provider(), TracerProvider):
+                tracer_provider = TracerProvider()
+                trace.set_tracer_provider(tracer_provider)  # type: ignore[arg-type]
+
+        # We'll optionally attach exporters if you want (out of scope to do it here).
         # Example: tracer_provider.add_span_processor(BatchSpanProcessor(your_exporter))
 
         self._tracer = trace.get_tracer("aiq-async-otel-listener")
@@ -107,10 +161,25 @@ class AsyncOtelSpanListener:
                 # Weave is not initialized, so we don't do anything
                 pass
 
+    @property
+    def _is_using_dummy_implementations(self) -> bool:
+        """
+        Check if we're using dummy implementations because OpenTelemetry is not installed.
+        """
+        return not OPENTELEMETRY_AVAILABLE
+
     def _on_next(self, step: IntermediateStep) -> None:
         """
         The main logic that reacts to each IntermediateStep.
         """
+        # Skip processing if OpenTelemetry is not properly installed (using dummy implementations)
+        if self._is_using_dummy_implementations:
+            if not self._skip_warning_logged:
+                logger.warning("Skipping OpenTelemetry event processing because OpenTelemetry is not installed. "
+                               "Install with: pip install opentelemetry-api opentelemetry-sdk")
+                self._skip_warning_logged = True
+            return
+
         if (step.event_state == IntermediateStepState.START):
 
             self._process_start_event(step)
@@ -175,11 +244,6 @@ class AsyncOtelSpanListener:
 
         self._outstanding_spans.clear()
 
-        if len(self._span_stack) > 0:
-            logger.error(
-                "Not all spans were closed. Ensure all start events have a corresponding end event. Remaining: %s",
-                self._span_stack)
-
         self._span_stack.clear()
 
         # Clean up any lingering Weave calls if Weave is available and initialized
@@ -204,7 +268,7 @@ class AsyncOtelSpanListener:
         parent_ctx = None
 
         if (len(self._span_stack) > 0):
-            parent_span = self._span_stack.get(step.function_ancestry.parent_id, None)
+            parent_span = self._span_stack.get(step.parent_id, None)
             if parent_span is None:
                 logger.warning("No parent span found for step %s", step.UUID)
                 return
@@ -262,6 +326,10 @@ class AsyncOtelSpanListener:
                 sub_span.set_attribute(SpanAttributes.INPUT_VALUE, serialized_input)
                 sub_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE, "application/json" if is_json else "text/plain")
 
+        # Optional: add metadata to the span from TraceMetadata
+        if step.payload.metadata:
+            sub_span.set_attribute("aiq.metadata", step.payload.metadata.model_dump_json())
+
         self._span_stack[step.UUID] = sub_span
 
         self._outstanding_spans[step.UUID] = sub_span
@@ -300,6 +368,13 @@ class AsyncOtelSpanListener:
             sub_span.set_attribute(SpanAttributes.OUTPUT_VALUE, serialized_output)
             sub_span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE, "application/json" if is_json else "text/plain")
 
+        # # Optional: add metadata to the span from TraceMetadata
+        if step.payload.metadata:
+            start_event_metadata = json.loads(sub_span.attributes.get("aiq.metadata", {}))
+            end_event_metadata = json.loads(step.payload.metadata.model_dump_json())
+            merged_event_metadata = merge_dicts(start_event_metadata, end_event_metadata)
+            sub_span.set_attribute("aiq.metadata", json.dumps(merged_event_metadata))
+
         end_ns = _ns_timestamp(step.payload.event_timestamp)
 
         # End the subspan
@@ -307,7 +382,7 @@ class AsyncOtelSpanListener:
 
         # Finish corresponding Weave call if Weave is available and initialized
         if self.gc is not None:
-            self._finish_weave_call(step, sub_span)
+            self._finish_weave_call(step)
 
     @contextmanager
     def parent_call(self, trace_id: str, parent_call_id: str):
@@ -333,13 +408,13 @@ class AsyncOtelSpanListener:
         # use it as the parent
         if existing_call is not None:
             parent_call = existing_call
-            logger.debug(f"Found existing Weave call: {existing_call.id} from trace: {existing_call.trace_id}")
+            logger.debug("Found existing Weave call: %s from trace: %s", existing_call.id, existing_call.trace_id)
         # Otherwise, check our internal stack for parent relationships
         elif len(self._weave_calls) > 0 and len(self._span_stack) > 1:
             # Get the parent span using stack position (one level up)
             parent_span_id = self._span_stack[-2].get_span_context().span_id
             # Find the corresponding weave call for this parent span
-            for uuid, call in self._weave_calls.items():
+            for call in self._weave_calls.values():
                 if getattr(call, "span_id", None) == parent_span_id:
                     parent_call = call
                     break
@@ -378,7 +453,7 @@ class AsyncOtelSpanListener:
 
         return call
 
-    def _finish_weave_call(self, step: IntermediateStep, span: Span) -> None:
+    def _finish_weave_call(self, step: IntermediateStep) -> None:
         """
         Finish a previously created Weave call
         """

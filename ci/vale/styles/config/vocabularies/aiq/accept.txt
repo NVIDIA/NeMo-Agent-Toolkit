@@ -17,6 +17,7 @@ arXiv
 [Cc]allable(s?)
 # Documentation for ccache only capitalizes the name at the start of a sentence https://ccache.dev/
 [Cc]cache
+[Cc]ategorizer
 [Cc]hatbot(s?)
 # clangd is never capitalized even at the start of a sentence https://clangd.llvm.org/
 clangd
@@ -60,6 +61,8 @@ groundedness
 isort
 Jira
 jsonlines
+Langfuse
+LangSmith
 # libcudf isn't styled in the way that cuDF is https://docs.rapids.ai/api/libcudf/stable/
 libcudf
 LLM(s?)
@@ -80,11 +83,13 @@ NIM(s?)
 npm
 NumPy
 NVIDIA
+OTel
 onboarding
 [Oo]verfitting
 pandas
 [Pp]arallelization
 [Pp]arsable
+Patronus
 PCIe
 PDF(s?)
 [Pp]reprocess
@@ -115,7 +120,9 @@ triages
 [Uu]nencrypted
 [Uu]nittest(s?)
 [Uu]ploader
+[Uu]psert
 uv
+VectorDB
 [Ww]alkthrough
 XGBoost
 zsh

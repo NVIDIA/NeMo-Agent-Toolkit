@@ -20,6 +20,7 @@ from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.data_models.intermediate_step import StreamEventData
+from aiq.data_models.invocation_node import InvocationNode
 from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
 
 # pylint: disable=redefined-outer-name
@@ -52,11 +53,14 @@ def mock_intermediate_steps(llm_name, tool_name):
 
     def create_step(event_type, name=llm_name, input_data=None, output_data=None, chunk=None):
         """Helper to create an `IntermediateStep`."""
-        return IntermediateStep(
-            payload=IntermediateStepPayload(event_type=event_type,
-                                            framework=framework,
-                                            name=name,
-                                            data=StreamEventData(input=input_data, output=output_data, chunk=chunk)))
+        return IntermediateStep(parent_id="root",
+                                function_ancestry=InvocationNode(function_name=name, function_id="test-function-id"),
+                                payload=IntermediateStepPayload(event_type=event_type,
+                                                                framework=framework,
+                                                                name=name,
+                                                                data=StreamEventData(input=input_data,
+                                                                                     output=output_data,
+                                                                                     chunk=chunk)))
 
     return [
         create_step(IntermediateStepType.LLM_START, input_data=user_input),
@@ -99,7 +103,15 @@ def test_get_agent_actions(intermediate_step_adapter, mock_intermediate_steps, f
                                                                 intermediate_step_adapter.DEFAULT_EVENT_FILTER)
 
     assert adapted_steps, "Adapted steps are empty"
-    # Validate TOOL_END Action
-    tool_action, tool_output = adapted_steps[0]
-    assert tool_action.tool == tool_name, "Tool action name mismatch"
+    # Find tool and LLM steps by their names
+    tool_step = next((step for step in adapted_steps if step[0].tool == tool_name), None)
+    llm_step = next((step for step in adapted_steps if step[0].tool == llm_name), None)
+
+    assert tool_step is not None, "Tool step not found"
+    assert llm_step is not None, "LLM step not found"
+
+    tool_action, tool_output = tool_step
+    llm_action, llm_output = llm_step
+
     assert tool_output == "Tool output response", "Tool output mismatch"
+    assert llm_output == "Final AI-generated response", "LLM output mismatch"

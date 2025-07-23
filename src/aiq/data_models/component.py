@@ -35,6 +35,8 @@ class AIQComponentEnum(StrEnum):
     LOGGING = "logging"
     TRACING = "tracing"
     PACKAGE = "package"
+    OBJECT_STORE = "object_store"
+    ITS_STRATEGY = "its_strategy"
     UNDEFINED = "undefined"
 
 
@@ -43,4 +45,6 @@ class ComponentGroup(StrEnum):
     FUNCTIONS = "functions"
     LLMS = "llms"
     MEMORY = "memory"
+    OBJECT_STORES = "object_stores"
     RETRIEVERS = "retrievers"
+    ITS_STRATEGIES = "its_strategies"

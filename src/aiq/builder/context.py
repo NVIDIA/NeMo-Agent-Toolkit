@@ -29,6 +29,7 @@ from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.data_models.intermediate_step import StreamEventData
 from aiq.data_models.invocation_node import InvocationNode
+from aiq.runtime.user_metadata import RequestAttributes
 from aiq.utils.reactive.subject import Subject
 
 
@@ -60,12 +61,16 @@ class ActiveFunctionContextManager:
 class AIQContextState(metaclass=Singleton):
 
     def __init__(self):
+        self.conversation_id: ContextVar[str | None] = ContextVar("conversation_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
         self.user_manager: ContextVar[typing.Any] = ContextVar("user_manager", default=None)
+        self.metadata: ContextVar[RequestAttributes] = ContextVar("request_attributes", default=RequestAttributes())
         self.event_stream: ContextVar[Subject[IntermediateStep] | None] = ContextVar("event_stream", default=Subject())
         self.active_function: ContextVar[InvocationNode] = ContextVar("active_function",
                                                                       default=InvocationNode(function_id="root",
                                                                                              function_name="root"))
+        self.active_span_id_stack: ContextVar[list[str]] = ContextVar("active_span_id_stack", default=["root"])
+
         # Default is a lambda no-op which returns NoneType
         self.user_input_callback: ContextVar[Callable[[InteractionPrompt], Awaitable[HumanResponse | None]]
                                              | None] = ContextVar(
@@ -111,6 +116,18 @@ class AIQContext:
         return self._context_state.user_manager.get()
 
     @property
+    def metadata(self):
+        """
+        Retrieves the request attributes instance from the current context state
+        providing access to user-defined metadata.
+
+        Returns:
+            RequestAttributes: The instance of the request attributes
+                retrieved from the context state.
+        """
+        return self._context_state.metadata.get()
+
+    @property
     def user_interaction_manager(self) -> AIQUserInteractionManager:
         """
         Return an instance of AIQUserInteractionManager that uses
@@ -131,6 +148,16 @@ class AIQContext:
                 from the context state.
         """
         return IntermediateStepManager(self._context_state)
+
+    @property
+    def conversation_id(self) -> str | None:
+        """
+        This property retrieves the conversation ID which is the unique identifier for the current chat conversation.
+
+        Returns:
+            str | None
+        """
+        return self._context_state.conversation_id.get()
 
     @contextmanager
     def push_active_function(self, function_name: str, input_data: typing.Any | None):
@@ -183,6 +210,19 @@ class AIQContext:
         state. The active function is the function that is currently being executed.
         """
         return self._context_state.active_function.get()
+
+    @property
+    def active_span_id(self) -> str:
+        """
+        Retrieves the active span ID from the context state.
+
+        This property provides access to the active span ID stored in the context state. The active span ID represents
+        the currently running function/tool/llm/agent/etc and can be used to group telemetry data together.
+
+        Returns:
+            str: The active span ID.
+        """
+        return self._context_state.active_span_id_stack.get()[-1]
 
     @staticmethod
     def get() -> "AIQContext":

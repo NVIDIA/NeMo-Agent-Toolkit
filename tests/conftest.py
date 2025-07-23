@@ -66,6 +66,11 @@ def config_file_fixture(test_data_dir: str):
     return os.path.join(test_data_dir, "config.yaml")
 
 
+@pytest.fixture(name="eval_config_file")
+def eval_config_file_fixture() -> str:
+    return os.path.join(EXAMPLES_DIR, "evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml")
+
+
 @pytest.fixture(name="mock_aiohttp_session")
 def mock_aiohttp_session_fixture():
     with mock.patch("aiohttp.ClientSession") as mock_aiohttp_session:
@@ -395,6 +400,7 @@ def rag_intermediate_steps_fixture(rag_user_inputs, rag_generated_outputs) -> li
     from aiq.data_models.intermediate_step import IntermediateStepPayload
     from aiq.data_models.intermediate_step import IntermediateStepType
     from aiq.data_models.intermediate_step import StreamEventData
+    from aiq.data_models.invocation_node import InvocationNode
 
     framework = LLMFrameworkEnum.LANGCHAIN
     token_cnt = 10
@@ -410,12 +416,16 @@ def rag_intermediate_steps_fixture(rag_user_inputs, rag_generated_outputs) -> li
         if step_uuid is None:
             step_uuid = str(uuid.uuid4())
         """Helper to create an `IntermediateStep`."""
-        return IntermediateStep(
-            payload=IntermediateStepPayload(UUID=step_uuid,
-                                            event_type=event_type,
-                                            framework=framework,
-                                            name=name,
-                                            data=StreamEventData(input=input_data, output=output_data, chunk=chunk)))
+        return IntermediateStep(parent_id="root",
+                                function_ancestry=InvocationNode(function_name=name,
+                                                                 function_id=f"test-{name}-{step_uuid}"),
+                                payload=IntermediateStepPayload(UUID=step_uuid,
+                                                                event_type=event_type,
+                                                                framework=framework,
+                                                                name=name,
+                                                                data=StreamEventData(input=input_data,
+                                                                                     output=output_data,
+                                                                                     chunk=chunk)))
 
     step_lists = []  # Store separate lists
 

@@ -20,6 +20,7 @@ from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.data_models.intermediate_step import StreamEventData
+from aiq.data_models.invocation_node import InvocationNode
 from aiq.profiler.inference_optimization.prompt_caching import get_common_prefixes
 from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
@@ -37,17 +38,23 @@ def minimal_valid_df_fixture():
     # df = pd.DataFrame(data)
 
     events = [[
-        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_START,
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="llama-3", function_id="test-llama-3"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_START,
                                                          framework=LLMFrameworkEnum.LANGCHAIN,
                                                          event_timestamp=100.0,
                                                          name="llama-3",
                                                          data=StreamEventData(input="Hello world!"))),
-        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="llama-3", function_id="test-llama-3"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
                                                          event_timestamp=105.0,
                                                          framework=LLMFrameworkEnum.LANGCHAIN,
                                                          name="llama-3",
                                                          data=StreamEventData(output="Hello world!"))),
-        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_START,
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="llama-2", function_id="test-llama-2"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_START,
                                                          event_timestamp=200.0,
                                                          framework=LLMFrameworkEnum.LLAMA_INDEX,
                                                          name="llama-2",
