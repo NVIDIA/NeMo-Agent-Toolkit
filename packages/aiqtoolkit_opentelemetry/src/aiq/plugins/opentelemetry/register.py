@@ -21,12 +21,13 @@ from pydantic import Field
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.observability.mixin.batch_telemetry_config_mixin import BatchTelemetryConfigMixin
+from aiq.observability.mixin.batch_config_mixin import BatchConfigMixin
+from aiq.observability.mixin.collector_config_mixin import CollectorConfigMixin
 
 logger = logging.getLogger(__name__)
 
 
-class LangfuseTelemetryExporter(BatchTelemetryConfigMixin, TelemetryExporterBaseConfig, name="langfuse"):
+class LangfuseTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name="langfuse"):
     """A telemetry exporter to transmit traces to externally hosted langfuse service."""
 
     endpoint: str = Field(description="The langfuse OTEL endpoint (/api/public/otel/v1/traces)")
@@ -61,7 +62,7 @@ async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder
                                   shutdown_timeout=config.shutdown_timeout)
 
 
-class LangsmithTelemetryExporter(BatchTelemetryConfigMixin, TelemetryExporterBaseConfig, name="langsmith"):
+class LangsmithTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="langsmith"):
     """A telemetry exporter to transmit traces to externally hosted langsmith service."""
 
     endpoint: str = Field(
@@ -69,7 +70,6 @@ class LangsmithTelemetryExporter(BatchTelemetryConfigMixin, TelemetryExporterBas
         default="https://api.smith.langchain.com/otel/v1/traces",
     )
     api_key: str = Field(description="The Langsmith API key", default="")
-    project: str = Field(description="The project name to group the telemetry traces.")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
 
@@ -94,11 +94,12 @@ async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, build
                                   shutdown_timeout=config.shutdown_timeout)
 
 
-class OtelCollectorTelemetryExporter(BatchTelemetryConfigMixin, TelemetryExporterBaseConfig, name="otelcollector"):
+class OtelCollectorTelemetryExporter(BatchConfigMixin,
+                                     CollectorConfigMixin,
+                                     TelemetryExporterBaseConfig,
+                                     name="otelcollector"):
     """A telemetry exporter to transmit traces to externally hosted otel collector service."""
 
-    endpoint: str = Field(description="The otel endpoint to export telemetry traces.")
-    project: str = Field(description="The project name to group the telemetry traces.")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
 
@@ -117,12 +118,10 @@ async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builde
                                   shutdown_timeout=config.shutdown_timeout)
 
 
-class PatronusTelemetryExporter(BatchTelemetryConfigMixin, TelemetryExporterBaseConfig, name="patronus"):
+class PatronusTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="patronus"):
     """A telemetry exporter to transmit traces to Patronus service."""
 
-    endpoint: str = Field(description="The Patronus OTEL endpoint")
     api_key: str = Field(description="The Patronus API key", default="")
-    project: str = Field(description="The project name to group the telemetry traces.")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
 
@@ -150,12 +149,11 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
                                   shutdown_timeout=config.shutdown_timeout)
 
 
-class GalileoTelemetryExporter(BatchTelemetryConfigMixin, TelemetryExporterBaseConfig, name="galileo"):  # pylint: disable=W0613  # noqa: E501
+class GalileoTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="galileo"):  # pylint: disable=W0613  # noqa: E501
     """A telemetry exporter to transmit traces to externally hosted galileo service."""
 
     endpoint: str = Field(description="The galileo endpoint to export telemetry traces.",
                           default="https://app.galileo.ai/api/galileo/otel/traces")
-    project: str = Field(description="The project name to group the telemetry traces.")
     logstream: str = Field(description="The logstream name to group the telemetry traces.")
     api_key: str = Field(description="The api key to authenticate with the galileo service.")
 

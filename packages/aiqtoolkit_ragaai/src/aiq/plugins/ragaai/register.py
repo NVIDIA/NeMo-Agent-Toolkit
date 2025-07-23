@@ -20,17 +20,18 @@ from pydantic import Field
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.observability.mixin.batch_telemetry_config_mixin import BatchTelemetryConfigMixin
+from aiq.observability.mixin.batch_config_mixin import BatchConfigMixin
+from aiq.observability.mixin.collector_config_mixin import CollectorConfigMixin
 
 logger = logging.getLogger(__name__)
 
 
-class CatalystTelemetryExporter(BatchTelemetryConfigMixin, TelemetryExporterBaseConfig, name="catalyst"):
+class CatalystTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="catalyst"):
     """A telemetry exporter to transmit traces to RagaAI catalyst."""
-    endpoint: str = Field(description="The RagaAI Catalyst endpoint", default="")
+    endpoint: str = Field(description="The RagaAI Catalyst endpoint",
+                          default="https://app.galileo.ai/api/galileo/otel/traces")
     access_key: str = Field(description="The RagaAI Catalyst API access key", default="")
     secret_key: str = Field(description="The RagaAI Catalyst API secret key", default="")
-    project: str = Field(description="The RagaAI Catalyst project name")
     dataset: str | None = Field(description="The RagaAI Catalyst dataset name", default=None)
     tracer_type: str = Field(description="The RagaAI Catalyst tracer type", default="agentic/nemo-framework")
 

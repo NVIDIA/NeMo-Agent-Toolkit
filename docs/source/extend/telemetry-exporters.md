@@ -209,31 +209,6 @@ The following table helps you choose the appropriate exporter type for your use 
 - **Integrating with HTTP API?** → Use Span Exporter
 - **Using standard observability tools?** → Use OpenTelemetry Exporter or the pre-built `OTLPSpanAdapterExporter`
 
-#### Decision Flow Chart
-
-```{mermaid}
-flowchart TD
-    A[What's your use case?] --> B{Development & Testing}
-    A --> C{Production Integration}
-    A --> D{Enterprise Observability}
-
-    B --> E[Raw Exporter<br/>Console/File Output<br/>30 minutes]
-
-    C --> F{Service Type?}
-    F --> G[Custom HTTP API<br/>Span Exporter<br/>2-4 hours]
-    F --> H[Database/Custom Format<br/>Span Exporter<br/>2-4 hours]
-
-    D --> I{OTLP Compatible?}
-    I --> J[Yes: Use OTLPSpanAdapterExporter<br/>30 minutes]
-    I --> K[No: OpenTelemetry Exporter<br/>4-8 hours]
-
-    style E fill:#fff3e0
-    style G fill:#f3e5f5
-    style H fill:#f3e5f5
-    style J fill:#e8f5e8
-    style K fill:#e8f5e8
-```
-
 #### Raw Exporters
 
 Process raw `IntermediateStep` events directly:
@@ -294,7 +269,7 @@ class CustomTelemetryExporter(TelemetryExporterBaseConfig, name="custom"):
 
 ### Step 2: Implement the Exporter Class
 
-Choose the appropriate base class based on your needs (see [Decision Flow Chart](#decision-flow-chart) for guidance):
+Choose the appropriate base class based on your needs:
 
 #### Raw Exporter (for simple data processing)
 

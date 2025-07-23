@@ -20,17 +20,17 @@ from pydantic import Field
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.observability.mixin.batch_telemetry_config_mixin import BatchTelemetryConfigMixin
+from aiq.observability.mixin.batch_config_mixin import BatchConfigMixin
+from aiq.observability.mixin.collector_config_mixin import CollectorConfigMixin
 
 logger = logging.getLogger(__name__)
 
 
-class PhoenixTelemetryExporter(BatchTelemetryConfigMixin, TelemetryExporterBaseConfig, name="phoenix"):
+class PhoenixTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="phoenix"):
     """A telemetry exporter to transmit traces to externally hosted phoenix service."""
 
     endpoint: str = Field(
         description="Phoenix server endpoint for trace export (e.g., 'http://localhost:6006/v1/traces'")
-    project: str = Field(description="The project name to group the telemetry traces.")
 
 
 @register_telemetry_exporter(config_type=PhoenixTelemetryExporter)

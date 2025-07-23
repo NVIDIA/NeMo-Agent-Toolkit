@@ -17,9 +17,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 
-class BatchTelemetryConfigMixin(BaseModel):
-    batch_size: int = Field(default=100, description="The batch size for the telemetry exporter.")
-    flush_interval: float = Field(default=5.0, description="The flush interval for the telemetry exporter.")
-    max_queue_size: int = Field(default=1000, description="The maximum queue size for the telemetry exporter.")
-    drop_on_overflow: bool = Field(default=False, description="Whether to drop on overflow for the telemetry exporter.")
-    shutdown_timeout: float = Field(default=10.0, description="The shutdown timeout for the telemetry exporter.")
+class CollectorConfigMixin(BaseModel):
+    """Mixin for telemetry exporters that require a project name and endpoint when exporting to a collector service."""
+    project: str = Field(description="The project name to associate the telemetry traces.")
+    endpoint: str = Field(description="The endpoint of the telemetry collector service.")
