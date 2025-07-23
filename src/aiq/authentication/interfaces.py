@@ -153,6 +153,7 @@ class AuthenticationClientBase(ABC):
         Raises:
             NotImplementedError: Must be implemented by subclasses.
         """
+        ## This method will call the frontend FlowHandlerBase `authenticate` method
         pass
 
 
@@ -173,7 +174,6 @@ class OAuthClientBase(AuthenticationClientBase, ABC):
         """
         pass
 
-    @abstractmethod
     async def authenticate(self) -> None:
         """
         Perform the authentication process for the client.
@@ -185,13 +185,14 @@ class OAuthClientBase(AuthenticationClientBase, ABC):
         Raises:
             NotImplementedError: Must be implemented by subclasses.
         """
+        ## This method will call the frontend FlowHandlerBase `authenticate` method
         pass
 
-    @abstractmethod
     async def shut_down_auth_code_flow(self):
         """
         Initiates and completes the authorization flow for OAuth clients
         """
+        ## This method will call the frontend FlowHandlerBase `shut_down_auth_code_flow` method
         pass
 
     @abstractmethod
@@ -343,6 +344,13 @@ class FlowHandlerBase(ABC):
 
         Raises:
             NotImplementedError: Must be implemented by subclasses.
+        """
+        pass
+
+    @staticmethod
+    async def shut_down_auth_code_flow(self, oauth_client: OAuthClientBase) -> None:
+        """
+        Initiates and completes the authorization flow for OAuth clients
         """
         pass
 
