@@ -31,6 +31,7 @@ from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.cli.register_workflow import register_embedder_client
 from aiq.cli.register_workflow import register_embedder_provider
 from aiq.cli.register_workflow import register_function
+from aiq.cli.register_workflow import register_its_strategy
 from aiq.cli.register_workflow import register_llm_client
 from aiq.cli.register_workflow import register_llm_provider
 from aiq.cli.register_workflow import register_memory
@@ -41,9 +42,13 @@ from aiq.data_models.config import AIQConfig
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
+from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
+from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
+from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
 from aiq.memory.models import MemoryItem
 from aiq.retriever.interface import AIQRetriever
@@ -76,6 +81,10 @@ class TMemoryConfig(MemoryBaseConfig, name="test_memory"):
 
 
 class TRetrieverProviderConfig(RetrieverBaseConfig, name="test_retriever"):
+    raise_error: bool = False
+
+
+class TestITSStrategyConfig(ITSStrategyBaseConfig, name="test_its_strategy"):
     raise_error: bool = False
 
 
@@ -173,6 +182,30 @@ async def _register():
             raise ValueError("Error")
 
         yield RetrieverProviderInfo(config=config, description="Mock retriever to test the registration process")
+
+    @register_its_strategy(config_type=TestITSStrategyConfig)
+    async def register_its(config: TestITSStrategyConfig, builder: Builder):
+
+        if config.raise_error:
+            raise ValueError("Error")
+
+        class DummyITSStrategy(StrategyBase):
+            """Very small pass-through strategy used only for testing."""
+
+            async def ainvoke(self, items=None, **kwargs):
+                # Do nothing, just return what we got
+                return items
+
+            async def build_components(self, builder: Builder) -> None:
+                pass
+
+            def supported_pipeline_types(self) -> [PipelineTypeEnum]:
+                return [PipelineTypeEnum.AGENT_EXECUTION]
+
+            def stage_type(self) -> StageTypeEnum:
+                return StageTypeEnum.SCORING
+
+        yield DummyITSStrategy(config)
 
 
 async def test_build():
@@ -564,6 +597,55 @@ async def get_retriever_config():
             builder.get_retriever_config("retriever_name_not_exist")
 
 
+async def test_add_its_strategy():
+
+    async with WorkflowBuilder() as builder:
+        # Normal case
+        await builder.add_its_strategy("its_strategy", TestITSStrategyConfig())
+
+        # Provider raises
+        with pytest.raises(ValueError):
+            await builder.add_its_strategy("its_strategy_err", TestITSStrategyConfig(raise_error=True))
+
+        # Duplicate name
+        with pytest.raises(ValueError):
+            await builder.add_its_strategy("its_strategy", TestITSStrategyConfig())
+
+
+async def test_get_its_strategy_and_config():
+
+    async with WorkflowBuilder() as builder:
+        cfg = TestITSStrategyConfig()
+        await builder.add_its_strategy("its_strategy", cfg)
+
+        strat = await builder.get_its_strategy(
+            "its_strategy",
+            pipeline_type=PipelineTypeEnum.AGENT_EXECUTION,
+            stage_type=StageTypeEnum.SCORING,
+        )
+
+        with pytest.raises(ValueError):
+            await builder.get_its_strategy(
+                "its_strategy",
+                pipeline_type=PipelineTypeEnum.PLANNING,  # Wrong pipeline type
+                stage_type=StageTypeEnum.SCORING,
+            )
+
+        assert strat.config == await builder.get_its_strategy_config(
+            "its_strategy",
+            pipeline_type=PipelineTypeEnum.AGENT_EXECUTION,
+            stage_type=StageTypeEnum.SCORING,
+        )
+
+        # Non-existent name
+        with pytest.raises(ValueError):
+            await builder.get_its_strategy(
+                "does_not_exist",
+                pipeline_type=PipelineTypeEnum.AGENT_EXECUTION,
+                stage_type=StageTypeEnum.SCORING,
+            )
+
+
 async def test_built_config():
 
     general_config = GeneralConfig(cache_dir="Something else")
@@ -573,6 +655,7 @@ async def test_built_config():
     embedder_config = TEmbedderProviderConfig()
     memory_config = TMemoryConfig()
     retriever_config = TRetrieverProviderConfig()
+    its_config = TestITSStrategyConfig()
 
     async with WorkflowBuilder(general_config=general_config) as builder:
 
@@ -588,6 +671,8 @@ async def test_built_config():
 
         await builder.add_retriever("retriever1", retriever_config)
 
+        await builder.add_its_strategy("its_strategy", its_config)
+
         workflow = builder.build()
 
         workflow_config = workflow.config
@@ -599,6 +684,7 @@ async def test_built_config():
         assert workflow_config.embedders == {"embedder1": embedder_config}
         assert workflow_config.memory == {"memory1": memory_config}
         assert workflow_config.retrievers == {"retriever1": retriever_config}
+        assert workflow_config.its_strategies == {"its_strategy": its_config}
 
 
 # Error Logging Tests

@@ -666,3 +666,79 @@ Workflow Result:
 ["To install CUDA and get started with developing applications using it, you can follow the steps outlined in the CUDA documentation. This includes verifying that you have a CUDA-capable GPU, downloading the NVIDIA CUDA Toolkit, and installing the CUDA software. After installation, you can verify that the CUDA toolkit can find and communicate correctly with the CUDA-capable hardware by compiling and running sample programs.\n\nHere's an example Python code that demonstrates how to use CUDA:\n```python\nimport numpy as np\nimport cupy as cp\n\n# Create a sample array\narr = np.array([1, 2, 3, 4, 5])\n\n# Transfer the array to the GPU\narr_gpu = cp.asarray(arr)\n\n# Perform some operations on the GPU\nresult_gpu = cp.square(arr_gpu)\n\n# Transfer the result back to the CPU\nresult_cpu = cp.asnumpy(result_gpu)\n\nprint(result_cpu)\n```\nThis code creates a sample array, transfers it to the GPU, performs some operations on the GPU, and then transfers the result back to the CPU. The output of this code will be the squared values of the original array."]
 --------------------------------------------------
 ````
+
+## Using Inference Time Scaling
+You can also use the toolkit's experimental `inference_time_scaling` feature to scale the inference time of the agent. This feature allows you to control the inference time of the agent. Particularly, in this example, we demonstrate how to enable multiple
+executions of the retrieval agent with a higher LLM temperature to encourage diversity. We then merge the outputs of the multiple runs with another LLM call to synthesize one comprehensive answer from multiple searches.
+
+An example configuration can be found in the `configs/milvus_rag_config_its.yml` file. Notably, it has a few additions to the standard configuration: 
+- An `its_strategies` section of the configuration that details which inference time scaling techniques will be used in the workflow
+- A `selection_strategy` called `llm_based_agent_output_merging` selection, that takes the output of multiple workflow runs and combines them using a single LLM call. 
+- A new `workflow` entrypoint called the `execute_score_select` function. The function executes the `augmented_fn` (the ReAct agent here) `num_iterations` times, and then passes the outputs to the selector. 
+
+To run this workflow, you can use the following command:
+```bash
+aiq run --config_file examples/simple_rag/configs/milvus_rag_config_its.yml --input "What is the difference between CUDA and MCP?"
+```
+
+You should see output that looks similar to the following: 
+```console
+.....
+Configuration Summary:
+--------------------
+Workflow Type: execute_score_select_function
+Number of Functions: 3
+Number of LLMs: 1
+Number of Embedders: 1
+Number of Memory: 0
+Number of Retrievers: 2
+Number of ITS Strategies: 1
+2025-06-30 13:33:59,629 - aiq.experimental.decorators.experimental_warning_decorator - WARNING - This function is experimental and the API may change in future releases. Function: get_its_strategy
+...
+...
+...
+[AGENT]
+Agent input: How does CUDA compare to MCP?
+Agent's thoughts: 
+Thought: Now that I have information about both CUDA and MCP, I can compare them. CUDA is a library developed by NVIDIA for parallel computing, while MCP stands for Model Context Protocol, which is an open protocol that standardizes how applications provide context to LLMs (Large Language Models).
+
+ CUDA and MCP are two different technologies with different purposes. CUDA is a parallel computing platform and programming model developed by NVIDIA, while MCP is an open protocol for providing context to Large Language Models. They are not directly comparable, but they can be used together in certain applications.
+
+Final Answer: CUDA and MCP are two different technologies with different purposes. CUDA is a parallel computing platform and programming model developed by NVIDIA, while MCP is an open protocol for providing context to Large Language Models. They are not directly comparable, but they can be used together in certain applications.
+------------------------------
+2025-06-30 13:34:15,706 - aiq.agent.react_agent.agent - INFO - 
+------------------------------
+[AGENT]
+Agent input: How does CUDA compare to MCP?
+Agent's thoughts: 
+Thought: I have been provided with information about CUDA and MCP. CUDA is a library developed by NVIDIA for parallel computing, while MCP stands for Model Context Protocol, which is an open protocol that standardizes how applications provide context to LLMs (Large Language Models). 
+
+To compare CUDA and MCP, we need to understand that they serve different purposes. CUDA is a computing platform and programming model that enables dramatic increases in computing performance by harnessing the power of the GPU. On the other hand, MCP is a protocol that enables LLMs to securely access tools and data sources.
+
+Since CUDA and MCP are fundamentally different, a direct comparison between the two may not be meaningful. However, we can say that CUDA is focused on computing and parallel processing, while MCP is focused on providing a standardized way for LLMs to access tools and data sources.
+
+Final Answer: CUDA and MCP serve different purposes and cannot be directly compared. CUDA is a computing platform and programming model for parallel computing, while MCP is a protocol for providing context to LLMs.
+------------------------------
+2025-06-30 13:34:18,083 - aiq.agent.react_agent.agent - INFO - 
+------------------------------
+[AGENT]
+Agent input: How does CUDA compare to MCP?
+Agent's thoughts: 
+Thought: I have been provided with information about CUDA and MCP. CUDA is a library developed by NVIDIA for parallel computing, while MCP stands for Model Context Protocol, which is an open protocol that standardizes how applications provide context to LLMs (Large Language Models). 
+
+To compare CUDA and MCP, we need to consider their purposes and use cases. CUDA is primarily used for parallel computing, allowing developers to harness the power of NVIDIA GPUs to perform complex computations. On the other hand, MCP is designed to provide a standardized way for applications to interact with LLMs, enabling them to access and utilize the capabilities of these models.
+
+Since I have already retrieved information about both CUDA and MCP, I can now provide a comparison between the two.
+
+Final Answer: CUDA and MCP are two different technologies with distinct purposes. CUDA is a library for parallel computing, while MCP is a protocol for providing context to LLMs. While both technologies are used in different fields, they share a common goal of enabling developers to create powerful and efficient applications. CUDA is used for compute-intensive tasks such as scientific simulations, data analytics, and machine learning, whereas MCP is used for natural language processing and other AI-related tasks. In summary, CUDA and MCP are complementary technologies that can be used together to create innovative applications, but they are not directly comparable.
+------------------------------
+2025-06-30 13:34:18,086 - aiq.experimental.inference_time_scaling.functions.execute_score_select_function - INFO - Beginning selection
+2025-06-30 13:34:20,578 - aiq.experimental.inference_time_scaling.selection.llm_based_output_merging_selector - INFO - Merged output: CUDA and MCP are two distinct technologies with different purposes and cannot be directly compared. CUDA is a parallel computing platform and programming model, primarily used for compute-intensive tasks such as scientific simulations, data analytics, and machine learning, whereas MCP is an open protocol designed for providing context to Large Language Models (LLMs), particularly for natural language processing and other AI-related tasks. While they serve different purposes, CUDA and MCP share a common goal of enabling developers to create powerful and efficient applications. They are complementary technologies that can be utilized together in certain applications to achieve innovative outcomes, although their differences in design and functionality set them apart. In essence, CUDA focuses on parallel computing and is developed by NVIDIA, whereas MCP is focused on context provision for LLMs, making them unique in their respective fields but potentially synergistic in specific use cases.
+2025-06-30 13:34:20,578 - aiq.front_ends.console.console_front_end_plugin - INFO - 
+--------------------------------------------------
+Workflow Result:
+['CUDA and MCP are two distinct technologies with different purposes and cannot be directly compared. CUDA is a parallel computing platform and programming model, primarily used for compute-intensive tasks such as scientific simulations, data analytics, and machine learning, whereas MCP is an open protocol designed for providing context to Large Language Models (LLMs), particularly for natural language processing and other AI-related tasks. While they serve different purposes, CUDA and MCP share a common goal of enabling developers to create powerful and efficient applications. They are complementary technologies that can be utilized together in certain applications to achieve innovative outcomes, although their differences in design and functionality set them apart. In essence, CUDA focuses on parallel computing and is developed by NVIDIA, whereas MCP is focused on context provision for LLMs, making them unique in their respective fields but potentially synergistic in specific use cases.']
+--------------------------------------------------
+```
+
+**Note**: The workflow was executed three times, with three different `Final Answer` sections. The selector then combines them into a single, comprehensive response.
