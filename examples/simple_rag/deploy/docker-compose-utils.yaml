@@ -28,7 +28,7 @@ services:
     container_name: attu
     hostname: attu
     environment:
-      MILVUS_URL: http://milvus:19530
+      MILVUS_URL: http://milvus:19530      
     ports:
       - "8000:3000"
 
