@@ -993,18 +993,18 @@ from aiq.observability.exporter.raw_exporter import RawExporter
 from aiq.data_models.intermediate_step import IntermediateStep
 
 class BatchingExporter(RawExporter[IntermediateStep, IntermediateStep]):
-    def __init__(self, endpoint: str, api_key: str, project: str, 
-                 batch_size: int = 100, flush_interval: float = 5.0, 
-                 max_queue_size: int = 1000, drop_on_overflow: bool = False, 
+    def __init__(self, endpoint: str, api_key: str, project: str,
+                 batch_size: int = 100, flush_interval: float = 5.0,
+                 max_queue_size: int = 1000, drop_on_overflow: bool = False,
                  shutdown_timeout: float = 10.0, **kwargs):
         super().__init__(**kwargs)
-        
+
         self.endpoint = endpoint
         self.api_key = api_key
         self.project = project
         self.session = aiohttp.ClientSession()
         self.headers = {"Authorization": f"Bearer {api_key}"}
-        
+
         # Add batching processor with callback to export_processed (same pattern as OtelSpanExporter)
         self._batching_processor = BatchingProcessor[IntermediateStep](
             batch_size=batch_size,
@@ -1018,7 +1018,7 @@ class BatchingExporter(RawExporter[IntermediateStep, IntermediateStep]):
 
     async def export_processed(self, item: IntermediateStep | list[IntermediateStep]) -> None:
         """Export single items or batches from the BatchingProcessor.
-        
+
         This method handles both regular processing and time-based batch callbacks
         from the BatchingProcessor, following the same pattern as OtelSpanExporter.
         """
@@ -1046,7 +1046,7 @@ class BatchingExporter(RawExporter[IntermediateStep, IntermediateStep]):
                 for item in items
             ]
         }
-        
+
         async with self.session.post(
             self.endpoint,
             json=payload,
@@ -1298,7 +1298,7 @@ logging.getLogger("aiq.observability").setLevel(logging.DEBUG)
 **Q: How do I handle authentication?**
 
 - Use environment variables for credentials: `api_key: str = Field(default="", description="API key from MYSERVICE_API_KEY")
-- Environment variable can be configured directly in the workflow YAML configuration flie.
+- Environment variable can be configured directly in the workflow YAML configuration file.
 - Check environment variables in registration: `api_key = config.api_key or os.environ.get("MYSERVICE_API_KEY")`
 
 **Q: My exporter isn't receiving events. What's wrong?**
