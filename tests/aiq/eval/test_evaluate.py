@@ -38,12 +38,14 @@ from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.data_models.intermediate_step import StreamEventData
+from aiq.data_models.invocation_node import InvocationNode
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
 from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.evaluator.evaluator_model import EvalOutputItem
+from aiq.profiler.data_models import ProfilerResults
 from aiq.runtime.session import AIQSessionManager
 
 # pylint: disable=redefined-outer-name
@@ -95,15 +97,21 @@ def generated_answer():
 @pytest.fixture
 def tool_end_intermediate_step():
     """Fixture to create a valid TOOL_END IntermediateStep."""
-    return IntermediateStep(payload=IntermediateStepPayload(
-        event_type=IntermediateStepType.TOOL_END, data=StreamEventData(input="Tool input", output="Tool output")))
+    return IntermediateStep(parent_id="root",
+                            function_ancestry=InvocationNode(function_name="tool_test", function_id="test-tool-end"),
+                            payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END,
+                                                            data=StreamEventData(input="Tool input",
+                                                                                 output="Tool output")))
 
 
 @pytest.fixture
 def llm_end_intermediate_step(generated_answer):
     """Fixture to create a valid LLM_END IntermediateStep."""
-    return IntermediateStep(payload=IntermediateStepPayload(
-        event_type=IntermediateStepType.LLM_END, data=StreamEventData(input="User input", output=generated_answer)))
+    return IntermediateStep(parent_id="root",
+                            function_ancestry=InvocationNode(function_name="llm_test", function_id="test-llm-end"),
+                            payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
+                                                            data=StreamEventData(input="User input",
+                                                                                 output=generated_answer)))
 
 
 @pytest.fixture
@@ -414,13 +422,16 @@ def test_write_output(evaluation_run, default_eval_config, eval_input, eval_outp
     # Evaluator results must be written to {evaluator_name}_output.json
     evaluator_output_path = output_dir / f"{evaluator_name}_output.json"
 
+    # Create a mock ProfilerResults object
+    mock_profiler_results = ProfilerResults()
+
     # Patch file operations and logging. It is important to keep logs frozen to match user expectations.
     with patch("builtins.open", mock_open()) as mock_file, \
          patch("pathlib.Path.mkdir") as mock_mkdir, \
          patch("aiq.eval.evaluate.logger.info") as mock_logger:
 
         # Run the actual function
-        evaluation_run.write_output(mock_dataset_handler)
+        evaluation_run.write_output(mock_dataset_handler, mock_profiler_results)
 
         # Ensure directories are created
         mock_mkdir.assert_called()
@@ -448,13 +459,15 @@ def test_write_output_handles_none_output(evaluation_run, eval_input):
     # Mock dataset handler
     mock_dataset_handler = MagicMock()
     mock_dataset_handler.publish_eval_input.return_value = "[]"
+    # Create a mock ProfilerResults object
+    mock_profiler_results = ProfilerResults()
     # Patch file operations and logging
     with patch("builtins.open", mock_open()), \
          patch("pathlib.Path.mkdir"), \
          patch("aiq.eval.evaluate.logger.info"):
         # Should not raise AttributeError
         try:
-            evaluation_run.write_output(mock_dataset_handler)
+            evaluation_run.write_output(mock_dataset_handler, mock_profiler_results)
         except AttributeError:
             pytest.fail("write_output should not access .output without a None check")
 
@@ -503,7 +516,8 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
          patch.object(evaluation_run, "run_workflow_local",
                       wraps=evaluation_run.run_workflow_local) as mock_run_workflow, \
          patch.object(evaluation_run, "run_evaluators", AsyncMock()) as mock_run_evaluators, \
-         patch.object(evaluation_run, "profile_workflow", AsyncMock()) as mock_profile_workflow, \
+         patch.object(evaluation_run, "profile_workflow",
+                      AsyncMock(return_value=ProfilerResults())) as mock_profile_workflow, \
          patch.object(evaluation_run, "write_output", MagicMock()) as mock_write_output:
 
         # Run the function
@@ -528,8 +542,8 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
         # Ensure profiling is executed
         mock_profile_workflow.assert_called_once()
 
-        # Ensure output is written
-        mock_write_output.assert_called_once_with(mock_dataset_handler)
+        # Ensure output is written with both dataset_handler and profiler_results
+        mock_write_output.assert_called_once_with(mock_dataset_handler, mock_profile_workflow.return_value)
 
         # Ensure custom scripts are run and directory is uploaded
         mock_uploader.run_custom_scripts.assert_called_once()

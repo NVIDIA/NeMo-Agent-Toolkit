@@ -133,3 +133,14 @@ class RetrieverRef(ComponentRef):
     @override
     def component_group(self):
         return ComponentGroup.RETRIEVERS
+
+
+class ITSStrategyRef(ComponentRef):
+    """
+    A reference to an ITS strategy in an AgentIQ configuration object.
+    """
+
+    @property
+    @override
+    def component_group(self):
+        return ComponentGroup.ITS_STRATEGIES

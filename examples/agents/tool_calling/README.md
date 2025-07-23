@@ -26,12 +26,28 @@ A configurable Tool Calling Agent. This agent leverages the AIQ toolkit plugin s
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AIQ toolkit library agent and tools.
-- **Tool Calling / Function calling Agent:** Leverages tool / function input schema to appropriately route to the correct tool
-- **Custom Plugin System:** Developers can bring in new tools using plugins.
-- **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
-- **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
-- **Ease of Use:** Simplifies developer experience and deployment.
+- **Tool Calling Agent Framework:** Demonstrates a `tool_calling_agent` that leverages tool/function input schemas to make precise tool selections and structured function calls.
+- **Wikipedia Search Integration:** Shows integration with the `wikipedia_search` tool for retrieving factual information from Wikipedia sources.
+- **Code Generation Capabilities:** Includes the `code_generation_tool` for generating code examples and technical content.
+- **Schema-Driven Tool Selection:** Uses structured input schemas to appropriately route to the correct tool, providing more deterministic tool calling compared to name/description-based routing.
+- **Dual-Node Graph Architecture:** Implements the same operational pattern as other AIQ agents, alternating between reasoning and tool execution while using schema-based tool selection.
+
+## Graph Structure
+
+The Tool Calling agent uses the same dual-node graph architecture as other agents in the AIQ toolkit, alternating between reasoning and tool execution. The following diagram illustrates the agent's workflow:
+
+<div align="center">
+<img src="../../../docs/source/_static/dual_node_agent.png" alt="Tool Calling Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
+</div>
+
+**Workflow Overview:**
+- **Start**: The agent begins processing with user input
+- **Agent Node**: Leverages tool/function input schemas to decide which tool to call or provide a final answer
+- **Conditional Edge**: Routes the flow based on the agent's decision
+- **Tool Node**: Executes the selected tool using structured input schemas
+- **Cycle**: The agent can loop between reasoning and tool execution until it reaches a final answer
+
+This architecture enables the Tool Calling agent to make precise tool selections based on input schemas while maintaining the same operational pattern as other agents in the toolkit.
 
 ## Installation and Setup
 
@@ -71,13 +87,13 @@ For more details, refer to the [ReAct Agent documentation](../../../docs/source/
 Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run  --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
+aiq run --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
 ```
 
 **Expected Output**
 
 ```console
-$ aiq run  --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
+$ aiq run --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
 2025-04-23 15:03:46,312 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (499.885559 ms). Ensure all imports are inside your registered functions.
 2025-04-23 15:03:46,573 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/agents/tool_calling/configs/config.yml'
 2025-04-23 15:03:46,581 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.

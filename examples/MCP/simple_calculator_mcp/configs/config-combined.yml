@@ -1,0 +1,72 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This config file demonstrates how to use multiple MCP tools from different servers
+# in a single workflow. The workflow acts as an MCP client and connects to:
+# - Calculator tools from an MCP server on port 9901 (toolkit-deployed)
+# - Time tool from an external containerized MCP server on port 8080
+
+general:
+  use_uvloop: true
+
+functions:
+  # These tools are from the MCP server deployed by the toolkit
+  calculator_multiply:
+    _type: mcp_tool_wrapper
+    url: "http://localhost:9901/sse"
+    mcp_tool_name: calculator_multiply
+    description: "Returns the product of two numbers"
+  calculator_inequality:
+    _type: mcp_tool_wrapper
+    url: "http://localhost:9901/sse"
+    mcp_tool_name: calculator_inequality
+    description: "Returns the inequality of two numbers"
+  calculator_divide:
+    _type: mcp_tool_wrapper
+    url: "http://localhost:9901/sse"
+    mcp_tool_name: calculator_divide
+    description: "Returns the quotient of two numbers"
+  calculator_subtract:
+    _type: mcp_tool_wrapper
+    url: "http://localhost:9901/sse"
+    mcp_tool_name: calculator_subtract
+    description: "Returns the difference of two numbers"
+  # This tool is from the containerized MCP server not deployed by the toolkit
+  mcp_time_tool:
+    _type: mcp_tool_wrapper
+    url: "http://localhost:8080/sse"
+    mcp_tool_name: get_current_time
+    description: "Returns the current date and time from the MCP server"
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+    max_tokens: 1024
+  openai_llm:
+    _type: openai
+    model_name: gpt-3.5-turbo
+    max_tokens: 2000
+
+workflow:
+  _type: react_agent
+  tool_names:
+    - calculator_multiply
+    - calculator_inequality
+    - calculator_divide
+    - calculator_subtract
+    - mcp_time_tool
+  llm_name: nim_llm

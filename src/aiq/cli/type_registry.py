@@ -52,6 +52,8 @@ from aiq.data_models.front_end import FrontEndBaseConfig
 from aiq.data_models.front_end import FrontEndConfigT
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.function import FunctionConfigT
+from aiq.data_models.its_strategy import ITSStrategyBaseConfig
+from aiq.data_models.its_strategy import ITSStrategyBaseConfigT
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.llm import LLMBaseConfigT
 from aiq.data_models.logging import LoggingBaseConfig
@@ -64,6 +66,7 @@ from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfigT
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterConfigT
+from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
 from aiq.registry_handlers.registry_handler_base import AbstractRegistryHandler
 from aiq.utils.optional_imports import TelemetryOptionalImportError
@@ -94,6 +97,7 @@ RetrieverProviderBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], Asyn
 RetrieverClientBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], AsyncIterator[typing.Any]]
 RegistryHandlerBuildCallableT = Callable[[RegistryHandlerBaseConfigT], AsyncIterator[AbstractRegistryHandler]]
 ToolWrapperBuildCallableT = Callable[[str, Function, Builder], typing.Any]
+ITSStrategyBuildCallableT = Callable[[ITSStrategyBaseConfigT, Builder], AsyncIterator[StrategyBase]]
 
 TeleExporterRegisteredCallableT = Callable[[TelemetryExporterConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 LoggingMethodRegisteredCallableT = Callable[[LoggingMethodConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
@@ -112,6 +116,7 @@ RetrieverProviderRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder],
 RetrieverClientRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 RegistryHandlerRegisteredCallableT = Callable[[RegistryHandlerBaseConfigT],
                                               AbstractAsyncContextManager[AbstractRegistryHandler]]
+ITSStrategyRegisterCallableT = Callable[[ITSStrategyBaseConfigT, Builder], AbstractAsyncContextManager[StrategyBase]]
 
 
 class RegisteredInfo(BaseModel, typing.Generic[TypedBaseModelT]):
@@ -226,6 +231,14 @@ class RegisteredMemoryInfo(RegisteredInfo[MemoryBaseConfig]):
     build_fn: MemoryRegisteredCallableT = Field(repr=False)
 
 
+class RegisteredITSStrategyInfo(RegisteredInfo[ITSStrategyBaseConfig]):
+    """
+    Represents a registered Inference Time Scaling (ITS) strategy.
+    """
+
+    build_fn: ITSStrategyRegisterCallableT = Field(repr=False)
+
+
 class RegisteredToolWrapper(BaseModel):
     """
     Represents a registered tool wrapper. Tool wrappers are used to wrap the functions in a particular LLM framework.
@@ -316,6 +329,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         # Tool Wrappers
         self._registered_tool_wrappers: dict[str, RegisteredToolWrapper] = {}
+
+        # ITS Strategies
+        self._registered_its_strategies: dict[type[ITSStrategyBaseConfig], RegisteredITSStrategyInfo] = {}
 
         # Packages
         self._registered_packages: dict[str, RegisteredPackage] = {}
@@ -647,6 +663,25 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
             raise KeyError(f"Could not find a registered tool wrapper for LLM framework `{llm_framework}`. "
                            f"Registered LLM frameworks: {set(self._registered_tool_wrappers.keys())}") from err
 
+    def register_its_strategy(self, info: RegisteredITSStrategyInfo):
+        if (info.config_type in self._registered_its_strategies):
+            raise ValueError(
+                f"An ITS strategy with the same config type `{info.config_type}` has already been registered.")
+
+        self._registered_its_strategies[info.config_type] = info
+
+        self._registration_changed()
+
+    def get_its_strategy(self, config_type: type[ITSStrategyBaseConfig]) -> RegisteredITSStrategyInfo:
+        try:
+            strategy = self._registered_its_strategies[config_type]
+        except Exception as e:
+            raise KeyError(f"Could not find a registered ITS strategy for config `{config_type}`. ") from e
+        return strategy
+
+    def get_registered_its_strategies(self) -> list[RegisteredInfo[ITSStrategyBaseConfig]]:
+        return list(self._registered_its_strategies.values())
+
     def register_registry_handler(self, info: RegisteredRegistryHandlerInfo):
 
         if (info.config_type in self._registered_memory_infos):
@@ -738,6 +773,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         if component_type == AIQComponentEnum.PACKAGE:
             return self._registered_packages
 
+        if component_type == AIQComponentEnum.ITS_STRATEGY:
+            return self._registered_its_strategies
+
         raise ValueError(f"Supplied an unsupported component type {component_type}")
 
     def get_registered_types_by_component_type(  # pylint: disable=R0911
@@ -786,6 +824,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         if component_type == AIQComponentEnum.PACKAGE:
             return list(self._registered_packages)
+
+        if component_type == AIQComponentEnum.ITS_STRATEGY:
+            return [i.static_type() for i in self._registered_its_strategies]
 
         raise ValueError(f"Supplied an unsupported component type {component_type}")
 
@@ -847,6 +888,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         if issubclass(cls, LoggingBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_logging_method())
+
+        if issubclass(cls, ITSStrategyBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_its_strategies())
 
         raise ValueError(f"Supplied an unsupported component type {cls}")
 

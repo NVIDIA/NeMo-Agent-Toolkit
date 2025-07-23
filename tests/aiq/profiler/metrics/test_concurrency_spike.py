@@ -20,6 +20,7 @@ from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.data_models.intermediate_step import StreamEventData
+from aiq.data_models.invocation_node import InvocationNode
 from aiq.profiler.inference_optimization.experimental.concurrency_spike_analysis import concurrency_spike_analysis
 from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
@@ -51,37 +52,49 @@ def minimal_valid_df_fixture():
     # df = pd.DataFrame(data)
     # Create list of events that will make the above dataframe
     events = [[
-        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_START,
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="llama-3", function_id="test-u1"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_START,
                                                          event_timestamp=1.0,
                                                          framework=LLMFrameworkEnum.LANGCHAIN,
                                                          name="llama-3",
                                                          data=StreamEventData(input="Hello world!"),
                                                          UUID="u1")),
-        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START,
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="weather-search", function_id="test-u2"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START,
                                                          event_timestamp=1.5,
                                                          framework=LLMFrameworkEnum.LANGCHAIN,
                                                          name="weather-search",
                                                          data=StreamEventData(input="Hello world!"),
                                                          UUID="u2")),
-        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END,
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="weather-search", function_id="test-u2"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END,
                                                          event_timestamp=1.6,
                                                          framework=LLMFrameworkEnum.LANGCHAIN,
                                                          name="weather-search",
                                                          data=StreamEventData(output="Hello world!"),
                                                          UUID="u2")),
-        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="llama-3", function_id="test-u1"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_END,
                                                          event_timestamp=2.0,
                                                          framework=LLMFrameworkEnum.LANGCHAIN,
                                                          name="llama-3",
                                                          data=StreamEventData(output="Hello world!"),
                                                          UUID="u1")),
-        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START,
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="google-search", function_id="test-u3"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START,
                                                          event_timestamp=10.0,
                                                          framework=LLMFrameworkEnum.LANGCHAIN,
                                                          name="google-search",
                                                          data=StreamEventData(input="Hello world!"),
                                                          UUID="u3")),
-        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END,
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="google-search", function_id="test-u3"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END,
                                                          event_timestamp=11.0,
                                                          framework=LLMFrameworkEnum.LANGCHAIN,
                                                          name="google-search",

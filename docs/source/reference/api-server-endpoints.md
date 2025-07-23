@@ -15,13 +15,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA Agent Intelligence Toolkit API Server Endpoints
+# NVIDIA NeMo Agent Toolkit API Server Endpoints
 
-There are currently four workflow transactions that can be initiated using HTTP or WebSocket when the AIQ toolkit server is running: `generate non-streaming`,`generate streaming`, `chat non-streaming`, and `chat streaming`. The following are types of interfaces you can use to interact with your running workflows.
+There are currently four workflow transactions that can be initiated using HTTP or WebSocket when the NeMo Agent toolkit server is running: `generate non-streaming`,`generate streaming`, `chat non-streaming`, and `chat streaming`. The following are types of interfaces you can use to interact with your running workflows.
   - **Generate Interface:** Uses the transaction schema defined by your workflow. The interface documentation is accessible
     using Swagger while the server is running [`http://localhost:8000/docs`](http://localhost:8000/docs).
   - **Chat Interface:** [OpenAI API Documentation](https://platform.openai.com/docs/guides/text?api-mode=chat) provides
-    details on chat formats compatible with the AIQ toolkit server.
+    details on chat formats compatible with the NeMo Agent toolkit server.
 
 
 ## Generate Non-Streaming Transaction
@@ -267,11 +267,11 @@ result back to the client. The transaction schema is defined by the workflow.
   ```
 
 ## Evaluation Endpoint
-You can also evaluate workflows via the AIQ toolkit `evaluate` endpoint. For more information, refer to the [AIQ toolkit Evaluation Endpoint](../reference/evaluate-api.md) documentation.
+You can also evaluate workflows via the NeMo Agent toolkit `evaluate` endpoint. For more information, refer to the [NeMo Agent toolkit Evaluation Endpoint](../reference/evaluate-api.md) documentation.
 
 ## Choosing between Streaming and Non-Streaming
 Use streaming if you need real-time updates or live communication where users expect immediate feedback. Use non-streaming if your workflow responds with simple updates and less feedback is needed.
 
-## AIQ Toolkit API Server Interaction Guide
+## NeMo Agent Toolkit API Server Interaction Guide
 A custom user interface can communicate with the API server using both HTTP requests and WebSocket connections.
 For details on proper WebSocket messaging integration, refer to the [WebSocket Messaging Interface](../reference/websockets.md) documentation.

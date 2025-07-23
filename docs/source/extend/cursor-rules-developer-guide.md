@@ -17,13 +17,13 @@ limitations under the License.
 
 # Cursor Rules Developer Guide
 
-This guide explains how to organize, create, and maintain Cursor rules within the AIQ Toolkit project.
+This guide explains how to organize, create, and maintain Cursor rules within the NeMo Agent toolkit project.
 
 ## Overview
 
 Cursor Rules allow you to provide system-level guidance to AI assistants, functioning as persistent context that helps them understand your project and preferences. According to the [official Cursor documentation](https://docs.cursor.com/context/rules), rules solve the problem that "Large language models do not retain memory between completions" by providing persistent, reusable context at the prompt level.
 
-In the AIQ Toolkit project, Cursor rules serve as specialized documentation files that extract information from project documentation and convert it into system prompts for AI agents. They help AI assistants understand:
+In the NeMo Agent toolkit project, Cursor rules serve as specialized documentation files that extract information from project documentation and convert it into system prompts for AI agents. They help AI assistants understand:
 
 * Project-specific patterns and conventions
 * Configuration requirements for different components
@@ -34,7 +34,7 @@ When a rule is applied, its contents are included at the start of the model cont
 
 ## Rule Organization Structure
 
-The AIQ Toolkit uses a hierarchical structure for organizing Cursor rules under `.cursor/rules/`:
+The NeMo Agent toolkit uses a hierarchical structure for organizing Cursor rules under `.cursor/rules/`:
 
 ```
 .cursor/rules/
@@ -145,8 +145,8 @@ Each subdirectory focuses on a specific area of the toolkit:
 
 ### Writing Effective Agent Requested Rule Descriptions
 
-   For **Agent Requested** rules, the description is crucial as it helps the AI determine when to apply the rule. Based on existing AIQ Toolkit rules, follow these patterns:
+   For **Agent Requested** rules, the description is crucial as it helps the AI determine when to apply the rule. Based on existing NeMo Agent toolkit rules, follow these patterns:
 
-   * `"Follow these rules when the user's request involves integrating or selecting ReAct, Tool-Calling, Reasoning, or ReWOO agents within AIQ workflows"`
-   * `"Follow these rules when the user's request involves creating, reinstalling, or deleting AIQ workflows"`
-   * `"Follow these rules when the user's request involves running, serving, or executing AIQ workflows"`
+   * `"Follow these rules when the user's request involves integrating or selecting ReAct, Tool-Calling, Reasoning, or ReWOO agents within NeMo Agent workflows"`
+   * `"Follow these rules when the user's request involves creating, reinstalling, or deleting NeMo Agent workflows"`
+   * `"Follow these rules when the user's request involves running, serving, or executing NeMo Agent workflows"`

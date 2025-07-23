@@ -21,12 +21,28 @@ A configurable ReAct agent. This agent leverages the AIQ toolkit plugin system a
 
 ## Key Features
 
-- **Pre-built Tools:** Leverages core AIQ toolkit library agent and tools.
-- **ReAct agent:** Performs reasoning between tool call; utilizes tool names and descriptions to appropriately route to the correct tool
-- **Custom Plugin System:** Developers can bring in new tools using plugins.
-- **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
-- **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
-- **Ease of Use:** Simplifies developer experience and deployment.
+- **ReAct Agent Framework:** Demonstrates a `react_agent` that performs step-by-step reasoning between tool calls, utilizing tool names and descriptions to route appropriately to the correct tool.
+- **Wikipedia Search Integration:** Shows integration with the `wikipedia_search` tool for retrieving factual information from Wikipedia sources.
+- **Code Generation Capabilities:** Includes the `code_generation_tool` for generating code examples and technical content.
+- **Dual-Node Graph Architecture:** Implements the characteristic ReAct pattern that alternates between reasoning (Agent Node) and tool execution (Tool Node) until reaching a final answer.
+- **YAML-based Agent Configuration:** Fully configurable via YAML, allowing easy customization of tools, prompts, and agent behavior for different use cases.
+
+## Graph Structure
+
+The ReAct agent uses a dual-node graph architecture that alternates between reasoning and tool execution. The following diagram illustrates the agent's workflow:
+
+<div align="center">
+<img src="../../../docs/source/_static/dual_node_agent.png" alt="ReAct Agent Graph Structure" width="400" style="max-width: 100%; height: auto;">
+</div>
+
+**Workflow Overview:**
+- **Start**: The agent begins processing with user input
+- **Agent Node**: Performs reasoning and decides whether to use a tool or provide a final answer
+- **Conditional Edge**: Routes the flow based on the agent's decision
+- **Tool Node**: Executes the selected tool when needed
+- **Cycle**: The agent can loop between reasoning and tool execution until it reaches a final answer
+
+This architecture allows the ReAct agent to think step-by-step, use tools when necessary, and provide well-reasoned responses based on the available information.
 
 ## Installation and Setup
 
@@ -65,7 +81,7 @@ For more details, refer to the [ReAct agent documentation](../../../docs/source/
 Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run  --config_file=examples/agents/react/configs/config.yml --input "who was Djikstra?"
+aiq run --config_file=examples/agents/react/configs/config.yml --input "who was Djikstra?"
 ```
 
 **Expected Output**

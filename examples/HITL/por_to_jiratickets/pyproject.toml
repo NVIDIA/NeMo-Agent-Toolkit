@@ -1,0 +1,22 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+root = "../../.."
+
+[project]
+name = "aiq_por_to_jiratickets"
+dynamic = ["version"]
+dependencies = [
+  "aiqtoolkit[langchain]~=1.2",
+]
+requires-python = ">=3.11,<3.13"
+description = "Custom AIQ toolkit Workflow"
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+aiqtoolkit = { path = "../../..", editable = true }
+
+[project.entry-points.'aiq.components']
+aiq_por_to_jiratickets = "aiq_por_to_jiratickets.register"

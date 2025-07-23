@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
     """
-    Function which connects to a Model Context Protocol (MCP) server and wraps the selected tool as an AIQ Toolkit
+    Function which connects to a Model Context Protocol (MCP) server and wraps the selected tool as a NeMo Agent toolkit
     function.
     """
     # Add your custom configuration parameters here
@@ -75,7 +75,8 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=
                 return await tool.acall(args)
 
             _ = tool.input_schema.model_validate(kwargs)
-            return await tool.acall(kwargs)
+            filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None}
+            return await tool.acall(filtered_kwargs)
         except Exception as e:
             if config.return_exception:
                 if tool_input:
