@@ -25,7 +25,7 @@ The Code Execution Sandbox provides:
 - **Secure code execution** in isolated Docker containers
 - **Comprehensive error handling** with detailed stdout/stderr capture
 - **Multiple input formats** including raw code, dictionary format, and markdown
-- **Dependency management** with pre-installed libraries (numpy, pandas, plotly, etc.)
+- **Dependency management** with pre-installed libraries
 - **Flexible configuration** with customizable timeouts and output limits
 - **Robust debugging** with extensive logging and error reporting
 
@@ -126,15 +126,6 @@ The sandbox returns JSON responses with the following structure:
   "stderr": "Standard error content"
 }
 ```
-
-### Available Libraries
-
-The sandbox comes pre-installed with:
-- **numpy** - Numerical computing
-- **pandas** - Data manipulation and analysis
-- **scipy** - Scientific computing
-- **ipython** - Enhanced interactive Python
-- **plotly** - Interactive visualizations
 
 ## Configuration Options
 
