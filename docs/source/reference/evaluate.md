@@ -25,7 +25,7 @@ NeMo Agent toolkit provides a set of evaluators to run and evaluate the workflow
 
 Example:
 ```bash
-aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml
+aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml
 ```
 
 ## Using Datasets
@@ -43,7 +43,7 @@ eval:
   general:
     dataset:
       _type: json
-      file_path: examples/basic/functions/simple/data/langsmith.json
+      file_path: examples/getting_started/simple_web_query/data/langsmith.json
 ```
 
 ### Dataset Format
@@ -81,7 +81,7 @@ eval:
   general:
     dataset:
       _type: json
-      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
+      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true
@@ -104,7 +104,7 @@ and `sympy__sympy-21055`. The evaluation iteratively develops and debugs the wor
 eval:
     dataset:
       _type: json
-      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
+      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
       id_key: instance_id
       structure:
         disable: true
@@ -122,7 +122,7 @@ You can also skip entries from the dataset. Here is an example configuration to 
 eval:
     dataset:
       _type: json
-      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
+      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
       id_key: instance_id
       structure:
         disable: true
@@ -198,7 +198,7 @@ eval:
   general:
     dataset:
       _type: json
-      file_path: examples/intermediate/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
+      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
       id_key: instance_id
       structure: # For swe-bench the entire row is the input
         disable: true
@@ -270,7 +270,7 @@ Note: In your evaluation dataset, make sure that the `answer` field is a descrip
 
 **Sample Usage:**
 ```bash
-aiq eval --config_file=examples/basic/functions/simple_calculator/configs/config-tunable-rag-eval.yml
+aiq eval --config_file=examples/getting_started/simple_web_query/configs/config-tunable-rag-eval.yml
 ```
 
 ## Adding Custom Evaluators
@@ -280,7 +280,7 @@ You can add custom evaluators to evaluate the workflow output. To add a custom e
 ## Running multiple repetitions
 You can run multiple repetitions of the evaluation by running a command line option `--reps`. For example, to run the evaluation 5 times, run the following command:
 ```bash
-aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml --reps=5
+aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml --reps=5
 ```
 This will allow you to get an average score across multiple runs and analyze the variation in the generated outputs.
 
@@ -299,33 +299,33 @@ You can then re-run evaluation on that output file along with `--skip_completed_
 
 Pass-1:
 ```
-aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml
+aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml
 ```
 This pass results in workflow interrupted warning. You can then do another pass.
 
 Pass-2:
 ```bash
-cp .tmp/aiq/examples/basic/functions/simple/workflow_output.json .tmp/simple_workflow_output.json
-aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml --skip_completed_entries --dataset=.tmp/simple_workflow_output.json
+cp .tmp/aiq/examples/getting_started/simple_web_query/workflow_output.json .tmp/simple_workflow_output.json
+aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml --skip_completed_entries --dataset=.tmp/simple_workflow_output.json
 ```
 
 ## Running evaluation offline
 You can evaluate a dataset with previously generated answers via the `--skip_workflow` option. In this case the dataset has both the expected `answer` and the `generated_answer`.
 ```bash
-cp .tmp/aiq/examples/basic/functions/simple/workflow_output.json .tmp/simple_workflow_output.json
-aiq eval --config_file=examples/basic/functions/simple/configs/eval_config.yml --skip_workflow --dataset=.tmp/simple_workflow_output.json
+cp .tmp/aiq/examples/getting_started/simple_web_query/workflow_output.json .tmp/simple_workflow_output.json
+aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml --skip_workflow --dataset=.tmp/simple_workflow_output.json
 ```
-This assumes that the workflow output was previously generated and stored in `.tmp/aiq/examples/basic/functions/simple/workflow_output.json`
+This assumes that the workflow output was previously generated and stored in `.tmp/aiq/examples/getting_started/simple_web_query/workflow_output.json`
 
 ## Running the workflow over a dataset without evaluation
 You can do this by running `aiq eval` with a workflow configuration file that includes an `eval` section with no `evaluators`.
 ```yaml
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/basic/functions/simple/
+    output_dir: ./.tmp/aiq/examples/getting_started/simple_web_query/
     dataset:
       _type: json
-      file_path: examples/basic/functions/simple/data/langsmith.json
+      file_path: examples/getting_started/simple_web_query/data/langsmith.json
 ```
 
 ## Evaluation output
@@ -333,7 +333,7 @@ The output of the workflow is stored as `workflow_output.json` in the `output_di
 ```yaml
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/basic/functions/simple/
+    output_dir: ./.tmp/aiq/examples/getting_started/simple_web_query/
 ```
 Here is a sample workflow output snipped generated by running evaluation on the `simple` example workflow -
 ```
@@ -385,7 +385,7 @@ The output of the evaluators are stored in distinct files in the same `output_di
 The workflow_output.json file contains the intermediate steps for each entry in the dataset. The intermediate steps are filtered using the `eval.general.output.workflow_output_step_filter` parameter in the `config.yml` file. The default value for the filter is `[LLM_END, TOOL_END]`. You can customize the filter by providing a list of intermediate step types to include in the output file.
 
 **Example:**
-`examples/basic/functions/simple/configs/eval_config.yml` can be modified to include the intermediate steps in the output by adding the following configuration:
+`examples/getting_started/simple_web_query/configs/eval_config.yml` can be modified to include the intermediate steps in the output by adding the following configuration:
 ```yaml
 eval:
   general:
@@ -408,7 +408,7 @@ eval:
       dir: ./.tmp/aiq/examples/simple_output/
       custom_scripts:
         convert_workflow_to_csv:
-          script: examples/basic/functions/simple/src/aiq_simple/scripts/workflow_to_csv.py
+          script: examples/getting_started/simple_web_query/src/aiq_simple_web_query/scripts/workflow_to_csv.py
           kwargs:
             # The input and output are relative to the output directory
             input: workflow_output.json
@@ -448,7 +448,7 @@ eval:
 ```
 
 When `append_job_id_to_output_dir` is set to `true`, a unique job ID (`job_{UUID}`) is automatically generated for each evaluation run and appended to the output directory path. This results in:
-- Local output path: `./.tmp/aiq/examples/basic/functions/simple/jobs/job_{unique-job-id}/`
+- Local output path: `./.tmp/aiq/examples/getting_started/simple_web_query/jobs/job_{unique-job-id}/`
 - Remote output path (if S3 is configured): `output/jobs/job_{unique-job-id}/`
 
 The `cleanup` option is used to control the cleanup of the output directory. If `cleanup` is set to `true`, the entire output directory and all job `sub-directories` are deleted at the beginning of the evaluation. Therefore, `cleanup` must be set to `false` if you want to preserve the output directory and job `sub-directories`.

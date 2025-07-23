@@ -81,6 +81,9 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
     yield ChatOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
 ```
 
+The `wrapper_type` parameter in the decorator specifies the LLM framework that the plugin is compatible with. This instruments the plugin with the appropriate telemetry hooks to enable observability, evaluation, and profiling. 
+The `wrapper_type` argument can also be used with the library's `Builder` class to build plugins in a framework-agnostic way. This allows the library to use the same plugin across different frameworks without needing to change the code.
+
 ### Entry Point
 
 Determining which plugins are available in a given environment is done through the use of [python entry points](https://packaging.python.org/en/latest/specifications/entry-points/). In NeMo Agent toolkit, we scan the python environment for entry points which have the name `aiqtoolkit.components`. The value of the entry point is a python module that will be imported when the entry point is loaded.

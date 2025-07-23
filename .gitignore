@@ -212,8 +212,8 @@ tags
 
 # Vector db files
 deploy/compose/volumes
-examples/simple_rag/deploy/volumes
-examples/rag/compose/volumes
+examples/RAG/simple_rag/deploy/volumes
+examples/RAG/compose/volumes
 
 # Mac Metadata
 **/*.DS_Store
