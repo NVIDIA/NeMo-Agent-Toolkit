@@ -629,7 +629,7 @@ async def test_langchain_handler_tool_execution(reactive_stream: Subject):
     tool_name = "TestSearchTool"
     run_id = uuid4()
 
-    # Create structured input data (this is what the PR aims to preserve)
+    # Create structured input data
     structured_inputs = {
         "query": "test search query",
         "max_results": 5,
@@ -680,7 +680,6 @@ async def test_langchain_handler_tool_execution(reactive_stream: Subject):
     assert tool_end_event.framework == LLMFrameworkEnum.LANGCHAIN
 
     # Verify that structured inputs are preserved in TOOL_END event
-    # This is the key functionality being tested from the PR
     assert tool_end_event.metadata.tool_inputs == structured_inputs
     assert tool_end_event.metadata.tool_outputs == tool_output
     assert tool_end_event.data.input == structured_inputs
