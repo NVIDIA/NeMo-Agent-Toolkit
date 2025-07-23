@@ -575,7 +575,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         self._object_stores[name] = ConfiguredObjectStore(config=config, instance=info_obj)
 
-        return info_obj
+        return info_obj.instance
 
     @override
     async def get_object_store_client(self, object_store_name: str | ObjectStoreRef) -> ObjectStore:
