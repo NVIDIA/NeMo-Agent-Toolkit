@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+from unittest.mock import MagicMock
+
 import pytest
 from openai import BaseModel
 from pydantic import ConfigDict
@@ -34,6 +37,7 @@ from aiq.cli.register_workflow import register_memory
 from aiq.cli.register_workflow import register_retriever_client
 from aiq.cli.register_workflow import register_retriever_provider
 from aiq.cli.register_workflow import register_tool_wrapper
+from aiq.data_models.config import AIQConfig
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
@@ -73,6 +77,10 @@ class TMemoryConfig(MemoryBaseConfig, name="test_memory"):
 
 class TRetrieverProviderConfig(RetrieverBaseConfig, name="test_retriever"):
     raise_error: bool = False
+
+
+class FailingFunctionConfig(FunctionBaseConfig, name="failing_function"):
+    pass
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -116,6 +124,12 @@ async def _register():
 
         yield DerivedFunction(config)
 
+    @register_function(config_type=FailingFunctionConfig)
+    async def register_failing_function(config: FailingFunctionConfig, b: Builder):
+        # This function always raises an exception during initialization
+        raise ValueError("Function initialization failed")
+        yield  # This line will never be reached, but needed for the AsyncGenerator type
+
     @register_llm_provider(config_type=TLLMProviderConfig)
     async def register4(config: TLLMProviderConfig, b: Builder):
 
@@ -125,7 +139,7 @@ async def _register():
         yield LLMProviderInfo(config=config, description="A test client.")
 
     @register_embedder_provider(config_type=TEmbedderProviderConfig)
-    async def registe5(config: TEmbedderProviderConfig, b: Builder):
+    async def register5(config: TEmbedderProviderConfig, b: Builder):
 
         if (config.raise_error):
             raise ValueError("Error")
@@ -585,3 +599,280 @@ async def test_built_config():
         assert workflow_config.embedders == {"embedder1": embedder_config}
         assert workflow_config.memory == {"memory1": memory_config}
         assert workflow_config.retrievers == {"retriever1": retriever_config}
+
+
+# Error Logging Tests
+
+
+@pytest.fixture
+def caplog_fixture(caplog):
+    """Configure caplog to capture ERROR level logs."""
+    caplog.set_level(logging.ERROR)
+    return caplog
+
+
+@pytest.fixture
+def mock_component_data():
+    """Create mock component data for testing."""
+    # Create a mock failing component
+    failing_component = MagicMock()
+    failing_component.name = "test_component"
+    failing_component.component_group.value = "llms"
+
+    return failing_component
+
+
+def test_log_build_failure_helper_method(caplog_fixture, mock_component_data):
+    """Test the _log_build_failure helper method directly."""
+    builder = WorkflowBuilder()
+
+    completed_components = [("comp1", "llms"), ("comp2", "embedders")]
+    remaining_components = [("comp3", "functions"), ("comp4", "memory")]
+    original_error = ValueError("Test error message")
+
+    # Call the helper method
+    builder._log_build_failure_component(mock_component_data,
+                                         completed_components,
+                                         remaining_components,
+                                         original_error)
+
+    # Verify error logging content
+    log_text = caplog_fixture.text
+    assert "Failed to initialize component test_component (llms)" in log_text
+    assert "Successfully built components:" in log_text
+    assert "- comp1 (llms)" in log_text
+    assert "- comp2 (embedders)" in log_text
+    assert "Remaining components to build:" in log_text
+    assert "- comp3 (functions)" in log_text
+    assert "- comp4 (memory)" in log_text
+    assert "Original error:" in log_text
+    assert "Test error message" in log_text
+
+
+def test_log_build_failure_workflow_helper_method(caplog_fixture):
+    """Test the _log_build_failure_workflow helper method directly."""
+    builder = WorkflowBuilder()
+
+    completed_components = [("comp1", "llms"), ("comp2", "embedders")]
+    remaining_components = [("comp3", "functions")]
+    original_error = ValueError("Workflow build failed")
+
+    # Call the helper method
+    builder._log_build_failure_workflow(completed_components, remaining_components, original_error)
+
+    # Verify error logging content
+    log_text = caplog_fixture.text
+    assert "Failed to initialize component <workflow> (workflow)" in log_text
+    assert "Successfully built components:" in log_text
+    assert "- comp1 (llms)" in log_text
+    assert "- comp2 (embedders)" in log_text
+    assert "Remaining components to build:" in log_text
+    assert "- comp3 (functions)" in log_text
+    assert "Original error:" in log_text
+
+
+def test_log_build_failure_no_completed_components(caplog_fixture, mock_component_data):
+    """Test error logging when no components have been successfully built."""
+    builder = WorkflowBuilder()
+
+    completed_components = []
+    remaining_components = [("comp1", "embedders"), ("comp2", "functions")]
+    original_error = ValueError("First component failed")
+
+    builder._log_build_failure_component(mock_component_data,
+                                         completed_components,
+                                         remaining_components,
+                                         original_error)
+
+    log_text = caplog_fixture.text
+    assert "Failed to initialize component test_component (llms)" in log_text
+    assert "No components were successfully built before this failure" in log_text
+    assert "Remaining components to build:" in log_text
+    assert "- comp1 (embedders)" in log_text
+    assert "- comp2 (functions)" in log_text
+    assert "Original error:" in log_text
+
+
+def test_log_build_failure_no_remaining_components(caplog_fixture, mock_component_data):
+    """Test error logging when no components remain to be built."""
+    builder = WorkflowBuilder()
+
+    completed_components = [("comp1", "llms"), ("comp2", "embedders")]
+    remaining_components = []
+    original_error = ValueError("Last component failed")
+
+    builder._log_build_failure_component(mock_component_data,
+                                         completed_components,
+                                         remaining_components,
+                                         original_error)
+
+    log_text = caplog_fixture.text
+    assert "Failed to initialize component test_component (llms)" in log_text
+    assert "Successfully built components:" in log_text
+    assert "- comp1 (llms)" in log_text
+    assert "- comp2 (embedders)" in log_text
+    assert "No remaining components to build" in log_text
+    assert "Original error:" in log_text
+
+
+# Evaluator Error Logging Tests
+
+
+def test_log_evaluator_build_failure_helper_method(caplog_fixture):
+    """Test the _log_evaluator_build_failure helper method directly."""
+    from aiq.builder.eval_builder import WorkflowEvalBuilder
+
+    builder = WorkflowEvalBuilder()
+
+    completed_evaluators = ["eval1", "eval2"]
+    remaining_evaluators = ["eval3", "eval4"]
+    original_error = ValueError("Evaluator build failed")
+
+    # Call the helper method
+    builder._log_build_failure_evaluator("failing_evaluator",
+                                         completed_evaluators,
+                                         remaining_evaluators,
+                                         original_error)
+
+    # Verify error logging content
+    log_text = caplog_fixture.text
+    assert "Failed to initialize component failing_evaluator (evaluator)" in log_text
+    assert "Successfully built components:" in log_text
+    assert "- eval1 (evaluator)" in log_text
+    assert "- eval2 (evaluator)" in log_text
+    assert "Remaining components to build:" in log_text
+    assert "- eval3 (evaluator)" in log_text
+    assert "- eval4 (evaluator)" in log_text
+    assert "Original error:" in log_text
+
+
+def test_log_evaluator_build_failure_no_completed(caplog_fixture):
+    """Test evaluator error logging when no evaluators have been successfully built."""
+    from aiq.builder.eval_builder import WorkflowEvalBuilder
+
+    builder = WorkflowEvalBuilder()
+
+    completed_evaluators = []
+    remaining_evaluators = ["eval1", "eval2"]
+    original_error = ValueError("First evaluator failed")
+
+    builder._log_build_failure_evaluator("failing_evaluator",
+                                         completed_evaluators,
+                                         remaining_evaluators,
+                                         original_error)
+
+    log_text = caplog_fixture.text
+    assert "Failed to initialize component failing_evaluator (evaluator)" in log_text
+    assert "No components were successfully built before this failure" in log_text
+    assert "Remaining components to build:" in log_text
+    assert "- eval1 (evaluator)" in log_text
+    assert "- eval2 (evaluator)" in log_text
+    assert "Original error:" in log_text
+
+
+def test_log_evaluator_build_failure_no_remaining(caplog_fixture):
+    """Test evaluator error logging when no evaluators remain to be built."""
+    from aiq.builder.eval_builder import WorkflowEvalBuilder
+
+    builder = WorkflowEvalBuilder()
+
+    completed_evaluators = ["eval1", "eval2"]
+    remaining_evaluators = []
+    original_error = ValueError("Last evaluator failed")
+
+    builder._log_build_failure_evaluator("failing_evaluator",
+                                         completed_evaluators,
+                                         remaining_evaluators,
+                                         original_error)
+
+    log_text = caplog_fixture.text
+    assert "Failed to initialize component failing_evaluator (evaluator)" in log_text
+    assert "Successfully built components:" in log_text
+    assert "- eval1 (evaluator)" in log_text
+    assert "- eval2 (evaluator)" in log_text
+    assert "No remaining components to build" in log_text
+    assert "Original error:" in log_text
+
+
+async def test_integration_error_logging_with_failing_function(caplog_fixture):
+    """Integration test: Verify error logging when building a workflow with a function that fails during initialization.
+
+    This test creates a real failing function (not mocked) and attempts to build a workflow,
+    then verifies that the error logging messages are correct.
+    """
+    # Create a config with one successful function and one failing function
+    config_dict = {
+        "functions": {
+            "working_function": FunctionReturningFunctionConfig(),
+            "failing_function": FailingFunctionConfig(),
+            "another_working_function": FunctionReturningInfoConfig()
+        },
+        "workflow": FunctionReturningFunctionConfig()
+    }
+
+    config = AIQConfig.model_validate(config_dict)
+
+    async with WorkflowBuilder() as builder:
+        with pytest.raises(ValueError, match="Function initialization failed"):
+            await builder.populate_builder(config)
+
+    # Verify the error logging output
+    log_text = caplog_fixture.text
+
+    # Should have the main error message with component name and type
+    assert "Failed to initialize component failing_function (functions)" in log_text
+
+    # Should list successfully built components before the failure
+    assert "Successfully built components:" in log_text
+    assert "- working_function (functions)" in log_text
+
+    # Should list remaining components that still need to be built
+    assert "Remaining components to build:" in log_text
+    assert "- another_working_function (functions)" in log_text
+    assert "- <workflow> (workflow)" in log_text
+
+    # Should include the original error
+    assert "Original error:" in log_text
+    assert "Function initialization failed" in log_text
+
+    # Verify the error was propagated (not just logged)
+    assert "ValueError: Function initialization failed" in log_text
+
+
+async def test_integration_error_logging_with_workflow_failure(caplog_fixture):
+    """Integration test: Verify error logging when workflow setup fails.
+
+    This test attempts to build with a failing workflow and verifies the error messages.
+    """
+    # Create a config with successful functions but failing workflow
+    config_dict = {
+        "functions": {
+            "working_function1": FunctionReturningFunctionConfig(), "working_function2": FunctionReturningInfoConfig()
+        },
+        "workflow":
+            FailingFunctionConfig()  # This will fail during workflow setup
+    }
+
+    config = AIQConfig.model_validate(config_dict)
+
+    async with WorkflowBuilder() as builder:
+        with pytest.raises(ValueError, match="Function initialization failed"):
+            await builder.populate_builder(config)
+
+    # Verify the error logging output
+    log_text = caplog_fixture.text
+
+    # Should have the main error message for workflow failure
+    assert "Failed to initialize component <workflow> (workflow)" in log_text
+
+    # Should list all successfully built components (functions should have succeeded)
+    assert "Successfully built components:" in log_text
+    assert "- working_function1 (functions)" in log_text
+    assert "- working_function2 (functions)" in log_text
+
+    # Should show no remaining components to build (since workflow is the last step)
+    assert "No remaining components to build" in log_text
+
+    # Should include the original error
+    assert "Original error:" in log_text
+    assert "Function initialization failed" in log_text

@@ -24,6 +24,7 @@ from aiq.builder.builder import Builder
 from aiq.builder.embedder import EmbedderProviderInfo
 from aiq.cli.register_workflow import register_embedder_provider
 from aiq.data_models.embedder import EmbedderBaseConfig
+from aiq.data_models.retry_mixin import RetryMixin
 
 allowed_truncate_values = ["NONE", "START", "END"]
 
@@ -37,7 +38,7 @@ def option_in_allowed_values(v):
 TruncationOption = typing.Annotated[str, AfterValidator(option_in_allowed_values)]
 
 
-class NIMEmbedderModelConfig(EmbedderBaseConfig, name="nim"):
+class NIMEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="nim"):
     """A NVIDIA Inference Microservice (NIM) embedder provider to be used with an embedder client."""
 
     api_key: str | None = Field(default=None, description="NVIDIA API key to interact with hosted NIM.")
