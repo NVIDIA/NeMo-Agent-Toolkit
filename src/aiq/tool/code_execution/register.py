@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import logging
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -48,7 +48,7 @@ async def code_execution_tool(config: CodeExecutionToolConfig, builder: Builder)
 
     # Create sandbox without working_directory
     sandbox_kwargs = {"uri": config.uri}
-    
+
     sandbox = get_sandbox(sandbox_type=config.sandbox_type, **sandbox_kwargs)
     logger.info(f"[DEBUG] Created sandbox of type: {config.sandbox_type}")
 
