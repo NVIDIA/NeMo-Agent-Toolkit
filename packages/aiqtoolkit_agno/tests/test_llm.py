@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# pylint: disable=not-async-context-manager
+
 import os
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -23,7 +25,6 @@ from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
-# Import the module under test with the correct import path
 from aiq.plugins.agno.llm import nim_agno
 from aiq.plugins.agno.llm import openai_agno
 
@@ -98,7 +99,17 @@ class TestNimAgno:
             mock_nvidia.assert_called_once_with(id="test-model")
 
             # Verify that the returned object is the mock Nvidia instance
-            assert nvidia_instance == mock_nvidia.return_value
+        assert nvidia_instance == mock_nvidia.return_value
+
+    @patch("agno.models.nvidia.Nvidia")
+    async def test_nim_agno_without_api_key(self, mock_nvidia, nim_config, mock_builder):
+        """Test nim_agno behavior when no API key is provided."""
+        # Make sure no API key environment variables are set
+        with patch.dict(os.environ, {}, clear=True):
+            async with nim_agno(nim_config, mock_builder) as nvidia_instance:
+                # Should still create Nvidia instance even without API key
+                mock_nvidia.assert_called_once_with(id="test-model")
+                assert nvidia_instance == mock_nvidia.return_value
 
 
 class TestOpenAIAgno:
@@ -112,7 +123,7 @@ class TestOpenAIAgno:
     @pytest.fixture
     def openai_config(self):
         """Create an OpenAIModelConfig instance."""
-        return OpenAIModelConfig(model="gpt-4")
+        return OpenAIModelConfig(model_name="gpt-4")
 
     @patch("agno.models.openai.OpenAIChat")
     async def test_openai_agno(self, mock_openai_chat, openai_config, mock_builder):
@@ -121,10 +132,13 @@ class TestOpenAIAgno:
         async with openai_agno(openai_config, mock_builder) as openai_instance:
             # Verify that OpenAIChat was created with the correct parameters
             mock_openai_chat.assert_called_once()
-            call_kwargs = mock_openai_chat.call_args[1]
+            call_kwargs = mock_openai_chat.call_args[1]  # type: ignore[union-attr]
 
-            # Check that model is set correctly
-            assert call_kwargs["model"] == "gpt-4"
+            print("openai_config", openai_config)
+            print("call_kwargs", call_kwargs)
+
+            # Check that model is set correctly (should be 'id' in agno)
+            assert call_kwargs["id"] == "gpt-4"
 
             # Verify that the returned object is the mock OpenAIChat instance
             assert openai_instance == mock_openai_chat.return_value
@@ -141,10 +155,10 @@ class TestOpenAIAgno:
         async with openai_agno(openai_config, mock_builder) as openai_instance:
             # Verify that OpenAIChat was created with the correct parameters
             mock_openai_chat.assert_called_once()
-            call_kwargs = mock_openai_chat.call_args[1]
+            call_kwargs = mock_openai_chat.call_args[1]  # type: ignore[union-attr]
 
             # Check that all parameters are passed correctly
-            assert call_kwargs["model"] == "gpt-4"
+            assert call_kwargs["id"] == "gpt-4"  # model_name becomes 'id' in agno
             assert call_kwargs["api_key"] == "test-api-key"
             assert call_kwargs["temperature"] == 0.7
             # Not checking max_tokens
@@ -167,8 +181,25 @@ class TestOpenAIAgno:
 
         # Check that nim_agno is registered for NIMModelConfig and LLMFrameworkEnum.AGNO
         assert (NIMModelConfig, LLMFrameworkEnum.AGNO) in mock_registry._llm_client_map
+        # pylint: disable-next=comparison-with-callable
         assert mock_registry._llm_client_map[(NIMModelConfig, LLMFrameworkEnum.AGNO)] == nim_agno
 
         # Check that openai_agno is registered for OpenAIModelConfig and LLMFrameworkEnum.AGNO
         assert (OpenAIModelConfig, LLMFrameworkEnum.AGNO) in mock_registry._llm_client_map
+        # pylint: disable-next=comparison-with-callable
         assert mock_registry._llm_client_map[(OpenAIModelConfig, LLMFrameworkEnum.AGNO)] == openai_agno
+
+    @patch("agno.models.openai.OpenAIChat")
+    async def test_openai_agno_without_model_field(self, mock_openai_chat, mock_builder):
+        """Test openai_agno behavior when model field is not in kwargs."""
+        # Create a config that would not have 'model' in the dumped kwargs
+        config = OpenAIModelConfig(model_name="test-model")
+
+        async with openai_agno(config, mock_builder) as openai_instance:
+            # Verify OpenAIChat was called
+            mock_openai_chat.assert_called_once()
+            call_kwargs = mock_openai_chat.call_args[1]  # type: ignore[union-attr]
+
+            # Should have 'id' field with the model name
+            assert call_kwargs["id"] == "test-model"
+            assert openai_instance == mock_openai_chat.return_value
