@@ -12,18 +12,56 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
+import contextlib
 import logging
 import multiprocessing
-import resource
-import sys
 import os
-import pathlib
+import resource
+from enum import Enum
 from io import StringIO
 
 from flask import Flask
+from flask import Response
 from flask import request
+from pydantic import BaseModel
+from pydantic import Field
 
 app = Flask(__name__)
+
+
+class CodeExecutionStatus(str, Enum):
+    """
+    Status of code execution.
+    """
+    COMPLETED = "completed"
+    ERROR = "error"
+    TIMEOUT = "timeout"
+
+
+class CodeExecutionResult(BaseModel):
+    """
+    Result of code execution.
+    """
+    process_status: CodeExecutionStatus = Field(default=CodeExecutionStatus.COMPLETED,
+                                                description="Status of the process")
+    stdout: str = Field(description="Standard output of the process")
+    stderr: str = Field(description="Standard error of the process")
+
+
+class CodeExecutionResponse(Response):
+    """
+    Response class that returns a JSON response with the given status code and result.
+    """
+
+    def __init__(self, status_code: int, result: CodeExecutionResult):
+        super().__init__(status=status_code, mimetype="application/json", response=result.model_dump_json())
+
+    @classmethod
+    def with_error(cls, status_code: int, error_message: str) -> 'CodeExecutionResponse':
+        return cls(status_code,
+                   CodeExecutionResult(process_status=CodeExecutionStatus.ERROR, stdout="", stderr=error_message))
 
 
 @app.after_request
@@ -36,66 +74,42 @@ def add_hsts_header(response):
     return response
 
 
-def execute_python(generated_code, timeout):
+def execute_python(generated_code: str, timeout: float) -> CodeExecutionResult:
     # running in a separate process to ensure any kind of crashes are properly handled
     queue = multiprocessing.Queue()
     process = multiprocessing.Process(target=execute_code_subprocess, args=(generated_code, queue))
-    
+
     process.start()
+    # wait until the process finishes or the timeout expires
     process.join(timeout=timeout)
-
-    if process.is_alive():  # didn't finish successfully
+    if process.exitcode is None:
         process.kill()
-        return {"process_status": "timeout", "stdout": "", "stderr": "Timed out\n"}
+        return CodeExecutionResult(process_status=CodeExecutionStatus.TIMEOUT, stdout="", stderr="Timed out\n")
 
-    result = queue.get()
-    return result
+    return queue.get()
 
 
 # need to memory-limit to avoid common errors of allocating too much
 # but this has to be done in a subprocess to not crush server itself
-def execute_code_subprocess(generated_code, queue):
-    print(f"[DEBUG] execute_code_subprocess started, PID: {os.getpid()}")
-    
+def execute_code_subprocess(generated_code: str, queue):
+    logging.debug("execute_code_subprocess started, PID: %s", os.getpid())
+
     limit = 1024 * 1024 * 1024 * 10  # 10gb - somehow with a smaller limit the server dies when numpy is used
     resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
     resource.setrlimit(resource.RLIMIT_DATA, (limit, limit))
-
-    # Capture both stdout and stderr
-    old_stdout = sys.stdout
-    old_stderr = sys.stderr
     stdout_capture = StringIO()
     stderr_capture = StringIO()
-    
     try:
-        sys.stdout = stdout_capture
-        sys.stderr = stderr_capture
-        exec(generated_code, {})  # pylint: disable=W0122
-        
-        stdout_content = stdout_capture.getvalue()
-        stderr_content = stderr_capture.getvalue()
-        
-        print(f"[DEBUG] Code executed successfully")
-        print(f"[DEBUG] stdout length: {len(stdout_content)}")
-        print(f"[DEBUG] stderr length: {len(stderr_content)}")
-        
-        queue.put({
-            "process_status": "completed",
-            "stdout": stdout_content,
-            "stderr": stderr_content
-        })
+        with contextlib.redirect_stdout(stdout_capture), contextlib.redirect_stderr(stderr_capture):
+            exec(generated_code, {})  # pylint: disable=W0122
+        queue.put(CodeExecutionResult(stdout=stdout_capture.getvalue(), stderr=stderr_capture.getvalue()))
     except Exception as e:
-        print(f"[DEBUG] Exception during code execution: {str(e)}")
-        stderr_capture.write(f"Error: {str(e)}")
-        queue.put({
-            "process_status": "error", 
-            "stdout": stdout_capture.getvalue(), 
-            "stderr": stderr_capture.getvalue()
-        })
-    finally:
-        sys.stdout = old_stdout
-        sys.stderr = old_stderr
-        print("[DEBUG] Restored stdout/stderr")
+        # Include the exception type name in the error message for better debugging
+        _ = stderr_capture.write(f"\n{type(e).__name__}: {str(e)}\n")  # pylint: disable=W0631
+        queue.put(
+            CodeExecutionResult(process_status=CodeExecutionStatus.ERROR,
+                                stdout=stdout_capture.getvalue(),
+                                stderr=stderr_capture.getvalue()))
 
 
 # Main Flask endpoint to handle execution requests
@@ -104,34 +118,38 @@ def execute():
     try:
         # Check if request has JSON data
         if not request.is_json:
-            return {"process_status": "error", "stdout": "", "stderr": "Request must be JSON"}, 400
-        
+            return CodeExecutionResponse.with_error(400, "Request must be JSON")
+
         # Get JSON data safely
-        json_data = request.get_json()
-        
+        json_data = request.get_json(silent=True)
+
         if json_data is None:
-            return {"process_status": "error", "stdout": "", "stderr": "Invalid JSON data"}, 400
-        
+            return CodeExecutionResponse.with_error(400, "Invalid JSON data")
+
         # Check for required fields
         if 'generated_code' not in json_data:
-            return {"process_status": "error", "stdout": "", "stderr": "Missing required field: generated_code"}, 400
-        
-        if 'timeout' not in json_data:
-            return {"process_status": "error", "stdout": "", "stderr": "Missing required field: timeout"}, 400
-        
-        generated_code = json_data['generated_code']
-        timeout = json_data['timeout']
-        language = json_data.get('language', 'python')
+            return CodeExecutionResponse.with_error(400, "Missing required field: generated_code")
 
-        if language == 'python':
-            result = execute_python(generated_code, timeout)
-            return result
-        
-        return {"process_status": "error", "stdout": "", "stderr": "Only python execution is supported"}
-    
+        if 'timeout' not in json_data:
+            return CodeExecutionResponse.with_error(400, "Missing required field: timeout")
+
+        if 'language' not in json_data:
+            return CodeExecutionResponse.with_error(400, "Missing required field: language")
+
+        generated_code: str | None = json_data.get('generated_code', None)
+        assert generated_code is not None
+        timeout: float | None = json_data.get('timeout', None)
+        assert timeout is not None
+        language: str | None = json_data.get('language', None)
+        assert language is not None
+
+        if language != 'python':
+            return CodeExecutionResponse.with_error(400, "Only python execution is supported")
+
+        return CodeExecutionResponse(200, execute_python(generated_code, timeout))
+
     except Exception as e:
-        import traceback
-        return {"process_status": "error", "stdout": "", "stderr": f"Server error: {str(e)}"}, 500
+        return CodeExecutionResponse.with_error(500, f"Server error: {str(e)}")
 
 
 if __name__ == '__main__':

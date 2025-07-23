@@ -17,6 +17,7 @@
 # Usage: ./start_local_sandbox.sh [SANDBOX_NAME] [OUTPUT_DATA_PATH]
 # NOTE: needs to run from the root of the repo!
 
+DOCKER_COMMAND=${DOCKER_COMMAND:-"docker"}
 SANDBOX_NAME=${1:-'local-sandbox'}
 NUM_THREADS=10
 
@@ -34,15 +35,15 @@ if [ ! -d "${OUTPUT_DATA_PATH}" ]; then
 fi
 
 # Check if the Docker image already exists
-if ! docker images ${SANDBOX_NAME} | grep -q "${SANDBOX_NAME}"; then
+if ! ${DOCKER_COMMAND} images ${SANDBOX_NAME} | grep -q "${SANDBOX_NAME}"; then
     echo "Docker image not found locally. Building ${SANDBOX_NAME}..."
-    docker build --tag=${SANDBOX_NAME} --build-arg="UWSGI_PROCESSES=$((${NUM_THREADS} * 10))" --build-arg="UWSGI_CHEAPER=${NUM_THREADS}" -f Dockerfile.sandbox .
+    ${DOCKER_COMMAND} build --tag=${SANDBOX_NAME} --build-arg="UWSGI_PROCESSES=$((${NUM_THREADS} * 10))" --build-arg="UWSGI_CHEAPER=${NUM_THREADS}" -f Dockerfile.sandbox .
 else
     echo "Using existing Docker image: ${SANDBOX_NAME}"
 fi
 
 # Mount the output_data directory directly so files created in container appear in the local directory
-docker run --network=host --rm --name=local-sandbox \
+${DOCKER_COMMAND} run --rm --name=local-sandbox \
   -v "${OUTPUT_DATA_PATH}:/workspace" \
   -w /workspace \
   ${SANDBOX_NAME}
