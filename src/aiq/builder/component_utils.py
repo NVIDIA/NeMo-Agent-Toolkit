@@ -32,6 +32,7 @@ from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.utils.type_utils import DecomposedType
 
@@ -42,6 +43,7 @@ _component_group_order = [
     ComponentGroup.EMBEDDERS,
     ComponentGroup.LLMS,
     ComponentGroup.MEMORY,
+    ComponentGroup.OBJECT_STORES,
     ComponentGroup.RETRIEVERS,
     ComponentGroup.ITS_STRATEGIES,
     ComponentGroup.FUNCTIONS,
@@ -105,6 +107,8 @@ def group_from_component(component: TypedBaseModel) -> ComponentGroup | None:
         return ComponentGroup.LLMS
     if (isinstance(component, MemoryBaseConfig)):
         return ComponentGroup.MEMORY
+    if (isinstance(component, ObjectStoreBaseConfig)):
+        return ComponentGroup.OBJECT_STORES
     if (isinstance(component, RetrieverBaseConfig)):
         return ComponentGroup.RETRIEVERS
     if (isinstance(component, ITSStrategyBaseConfig)):
@@ -247,7 +251,7 @@ def build_dependency_sequence(config: "AIQConfig") -> list[ComponentInstanceData
     """
 
     total_node_count = len(config.embedders) + len(config.functions) + len(config.llms) + len(config.memory) + len(
-        config.retrievers) + len(config.its_strategies) + 1  # +1 for the workflow
+        config.object_stores) + len(config.retrievers) + len(config.its_strategies) + 1  # +1 for the workflow
 
     dependency_map: dict
     dependency_graph: nx.DiGraph

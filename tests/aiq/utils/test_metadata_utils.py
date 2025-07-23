@@ -23,6 +23,7 @@ from aiq.data_models.evaluate import EvaluatorBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.utils.metadata_utils import generate_config_type_docs
@@ -39,7 +40,8 @@ def base_configs_fixture():
         RegistryHandlerBaseConfig,
         RetrieverBaseConfig,
         MemoryBaseConfig,
-        EvaluatorBaseConfig
+        EvaluatorBaseConfig,
+        ObjectStoreBaseConfig
     ]
 
     return base_configs

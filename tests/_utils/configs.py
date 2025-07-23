@@ -17,6 +17,7 @@ from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
 
 
@@ -47,6 +48,10 @@ class EmbedderProviderTestConfig(EmbedderBaseConfig, name="test_embedding"):
 
 
 class MemoryTestConfig(MemoryBaseConfig, name="test_memory"):
+    pass
+
+
+class ObjectStoreTestConfig(ObjectStoreBaseConfig, name="test_object_store"):
     pass
 
 
