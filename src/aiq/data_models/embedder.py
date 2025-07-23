@@ -20,6 +20,7 @@ from .common import TypedBaseModel
 
 
 class EmbedderBaseConfig(TypedBaseModel, BaseModelRegistryTag):
+    """ Base configuration for embedding model providers. """
     pass
 
 
