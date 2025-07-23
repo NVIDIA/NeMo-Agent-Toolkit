@@ -293,9 +293,6 @@ class StepAdaptor:
 
     def process(self, step: IntermediateStep) -> AIQResponseSerializable | None:  # pylint: disable=R1710
 
-        if not isinstance(step, IntermediateStep):
-            return
-
         # Track the chunk
         self._history.append(step)
         payload = step.payload
