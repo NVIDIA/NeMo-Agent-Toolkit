@@ -54,9 +54,9 @@ def test_fastapi_config_openai_api_v1_path_field():
     assert config.openai_api_v1_path is None
 
     # Test explicit path
-    config = FastApiFrontEndConfig.EndpointBase(
-        method="POST", description="test", openai_api_v1_path="/v1/chat/completions"
-    )
+    config = FastApiFrontEndConfig.EndpointBase(method="POST",
+                                                description="test",
+                                                openai_api_v1_path="/v1/chat/completions")
     assert config.openai_api_v1_path == "/v1/chat/completions"
 
     # Test explicit None
