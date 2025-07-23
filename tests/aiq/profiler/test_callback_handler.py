@@ -516,7 +516,9 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
 
         # Call the tool function
         try:
-            result = tool_func(*args, **kwargs)
+            # Remove tool_name from kwargs before calling the function since it's only used for metadata
+            tool_kwargs = {k: v for k, v in kwargs.items() if k != "tool_name"}
+            result = tool_func(*args, **tool_kwargs)
 
             # Create end event payload
             end_payload = IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END,
@@ -606,7 +608,7 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
     # Verify event details
     assert start_event.payload.name == "TestTool"
     assert "args" in start_event.payload.metadata.tool_inputs
-    assert tool_args[0] in start_event.payload.metadata.tool_inputs["args"]
+    assert tool_args[0] in start_event.payload.metadata.tool_inputs.get("args", [])
 
     assert end_event.payload.name == "TestTool"
     assert "result" in end_event.payload.metadata.tool_outputs
@@ -617,8 +619,6 @@ async def test_langchain_handler_tool_execution(reactive_stream: Subject):
     """
     Test that the LangchainProfilerHandler properly stores and retrieves
     structured tool inputs for TOOL_START and TOOL_END events.
-    This test verifies the functionality added in the PR that stores
-    copy.deepcopy(inputs) instead of just the string representation.
     """
 
     all_stats = []
@@ -641,7 +641,7 @@ async def test_langchain_handler_tool_execution(reactive_stream: Subject):
     }
 
     await handler.on_tool_start(
-        serialized={},
+        serialized={"name": tool_name},  # Tool name should be in serialized dict
         input_str="test search query",  # This was the old format
         run_id=run_id,
         inputs=structured_inputs,  # This is the new structured format
@@ -689,7 +689,5 @@ async def test_langchain_handler_tool_execution(reactive_stream: Subject):
     # Verify that the inputs are deep copied (not just referenced)
     # Modify original inputs and ensure event data is unchanged
     structured_inputs["query"] = "modified query"
-    assert tool_end_event.metadata.tool_inputs["query"] == "test search query"
-    assert tool_end_event.data.input["query"] == "test search query"
-
-    print("✅ Langchain tool test passed: structured inputs properly stored and retrieved")
+    assert tool_end_event.metadata.tool_inputs.get("query") == "test search query"
+    assert tool_end_event.data.input.get("query") == "test search query"
