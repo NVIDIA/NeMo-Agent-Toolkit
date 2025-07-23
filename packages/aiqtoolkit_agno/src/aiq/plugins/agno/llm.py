@@ -48,11 +48,11 @@ async def nim_agno(llm_config: NIMModelConfig, builder: Builder):
                 os.environ["NVIDIA_API_KEY"] = nvidai_api_key
 
     # Create Nvidia instance with conditional base_url
-    nvidia_args = {"id": config_obj.get("id")}
+    kwargs = {"id": config_obj.get("id")}
     if "base_url" in config_obj and config_obj.get("base_url") is not None:
-        nvidia_args["base_url"] = config_obj.get("base_url")
+        kwargs["base_url"] = config_obj.get("base_url")
 
-    client = Nvidia(**nvidia_args)
+    client = Nvidia(**kwargs)  # type: ignore[arg-type]
 
     if isinstance(client, RetryMixin):
 
@@ -69,8 +69,21 @@ async def openai_agno(llm_config: OpenAIModelConfig, builder: Builder):
 
     from agno.models.openai import OpenAIChat
 
-    config_obj = {
-        **llm_config.model_dump(exclude={"type"}, by_alias=True),
-    }
+    # Use model_dump to get the proper field values with correct types
+    kwargs = llm_config.model_dump(
+        exclude={"type", "do_auto_retry", "max_retries", "retry_on_status_codes", "retry_on_errors", "num_retries"},
+        by_alias=True)
 
-    yield OpenAIChat(**config_obj)
+    # AGNO uses 'id' instead of 'model' for the model name
+    if "model" in kwargs:
+        kwargs["id"] = kwargs.pop("model")
+
+    client = OpenAIChat(**kwargs)
+
+    if isinstance(llm_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
+
+    yield client

@@ -18,26 +18,18 @@ general:
   use_uvloop: true
 
 functions:
-  serp_api_tool:
+  web_search_tool:
     _type: serp_api_tool
-    # You can add your SerpAPI key here or use environment variables
-    # api_key: your_serp_api_key
-  
-  agno_personal_finance:
-    _type: agno_personal_finance
-    llm_name: nim_llm
-    serp_api_tool: serp_api_tool
-  
+    api_key: ${SERP_API_KEY}
+
 llms:
-  nim_llm:
-    _type: nim
-    model_name: meta/llama-3.3-70b-instruct
-    temperature: 0.0
+  openai_llm:
+    _type: openai
+    model_name: gpt-4o
+    max_tokens: 2000
+    api_key: ${OPENAI_API_KEY}
 
 workflow:
   _type: agno_personal_finance
-  llm_name: nim_llm
-  serp_api_tool: serp_api_tool
-  verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  llm_name: openai_llm
+  tools: [web_search_tool]

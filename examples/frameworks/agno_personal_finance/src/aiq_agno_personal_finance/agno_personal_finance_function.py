@@ -14,8 +14,9 @@
 # limitations under the License.
 
 import logging
-import os
 from textwrap import dedent
+
+from pydantic import Field
 
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
@@ -29,9 +30,9 @@ logger = logging.getLogger(__name__)
 
 
 class AgnoPersonalFinanceFunctionConfig(FunctionBaseConfig, name="agno_personal_finance"):
-    llm_name: LLMRef
-    serp_api_tool: FunctionRef
-    api_key: str | None = None
+    llm_name: LLMRef = Field(...,
+                             description="The name of the LLM to use for the financial research and planner agents.")
+    tools: list[FunctionRef] = Field(..., description="The tools to use for the financial research and planner agents.")
 
 
 @register_function(config_type=AgnoPersonalFinanceFunctionConfig, framework_wrappers=[LLMFrameworkEnum.AGNO])
@@ -53,18 +54,12 @@ async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConf
     """
 
     from agno.agent import Agent
-    if (not config.api_key):
-        config.api_key = os.getenv("NVIDIA_API_KEY")
-
-    if not config.api_key:
-        raise ValueError(
-            "API token must be provided in the configuration or in the environment variable `NVIDIA_API_KEY`")
 
     # Get the language model
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.AGNO)
 
     # Get the search tool
-    search_tool = builder.get_tool(fn_name=config.serp_api_tool, wrapper_type=LLMFrameworkEnum.AGNO)
+    tools = builder.get_tools(tool_names=config.tools, wrapper_type=LLMFrameworkEnum.AGNO)
 
     # Create researcher agent
     researcher = Agent(
@@ -80,14 +75,11 @@ async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConf
         instructions=[
             "Given a user's financial goals and current financial situation, first generate a list of 3 search terms "
             "related to those goals.",
-            "For each search term, use search_google function to search the web. Always use exactly 5 as the "
-            "num_results parameter.",
-            "The search_google function requires a specific format: search_google(query='your query', num_results=5). "
-            "Use this format precisely.",
+            "For each search term, use the web_search_tool function to search the internet for information.",
             "From the results of all searches, return the 10 most relevant results to the user's preferences.",
             "Remember: the quality of the results is important.",
         ],
-        tools=[search_tool],
+        tools=tools,
         add_datetime_to_instructions=True,
     )
 
@@ -140,7 +132,6 @@ async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConf
 
             # Now run the planner with the research results
             planner_response = await planner.arun(planner_input, stream=False)
-            logger.info("response from agno_personal_finance: \n %s", planner_response)
 
             # Extract content from RunResponse
             planner_content = (planner_response.content
@@ -149,7 +140,7 @@ async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConf
             # Return the content as a string
             return planner_content
         except Exception as e:
-            logger.error(f"Error in agno_personal_finance function: {str(e)}")
+            logger.error("Error in agno_personal_finance function: %s", str(e))
             return f"Sorry, I encountered an error while generating your financial plan: {str(e)}"
 
     yield FunctionInfo.from_fn(_arun, description="extract relevant personal finance data per user input query")
