@@ -233,7 +233,7 @@ wheels = [
 
 [[package]]
 name = "aiq-agno-personal-finance"
-source = { editable = "examples/basic/frameworks/agno_personal_finance" }
+source = { editable = "examples/frameworks/agno_personal_finance" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["agno"] },
     { name = "litellm" },
@@ -249,7 +249,7 @@ requires-dist = [
 
 [[package]]
 name = "aiq-alert-triage-agent"
-source = { editable = "examples/advanced/alert_triage_agent" }
+source = { editable = "examples/advanced_agents/alert_triage_agent" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain"] },
     { name = "ansible-runner" },
@@ -271,7 +271,7 @@ requires-dist = [
 
 [[package]]
 name = "aiq-automated-description-generation"
-source = { editable = "examples/basic/functions/automated_description_generation" }
+source = { editable = "examples/custom_functions/automated_description_generation" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["ingestion", "langchain"] },
 ]
@@ -281,7 +281,7 @@ requires-dist = [{ name = "aiqtoolkit", extras = ["ingestion", "langchain"], edi
 
 [[package]]
 name = "aiq-email-phishing-analyzer"
-source = { editable = "examples/intermediate/evaluation_and_profiling/email_phishing_analyzer" }
+source = { editable = "examples/evaluation_and_profiling/email_phishing_analyzer" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain"] },
     { name = "arize-phoenix" },
@@ -301,7 +301,7 @@ requires-dist = [
 
 [[package]]
 name = "aiq-multi-frameworks"
-source = { editable = "examples/basic/frameworks/multi_frameworks" }
+source = { editable = "examples/frameworks/multi_frameworks" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain", "llama-index"] },
     { name = "arxiv" },
@@ -323,7 +323,7 @@ requires-dist = [
 
 [[package]]
 name = "aiq-plot-charts"
-source = { editable = "examples/basic/functions/plot_charts" }
+source = { editable = "examples/custom_functions/plot_charts" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain"] },
     { name = "matplotlib" },
@@ -339,7 +339,7 @@ requires-dist = [
 
 [[package]]
 name = "aiq-por-to-jiratickets"
-source = { editable = "examples/intermediate/HITL/por_to_jiratickets" }
+source = { editable = "examples/HITL/por_to_jiratickets" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain"] },
 ]
@@ -349,7 +349,7 @@ requires-dist = [{ name = "aiqtoolkit", extras = ["langchain"], editable = "." }
 
 [[package]]
 name = "aiq-profiler-agent"
-source = { editable = "examples/advanced/profiler_agent" }
+source = { editable = "examples/advanced_agents/profiler_agent" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain", "profiling", "telemetry"] },
     { name = "pydantic" },
@@ -363,7 +363,7 @@ requires-dist = [
 
 [[package]]
 name = "aiq-redact-pii"
-source = { editable = "examples/intermediate/observability/redact_pii" }
+source = { editable = "examples/observability/redact_pii" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["weave"] },
 ]
@@ -373,7 +373,7 @@ requires-dist = [{ name = "aiqtoolkit", extras = ["weave"], editable = "." }]
 
 [[package]]
 name = "aiq-semantic-kernel-demo"
-source = { editable = "examples/basic/frameworks/semantic_kernel_demo" }
+source = { editable = "examples/frameworks/semantic_kernel_demo" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain", "semantic-kernel"] },
     { name = "faiss-cpu" },
@@ -386,22 +386,8 @@ requires-dist = [
 ]
 
 [[package]]
-name = "aiq-simple"
-source = { editable = "examples/basic/functions/simple" }
-dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain"] },
-    { name = "faiss-cpu" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
-    { name = "faiss-cpu", specifier = "==1.9.0" },
-]
-
-[[package]]
 name = "aiq-simple-calculator"
-source = { editable = "examples/basic/functions/simple_calculator" }
+source = { editable = "examples/getting_started/simple_calculator" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain"] },
 ]
@@ -411,7 +397,7 @@ requires-dist = [{ name = "aiqtoolkit", extras = ["langchain"], editable = "." }
 
 [[package]]
 name = "aiq-simple-calculator-custom-routes"
-source = { editable = "examples/intermediate/custom_routes/simple_calculator_custom_routes" }
+source = { editable = "examples/front_ends/simple_calculator_custom_routes" }
 dependencies = [
     { name = "aiq-simple-calculator" },
     { name = "aiqtoolkit", extra = ["langchain"] },
@@ -419,13 +405,13 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiq-simple-calculator", editable = "examples/basic/functions/simple_calculator" },
+    { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_calculator" },
     { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
 ]
 
 [[package]]
 name = "aiq-simple-calculator-eval"
-source = { editable = "examples/intermediate/evaluation_and_profiling/simple_calculator_eval" }
+source = { editable = "examples/evaluation_and_profiling/simple_calculator_eval" }
 dependencies = [
     { name = "aiq-simple-calculator" },
     { name = "aiqtoolkit", extra = ["langchain"] },
@@ -433,13 +419,13 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiq-simple-calculator", editable = "examples/basic/functions/simple_calculator" },
+    { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_calculator" },
     { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
 ]
 
 [[package]]
 name = "aiq-simple-calculator-hitl"
-source = { editable = "examples/intermediate/HITL/simple_calculator_hitl" }
+source = { editable = "examples/HITL/simple_calculator_hitl" }
 dependencies = [
     { name = "aiq-por-to-jiratickets" },
     { name = "aiq-simple-calculator" },
@@ -448,14 +434,14 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiq-por-to-jiratickets", editable = "examples/intermediate/HITL/por_to_jiratickets" },
-    { name = "aiq-simple-calculator", editable = "examples/basic/functions/simple_calculator" },
+    { name = "aiq-por-to-jiratickets", editable = "examples/HITL/por_to_jiratickets" },
+    { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_calculator" },
     { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
 ]
 
 [[package]]
 name = "aiq-simple-calculator-mcp"
-source = { editable = "examples/intermediate/MCP/simple_calculator_mcp" }
+source = { editable = "examples/MCP/simple_calculator_mcp" }
 dependencies = [
     { name = "aiq-simple-calculator" },
     { name = "aiqtoolkit", extra = ["langchain"] },
@@ -463,13 +449,13 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiq-simple-calculator", editable = "examples/basic/functions/simple_calculator" },
+    { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_calculator" },
     { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
 ]
 
 [[package]]
 name = "aiq-simple-calculator-observability"
-source = { editable = "examples/intermediate/observability/simple_calculator_observability" }
+source = { editable = "examples/observability/simple_calculator_observability" }
 dependencies = [
     { name = "aiq-simple-calculator" },
     { name = "aiqtoolkit", extra = ["langchain"] },
@@ -477,13 +463,13 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiq-simple-calculator", editable = "examples/basic/functions/simple_calculator" },
+    { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_calculator" },
     { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
 ]
 
 [[package]]
 name = "aiq-simple-rag"
-source = { editable = "examples/intermediate/RAG/simple_rag" }
+source = { editable = "examples/RAG/simple_rag" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["ingestion", "langchain", "mem0ai"] },
 ]
@@ -492,8 +478,37 @@ dependencies = [
 requires-dist = [{ name = "aiqtoolkit", extras = ["ingestion", "langchain", "mem0ai"], editable = "." }]
 
 [[package]]
+name = "aiq-simple-web-query"
+source = { editable = "examples/getting_started/simple_web_query" }
+dependencies = [
+    { name = "aiqtoolkit", extra = ["langchain", "telemetry"] },
+    { name = "faiss-cpu" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
+    { name = "aiqtoolkit", extras = ["telemetry"], editable = "." },
+    { name = "faiss-cpu", specifier = "==1.9.0" },
+]
+
+[[package]]
+name = "aiq-simple-web-query-eval"
+source = { editable = "examples/evaluation_and_profiling/simple_web_query_eval" }
+dependencies = [
+    { name = "aiq-simple-web-query" },
+    { name = "aiqtoolkit", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiq-simple-web-query", editable = "examples/getting_started/simple_web_query" },
+    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
+]
+
+[[package]]
 name = "aiq-swe-bench"
-source = { editable = "examples/intermediate/evaluation_and_profiling/swe_bench" }
+source = { editable = "examples/evaluation_and_profiling/swe_bench" }
 dependencies = [
     { name = "aiqtoolkit", extra = ["langchain"] },
     { name = "swebench" },
@@ -552,7 +567,6 @@ examples = [
     { name = "aiq-profiler-agent" },
     { name = "aiq-redact-pii" },
     { name = "aiq-semantic-kernel-demo" },
-    { name = "aiq-simple" },
     { name = "aiq-simple-calculator" },
     { name = "aiq-simple-calculator-custom-routes" },
     { name = "aiq-simple-calculator-eval" },
@@ -560,6 +574,8 @@ examples = [
     { name = "aiq-simple-calculator-mcp" },
     { name = "aiq-simple-calculator-observability" },
     { name = "aiq-simple-rag" },
+    { name = "aiq-simple-web-query" },
+    { name = "aiq-simple-web-query-eval" },
     { name = "aiq-swe-bench" },
 ]
 gunicorn = [
@@ -645,25 +661,26 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "aioboto3", specifier = ">=11.0.0" },
-    { name = "aiq-agno-personal-finance", marker = "extra == 'examples'", editable = "examples/basic/frameworks/agno_personal_finance" },
-    { name = "aiq-alert-triage-agent", marker = "extra == 'examples'", editable = "examples/advanced/alert_triage_agent" },
-    { name = "aiq-automated-description-generation", marker = "extra == 'examples'", editable = "examples/basic/functions/automated_description_generation" },
-    { name = "aiq-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/intermediate/evaluation_and_profiling/email_phishing_analyzer" },
-    { name = "aiq-multi-frameworks", marker = "extra == 'examples'", editable = "examples/basic/frameworks/multi_frameworks" },
-    { name = "aiq-plot-charts", marker = "extra == 'examples'", editable = "examples/basic/functions/plot_charts" },
-    { name = "aiq-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/intermediate/HITL/por_to_jiratickets" },
-    { name = "aiq-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced/profiler_agent" },
-    { name = "aiq-redact-pii", marker = "extra == 'examples'", editable = "examples/intermediate/observability/redact_pii" },
-    { name = "aiq-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/basic/frameworks/semantic_kernel_demo" },
-    { name = "aiq-simple", marker = "extra == 'examples'", editable = "examples/basic/functions/simple" },
-    { name = "aiq-simple-calculator", marker = "extra == 'examples'", editable = "examples/basic/functions/simple_calculator" },
-    { name = "aiq-simple-calculator-custom-routes", marker = "extra == 'examples'", editable = "examples/intermediate/custom_routes/simple_calculator_custom_routes" },
-    { name = "aiq-simple-calculator-eval", marker = "extra == 'examples'", editable = "examples/intermediate/evaluation_and_profiling/simple_calculator_eval" },
-    { name = "aiq-simple-calculator-hitl", marker = "extra == 'examples'", editable = "examples/intermediate/HITL/simple_calculator_hitl" },
-    { name = "aiq-simple-calculator-mcp", marker = "extra == 'examples'", editable = "examples/intermediate/MCP/simple_calculator_mcp" },
-    { name = "aiq-simple-calculator-observability", marker = "extra == 'examples'", editable = "examples/intermediate/observability/simple_calculator_observability" },
-    { name = "aiq-simple-rag", marker = "extra == 'examples'", editable = "examples/intermediate/RAG/simple_rag" },
-    { name = "aiq-swe-bench", marker = "extra == 'examples'", editable = "examples/intermediate/evaluation_and_profiling/swe_bench" },
+    { name = "aiq-agno-personal-finance", marker = "extra == 'examples'", editable = "examples/frameworks/agno_personal_finance" },
+    { name = "aiq-alert-triage-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/alert_triage_agent" },
+    { name = "aiq-automated-description-generation", marker = "extra == 'examples'", editable = "examples/custom_functions/automated_description_generation" },
+    { name = "aiq-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/email_phishing_analyzer" },
+    { name = "aiq-multi-frameworks", marker = "extra == 'examples'", editable = "examples/frameworks/multi_frameworks" },
+    { name = "aiq-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },
+    { name = "aiq-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/HITL/por_to_jiratickets" },
+    { name = "aiq-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },
+    { name = "aiq-redact-pii", marker = "extra == 'examples'", editable = "examples/observability/redact_pii" },
+    { name = "aiq-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/frameworks/semantic_kernel_demo" },
+    { name = "aiq-simple-calculator", marker = "extra == 'examples'", editable = "examples/getting_started/simple_calculator" },
+    { name = "aiq-simple-calculator-custom-routes", marker = "extra == 'examples'", editable = "examples/front_ends/simple_calculator_custom_routes" },
+    { name = "aiq-simple-calculator-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_calculator_eval" },
+    { name = "aiq-simple-calculator-hitl", marker = "extra == 'examples'", editable = "examples/HITL/simple_calculator_hitl" },
+    { name = "aiq-simple-calculator-mcp", marker = "extra == 'examples'", editable = "examples/MCP/simple_calculator_mcp" },
+    { name = "aiq-simple-calculator-observability", marker = "extra == 'examples'", editable = "examples/observability/simple_calculator_observability" },
+    { name = "aiq-simple-rag", marker = "extra == 'examples'", editable = "examples/RAG/simple_rag" },
+    { name = "aiq-simple-web-query", marker = "extra == 'examples'", editable = "examples/getting_started/simple_web_query" },
+    { name = "aiq-simple-web-query-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_web_query_eval" },
+    { name = "aiq-swe-bench", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/swe_bench" },
     { name = "aiqtoolkit-agno", marker = "extra == 'agno'", editable = "packages/aiqtoolkit_agno" },
     { name = "aiqtoolkit-crewai", marker = "extra == 'crewai'", editable = "packages/aiqtoolkit_crewai" },
     { name = "aiqtoolkit-langchain", marker = "extra == 'langchain'", editable = "packages/aiqtoolkit_langchain" },
@@ -707,7 +724,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["agno", "crewai", "ingestion", "langchain", "llama-index", "mem0ai", "opentelemetry", "phoenix", "ragaai", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "profiling", "gunicorn"]
+provides-extras = ["agno", "crewai", "ingestion", "langchain", "llama-index", "mem0ai", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "profiling", "gunicorn"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1040,15 +1057,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d7/d8/05696357e0311f5b5c316d7b95f46c669dd9c15aaeecbb48c7d0aeb88c40/appdirs-1.4.4.tar.gz", hash = "sha256:7d5d0167b2b1ba821647616af46a749d1c653740dd0d2415100fe26e27afdf41", size = 13470, upload-time = "2020-05-11T07:59:51.037Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3b/00/2344469e2084fb287c2e0b57b72910309874c3245463acd6cf5e3db69324/appdirs-1.4.4-py2.py3-none-any.whl", hash = "sha256:a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128", size = 9566, upload-time = "2020-05-11T07:59:49.499Z" },
-]
-
-[[package]]
-name = "appnope"
-version = "0.1.4"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/35/5d/752690df9ef5b76e169e68d6a129fa6d08a7100ca7f754c89495db3c6019/appnope-0.1.4.tar.gz", hash = "sha256:1de3860566df9caf38f01f86f65e0e13e379af54f9e4bee1e66b48f2efffd1ee", size = 4170, upload-time = "2024-02-06T09:43:11.258Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/81/29/5ecc3a15d5a33e31b26c11426c45c501e439cb865d0bff96315d86443b78/appnope-0.1.4-py2.py3-none-any.whl", hash = "sha256:502575ee11cd7a28c0205f379b525beefebab9d161b7c964670864014ed7213c", size = 4321, upload-time = "2024-02-06T09:43:09.663Z" },
 ]
 
 [[package]]
@@ -1679,18 +1687,6 @@ wheels = [
 ]
 
 [[package]]
-name = "comm"
-version = "0.2.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "traitlets" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e9/a8/fb783cb0abe2b5fded9f55e5703015cdf1c9c85b3669087c538dd15a6a86/comm-0.2.2.tar.gz", hash = "sha256:3fd7a84065306e07bea1773df6eb8282de51ba82f77c72f9c85716ab11fe980e", size = 6210, upload-time = "2024-03-12T16:53:41.133Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e6/75/49e5bfe642f71f272236b5b2d2691cf915a7283cc0ceda56357b61daa538/comm-0.2.2-py3-none-any.whl", hash = "sha256:e6fb86cb70ff661ee8c9c14e7d36d6de3b4066f1441be4063df9c5009f0a64d3", size = 7180, upload-time = "2024-03-12T16:53:39.226Z" },
-]
-
-[[package]]
 name = "confection"
 version = "0.1.5"
 source = { registry = "https://pypi.org/simple" }
@@ -1880,15 +1876,6 @@ wheels = [
 ]
 
 [[package]]
-name = "dacite"
-version = "1.9.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/55/a0/7ca79796e799a3e782045d29bf052b5cde7439a2bbb17f15ff44f7aacc63/dacite-1.9.2.tar.gz", hash = "sha256:6ccc3b299727c7aa17582f0021f6ae14d5de47c7227932c47fec4cdfefd26f09", size = 22420, upload-time = "2025-02-05T09:27:29.757Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/94/35/386550fd60316d1e37eccdda609b074113298f23cef5bddb2049823fe666/dacite-1.9.2-py3-none-any.whl", hash = "sha256:053f7c3f5128ca2e9aceb66892b1a3c8936d02c686e707bee96e19deef4bc4a0", size = 16600, upload-time = "2025-02-05T09:27:24.345Z" },
-]
-
-[[package]]
 name = "dataclasses-json"
 version = "0.6.7"
 source = { registry = "https://pypi.org/simple" }
@@ -1923,23 +1910,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1d/69/8cc725b5d38968fd118e4ce56a483b16e75b7793854c1a392ec4a34eeb31/datasets-2.14.4.tar.gz", hash = "sha256:ef29c2b5841de488cd343cfc26ab979bff77efa4d2285af51f1ad7db5c46a83b", size = 2178719, upload-time = "2023-08-08T15:45:43.015Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/66/f8/38298237d18d4b6a8ee5dfe390e97bed5adb8e01ec6f9680c0ddf3066728/datasets-2.14.4-py3-none-any.whl", hash = "sha256:29336bd316a7d827ccd4da2236596279b20ca2ac78f64c04c9483da7cbc2459b", size = 519335, upload-time = "2023-08-08T15:45:38.837Z" },
-]
-
-[[package]]
-name = "debugpy"
-version = "1.8.14"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/bd/75/087fe07d40f490a78782ff3b0a30e3968936854105487decdb33446d4b0e/debugpy-1.8.14.tar.gz", hash = "sha256:7cd287184318416850aa8b60ac90105837bb1e59531898c07569d197d2ed5322", size = 1641444, upload-time = "2025-04-10T19:46:10.981Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/67/e8/57fe0c86915671fd6a3d2d8746e40485fd55e8d9e682388fbb3a3d42b86f/debugpy-1.8.14-cp311-cp311-macosx_14_0_universal2.whl", hash = "sha256:1b2ac8c13b2645e0b1eaf30e816404990fbdb168e193322be8f545e8c01644a9", size = 2175064, upload-time = "2025-04-10T19:46:19.486Z" },
-    { url = "https://files.pythonhosted.org/packages/3b/97/2b2fd1b1c9569c6764ccdb650a6f752e4ac31be465049563c9eb127a8487/debugpy-1.8.14-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cf431c343a99384ac7eab2f763980724834f933a271e90496944195318c619e2", size = 3132359, upload-time = "2025-04-10T19:46:21.192Z" },
-    { url = "https://files.pythonhosted.org/packages/c0/ee/b825c87ed06256ee2a7ed8bab8fb3bb5851293bf9465409fdffc6261c426/debugpy-1.8.14-cp311-cp311-win32.whl", hash = "sha256:c99295c76161ad8d507b413cd33422d7c542889fbb73035889420ac1fad354f2", size = 5133269, upload-time = "2025-04-10T19:46:23.047Z" },
-    { url = "https://files.pythonhosted.org/packages/d5/a6/6c70cd15afa43d37839d60f324213843174c1d1e6bb616bd89f7c1341bac/debugpy-1.8.14-cp311-cp311-win_amd64.whl", hash = "sha256:7816acea4a46d7e4e50ad8d09d963a680ecc814ae31cdef3622eb05ccacf7b01", size = 5158156, upload-time = "2025-04-10T19:46:24.521Z" },
-    { url = "https://files.pythonhosted.org/packages/d9/2a/ac2df0eda4898f29c46eb6713a5148e6f8b2b389c8ec9e425a4a1d67bf07/debugpy-1.8.14-cp312-cp312-macosx_14_0_universal2.whl", hash = "sha256:8899c17920d089cfa23e6005ad9f22582fd86f144b23acb9feeda59e84405b84", size = 2501268, upload-time = "2025-04-10T19:46:26.044Z" },
-    { url = "https://files.pythonhosted.org/packages/10/53/0a0cb5d79dd9f7039169f8bf94a144ad3efa52cc519940b3b7dde23bcb89/debugpy-1.8.14-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f6bb5c0dcf80ad5dbc7b7d6eac484e2af34bdacdf81df09b6a3e62792b722826", size = 4221077, upload-time = "2025-04-10T19:46:27.464Z" },
-    { url = "https://files.pythonhosted.org/packages/f8/d5/84e01821f362327bf4828728aa31e907a2eca7c78cd7c6ec062780d249f8/debugpy-1.8.14-cp312-cp312-win32.whl", hash = "sha256:281d44d248a0e1791ad0eafdbbd2912ff0de9eec48022a5bfbc332957487ed3f", size = 5255127, upload-time = "2025-04-10T19:46:29.467Z" },
-    { url = "https://files.pythonhosted.org/packages/33/16/1ed929d812c758295cac7f9cf3dab5c73439c83d9091f2d91871e648093e/debugpy-1.8.14-cp312-cp312-win_amd64.whl", hash = "sha256:5aa56ef8538893e4502a7d79047fe39b1dae08d9ae257074c6464a7b290b806f", size = 5297249, upload-time = "2025-04-10T19:46:31.538Z" },
-    { url = "https://files.pythonhosted.org/packages/97/1a/481f33c37ee3ac8040d3d51fc4c4e4e7e61cb08b8bc8971d6032acc2279f/debugpy-1.8.14-py2.py3-none-any.whl", hash = "sha256:5cd9a579d553b6cb9759a7908a41988ee6280b961f24f63336835d9418216a20", size = 5256230, upload-time = "2025-04-10T19:46:54.077Z" },
 ]
 
 [[package]]
@@ -2440,25 +2410,6 @@ wheels = [
 ]
 
 [[package]]
-name = "google-genai"
-version = "1.25.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anyio" },
-    { name = "google-auth" },
-    { name = "httpx" },
-    { name = "pydantic" },
-    { name = "requests" },
-    { name = "tenacity" },
-    { name = "typing-extensions" },
-    { name = "websockets" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/7f/59/c9b9148c8702b60253f5a251f16ae436534c5d4362da193c9db05ac9858c/google_genai-1.25.0.tar.gz", hash = "sha256:a08a79c819a5d949d9948cd372e36e512bf85cd28158994daaa36d0ec4cb2b02", size = 228141, upload-time = "2025-07-09T20:53:47.885Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f6/ec/149f3d49b56cf848142071772aabb1c290b535bd9b5327a5dfccf1d00332/google_genai-1.25.0-py3-none-any.whl", hash = "sha256:fb5cee79b9a0a1b2afd5cfdf279099ecebd186551eefcaa6ec0c6016244e6138", size = 226847, upload-time = "2025-07-09T20:53:46.532Z" },
-]
-
-[[package]]
 name = "google-search-results"
 version = "2.4.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2542,23 +2493,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/98/82/d022cf25ca39cf1200650fc58c52af32c90f80479c25d1cbf57980ec3065/greenlet-3.2.3-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:419e60f80709510c343c57b4bb5a339d8767bf9aef9b8ce43f4f143240f88b7c", size = 1121190, upload-time = "2025-06-05T16:36:48.59Z" },
     { url = "https://files.pythonhosted.org/packages/f5/e1/25297f70717abe8104c20ecf7af0a5b82d2f5a980eb1ac79f65654799f9f/greenlet-3.2.3-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:93d48533fade144203816783373f27a97e4193177ebaaf0fc396db19e5d61163", size = 1149055, upload-time = "2025-06-05T16:12:40.457Z" },
     { url = "https://files.pythonhosted.org/packages/1f/8f/8f9e56c5e82eb2c26e8cde787962e66494312dc8cb261c460e1f3a9c88bc/greenlet-3.2.3-cp312-cp312-win_amd64.whl", hash = "sha256:7454d37c740bb27bdeddfc3f358f26956a07d5220818ceb467a483197d84f849", size = 297817, upload-time = "2025-06-05T16:29:49.244Z" },
-]
-
-[[package]]
-name = "groq"
-version = "0.30.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anyio" },
-    { name = "distro" },
-    { name = "httpx" },
-    { name = "pydantic" },
-    { name = "sniffio" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a9/b1/72ca20dc9b977b7f604648e8944c77b267bddeb90d8e16bda0cf0e397844/groq-0.30.0.tar.gz", hash = "sha256:919466e48fcbebef08fed3f71debb0f96b0ea8d2ec77842c384aa843019f6e2c", size = 134928, upload-time = "2025-07-11T20:28:36.583Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/19/b8/5b90edf9fbd795597220e3d1b5534d845e69a73ffe1fdeb967443ed2a6cf/groq-0.30.0-py3-none-any.whl", hash = "sha256:6d9609a7778ba56432f45c1bac21b005f02c6c0aca9c1c094e65536f162c1e83", size = 131056, upload-time = "2025-07-11T20:28:35.591Z" },
 ]
 
 [[package]]
@@ -2916,42 +2850,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b9/bc/fcd5e5ba55cfb263277fb31d0ca65ed65e9e0f7a38eb9bc3d405aacb2ba8/instructor-1.9.0.tar.gz", hash = "sha256:34fb37084d40130bdde9d8dd27f592cef81b409ded8a8c11ccd81945e52fd9e6", size = 69331467, upload-time = "2025-06-21T05:53:26.65Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/70/11/c29d11567c39b360b61284e7bd6932a6aeb2772ff5088cf9d26b3f160d05/instructor-1.9.0-py3-none-any.whl", hash = "sha256:ab0eda1d20a2135cd15e1ed0928ea6428bee65cdc1ebfd09aba980c8da6389ee", size = 94705, upload-time = "2025-06-21T05:53:23.565Z" },
-]
-
-[[package]]
-name = "ipykernel"
-version = "6.29.5"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "appnope", marker = "sys_platform == 'darwin'" },
-    { name = "comm" },
-    { name = "debugpy" },
-    { name = "ipython" },
-    { name = "jupyter-client" },
-    { name = "jupyter-core" },
-    { name = "matplotlib-inline" },
-    { name = "nest-asyncio" },
-    { name = "packaging" },
-    { name = "psutil" },
-    { name = "pyzmq" },
-    { name = "tornado" },
-    { name = "traitlets" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e9/5c/67594cb0c7055dc50814b21731c22a601101ea3b1b50a9a1b090e11f5d0f/ipykernel-6.29.5.tar.gz", hash = "sha256:f093a22c4a40f8828f8e330a9c297cb93dcab13bd9678ded6de8e5cf81c56215", size = 163367, upload-time = "2024-07-01T14:07:22.543Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/94/5c/368ae6c01c7628438358e6d337c19b05425727fbb221d2a3c4303c372f42/ipykernel-6.29.5-py3-none-any.whl", hash = "sha256:afdb66ba5aa354b09b91379bac28ae4afebbb30e8b39510c9690afb7a10421b5", size = 117173, upload-time = "2024-07-01T14:07:19.603Z" },
-]
-
-[[package]]
-name = "ipynbname"
-version = "2024.1.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "ipykernel" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d8/4b/a84ceea5ff73ec0e466540d54e835414f3e0ecde8389ce008e12fa129709/ipynbname-2024.1.0.0.tar.gz", hash = "sha256:1d3c69cdee8a97814f456a7204e9cc195b4bbb4b9e45cbe757796b162493f606", size = 4204, upload-time = "2024-05-07T08:06:41.306Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1a/fc/c6b3f5ad0520aed15b2dc0632a0c6a74d7434e7950f766089e13a8b6631f/ipynbname-2024.1.0.0-py3-none-any.whl", hash = "sha256:cdd098cfe1986baa1d4ecb0b42f7a2b63646f25570f57163239beba73f26d65a", size = 4345, upload-time = "2024-05-07T08:06:39.644Z" },
 ]
 
 [[package]]
@@ -4782,115 +4680,6 @@ wheels = [
 ]
 
 [[package]]
-name = "openinference-instrumentation-anthropic"
-version = "0.1.18"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/34/4f/66ff7cd9f7d60fde67759fca05c53053a02ea654203354bf7ee5d5dca1d4/openinference_instrumentation_anthropic-0.1.18.tar.gz", hash = "sha256:0a4cb556235dbcf8003e41204841b35be17e4e240ba5436218f5f837f36b0733", size = 14108, upload-time = "2025-05-20T05:03:54.3Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e3/36/2ab55c22e17f1b426e4205fdb82925e69a22dd34bd2918e72254d5df3237/openinference_instrumentation_anthropic-0.1.18-py3-none-any.whl", hash = "sha256:c0aeb5b6fdfecc308b1e286ff66dd69d23371b999a545590811de14142716904", size = 17218, upload-time = "2025-05-20T05:03:52.788Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-bedrock"
-version = "0.1.26"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "dacite" },
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d4/b6/5c0167e364da21bd0b2aea3b88fbde0a8d77e14fccfe7948d3608c438b22/openinference_instrumentation_bedrock-0.1.26.tar.gz", hash = "sha256:2191f664ec9791f8f42d15fb6af43f3937640249c1aeeb7edbd6a719b3cfd77b", size = 170038, upload-time = "2025-06-19T16:54:19.165Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f0/d3/6d52f61360abe0cda5cdd7be71fb64f3953718fe74f03be82cd1087af631/openinference_instrumentation_bedrock-0.1.26-py3-none-any.whl", hash = "sha256:953d1bc8b958d56b03263a5752b2e9a8c6a33069d05e1233527a21a6dd1505ce", size = 50677, upload-time = "2025-06-19T16:54:17.805Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-crewai"
-version = "0.1.10"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/03/16/1836fb73a1f4981a3252a58c7f9e23246151257cc6daca095eaa330e2d9b/openinference_instrumentation_crewai-0.1.10.tar.gz", hash = "sha256:4f755eaf2da2760d809aa61100bc804017d59a4cc09c79f55da460a8e5ed495d", size = 10070, upload-time = "2025-05-28T03:51:21.742Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/cc/8b/4144198b5d735dc3f18ccc15638fe020a48c3d2ea892ab54b382ce30d359/openinference_instrumentation_crewai-0.1.10-py3-none-any.whl", hash = "sha256:6b42239eedbc9b03eb01e7c81a2873a8b7352254bd787c1d2d22d6a22de9e51a", size = 11581, upload-time = "2025-05-28T03:51:20.91Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-google-adk"
-version = "0.1.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/77/c7/b2300fbf7536ff81d70e333d2facd014b5d8d9e036810a4d84b860fa8cba/openinference_instrumentation_google_adk-0.1.1.tar.gz", hash = "sha256:357b4e1ecce12275b26fab7109aa69f50f8db2bb7c19b591182ca7b3ce650135", size = 11803, upload-time = "2025-06-27T22:47:23.718Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d7/21/65d56dd388bc7cdf71f2bc156008b5fca3b31f8bbc608d7eb8f1dd8d62f7/openinference_instrumentation_google_adk-0.1.1-py3-none-any.whl", hash = "sha256:65ba906b8ac7bae72c09fe708aff96f5b7f26e01497cd9ba381c168ce4f4934e", size = 13612, upload-time = "2025-06-27T22:47:22.92Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-groq"
-version = "0.1.11"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4f/77/4bafc9b2307325e97afc9857e18eaa2d952ebeedb4063f4f4ae82fa9624f/openinference_instrumentation_groq-0.1.11.tar.gz", hash = "sha256:d23d640822dd66682f779c490b7d9cebbf26895cc06ff75d6ae8e1df8210f1e8", size = 11817, upload-time = "2025-04-28T23:14:06.058Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/64/1a/073e8bea94af702bf554f0a1c53a403783ef942fdd07a5ec286a4d642d0a/openinference_instrumentation_groq-0.1.11-py3-none-any.whl", hash = "sha256:b5303469870ba474dc3461558730c18cf5ef787b490386f72d20a250ede9cf36", size = 15717, upload-time = "2025-04-28T23:13:56.832Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-haystack"
-version = "0.1.24"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b1/15/d750f65dff58524fb7c1d679bae91948447e1a3547bc32e662e6d3ac7fcc/openinference_instrumentation_haystack-0.1.24.tar.gz", hash = "sha256:14aea1e46d16415e373dd3f65d4e2ae94a1aa705b7b6967e606ab6e5dbb2cc18", size = 13001, upload-time = "2025-05-31T00:10:31.585Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/96/2f/0bad4a4840de04defa9f82fc6ffaa48b02dd19aa085fdf08701ba349cb59/openinference_instrumentation_haystack-0.1.24-py3-none-any.whl", hash = "sha256:55628441fdccb13904c7bc90e3621d18d346acf9bf3884b9fac672a6dba9ad2f", size = 14415, upload-time = "2025-05-31T00:10:29.683Z" },
-]
-
-[[package]]
 name = "openinference-instrumentation-langchain"
 version = "0.1.29"
 source = { registry = "https://pypi.org/simple" }
@@ -4905,130 +4694,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/10/d2/185e4dd18431f35faba90482f511328d283e71ed12737e050664f7b5efeb/openinference_instrumentation_langchain-0.1.29.tar.gz", hash = "sha256:f6c10079c91f810cff39ff24c278e41d16df0c3706b230e1859f46cad20f8e0b", size = 45868, upload-time = "2024-10-31T14:29:21.803Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/eb/ba/b0855a5f9bb565e462d85ecfad63d108c4c4bc209a34850623273f7dbcef/openinference_instrumentation_langchain-0.1.29-py3-none-any.whl", hash = "sha256:9faaedb62f90ca8099b48c0b9ded97fe109a646b756f4bf7c98479b500a8446d", size = 17043, upload-time = "2024-10-31T14:29:20.811Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-litellm"
-version = "0.1.23"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-sdk" },
-    { name = "setuptools" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d0/24/d55bb98f74958f6a8e33d59cf1c3e00c3964860b3082d480f2bf66f557b6/openinference_instrumentation_litellm-0.1.23.tar.gz", hash = "sha256:6903b28b4edfc7b652a78967757aafac76dd13460d9e0ecb37383cae88d989d5", size = 17852, upload-time = "2025-07-10T20:20:21.654Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ec/fb/642649bcf0e37193103f61aef2ebea29e6c99c9b20d695e033e018da4fc7/openinference_instrumentation_litellm-0.1.23-py3-none-any.whl", hash = "sha256:3548472b8b239fc01ce270546f6c19a165c08799461c6d22d6c87adef192a9e7", size = 12749, upload-time = "2025-07-10T20:20:20.326Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-llama-index"
-version = "4.3.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/15/8d/dd691556848761022de808adb376195e3b6c53c50e971b27ea56e828d9ba/openinference_instrumentation_llama_index-4.3.1.tar.gz", hash = "sha256:d3a2502be7ffce6547eaf5aaf1b6973e7f700954538a202a95fae6b87fc645c1", size = 59327, upload-time = "2025-06-27T16:35:11.434Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0a/ad/f9d0e5d41d9ad8a71daecd77d1702d1f4f328768aab9a84de588bf883426/openinference_instrumentation_llama_index-4.3.1-py3-none-any.whl", hash = "sha256:f1fbf8d4177f3a2eb039ede5d86968332c1066de32343c3017ee5272bc9e92e0", size = 28381, upload-time = "2025-06-27T16:35:10.279Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-mistralai"
-version = "1.3.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/12/93/40e5f7b951fe309893f0fc4ff615264e021a3ebfc63cbe3815fd6b0f8cb3/openinference_instrumentation_mistralai-1.3.3.tar.gz", hash = "sha256:a55472a52dfa179058b851f2e502346a3cc1acadb023dd5b66b77c542369480a", size = 21307, upload-time = "2025-04-28T23:14:06.082Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/f0/8e5678d39ff0cac31f2093f194a2510c8cccf443442df01bbab8042aaff9/openinference_instrumentation_mistralai-1.3.3-py3-none-any.whl", hash = "sha256:f7323f4de35dc4aacf80be40d105a2f800f3ff7f9e0404b052d51c657e0d33e0", size = 20386, upload-time = "2025-04-28T23:13:55.994Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-openai"
-version = "0.1.30"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/65/14/d72575256fe8eb511ed1d052ea3272fcc46eaa7d61adaf1043090a2ad213/openinference_instrumentation_openai-0.1.30.tar.gz", hash = "sha256:b5ef3576433900ae71f328ca771905bb1392f7ad6c3dc0c0b942ceb138f091c3", size = 21343, upload-time = "2025-05-31T00:10:33.211Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b3/b9/6026fb57c1856ce71e02b35fe9c8a40563abe3eacab2776532c88325c6b5/openinference_instrumentation_openai-0.1.30-py3-none-any.whl", hash = "sha256:de0ac47405e7f4a94bd67b8ca0512e109c97bee4d37023d8eab7cbb421705f29", size = 28366, upload-time = "2025-05-31T00:10:30.744Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-openai-agents"
-version = "1.0.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/8e/63/a3e825e2d40c94319bda1f4679cbe9a11b9ad16677b3a50e5853d54657ed/openinference_instrumentation_openai_agents-1.0.0.tar.gz", hash = "sha256:c196186194dbc95f26d4bd003c7f44a88564493c7f1c50348fad1c2b265a396a", size = 11648, upload-time = "2025-07-02T05:01:39.434Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/09/6e/fa72af65c22b41b141a7b31056ec39ab8e586f34dd64008aecddae662618/openinference_instrumentation_openai_agents-1.0.0-py3-none-any.whl", hash = "sha256:6c8cb179c9db1f543f58ed8f773456a96fd771bfcc0394e0e5eabebbbc0dd045", size = 13530, upload-time = "2025-07-02T05:01:38.334Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-smolagents"
-version = "0.1.14"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c9/3f/7acd78b90ce7a77c7beb32f4af86c1efcf669d45019160ad1ee2af3ccdff/openinference_instrumentation_smolagents-0.1.14.tar.gz", hash = "sha256:9a24a778e5f34c3837576fcf92bf98a4af34fa213249a04d6776e82c51ccdde6", size = 11107, upload-time = "2025-07-10T20:20:23.012Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/b8/43652d8452e8faaed85535b9652412e8393ba1e288a1a4cc267e6c6aff04/openinference_instrumentation_smolagents-0.1.14-py3-none-any.whl", hash = "sha256:8f818ac8df18e57588b267dc033ef76065aa7c2af930864309931b7b1f3a8966", size = 12719, upload-time = "2025-07-10T20:20:22.055Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation-vertexai"
-version = "0.1.11"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-instrumentation" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/06/3e/a1cd041ed1237e80178c70e5d71d95417225f84065e3aae854b70173f01c/openinference_instrumentation_vertexai-0.1.11.tar.gz", hash = "sha256:600d9be988af6e1371e17187cf6aeed3ebb893d1ca0ef567cc00f67b3242aba6", size = 21061, upload-time = "2025-05-05T16:38:46.18Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/c9/e2ea586fec1f7650d0f8c6e630417859851995ed5ba693315d1ef282de57/openinference_instrumentation_vertexai-0.1.11-py3-none-any.whl", hash = "sha256:5fceb31a89aea0d8b7c93b7b89f8095888fedf8f8944518b2d803b02f39810dc", size = 17169, upload-time = "2025-05-05T16:38:45.151Z" },
 ]
 
 [[package]]
@@ -5665,15 +5330,15 @@ wheels = [
 name = "psutil"
 version = "6.0.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/18/c7/8c6872f7372eb6a6b2e4708b88419fb46b857f7a2e1892966b851cc79fc9/psutil-6.0.0.tar.gz", hash = "sha256:8faae4f310b6d969fa26ca0545338b21f73c6b15db7c4a8d934a5482faa818f2", size = 508067, upload-time = "2024-06-18T21:40:10.559Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2a/80/336820c1ad9286a4ded7e845b2eccfcb27851ab8ac6abece774a6ff4d3de/psutil-7.0.0.tar.gz", hash = "sha256:7be9c3eba38beccb6495ea33afd982a44074b78f28c434a1f51cc07fd315c456", size = 497003, upload-time = "2025-02-13T21:54:07.946Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0b/37/f8da2fbd29690b3557cca414c1949f92162981920699cd62095a984983bf/psutil-6.0.0-cp36-abi3-macosx_10_9_x86_64.whl", hash = "sha256:c588a7e9b1173b6e866756dde596fd4cad94f9399daf99ad8c3258b3cb2b47a0", size = 250961, upload-time = "2024-06-18T21:41:11.662Z" },
-    { url = "https://files.pythonhosted.org/packages/35/56/72f86175e81c656a01c4401cd3b1c923f891b31fbcebe98985894176d7c9/psutil-6.0.0-cp36-abi3-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:6ed2440ada7ef7d0d608f20ad89a04ec47d2d3ab7190896cd62ca5fc4fe08bf0", size = 287478, upload-time = "2024-06-18T21:41:16.18Z" },
-    { url = "https://files.pythonhosted.org/packages/19/74/f59e7e0d392bc1070e9a70e2f9190d652487ac115bb16e2eff6b22ad1d24/psutil-6.0.0-cp36-abi3-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5fd9a97c8e94059b0ef54a7d4baf13b405011176c3b6ff257c247cae0d560ecd", size = 290455, upload-time = "2024-06-18T21:41:29.048Z" },
-    { url = "https://files.pythonhosted.org/packages/cd/5f/60038e277ff0a9cc8f0c9ea3d0c5eb6ee1d2470ea3f9389d776432888e47/psutil-6.0.0-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e2e8d0054fc88153ca0544f5c4d554d42e33df2e009c4ff42284ac9ebdef4132", size = 292046, upload-time = "2024-06-18T21:41:33.53Z" },
-    { url = "https://files.pythonhosted.org/packages/8b/20/2ff69ad9c35c3df1858ac4e094f20bd2374d33c8643cf41da8fd7cdcb78b/psutil-6.0.0-cp37-abi3-win32.whl", hash = "sha256:a495580d6bae27291324fe60cea0b5a7c23fa36a7cd35035a16d93bdcf076b9d", size = 253560, upload-time = "2024-06-18T21:41:46.067Z" },
-    { url = "https://files.pythonhosted.org/packages/73/44/561092313ae925f3acfaace6f9ddc4f6a9c748704317bad9c8c8f8a36a79/psutil-6.0.0-cp37-abi3-win_amd64.whl", hash = "sha256:33ea5e1c975250a720b3a6609c490db40dae5d83a4eb315170c4fe0d8b1f34b3", size = 257399, upload-time = "2024-06-18T21:41:52.1Z" },
-    { url = "https://files.pythonhosted.org/packages/7c/06/63872a64c312a24fb9b4af123ee7007a306617da63ff13bcc1432386ead7/psutil-6.0.0-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:ffe7fc9b6b36beadc8c322f84e1caff51e8703b88eee1da46d1e3a6ae11b4fd0", size = 251988, upload-time = "2024-06-18T21:41:57.337Z" },
+    { url = "https://files.pythonhosted.org/packages/ed/e6/2d26234410f8b8abdbf891c9da62bee396583f713fb9f3325a4760875d22/psutil-7.0.0-cp36-abi3-macosx_10_9_x86_64.whl", hash = "sha256:101d71dc322e3cffd7cea0650b09b3d08b8e7c4109dd6809fe452dfd00e58b25", size = 238051, upload-time = "2025-02-13T21:54:12.36Z" },
+    { url = "https://files.pythonhosted.org/packages/04/8b/30f930733afe425e3cbfc0e1468a30a18942350c1a8816acfade80c005c4/psutil-7.0.0-cp36-abi3-macosx_11_0_arm64.whl", hash = "sha256:39db632f6bb862eeccf56660871433e111b6ea58f2caea825571951d4b6aa3da", size = 239535, upload-time = "2025-02-13T21:54:16.07Z" },
+    { url = "https://files.pythonhosted.org/packages/2a/ed/d362e84620dd22876b55389248e522338ed1bf134a5edd3b8231d7207f6d/psutil-7.0.0-cp36-abi3-manylinux_2_12_i686.manylinux2010_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:1fcee592b4c6f146991ca55919ea3d1f8926497a713ed7faaf8225e174581e91", size = 275004, upload-time = "2025-02-13T21:54:18.662Z" },
+    { url = "https://files.pythonhosted.org/packages/bf/b9/b0eb3f3cbcb734d930fdf839431606844a825b23eaf9a6ab371edac8162c/psutil-7.0.0-cp36-abi3-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4b1388a4f6875d7e2aff5c4ca1cc16c545ed41dd8bb596cefea80111db353a34", size = 277986, upload-time = "2025-02-13T21:54:21.811Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/a2/709e0fe2f093556c17fbafda93ac032257242cabcc7ff3369e2cb76a97aa/psutil-7.0.0-cp36-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:a5f098451abc2828f7dc6b58d44b532b22f2088f4999a937557b603ce72b1993", size = 279544, upload-time = "2025-02-13T21:54:24.68Z" },
+    { url = "https://files.pythonhosted.org/packages/50/e6/eecf58810b9d12e6427369784efe814a1eec0f492084ce8eb8f4d89d6d61/psutil-7.0.0-cp37-abi3-win32.whl", hash = "sha256:ba3fcef7523064a6c9da440fc4d6bd07da93ac726b5733c29027d7dc95b39d99", size = 241053, upload-time = "2025-02-13T21:54:34.31Z" },
+    { url = "https://files.pythonhosted.org/packages/50/1b/6921afe68c74868b4c9fa424dad3be35b095e16687989ebbb50ce4fceb7c/psutil-7.0.0-cp37-abi3-win_amd64.whl", hash = "sha256:4cf3d4eb1aa9b348dec30105c55cd9b7d4629285735a102beb4441e38db90553", size = 244885, upload-time = "2025-02-13T21:54:37.486Z" },
 ]
 
 [[package]]
@@ -5692,15 +5357,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/cd/05/0a34433a064256a578f1783a10da6df098ceaa4a57bbeaa96a6c0352786b/pure_eval-0.2.3.tar.gz", hash = "sha256:5f4e983f40564c576c7c8635ae88db5956bb2229d7e9237d03b3c0b0190eaf42", size = 19752, upload-time = "2024-07-21T12:58:21.801Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8e/37/efad0257dc6e593a18957422533ff0f87ede7c9c6ea010a2177d738fb82f/pure_eval-0.2.3-py3-none-any.whl", hash = "sha256:1db8e35b67b3d218d818ae653e27f06c3aa420901fa7b081ca98cbedc874e0d0", size = 11842, upload-time = "2024-07-21T12:58:20.04Z" },
-]
-
-[[package]]
-name = "py-cpuinfo"
-version = "9.0.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/37/a8/d832f7293ebb21690860d2e01d8115e5ff6f2ae8bbdc953f0eb0fa4bd2c7/py-cpuinfo-9.0.0.tar.gz", hash = "sha256:3cdbbf3fac90dc6f118bfd64384f309edeadd902d7c8fb17f02ffa1fc3f49690", size = 104716, upload-time = "2022-10-25T20:38:06.303Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e0/a9/023730ba63db1e494a271cb018dcd361bd2c917ba7004c3e49d5daf795a2/py_cpuinfo-9.0.0-py3-none-any.whl", hash = "sha256:859625bc251f64e21f077d099d4162689c762b5d6a4c3c97553d56241c9674d5", size = 22335, upload-time = "2022-10-25T20:38:27.636Z" },
 ]
 
 [[package]]
@@ -6362,56 +6018,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1d/56/3f355f931c239c260b4fe3bd6433ec6c9e6185cd5ae0970fe89d0ca6daee/qdrant_client-1.14.3.tar.gz", hash = "sha256:bb899e3e065b79c04f5e47053d59176150c0a5dabc09d7f476c8ce8e52f4d281", size = 286766, upload-time = "2025-06-16T11:13:47.838Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/35/5e/8174c845707e60b60b65c58f01e40bbc1d8181b5ff6463f25df470509917/qdrant_client-1.14.3-py3-none-any.whl", hash = "sha256:66faaeae00f9b5326946851fe4ca4ddb1ad226490712e2f05142266f68dfc04d", size = 328969, upload-time = "2025-06-16T11:13:46.636Z" },
-]
-
-[[package]]
-name = "ragaai-catalyst"
-version = "2.2.5"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "aiohttp" },
-    { name = "google-genai" },
-    { name = "gputil" },
-    { name = "groq" },
-    { name = "ipynbname" },
-    { name = "langchain" },
-    { name = "langchain-core" },
-    { name = "litellm" },
-    { name = "llama-index" },
-    { name = "markdown" },
-    { name = "openai" },
-    { name = "openinference-instrumentation-anthropic" },
-    { name = "openinference-instrumentation-bedrock" },
-    { name = "openinference-instrumentation-crewai" },
-    { name = "openinference-instrumentation-google-adk" },
-    { name = "openinference-instrumentation-groq" },
-    { name = "openinference-instrumentation-haystack" },
-    { name = "openinference-instrumentation-langchain" },
-    { name = "openinference-instrumentation-litellm" },
-    { name = "openinference-instrumentation-llama-index" },
-    { name = "openinference-instrumentation-mistralai" },
-    { name = "openinference-instrumentation-openai" },
-    { name = "openinference-instrumentation-openai-agents" },
-    { name = "openinference-instrumentation-smolagents" },
-    { name = "openinference-instrumentation-vertexai" },
-    { name = "opentelemetry-exporter-otlp" },
-    { name = "opentelemetry-proto" },
-    { name = "opentelemetry-sdk" },
-    { name = "pandas" },
-    { name = "psutil" },
-    { name = "py-cpuinfo" },
-    { name = "pyopenssl" },
-    { name = "pypdf" },
-    { name = "requests" },
-    { name = "rich" },
-    { name = "tenacity" },
-    { name = "tiktoken" },
-    { name = "tomli" },
-    { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/21/0c/bd724822ab85e1eeb4936df7d257400972e2bc53a9afd108951dc8f6fe8e/ragaai_catalyst-2.2.5.tar.gz", hash = "sha256:9ff528a7c63e32c7fb5d49b8ec2e051d056c189efb2ef0461fb4208a81817545", size = 40898669, upload-time = "2025-07-01T05:11:58.614Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9c/e5/2ffd692720b71090f4e02986fdcef6340c01f497900f8c0981bf21890e98/ragaai_catalyst-2.2.5-py3-none-any.whl", hash = "sha256:44293b48e83887bec1c76ba0e66ab88781a1ba58541d313780282e24135303a5", size = 434917, upload-time = "2025-07-01T05:11:34.115Z" },
 ]
 
 [[package]]
@@ -7350,9 +6956,9 @@ wheels = [
 name = "tenacity"
 version = "8.3.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/32/6c/57df6196ce52c464cf8556e8f697fec5d3469bb8cd319c1685c0a090e0b4/tenacity-8.3.0.tar.gz", hash = "sha256:953d4e6ad24357bceffbc9707bc74349aca9d245f68eb65419cf0c249a1949a2", size = 43608, upload-time = "2024-05-07T08:48:17.099Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0a/d4/2b0cd0fe285e14b36db076e78c93766ff1d529d70408bd1d2a5a84f1d929/tenacity-9.1.2.tar.gz", hash = "sha256:1169d376c297e7de388d18b4481760d478b0e99a777cad3a9c86e556f4b697cb", size = 48036, upload-time = "2025-04-02T08:25:09.966Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/61/a1/6bb0cbebefb23641f068bb58a2bc56da9beb2b1c550242e3c540b37698f3/tenacity-8.3.0-py3-none-any.whl", hash = "sha256:3649f6443dbc0d9b01b9d8020a9c4ec7a1ff5f6f3c6c8a036ef371f573fe9185", size = 25934, upload-time = "2024-05-07T08:48:14.696Z" },
+    { url = "https://files.pythonhosted.org/packages/e5/30/643397144bfbfec6f6ef821f36f33e57d35946c44a2352d3c9f0ae847619/tenacity-9.1.2-py3-none-any.whl", hash = "sha256:f77bf36710d8b73a50b2dd155c97b870017ad21afe6ab300326b0371b3b05138", size = 28248, upload-time = "2025-04-02T08:25:07.678Z" },
 ]
 
 [[package]]

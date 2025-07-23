@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
     """
-    Function which connects to a Model Context Protocol (MCP) server and wraps the selected tool as an AIQ Toolkit
+    Function which connects to a Model Context Protocol (MCP) server and wraps the selected tool as a NeMo Agent toolkit
     function.
     """
     # Add your custom configuration parameters here
