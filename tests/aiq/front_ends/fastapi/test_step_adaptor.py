@@ -88,7 +88,8 @@ def make_intermediate_step():
         )
         # The IntermediateStep constructor requires a function_ancestry,
         # but for testing we can just pass None or a placeholder.
-        return IntermediateStep(function_ancestry=InvocationNode(parent_id="abc",
+        return IntermediateStep(parent_id="root",
+                                function_ancestry=InvocationNode(parent_id="abc",
                                                                  function_id="def",
                                                                  function_name="xyz"),
                                 payload=payload)

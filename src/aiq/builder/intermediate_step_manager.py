@@ -20,7 +20,6 @@ import typing
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepState
-from aiq.data_models.invocation_node import InvocationNode
 from aiq.utils.reactive.observable import OnComplete
 from aiq.utils.reactive.observable import OnError
 from aiq.utils.reactive.observable import OnNext
@@ -37,7 +36,7 @@ class OpenStep:
     step_id: str
     step_name: str
     step_type: str
-    step_parent_id: str | None
+    step_parent_id: str
     prev_stack: list[str]
     active_stack: list[str]
 
@@ -153,15 +152,14 @@ class IntermediateStepManager:
                 return
 
             parent_step_id = open_step.step_parent_id
+        else:
+            assert False, "Invalid event state"
 
         active_function = self._context_state.active_function.get()
 
-        function_ancestry = InvocationNode(function_name=active_function.function_name,
-                                           function_id=active_function.function_id,
-                                           parent_id=parent_step_id,
-                                           parent_name=active_function.parent_name)
-
-        intermediate_step = IntermediateStep(function_ancestry=function_ancestry, payload=payload)
+        intermediate_step = IntermediateStep(parent_id=parent_step_id,
+                                             function_ancestry=active_function,
+                                             payload=payload)
 
         self._context_state.event_stream.get().on_next(intermediate_step)
 

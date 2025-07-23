@@ -121,6 +121,7 @@ triages
 [Uu]nittest(s?)
 [Uu]nprocessable
 [Uu]ploader
+[Uu]psert
 uv
 VectorDB
 [Ww]alkthrough

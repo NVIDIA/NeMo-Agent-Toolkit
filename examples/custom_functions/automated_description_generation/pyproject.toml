@@ -1,0 +1,23 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+root = "../../.."
+
+[project]
+name = "aiq_automated_description_generation"
+dynamic = ["version"]
+dependencies = [
+  "aiqtoolkit[ingestion, langchain]~=1.2"
+]
+requires-python = ">=3.11,<3.13"
+description = "Automated Generation Description AI-Q example"
+keywords = ["ai", "rag", "agents"]
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+aiqtoolkit = { path = "../../..", editable = true }
+
+[project.entry-points.'aiq.components']
+aiq_automated_description_generation = "aiq_automated_description_generation.register"

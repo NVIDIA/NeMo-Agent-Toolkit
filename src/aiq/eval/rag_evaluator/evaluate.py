@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+import math
 from collections.abc import Sequence
 
 from pydantic import BaseModel
@@ -53,9 +54,9 @@ class RAGEvaluator:
             if self.input_obj_field and hasattr(input_obj, self.input_obj_field):
                 # If input_obj_field is specified, return the value of that field
                 return str(getattr(input_obj, self.input_obj_field, ""))
-            else:
-                # If no input_obj_field is specified, return the string representation of the model
-                return input_obj.model_dump_json()
+
+            # If no input_obj_field is specified, return the string representation of the model
+            return input_obj.model_dump_json()
 
         if isinstance(input_obj, dict):
             # If input_obj is a dict, return the JSON string representation
@@ -105,19 +106,29 @@ class RAGEvaluator:
             return EvalOutput(average_score=0.0, eval_output_items=[])
 
         scores: list[dict[str, float]] = results_dataset.scores
+
+        # If Ragas returned no scores, return empty output to avoid downstream errors
         if not scores:
-            logger.error("Ragas returned empty score list")
+            logger.warning("Ragas returned empty score list")
             return EvalOutput(average_score=0.0, eval_output_items=[])
 
-        # Convert from list of dicts to dict of lists
-        scores_dict = {metric: [score[metric] for score in scores] for metric in scores[0]}
+        def _nan_to_zero(v: float | None) -> float:
+            """Convert NaN or None to 0.0 for safe arithmetic/serialization."""
+            return 0.0 if v is None or (isinstance(v, float) and math.isnan(v)) else v
 
-        # Compute the average of each metric
-        average_scores = {metric: sum(values) / len(values) for metric, values in scores_dict.items()}
+        # Convert from list of dicts to dict of lists, coercing NaN/None to 0.0
+        scores_dict = {metric: [_nan_to_zero(score.get(metric)) for score in scores] for metric in scores[0]}
+        first_metric_name = list(scores_dict.keys())[0] if scores_dict else None
 
-        # Extract the first (and only) metric's average score
-        first_avg_score = next(iter(average_scores.values()))
-        first_metric_name = list(scores_dict.keys())[0]
+        # Compute the average of each metric, guarding against empty lists
+        average_scores = {
+            metric: (sum(values) / len(values) if values else 0.0)
+            for metric, values in scores_dict.items()
+        }
+
+        first_avg_score = average_scores.get(list(scores_dict.keys())[0], 0.0)
+        if isinstance(first_avg_score, float) and math.isnan(first_avg_score):
+            first_avg_score = 0.0
 
         df = results_dataset.to_pandas()
         # Get id from eval_input if df size matches number of eval_input_items
@@ -130,7 +141,7 @@ class RAGEvaluator:
         eval_output_items = [
             EvalOutputItem(
                 id=ids[i],
-                score=getattr(row, first_metric_name, 0.0),
+                score=_nan_to_zero(getattr(row, first_metric_name, 0.0) if first_metric_name else 0.0),
                 reasoning={
                     key:
                         getattr(row, key, None)  # Use getattr to safely access attributes

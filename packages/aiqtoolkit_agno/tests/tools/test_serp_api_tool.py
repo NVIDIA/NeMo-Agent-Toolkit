@@ -13,8 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=no-name-in-module,import-error
+# pylint: disable=not-async-context-manager
 
+import json
 import os
 import sys
 from unittest.mock import AsyncMock
@@ -24,9 +25,9 @@ from unittest.mock import patch
 import pytest
 
 from aiq.builder.builder import Builder
+from aiq.builder.function import LambdaFunction
 from aiq.builder.function_info import FunctionInfo
 from aiq.plugins.agno.tools.serp_api_tool import SerpApiToolConfig
-from aiq.plugins.agno.tools.serp_api_tool import _empty_query_handled as original_empty_query_handled
 from aiq.plugins.agno.tools.serp_api_tool import serp_api_tool
 
 
@@ -67,17 +68,36 @@ class TestSerpApiTool:
 
     @pytest.fixture
     def mock_search_results(self):
-        """Create mock search results."""
-        return [{
-            "title": "Test Result 1",
-            "link": "https://example.com/1",
-            "snippet": "This is the first test result snippet."
-        },
+        """Create mock search results as a JSON string."""
+        return json.dumps({
+            "search_results": [{
+                "title": "Test Result 1",
+                "link": "https://example.com/1",
+                "snippet": "This is the first test result snippet."
+            },
+                               {
+                                   "title": "Test Result 2",
+                                   "link": "https://example.com/2",
+                                   "snippet": "This is the second test result snippet."
+                               }]
+        })
+
+    @pytest.fixture
+    def mock_incomplete_search_results(self):
+        """Create mock search results as a JSON string."""
+        return json.dumps({
+            "search_results": [
                 {
-                    "title": "Test Result 2",
-                    "link": "https://example.com/2",
-                    "snippet": "This is the second test result snippet."
-                }]
+                    "title": "Complete Result",
+                    "link": "https://example.com/complete",
+                    "snippet": "This result has all fields."
+                },
+                {
+                    # Missing title and snippet
+                    "link": "https://example.com/incomplete"
+                }
+            ]
+        })
 
     @pytest.mark.asyncio
     @patch.dict("sys.modules", {**sys.modules, **mock_modules})
@@ -85,7 +105,9 @@ class TestSerpApiTool:
         """Test that serp_api_tool correctly creates a FunctionInfo object."""
         # Set up the mock
         mock_tools = MagicMock()
-        sys.modules['agno.tools.serpapi'].SerpApiTools = mock_tools
+        mock_serpapi_module = MagicMock()
+        mock_serpapi_module.SerpApiTools = mock_tools
+        sys.modules['agno.tools.serpapi'] = mock_serpapi_module
 
         # Call the function under test - handle as context manager
         async with serp_api_tool(tool_config, mock_builder) as fn_info:
@@ -105,7 +127,9 @@ class TestSerpApiTool:
 
         # Set up the mock
         mock_tools = MagicMock()
-        sys.modules['agno.tools.serpapi'].SerpApiTools = mock_tools
+        mock_serpapi_module = MagicMock()
+        mock_serpapi_module.SerpApiTools = mock_tools
+        sys.modules['agno.tools.serpapi'] = mock_serpapi_module
 
         # Call the function under test
         async with serp_api_tool(config, mock_builder) as fn_info:
@@ -130,82 +154,24 @@ class TestSerpApiTool:
 
     @pytest.mark.asyncio
     @patch.dict("sys.modules", {**sys.modules, **mock_modules})
-    async def test_serp_api_search_empty_query_first_time(self, tool_config, mock_builder):
-        """Test that _serp_api_search handles empty queries correctly (first time)."""
-        # Set up the mocks
-        mock_tool = MagicMock()
-        mock_tool.search_google = AsyncMock()
-        mock_tools = MagicMock(return_value=mock_tool)
-        sys.modules['agno.tools.serpapi'].SerpApiTools = mock_tools
-
-        # Store original value to restore later
-        original_value = original_empty_query_handled
-        try:
-            # Set to False to simulate first-time behavior
-            modules_dict = sys.modules["aiq.plugins.agno.tools.serp_api_tool"].__dict__
-            modules_dict["_empty_query_handled"] = False
-
-            # Get the function info
-            async with serp_api_tool(tool_config, mock_builder) as fn_info:
-                # Call the search function with empty query
-                result = await fn_info.single_fn("")
-
-                # Verify the result
-                assert "Tool is initialized" in result
-                assert "Please provide a search query" in result
-
-                # Verify search was not called
-                mock_tool.search_google.assert_not_called()
-        finally:
-            # Restore original module state
-            modules_dict["_empty_query_handled"] = original_value
-
-    @pytest.mark.asyncio
-    @patch.dict("sys.modules", {**sys.modules, **mock_modules})
-    async def test_serp_api_search_empty_query_subsequent(self, tool_config, mock_builder):
-        """Test that _serp_api_search handles empty queries correctly (subsequent times)."""
-        # Set up the mocks
-        mock_tool = MagicMock()
-        mock_tool.search_google = AsyncMock()
-        mock_tools = MagicMock(return_value=mock_tool)
-        sys.modules['agno.tools.serpapi'].SerpApiTools = mock_tools
-
-        # Store original value to restore later
-        original_value = original_empty_query_handled
-        try:
-            # Set to True to simulate subsequent behavior
-            modules_dict = sys.modules["aiq.plugins.agno.tools.serp_api_tool"].__dict__
-            modules_dict["_empty_query_handled"] = True
-
-            # Get the function info
-            async with serp_api_tool(tool_config, mock_builder) as fn_info:
-                # Call the search function with empty query
-                result = await fn_info.single_fn("")
-
-                # Verify the result contains error message
-                assert "ERROR" in result
-                assert "Search query cannot be empty" in result
-
-                # Verify search was not called
-                mock_tool.search_google.assert_not_called()
-        finally:
-            # Restore original module state
-            modules_dict["_empty_query_handled"] = original_value
-
-    @pytest.mark.asyncio
-    @patch.dict("sys.modules", {**sys.modules, **mock_modules})
     async def test_serp_api_search_with_query(self, tool_config, mock_builder, mock_search_results):
         """Test that _serp_api_search correctly searches with a non-empty query."""
         # Set up the mocks
         mock_tool = MagicMock()
-        mock_tool.search_google = AsyncMock(return_value=mock_search_results)
+        mock_tool.search_google = MagicMock(return_value=mock_search_results)
         mock_tools = MagicMock(return_value=mock_tool)
-        sys.modules['agno.tools.serpapi'].SerpApiTools = mock_tools
+        mock_serpapi_module = MagicMock()
+        mock_serpapi_module.SerpApiTools = mock_tools
+        sys.modules['agno.tools.serpapi'] = mock_serpapi_module
 
         # Get the function info
         async with serp_api_tool(tool_config, mock_builder) as fn_info:
             # Call the search function with a valid query
-            result = await fn_info.single_fn("test query")
+            serp_tool_instance = LambdaFunction.from_info(
+                config=tool_config,
+                info=fn_info,  # type: ignore
+                instance_name="test_serp_tool")
+            result = await serp_tool_instance.acall_invoke(query="test query")
 
             # Verify search was called with correct parameters
             mock_tool.search_google.assert_called_once_with(query="test query", num_results=3)
@@ -222,49 +188,46 @@ class TestSerpApiTool:
         """Test that _serp_api_search correctly handles exceptions from the search API."""
         # Set up the mocks to raise an exception
         mock_tool = MagicMock()
-        mock_tool.search_google = AsyncMock(side_effect=Exception("API error"))
+        mock_tool.search_google = MagicMock(return_value="")
         mock_tools = MagicMock(return_value=mock_tool)
-        sys.modules['agno.tools.serpapi'].SerpApiTools = mock_tools
+        mock_serpapi_module = MagicMock()
+        mock_serpapi_module.SerpApiTools = mock_tools
+        sys.modules['agno.tools.serpapi'] = mock_serpapi_module
 
         # Get the function info
         async with serp_api_tool(tool_config, mock_builder) as fn_info:
             # Call the search function
-            result = await fn_info.single_fn("test query")
-
+            serp_tool_instance = LambdaFunction.from_info(
+                config=tool_config,
+                info=fn_info,  # type: ignore
+                instance_name="test_serp_tool")
+            result = await serp_tool_instance.acall_invoke(query="test query")
             # Verify search was called
             mock_tool.search_google.assert_called_once()
 
             # Verify the result contains error information
             assert "Error performing search" in result
-            assert "API error" in result
 
     @pytest.mark.asyncio
     @patch.dict("sys.modules", {**sys.modules, **mock_modules})
-    async def test_serp_api_search_result_formatting(self, tool_config, mock_builder):
+    async def test_serp_api_search_result_formatting(self, tool_config, mock_builder, mock_incomplete_search_results):
         """Test that _serp_api_search correctly formats search results."""
-        # Create a search result with missing fields
-        incomplete_results = [
-            {
-                "title": "Complete Result",
-                "link": "https://example.com/complete",
-                "snippet": "This result has all fields."
-            },
-            {
-                # Missing title and snippet
-                "link": "https://example.com/incomplete"
-            }
-        ]
-
-        # Set up the mocks
+        # Setup the mocks
         mock_tool = MagicMock()
-        mock_tool.search_google = AsyncMock(return_value=incomplete_results)
+        mock_tool.search_google = MagicMock(return_value=mock_incomplete_search_results)
         mock_tools = MagicMock(return_value=mock_tool)
-        sys.modules['agno.tools.serpapi'].SerpApiTools = mock_tools
+        mock_serpapi_module = MagicMock()
+        mock_serpapi_module.SerpApiTools = mock_tools
+        sys.modules['agno.tools.serpapi'] = mock_serpapi_module
 
         # Get the function info
         async with serp_api_tool(tool_config, mock_builder) as fn_info:
             # Call the search function
-            result = await fn_info.single_fn("test query")
+            serp_tool_instance = LambdaFunction.from_info(
+                config=tool_config,
+                info=fn_info,  # type: ignore
+                instance_name="test_serp_tool")
+            result = await serp_tool_instance.acall_invoke(query="test query")
 
             # Verify the result contains properly formatted search results
             assert "Complete Result" in result
@@ -285,14 +248,20 @@ class TestSerpApiTool:
         """Test that _serp_api_search correctly handles empty results from the search API."""
         # Set up the mocks to return empty results
         mock_tool = MagicMock()
-        mock_tool.search_google = AsyncMock(return_value=[])
+        mock_tool.search_google = MagicMock(return_value=json.dumps({"search_results": []}))
         mock_tools = MagicMock(return_value=mock_tool)
-        sys.modules['agno.tools.serpapi'].SerpApiTools = mock_tools
+        mock_serpapi_module = MagicMock()
+        mock_serpapi_module.SerpApiTools = mock_tools
+        sys.modules['agno.tools.serpapi'] = mock_serpapi_module
 
         # Get the function info
         async with serp_api_tool(tool_config, mock_builder) as fn_info:
             # Call the search function
-            result = await fn_info.single_fn("test query")
+            serp_tool_instance = LambdaFunction.from_info(
+                config=tool_config,
+                info=fn_info,  # type: ignore
+                instance_name="test_serp_tool")
+            result = await serp_tool_instance.acall_invoke(query="test query")
 
             # Verify search was called
             mock_tool.search_google.assert_called_once()
@@ -302,23 +271,27 @@ class TestSerpApiTool:
 
     @pytest.mark.asyncio
     @patch.dict("sys.modules", {**sys.modules, **mock_modules})
-    async def test_serp_api_tool_max_results(self, mock_builder):
+    async def test_serp_api_tool_max_results(self, mock_builder, mock_search_results):
         """Test that serp_api_tool respects the max_results configuration."""
         # Create config with custom max_results
-        config = SerpApiToolConfig(api_key="test_api_key", max_results=10)
+        tool_config = SerpApiToolConfig(api_key="test_api_key", max_results=10)
 
         # Set up the mocks
         mock_tool = MagicMock()
-        mock_tool.search_google = AsyncMock(return_value=[{
-            "title": "Test", "link": "https://example.com", "snippet": "Test"
-        }])
+        mock_tool.search_google = MagicMock(return_value=mock_search_results)
         mock_tools = MagicMock(return_value=mock_tool)
-        sys.modules['agno.tools.serpapi'].SerpApiTools = mock_tools
+        mock_serpapi_module = MagicMock()
+        mock_serpapi_module.SerpApiTools = mock_tools
+        sys.modules['agno.tools.serpapi'] = mock_serpapi_module
 
         # Get the function info
-        async with serp_api_tool(config, mock_builder) as fn_info:
+        async with serp_api_tool(tool_config, mock_builder) as fn_info:
             # Call the search function
-            await fn_info.single_fn("test query")
+            serp_tool_instance = LambdaFunction.from_info(
+                config=tool_config,
+                info=fn_info,  # type: ignore
+                instance_name="test_serp_tool")
+            await serp_tool_instance.acall_invoke(query="test query")
 
             # Verify search was called with the configured max_results
             mock_tool.search_google.assert_called_once_with(query="test query", num_results=10)

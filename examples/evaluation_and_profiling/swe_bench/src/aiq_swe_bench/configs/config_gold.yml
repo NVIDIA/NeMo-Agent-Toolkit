@@ -1,0 +1,47 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+general:
+  use_uvloop: true
+
+workflow:
+  _type: swe_bench
+  predictor:
+    _type: gold
+    verbose: true
+
+eval:
+  general:
+    output_dir: ./.tmp/aiq/examples/evaluation_and_profiling/swe_bench/gold/
+    max_concurrency: 4
+
+    dataset:
+      _type: json
+      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
+      id_key: instance_id
+      structure: # For swe-bench the entire row is the input
+        disable: true
+      filter:
+        allowlist:
+          field:
+            instance_id:
+              - sympy__sympy-20590
+              - sympy__sympy-21055
+
+  evaluators:
+    swe_bench:
+      _type: swe_bench
+      run_id: aiq_1
