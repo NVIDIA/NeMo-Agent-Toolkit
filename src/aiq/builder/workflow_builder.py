@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import dataclasses
 import inspect
 import logging
@@ -123,9 +122,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._memory_clients: dict[str, ConfiguredMemory] = {}
         self._retrievers: dict[str, ConfiguredRetriever] = {}
 
-        # Locks for thread-safe access to shared data structures
-        self._telemetry_exporters_lock = asyncio.Lock()
-
         self._context_state = AIQContextState.get()
 
         self._exit_stack: AsyncExitStack | None = None
@@ -157,10 +153,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             logging.getLogger().addHandler(handler)
 
         # Add the telemetry exporters
-        await asyncio.gather(*[
-            self.add_telemetry_exporter(key, telemetry_exporter_config)
-            for key, telemetry_exporter_config in telemetry_config.tracing.items()
-        ])
+        for key, telemetry_exporter_config in telemetry_config.tracing.items():
+            await self.add_telemetry_exporter(key, telemetry_exporter_config)
 
         return self
 
@@ -578,9 +572,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         exporter_context_manager = exporter_info.build_fn(config, self)
 
         # Only protect the shared state modifications (serialized)
-        async with self._telemetry_exporters_lock:
-            exporter = await self._get_exit_stack().enter_async_context(exporter_context_manager)
-            self._telemetry_exporters[name] = ConfiguredTelemetryExporter(config=config, instance=exporter)
+        exporter = await self._get_exit_stack().enter_async_context(exporter_context_manager)
+        self._telemetry_exporters[name] = ConfiguredTelemetryExporter(config=config, instance=exporter)
 
     async def populate_builder(self, config: AIQConfig, skip_workflow: bool = False):
         """
