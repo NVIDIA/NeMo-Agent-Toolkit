@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA Agent Intelligence Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
+![NVIDIA NeMo Agent Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "NeMo Agent toolkit banner image")
 
-# NVIDIA Agent Intelligence Toolkit Subpackage
-This is a subpackage for Redis memory integration in AIQ toolkit.
+# NVIDIA NeMo Agent Toolkit Subpackage
+This is a subpackage for Redis memory integration in NeMo Agent toolkit.
 
-For more information about AIQ toolkit, please visit the [AIQ toolkit package](https://pypi.org/project/aiqtoolkit/).
+For more information about NeMo Agent toolkit, please visit the [NeMo Agent toolkit package](https://pypi.org/project/aiqtoolkit/).

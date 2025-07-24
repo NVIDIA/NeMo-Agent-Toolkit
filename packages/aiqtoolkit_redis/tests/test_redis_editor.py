@@ -21,17 +21,26 @@ from langchain_core.embeddings import Embeddings
 
 from aiq.memory.models import MemoryItem
 from aiq.plugins.redis.redis_editor import RedisEditor
+from aiq.utils.type_utils import override
 
 
 class TestEmbeddings(Embeddings):
 
-    def embed_query(self, text):
+    @override
+    def embed_query(self, text: str) -> list[float]:
         if not text or len(text) == 0:
             raise ValueError("No query passed to embedding model")
-        return [0, 1, 2, 3, 4, 5]
+        return [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
 
-    def embed_documents(self, texts):
-        return [[0, 1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]
+    @override
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        res: list[list[float]] = []
+        counter = 0
+        for text in texts:
+            embedding = [e + counter for e in self.embed_query(text)]
+            res.append(embedding)
+            counter += len(embedding)
+        return res
 
 
 @pytest.fixture(name="mock_redis_client")

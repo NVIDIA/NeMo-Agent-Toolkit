@@ -15,25 +15,19 @@
 
 import logging
 import secrets
-from typing import Protocol
 
 import numpy as np
-
 import redis.asyncio as redis
 import redis.exceptions as redis_exceptions
+from langchain_core.embeddings import Embeddings
+from redis.commands.search.query import Query
+
 from aiq.memory.interfaces import MemoryEditor
 from aiq.memory.models import MemoryItem
-from redis.commands.search.query import Query
 
 logger = logging.getLogger(__name__)
 
 INDEX_NAME = "memory_idx"
-
-
-class SupportsEmbedQuery(Protocol):
-
-    async def aembed_query(self, query: str) -> list[float]:
-        ...
 
 
 class RedisEditor(MemoryEditor):
@@ -41,19 +35,19 @@ class RedisEditor(MemoryEditor):
     Wrapper class that implements AIQ Toolkit Interfaces for Redis memory storage.
     """
 
-    def __init__(self, redis_client: redis.Redis, key_prefix: str, embedder: SupportsEmbedQuery):
+    def __init__(self, redis_client: redis.Redis, key_prefix: str, embedder: Embeddings):
         """
         Initialize Redis client for memory storage.
 
         Args:
             redis_client: (redis.Redis) Redis client
             key_prefix: (str) Redis key prefix
-            embedder: (SupportsEmbedQuery) Embedder for semantic search functionality
+            embedder: (Embeddings) Embedder for semantic search functionality
         """
 
         self._client: redis.Redis = redis_client
         self._key_prefix: str = key_prefix
-        self._embedder: SupportsEmbedQuery = embedder
+        self._embedder: Embeddings = embedder
 
     async def add_items(self, items: list[MemoryItem]) -> None:
         """
@@ -166,7 +160,7 @@ class RedisEditor(MemoryEditor):
                 logger.error(f"Failed to get index info: {str(e)}")
 
             # Execute the search
-            results = await self._client.ft("memory_idx").search(search_query, query_params={"vec": query_vector_bytes})
+            results = await self._client.ft(INDEX_NAME).search(search_query, query_params={"vec": query_vector_bytes})
 
             # Log detailed results information
             logger.debug(f"Search returned {len(results.docs)} results")

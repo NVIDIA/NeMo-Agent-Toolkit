@@ -45,8 +45,8 @@ memory:
     embedder: nv-embedqa-e5-v5
 
 functions:
-  memory_search:
-    _type: memory_search
+  get_memory:
+    _type: get_memory
     memory: redis_memory
     description: |
       Always call this tool before calling any other tools, even if the user does not mention to use it.
@@ -54,7 +54,7 @@ functions:
       For example: "How does the user like responses formatted?".
       Use "redis" for the user_id
   memory_add:
-    _type: memory_add
+    _type: add_memory
     memory: redis_memory
     description: |
       Add any facts about user preferences to long term memory. Always use this if users mention a preference.
@@ -64,7 +64,7 @@ functions:
 
 workflow:
   _type: react_agent
-  tool_names: [memory_add, memory_search]
+  tool_names: [memory_add, get_memory]
   description: "A chat agent that can make memories and also recall memories"
   llm_name: nim_llm
   system_prompt: |
@@ -73,7 +73,7 @@ workflow:
     {tools}
 
     IMPORTANT MEMORY TOOL REQUIREMENTS:
-    1. You MUST use memory_search tool with the exact JSON format below
+    1. You MUST use get_memory tool with the exact JSON format below
     2. You MUST include ALL required parameters (query, top_k, user_id)
     3. The input MUST be a valid JSON object with no extra text or formatting
 

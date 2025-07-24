@@ -48,9 +48,9 @@ async def redis_memory_client(config: RedisMemoryClientConfig, builder: Builder)
 
     embedder = await builder.get_embedder(config.embedder, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
-    test_embedding = embedder.embed_query("test")
+    test_embedding = await embedder.aembed_query("test")
     embedding_dim = len(test_embedding)
-    ensure_index_exists(client=redis_client, key_prefix=config.key_prefix, embedding_dim=embedding_dim)
+    await ensure_index_exists(client=redis_client, key_prefix=config.key_prefix, embedding_dim=embedding_dim)
 
     memory_editor = RedisEditor(redis_client=redis_client, key_prefix=config.key_prefix, embedder=embedder)
 
