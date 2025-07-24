@@ -162,8 +162,12 @@ class BaseAgent(ABC):
 
             except Exception as e:
                 last_exception = e
-                logger.warning(f"{AGENT_LOG_PREFIX} Tool call attempt {attempt + 1}/{max_retries + 1} "
-                               f"failed for tool {tool.name}: {str(e)}")
+                logger.warning("%s Tool call attempt %d/%d failed for tool %s: %s",
+                               AGENT_LOG_PREFIX,
+                               attempt + 1,
+                               max_retries + 1,
+                               tool.name,
+                               str(e))
 
                 # If this was the last attempt, don't sleep
                 if attempt == max_retries:
@@ -171,12 +175,12 @@ class BaseAgent(ABC):
 
                 # Exponential backoff: 2^attempt seconds
                 sleep_time = 2**attempt
-                logger.debug(f"{AGENT_LOG_PREFIX} Retrying tool call for {tool.name} in {sleep_time} seconds...")
+                logger.debug("%s Retrying tool call for %s in %d seconds...", AGENT_LOG_PREFIX, tool.name, sleep_time)
                 await asyncio.sleep(sleep_time)
 
         # All retries exhausted, return error message
-        error_content = f"Tool call failed after all retry attempts. Last error: {str(last_exception)}"
-        logger.error(f"{AGENT_LOG_PREFIX} {error_content}")
+        error_content = "Tool call failed after all retry attempts. Last error: %s" % str(last_exception)
+        logger.error("%s %s", AGENT_LOG_PREFIX, error_content)
         return ToolMessage(name=tool.name, tool_call_id=tool.name, content=error_content)
 
     def _log_tool_response(self, tool_name: str, tool_input: Any, tool_response: str, max_chars: int = 1000) -> None:
