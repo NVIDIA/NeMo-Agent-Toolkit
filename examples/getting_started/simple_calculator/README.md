@@ -56,7 +56,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/getting_started/simple_web_query
+uv pip install -e examples/getting_started/simple_calculator
 ```
 
 ### Set Up API Keys
@@ -72,15 +72,15 @@ export OPENAI_API_KEY=<YOUR_API_KEY>  # OPTIONAL
 Return to your original terminal, and run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+aiq run --config_file examples/getting_started/simple_calculator/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
 **Expected Output**
 The workflow output can be quite lengthy, the end of the workflow output should contain something similar to the following (the final answer will depend on the time of day the workflow is run):
 ```console
-$ aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+$ aiq run --config_file examples/getting_started/simple_calculator/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 2025-04-23 15:58:34,877 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (440.151215 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:58:35,193 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/getting_started/simple_web_query/configs/config.yml'
+2025-04-23 15:58:35,193 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/getting_started/simple_calculator/configs/config.yml'
 2025-04-23 15:58:35,199 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 
 Configuration Summary:
@@ -175,14 +175,14 @@ Prior to building the Docker image ensure that you have followed the steps in th
 From the root directory of the Simple Calculator repository, build the Docker image:
 
 ```bash
-docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t simple_calculator -f examples/getting_started/simple_web_query/Dockerfile .
+docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t simple_calculator -f examples/getting_started/simple_calculator/Dockerfile .
 ```
 
 ### Run the Docker Container
 Deploy the container:
 
 ```bash
-docker run -p 8000:8000 -p 6006:6006 -e NVIDIA_API_KEY simple_calculator
+docker run -p 8000:8000 -p 6006:6006 -e NVIDIA_API_KEY -e OPENAI_API_KEY simple_calculator
 ```
 
 Note, a phoenix telemetry service will be exposed at port 6006.
@@ -204,6 +204,6 @@ The API response should be similar to the following:
 ```bash
 {
   "input": "Is the product of 2 * 4 greater than the current hour of the day?",
-  "output": "No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 16)."
+  "value": "No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 16)."
 }
 ```

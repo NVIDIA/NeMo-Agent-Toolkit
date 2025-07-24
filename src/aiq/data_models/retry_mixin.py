@@ -21,11 +21,15 @@ class RetryMixin(BaseModel):
     """Mixin class for retry configuration."""
     do_auto_retry: bool = Field(default=True,
                                 description="Whether to automatically retry method calls"
-                                " that fail with a retryable error.")
+                                " that fail with a retryable error.",
+                                exclude=True)
     num_retries: int = Field(default=5,
                              description="Number of times to retry a method call that fails"
-                             " with a retryable error.")
+                             " with a retryable error.",
+                             exclude=True)
     retry_on_status_codes: list[int | str] = Field(default_factory=lambda: [429, 500, 502, 503, 504],
-                                                   description="List of HTTP status codes that should trigger a retry.")
+                                                   description="List of HTTP status codes that should trigger a retry.",
+                                                   exclude=True)
     retry_on_errors: list[str] | None = Field(default_factory=lambda: ["Too Many Requests"],
-                                              description="List of error substrings that should trigger a retry.")
+                                              description="List of error substrings that should trigger a retry.",
+                                              exclude=True)

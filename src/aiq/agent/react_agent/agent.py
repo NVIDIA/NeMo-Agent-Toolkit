@@ -233,32 +233,32 @@ class ReActAgentGraph(DualNodeAgent):
             return AgentDecision.END
 
     async def tool_node(self, state: ReActGraphState):
-        try:
-            logger.debug("%s Starting the Tool Call Node", AGENT_LOG_PREFIX)
-            if len(state.agent_scratchpad) == 0:
-                raise RuntimeError('No tool input received in state: "agent_scratchpad"')
-            agent_thoughts = state.agent_scratchpad[-1]
-            # the agent can run any installed tool, simply install the tool and add it to the config file
-            requested_tool = self._get_tool(agent_thoughts.tool)
-            if not requested_tool:
-                configured_tool_names = list(self.tools_dict.keys())
-                logger.warning(
-                    "%s ReAct Agent wants to call tool %s. In the ReAct Agent's configuration within the config file,"
-                    "there is no tool with that name: %s",
-                    AGENT_LOG_PREFIX,
-                    agent_thoughts.tool,
-                    configured_tool_names)
-                tool_response = ToolMessage(name='agent_error',
-                                            tool_call_id='agent_error',
-                                            content=TOOL_NOT_FOUND_ERROR_MESSAGE.format(tool_name=agent_thoughts.tool,
-                                                                                        tools=configured_tool_names))
-                state.tool_responses += [tool_response]
-                return state
 
-            logger.debug("%s Calling tool %s with input: %s",
-                         AGENT_LOG_PREFIX,
-                         requested_tool.name,
-                         agent_thoughts.tool_input)
+        logger.debug("%s Starting the Tool Call Node", AGENT_LOG_PREFIX)
+        if len(state.agent_scratchpad) == 0:
+            raise RuntimeError('No tool input received in state: "agent_scratchpad"')
+        agent_thoughts = state.agent_scratchpad[-1]
+        # the agent can run any installed tool, simply install the tool and add it to the config file
+        requested_tool = self._get_tool(agent_thoughts.tool)
+        if not requested_tool:
+            configured_tool_names = list(self.tools_dict.keys())
+            logger.warning(
+                "%s ReAct Agent wants to call tool %s. In the ReAct Agent's configuration within the config file,"
+                "there is no tool with that name: %s",
+                AGENT_LOG_PREFIX,
+                agent_thoughts.tool,
+                configured_tool_names)
+            tool_response = ToolMessage(name='agent_error',
+                                        tool_call_id='agent_error',
+                                        content=TOOL_NOT_FOUND_ERROR_MESSAGE.format(tool_name=agent_thoughts.tool,
+                                                                                    tools=configured_tool_names))
+            state.tool_responses += [tool_response]
+            return state
+
+        logger.debug("%s Calling tool %s with input: %s",
+                     AGENT_LOG_PREFIX,
+                     requested_tool.name,
+                     agent_thoughts.tool_input)
 
             # Run the tool. Try to use structured input, if possible.
             try:
