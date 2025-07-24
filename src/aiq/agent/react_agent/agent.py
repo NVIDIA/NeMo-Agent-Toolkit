@@ -260,48 +260,44 @@ class ReActAgentGraph(DualNodeAgent):
                      requested_tool.name,
                      agent_thoughts.tool_input)
 
-            # Run the tool. Try to use structured input, if possible.
-            try:
-                tool_input_str = str(agent_thoughts.tool_input).strip().replace("'", '"')
-                tool_input_dict = json.loads(tool_input_str) if tool_input_str != 'None' else tool_input_str
-                logger.debug("%s Successfully parsed structured tool input from Action Input", AGENT_LOG_PREFIX)
+        # Run the tool. Try to use structured input, if possible.
+        try:
+            tool_input_str = str(agent_thoughts.tool_input).strip().replace("'", '"')
+            tool_input_dict = json.loads(tool_input_str) if tool_input_str != 'None' else tool_input_str
+            logger.debug("%s Successfully parsed structured tool input from Action Input", AGENT_LOG_PREFIX)
 
-                tool_response = await self._call_tool(requested_tool,
-                                                      tool_input_dict,
-                                                      RunnableConfig(callbacks=self.callbacks),
-                                                      max_retries=self.tool_call_max_retries)
+            tool_response = await self._call_tool(requested_tool,
+                                                  tool_input_dict,
+                                                  RunnableConfig(callbacks=self.callbacks),
+                                                  max_retries=self.tool_call_max_retries)
 
-                if self.detailed_logs:
-                    self._log_tool_response(requested_tool.name, tool_input_dict, str(tool_response.content))
+            if self.detailed_logs:
+                self._log_tool_response(requested_tool.name, tool_input_dict, str(tool_response.content))
 
-            except JSONDecodeError as ex:
-                logger.debug(
-                    "%s Unable to parse structured tool input from Action Input. Using Action Input as is."
-                    "\nParsing error: %s",
-                    AGENT_LOG_PREFIX,
-                    ex,
-                    exc_info=True)
-                tool_input_str = str(agent_thoughts.tool_input)
+        except JSONDecodeError as ex:
+            logger.debug(
+                "%s Unable to parse structured tool input from Action Input. Using Action Input as is."
+                "\nParsing error: %s",
+                AGENT_LOG_PREFIX,
+                ex,
+                exc_info=True)
+            tool_input_str = str(agent_thoughts.tool_input)
 
-                tool_response = await self._call_tool(requested_tool,
-                                                      tool_input_str,
-                                                      RunnableConfig(callbacks=self.callbacks),
-                                                      max_retries=self.tool_call_max_retries)
+            tool_response = await self._call_tool(requested_tool,
+                                                  tool_input_str,
+                                                  RunnableConfig(callbacks=self.callbacks),
+                                                  max_retries=self.tool_call_max_retries)
 
-                if self.detailed_logs:
-                    self._log_tool_response(requested_tool.name, tool_input_str, str(tool_response.content))
+        if self.detailed_logs:
+            self._log_tool_response(requested_tool.name, tool_input_str, str(tool_response.content))
 
-            if not self.pass_tool_call_errors_to_agent:
-                if tool_response.status == "error":
-                    logger.error("%s Tool %s failed: %s", AGENT_LOG_PREFIX, requested_tool.name, tool_response.content)
-                    raise RuntimeError("Tool call failed: " + str(tool_response.content))
+        if not self.pass_tool_call_errors_to_agent:
+            if tool_response.status == "error":
+                logger.error("%s Tool %s failed: %s", AGENT_LOG_PREFIX, requested_tool.name, tool_response.content)
+                raise RuntimeError("Tool call failed: " + str(tool_response.content))
 
-            state.tool_responses += [tool_response]
-            return state
-
-        except Exception as ex:
-            logger.exception("%s Failed to call tool_node: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
-            raise ex
+        state.tool_responses += [tool_response]
+        return state
 
     async def build_graph(self):
         try:
