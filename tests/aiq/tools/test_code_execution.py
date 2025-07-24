@@ -13,37 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import contextlib
 import logging
-from io import StringIO
 from urllib.parse import urljoin
 
 import pytest
 import requests
 from pytest_httpserver import HTTPServer
-from werkzeug import Request
-from werkzeug import Response
 
 from aiq.tool.code_execution import code_sandbox
+from aiq.tool.code_execution.local_sandbox.local_sandbox_server import do_execute
 
 logger = logging.getLogger(__name__)
-
-
-def exec_code(request: Request):
-    stdout = StringIO()
-    try:
-        with contextlib.redirect_stdout(stdout):
-            code = request.json["generated_code"]
-            exec(code)  # pylint: disable=exec-used
-
-        output = stdout.getvalue()
-    except Exception as e:
-        print(f"ERROR: {e}")
-        logger.exception(e)
-    return Response(response=output,
-                    status=200,
-                    headers={"Content-Type": "application/json"},
-                    mimetype="application/json")
 
 
 def test_client_init(uri: str = "http://localhost:6000"):
@@ -90,13 +70,15 @@ async def test_bad_response(httpserver: HTTPServer):
                                    }""")
 
     resp = await client.execute_code(generated_code='print("Hello World")')
-    assert resp == {'process_status': 'error', 'stdout': '', 'stderr': 'Unknown error'}
+    assert resp.get("process_status") == "error"
+    assert resp.get("stdout") == ""
+    assert resp.get("stderr").startswith("Unknown error")
 
 
 async def test_code_gen(httpserver: HTTPServer):
 
     client = code_sandbox.get_sandbox("local", uri=httpserver.url_for("/execute"))
-    httpserver.expect_request("/execute", method="POST").respond_with_handler(exec_code)
+    httpserver.expect_request("/execute", method="POST").respond_with_handler(do_execute)
 
     # Execute simple code
     resp = await client.execute_code(generated_code='print("Hello World")')
@@ -105,7 +87,7 @@ async def test_code_gen(httpserver: HTTPServer):
     assert resp.get("stderr") == ""
 
     # Check Timeout
-    resp = await client.execute_code(generated_code="import time; time.sleep(5)", timeout=2)
+    resp = await client.execute_code(generated_code="import time; time.sleep(5)", timeout_seconds=2)
     assert resp.get("process_status") == "timeout"
     assert resp.get("stdout") == ""
     assert resp.get("stderr").rstrip() == "Timed out"
