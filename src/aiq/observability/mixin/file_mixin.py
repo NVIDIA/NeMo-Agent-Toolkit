@@ -123,20 +123,20 @@ class FileExportMixin(ResourceConflictMixin):
 
     def _format_conflict_error(self, resource_type: str, identifier: Any, existing_instance: Any) -> str:
         """Format user-friendly error messages for file conflicts."""
-        if resource_type == "file_path":
-            return (f"File path conflict detected: '{self._current_file_path}' is already in use by another "
-                    f"FileExportMixin instance (project: '{existing_instance._project}'). "
-                    f"Use different project names or output paths to avoid conflicts.")
-
-        elif resource_type == "cleanup_pattern":
-            return (f"Rolling file cleanup conflict detected: Both instances would use pattern "
-                    f"'{self._base_filename}_*{self._file_extension}' in directory '{self._base_dir}', "
-                    f"causing one to delete the other's files. "
-                    f"Current instance (project: '{self._project}'), "
-                    f"existing instance (project: '{existing_instance._project}'). "
-                    f"Use different project names or directories to avoid conflicts.")
-
-        return f"Unknown file resource conflict: {resource_type} = {identifier}"
+        match resource_type:
+            case "file_path":
+                return (f"File path conflict detected: '{self._current_file_path}' is already in use by another "
+                        f"FileExportMixin instance (project: '{existing_instance._project}'). "
+                        f"Use different project names or output paths to avoid conflicts.")
+            case "cleanup_pattern":
+                return (f"Rolling file cleanup conflict detected: Both instances would use pattern "
+                        f"'{self._base_filename}_*{self._file_extension}' in directory '{self._base_dir}', "
+                        f"causing one to delete the other's files. "
+                        f"Current instance (project: '{self._project}'), "
+                        f"existing instance (project: '{existing_instance._project}'). "
+                        f"Use different project names or directories to avoid conflicts.")
+            case _:
+                return f"Unknown file resource conflict: {resource_type} = {identifier}"
 
     def _cleanup_old_files_sync(self) -> None:
         """Synchronous version of cleanup for use during initialization."""
@@ -271,7 +271,7 @@ class FileExportMixin(ResourceConflictMixin):
             "rolling_enabled": self._enable_rolling,
             "cleanup_on_init": self._cleanup_on_init,
             "project": self._project,
-            "effective_project": self._project,  # No longer using isolation suffix
+            "effective_project": self._project,
         }
 
         if self._enable_rolling:
