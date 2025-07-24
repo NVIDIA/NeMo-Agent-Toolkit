@@ -43,14 +43,13 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     uv sync --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
     uv pip install -e '.[telemetry]' --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
-    uv pip install --link-mode=copy ./examples/getting_started/simple_web_query
+    uv pip install --link-mode=copy ./examples/getting_started/simple_calculator
 
 # Enivronment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"
 
 # Set the config file environment variable
-ENV AIQ_CONFIG_FILE=/workspace/examples/getting_started/simple_web_query/configs/config.yml
+ENV AIQ_CONFIG_FILE=/workspace/examples/getting_started/simple_calculator/configs/config.yml
 
 # Define the entry point to start the server
-ENTRYPOINT ["/bin/bash", "-c", "aiq serve --config_file=/workspace/examples/getting_started/simple_web_query/configs/config.yml \
-    --host 0.0.0.0 & phoenix serve"]
+ENTRYPOINT ["sh", "-c", "exec aiq serve --config_file=$AIQ_CONFIG_FILE --host 0.0.0.0"]
