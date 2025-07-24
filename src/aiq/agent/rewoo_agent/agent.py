@@ -263,7 +263,8 @@ class ReWOOAgentGraph(BaseAgent):
             tool_input_parsed = self._parse_tool_input(tool_input)
             tool_response = await self._call_tool(requested_tool,
                                                   tool_input_parsed,
-                                                  RunnableConfig(callbacks=self.callbacks))
+                                                  RunnableConfig(callbacks=self.callbacks),
+                                                  max_retries=3)
 
             # ToolMessage only accepts str or list[str | dict] as content.
             # Convert into list if the response is a dict.

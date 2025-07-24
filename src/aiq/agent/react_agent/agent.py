@@ -268,7 +268,8 @@ class ReActAgentGraph(DualNodeAgent):
 
                 tool_response = await self._call_tool(requested_tool,
                                                       tool_input_dict,
-                                                      RunnableConfig(callbacks=self.callbacks))
+                                                      RunnableConfig(callbacks=self.callbacks),
+                                                      max_retries=self.tool_call_max_retries)
 
                 if self.detailed_logs:
                     self._log_tool_response(requested_tool.name, tool_input_dict, str(tool_response.content))
@@ -284,7 +285,8 @@ class ReActAgentGraph(DualNodeAgent):
 
                 tool_response = await self._call_tool(requested_tool,
                                                       tool_input_str,
-                                                      RunnableConfig(callbacks=self.callbacks))
+                                                      RunnableConfig(callbacks=self.callbacks),
+                                                      max_retries=self.tool_call_max_retries)
 
                 if self.detailed_logs:
                     self._log_tool_response(requested_tool.name, tool_input_str, str(tool_response.content))

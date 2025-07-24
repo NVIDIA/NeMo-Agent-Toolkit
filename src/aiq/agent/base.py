@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import json
 import logging
 from abc import ABC
@@ -124,9 +125,10 @@ class BaseAgent(ABC):
     async def _call_tool(self,
                          tool: BaseTool,
                          tool_input: dict[str, Any] | str,
-                         config: RunnableConfig | None = None) -> ToolMessage:
+                         config: RunnableConfig | None = None,
+                         max_retries: int = 3) -> ToolMessage:
         """
-        Call a tool directly. Retry logic is handled automatically by the underlying tool client.
+        Call a tool with retry logic and error handling.
 
         Parameters
         ----------
@@ -136,21 +138,46 @@ class BaseAgent(ABC):
             The input to pass to the tool
         config : RunnableConfig | None
             The config to pass to the tool
+        max_retries : int
+            Maximum number of retry attempts (default: 3)
 
         Returns
         -------
         ToolMessage
             The tool response
         """
-        response = await tool.ainvoke(tool_input, config=config)
+        last_exception = None
 
-        # Handle empty responses
-        if response is None or (isinstance(response, str) and response == ""):
-            return ToolMessage(name=tool.name,
-                               tool_call_id=tool.name,
-                               content=f"The tool {tool.name} provided an empty response.")
+        for attempt in range(max_retries + 1):
+            try:
+                response = await tool.ainvoke(tool_input, config=config)
 
-        return ToolMessage(name=tool.name, tool_call_id=tool.name, content=response)
+                # Handle empty responses
+                if response is None or (isinstance(response, str) and response == ""):
+                    return ToolMessage(name=tool.name,
+                                       tool_call_id=tool.name,
+                                       content=f"The tool {tool.name} provided an empty response.")
+
+                return ToolMessage(name=tool.name, tool_call_id=tool.name, content=response)
+
+            except Exception as e:
+                last_exception = e
+                logger.warning(f"{AGENT_LOG_PREFIX} Tool call attempt {attempt + 1}/{max_retries + 1} "
+                               f"failed for tool {tool.name}: {str(e)}")
+
+                # If this was the last attempt, don't sleep
+                if attempt == max_retries:
+                    break
+
+                # Exponential backoff: 2^attempt seconds
+                sleep_time = 2**attempt
+                logger.debug(f"{AGENT_LOG_PREFIX} Retrying tool call for {tool.name} in {sleep_time} seconds...")
+                await asyncio.sleep(sleep_time)
+
+        # All retries exhausted, return error message
+        error_content = f"Tool call failed after all retry attempts. Last error: {str(last_exception)}"
+        logger.error(f"{AGENT_LOG_PREFIX} {error_content}")
+        return ToolMessage(name=tool.name, tool_call_id=tool.name, content=error_content)
 
     def _log_tool_response(self, tool_name: str, tool_input: Any, tool_response: str, max_chars: int = 1000) -> None:
         """

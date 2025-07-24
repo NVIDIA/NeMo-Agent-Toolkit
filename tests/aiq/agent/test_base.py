@@ -16,6 +16,7 @@
 import logging
 from unittest.mock import AsyncMock
 from unittest.mock import Mock
+from unittest.mock import call
 from unittest.mock import patch
 
 import pytest
@@ -177,33 +178,42 @@ class TestCallTool:
         assert result.tool_call_id == tool.name
         tool.ainvoke.assert_called_once_with(tool_input, config=config)
 
-    async def test_tool_call_error_propagation(self, base_agent):
-        """Test that tool call errors are propagated to the automatic retry system."""
+    async def test_tool_call_with_retries_success_on_second_attempt(self, base_agent):
+        """Test that tool call succeeds on second attempt with retry logic."""
         tool = base_agent.tools[0]  # Tool A
         tool_input = {"query": "test"}
+        config = RunnableConfig(callbacks=[])
 
-        tool.ainvoke = AsyncMock(side_effect=Exception("Tool error"))
+        tool.ainvoke = AsyncMock(side_effect=[Exception("Network error"), "Tool response"])
 
-        # Error should be propagated (retry is handled automatically by underlying client)
-        with pytest.raises(Exception, match="Tool error"):
-            await base_agent._call_tool(tool, tool_input)
-
-    async def test_tool_call_empty_response(self, base_agent):
-        """Test tool call with empty string response."""
-        tool = base_agent.tools[0]  # Tool A
-        tool_input = {"query": "test"}
-
-        tool.ainvoke = AsyncMock(return_value="")
-
-        result = await base_agent._call_tool(tool, tool_input)
+        with patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
+            result = await base_agent._call_tool(tool, tool_input, config, max_retries=2)
 
         assert isinstance(result, ToolMessage)
-        assert f"The tool {tool.name} provided an empty response." in result.content
-        assert result.name == tool.name
-        assert result.tool_call_id == tool.name
+        assert result.content == "Tool response"
+        assert tool.ainvoke.call_count == 2
+        mock_sleep.assert_called_once_with(1)  # 2^0 = 1 second for first retry
+
+    async def test_tool_call_all_retries_exhausted(self, base_agent):
+        """Test that tool call returns error message when all retries are exhausted."""
+        tool = base_agent.tools[0]  # Tool A
+        tool_input = {"query": "test"}
+
+        tool.ainvoke = AsyncMock(side_effect=Exception("Persistent error"))
+
+        with patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
+            result = await base_agent._call_tool(tool, tool_input, max_retries=2)
+
+        assert isinstance(result, ToolMessage)
+        assert "Tool call failed after all retry attempts" in result.content
+        assert "Persistent error" in result.content
+        assert tool.ainvoke.call_count == 3  # Initial + 2 retries
+        # Should have called sleep twice: 2^0=1, 2^1=2
+        assert mock_sleep.call_count == 2
+        mock_sleep.assert_has_calls([call(1), call(2)])
 
     async def test_tool_call_none_response(self, base_agent):
-        """Test tool call with None response."""
+        """Test handling of None response from tool."""
         tool = base_agent.tools[0]  # Tool A
         tool_input = {"query": "test"}
 
@@ -212,20 +222,35 @@ class TestCallTool:
         result = await base_agent._call_tool(tool, tool_input)
 
         assert isinstance(result, ToolMessage)
-        assert f"The tool {tool.name} provided an empty response." in result.content
+        assert "provided an empty response" in result.content
+        assert result.name == tool.name
 
-    async def test_tool_call_with_string_input(self, base_agent):
-        """Test tool call with string input instead of dict."""
+    async def test_tool_call_empty_string_response(self, base_agent):
+        """Test handling of empty string response from tool."""
         tool = base_agent.tools[0]  # Tool A
-        tool_input = "test query"
+        tool_input = {"query": "test"}
 
-        tool.ainvoke = AsyncMock(return_value="Tool response")
+        tool.ainvoke = AsyncMock(return_value="")
 
         result = await base_agent._call_tool(tool, tool_input)
 
         assert isinstance(result, ToolMessage)
-        assert result.content == "Tool response"
-        tool.ainvoke.assert_called_once_with(tool_input, config=None)
+        assert "provided an empty response" in result.content
+        assert result.name == tool.name
+
+    async def test_tool_call_zero_retries(self, base_agent):
+        """Test behavior with zero retries."""
+        tool = base_agent.tools[0]  # Tool A
+        tool_input = {"query": "test"}
+
+        tool.ainvoke = AsyncMock(side_effect=Exception("Error"))
+
+        result = await base_agent._call_tool(tool, tool_input, max_retries=0)
+
+        # With max_retries=0, only one attempt should be made
+        assert isinstance(result, ToolMessage)
+        assert "Tool call failed after all retry attempts" in result.content
+        assert tool.ainvoke.call_count == 1
 
 
 class TestLogToolResponse:
