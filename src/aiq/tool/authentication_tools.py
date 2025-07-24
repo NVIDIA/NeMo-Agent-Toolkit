@@ -24,7 +24,7 @@ from aiq.builder.builder import Builder
 from aiq.builder.context import AIQContext
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
-from aiq.data_models.authentication import AuthenticatedContext
+from aiq.data_models.authentication import AuthenticatedContext, AuthResult
 from aiq.data_models.authentication import ConsentPromptMode
 from aiq.data_models.authentication import CredentialLocation
 from aiq.data_models.authentication import HeaderAuthScheme
@@ -96,13 +96,13 @@ async def http_auth_tool(config: HTTPAuthTool, builder: Builder):
             http_basic_auth_client: OAuthClientBase = await builder.get_authentication(authentication_provider_name)
 
             # Perform authentication (this will invoke the user authentication callback)
-            auth_context: AuthenticatedContext = await http_basic_auth_client.authenticate(user_id="default_user")
+            auth_context: AuthResult = await http_basic_auth_client.authenticate(user_id="default_user")
 
-            if not auth_context or not auth_context.headers:
+            if not auth_context or not auth_context.credentials:
                 return f"Failed to authenticate provider: {authentication_provider_name}: Invalid credentials"
 
             return (f"Your registered API Provider name: [{authentication_provider_name}] is now authenticated.\n"
-                    f"Authentication Headers: {auth_context.headers}\n")
+                    f"Credentials: {auth_context.credentials}.\n")
 
         except Exception as e:
             logger.exception("HTTP Basic authentication failed", exc_info=True)

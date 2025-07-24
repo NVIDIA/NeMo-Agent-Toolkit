@@ -1,5 +1,7 @@
 
-from aiq.data_models.authentication import AuthenticationBaseConfig, AuthenticatedContext, AuthFlowType
+from pydantic import SecretStr
+
+from aiq.data_models.authentication import AuthenticationBaseConfig, AuthenticatedContext, AuthFlowType, AuthResult, BasicAuthCred, BearerTokenCred
 from aiq.authentication.interfaces import AuthenticationClientBase
 
 
@@ -17,11 +19,11 @@ class HTTPBasicAuthExchanger(AuthenticationClientBase):
             config: Configuration for the authentication process.
         """
         super().__init__(config)
-        self._authenticated_tokens: dict[str, AuthenticatedContext] = {}
+        self._authenticated_tokens: dict[str, AuthResult] = {}
         self._context = AIQContext.get()
 
 
-    async def authenticate(self, user_id: str) -> AuthenticatedContext:
+    async def authenticate(self, user_id: str) -> AuthResult:
         """
         Performs simple HTTP Authentication using the provided user ID.
         Args:
@@ -41,6 +43,23 @@ class HTTPBasicAuthExchanger(AuthenticationClientBase):
             raise RuntimeError(f"Authentication callback failed: {str(e)}. Did you forget to set a "
                                f"callback handler for your frontend?") from e
 
-        self._authenticated_tokens[user_id] = auth_context
+        basic_auth_credentials = BasicAuthCred(
+            username= SecretStr(auth_context.query_params.get("username", "")),
+            password= SecretStr(auth_context.query_params.get("password", ""))
+        )
 
-        return auth_context
+        # Get the auth token from the headers of auth context
+        bearer_token = auth_context.headers.get("Authorization", "").split(" ")[-1]
+        if not bearer_token:
+            raise RuntimeError("Authentication failed: No Authorization header found in the response.")
+
+        bearer_token_cred = BearerTokenCred(
+            token=SecretStr(bearer_token),
+            scheme="Basic"
+        )
+
+        auth_result = AuthResult(credentials=[basic_auth_credentials, bearer_token_cred])
+
+        self._authenticated_tokens[user_id] = auth_result
+
+        return auth_result

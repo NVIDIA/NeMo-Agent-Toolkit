@@ -47,6 +47,10 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
         headers = {
             "Authorization": f"Basic {encoded_credentials}"
         }
+        query_params = {
+            "username": username,
+            "password": password
+        }
 
-        return AuthenticatedContext(headers=headers)
+        return AuthenticatedContext(headers=headers, query_params=query_params)
 

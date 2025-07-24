@@ -15,11 +15,13 @@
 
 import typing
 from enum import Enum
+from datetime import datetime, timezone
 
 import httpx
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
+from pydantic import SecretStr
 
 from .common import BaseModelRegistryTag
 from .common import TypedBaseModel
@@ -142,3 +144,110 @@ class RefreshTokenRequest(BaseModel):
     client_secret: str = Field(description="The client secret for OAuth 2.0 authentication.")
     refresh_token: str = Field(
         description="The refresh token for OAuth 2.0 authentication used to obtain a new access token.")
+
+
+
+####################
+### OUTPUT TYPES ###
+####################
+
+class CredentialKind(str, Enum):
+    HEADER = "header"
+    QUERY = "query"
+    COOKIE = "cookie"
+    BASIC = "basic_auth"      # (user, pass) tuple
+    BEARER = "bearer_token"   # Authorization header
+
+
+class _CredBase(BaseModel):
+    kind: CredentialKind
+    model_config = ConfigDict(extra="forbid")
+
+
+class HeaderCred(_CredBase):
+    kind: typing.Literal[CredentialKind.HEADER] = CredentialKind.HEADER
+    name: str
+    value: SecretStr
+
+
+class QueryCred(_CredBase):
+    kind: typing.Literal[CredentialKind.QUERY] = CredentialKind.QUERY
+    name: str
+    value: SecretStr
+
+
+class CookieCred(_CredBase):
+    kind: typing.Literal[CredentialKind.COOKIE] = CredentialKind.COOKIE
+    name: str
+    value: SecretStr
+
+
+class BasicAuthCred(_CredBase):
+    kind: typing.Literal[CredentialKind.BASIC] = CredentialKind.BASIC
+    username: SecretStr
+    password: SecretStr
+
+
+
+class BearerTokenCred(_CredBase):
+    kind: typing.Literal[CredentialKind.BEARER] = CredentialKind.BEARER
+    token: SecretStr
+    scheme: str = "Bearer"           # override to "Token", etc.
+    header_name: str = "Authorization"
+
+
+Credential = typing.Annotated[
+    typing.Union[
+        HeaderCred,
+        QueryCred,
+        CookieCred,
+        BasicAuthCred,
+        BearerTokenCred,
+    ],
+    Field(discriminator="kind"),
+]
+
+class AuthResult(BaseModel):
+    credentials: list[Credential]
+    token_expires_at: datetime | None = None
+    raw: dict[str, typing.Any] = {}          # idP / debug blob
+
+    model_config = ConfigDict(extra="forbid")
+
+    # ---------- helpers -------------------------------------------------------
+    def is_expired(self) -> bool:
+        return bool(self.token_expires_at and
+                    datetime.now(timezone.utc) >= self.token_expires_at)
+
+    def as_requests_kwargs(self) -> dict[str, typing.Any]:
+        """Convert to kwargs usable by `requests` / `httpx`."""
+        kw: dict[str, typing.Any] = {"headers": {}, "params": {}, "cookies": {}}
+
+        for cred in self.credentials:
+            match cred:
+                case HeaderCred():
+                    kw["headers"][cred.name] = cred.value.get_secret_value()
+                case QueryCred():
+                    kw["params"][cred.name] = cred.value.get_secret_value()
+                case CookieCred():
+                    kw["cookies"][cred.name] = cred.value.get_secret_value()
+                case BearerTokenCred():
+                    kw["headers"][cred.header_name] = (
+                        f"{cred.scheme} {cred.token.get_secret_value()}"
+                    )
+                case BasicAuthCred():
+                    kw["auth"] = (
+                        cred.username.get_secret_value(),
+                        cred.password.get_secret_value(),
+                    )
+
+        return kw
+
+    def attach(self, target_kwargs: dict[str, typing.Any]) -> None:
+        """In-place merge into an existing kwargs dict."""
+        merged = self.as_requests_kwargs()
+        for k, v in merged.items():
+            if isinstance(v, dict):
+                target_kwargs.setdefault(k, {}).update(v)
+            else:
+                target_kwargs[k] = v

@@ -19,7 +19,7 @@ from abc import abstractmethod
 import httpx
 
 from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
-from aiq.data_models.authentication import AuthenticationBaseConfig, AuthenticatedContext, AuthFlowType
+from aiq.data_models.authentication import AuthenticationBaseConfig, AuthenticatedContext, AuthFlowType, AuthResult
 from aiq.data_models.authentication import CredentialLocation
 from aiq.data_models.authentication import HeaderAuthScheme
 from aiq.data_models.authentication import OAuth2AuthorizationQueryParams
@@ -45,7 +45,7 @@ class AuthenticationClientBase(ABC):
         self.config = config
 
     @abstractmethod
-    async def authenticate(self, user_id: str) -> AuthenticatedContext:
+    async def authenticate(self, user_id: str) -> AuthResult:
         """
         Perform the authentication process for the client.
 
@@ -105,7 +105,7 @@ class OAuthClientBase(AuthenticationClientBase, ABC):
         """
         pass
 
-    async def authenticate(self, user_id: str) -> AuthenticatedContext:
+    async def authenticate(self, user_id: str) -> AuthResult:
         """
         Perform the authentication process for the client.
 

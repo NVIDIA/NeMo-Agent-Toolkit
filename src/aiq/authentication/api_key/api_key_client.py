@@ -15,11 +15,12 @@
 
 import logging
 
-import httpx
+from docutils.nodes import header
+from pydantic import SecretStr
 
 from aiq.authentication.api_key.api_key_config import APIKeyConfig
 from aiq.authentication.interfaces import AuthenticationClientBase
-from aiq.data_models.authentication import HeaderAuthScheme, AuthenticatedContext
+from aiq.data_models.authentication import HeaderAuthScheme, AuthenticatedContext, AuthResult, BearerTokenCred
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +31,7 @@ class APIKeyClient(AuthenticationClientBase):
         assert isinstance(config, APIKeyConfig), ("Config is not APIKeyConfig")
         super().__init__(config)
 
-    async def construct_authentication_header(self,
-                                              header_auth_scheme: HeaderAuthScheme = HeaderAuthScheme.BEARER
-                                              ) -> httpx.Headers | None:
+    async def _construct_authentication_header(self) -> BearerTokenCred | None:
         """
         Constructs the authenticated HTTP header based on the authentication scheme.
         Basic Authentication follows the OpenAPI 3.0 Basic Authentication standard as well as RFC 7617.
@@ -42,17 +41,28 @@ class APIKeyClient(AuthenticationClientBase):
                                              Supported schemes: BEARER, X_API_KEY, BASIC, CUSTOM.
 
         Returns:
-            httpx.Headers | None: The constructed HTTP header if successful, otherwise returns None.
+            BearerTokenCred: The HTTP headers containing the authentication credentials.
+                             Returns None if the scheme is not supported or configuration is invalid.
 
         """
 
         from aiq.authentication.interfaces import AUTHORIZATION_HEADER
 
+        header_auth_scheme = self.config.auth_scheme
+
         if header_auth_scheme == HeaderAuthScheme.BEARER:
-            return httpx.Headers({f"{AUTHORIZATION_HEADER}": f"{HeaderAuthScheme.BEARER.value} {self.config.raw_key}"})
+            return BearerTokenCred(
+                token=SecretStr(f"{self.config.raw_key}"),
+                scheme=HeaderAuthScheme.BEARER.value,
+                header_name=AUTHORIZATION_HEADER
+            )
 
         if header_auth_scheme == HeaderAuthScheme.X_API_KEY:
-            return httpx.Headers({f"{HeaderAuthScheme.X_API_KEY.value}": f"{self.config.raw_key}"})
+            return BearerTokenCred(
+                token=SecretStr(f"{self.config.raw_key}"),
+                scheme=HeaderAuthScheme.X_API_KEY.value,
+                header_name=''
+            )
 
         if header_auth_scheme == HeaderAuthScheme.CUSTOM:
             if not self.config.header_name:
@@ -63,12 +73,15 @@ class APIKeyClient(AuthenticationClientBase):
                 logger.error('header_prefix required when using header_auth_scheme CUSTOM')
                 return None
 
-            return httpx.Headers(
-                {f"{self.config.header_name}": f"{self.config.header_prefix} {self.config.raw_key}"})
+            return BearerTokenCred(
+                token=SecretStr(f"{self.config.raw_key}"),
+                scheme=self.config.header_prefix,
+                header_name=self.config.header_name
+            )
 
         return None
 
-    async def authenticate(self, user_id: str) -> AuthenticatedContext:
+    async def authenticate(self, user_id:str) -> AuthResult | None:
         """
         Authenticate the user using the API key credentials.
 
@@ -78,5 +91,11 @@ class APIKeyClient(AuthenticationClientBase):
         Returns:
             AuthenticatedContext: The authenticated context containing headers, query params, cookies, etc.
         """
-        headers = await self.construct_authentication_header(self.config.auth_scheme)
-        return AuthenticatedContext(headers=headers)
+
+        headers = await self._construct_authentication_header()
+
+        if not headers:
+            logger.error("Failed to construct authentication headers.")
+            return None
+
+        return AuthResult(credentials=[headers])
