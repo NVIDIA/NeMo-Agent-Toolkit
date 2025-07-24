@@ -154,11 +154,10 @@ class ReActAgentGraph(DualNodeAgent):
                     question = str(state.messages[0].content)
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
 
-                    output_message = await self._stream_llm(
-                        self.agent, {
-                            "question": question, "agent_scratchpad": agent_scratchpad
-                        },
-                        RunnableConfig(callbacks=self.callbacks))
+                    output_message = await self._stream_llm(self.agent, {
+                        "question": question, "agent_scratchpad": agent_scratchpad
+                    },
+                                                            RunnableConfig(callbacks=self.callbacks))
 
                     if self.detailed_logs:
                         logger.info(AGENT_CALL_LOG_MESSAGE, question, output_message.content)
@@ -267,8 +266,8 @@ class ReActAgentGraph(DualNodeAgent):
                 logger.debug("%s Successfully parsed structured tool input from Action Input", AGENT_LOG_PREFIX)
 
                 tool_response = await self._call_tool(requested_tool,
-                                                       tool_input_dict,
-                                                       RunnableConfig(callbacks=self.callbacks))
+                                                      tool_input_dict,
+                                                      RunnableConfig(callbacks=self.callbacks))
 
                 if self.detailed_logs:
                     self._log_tool_response(requested_tool.name, tool_input_dict, str(tool_response.content))
@@ -283,8 +282,8 @@ class ReActAgentGraph(DualNodeAgent):
                 tool_input_str = str(agent_thoughts.tool_input)
 
                 tool_response = await self._call_tool(requested_tool,
-                                                       tool_input_str,
-                                                       RunnableConfig(callbacks=self.callbacks))
+                                                      tool_input_str,
+                                                      RunnableConfig(callbacks=self.callbacks))
 
                 if self.detailed_logs:
                     self._log_tool_response(requested_tool.name, tool_input_str, str(tool_response.content))

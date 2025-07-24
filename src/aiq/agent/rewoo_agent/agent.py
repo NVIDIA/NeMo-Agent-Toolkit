@@ -262,8 +262,8 @@ class ReWOOAgentGraph(BaseAgent):
             # Run the tool. Try to use structured input, if possible
             tool_input_parsed = self._parse_tool_input(tool_input)
             tool_response = await self._call_tool(requested_tool,
-                                                   tool_input_parsed,
-                                                   RunnableConfig(callbacks=self.callbacks))
+                                                  tool_input_parsed,
+                                                  RunnableConfig(callbacks=self.callbacks))
 
             # ToolMessage only accepts str or list[str | dict] as content.
             # Convert into list if the response is a dict.
@@ -314,7 +314,7 @@ class ReWOOAgentGraph(BaseAgent):
             solver = solver_prompt | self.llm
 
             output_message = await self._stream_llm(solver, {"task": task},
-                                                     RunnableConfig(callbacks=self.callbacks))  # type: ignore
+                                                    RunnableConfig(callbacks=self.callbacks))  # type: ignore
 
             if self.detailed_logs:
                 solver_output_log_message = AGENT_CALL_LOG_MESSAGE % (task, str(output_message.content))
