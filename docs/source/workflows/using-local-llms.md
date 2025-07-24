@@ -111,8 +111,7 @@ workflow:
   tool_names: [webpage_query, current_datetime]
   llm_name: nim_llm
   verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  parse_agent_response_max_retries: 3
 ```
 
 ### Running the NeMo Agent Toolkit Workflow
@@ -176,8 +175,7 @@ workflow:
   tool_names: [webpage_query, current_datetime]
   llm_name: vllm_llm
   verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  parse_agent_response_max_retries: 3
 ```
 
 ### Running the NeMo Agent Toolkit Workflow

@@ -80,6 +80,25 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
 
         return self._converter.convert(value, to_type=to_type)
 
+    def try_convert(self, value: typing.Any, to_type: type[_T]) -> _T:
+        """
+        Converts the given value to the specified type using graceful error handling.
+        If conversion fails, returns the original value and continues processing.
+
+        Parameters
+        ----------
+        value : typing.Any
+            The value to convert.
+        to_type : type
+            The type to convert the value to.
+
+        Returns
+        -------
+        _T
+            The converted value, or original value if conversion fails.
+        """
+        return self._converter.try_convert(value, to_type=to_type)
+
     @abstractmethod
     async def _ainvoke(self, value: InputT) -> SingleOutputT:
         pass
@@ -120,7 +139,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
                 result = await self._ainvoke(converted_input)
 
                 if to_type is not None and not isinstance(result, to_type):
-                    result = self._converter.convert(result, to_type=to_type)
+                    result = self._converter.try_convert(result, to_type=to_type)
 
                 manager.set_output(result)
 
@@ -207,7 +226,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
 
                 async for data in self._astream(converted_input):
                     if to_type is not None and not isinstance(data, to_type):
-                        converted_data = self._converter.convert(data, to_type=to_type)
+                        converted_data = self._converter.try_convert(data, to_type=to_type)
                         final_output.append(converted_data)
                         yield converted_data
                     else:

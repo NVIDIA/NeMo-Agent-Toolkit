@@ -51,8 +51,7 @@ workflow:
   tool_names: [webpage_query, current_datetime]
   llm_name: nim_llm
   verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  parse_agent_response_max_retries: 3
 ```
 
 This workflow configuration is divided into four sections: `functions`, `llms`, `embedders`, and `workflow`. The `functions` section contains the tools used in the workflow, while `llms` and `embedders` define the models used in the workflow, and lastly the `workflow` section ties the other sections together and defines the workflow itself.

@@ -63,8 +63,7 @@ workflow:
   tool_names: [webpage_query, current_datetime]
   llm_name: nim_llm
   verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  parse_agent_response_max_retries: 3
 ```
 
 From the above we see that it is divided into four sections: `functions`, `llms`, `embedders`, and `workflow`. There are additional optional sections not used in the above example they are: `general`, `memory`, `retrievers`, and `eval`.

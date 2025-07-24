@@ -33,3 +33,4 @@ workflow:
   _type: agno_personal_finance
   llm_name: openai_llm
   tools: [web_search_tool]
+  parse_agent_response_max_retries: 3

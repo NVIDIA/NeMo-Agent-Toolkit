@@ -69,8 +69,7 @@ workflow:
     - calculator_subtract
   llm_name: nim_llm
   verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  parse_agent_response_max_retries: 3
 
 
 eval:

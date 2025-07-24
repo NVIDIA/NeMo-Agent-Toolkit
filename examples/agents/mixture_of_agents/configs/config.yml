@@ -74,8 +74,7 @@ workflow:
   tool_names: [math_agent, internet_agent, code_generation]
   llm_name: agent_orchestrator
   verbose: true
-  handle_parsing_errors: true
-  max_retries: 2
+  parse_agent_response_max_retries: 2
   system_prompt: |
     Answer the following questions as best you can. You may communicate and collaborate with various experts to answer the questions:
 

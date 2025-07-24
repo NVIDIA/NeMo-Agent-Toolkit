@@ -168,7 +168,7 @@ async def test_functions_single_pod_input_pod_output():
         assert await fn_obj.ainvoke(4, to_type=str) == "4!"
 
         # Invoke with input which is not convertible
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             await fn_obj.ainvoke([4.5], to_type=str)
 
 
@@ -286,13 +286,13 @@ async def test_stream_functions_single_pod_input_pod_output():
 
         # Stream output with input which is not convertible
         result: None | BaseModel = None
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             async for output in fn_obj.astream([4.5], to_type=str):
                 result = output
 
         # Stream output with input which is not convertible and to_type set to None
         result: None | BaseModel = None
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             async for output in fn_obj.astream([4.5], to_type=None):
                 result = output
 

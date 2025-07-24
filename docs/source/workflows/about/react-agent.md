@@ -56,8 +56,7 @@ workflow:
   tool_names: [wikipedia_search, current_datetime, code_generation, math_agent]
   llm_name: nim_llm
   verbose: true
-  handle_parsing_errors: true
-  max_retries: 2
+  parse_agent_response_max_retries: 2
 ```
 In your YAML file, to use the ReAct agent as a function:
 ```yaml
@@ -84,11 +83,15 @@ functions:
 
 * `verbose`: Defaults to `False` (useful to prevent logging of sensitive data).  If set to `True`, the Agent will log input, output, and intermediate steps.
 
-* `retry_parsing_errors`: Defaults to `True`.  Sometimes, the Agent may hallucinate and might not output exactly in the ReAct output format (due to inherit LLM variability.  These hallucinations can be reduced by tweaking the prompt to be more specific for your use-case.); if set to `True`, the Agent will identify the issue with the LLM output (how exactly are we missing the ReAct output format?) and will retry the LLM call, including the output format error information.
+* `retry_agent_response_parsing_errors`: Defaults to `True`.  If set to `True`, the Agent will retry parsing errors.  If set to `False`, the Agent will raise an exception.
 
-* `max_retries`: Defaults to `1`.  Maximum amount of times the Agent may retry parsing errors.  Prevents the Agent from getting into infinite hallucination loops.
+* `parse_agent_response_max_retries`: Defaults to `1`.  Maximum amount of times the Agent may retry parsing errors.  Prevents the Agent from getting into infinite hallucination loops.
 
-* `max_iterations`: Defaults to `15`.  The ReAct agent may reason between tool calls, and might use multiple tools to answer the question; the maximum amount of tool calls the Agent may take before answering the original question.
+* `tool_call_max_retries`: Defaults to `1`.  Maximum amount of times the Agent may retry tool call errors.  Prevents the Agent from getting into infinite tool call loops.
+
+* `max_tool_calls`: Defaults to `15`.  The ReAct agent may reason between tool calls, and might use multiple tools to answer the question; the maximum amount of tool calls the Agent may take before answering the original question.
+
+* `pass_tool_call_errors_to_agent`: Defaults to `True`.  If set to `True`, the Agent will pass tool call errors to the Agent.  If set to `False`, the Agent will raise an exception.
 
 * `description`:  Defaults to `"ReAct Agent Workflow"`.  When the ReAct agent is configured as a function, this config option allows us to control the tool description (for example, when used as a tool within another agent).
 
