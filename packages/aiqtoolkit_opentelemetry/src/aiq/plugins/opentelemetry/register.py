@@ -115,7 +115,10 @@ async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builde
                                   flush_interval=config.flush_interval,
                                   max_queue_size=config.max_queue_size,
                                   drop_on_overflow=config.drop_on_overflow,
-                                  shutdown_timeout=config.shutdown_timeout)
+                                  shutdown_timeout=config.shutdown_timeout,
+                                  resource_attributes={
+                                      "service.name": config.project,
+                                  })
 
 
 class PatronusTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="patronus"):

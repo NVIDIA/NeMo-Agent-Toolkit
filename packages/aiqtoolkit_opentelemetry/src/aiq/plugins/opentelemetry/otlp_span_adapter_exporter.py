@@ -52,14 +52,21 @@ class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):  # pylin
         )
     """
 
-    def __init__(self,
-                 context_state: AIQContextState | None = None,
-                 batch_size: int = 100,
-                 flush_interval: float = 5.0,
-                 max_queue_size: int = 1000,
-                 drop_on_overflow: bool = False,
-                 shutdown_timeout: float = 10.0,
-                 **otlp_kwargs):
+    def __init__(
+            self,
+            *,
+            # OtelSpanExporter args
+            context_state: AIQContextState | None = None,
+            batch_size: int = 100,
+            flush_interval: float = 5.0,
+            max_queue_size: int = 1000,
+            drop_on_overflow: bool = False,
+            shutdown_timeout: float = 10.0,
+            resource_attributes: dict[str, str] | None = None,
+            # OTLPSpanExporterMixin args
+            endpoint: str,
+            headers: dict[str, str] | None = None,
+            **otlp_kwargs):
         """Initialize the OTLP span exporter.
 
         Args:
@@ -69,6 +76,10 @@ class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):  # pylin
             max_queue_size: Maximum number of spans to queue.
             drop_on_overflow: Whether to drop spans when queue is full.
             shutdown_timeout: Maximum time to wait for export completion during shutdown.
+            resource_attributes: Additional resource attributes for spans.
+            endpoint: The endpoint for the OTLP service.
+            headers: The headers for the OTLP service.
+            **otlp_kwargs: Additional keyword arguments for the OTLP service.
         """
         super().__init__(context_state=context_state,
                          batch_size=batch_size,
@@ -76,4 +87,7 @@ class OTLPSpanAdapterExporter(OTLPSpanExporterMixin, OtelSpanExporter):  # pylin
                          max_queue_size=max_queue_size,
                          drop_on_overflow=drop_on_overflow,
                          shutdown_timeout=shutdown_timeout,
+                         resource_attributes=resource_attributes,
+                         endpoint=endpoint,
+                         headers=headers,
                          **otlp_kwargs)
