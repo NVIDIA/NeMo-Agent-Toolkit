@@ -251,37 +251,37 @@ def patch_with_retry(
 
     # Choose attribute source: the *class* to avoid triggering __getattr__
     cls = obj if inspect.isclass(obj) else type(obj)
+    cls_name = getattr(cls, "__name__", str(cls))
 
-    for name, attr in inspect.getmembers(cls, callable):
-        # Skip private/special names and descriptors we don't want to patch
-        if name.startswith("_") or isinstance(attr, (property, staticmethod, classmethod)):
+    for name, _ in inspect.getmembers(cls, callable):
+        descriptor = inspect.getattr_static(cls, name)
+
+        # Skip dunders, privates and all descriptors we must not wrap
+        if (name.startswith("_") or isinstance(descriptor, (property, staticmethod, classmethod))):
             continue
 
-        original = attr.__func__ if isinstance(attr, types.MethodType) else attr
+        original = descriptor.__func__ if isinstance(descriptor, types.MethodType) else descriptor
         wrapped = deco(original)
 
-        # Try an instance‑level monkey‑patch first (if we have an instance)
-        if not inspect.isclass(obj):
-            try:
+        try:  # instance‑level first
+            if not inspect.isclass(obj):
                 object.__setattr__(obj, name, types.MethodType(wrapped, obj))
-                continue  # succeed, go to next attribute
-            except Exception as exc:  # noqa: BLE001
-                logger.info(
-                    "Instance‑level patch failed for %s.%s (%s); "
-                    "falling back to class‑level patch. This will affect every instance of the class, "
-                    "and all objects created will retry on failure for this method.",
-                    cls.__name__,
-                    name,
-                    exc,
-                )
+                continue
+        except Exception as exc:
+            logger.info(
+                "Instance‑level patch failed for %s.%s (%s); "
+                "falling back to class‑level patch.",
+                cls_name,
+                name,
+                exc,
+            )
 
-        # Fallback: patch the class itself (affects all instances)
-        try:
+        try:  # class‑level fallback
             setattr(cls, name, wrapped)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.info(
                 "Cannot patch method %s.%s with automatic retries: %s",
-                cls.__name__,
+                cls_name,
                 name,
                 exc,
             )
