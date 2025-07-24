@@ -45,7 +45,7 @@ class AuthenticationClientBase(ABC):
         self.config = config
 
     @abstractmethod
-    async def authenticate(self, user_id: str) -> AuthResult:
+    async def authenticate(self, user_id: str | None) -> AuthResult:
         """
         Perform the authentication process for the client.
 
@@ -105,7 +105,7 @@ class OAuthClientBase(AuthenticationClientBase, ABC):
         """
         pass
 
-    async def authenticate(self, user_id: str) -> AuthResult:
+    async def authenticate(self, user_id: str | None) -> AuthResult:
         """
         Perform the authentication process for the client.
 

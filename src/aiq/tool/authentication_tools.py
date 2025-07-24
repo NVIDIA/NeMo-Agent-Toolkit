@@ -102,7 +102,7 @@ async def http_auth_tool(config: HTTPAuthTool, builder: Builder):
                 return f"Failed to authenticate provider: {authentication_provider_name}: Invalid credentials"
 
             return (f"Your registered API Provider name: [{authentication_provider_name}] is now authenticated.\n"
-                    f"Credentials: {auth_context.credentials}.\n")
+                    f"Credentials: {auth_context.as_requests_kwargs()}.\n")
 
         except Exception as e:
             logger.exception("HTTP Basic authentication failed", exc_info=True)

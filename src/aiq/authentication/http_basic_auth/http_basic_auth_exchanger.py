@@ -23,7 +23,7 @@ class HTTPBasicAuthExchanger(AuthenticationClientBase):
         self._context = AIQContext.get()
 
 
-    async def authenticate(self, user_id: str) -> AuthResult:
+    async def authenticate(self, user_id: str | None) -> AuthResult:
         """
         Performs simple HTTP Authentication using the provided user ID.
         Args:
@@ -32,13 +32,13 @@ class HTTPBasicAuthExchanger(AuthenticationClientBase):
         Returns:
             AuthenticatedContext: The context containing authentication headers.
         """
-        if user_id in self._authenticated_tokens:
+        if user_id and user_id in self._authenticated_tokens:
             return self._authenticated_tokens[user_id]
 
         auth_callback = self._context.user_auth_callback
 
         try:
-            auth_context = await auth_callback(self.config, AuthFlowType.HTTP_BASIC)
+            auth_context: AuthenticatedContext = await auth_callback(self.config, AuthFlowType.HTTP_BASIC)
         except RuntimeError as e:
             raise RuntimeError(f"Authentication callback failed: {str(e)}. Did you forget to set a "
                                f"callback handler for your frontend?") from e
