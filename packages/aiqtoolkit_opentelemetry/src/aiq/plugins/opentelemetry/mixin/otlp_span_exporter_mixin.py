@@ -42,15 +42,16 @@ class OTLPSpanExporterMixin:
                 super().__init__(endpoint=endpoint, headers=headers, **kwargs)
     """
 
-    def __init__(self, *args, endpoint: str, headers: dict[str, str], **kwargs):
+    def __init__(self, *args, endpoint: str, headers: dict[str, str] | None = None, **kwargs):
         """Initialize the OTLP span exporter.
 
         Args:
             endpoint: OTLP service endpoint URL.
             headers: HTTP headers for authentication and metadata.
         """
-        self._exporter = OTLPSpanExporter(endpoint=endpoint, headers=headers)
         super().__init__(*args, **kwargs)
+
+        self._exporter = OTLPSpanExporter(endpoint=endpoint, headers=headers)
 
     async def export_otel_spans(self, spans: list[OtelSpan]) -> None:
         """Export a list of OtelSpans using the OTLP exporter.
