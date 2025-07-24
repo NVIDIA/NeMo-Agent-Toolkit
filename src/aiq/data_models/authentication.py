@@ -39,6 +39,16 @@ class CredentialLocation(str, Enum):
     BODY = "body"
 
 
+class AuthFlowType(str, Enum):
+    API_KEY = "api_key"
+    OAUTH2_CLIENT_CREDENTIALS = "oauth2_client_credentials"
+    OAUTH2_AUTHORIZATION_CODE = "oauth2_authorization_code"
+    OAUTH2_PASSWORD = "oauth2_password"
+    OAUTH2_DEVICE_CODE = "oauth2_device_code"
+    HTTP_BASIC = "http_basic"
+    NONE = "none"
+
+
 class AuthenticatedContext(BaseModel):
     """
     Represents the context used to authenticate an API request. This can include

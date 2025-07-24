@@ -19,8 +19,7 @@ from abc import abstractmethod
 import httpx
 
 from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
-from aiq.data_models.authentication import AuthenticatedContext
-from aiq.data_models.authentication import ConsentPromptMode
+from aiq.data_models.authentication import AuthenticationBaseConfig, AuthenticatedContext, AuthFlowType
 from aiq.data_models.authentication import CredentialLocation
 from aiq.data_models.authentication import HeaderAuthScheme
 from aiq.data_models.authentication import OAuth2AuthorizationQueryParams
@@ -30,119 +29,23 @@ from aiq.front_ends.fastapi.message_handler import MessageHandler
 AUTHORIZATION_HEADER = "Authorization"
 
 
-class RequestManagerBase:
-    """
-    Base class for handling API requests.
-    This class provides an interface for making API requests.
-    """
-    pass
-
-
-class ResponseManagerBase(ABC):
-    """
-    Base class for handling API responses.
-    This class provides an interface for handling API responses.
-    """
-
-    @property
-    @abstractmethod
-    def message_handler(self) -> "MessageHandler | None":
-        """
-        Get the message handler for the response manager.
-        """
-        pass
-
-    @message_handler.setter
-    @abstractmethod
-    def message_handler(self, message_handler: "MessageHandler") -> None:
-        """
-        Set the message handler for the response manager.
-        """
-        pass
-
-    @abstractmethod
-    async def handle_consent_prompt_redirect(self, location_header: str) -> None:
-        """
-        Handles redirect-based consent prompts initiated by OAuth 2.0 flows.
-
-        This method is responsible for processing the redirect URI received from the
-        authorization server (typically a 302 Location header). Depending on the execution
-        environment (e.g., headless server, local development, desktop), this may involve
-        opening a browser, triggering a frontend event, or notifying the user to complete
-        the consent flow manually.
-
-        Args:
-            location_header (str): The redirect URL containing the consent prompt.
-
-        Raises:
-            NotImplementedError: Must be implemented by subclasses tailored to the execution context.
-        """
-        pass
-
-
 class AuthenticationClientBase(ABC):
     """
     Base class for authenticating to API services.
     This class provides an interface for authenticating to API services.
     """
 
-    @property
-    @abstractmethod
-    def config_name(self) -> str | None:
+    def __init__(self, config: AuthenticationBaseConfig):
         """
-        Get the name of the authentication configuration.
-
-        Returns:
-            str | None: The name of the authentication configuration, or None if not set.
-        """
-        pass
-
-    @config_name.setter
-    @abstractmethod
-    def config_name(self, config_name: str | None) -> None:
-        """
-        Set the name of the authentication configuration.
+        Initialize the AuthenticationClientBase with the given configuration.
 
         Args:
-            config_name (str | None): The name of the authentication configuration.
+            config (AuthenticationBaseConfig): Configuration items for authentication.
         """
-        pass
+        self.config = config
 
     @abstractmethod
-    async def validate_credentials(self) -> bool:
-        """
-        Validates the credentials for the authentication client.
-
-        Returns:
-            bool: True if credentials are valid, False otherwise.
-        """
-        pass
-
-    @abstractmethod
-    async def construct_authentication_context(self,
-                                               credential_location: CredentialLocation,
-                                               header_scheme: HeaderAuthScheme) -> AuthenticatedContext | None:
-        """
-        Construct the authentication context to be injected into an API request.
-
-        This method builds an authentication context based on the given credential location
-        (e.g., headers, query parameters, or cookies) and the specified authentication scheme
-        (e.g., Bearer, Basic, API key). The resulting context encapsulates the credentials
-        in a structured format suitable for inclusion in outbound API requests.
-
-        Args:
-            credential_location (CredentialLocation): The part of the request where credentials
-                should be injected (header, query, or cookie).
-            header_scheme (HeaderAuthScheme): The HTTP authentication scheme to apply
-                (e.g., BEARER, BASIC, CUSTOM).
-
-        Returns:
-            AuthenticatedContext | None: A populated authentication context if authentication is
-            successful, or None if credentials are missing or invalid.
-        """
-
-    @abstractmethod
-    async def authenticate(self) -> None:
+    async def authenticate(self, user_id: str) -> AuthenticatedContext:
         """
         Perform the authentication process for the client.
 
@@ -156,6 +59,34 @@ class AuthenticationClientBase(ABC):
         ## This method will call the frontend FlowHandlerBase `authenticate` method
         pass
 
+
+class FlowHandlerBase(ABC):
+    """
+    Handles front-end specifc flows for authentication clients.
+
+    Each front end will define a FlowHandler that will implement the authenticate method.
+
+    The `authenticate` method will be stored as the callback in the AIQContextState.user_auth_callback
+    """
+
+    @staticmethod
+    async def authenticate(config: AuthenticationBaseConfig, method: AuthFlowType) -> AuthenticatedContext:
+        """
+        Perform the authentication process for the client.
+
+        This method handles the necessary steps to authenticate the client with the
+        target API service, which may include obtaining tokens, refreshing credentials,
+        or completing multistep authentication flows.
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses.
+        """
+        pass
+
+
+#######################################################################
+## The below interface needs to be updated. OAuth is broken currently##
+#######################################################################
 
 class OAuthClientBase(AuthenticationClientBase, ABC):
     """
@@ -174,7 +105,7 @@ class OAuthClientBase(AuthenticationClientBase, ABC):
         """
         pass
 
-    async def authenticate(self) -> None:
+    async def authenticate(self, user_id: str) -> AuthenticatedContext:
         """
         Perform the authentication process for the client.
 
@@ -186,13 +117,6 @@ class OAuthClientBase(AuthenticationClientBase, ABC):
             NotImplementedError: Must be implemented by subclasses.
         """
         ## This method will call the frontend FlowHandlerBase `authenticate` method
-        pass
-
-    async def shut_down_auth_code_flow(self):
-        """
-        Initiates and completes the authorization flow for OAuth clients
-        """
-        ## This method will call the frontend FlowHandlerBase `shut_down_auth_code_flow` method
         pass
 
     @abstractmethod
@@ -324,34 +248,51 @@ class OAuthClientBase(AuthenticationClientBase, ABC):
         pass
 
 
-class FlowHandlerBase(ABC):
+class RequestManagerBase:
     """
-    Handles front-end specifc flows for authentication clients.
-
-    Each front end will define a FlowHandler that will implement the authenticate method.
-
-    The `authenticate` method will be stored as the callback in the AIQContextState.user_auth_callback
+    Base class for handling API requests.
+    This class provides an interface for making API requests.
     """
+    pass
+
+
+class ResponseManagerBase(ABC):
+    """
+    Base class for handling API responses.
+    This class provides an interface for handling API responses.
+    """
+
+    @property
+    @abstractmethod
+    def message_handler(self) -> "MessageHandler | None":
+        """
+        Get the message handler for the response manager.
+        """
+        pass
+
+    @message_handler.setter
+    @abstractmethod
+    def message_handler(self, message_handler: "MessageHandler") -> None:
+        """
+        Set the message handler for the response manager.
+        """
+        pass
 
     @abstractmethod
-    async def authenticate(self, oauth_client: OAuthClientBase) -> OAuthClientBase:
+    async def handle_consent_prompt_redirect(self, location_header: str) -> None:
         """
-        Perform the authentication process for the client.
+        Handles redirect-based consent prompts initiated by OAuth 2.0 flows.
 
-        This method handles the necessary steps to authenticate the client with the
-        target API service, which may include obtaining tokens, refreshing credentials,
-        or completing multi-step authentication flows.
+        This method is responsible for processing the redirect URI received from the
+        authorization server (typically a 302 Location header). Depending on the execution
+        environment (e.g., headless server, local development, desktop), this may involve
+        opening a browser, triggering a frontend event, or notifying the user to complete
+        the consent flow manually.
+
+        Args:
+            location_header (str): The redirect URL containing the consent prompt.
 
         Raises:
-            NotImplementedError: Must be implemented by subclasses.
+            NotImplementedError: Must be implemented by subclasses tailored to the execution context.
         """
         pass
-
-    @abstractmethod
-    async def shut_down_auth_code_flow(self, oauth_client: OAuthClientBase) -> None:
-        """
-        Initiates and completes the authorization flow for OAuth clients
-        """
-        pass
-
-

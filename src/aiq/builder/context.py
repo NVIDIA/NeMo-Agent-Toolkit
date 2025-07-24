@@ -35,6 +35,9 @@ from aiq.data_models.invocation_node import InvocationNode
 from aiq.runtime.user_metadata import RequestAttributes
 from aiq.utils.reactive.subject import Subject
 
+from aiq.data_models.authentication import AuthenticationBaseConfig, AuthenticatedContext
+from aiq.data_models.authentication import AuthFlowType
+
 
 class Singleton(type):
 
@@ -84,11 +87,11 @@ class AIQContextState(metaclass=Singleton):
         # executing the callback during the session, it is exiting and resetting the callback. Defaulting to
         # `user_auth_callback_server_http` since this bug only happens during streaming requests.
         from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
-        self.user_auth_callback: ContextVar[Callable[[OAuthClientBase, ConsentPromptMode],
-                                                     Awaitable[AuthenticationError | None]]
+        self.user_auth_callback: ContextVar[Callable[[AuthenticationBaseConfig, AuthFlowType],
+                                                     Awaitable[AuthenticatedContext]]
                                             | None] = ContextVar(
                                                 "user_auth_callback",
-                                                default=FastApiFrontEndPluginWorker.user_auth_callback_server_http)
+                                                default=None)
 
     @staticmethod
     def get() -> "AIQContextState":
@@ -236,6 +239,25 @@ class AIQContext:
             str: The active span ID.
         """
         return self._context_state.active_span_id_stack.get()[-1]
+
+    @property
+    def user_auth_callback(self) -> Callable[[AuthenticationBaseConfig, AuthFlowType], Awaitable[AuthenticatedContext]]:
+        """
+        Retrieves the user authentication callback function from the context state.
+
+        This property provides access to the user authentication callback function stored in the context state.
+        The callback function is responsible for handling user authentication based on the provided configuration.
+
+        Returns:
+            Callable[[AuthenticationBaseConfig], Awaitable[AuthenticatedContext]]: The user authentication callback function.
+
+        Raises:
+            RuntimeError: If the user authentication callback is not set in the context.
+        """
+        callback = self._context_state.user_auth_callback.get()
+        if callback is None:
+            raise RuntimeError("User authentication callback is not set in the context.")
+        return callback
 
     @staticmethod
     def get() -> "AIQContext":

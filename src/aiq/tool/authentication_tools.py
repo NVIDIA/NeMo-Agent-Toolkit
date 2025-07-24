@@ -80,6 +80,39 @@ async def _test_jira_api_call(oauth_client: OAuthClientBase) -> typing.Any | Non
 
     return test_api_call_result
 
+class HTTPAuthTool(FunctionBaseConfig, name="http_auth_tool"):
+    """Authenticate to any registered API provider using OAuth2 authorization flow with browser consent handling."""
+    pass
+
+@register_function(config_type=HTTPAuthTool)
+async def http_auth_tool(config: HTTPAuthTool, builder: Builder):
+    """
+    Uses HTTP Basic authentication to authenticate to any registered API provider.
+    """
+
+    async def _arun(authentication_provider_name: str) -> str:
+        try:
+            # Get the http basic auth registered authentication client
+            http_basic_auth_client: OAuthClientBase = await builder.get_authentication(authentication_provider_name)
+
+            # Perform authentication (this will invoke the user authentication callback)
+            auth_context: AuthenticatedContext = await http_basic_auth_client.authenticate(user_id="default_user")
+
+            if not auth_context or not auth_context.headers:
+                return f"Failed to authenticate provider: {authentication_provider_name}: Invalid credentials"
+
+            return (f"Your registered API Provider name: [{authentication_provider_name}] is now authenticated.\n"
+                    f"Authentication Headers: {auth_context.headers}\n")
+
+        except Exception as e:
+            logger.exception("HTTP Basic authentication failed", exc_info=True)
+            return f"HTTP Basic authentication to '{authentication_provider_name}' failed: {str(e)}"
+
+    yield FunctionInfo.from_fn(
+        _arun,
+        description="Use HTTP basic authentication to authenticate with a given provider."
+    )
+
 
 class OAuth2BrowserAuthTool(FunctionBaseConfig, name="oauth2_browser_auth_tool"):
     """Authenticate to any registered API provider using OAuth2 authorization flow with browser consent handling."""

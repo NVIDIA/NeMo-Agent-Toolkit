@@ -31,6 +31,7 @@ from aiq.data_models.interactive import InteractionPrompt
 from aiq.front_ends.console.console_front_end_config import ConsoleFrontEndConfig
 from aiq.front_ends.simple_base.simple_front_end_plugin_base import SimpleFrontEndPluginBase
 from aiq.runtime.session import AIQSessionManager
+from aiq.front_ends.console.authentication_flow_handler import ConsoleAuthenticationFlowHandler
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ async def prompt_for_input_cli(question: InteractionPrompt) -> HumanResponse:
 
         return HumanResponseText(text=user_response)
 
-    raise ValueError("Unsupported human propmt input type. The run command only supports the 'HumanPromptText' "
+    raise ValueError("Unsupported human prompt input type. The run command only supports the 'HumanPromptText' "
                      "input type. Please use the 'serve' command to ensure full support for all input types.")
 
 
@@ -86,7 +87,7 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
 
                 async with session_manager.session(
                         user_input_callback=prompt_for_input_cli,
-                        user_authentication_callback=self.user_auth_callback_console) as session:
+                        user_authentication_callback=ConsoleAuthenticationFlowHandler.authenticate) as session:
                     async with session.run(query) as runner:
                         base_output = await runner.result(to_type=str)
 
