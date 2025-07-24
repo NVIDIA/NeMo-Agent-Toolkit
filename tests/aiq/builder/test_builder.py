@@ -38,22 +38,26 @@ from aiq.cli.register_workflow import register_memory
 from aiq.cli.register_workflow import register_object_store
 from aiq.cli.register_workflow import register_retriever_client
 from aiq.cli.register_workflow import register_retriever_provider
+from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.cli.register_workflow import register_tool_wrapper
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
+from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
 from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
+from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
 from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
 from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
 from aiq.memory.models import MemoryItem
 from aiq.object_store.in_memory_object_store import InMemoryObjectStore
+from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.retriever.interface import AIQRetriever
 from aiq.retriever.models import AIQDocument
 from aiq.retriever.models import RetrieverOutput
@@ -84,6 +88,10 @@ class TMemoryConfig(MemoryBaseConfig, name="test_memory"):
 
 
 class TRetrieverProviderConfig(RetrieverBaseConfig, name="test_retriever"):
+    raise_error: bool = False
+
+
+class TTelemetryExporterConfig(TelemetryExporterBaseConfig, name="test_telemetry_exporter"):
     raise_error: bool = False
 
 
@@ -196,6 +204,20 @@ async def _register():
             raise ValueError("Error")
 
         yield InMemoryObjectStore()
+
+    # Register mock telemetry exporter
+    @register_telemetry_exporter(config_type=TTelemetryExporterConfig)
+    async def register9(config: TTelemetryExporterConfig, builder: Builder):
+
+        if (config.raise_error):
+            raise ValueError("Error")
+
+        class TestTelemetryExporter(BaseExporter):
+
+            def export(self, event: IntermediateStep):
+                pass
+
+        yield TestTelemetryExporter()
 
     @register_its_strategy(config_type=TestITSStrategyConfig)
     async def register_its(config: TestITSStrategyConfig, builder: Builder):
@@ -741,6 +763,31 @@ async def test_built_config():
         assert workflow_config.retrievers == {"retriever1": retriever_config}
         assert workflow_config.object_stores == {"object_store1": object_store_config}
         assert workflow_config.its_strategies == {"its_strategy": its_config}
+
+
+async def test_add_telemetry_exporter():
+
+    workflow_config = FunctionReturningFunctionConfig()
+    telemetry_exporter_config = TTelemetryExporterConfig()
+
+    async with WorkflowBuilder() as builder:
+
+        await builder.set_workflow(workflow_config)
+
+        await builder.add_telemetry_exporter("exporter1", telemetry_exporter_config)
+
+        with pytest.raises(ValueError):
+            await builder.add_telemetry_exporter("exporter2", TTelemetryExporterConfig(raise_error=True))
+
+        with pytest.raises(ValueError):
+            await builder.add_telemetry_exporter("exporter1", TTelemetryExporterConfig())
+
+        workflow = builder.build()
+
+        exporter1_instance = workflow.telemetry_exporters.get("exporter1", None)
+
+        assert exporter1_instance is not None
+        assert issubclass(type(exporter1_instance), BaseExporter)
 
 
 # Error Logging Tests

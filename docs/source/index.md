@@ -114,6 +114,7 @@ Adding an LLM Provider <./extend/adding-an-llm-provider.md>
 Adding an Object Store Provider <./extend/object-store.md>
 Integrating AWS Bedrock Models <./extend/integrating-aws-bedrock-models.md>
 Cursor Rules Developer Guide <./extend/cursor-rules-developer-guide.md>
+Adding a Telemetry Exporter <./extend/telemetry-exporters.md>
 ```
 
 ```{toctree}

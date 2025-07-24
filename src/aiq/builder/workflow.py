@@ -30,18 +30,9 @@ from aiq.data_models.config import AIQConfig
 from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
 from aiq.object_store.interfaces import ObjectStore
+from aiq.observability.exporter.base_exporter import BaseExporter
+from aiq.observability.exporter_manager import ExporterManager
 from aiq.runtime.runner import AIQRunner
-from aiq.utils.optional_imports import TelemetryOptionalImportError
-from aiq.utils.optional_imports import try_import_opentelemetry
-
-# Try to import OpenTelemetry modules
-# If the dependencies are not installed, use a dummy span exporter here
-try:
-    opentelemetry = try_import_opentelemetry()
-    from opentelemetry.sdk.trace.export import SpanExporter
-except TelemetryOptionalImportError:
-    from aiq.utils.optional_imports import DummySpanExporter  # pylint: disable=ungrouped-imports
-    SpanExporter = DummySpanExporter
 
 callback_handler_var: ContextVar[Any | None] = ContextVar("callback_handler_var", default=None)
 
@@ -57,7 +48,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
                  embeddings: dict[str, EmbedderProviderInfo] | None = None,
                  memory: dict[str, MemoryEditor] | None = None,
                  object_stores: dict[str, ObjectStore] | None = None,
-                 exporters: dict[str, SpanExporter] | None = None,
+                 telemetry_exporters: dict[str, BaseExporter] | None = None,
                  retrievers: dict[str | None, RetrieverProviderInfo] | None = None,
                  its_strategies: dict[str, StrategyBase] | None = None,
                  context_state: AIQContextState):
@@ -71,15 +62,16 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         self.llms = llms or {}
         self.embeddings = embeddings or {}
         self.memory = memory or {}
+        self.telemetry_exporters = telemetry_exporters or {}
         self.object_stores = object_stores or {}
         self.retrievers = retrievers or {}
+
+        self._exporter_manager = ExporterManager.from_exporters(self.telemetry_exporters)
         self.its_strategies = its_strategies or {}
 
         self._entry_fn = entry_fn
 
         self._context_state = context_state
-
-        self._exporters = exporters or {}
 
     @property
     def has_streaming_output(self) -> bool:
@@ -97,8 +89,11 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         Called each time we start a new workflow run. We'll create
         a new top-level workflow span here.
         """
-        async with AIQRunner(input_message=message, entry_fn=self._entry_fn,
-                             context_state=self._context_state) as runner:
+
+        async with AIQRunner(input_message=message,
+                             entry_fn=self._entry_fn,
+                             context_state=self._context_state,
+                             exporter_manager=self._exporter_manager.get()) as runner:
 
             # The caller can `yield runner` so they can do `runner.result()` or `runner.result_stream()`
             yield runner
@@ -128,7 +123,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
                       embeddings: dict[str, EmbedderProviderInfo] | None = None,
                       memory: dict[str, MemoryEditor] | None = None,
                       object_stores: dict[str, ObjectStore] | None = None,
-                      exporters: dict[str, SpanExporter] | None = None,
+                      telemetry_exporters: dict[str, BaseExporter] | None = None,
                       retrievers: dict[str | None, RetrieverProviderInfo] | None = None,
                       its_strategies: dict[str, StrategyBase] | None = None,
                       context_state: AIQContextState) -> 'Workflow[InputT, StreamingOutputT, SingleOutputT]':
@@ -147,7 +142,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
                             embeddings=embeddings,
                             memory=memory,
                             object_stores=object_stores,
-                            exporters=exporters,
+                            telemetry_exporters=telemetry_exporters,
                             retrievers=retrievers,
                             its_strategies=its_strategies,
                             context_state=context_state)

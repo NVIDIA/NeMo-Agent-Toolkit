@@ -29,12 +29,12 @@ After logging in, create a new project.
 - Project Name: Choose any name.
 - Use Case: `Agentic Application`
 
-### Step3: Generate API Credentials
+### Step 3: Generate API Credentials
 Go to your [profile](https://catalyst.raga.ai/settings/authenticate) settings to generate your:
 - access key
 - secret key
 
-### Step4: Configure Your Environment
+### Step 4: Configure Your Environment
 Set the following environment variables in your terminal
 ```yaml
 export CATALYST_ACCESS_KEY=YOUR_ACCESS_KEY
