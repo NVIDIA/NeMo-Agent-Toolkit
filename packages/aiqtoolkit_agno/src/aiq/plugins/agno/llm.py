@@ -70,9 +70,7 @@ async def openai_agno(llm_config: OpenAIModelConfig, builder: Builder):
     from agno.models.openai import OpenAIChat
 
     # Use model_dump to get the proper field values with correct types
-    kwargs = llm_config.model_dump(
-        exclude={"type", "do_auto_retry", "max_retries", "retry_on_status_codes", "retry_on_errors", "num_retries"},
-        by_alias=True)
+    kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
 
     # AGNO uses 'id' instead of 'model' for the model name
     if "model" in kwargs:
