@@ -57,8 +57,8 @@ def base_agent_no_logs():
     return MockBaseAgent(detailed_logs=False)
 
 
-class TestStreamLLMWithRetry:
-    """Test the _stream_llm_with_retry method."""
+class TestStreamLLM:
+    """Test the _stream_llm method."""
 
     async def test_successful_streaming(self, base_agent):
         """Test successful streaming without retries."""
@@ -77,155 +77,99 @@ class TestStreamLLMWithRetry:
         inputs = {"messages": [HumanMessage(content="test")]}
         config = RunnableConfig(callbacks=[])
 
-        result = await base_agent._stream_llm_with_retry(mock_runnable, inputs, config)
+        result = await base_agent._stream_llm(mock_runnable, inputs, config)
 
         assert isinstance(result, AIMessage)
         assert result.content == "Hello world!"
 
-    async def test_streaming_with_retry_success(self, base_agent):
-        """Test streaming that fails once but succeeds on retry."""
+    async def test_streaming_error_propagation(self, base_agent):
+        """Test that streaming errors are propagated to the automatic retry system."""
+        mock_runnable = Mock()
+
+        async def mock_astream(inputs, config=None):
+            raise Exception("Network error")
+            yield  # Never executed but makes this an async generator
+
+        mock_runnable.astream = mock_astream
+
+        inputs = {"messages": [HumanMessage(content="test")]}
+
+        # Error should be propagated (retry is handled automatically by underlying client)
+        with pytest.raises(Exception, match="Network error"):
+            await base_agent._stream_llm(mock_runnable, inputs)
+
+    async def test_streaming_empty_content(self, base_agent):
+        """Test streaming with empty content."""
         mock_runnable = Mock()
         mock_event = Mock()
-        mock_event.content = "Success!"
-
-        call_count = 0
+        mock_event.content = ""
 
         async def mock_astream(inputs, config=None):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                raise Exception("Network error")
-            else:
-                yield mock_event
+            yield mock_event
 
         mock_runnable.astream = mock_astream
 
         inputs = {"messages": [HumanMessage(content="test")]}
 
-        with patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
-            result = await base_agent._stream_llm_with_retry(mock_runnable, inputs, max_retries=2)
-
-        assert isinstance(result, AIMessage)
-        assert result.content == "Success!"
-        assert call_count == 2
-        mock_sleep.assert_called_once_with(2)  # 2^1 for first retry
-
-    async def test_streaming_max_retries_exceeded(self, base_agent):
-        """Test streaming that fails after max retries."""
-        mock_runnable = Mock()
-
-        async def failing_astream(inputs, config=None):
-            raise Exception("Persistent error")
-
-        mock_runnable.astream = failing_astream
-
-        inputs = {"messages": [HumanMessage(content="test")]}
-
-        with patch('asyncio.sleep', new_callable=AsyncMock):
-            result = await base_agent._stream_llm_with_retry(mock_runnable, inputs, max_retries=2)
-
-        assert isinstance(result, AIMessage)
-        assert "LLM streaming failed after all retry attempts" in result.content
-
-    async def test_streaming_with_empty_response(self, base_agent):
-        """Test streaming with empty response."""
-        mock_runnable = Mock()
-
-        async def mock_astream(inputs, config=None):
-            return
-            yield  # This will never execute, creating empty async generator
-
-        mock_runnable.astream = mock_astream
-
-        inputs = {"messages": [HumanMessage(content="test")]}
-
-        result = await base_agent._stream_llm_with_retry(mock_runnable, inputs)
+        result = await base_agent._stream_llm(mock_runnable, inputs)
 
         assert isinstance(result, AIMessage)
         assert result.content == ""
 
 
-class TestCallLLMWithRetry:
-    """Test the _call_llm_with_retry method."""
+class TestCallLLM:
+    """Test the _call_llm method."""
 
     async def test_successful_llm_call(self, base_agent):
-        """Test successful LLM call without retries."""
+        """Test successful LLM call."""
         messages = [HumanMessage(content="test")]
         mock_response = AIMessage(content="Response content")
 
         base_agent.llm.ainvoke = AsyncMock(return_value=mock_response)
 
-        result = await base_agent._call_llm_with_retry(messages)
+        result = await base_agent._call_llm(messages)
 
         assert isinstance(result, AIMessage)
         assert result.content == "Response content"
         base_agent.llm.ainvoke.assert_called_once_with(messages)
 
-    async def test_llm_call_with_retry_success(self, base_agent):
-        """Test LLM call that fails once but succeeds on retry."""
+    async def test_llm_call_error_propagation(self, base_agent):
+        """Test that LLM call errors are propagated to the automatic retry system."""
         messages = [HumanMessage(content="test")]
-        mock_response = AIMessage(content="Success!")
 
-        base_agent.llm.ainvoke = AsyncMock(side_effect=[Exception("API error"), mock_response])
+        base_agent.llm.ainvoke = AsyncMock(side_effect=Exception("API error"))
 
-        with patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
-            result = await base_agent._call_llm_with_retry(messages, max_retries=2)
+        # Error should be propagated (retry is handled automatically by underlying client)
+        with pytest.raises(Exception, match="API error"):
+            await base_agent._call_llm(messages)
 
-        assert isinstance(result, AIMessage)
-        assert result.content == "Success!"
-        assert base_agent.llm.ainvoke.call_count == 2
-        mock_sleep.assert_called_once_with(2)  # 2^1 for first retry
-
-    async def test_llm_call_max_retries_exceeded(self, base_agent):
-        """Test LLM call that fails after max retries."""
+    async def test_llm_call_content_conversion(self, base_agent):
+        """Test that LLM response content is properly converted to string."""
         messages = [HumanMessage(content="test")]
-        base_agent.llm.ainvoke = AsyncMock(side_effect=Exception("Persistent error"))
-
-        with patch('asyncio.sleep', new_callable=AsyncMock):
-            result = await base_agent._call_llm_with_retry(messages, max_retries=2)
-
-        assert isinstance(result, AIMessage)
-        assert "LLM call failed after all retry attempts" in result.content
-        assert base_agent.llm.ainvoke.call_count == 2
-
-    async def test_llm_call_with_empty_content(self, base_agent):
-        """Test LLM call that returns empty content."""
-        messages = [HumanMessage(content="test")]
-        mock_response = AIMessage(content="")
-
-        base_agent.llm.ainvoke = AsyncMock(return_value=mock_response)
-
-        result = await base_agent._call_llm_with_retry(messages)
-
-        assert isinstance(result, AIMessage)
-        assert result.content == ""
-
-    async def test_llm_call_with_none_content(self, base_agent):
-        """Test LLM call that returns None content."""
-        messages = [HumanMessage(content="test")]
+        # Mock response that simulates non-string content that gets converted
         mock_response = Mock()
-        mock_response.content = None
+        mock_response.content = 123
 
         base_agent.llm.ainvoke = AsyncMock(return_value=mock_response)
 
-        result = await base_agent._call_llm_with_retry(messages)
+        result = await base_agent._call_llm(messages)
 
         assert isinstance(result, AIMessage)
-        assert result.content == "None"
+        assert result.content == "123"
 
 
-class TestCallToolWithRetry:
-    """Test the _call_tool_with_retry method."""
+class TestCallTool:
+    """Test the _call_tool method."""
 
     async def test_successful_tool_call(self, base_agent):
-        """Test successful tool call without retries."""
+        """Test successful tool call."""
         tool = base_agent.tools[0]  # Tool A
         tool_input = {"query": "test"}
         config = RunnableConfig(callbacks=[])
 
         tool.ainvoke = AsyncMock(return_value="Tool response")
 
-        result = await base_agent._call_tool_with_retry(tool, tool_input, config)
+        result = await base_agent._call_tool(tool, tool_input, config)
 
         assert isinstance(result, ToolMessage)
         assert result.content == "Tool response"
@@ -233,96 +177,54 @@ class TestCallToolWithRetry:
         assert result.tool_call_id == tool.name
         tool.ainvoke.assert_called_once_with(tool_input, config=config)
 
-    async def test_tool_call_with_retry_success(self, base_agent):
-        """Test tool call that fails once but succeeds on retry."""
+    async def test_tool_call_error_propagation(self, base_agent):
+        """Test that tool call errors are propagated to the automatic retry system."""
         tool = base_agent.tools[0]  # Tool A
         tool_input = {"query": "test"}
 
-        tool.ainvoke = AsyncMock(side_effect=[Exception("Tool error"), "Success!"])
+        tool.ainvoke = AsyncMock(side_effect=Exception("Tool error"))
 
-        with patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
-            result = await base_agent._call_tool_with_retry(tool, tool_input, max_retries=2)
+        # Error should be propagated (retry is handled automatically by underlying client)
+        with pytest.raises(Exception, match="Tool error"):
+            await base_agent._call_tool(tool, tool_input)
 
-        assert isinstance(result, ToolMessage)
-        assert result.content == "Success!"
-        assert result.name == tool.name
-        assert result.tool_call_id == tool.name
-        assert tool.ainvoke.call_count == 2
-        mock_sleep.assert_called_once_with(2)  # 2^1 for first retry
-
-    async def test_tool_call_max_retries_exceeded(self, base_agent):
-        """Test tool call that fails after max retries."""
-        tool = base_agent.tools[0]  # Tool A
-        tool_input = {"query": "test"}
-
-        tool.ainvoke = AsyncMock(side_effect=Exception("Persistent error"))
-
-        with patch('asyncio.sleep', new_callable=AsyncMock):
-            result = await base_agent._call_tool_with_retry(tool, tool_input, max_retries=2)
-
-        assert isinstance(result, ToolMessage)
-        assert f"Tool {tool.name} failed after all retry attempts" in result.content
-        assert result.status == "error"
-        assert result.name == tool.name
-        assert result.tool_call_id == tool.name
-        assert tool.ainvoke.call_count == 2
-
-    async def test_tool_call_with_empty_string_response(self, base_agent):
-        """Test tool call that returns empty string."""
+    async def test_tool_call_empty_response(self, base_agent):
+        """Test tool call with empty string response."""
         tool = base_agent.tools[0]  # Tool A
         tool_input = {"query": "test"}
 
         tool.ainvoke = AsyncMock(return_value="")
 
-        result = await base_agent._call_tool_with_retry(tool, tool_input)
+        result = await base_agent._call_tool(tool, tool_input)
 
         assert isinstance(result, ToolMessage)
         assert f"The tool {tool.name} provided an empty response." in result.content
         assert result.name == tool.name
         assert result.tool_call_id == tool.name
 
-    async def test_tool_call_with_none_response(self, base_agent):
-        """Test tool call that returns None."""
+    async def test_tool_call_none_response(self, base_agent):
+        """Test tool call with None response."""
         tool = base_agent.tools[0]  # Tool A
         tool_input = {"query": "test"}
 
         tool.ainvoke = AsyncMock(return_value=None)
 
-        result = await base_agent._call_tool_with_retry(tool, tool_input)
-
-        # According to the implementation, None responses are converted to ToolMessage with string content "None"
-        assert isinstance(result, ToolMessage)
-        assert result.content == "None"
-        assert result.name == tool.name
-        assert result.tool_call_id == tool.name
-
-    async def test_tool_call_with_non_string_response(self, base_agent):
-        """Test tool call that returns non-string response."""
-        tool = base_agent.tools[0]  # Tool A
-        tool_input = {"query": "test"}
-
-        tool.ainvoke = AsyncMock(return_value={"result": "data"})
-
-        result = await base_agent._call_tool_with_retry(tool, tool_input)
+        result = await base_agent._call_tool(tool, tool_input)
 
         assert isinstance(result, ToolMessage)
-        assert result.content == "{'result': 'data'}"
-        assert result.name == tool.name
-        assert result.tool_call_id == tool.name
+        assert f"The tool {tool.name} provided an empty response." in result.content
 
-    async def test_tool_call_without_config(self, base_agent):
-        """Test tool call without providing config parameter."""
+    async def test_tool_call_with_string_input(self, base_agent):
+        """Test tool call with string input instead of dict."""
         tool = base_agent.tools[0]  # Tool A
-        tool_input = {"query": "test"}
+        tool_input = "test query"
 
         tool.ainvoke = AsyncMock(return_value="Tool response")
 
-        result = await base_agent._call_tool_with_retry(tool, tool_input)
+        result = await base_agent._call_tool(tool, tool_input)
 
         assert isinstance(result, ToolMessage)
         assert result.content == "Tool response"
-        assert result.name == tool.name
-        assert result.tool_call_id == tool.name
         tool.ainvoke.assert_called_once_with(tool_input, config=None)
 
 
@@ -479,37 +381,11 @@ class TestBaseAgentIntegration:
         assert agent.callbacks == []
         assert agent.detailed_logs is True
 
-    async def test_retry_methods_with_different_retry_counts(self, base_agent):
-        """Test retry methods with different retry counts."""
+    async def test_error_handling_integration(self, base_agent):
+        """Test that errors are properly handled through the automatic retry system."""
         messages = [HumanMessage(content="test")]
         base_agent.llm.ainvoke = AsyncMock(side_effect=Exception("Error"))
 
-        with patch('asyncio.sleep', new_callable=AsyncMock):
-            result = await base_agent._call_llm_with_retry(messages, max_retries=1)
-
-        assert isinstance(result, AIMessage)
-        assert "LLM call failed after all retry attempts" in result.content
-        assert base_agent.llm.ainvoke.call_count == 1
-
-    async def test_exponential_backoff_timing(self, base_agent):
-        """Test that exponential backoff works correctly."""
-        messages = [HumanMessage(content="test")]
-        base_agent.llm.ainvoke = AsyncMock(side_effect=Exception("Error"))
-
-        with patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
-            await base_agent._call_llm_with_retry(messages, max_retries=2)
-
-        # With max_retries=2, there will be only 1 retry attempt (attempt 1)
-        # So sleep is called once with 2^1 = 2
-        mock_sleep.assert_called_once_with(2)
-
-    async def test_zero_retries(self, base_agent):
-        """Test behavior with zero retries."""
-        messages = [HumanMessage(content="test")]
-        base_agent.llm.ainvoke = AsyncMock(side_effect=Exception("Error"))
-
-        result = await base_agent._call_llm_with_retry(messages, max_retries=0)
-
-        # With max_retries=0, the loop doesn't execute, so it returns the fallback message
-        assert isinstance(result, AIMessage)
-        assert "LLM call failed after all retry attempts" in result.content
+        # Errors should be propagated since retry is handled by the underlying client
+        with pytest.raises(Exception, match="Error"):
+            await base_agent._call_llm(messages)

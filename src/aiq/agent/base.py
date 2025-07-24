@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import json
 import logging
 from abc import ABC
@@ -78,14 +77,12 @@ class BaseAgent(ABC):
         self.detailed_logs = detailed_logs
         self.graph = None
 
-    async def _stream_llm_with_retry(self,
-                                     runnable: Any,
-                                     inputs: dict[str, Any],
-                                     config: RunnableConfig | None = None,
-                                     max_retries: int = 3) -> AIMessage:
+    async def _stream_llm(self,
+                          runnable: Any,
+                          inputs: dict[str, Any],
+                          config: RunnableConfig | None = None) -> AIMessage:
         """
-        Safely stream from LLM with retry logic and graceful error handling.
-        Common pattern used across multiple agents.
+        Stream from LLM runnable. Retry logic is handled automatically by the underlying LLM client.
 
         Parameters
         ----------
@@ -95,80 +92,41 @@ class BaseAgent(ABC):
             The inputs to pass to the runnable
         config : RunnableConfig | None
             The config to pass to the runnable (should include callbacks)
-        max_retries : int
-            Maximum number of retry attempts (default: 3)
 
         Returns
         -------
         AIMessage
-            The LLM response or error message
+            The LLM response
         """
-        for attempt in range(1, max_retries + 1):
-            try:
-                output_message = ""
-                async for event in runnable.astream(inputs, config=config):
-                    output_message += event.content
+        output_message = ""
+        async for event in runnable.astream(inputs, config=config):
+            output_message += event.content
 
-                return AIMessage(content=output_message)
+        return AIMessage(content=output_message)
 
-            except Exception as e:
-                logger.warning("%s LLM streaming failed on attempt %d/%d: %s",
-                               AGENT_LOG_PREFIX,
-                               attempt,
-                               max_retries,
-                               str(e))
-
-                # Wait before retry (exponential backoff)
-                if attempt < max_retries:
-                    await asyncio.sleep(2**attempt)
-
-        return AIMessage(content="LLM streaming failed after all retry attempts")
-
-    async def _call_llm_with_retry(self, messages: list[BaseMessage], max_retries: int = 3) -> AIMessage:
+    async def _call_llm(self, messages: list[BaseMessage]) -> AIMessage:
         """
-        Safely call the LLM with retry logic and graceful error handling.
-        If the LLM fails, returns an error message instead of raising an exception.
+        Call the LLM directly. Retry logic is handled automatically by the underlying LLM client.
 
         Parameters
         ----------
         messages : list[BaseMessage]
             The messages to send to the LLM
-        max_retries : int
-            Maximum number of retry attempts (default: 3)
 
         Returns
         -------
         AIMessage
-            The LLM response or error message
+            The LLM response
         """
-        for attempt in range(1, max_retries + 1):
-            try:
-                response = await self.llm.ainvoke(messages)
+        response = await self.llm.ainvoke(messages)
+        return AIMessage(content=str(response.content))
 
-                # Handle different response types safely
-                return AIMessage(content=str(response.content))
-
-            except Exception as e:
-                logger.warning("%s LLM call failed on attempt %d/%d: %s",
-                               AGENT_LOG_PREFIX,
-                               attempt,
-                               max_retries,
-                               str(e))
-
-                # Wait before retry (exponential backoff)
-                if attempt < max_retries:
-                    await asyncio.sleep(2**attempt)
-
-        return AIMessage(content="LLM call failed after all retry attempts")
-
-    async def _call_tool_with_retry(self,
-                                    tool: BaseTool,
-                                    tool_input: dict[str, Any] | str,
-                                    config: RunnableConfig | None = None,
-                                    max_retries: int = 3) -> ToolMessage:
+    async def _call_tool(self,
+                         tool: BaseTool,
+                         tool_input: dict[str, Any] | str,
+                         config: RunnableConfig | None = None) -> ToolMessage:
         """
-        Safely call a tool with retry logic and graceful error handling.
-        If the tool fails, returns an error message instead of raising an exception.
+        Call a tool directly. Retry logic is handled automatically by the underlying tool client.
 
         Parameters
         ----------
@@ -176,43 +134,23 @@ class BaseAgent(ABC):
             The tool to call
         tool_input : Union[Dict[str, Any], str]
             The input to pass to the tool
-        max_retries : int
-            Maximum number of retry attempts (default: 3)
+        config : RunnableConfig | None
+            The config to pass to the tool
 
         Returns
         -------
-        Any
-            The tool response or error message
+        ToolMessage
+            The tool response
         """
-        for attempt in range(1, max_retries + 1):
-            try:
-                response = await tool.ainvoke(tool_input, config=config)
+        response = await tool.ainvoke(tool_input, config=config)
 
-                # Handle empty responses
-                if isinstance(response, str):
-                    if response is None or response == "":
-                        return ToolMessage(name=tool.name,
-                                           tool_call_id=tool.name,
-                                           content=f"The tool {tool.name} provided an empty response.")
+        # Handle empty responses
+        if response is None or (isinstance(response, str) and response == ""):
+            return ToolMessage(name=tool.name,
+                               tool_call_id=tool.name,
+                               content=f"The tool {tool.name} provided an empty response.")
 
-                return ToolMessage(name=tool.name, tool_call_id=tool.name, content=response)
-
-            except Exception as e:
-                logger.warning("%s Tool %s failed on attempt %d/%d: %s",
-                               AGENT_LOG_PREFIX,
-                               tool.name,
-                               attempt,
-                               max_retries,
-                               str(e))
-
-                # Wait before retry (exponential backoff)
-                if attempt < max_retries:
-                    await asyncio.sleep(2**attempt)
-
-        return ToolMessage(status="error",
-                           name=tool.name,
-                           tool_call_id=tool.name,
-                           content=f"Tool {tool.name} failed after all retry attempts")
+        return ToolMessage(name=tool.name, tool_call_id=tool.name, content=response)
 
     def _log_tool_response(self, tool_name: str, tool_input: Any, tool_response: str, max_chars: int = 1000) -> None:
         """

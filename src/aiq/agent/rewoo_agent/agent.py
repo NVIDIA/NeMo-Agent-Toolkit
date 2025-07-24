@@ -184,7 +184,7 @@ class ReWOOAgentGraph(BaseAgent):
                 logger.error("%s No task provided to the ReWOO Agent. Please provide a valid task.", AGENT_LOG_PREFIX)
                 return {"result": NO_INPUT_ERROR_MESSAGE}
 
-            plan = await self._stream_llm_with_retry(
+            plan = await self._stream_llm(
                 planner,
                 {"task": task},
                 RunnableConfig(callbacks=self.callbacks)  # type: ignore
@@ -261,9 +261,9 @@ class ReWOOAgentGraph(BaseAgent):
 
             # Run the tool. Try to use structured input, if possible
             tool_input_parsed = self._parse_tool_input(tool_input)
-            tool_response = await self._call_tool_with_retry(requested_tool,
-                                                             tool_input_parsed,
-                                                             config=RunnableConfig(callbacks=self.callbacks))
+            tool_response = await self._call_tool(requested_tool,
+                                                   tool_input_parsed,
+                                                   RunnableConfig(callbacks=self.callbacks))
 
             # ToolMessage only accepts str or list[str | dict] as content.
             # Convert into list if the response is a dict.
@@ -313,8 +313,8 @@ class ReWOOAgentGraph(BaseAgent):
             solver_prompt = self.solver_prompt.partial(plan=plan)
             solver = solver_prompt | self.llm
 
-            output_message = await self._stream_llm_with_retry(solver, {"task": task},
-                                                               RunnableConfig(callbacks=self.callbacks))  # type: ignore
+            output_message = await self._stream_llm(solver, {"task": task},
+                                                     RunnableConfig(callbacks=self.callbacks))  # type: ignore
 
             if self.detailed_logs:
                 solver_output_log_message = AGENT_CALL_LOG_MESSAGE % (task, str(output_message.content))

@@ -131,7 +131,7 @@ class ReActAgentGraph(DualNodeAgent):
                     question = content
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
 
-                    output_message = await self._stream_llm_with_retry(
+                    output_message = await self._stream_llm(
                         self.agent,
                         {"question": question},
                         RunnableConfig(callbacks=self.callbacks)  # type: ignore
@@ -154,7 +154,7 @@ class ReActAgentGraph(DualNodeAgent):
                     question = str(state.messages[0].content)
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
 
-                    output_message = await self._stream_llm_with_retry(
+                    output_message = await self._stream_llm(
                         self.agent, {
                             "question": question, "agent_scratchpad": agent_scratchpad
                         },
@@ -266,10 +266,9 @@ class ReActAgentGraph(DualNodeAgent):
                 tool_input_dict = json.loads(tool_input_str) if tool_input_str != 'None' else tool_input_str
                 logger.debug("%s Successfully parsed structured tool input from Action Input", AGENT_LOG_PREFIX)
 
-                tool_response = await self._call_tool_with_retry(requested_tool,
-                                                                 tool_input_dict,
-                                                                 RunnableConfig(callbacks=self.callbacks),
-                                                                 max_retries=self.tool_call_max_retries)
+                tool_response = await self._call_tool(requested_tool,
+                                                       tool_input_dict,
+                                                       RunnableConfig(callbacks=self.callbacks))
 
                 if self.detailed_logs:
                     self._log_tool_response(requested_tool.name, tool_input_dict, str(tool_response.content))
@@ -283,10 +282,9 @@ class ReActAgentGraph(DualNodeAgent):
                     exc_info=True)
                 tool_input_str = str(agent_thoughts.tool_input)
 
-                tool_response = await self._call_tool_with_retry(requested_tool,
-                                                                 tool_input_str,
-                                                                 RunnableConfig(callbacks=self.callbacks),
-                                                                 max_retries=self.tool_call_max_retries)
+                tool_response = await self._call_tool(requested_tool,
+                                                       tool_input_str,
+                                                       RunnableConfig(callbacks=self.callbacks))
 
                 if self.detailed_logs:
                     self._log_tool_response(requested_tool.name, tool_input_str, str(tool_response.content))
