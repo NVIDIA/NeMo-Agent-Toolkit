@@ -27,7 +27,9 @@ from aiq.builder.function_base import StreamingOutputT
 from aiq.builder.llm import LLMProviderInfo
 from aiq.builder.retriever import RetrieverProviderInfo
 from aiq.data_models.config import AIQConfig
+from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
+from aiq.object_store.interfaces import ObjectStore
 from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.observability.exporter_manager import ExporterManager
 from aiq.runtime.runner import AIQRunner
@@ -45,8 +47,10 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
                  llms: dict[str, LLMProviderInfo] | None = None,
                  embeddings: dict[str, EmbedderProviderInfo] | None = None,
                  memory: dict[str, MemoryEditor] | None = None,
+                 object_stores: dict[str, ObjectStore] | None = None,
                  telemetry_exporters: dict[str, BaseExporter] | None = None,
                  retrievers: dict[str | None, RetrieverProviderInfo] | None = None,
+                 its_strategies: dict[str, StrategyBase] | None = None,
                  context_state: AIQContextState):
 
         super().__init__(input_schema=entry_fn.input_schema,
@@ -59,9 +63,11 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         self.embeddings = embeddings or {}
         self.memory = memory or {}
         self.telemetry_exporters = telemetry_exporters or {}
+        self.object_stores = object_stores or {}
         self.retrievers = retrievers or {}
 
         self._exporter_manager = ExporterManager.from_exporters(self.telemetry_exporters)
+        self.its_strategies = its_strategies or {}
 
         self._entry_fn = entry_fn
 
@@ -116,8 +122,10 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
                       llms: dict[str, LLMProviderInfo] | None = None,
                       embeddings: dict[str, EmbedderProviderInfo] | None = None,
                       memory: dict[str, MemoryEditor] | None = None,
+                      object_stores: dict[str, ObjectStore] | None = None,
                       telemetry_exporters: dict[str, BaseExporter] | None = None,
                       retrievers: dict[str | None, RetrieverProviderInfo] | None = None,
+                      its_strategies: dict[str, StrategyBase] | None = None,
                       context_state: AIQContextState) -> 'Workflow[InputT, StreamingOutputT, SingleOutputT]':
 
         input_type: type = entry_fn.input_type
@@ -133,6 +141,8 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
                             llms=llms,
                             embeddings=embeddings,
                             memory=memory,
+                            object_stores=object_stores,
                             telemetry_exporters=telemetry_exporters,
                             retrievers=retrievers,
+                            its_strategies=its_strategies,
                             context_state=context_state)

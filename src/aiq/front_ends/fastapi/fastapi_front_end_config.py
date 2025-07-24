@@ -22,6 +22,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import field_validator
 
+from aiq.data_models.component_ref import ObjectStoreRef
 from aiq.data_models.front_end import FrontEndBaseConfig
 from aiq.data_models.step_adaptor import StepAdaptorConfig
 
@@ -212,3 +213,10 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
                      "Each runner is responsible for loading and running the AIQ Toolkit workflow. "
                      "Note: This is different from the worker class used by Gunicorn."),
     )
+
+    object_store: ObjectStoreRef | None = Field(
+        default=None,
+        description=(
+            "Object store reference for the FastAPI app. If present, static files can be uploaded via a POST "
+            "request to '/static' and files will be served from the object store. The files will be served from the "
+            "object store at '/static/{file_name}'."))

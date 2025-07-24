@@ -97,6 +97,7 @@ Sizing Calculator <./workflows/sizing-calc.md>
 
 Memory Module <./store-and-retrieve/memory.md>
 ./store-and-retrieve/retrievers.md
+Object Store <./store-and-retrieve/object-store.md>
 ```
 
 ```{toctree}
@@ -110,6 +111,7 @@ Adding a Custom Evaluator <./extend/custom-evaluator.md>
 ./extend/adding-a-retriever.md
 ./extend/memory.md
 Adding an LLM Provider <./extend/adding-an-llm-provider.md>
+Adding an Object Store Provider <./extend/object-store.md>
 Integrating AWS Bedrock Models <./extend/integrating-aws-bedrock-models.md>
 Cursor Rules Developer Guide <./extend/cursor-rules-developer-guide.md>
 Adding a Telemetry Exporter <./extend/telemetry-exporters.md>
@@ -127,6 +129,7 @@ Command Line Interface (CLI) <./reference/cli.md>
 Cursor Rules Reference <./reference/cursor-rules-reference.md>
 Evaluation <./reference/evaluate.md>
 Evaluation Endpoints <./reference/evaluate-api.md>
+Inference Time Scaling <./reference/inference-time-scaling.md>
 Troubleshooting <./troubleshooting.md>
 ```
 

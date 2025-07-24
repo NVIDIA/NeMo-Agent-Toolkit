@@ -122,6 +122,7 @@ triages
 [Uu]nencrypted
 [Uu]nittest(s?)
 [Uu]ploader
+[Uu]psert
 uv
 VectorDB
 [Ww]alkthrough

@@ -40,19 +40,28 @@ from aiq.cli.type_registry import TypeRegistry
 from aiq.data_models.component import ComponentGroup
 from aiq.data_models.component_ref import EmbedderRef
 from aiq.data_models.component_ref import FunctionRef
+from aiq.data_models.component_ref import ITSStrategyRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.component_ref import MemoryRef
+from aiq.data_models.component_ref import ObjectStoreRef
 from aiq.data_models.component_ref import RetrieverRef
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.function_dependencies import FunctionDependencies
+from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from aiq.experimental.decorators.experimental_warning_decorator import aiq_experimental
+from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
+from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
+from aiq.object_store.interfaces import ObjectStore
 from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
 from aiq.profiler.utils import detect_llm_frameworks_in_build_fn
@@ -92,9 +101,21 @@ class ConfiguredMemory:
 
 
 @dataclasses.dataclass
+class ConfiguredObjectStore:
+    config: ObjectStoreBaseConfig
+    instance: ObjectStore
+
+
+@dataclasses.dataclass
 class ConfiguredRetriever:
     config: RetrieverBaseConfig
     instance: RetrieverProviderInfo
+
+
+@dataclasses.dataclass
+class ConfiguredITSStrategy:
+    config: ITSStrategyBaseConfig
+    instance: StrategyBase
 
 
 # pylint: disable=too-many-public-methods
@@ -121,7 +142,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._llms: dict[str, ConfiguredLLM] = {}
         self._embedders: dict[str, ConfiguredEmbedder] = {}
         self._memory_clients: dict[str, ConfiguredMemory] = {}
+        self._object_stores: dict[str, ConfiguredObjectStore] = {}
         self._retrievers: dict[str, ConfiguredRetriever] = {}
+        self._its_strategies: dict[str, ConfiguredITSStrategy] = {}
 
         self._context_state = AIQContextState.get()
 
@@ -211,9 +234,17 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                                k: v.config
                                for k, v in self._memory_clients.items()
                            },
+                           object_stores={
+                               k: v.config
+                               for k, v in self._object_stores.items()
+                           },
                            retrievers={
                                k: v.config
                                for k, v in self._retrievers.items()
+                           },
+                           its_strategies={
+                               k: v.config
+                               for k, v in self._its_strategies.items()
                            })
 
         if (entry_function is None):
@@ -239,6 +270,10 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                                               k: v.instance
                                               for k, v in self._memory_clients.items()
                                           },
+                                          object_stores={
+                                              k: v.instance
+                                              for k, v in self._object_stores.items()
+                                          },
                                           telemetry_exporters={
                                               k: v.instance
                                               for k, v in self._telemetry_exporters.items()
@@ -246,6 +281,10 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                                           retrievers={
                                               k: v.instance
                                               for k, v in self._retrievers.items()
+                                          },
+                                          its_strategies={
+                                              k: v.instance
+                                              for k, v in self._its_strategies.items()
                                           },
                                           context_state=self._context_state)
 
@@ -502,6 +541,33 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return self._memory_clients[memory_name].config
 
     @override
+    async def add_object_store(self, name: str | ObjectStoreRef, config: ObjectStoreBaseConfig) -> ObjectStore:
+        if name in self._object_stores:
+            raise ValueError(f"Object store `{name}` already exists in the list of object stores")
+
+        object_store_info = self._registry.get_object_store(type(config))
+
+        info_obj = await self._get_exit_stack().enter_async_context(object_store_info.build_fn(config, self))
+
+        self._object_stores[name] = ConfiguredObjectStore(config=config, instance=info_obj)
+
+        return info_obj
+
+    @override
+    async def get_object_store_client(self, object_store_name: str | ObjectStoreRef) -> ObjectStore:
+        if object_store_name not in self._object_stores:
+            raise ValueError(f"Object store `{object_store_name}` not found")
+
+        return self._object_stores[object_store_name].instance
+
+    @override
+    def get_object_store_config(self, object_store_name: str | ObjectStoreRef) -> ObjectStoreBaseConfig:
+        if object_store_name not in self._object_stores:
+            raise ValueError(f"Object store `{object_store_name}` not found")
+
+        return self._object_stores[object_store_name].config
+
+    @override
     async def add_retriever(self, name: str | RetrieverRef, config: RetrieverBaseConfig):
 
         if (name in self._retrievers):
@@ -552,6 +618,75 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise ValueError(f"Retriever `{retriever_name}` not found")
 
         return self._retrievers[retriever_name].config
+
+    @override
+    @aiq_experimental
+    async def add_its_strategy(self, name: str | str, config: ITSStrategyBaseConfig):
+        if (name in self._its_strategies):
+            raise ValueError(f"ITS strategy '{name}' already exists in the list of ITS strategies")
+
+        try:
+            its_strategy_info = self._registry.get_its_strategy(type(config))
+
+            info_obj = await self._get_exit_stack().enter_async_context(its_strategy_info.build_fn(config, self))
+
+            self._its_strategies[name] = ConfiguredITSStrategy(config=config, instance=info_obj)
+
+        except Exception as e:
+            logger.error("Error adding ITS strategy `%s` with config `%s`", name, config, exc_info=True)
+
+            raise e
+
+    @override
+    @aiq_experimental
+    async def get_its_strategy(self,
+                               strategy_name: str | ITSStrategyRef,
+                               pipeline_type: PipelineTypeEnum,
+                               stage_type: StageTypeEnum) -> StrategyBase:
+
+        if strategy_name not in self._its_strategies:
+            raise ValueError(f"ITS strategy '{strategy_name}' not found")
+
+        try:
+            # Get strategy info
+            its_strategy_info = self._its_strategies[strategy_name]
+
+            instance = its_strategy_info.instance
+
+            if not stage_type == instance.stage_type():
+                raise ValueError(f"ITS strategy '{strategy_name}' is not compatible with stage type '{stage_type}'")
+
+            if pipeline_type not in instance.supported_pipeline_types():
+                raise ValueError(
+                    f"ITS strategy '{strategy_name}' is not compatible with pipeline type '{pipeline_type}'")
+
+            instance.set_pipeline_type(pipeline_type)
+
+            return instance
+        except Exception as e:
+            logger.error("Error getting ITS strategy `%s`", strategy_name, exc_info=True)
+            raise e
+
+    @override
+    @aiq_experimental
+    async def get_its_strategy_config(self,
+                                      strategy_name: str | ITSStrategyRef,
+                                      pipeline_type: PipelineTypeEnum,
+                                      stage_type: StageTypeEnum) -> ITSStrategyBaseConfig:
+        if strategy_name not in self._its_strategies:
+            raise ValueError(f"ITS strategy '{strategy_name}' not found")
+
+        strategy_info = self._its_strategies[strategy_name]
+        instance = strategy_info.instance
+        config = strategy_info.config
+
+        if not stage_type == instance.stage_type():
+            raise ValueError(f"ITS strategy '{strategy_name}' is not compatible with stage type '{stage_type}'")
+
+        if pipeline_type not in instance.supported_pipeline_types():
+            raise ValueError(f"ITS strategy '{strategy_name}' is not compatible with pipeline type '{pipeline_type}'")
+
+        return config
 
     @override
     def get_user_manager(self):
@@ -683,6 +818,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 # Instantiate a memory client
                 elif component_instance.component_group == ComponentGroup.MEMORY:
                     await self.add_memory_client(component_instance.name, component_instance.config)
+            # Instantiate a object store client
+                elif component_instance.component_group == ComponentGroup.OBJECT_STORES:
+                    await self.add_object_store(component_instance.name, component_instance.config)
                 # Instantiate a retriever client
                 elif component_instance.component_group == ComponentGroup.RETRIEVERS:
                     await self.add_retriever(component_instance.name, component_instance.config)
@@ -691,6 +829,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                     # If the function is the root, set it as the workflow later
                     if (not component_instance.is_root):
                         await self.add_function(component_instance.name, component_instance.config)
+                elif component_instance.component_group == ComponentGroup.ITS_STRATEGIES:
+                    await self.add_its_strategy(component_instance.name, component_instance.config)
                 else:
                     raise ValueError(f"Unknown component group {component_instance.component_group}")
 
@@ -823,6 +963,47 @@ class ChildBuilder(Builder):
     @override
     def get_memory_client_config(self, memory_name: str) -> MemoryBaseConfig:
         return self._workflow_builder.get_memory_client_config(memory_name=memory_name)
+
+    @override
+    async def add_object_store(self, name: str, config: ObjectStoreBaseConfig):
+        return await self._workflow_builder.add_object_store(name, config)
+
+    @override
+    async def get_object_store_client(self, object_store_name: str) -> ObjectStore:
+        """
+        Return the instantiated object store client for the given name.
+        """
+        object_store_client = await self._workflow_builder.get_object_store_client(object_store_name)
+
+        self._dependencies.add_object_store(object_store_name)
+
+        return object_store_client
+
+    @override
+    def get_object_store_config(self, object_store_name: str) -> ObjectStoreBaseConfig:
+        return self._workflow_builder.get_object_store_config(object_store_name)
+
+    @override
+    async def add_its_strategy(self, name: str, config: ITSStrategyBaseConfig):
+        return await self._workflow_builder.add_its_strategy(name, config)
+
+    @override
+    async def get_its_strategy(self,
+                               strategy_name: str | ITSStrategyRef,
+                               pipeline_type: PipelineTypeEnum,
+                               stage_type: StageTypeEnum) -> StrategyBase:
+        return await self._workflow_builder.get_its_strategy(strategy_name=strategy_name,
+                                                             pipeline_type=pipeline_type,
+                                                             stage_type=stage_type)
+
+    @override
+    async def get_its_strategy_config(self,
+                                      strategy_name: str | ITSStrategyRef,
+                                      pipeline_type: PipelineTypeEnum,
+                                      stage_type: StageTypeEnum) -> ITSStrategyBaseConfig:
+        return await self._workflow_builder.get_its_strategy_config(strategy_name=strategy_name,
+                                                                    pipeline_type=pipeline_type,
+                                                                    stage_type=stage_type)
 
     @override
     async def add_retriever(self, name: str, config: RetrieverBaseConfig):
