@@ -33,6 +33,9 @@ logger = logging.getLogger(__name__)
 
 class _CredentialsManager(metaclass=Singleton):
 
+    DEFAULT_OAUTH_CREDENTIALS_TIMEOUT: float = 300.0
+    DEFAULT_CONSENT_PROMPT_TIMEOUT: float = 300.0
+
     def __init__(self):
         """
         Credentials Manager to store AIQ Authorization configurations.
@@ -166,7 +169,7 @@ class _CredentialsManager(metaclass=Singleton):
                         allow_methods=default_allow_methods,
                     ))
 
-    async def wait_for_oauth_credentials(self, timeout_in_seconds: float = 30.0) -> None:
+    async def wait_for_oauth_credentials(self, timeout_in_seconds: float = DEFAULT_OAUTH_CREDENTIALS_TIMEOUT) -> None:
         """
         Block until the oauth credentials are set in the redirect uri.
         """
@@ -184,7 +187,7 @@ class _CredentialsManager(metaclass=Singleton):
         """
         self._oauth_credentials_flag.set()
 
-    async def wait_for_consent_prompt_url(self, timeout_in_seconds: float = 30.0) -> None:
+    async def wait_for_consent_prompt_url(self, timeout_in_seconds: float = DEFAULT_CONSENT_PROMPT_TIMEOUT) -> None:
         """
         Block until the consent prompt location header has been retrieved.
         """

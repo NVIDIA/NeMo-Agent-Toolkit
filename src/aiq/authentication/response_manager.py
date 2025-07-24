@@ -96,7 +96,7 @@ class ResponseManager:
         """
         from aiq.authentication.credentials_manager import _CredentialsManager
         from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
-        from aiq.data_models.interactive import HumanPromptNotification
+        from aiq.data_models.interactive import _HumanPromptOAuthConsent
 
         oauth_config: OAuthUserConsentConfigBase | None = self._oauth_client.config
         try:
@@ -118,10 +118,8 @@ class ResponseManager:
 
                 if (self.message_handler):
                     await self.message_handler.create_websocket_message(
-                        HumanPromptNotification(
-                            text="Auth Code Grant flow consent request needed for authentication config: "
-                            f"[ {self._oauth_client.config_name} ]. "
-                            "Navigate to the '/aiq-auth' page to continue Auth Code Grant flow."))
+                        _HumanPromptOAuthConsent(text="User consent required for OAuth authentication provider: "
+                                                 f"[ {self._oauth_client.config_name} ]."))
 
                 if oauth_config:
                     oauth_config.consent_prompt_location_url = location_header

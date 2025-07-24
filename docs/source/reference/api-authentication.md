@@ -312,6 +312,6 @@ console log will prompt the user to send a `POST` request to the `prompt-uri` en
 `consent_prompt_key` in the request body to retrieve the authentication consent prompt redirect, allowing the user to
 log in with their credentials and complete the OAuth flow. The user is responsible for implementing the logic to send
 and handle the authentication redirect to continue the OAuth flow as well as the
-{py:mod}`aiq.data_models.interactive.HumanPromptNotification`
+{py:mod}`aiq.data_models.interactive._HumanPromptOAuthConsent`
 [Interactive WebSocket Message](websockets.md#user-interaction-message---openai-compatible) to receive a notification
 prompt.
