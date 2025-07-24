@@ -16,22 +16,13 @@
 import asyncio
 import logging
 from datetime import datetime
-from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-import aiofiles
-
+from aiq.observability.mixin.file_mode import FileMode
 from aiq.observability.mixin.resource_conflict_mixin import ResourceConflictMixin
 
 logger = logging.getLogger(__name__)
-
-
-class FileMode(StrEnum):
-    """File write modes for FileExportMixin."""
-
-    APPEND = "append"
-    OVERWRITE = "overwrite"
 
 
 class FileExportMixin(ResourceConflictMixin):
@@ -230,6 +221,9 @@ class FileExportMixin(ResourceConflictMixin):
             item (str | list[str]): The string or list of strings to export.
         """
         try:
+            # Lazy import to avoid slow startup times
+            import aiofiles
+
             async with self._lock:
                 # Check if we need to roll the file
                 if await self._should_roll_file():
