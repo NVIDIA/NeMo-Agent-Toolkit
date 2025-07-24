@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import logging
-import os
 
 from pydantic import Field
 
@@ -23,148 +22,53 @@ from aiq.cli.register_workflow import register_logging_method
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.utils.optional_imports import telemetry_optional_import
-from aiq.utils.optional_imports import try_import_phoenix
+from aiq.observability.mixin.file_mixin import FileMode
 
 logger = logging.getLogger(__name__)
 
 
-class PhoenixTelemetryExporter(TelemetryExporterBaseConfig, name="phoenix"):
-    """A telemetry exporter to transmit traces to externally hosted phoenix service."""
+class FileTelemetryExporterConfig(TelemetryExporterBaseConfig, name="file"):
+    """A telemetry exporter that writes runtime traces to local files with optional rolling."""
 
-    endpoint: str = Field(description="The phoenix endpoint to export telemetry traces.")
-    project: str = Field(description="The project name to group the telemetry traces.")
-
-
-@register_telemetry_exporter(config_type=PhoenixTelemetryExporter)
-async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: Builder):
-    """Create a Phoenix telemetry exporter."""
-    try:
-        # If the dependencies are not installed, a TelemetryOptionalImportError will be raised
-        phoenix = try_import_phoenix()  # noqa: F841
-        from phoenix.otel import HTTPSpanExporter
-
-        yield HTTPSpanExporter(config.endpoint)
-    except ConnectionError as ex:
-        logger.warning(
-            "Unable to connect to Phoenix at port 6006. Are you sure Phoenix is running?\n %s",
-            ex,
-            exc_info=True,
-        )
+    output_path: str = Field(description="Output path for logs. When rolling is disabled: exact file path. "
+                             "When rolling is enabled: directory path or file path (directory + base name).")
+    project: str = Field(description="Name to affiliate with this application.")
+    mode: FileMode = Field(
+        default=FileMode.APPEND,
+        description="File write mode: 'append' to add to existing file or 'overwrite' to start fresh.")
+    enable_rolling: bool = Field(default=False, description="Enable rolling log files based on size limits.")
+    max_file_size: int = Field(
+        default=10 * 1024 * 1024,  # 10MB
+        description="Maximum file size in bytes before rolling to a new file.")
+    max_files: int = Field(default=5, description="Maximum number of rolled files to keep.")
+    cleanup_on_init: bool = Field(default=False, description="Clean up old files during initialization.")
 
 
-class GalileoTelemetryExporter(TelemetryExporterBaseConfig, name="galileo"):
-    """A telemetry exporter to transmit traces to externally hosted galileo service."""
+@register_telemetry_exporter(config_type=FileTelemetryExporterConfig)
+async def file_telemetry_exporter(config: FileTelemetryExporterConfig, builder: Builder):  # pylint: disable=W0613
+    """
+    Build and return a FileExporter for file-based telemetry export with optional rolling.
+    """
 
-    endpoint: str = Field(description="The galileo endpoint to export telemetry traces.")
-    project: str = Field(description="The project name to group the telemetry traces.")
-    logstream: str = Field(description="The logstream name to group the telemetry traces.")
-    api_key: str = Field(description="The api key to authenticate with the galileo service.")
-    session_id: str = Field(description="The session id to group the telemetry traces.", default=None)
+    from aiq.observability.exporter.file_exporter import FileExporter
 
-
-@register_telemetry_exporter(config_type=GalileoTelemetryExporter)
-async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: Builder):
-    """Create a Galileo telemetry exporter."""
-    try:
-        # If the dependencies are not installed, a TelemetryOptionalImportError will be raised
-        phoenix = try_import_phoenix()  # noqa: F841
-        from phoenix.otel import HTTPSpanExporter
-
-        headers = {
-            "Galileo-API-Key": config.api_key,
-            "logstream": config.logstream,
-            "project": config.project,
-        }
-
-        if config.session_id:
-            headers["sessionid"] = config.session_id
-
-        yield HTTPSpanExporter(config.endpoint, headers=headers)
-    except ConnectionError as ex:
-        logger.warning(
-            f"Unable to connect to Galileo. Are you sure {config.endpoint} is correct?\n %s",
-            ex,
-            exc_info=True,
-        )
+    yield FileExporter(output_path=config.output_path,
+                       project=config.project,
+                       mode=config.mode,
+                       enable_rolling=config.enable_rolling,
+                       max_file_size=config.max_file_size,
+                       max_files=config.max_files,
+                       cleanup_on_init=config.cleanup_on_init)
 
 
-class LangfuseTelemetryExporter(TelemetryExporterBaseConfig, name="langfuse"):
-    """A telemetry exporter to transmit traces to externally hosted langfuse service."""
-
-    endpoint: str = Field(description="The langfuse OTEL endpoint (/api/public/otel/v1/traces)")
-    public_key: str = Field(description="The Langfuse public key", default="")
-    secret_key: str = Field(description="The Langfuse secret key", default="")
-
-
-@register_telemetry_exporter(config_type=LangfuseTelemetryExporter)
-async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder: Builder):
-    """Create a Langfuse telemetry exporter."""
-
-    import base64
-
-    trace_exporter = telemetry_optional_import("opentelemetry.exporter.otlp.proto.http.trace_exporter")
-
-    secret_key = config.secret_key or os.environ.get("LANGFUSE_SECRET_KEY")
-    public_key = config.public_key or os.environ.get("LANGFUSE_PUBLIC_KEY")
-    if not secret_key or not public_key:
-        raise ValueError("secret and public keys are required for langfuse")
-
-    credentials = f"{public_key}:{secret_key}".encode("utf-8")
-    auth_header = base64.b64encode(credentials).decode("utf-8")
-    headers = {"Authorization": f"Basic {auth_header}"}
-
-    yield trace_exporter.OTLPSpanExporter(endpoint=config.endpoint, headers=headers)
-
-
-class LangsmithTelemetryExporter(TelemetryExporterBaseConfig, name="langsmith"):
-    """A telemetry exporter to transmit traces to externally hosted langsmith service."""
-
-    endpoint: str = Field(
-        description="The langsmith OTEL endpoint",
-        default="https://api.smith.langchain.com/otel/v1/traces",
-    )
-    api_key: str = Field(description="The Langsmith API key", default="")
-    project: str = Field(description="The project name to group the telemetry traces.")
-
-
-@register_telemetry_exporter(config_type=LangsmithTelemetryExporter)
-async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, builder: Builder):
-    """Create a Langsmith telemetry exporter."""
-
-    trace_exporter = telemetry_optional_import("opentelemetry.exporter.otlp.proto.http.trace_exporter")
-
-    api_key = config.api_key or os.environ.get("LANGSMITH_API_KEY")
-    if not api_key:
-        raise ValueError("API key is required for langsmith")
-
-    headers = {"x-api-key": api_key, "Langsmith-Project": config.project}
-    yield trace_exporter.OTLPSpanExporter(endpoint=config.endpoint, headers=headers)
-
-
-class OtelCollectorTelemetryExporter(TelemetryExporterBaseConfig, name="otelcollector"):
-    """A telemetry exporter to transmit traces to externally hosted otel collector service."""
-
-    endpoint: str = Field(description="The otel endpoint to export telemetry traces.")
-    project: str = Field(description="The project name to group the telemetry traces.")
-
-
-@register_telemetry_exporter(config_type=OtelCollectorTelemetryExporter)
-async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder):
-    """Create an OpenTelemetry telemetry exporter."""
-
-    trace_exporter = telemetry_optional_import("opentelemetry.exporter.otlp.proto.http.trace_exporter")
-    yield trace_exporter.OTLPSpanExporter(endpoint=config.endpoint)
-
-
-class ConsoleLoggingMethod(LoggingBaseConfig, name="console"):
+class ConsoleLoggingMethodConfig(LoggingBaseConfig, name="console"):
     """A logger to write runtime logs to the console."""
 
     level: str = Field(description="The logging level of console logger.")
 
 
-@register_logging_method(config_type=ConsoleLoggingMethod)
-async def console_logging_method(config: ConsoleLoggingMethod, builder: Builder):
+@register_logging_method(config_type=ConsoleLoggingMethodConfig)
+async def console_logging_method(config: ConsoleLoggingMethodConfig, builder: Builder):  # pylint: disable=W0613
     """
     Build and return a StreamHandler for console-based logging.
     """
@@ -182,7 +86,7 @@ class FileLoggingMethod(LoggingBaseConfig, name="file"):
 
 
 @register_logging_method(config_type=FileLoggingMethod)
-async def file_logging_method(config: FileLoggingMethod, builder: Builder):
+async def file_logging_method(config: FileLoggingMethod, builder: Builder):  # pylint: disable=W0613
     """
     Build and return a FileHandler for file-based logging.
     """
@@ -190,52 +94,3 @@ async def file_logging_method(config: FileLoggingMethod, builder: Builder):
     handler = logging.FileHandler(filename=config.path, mode="a", encoding="utf-8")
     handler.setLevel(level)
     yield handler
-
-
-class PatronusTelemetryExporter(TelemetryExporterBaseConfig, name="patronus"):
-    """A telemetry exporter to transmit traces to Patronus service."""
-
-    endpoint: str = Field(description="The Patronus OTEL endpoint")
-    api_key: str = Field(description="The Patronus API key", default="")
-    project: str = Field(description="The project name to group the telemetry traces.")
-
-
-@register_telemetry_exporter(config_type=PatronusTelemetryExporter)
-async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder: Builder):
-    """Create a Patronus telemetry exporter."""
-    trace_exporter = telemetry_optional_import("opentelemetry.exporter.otlp.proto.grpc.trace_exporter")
-
-    api_key = config.api_key or os.environ.get("PATRONUS_API_KEY")
-    if not api_key:
-        raise ValueError("API key is required for Patronus")
-
-    headers = {
-        "x-api-key": api_key,
-        "pat-project-name": config.project,
-    }
-    yield trace_exporter.OTLPSpanExporter(endpoint=config.endpoint, headers=headers)
-
-
-class CatalystTelemetryExporter(TelemetryExporterBaseConfig, name="catalyst"):
-    """A telemetry exporter to transmit traces to RagaAI catalyst."""
-    endpoint: str = Field(description="The RagaAI Catalyst endpoint", default="")
-    access_key: str = Field(description="The RagaAI Catalyst API access key", default="")
-    secret_key: str = Field(description="The RagaAI Catalyst API secret key", default="")
-    project: str = Field(description="The RagaAI Catalyst project name")
-    dataset: str = Field(description="The RagaAI Catalyst dataset name")
-
-
-@register_telemetry_exporter(config_type=CatalystTelemetryExporter)
-async def catalyst_telemetry_exporter(config: CatalystTelemetryExporter, builder: Builder):
-    """Create a Catalyst telemetry exporter."""
-    catalyst = telemetry_optional_import("ragaai_catalyst")
-    trace_exporter = telemetry_optional_import("ragaai_catalyst.tracers.exporters")
-
-    access_key = config.access_key or os.environ.get("CATALYST_ACCESS_KEY")
-    secret_key = config.secret_key or os.environ.get("CATALYST_SECRET_KEY")
-    endpoint = config.endpoint or os.environ.get("CATALYST_ENDPOINT")
-    project = config.project
-    dataset = config.dataset
-
-    catalyst.RagaAICatalyst(access_key=access_key, secret_key=secret_key, base_url=endpoint)
-    yield trace_exporter.DynamicTraceExporter(project, dataset, endpoint, "agentic/nemo-framework")

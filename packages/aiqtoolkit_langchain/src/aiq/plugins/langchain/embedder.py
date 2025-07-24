@@ -16,7 +16,9 @@
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_embedder_client
+from aiq.data_models.retry_mixin import RetryMixin
 from aiq.embedder.openai_embedder import OpenAIEmbedderModelConfig
+from aiq.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
 @register_embedder_client(config_type=OpenAIEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
@@ -24,4 +26,12 @@ async def openai_langchain(embedder_config: OpenAIEmbedderModelConfig, builder: 
 
     from langchain_openai import OpenAIEmbeddings
 
-    yield OpenAIEmbeddings(**embedder_config.model_dump(exclude={"type"}, by_alias=True))
+    client = OpenAIEmbeddings(**embedder_config.model_dump(exclude={"type"}, by_alias=True))
+
+    if isinstance(embedder_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=embedder_config.num_retries,
+                                  retry_codes=embedder_config.retry_on_status_codes,
+                                  retry_on_messages=embedder_config.retry_on_errors)
+
+    yield client

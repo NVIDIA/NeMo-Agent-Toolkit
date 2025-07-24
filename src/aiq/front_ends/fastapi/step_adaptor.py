@@ -291,7 +291,8 @@ class StepAdaptor:
 
         return event
 
-    def process(self, step: IntermediateStep) -> AIQResponseSerializable | None:
+    def process(self, step: IntermediateStep) -> AIQResponseSerializable | None:  # pylint: disable=R1710
+
         # Track the chunk
         self._history.append(step)
         payload = step.payload

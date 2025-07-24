@@ -28,8 +28,14 @@ class UsageStatsItem(BaseModel):
     usage_stats_per_llm: dict[str, UsageStatsLLM]
     total_tokens: int | None = None
     runtime: float = 0.0
+    min_timestamp: float = 0.0
+    max_timestamp: float = 0.0
+    llm_latency: float = 0.0
 
 
 class UsageStats(BaseModel):
     # key is the id or input_obj from EvalInputItem
+    min_timestamp: float = 0.0
+    max_timestamp: float = 0.0
+    total_runtime: float = 0.0
     usage_stats_items: dict[typing.Any, UsageStatsItem] = {}

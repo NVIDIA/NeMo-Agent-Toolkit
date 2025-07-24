@@ -15,4 +15,4 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-Refer to the [Contributing to AIQ toolkit](./docs/source/resources/contributing.md) guide.
+Refer to the [Contributing to NeMo Agent toolkit](./docs/source/resources/contributing.md) guide.

@@ -26,6 +26,7 @@ from pydantic import Discriminator
 from pydantic import Field
 from pydantic import HttpUrl
 from pydantic import conlist
+from pydantic import field_serializer
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 
@@ -111,16 +112,53 @@ class Message(BaseModel):
 class AIQChatRequest(BaseModel):
     """
     AIQChatRequest is a data model that represents a request to the AIQ Toolkit chat API.
+    Fully compatible with OpenAI Chat Completions API specification.
     """
 
-    # Allow extra fields in the model_config to support derived models
-    model_config = ConfigDict(extra="allow")
-
+    # Required fields
     messages: typing.Annotated[list[Message], conlist(Message, min_length=1)]
-    model: str | None = None
-    temperature: float | None = None
-    max_tokens: int | None = None
-    top_p: float | None = None
+
+    # Optional fields (OpenAI Chat Completions API compatible)
+    model: str | None = Field(default=None, description="name of the model to use")
+    frequency_penalty: float | None = Field(default=0.0,
+                                            ge=-2.0,
+                                            le=2.0,
+                                            description="Penalty for new tokens based on frequency in text")
+    logit_bias: dict[str, float] | None = Field(default=None,
+                                                description="Modify likelihood of specified tokens appearing")
+    logprobs: bool | None = Field(default=None, description="Whether to return log probabilities")
+    top_logprobs: int | None = Field(default=None, ge=0, le=20, description="Number of most likely tokens to return")
+    max_tokens: int | None = Field(default=None, ge=1, description="Maximum number of tokens to generate")
+    n: int | None = Field(default=1, ge=1, le=128, description="Number of chat completion choices to generate")
+    presence_penalty: float | None = Field(default=0.0,
+                                           ge=-2.0,
+                                           le=2.0,
+                                           description="Penalty for new tokens based on presence in text")
+    response_format: dict[str, typing.Any] | None = Field(default=None, description="Response format specification")
+    seed: int | None = Field(default=None, description="Random seed for deterministic sampling")
+    service_tier: typing.Literal["auto", "default"] | None = Field(default=None,
+                                                                   description="Service tier for the request")
+    stop: str | list[str] | None = Field(default=None, description="Up to 4 sequences where API will stop generating")
+    stream: bool | None = Field(default=False, description="Whether to stream partial message deltas")
+    stream_options: dict[str, typing.Any] | None = Field(default=None, description="Options for streaming")
+    temperature: float | None = Field(default=1.0, ge=0.0, le=2.0, description="Sampling temperature between 0 and 2")
+    top_p: float | None = Field(default=None, ge=0.0, le=1.0, description="Nucleus sampling parameter")
+    tools: list[dict[str, typing.Any]] | None = Field(default=None, description="List of tools the model may call")
+    tool_choice: str | dict[str, typing.Any] | None = Field(default=None, description="Controls which tool is called")
+    parallel_tool_calls: bool | None = Field(default=True, description="Whether to enable parallel function calling")
+    user: str | None = Field(default=None, description="Unique identifier representing end-user")
+
+    model_config = ConfigDict(extra="allow",
+                              json_schema_extra={
+                                  "example": {
+                                      "model": "nvidia/nemotron",
+                                      "messages": [{
+                                          "role": "user", "content": "who are you?"
+                                      }],
+                                      "temperature": 0.7,
+                                      "stream": False
+                                  }
+                              })
 
     @staticmethod
     def from_string(data: str,
@@ -156,10 +194,17 @@ class AIQChoiceMessage(BaseModel):
     role: str | None = None
 
 
+class AIQChoiceDelta(BaseModel):
+    """Delta object for streaming responses (OpenAI-compatible)"""
+    content: str | None = None
+    role: str | None = None
+
+
 class AIQChoice(BaseModel):
     model_config = ConfigDict(extra="allow")
 
-    message: AIQChoiceMessage
+    message: AIQChoiceMessage | None = None
+    delta: AIQChoiceDelta | None = None
     finish_reason: typing.Literal['stop', 'length', 'tool_calls', 'content_filter', 'function_call'] | None = None
     index: int
     # logprobs: AIQChoiceLogprobs | None = None
@@ -197,16 +242,24 @@ class AIQResponseBaseModelIntermediate(BaseModel, AIQResponseSerializable):
 class AIQChatResponse(AIQResponseBaseModelOutput):
     """
     AIQChatResponse is a data model that represents a response from the AIQ Toolkit chat API.
+    Fully compatible with OpenAI Chat Completions API specification.
     """
 
     # Allow extra fields in the model_config to support derived models
     model_config = ConfigDict(extra="allow")
     id: str
-    object: str
+    object: str = "chat.completion"
     model: str = ""
     created: datetime.datetime
     choices: list[AIQChoice]
     usage: AIQUsage | None = None
+    system_fingerprint: str | None = None
+    service_tier: typing.Literal["scale", "default"] | None = None
+
+    @field_serializer('created')
+    def serialize_created(self, created: datetime.datetime) -> int:
+        """Serialize datetime to Unix timestamp for OpenAI compatibility"""
+        return int(created.timestamp())
 
     @staticmethod
     def from_string(data: str,
@@ -238,6 +291,7 @@ class AIQChatResponse(AIQResponseBaseModelOutput):
 class AIQChatResponseChunk(AIQResponseBaseModelOutput):
     """
     AIQChatResponseChunk is a data model that represents a response chunk from the AIQ Toolkit chat streaming API.
+    Fully compatible with OpenAI Chat Completions API specification.
     """
 
     # Allow extra fields in the model_config to support derived models
@@ -248,6 +302,14 @@ class AIQChatResponseChunk(AIQResponseBaseModelOutput):
     created: datetime.datetime
     model: str = ""
     object: str = "chat.completion.chunk"
+    system_fingerprint: str | None = None
+    service_tier: typing.Literal["scale", "default"] | None = None
+    usage: AIQUsage | None = None
+
+    @field_serializer('created')
+    def serialize_created(self, created: datetime.datetime) -> int:
+        """Serialize datetime to Unix timestamp for OpenAI compatibility"""
+        return int(created.timestamp())
 
     @staticmethod
     def from_string(data: str,
@@ -272,6 +334,36 @@ class AIQChatResponseChunk(AIQResponseBaseModelOutput):
             created=created,
             model=model,
             object=object_)
+
+    @staticmethod
+    def create_streaming_chunk(content: str,
+                               *,
+                               id_: str | None = None,
+                               created: datetime.datetime | None = None,
+                               model: str | None = None,
+                               role: str | None = None,
+                               finish_reason: str | None = None,
+                               usage: AIQUsage | None = None,
+                               system_fingerprint: str | None = None) -> "AIQChatResponseChunk":
+        """Create an OpenAI-compatible streaming chunk"""
+        if id_ is None:
+            id_ = str(uuid.uuid4())
+        if created is None:
+            created = datetime.datetime.now(datetime.timezone.utc)
+        if model is None:
+            model = ""
+
+        delta = AIQChoiceDelta(content=content,
+                               role=role) if content is not None or role is not None else AIQChoiceDelta()
+
+        return AIQChatResponseChunk(
+            id=id_,
+            choices=[AIQChoice(index=0, message=None, delta=delta, finish_reason=finish_reason)],
+            created=created,
+            model=model,
+            object="chat.completion.chunk",
+            usage=usage,
+            system_fingerprint=system_fingerprint)
 
 
 class AIQResponseIntermediateStep(AIQResponseBaseModelIntermediate):
@@ -563,7 +655,7 @@ GlobalTypeConverter.register_converter(_string_to_aiq_chat_response)
 
 
 def _chat_response_to_chat_response_chunk(data: AIQChatResponse) -> AIQChatResponseChunk:
-
+    # Preserve original message structure for backward compatibility
     return AIQChatResponseChunk(id=data.id, choices=data.choices, created=data.created, model=data.model)
 
 
@@ -572,7 +664,13 @@ GlobalTypeConverter.register_converter(_chat_response_to_chat_response_chunk)
 
 # ======== AIQChatResponseChunk Converters ========
 def _aiq_chat_response_chunk_to_string(data: AIQChatResponseChunk) -> str:
-    return data.choices[0].message.content or ""
+    if data.choices and len(data.choices) > 0:
+        choice = data.choices[0]
+        if choice.delta and choice.delta.content:
+            return choice.delta.content
+        if choice.message and choice.message.content:
+            return choice.message.content
+    return ""
 
 
 GlobalTypeConverter.register_converter(_aiq_chat_response_chunk_to_string)
@@ -586,3 +684,17 @@ def _string_to_aiq_chat_response_chunk(data: str) -> AIQChatResponseChunk:
 
 
 GlobalTypeConverter.register_converter(_string_to_aiq_chat_response_chunk)
+
+
+# ======== AINodeMessageChunk Converters ========
+def _ai_message_chunk_to_aiq_chat_response_chunk(data) -> AIQChatResponseChunk:
+    '''Converts LangChain AINodeMessageChunk to AIQChatResponseChunk'''
+    content = ""
+    if hasattr(data, 'content') and data.content is not None:
+        content = str(data.content)
+    elif hasattr(data, 'text') and data.text is not None:
+        content = str(data.text)
+    elif hasattr(data, 'message') and data.message is not None:
+        content = str(data.message)
+
+    return AIQChatResponseChunk.create_streaming_chunk(content=content, role="assistant", finish_reason=None)

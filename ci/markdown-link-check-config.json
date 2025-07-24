@@ -5,6 +5,7 @@
         {"pattern": "^https://(platform\\.)?openai\\.com"},
         {
             "pattern": "^https://code\\.visualstudio\\.com$"
-        }
+        },
+        {"pattern": "^#custom-opentelemetry-protocols$"}
     ]
 }
