@@ -44,7 +44,7 @@ An embeddings model is used to create embeddings for queries and for stored memo
 Try the chat by running:
 
 ```
-aiq run --config_file=examples/memory/redis/configs/config.yml --input "my favorite flavor is strawberry"
+aiq run --config_file=examples/memory/redis/configs/memory-example.yml --input "my favorite flavor is strawberry"
 
 --------------------------------------------------
 Workflow Result:
@@ -53,7 +53,7 @@ Workflow Result:
 ```
 
 ```
-aiq run --config_file=examples/memory/redis/configs/config.yml --input "what flavor of ice-cream should I get?"
+aiq run --config_file=examples/memory/redis/configs/memory-example.yml --input "what flavor of ice-cream should I get?"
 
 --------------------------------------------------
 Workflow Result:
