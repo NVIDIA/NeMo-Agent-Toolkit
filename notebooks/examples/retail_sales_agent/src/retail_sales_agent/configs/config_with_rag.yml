@@ -1,0 +1,67 @@
+general:
+  use_uvloop: true
+  logging:
+    console:
+      _type: console
+      level: INFO  # Changed from WARN to INFO to see debug messages
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    max_tokens: 2048  # Reduced from 8192 to free up context for agent prompting
+    context_window: 32768  # Explicitly set larger context window
+    api_key: $NVIDIA_API_KEY
+
+embedders:
+  nim_embedder:
+    _type: nim
+    model_name: nvidia/nv-embedqa-e5-v5
+    truncate: END
+    api_key: $NVIDIA_API_KEY
+
+
+functions:
+  get_daily_sales_by_product:
+    _type: get_daily_sales_by_product
+    data_path: notebooks/examples/retail_sales_agent/data/retail_sales_data.csv
+  get_total_sales_per_day:
+    _type: get_total_sales_per_day
+    data_path: notebooks/examples/retail_sales_agent/data/retail_sales_data.csv
+  detect_outliers_iqr:  
+    _type: detect_outliers_iqr
+    data_path: notebooks/examples/retail_sales_agent/data/retail_sales_data.csv
+
+  product_catalog_rag:
+    _type: local_llama_index_rag
+    llm_name: nim_llm
+    embedder_name: nim_embedder
+    data_dir: ./notebooks/examples/retail_sales_agent/data/rag/product_catalog.md
+    description: "A RAG tool that provides information about product specifications, features, and catalog details from the product documentation"
+
+  rag_agent:
+    _type: react_agent
+    llm_name: nim_llm
+    tool_names: 
+      - product_catalog_rag
+    max_history: 3  # Reduced from 10 to minimize context usage
+    max_iterations: 5  # Reduced from 15 to minimize context usage
+    max_retries: 2  # Reduced from 3 to minimize context usage
+    retry_parsing_errors: true
+    description: "An assistant that can answer questions about products. Use product_catalog_rag to answer questions about products. Do not make up information."
+    verbose: true
+
+
+workflow:
+  _type: react_agent
+  tool_names:
+    - get_daily_sales_by_product
+    - get_total_sales_per_day
+    - detect_outliers_iqr
+    - rag_agent
+  llm_name: nim_llm
+  max_history: 10
+  max_iterations: 15
+  description: "A helpful assistant that can answer questions about the retail sales CSV data"
+  verbose: true

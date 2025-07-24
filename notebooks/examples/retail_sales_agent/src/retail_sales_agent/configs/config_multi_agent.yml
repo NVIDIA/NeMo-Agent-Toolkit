@@ -1,0 +1,125 @@
+general:
+  use_uvloop: true
+  logging:
+    console:
+      _type: console
+      level: INFO  # Changed from WARN to INFO to see debug messages
+
+llms:
+  supervisor_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    max_tokens: 2048  # Reduced from 8192 to free up context for agent prompting
+    api_key: $NVIDIA_API_KEY
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    max_tokens: 2048  # Reduced from 8192 to free up context for agent prompting
+    context_window: 32768  # Explicitly set larger context window
+    api_key: $NVIDIA_API_KEY
+
+embedders:
+  nim_embedder:
+    _type: nim
+    model_name: nvidia/nv-embedqa-e5-v5
+    truncate: END
+    api_key: $NVIDIA_API_KEY
+
+
+functions:
+  get_daily_sales_by_product:
+    _type: get_daily_sales_by_product
+    data_path: notebooks/examples/retail_sales_agent/data/retail_sales_data.csv
+  get_total_sales_per_day:
+    _type: get_total_sales_per_day
+    data_path: notebooks/examples/retail_sales_agent/data/retail_sales_data.csv
+  detect_outliers_iqr:  
+    _type: detect_outliers_iqr
+    data_path: notebooks/examples/retail_sales_agent/data/retail_sales_data.csv
+
+  data_analysis_agent:
+    _type: react_agent
+    tool_names:
+      - get_daily_sales_by_product
+      - get_total_sales_per_day
+      - detect_outliers_iqr
+    llm_name: nim_llm
+    max_history: 10
+    max_iterations: 15
+    description: "A helpful assistant that can answer questions about the retail sales CSV data. Use the tools to answer the questions."
+    verbose: true
+
+  visualize_sales_trend:
+    _type: visualize_sales_trend
+    data_path: notebooks/examples/retail_sales_agent/data/retail_sales_data.csv
+  compare_store_trends_visually:
+    _type: compare_store_trends_visually
+    data_path: notebooks/examples/retail_sales_agent/data/retail_sales_data.csv  
+  plot_average_daily_revenue:
+    _type: plot_average_daily_revenue
+    data_path: notebooks/examples/retail_sales_agent/data/retail_sales_data.csv
+
+  data_visualization_agent:
+    _type: react_agent
+    llm_name: nim_llm
+    tool_names: 
+      - visualize_sales_trend
+      - compare_store_trends_visually
+      - plot_average_daily_revenue
+    max_history: 10
+    max_iterations: 15
+    description: "You are a data visualization expert. Your task is to create plots and visualizations based on user requests. Use available tools to analyze data and generate plots."
+    verbose: true
+    handle_parsing_errors: true
+    max_retries: 2
+    retry_parsing_errors: true
+
+  # RAG agent
+  product_catalog_rag:
+    _type: local_llama_index_rag
+    llm_name: nim_llm
+    embedder_name: nim_embedder
+    data_dir: ./notebooks/examples/retail_sales_agent/data/rag/product_catalog.md
+    description: "A RAG tool that provides information about product specifications, features, and catalog details from the product documentation"
+
+  rag_agent:
+    _type: react_agent
+    llm_name: nim_llm
+    tool_names: 
+      - product_catalog_rag
+    max_history: 3  # Reduced from 10 to minimize context usage
+    max_iterations: 5  # Reduced from 15 to minimize context usage
+    max_retries: 2  # Reduced from 3 to minimize context usage
+    retry_parsing_errors: true
+    description: "An assistant that can answer questions about products. Use product_catalog_rag to answer questions about products. Do not make up information."
+    verbose: true
+
+
+workflow:
+  _type: react_agent
+  tool_names: [data_analysis_agent, data_visualization_agent, rag_agent]
+  llm_name: summarizer_llm
+  verbose: true
+  handle_parsing_errors: true
+  max_retries: 2
+  system_prompt: |
+    Answer the following questions as best you can. You may communicate and collaborate with various experts to answer the questions:
+
+    {tools}
+
+    You may respond in one of two formats.
+    Use the following format exactly to communicate with an expert:
+
+    Question: the input question you must answer
+    Thought: you should always think about what to do
+    Action: the action to take, should be one of [{tool_names}]
+    Action Input: the input to the action (if there is no required input, include "Action Input: None")
+    Observation: wait for the expert to respond, do not assume the expert's response
+
+    ... (this Thought/Action/Action Input/Observation can repeat N times.)
+    Use the following format once you have the final answer:
+
+    Thought: I now know the final answer
+    Final Answer: the final answer to the original input question
