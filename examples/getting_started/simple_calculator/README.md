@@ -182,7 +182,7 @@ docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t simple_calcu
 Deploy the container:
 
 ```bash
-docker run -p 8000:8000 -p 6006:6006 -e NVIDIA_API_KEY simple_calculator
+docker run -p 8000:8000 -p 6006:6006 -e NVIDIA_API_KEY -e OPENAI_API_KEY simple_calculator
 ```
 
 Note, a phoenix telemetry service will be exposed at port 6006.
