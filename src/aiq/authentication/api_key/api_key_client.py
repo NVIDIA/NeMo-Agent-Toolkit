@@ -19,11 +19,7 @@ import httpx
 
 from aiq.authentication.api_key.api_key_config import APIKeyConfig
 from aiq.authentication.interfaces import AuthenticationClientBase
-from aiq.authentication.request_manager import RequestManager
-from aiq.data_models.authentication import AuthenticatedContext
-from aiq.data_models.authentication import CredentialLocation
-from aiq.data_models.authentication import HeaderAuthScheme
-from aiq.data_models.authentication import HTTPMethod
+from aiq.data_models.authentication import HeaderAuthScheme, AuthenticatedContext
 
 logger = logging.getLogger(__name__)
 
@@ -32,57 +28,7 @@ class APIKeyClient(AuthenticationClientBase):
 
     def __init__(self, config: APIKeyConfig, config_name: str | None = None) -> None:
         assert isinstance(config, APIKeyConfig), ("Config is not APIKeyConfig")
-
-        self._config_name: str | None = config_name
-        self._config: APIKeyConfig = config
-        self._request_manager: RequestManager = RequestManager()
-        super().__init__()
-
-    @property
-    def config_name(self) -> str | None:
-        """
-        Get the name of the authentication configuration.
-
-        Returns:
-            str | None: The name of the authentication configuration, or None if not set.
-        """
-        return self._config_name
-
-    @config_name.setter
-    def config_name(self, config_name: str | None) -> None:
-        """
-        Set the name of the authentication configuration.
-
-        Args:
-            config_name (str | None): The name of the authentication configuration.
-        """
-        self._config_name = config_name
-
-    async def validate_credentials(self) -> bool:
-        """
-        Ensure that the API key credentials are valid for the given API key configuration.
-
-        Returns:
-            bool: True if the API key credentials are valid, False otherwise.
-        """
-        # Validate the raw api key credentials are set and non-empty.
-        if not self._config.raw_key or self._config.raw_key == "":
-            return False
-
-        return True
-
-    async def construct_authentication_context(self,
-                                               credential_location: CredentialLocation,
-                                               header_scheme: HeaderAuthScheme) -> AuthenticatedContext | None:
-        """
-        Construct the authentication object to inject into headers, query, or cookies.
-        """
-        if credential_location == CredentialLocation.HEADER:
-            authentication_header: httpx.Headers | None = await self.construct_authentication_header(header_scheme)
-            return AuthenticatedContext(headers=authentication_header)
-
-        logger.error('Credential location %s not supported for API key client', credential_location)
-        return None
+        super().__init__(config)
 
     async def construct_authentication_header(self,
                                               header_auth_scheme: HeaderAuthScheme = HeaderAuthScheme.BEARER
@@ -99,59 +45,38 @@ class APIKeyClient(AuthenticationClientBase):
             httpx.Headers | None: The constructed HTTP header if successful, otherwise returns None.
 
         """
-        import base64
 
         from aiq.authentication.interfaces import AUTHORIZATION_HEADER
 
         if header_auth_scheme == HeaderAuthScheme.BEARER:
-            return httpx.Headers({f"{AUTHORIZATION_HEADER}": f"{HeaderAuthScheme.BEARER.value} {self._config.raw_key}"})
+            return httpx.Headers({f"{AUTHORIZATION_HEADER}": f"{HeaderAuthScheme.BEARER.value} {self.config.raw_key}"})
 
         if header_auth_scheme == HeaderAuthScheme.X_API_KEY:
-            return httpx.Headers({f"{HeaderAuthScheme.X_API_KEY.value}": f"{self._config.raw_key}"})
-
-        if header_auth_scheme == HeaderAuthScheme.BASIC:
-            if not self._config.username or not self._config.password:
-                logger.error('Username or password is missing. Please authenticate the provider: %s', self._config_name)
-                return None
-            token_key: str = f"{self._config.username}:{self._config.password}"
-            encoded_key: str = base64.b64encode(token_key.encode("utf-8")).decode("utf-8")
-            return httpx.Headers({f"{AUTHORIZATION_HEADER}": f"{HeaderAuthScheme.BASIC.value} {encoded_key}"})
+            return httpx.Headers({f"{HeaderAuthScheme.X_API_KEY.value}": f"{self.config.raw_key}"})
 
         if header_auth_scheme == HeaderAuthScheme.CUSTOM:
-            if not self._config.header_name:
-                logger.error('header_name required when using header_auth_scheme CUSTOM: %s', self._config_name)
+            if not self.config.header_name:
+                logger.error('header_name required when using header_auth_scheme CUSTOM')
                 return None
 
-            if not self._config.header_prefix:
-                logger.error('header_prefix required when using header_auth_scheme CUSTOM: %s', self._config_name)
+            if not self.config.header_prefix:
+                logger.error('header_prefix required when using header_auth_scheme CUSTOM')
                 return None
 
             return httpx.Headers(
-                {f"{self._config.header_name}": f"{self._config.header_prefix} {self._config.raw_key}"})
+                {f"{self.config.header_name}": f"{self.config.header_prefix} {self.config.raw_key}"})
 
         return None
 
-    async def send_request(self,
-                           url: str,
-                           http_method: str | HTTPMethod,
-                           headers: dict | None = None,
-                           query_params: dict | None = None,
-                           body_data: dict | None = None) -> httpx.Response | None:
+    async def authenticate(self, user_id: str) -> AuthenticatedContext:
         """
-        Sends an HTTP request to the specified URL with authentication handling.
+        Authenticate the user using the API key credentials.
 
         Args:
-            url: The target URL for the HTTP request
-            http_method: The HTTP method to use (GET, POST, etc.)
-            headers: Optional dictionary of HTTP headers to include
-            query_params: Optional dictionary of query parameters to include
-            body_data: Optional dictionary of request body data
+            user_id (str): The user ID to authenticate.
 
         Returns:
-            httpx.Response | None: The HTTP response from the request, or None if the request failed
+            AuthenticatedContext: The authenticated context containing headers, query params, cookies, etc.
         """
-        return await self._request_manager.send_request(url,
-                                                        http_method,
-                                                        headers=headers,
-                                                        query_params=query_params,
-                                                        body_data=body_data)
+        headers = await self.construct_authentication_header(self.config.auth_scheme)
+        return AuthenticatedContext(headers=headers)

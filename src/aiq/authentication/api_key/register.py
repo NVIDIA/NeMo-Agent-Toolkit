@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from aiq.authentication.api_key import api_key_config
 from aiq.authentication.api_key.api_key_client import APIKeyClient
 from aiq.authentication.api_key.api_key_config import APIKeyConfig
 from aiq.builder.builder import Builder
