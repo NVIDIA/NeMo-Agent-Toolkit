@@ -157,7 +157,7 @@ class LocalSandbox(Sandbox):
             return output_json
         except json.JSONDecodeError as e:
             logger.exception("Error parsing output: %s. %s", output.text, e)
-            return {'process_status': 'error', 'stdout': '', 'stderr': 'Unknown error'}
+            return {'process_status': 'error', 'stdout': '', 'stderr': f'Unknown error: {e} \"{output.text}\"'}
 
     @override
     def _prepare_request(self,

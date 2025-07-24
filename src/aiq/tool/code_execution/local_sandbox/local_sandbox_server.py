@@ -23,12 +23,15 @@ from enum import Enum
 from io import StringIO
 
 from flask import Flask
+from flask import Request
 from flask import Response
 from flask import request
 from pydantic import BaseModel
 from pydantic import Field
 
 app = Flask(__name__)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 
 class CodeExecutionStatus(str, Enum):
@@ -75,6 +78,17 @@ def add_hsts_header(response):
 
 
 def execute_python(generated_code: str, timeout: float) -> CodeExecutionResult:
+    """
+    Execute Python code in a subprocess.
+
+    Args:
+        generated_code: The code to execute
+        timeout: The timeout for the execution
+
+    Returns:
+        CodeExecutionResult object containing the execution result
+    """
+
     # running in a separate process to ensure any kind of crashes are properly handled
     queue = multiprocessing.Queue()
     process = multiprocessing.Process(target=execute_code_subprocess, args=(generated_code, queue))
@@ -92,29 +106,51 @@ def execute_python(generated_code: str, timeout: float) -> CodeExecutionResult:
 # need to memory-limit to avoid common errors of allocating too much
 # but this has to be done in a subprocess to not crush server itself
 def execute_code_subprocess(generated_code: str, queue):
-    logging.debug("execute_code_subprocess started, PID: %s", os.getpid())
+    """
+    Execute code in a subprocess.
 
-    limit = 1024 * 1024 * 1024 * 10  # 10gb - somehow with a smaller limit the server dies when numpy is used
-    resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
-    resource.setrlimit(resource.RLIMIT_DATA, (limit, limit))
+    Args:
+        generated_code: The code to execute
+        queue: The queue to put the result in
+    """
+
+    logger.debug("execute_code_subprocess started, PID: %s", os.getpid())
+
+    try:
+        limit = 1024 * 1024 * 1024 * 10  # 10gb - somehow with a smaller limit the server dies when numpy is used
+        resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
+        resource.setrlimit(resource.RLIMIT_DATA, (limit, limit))
+    except Exception as e:
+        logger.error("Failed to set resource limits, PID: %s, error: %s", os.getpid(), e)
+
     stdout_capture = StringIO()
     stderr_capture = StringIO()
     try:
         with contextlib.redirect_stdout(stdout_capture), contextlib.redirect_stderr(stderr_capture):
             exec(generated_code, {})  # pylint: disable=W0122
+        logger.debug("execute_code_subprocess finished, PID: %s", os.getpid())
         queue.put(CodeExecutionResult(stdout=stdout_capture.getvalue(), stderr=stderr_capture.getvalue()))
     except Exception as e:
-        # Include the exception type name in the error message for better debugging
-        _ = stderr_capture.write(f"\n{type(e).__name__}: {str(e)}\n")  # pylint: disable=W0631
+        import traceback
+        with contextlib.redirect_stderr(stderr_capture):
+            traceback.print_exc()
+        logger.debug("execute_code_subprocess failed, PID: %s, error: %s", os.getpid(), e)
         queue.put(
             CodeExecutionResult(process_status=CodeExecutionStatus.ERROR,
                                 stdout=stdout_capture.getvalue(),
                                 stderr=stderr_capture.getvalue()))
 
 
-# Main Flask endpoint to handle execution requests
-@app.route("/execute", methods=["POST"])
-def execute():
+def do_execute(request: Request) -> CodeExecutionResponse:
+    """
+    Main function to handle execution requests.
+
+    Args:
+        request: Request object containing the execution request
+
+    Returns:
+        CodeExecutionResponse object containing the execution result
+    """
     try:
         # Check if request has JSON data
         if not request.is_json:
@@ -152,7 +188,11 @@ def execute():
         return CodeExecutionResponse.with_error(500, f"Server error: {str(e)}")
 
 
+# Main Flask endpoint to handle execution requests
+@app.route("/execute", methods=["POST"])
+def execute():
+    return do_execute(request)
+
+
 if __name__ == '__main__':
-    log = logging.getLogger('werkzeug')
-    log.setLevel(logging.WARNING)
     app.run(port=6000)

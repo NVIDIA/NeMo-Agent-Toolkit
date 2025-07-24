@@ -44,6 +44,7 @@ fi
 
 # Mount the output_data directory directly so files created in container appear in the local directory
 ${DOCKER_COMMAND} run --rm --name=local-sandbox \
+  --network=host \
   -v "${OUTPUT_DATA_PATH}:/workspace" \
   -w /workspace \
   ${SANDBOX_NAME}

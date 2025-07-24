@@ -58,7 +58,7 @@ async def code_execution_tool(config: CodeExecutionToolConfig, builder: Builder)
             output = await sandbox.execute_code(
                 generated_code=generated_code,
                 language="python",
-                timeout=config.timeout,
+                timeout_seconds=config.timeout,
                 max_output_characters=config.max_output_characters,
             )
         except Exception as e:
