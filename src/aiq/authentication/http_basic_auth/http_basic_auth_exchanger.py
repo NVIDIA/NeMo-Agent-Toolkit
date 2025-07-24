@@ -44,8 +44,8 @@ class HTTPBasicAuthExchanger(AuthenticationClientBase):
                                f"callback handler for your frontend?") from e
 
         basic_auth_credentials = BasicAuthCred(
-            username= SecretStr(auth_context.query_params.get("username", "")),
-            password= SecretStr(auth_context.query_params.get("password", ""))
+            username= SecretStr(auth_context.metadata.get("username", "")),
+            password= SecretStr(auth_context.metadata.get("password", ""))
         )
 
         # Get the auth token from the headers of auth context

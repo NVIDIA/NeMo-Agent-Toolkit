@@ -52,5 +52,5 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
             "password": password
         }
 
-        return AuthenticatedContext(headers=headers, query_params=query_params)
+        return AuthenticatedContext(headers=headers, metadata=query_params)
 

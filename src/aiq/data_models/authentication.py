@@ -63,6 +63,7 @@ class AuthenticatedContext(BaseModel):
         default=None, description="Query parameters used for authentication.")
     cookies: dict[str, str] | httpx.Cookies | None = Field(default=None, description="Cookies used for authentication.")
     body: dict[str, str] | None = Field(default=None, description="Authenticated Body value, if applicable.")
+    metadata: dict[str, typing.Any] | None = Field(default=None, description="Additional metadata for the request.")
 
 
 class HeaderAuthScheme(str, Enum):
