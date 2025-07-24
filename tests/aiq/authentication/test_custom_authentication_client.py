@@ -18,7 +18,7 @@ import logging
 import httpx
 
 from aiq.authentication.interfaces import AuthenticationClientBase
-from aiq.authentication.interfaces import OAuthClientBase
+from aiq.authentication.interfaces import AuthenticationClientBase as OAuthClientBase
 from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import CredentialLocation
 from aiq.data_models.authentication import HeaderAuthScheme

@@ -38,7 +38,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import OAuthClientBase
+from aiq.authentication.interfaces import AuthenticationClientBase as OAuthClientBase
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse

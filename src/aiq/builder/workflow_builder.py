@@ -463,7 +463,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     @override
     async def get_authentication(self, authentication_config_name: str):
-        from aiq.authentication.credentials_manager import _CredentialsManager
 
         if authentication_config_name not in self._authentications:
             raise ValueError(f"Authentication `{authentication_config_name}` not found")
@@ -480,9 +479,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             # Set the config name
             authentication_client.config_name = authentication_config_name
-
-            # Store the client instance in the credentials manager
-            _CredentialsManager().store_authentication_client(authentication_config_name, authentication_client)
 
             # Return the authentication client
             return authentication_client

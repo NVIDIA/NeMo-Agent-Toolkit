@@ -25,3 +25,4 @@
 #from aiq.authentication.api_key.register import api_key_client
 
 from aiq.authentication.http_basic_auth import register
+from aiq.authentication.oauth2 import register

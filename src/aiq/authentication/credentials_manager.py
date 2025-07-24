@@ -18,10 +18,8 @@ import logging
 import typing
 
 from aiq.authentication.interfaces import AuthenticationClientBase
-from aiq.authentication.interfaces import OAuthClientBase
-from aiq.authentication.oauth2.oauth_user_consent_base_config import OAuthUserConsentConfigBase
+from aiq.authentication.interfaces import AuthenticationClientBase as OAuthClientBase
 from aiq.builder.context import Singleton
-from aiq.data_models.authentication import AuthenticationBaseConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FrontEndBaseConfig
 
@@ -42,30 +40,6 @@ class _CredentialsManager(metaclass=Singleton):
         self._full_config: "AIQConfig | None" = None
         self._oauth_credentials_flag: asyncio.Event = asyncio.Event()
         self._consent_prompt_flag: asyncio.Event = asyncio.Event()
-
-    def validate_unique_consent_prompt_keys(self, authentication_configs: dict[str, AuthenticationBaseConfig]) -> None:
-        """
-        Validate that all OAuthUserConsentConfigBase instances have unique consent_prompt_key values.
-
-        Args:
-            authentication_configs: Authentication configuration objects from config file.
-
-        Raises:
-            RuntimeError: If duplicate consent prompt keys are found.
-        """
-        consent_prompt_keys: list[str] = []
-
-        # Collect all consent prompt keys and their associated config names
-        for _, auth_config in authentication_configs.items():
-            if isinstance(auth_config, OAuthUserConsentConfigBase):
-
-                if auth_config.consent_prompt_key in consent_prompt_keys:
-                    error_message = (f"Duplicate consent_prompt_key found: {auth_config.consent_prompt_key}. "
-                                     "Please ensure consent_prompt_key is unique across Authentication configs.")
-                    logger.critical(error_message)
-                    raise RuntimeError('duplicate_consent_prompt_key', error_message)
-                else:
-                    consent_prompt_keys.append(auth_config.consent_prompt_key)
 
     def store_authentication_client(self, name: str, client: AuthenticationClientBase) -> None:
         """

@@ -147,9 +147,8 @@ class RefreshTokenRequest(BaseModel):
         description="The refresh token for OAuth 2.0 authentication used to obtain a new access token.")
 
 
-
 ####################
-### OUTPUT TYPES ###
+# OUTPUT TYPES
 ####################
 
 class CredentialKind(str, Enum):
@@ -189,7 +188,6 @@ class BasicAuthCred(_CredBase):
     password: SecretStr
 
 
-
 class BearerTokenCred(_CredBase):
     kind: typing.Literal[CredentialKind.BEARER] = CredentialKind.BEARER
     token: SecretStr
@@ -207,6 +205,7 @@ Credential = typing.Annotated[
     ],
     Field(discriminator="kind"),
 ]
+
 
 class AuthResult(BaseModel):
     credentials: list[Credential]

@@ -21,7 +21,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 
 from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import OAuthClientBase
+from aiq.authentication.interfaces import AuthenticationClientBase
 from aiq.builder.intermediate_step_manager import IntermediateStepManager
 from aiq.builder.user_interaction_manager import AIQUserInteractionManager
 from aiq.data_models.authentication import ConsentPromptMode

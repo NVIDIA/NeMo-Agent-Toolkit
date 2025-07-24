@@ -271,11 +271,6 @@ class AIQConfig(HashableBaseModel):
         stream.write(f"Number of Retrievers: {len(self.retrievers)}\n")
         stream.write(f"Number of Authentication Providers: {len(self.authentication)}\n")
 
-    def model_post_init(self, context: typing.Any) -> None:
-        from aiq.authentication.credentials_manager import _CredentialsManager
-        if (self.authentication):
-            _CredentialsManager().validate_unique_consent_prompt_keys(self.authentication)
-
     @field_validator("functions",
                      "llms",
                      "embedders",

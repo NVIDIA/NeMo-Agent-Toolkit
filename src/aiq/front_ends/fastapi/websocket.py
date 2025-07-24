@@ -26,7 +26,7 @@ from starlette.endpoints import WebSocketEndpoint
 from starlette.websockets import WebSocketDisconnect
 
 from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import OAuthClientBase
+from aiq.authentication.interfaces import AuthenticationClientBase as OAuthClientBase
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.api_server import AIQChatResponseChunk

@@ -21,7 +21,7 @@ import click
 from colorama import Fore
 
 from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import OAuthClientBase
+from aiq.authentication.interfaces import AuthenticationClientBase as OAuthClientBase
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.authentication import ConsentPromptMode
 from aiq.data_models.interactive import HumanPromptModelType
