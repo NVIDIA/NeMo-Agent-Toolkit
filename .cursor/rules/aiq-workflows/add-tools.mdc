@@ -184,5 +184,5 @@ workflow:
   tool_names: [langsmith_docs, langgraph_docs, current_datetime]
   llm_name: nim_llm
   verbose: true
-  parsing_agent_response_max_retries: 3
+  parse_agent_response_max_retries: 3
 ```

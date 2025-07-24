@@ -59,4 +59,4 @@ workflow:
     - current_request_attributes
   llm_name: nim_llm
   verbose: true
-  parsing_agent_response_max_retries: 3
+  parse_agent_response_max_retries: 3

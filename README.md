@@ -174,7 +174,7 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
       # Make it verbose
       verbose: true
       # Retry up to 3 times
-      parsing_agent_response_max_retries: 3
+      parse_agent_response_max_retries: 3
    ```
 
 3. Run the Hello World example using the `aiq` CLI and the `workflow.yaml` file.

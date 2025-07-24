@@ -69,12 +69,12 @@ class ReActAgentGraph(DualNodeAgent):
                  callbacks: list[AsyncCallbackHandler] | None = None,
                  detailed_logs: bool = False,
                  retry_agent_response_parsing_errors: bool = True,
-                 parsing_agent_response_max_retries: int = 1,
+                 parse_agent_response_max_retries: int = 1,
                  tool_call_max_retries: int = 1,
                  pass_tool_call_errors_to_agent: bool = True):
         super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs)
-        self.parsing_agent_response_max_retries = (parsing_agent_response_max_retries
-                                                   if retry_agent_response_parsing_errors else 1)
+        self.parse_agent_response_max_retries = (parse_agent_response_max_retries
+                                                 if retry_agent_response_parsing_errors else 1)
         self.tool_call_max_retries = tool_call_max_retries
         self.pass_tool_call_errors_to_agent = pass_tool_call_errors_to_agent
         logger.debug(
@@ -116,7 +116,8 @@ class ReActAgentGraph(DualNodeAgent):
             # keeping a working state allows us to resolve parsing errors without polluting the agent scratchpad
             # the agent "forgets" about the parsing error after solving it - prevents hallucinations in next cycles
             working_state = []
-            for attempt in range(1, self.parsing_agent_response_max_retries + 1):
+            # Starting from attempt 1 instead of 0 for logging
+            for attempt in range(1, self.parse_agent_response_max_retries + 1):
                 # the first time we are invoking the ReAct Agent, it won't have any intermediate steps / agent thoughts
                 if len(state.agent_scratchpad) == 0 and len(working_state) == 0:
                     # the user input comes from the "messages" state channel
@@ -191,10 +192,10 @@ class ReActAgentGraph(DualNodeAgent):
                                  AGENT_LOG_PREFIX,
                                  ex.observation,
                                  output_message.content)
-                    if attempt == self.parsing_agent_response_max_retries:
+                    if attempt == self.parse_agent_response_max_retries:
                         logger.error(
                             "%s Failed to parse agent output after %d attempts, consider enabling or "
-                            "increasing parsing_agent_response_max_retries",
+                            "increasing parse_agent_response_max_retries",
                             AGENT_LOG_PREFIX,
                             attempt,
                             exc_info=True)

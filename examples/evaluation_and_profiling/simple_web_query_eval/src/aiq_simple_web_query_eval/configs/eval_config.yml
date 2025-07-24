@@ -51,7 +51,7 @@ workflow:
   tool_names: [webpage_query, current_datetime]
   llm_name: nim_llm
   verbose: true
-  parsing_agent_response_max_retries: 3
+  parse_agent_response_max_retries: 3
 
 eval:
   general:

@@ -47,10 +47,11 @@ class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
         default=True,
         validation_alias=AliasChoices("retry_agent_response_parsing_errors", "retry_parsing_errors"),
         description="Whether to retry when encountering parsing errors in the agent's response.")
-    parsing_agent_response_max_retries: int = Field(
+    parse_agent_response_max_retries: int = Field(
         default=1,
-        validation_alias=AliasChoices("parsing_agent_response_max_retries", "max_retries"),
-        description="The number of retries of parsing the agent's response before raising a parsing error.")
+        validation_alias=AliasChoices("parse_agent_response_max_retries", "max_retries"),
+        description="Maximum number of times the Agent may retry parsing errors. "
+        "Prevents the Agent from getting into infinite hallucination loops.")
     tool_call_max_retries: int = Field(default=1, description="The number of retries before raising a tool call error.")
     max_tool_calls: int = Field(default=15,
                                 validation_alias=AliasChoices("max_tool_calls", "max_iterations"),
@@ -100,7 +101,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
         use_tool_schema=config.include_tool_input_schema_in_tool_description,
         detailed_logs=config.verbose,
         retry_agent_response_parsing_errors=config.retry_agent_response_parsing_errors,
-        parsing_agent_response_max_retries=config.parsing_agent_response_max_retries,
+        parse_agent_response_max_retries=config.parse_agent_response_max_retries,
         tool_call_max_retries=config.tool_call_max_retries,
         pass_tool_call_errors_to_agent=config.pass_tool_call_errors_to_agent).build_graph()
 
