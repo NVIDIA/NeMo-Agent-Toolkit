@@ -198,16 +198,25 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
             The output of the function optionally converted to the specified type.
         """
 
-        with self._context.push_active_function(self.config.type, input_data=value):
+        with self._context.push_active_function(self.instance_name, input_data=value) as manager:
             try:
                 converted_input: InputT = self._convert_input(value)  # type: ignore
 
-                async for data in self._astream(converted_input):
+                # Collect streaming outputs to capture the final result
+                final_output: list[typing.Any] = []
 
+                async for data in self._astream(converted_input):
                     if to_type is not None and not isinstance(data, to_type):
-                        yield self._converter.convert(data, to_type=to_type)
+                        converted_data = self._converter.convert(data, to_type=to_type)
+                        final_output.append(converted_data)
+                        yield converted_data
                     else:
+                        final_output.append(data)
                         yield data
+
+                # Set the final output for intermediate step tracking
+                manager.set_output(final_output)
+
             except Exception as e:
                 logger.error("Error with astream in function with input: %s.", value, exc_info=True)
                 raise e

@@ -11,6 +11,7 @@ arXiv
 [Aa]sync
 [Aa]utoencoder
 [Aa]nonymize(d?)
+[Bb]ackoff
 [Bb]ackpressure
 [Bb]atcher
 [Bb]oolean
@@ -39,6 +40,7 @@ CuPy
 Cython
 Dask
 Databricks
+Datadog
 DB(s?)
 [Dd]eserialize
 [Dd]ev

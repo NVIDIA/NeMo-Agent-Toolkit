@@ -15,8 +15,8 @@
 
 import typing
 
-from .common import BaseModelRegistryTag
-from .common import TypedBaseModel
+from aiq.data_models.common import BaseModelRegistryTag
+from aiq.data_models.common import TypedBaseModel
 
 
 class TelemetryExporterBaseConfig(TypedBaseModel, BaseModelRegistryTag):

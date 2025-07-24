@@ -71,23 +71,13 @@ from aiq.data_models.telemetry_exporter import TelemetryExporterConfigT
 from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
 from aiq.object_store.interfaces import ObjectStore
+from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.registry_handlers.registry_handler_base import AbstractRegistryHandler
-from aiq.utils.optional_imports import TelemetryOptionalImportError
-from aiq.utils.optional_imports import try_import_opentelemetry
-
-# Try to import OpenTelemetry modules
-# If the dependencies are not installed, use a dummy span exporter here
-try:
-    opentelemetry = try_import_opentelemetry()
-    from opentelemetry.sdk.trace.export import SpanExporter
-except TelemetryOptionalImportError:
-    from aiq.utils.optional_imports import DummySpanExporter  # pylint: disable=ungrouped-imports
-    SpanExporter = DummySpanExporter
 
 logger = logging.getLogger(__name__)
 
 FrontEndBuildCallableT = Callable[[FrontEndConfigT, AIQConfig], AsyncIterator[FrontEndBase]]
-TelemetryExporterBuildCallableT = Callable[[TelemetryExporterConfigT, Builder], AsyncIterator[SpanExporter]]
+TelemetryExporterBuildCallableT = Callable[[TelemetryExporterConfigT, Builder], AsyncIterator[BaseExporter]]
 LoggingMethodBuildCallableT = Callable[[LoggingMethodConfigT, Builder], AsyncIterator[Handler]]
 FunctionBuildCallableT = Callable[[FunctionConfigT, Builder], AsyncIterator[FunctionInfo | Callable | FunctionBase]]
 LLMProviderBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[LLMProviderInfo]]
