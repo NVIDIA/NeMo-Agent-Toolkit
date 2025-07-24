@@ -28,8 +28,7 @@ logger = logging.getLogger(__name__)
 
 class CatalystTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="catalyst"):
     """A telemetry exporter to transmit traces to RagaAI catalyst."""
-    endpoint: str = Field(description="The RagaAI Catalyst endpoint",
-                          default="https://app.galileo.ai/api/galileo/otel/traces")
+    endpoint: str = Field(description="The RagaAI Catalyst endpoint", default="https://catalyst.raga.ai/api")
     access_key: str = Field(description="The RagaAI Catalyst API access key", default="")
     secret_key: str = Field(description="The RagaAI Catalyst API secret key", default="")
     dataset: str | None = Field(description="The RagaAI Catalyst dataset name", default=None)
