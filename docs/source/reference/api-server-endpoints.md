@@ -266,6 +266,191 @@ result back to the client. The transaction schema is defined by the workflow.
   }
   ```
 
+## OpenAI Chat Completions API Compatible Endpoint
+
+The NeMo Agent Toolkit provides full OpenAI Chat Completions API compatibility through a dedicated endpoint that enables seamless integration with existing OpenAI-compatible client libraries and workflows.
+
+### Overview
+
+When the OpenAI v1 compatible endpoint is configured, the toolkit creates a single endpoint that fully implements the [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat) specification. This endpoint handles both streaming and non-streaming requests based on the `stream` parameter, exactly like the official OpenAI API.
+
+#### Key Benefits
+
+- **Drop-in Replacement**: Works with existing OpenAI client libraries without code changes
+- **Full API Compatibility**: Supports all OpenAI Chat Completions API parameters
+- **Industry Standard**: Familiar interface for developers already using OpenAI
+- **Future-Proof**: Aligned with established API patterns and ecosystem tools
+
+### Configuration
+
+To enable the OpenAI v1 compatible endpoint, set `openai_api_v1_path` in your FastAPI front-end configuration:
+
+```yaml
+general:
+  front_end:
+    _type: fastapi
+    workflow:
+      method: POST
+      openai_api_v1_path: /v1/chat/completions
+```
+
+#### Configuration Options
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `openai_api_v1_path` | string | `null` | Path for the OpenAI v1 compatible endpoint |
+| `openai_api_path` | string | `/chat` | Path for legacy OpenAI endpoints |
+| `method` | string | `POST` | HTTP method for the endpoint |
+
+### Endpoint Behavior
+
+#### OpenAI v1 Compatible Mode (`openai_api_v1_path` configured)
+
+Creates a single endpoint that handles both streaming and non-streaming requests:
+
+- **Route**: `/v1/chat/completions` (configurable via `openai_api_v1_path`)
+- **Method**: POST
+- **Content-Type**: `application/json`
+- **Behavior**: Routes to streaming or non-streaming based on `stream` parameter
+
+#### Legacy Mode (`openai_api_v1_path` not configured)
+
+Creates separate endpoints for different request types:
+
+- **Non-streaming**: `/<openai_api_path>`
+- **Streaming**: `<openai_api_path>/stream`
+
+### Request Format
+
+The endpoint accepts all standard OpenAI Chat Completions API parameters:
+
+| Parameter | Type | Description | Validation |
+|-----------|------|-------------|------------|
+| `messages` | array | **Required.** List of messages in conversation format | min 1 item |
+| `model` | string | Model identifier | - |
+| `frequency_penalty` | number | Decreases likelihood of repeating tokens | -2.0 to 2.0 |
+| `logit_bias` | object | Modify likelihood of specific tokens | token ID → bias |
+| `logprobs` | boolean | Return log probabilities | - |
+| `top_logprobs` | integer | Number of most likely tokens to return | 0 to 20 |
+| `max_tokens` | integer | Maximum tokens to generate | ≥ 1 |
+| `n` | integer | Number of completions to generate | 1 to 128 |
+| `presence_penalty` | number | Increases likelihood of new topics | -2.0 to 2.0 |
+| `response_format` | object | Specify response format | - |
+| `seed` | integer | Random seed for deterministic outputs | - |
+| `service_tier` | string | Service tier selection | "auto" or "default" |
+| `stop` | string/array | Stop sequences | - |
+| `stream` | boolean | Enable streaming responses | default: false |
+| `stream_options` | object | Streaming configuration options | - |
+| `temperature` | number | Sampling temperature | 0.0 to 2.0 |
+| `top_p` | number | Nucleus sampling parameter | 0.0 to 1.0 |
+| `tools` | array | Available function tools | - |
+| `tool_choice` | string/object | Tool selection strategy | - |
+| `parallel_tool_calls` | boolean | Enable parallel tool execution | default: true |
+| `user` | string | End-user identifier | - |
+
+### Usage Examples
+
+#### cURL Examples
+
+**Non-Streaming Request:**
+
+```bash
+curl -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "nvidia/llama-3.1-8b-instruct",
+    "messages": [
+      {"role": "user", "content": "What is the capital of France?"}
+    ],
+    "stream": false,
+    "temperature": 0.7,
+    "max_tokens": 100
+  }'
+```
+
+**Streaming Request:**
+
+```bash
+curl -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "nvidia/llama-3.1-8b-instruct",
+    "messages": [
+      {"role": "user", "content": "Tell me a short story"}
+    ],
+    "stream": true,
+    "temperature": 0.7
+  }'
+```
+
+#### Client Library Examples
+
+**OpenAI Python Client:**
+
+```python
+from openai import OpenAI
+
+# Initialize client pointing to your NeMo Agent Toolkit server
+client = OpenAI(
+    api_key="not-needed",  # API key not required for local deployment
+    base_url="http://localhost:8000/v1"
+)
+
+# Non-streaming chat completion
+response = client.chat.completions.create(
+    model="nvidia/llama-3.1-8b-instruct",
+    messages=[
+        {"role": "user", "content": "Explain quantum computing in simple terms"}
+    ],
+    stream=False,
+    temperature=0.7,
+    max_tokens=150
+)
+
+print(response.choices[0].message.content)
+```
+
+**AI SDK (JavaScript/TypeScript):**
+
+```typescript
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+
+// Configure custom OpenAI provider
+const customOpenAI = openai({
+  baseURL: 'http://localhost:8000/v1',
+  apiKey: 'not-needed'
+});
+
+// Non-streaming generation
+const { text } = await generateText({
+  model: customOpenAI('nvidia/llama-3.1-8b-instruct'),
+  prompt: 'Explain the benefits of renewable energy',
+  temperature: 0.7,
+  maxTokens: 200
+});
+
+console.log(text);
+```
+
+### Migration Guide
+
+#### From Legacy Mode
+
+If you're currently using legacy mode with separate endpoints:
+
+1. **Update Configuration**: Set `openai_api_v1_path: /v1/chat/completions`
+2. **Update Client Code**: Use single endpoint with `stream` parameter
+3. **Test Thoroughly**: Verify both streaming and non-streaming functionality
+
+#### From OpenAI API
+
+If you're migrating from OpenAI's API:
+
+1. **Update Base URL**: Point to your NeMo Agent Toolkit server
+2. **Update Model Names**: Use your configured model identifiers
+3. **Test Compatibility**: Verify all features work as expected
+
 ## Evaluation Endpoint
 You can also evaluate workflows via the NeMo Agent toolkit `evaluate` endpoint. For more information, refer to the [NeMo Agent toolkit Evaluation Endpoint](../reference/evaluate-api.md) documentation.
 
