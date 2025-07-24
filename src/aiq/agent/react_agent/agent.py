@@ -227,76 +227,85 @@ class ReActAgentGraph(DualNodeAgent):
             return AgentDecision.END
 
     async def tool_node(self, state: ReActGraphState):
-        try:
-            logger.debug("%s Starting the Tool Call Node", AGENT_LOG_PREFIX)
-            if len(state.agent_scratchpad) == 0:
-                raise RuntimeError('No tool input received in state: "agent_scratchpad"')
-            agent_thoughts = state.agent_scratchpad[-1]
-            # the agent can run any installed tool, simply install the tool and add it to the config file
-            requested_tool = self._get_tool(agent_thoughts.tool)
-            if not requested_tool:
-                configured_tool_names = list(self.tools_dict.keys())
-                logger.warning(
-                    "%s ReAct Agent wants to call tool %s. In the ReAct Agent's configuration within the config file,"
-                    "there is no tool with that name: %s",
-                    AGENT_LOG_PREFIX,
-                    agent_thoughts.tool,
-                    configured_tool_names)
-                tool_response = ToolMessage(name='agent_error',
-                                            tool_call_id='agent_error',
-                                            content=TOOL_NOT_FOUND_ERROR_MESSAGE.format(tool_name=agent_thoughts.tool,
-                                                                                        tools=configured_tool_names))
-                state.tool_responses += [tool_response]
-                return state
 
-            logger.debug("%s Calling tool %s with input: %s",
-                         AGENT_LOG_PREFIX,
-                         requested_tool.name,
-                         agent_thoughts.tool_input)
-
-            # Run the tool. Try to use structured input, if possible.
-            try:
-                tool_input_str = agent_thoughts.tool_input.strip().replace("'", '"')
-                tool_input_dict = json.loads(tool_input_str) if tool_input_str != 'None' else tool_input_str
-                logger.debug("%s Successfully parsed structured tool input from Action Input", AGENT_LOG_PREFIX)
-                tool_response = await requested_tool.ainvoke(tool_input_dict,
-                                                             config=RunnableConfig(callbacks=self.callbacks))
-                if self.detailed_logs:
-                    # The tool response can be very large, so we log only the first 1000 characters
-                    tool_response_str = str(tool_response)
-                    tool_response_str = tool_response_str[:1000] + "..." if len(
-                        tool_response_str) > 1000 else tool_response_str
-                    tool_response_log_message = TOOL_RESPONSE_LOG_MESSAGE % (
-                        requested_tool.name, tool_input_str, tool_response_str)
-                    logger.info(tool_response_log_message)
-            except JSONDecodeError as ex:
-                logger.warning(
-                    "%s Unable to parse structured tool input from Action Input. Using Action Input as is."
-                    "\nParsing error: %s",
-                    AGENT_LOG_PREFIX,
-                    ex,
-                    exc_info=True)
-                tool_input_str = agent_thoughts.tool_input
-                tool_response = await requested_tool.ainvoke(tool_input_str,
-                                                             config=RunnableConfig(callbacks=self.callbacks))
-
-            # some tools, such as Wikipedia, will return an empty response when no search results are found
-            if tool_response is None or tool_response == "":
-                tool_response = "The tool provided an empty response.\n"
-            # put the tool response in the graph state
-            tool_response = ToolMessage(name=agent_thoughts.tool,
-                                        tool_call_id=agent_thoughts.tool,
-                                        content=tool_response)
-            logger.debug("%s Called tool %s with input: %s\nThe tool returned: %s",
-                         AGENT_LOG_PREFIX,
-                         requested_tool.name,
-                         agent_thoughts.tool_input,
-                         tool_response.content)
+        logger.debug("%s Starting the Tool Call Node", AGENT_LOG_PREFIX)
+        if len(state.agent_scratchpad) == 0:
+            raise RuntimeError('No tool input received in state: "agent_scratchpad"')
+        agent_thoughts = state.agent_scratchpad[-1]
+        # the agent can run any installed tool, simply install the tool and add it to the config file
+        requested_tool = self._get_tool(agent_thoughts.tool)
+        if not requested_tool:
+            configured_tool_names = list(self.tools_dict.keys())
+            logger.warning(
+                "%s ReAct Agent wants to call tool %s. In the ReAct Agent's configuration within the config file,"
+                "there is no tool with that name: %s",
+                AGENT_LOG_PREFIX,
+                agent_thoughts.tool,
+                configured_tool_names)
+            tool_response = ToolMessage(name='agent_error',
+                                        tool_call_id='agent_error',
+                                        content=TOOL_NOT_FOUND_ERROR_MESSAGE.format(tool_name=agent_thoughts.tool,
+                                                                                    tools=configured_tool_names))
             state.tool_responses += [tool_response]
             return state
+
+        logger.debug("%s Calling tool %s with input: %s",
+                     AGENT_LOG_PREFIX,
+                     requested_tool.name,
+                     agent_thoughts.tool_input)
+
+        # Run the tool. Try to use structured input, if possible.
+        tool_input_str = agent_thoughts.tool_input.strip()
+        if (tool_input_str != 'None'):
+            try:
+                # Try to parse the tool input as a JSON object
+                tool_input_obj = json.loads(tool_input_str)
+            except JSONDecodeError:
+                # Try one more time replacing single quotes with double quotes
+                try:
+                    tool_input_str = tool_input_str.replace("'", '"')
+                    tool_input_obj = json.loads(tool_input_str)
+                except JSONDecodeError as ex:
+                    # If that doesn't work, just use the original string
+                    logger.warning(
+                        "%s Unable to parse structured tool input from Action Input. Using Action Input as is."
+                        "\nParsing error: %s",
+                        AGENT_LOG_PREFIX,
+                        ex,
+                        exc_info=True)
+
+                    tool_input_obj = tool_input_str
+
+        logger.debug("%s Running tool %s with input: %s", AGENT_LOG_PREFIX, requested_tool.name, tool_input_obj)
+
+        # Now call the tool
+        try:
+            tool_response = await requested_tool.ainvoke(tool_input_obj,
+                                                         config=RunnableConfig(callbacks=self.callbacks))
+            if self.detailed_logs:
+                # The tool response can be very large, so we log only the first 1000 characters
+                tool_response_str = str(tool_response)
+                tool_response_str = tool_response_str[:1000] + "..." if len(
+                    tool_response_str) > 1000 else tool_response_str
+                tool_response_log_message = TOOL_RESPONSE_LOG_MESSAGE % (
+                    requested_tool.name, tool_input_str, tool_response_str)
+                logger.info(tool_response_log_message)
         except Exception as ex:
-            logger.exception("%s Failed to call tool_node: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
+            logger.exception("%s Failed to call tool %s: %s", AGENT_LOG_PREFIX, requested_tool.name, ex, exc_info=ex)
             raise ex
+
+        # some tools, such as Wikipedia, will return an empty response when no search results are found
+        if tool_response is None or tool_response == "":
+            tool_response = "The tool provided an empty response.\n"
+        # put the tool response in the graph state
+        tool_response = ToolMessage(name=agent_thoughts.tool, tool_call_id=agent_thoughts.tool, content=tool_response)
+        logger.debug("%s Called tool %s with input: %s\nThe tool returned: %s",
+                     AGENT_LOG_PREFIX,
+                     requested_tool.name,
+                     agent_thoughts.tool_input,
+                     tool_response.content)
+        state.tool_responses += [tool_response]
+        return state
 
     async def build_graph(self):
         try:

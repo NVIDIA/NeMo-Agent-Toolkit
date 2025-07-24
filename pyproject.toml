@@ -66,6 +66,7 @@ opentelemetry = ["aiqtoolkit-opentelemetry"]
 phoenix = ["aiqtoolkit-phoenix"]
 ragaai = ["aiqtoolkit-ragaai"]
 mysql = ["aiqtoolkit-mysql"]
+redis = ["aiqtoolkit-redis"]
 s3 = ["aiqtoolkit-s3"]
 semantic-kernel = ["aiqtoolkit-semantic-kernel"]
 telemetry = [
@@ -124,6 +125,7 @@ aiqtoolkit-langchain = { workspace = true }
 aiqtoolkit-llama-index = { workspace = true }
 aiqtoolkit-mem0ai = { workspace = true }
 aiqtoolkit-mysql = { workspace = true }
+aiqtoolkit-redis = { workspace = true }
 aiqtoolkit-s3 = { workspace = true }
 aiqtoolkit-semantic-kernel = { workspace = true }
 aiqtoolkit-test = { workspace = true }
@@ -944,6 +946,7 @@ known_third_party = [
   "langchain",
   "llama_index",
   "mem0ai",
+  "redis",
   "semantic_kernel",
   "zep_cloud",
 ]

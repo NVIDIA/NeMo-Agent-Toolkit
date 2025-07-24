@@ -18,6 +18,7 @@ members = [
     "aiqtoolkit-opentelemetry",
     "aiqtoolkit-phoenix",
     "aiqtoolkit-ragaai",
+    "aiqtoolkit-redis",
     "aiqtoolkit-s3",
     "aiqtoolkit-semantic-kernel",
     "aiqtoolkit-test",
@@ -619,6 +620,9 @@ profiling = [
 ragaai = [
     { name = "aiqtoolkit-ragaai" },
 ]
+redis = [
+    { name = "aiqtoolkit-redis" },
+]
 s3 = [
     { name = "aiqtoolkit-s3" },
 ]
@@ -709,6 +713,7 @@ requires-dist = [
     { name = "aiqtoolkit-phoenix", marker = "extra == 'telemetry'", editable = "packages/aiqtoolkit_phoenix" },
     { name = "aiqtoolkit-ragaai", marker = "extra == 'ragaai'", editable = "packages/aiqtoolkit_ragaai" },
     { name = "aiqtoolkit-ragaai", marker = "extra == 'telemetry'", editable = "packages/aiqtoolkit_ragaai" },
+    { name = "aiqtoolkit-redis", marker = "extra == 'redis'", editable = "packages/aiqtoolkit_redis" },
     { name = "aiqtoolkit-s3", marker = "extra == 's3'", editable = "packages/aiqtoolkit_s3" },
     { name = "aiqtoolkit-semantic-kernel", marker = "extra == 'semantic-kernel'", editable = "packages/aiqtoolkit_semantic_kernel" },
     { name = "aiqtoolkit-weave", marker = "extra == 'telemetry'", editable = "packages/aiqtoolkit_weave" },
@@ -742,7 +747,8 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["agno", "crewai", "ingestion", "langchain", "llama-index", "mem0ai", "opentelemetry", "phoenix", "ragaai", "mysql", "s3", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "profiling", "gunicorn"]
+
+provides-extras = ["agno", "crewai", "ingestion", "langchain", "llama-index", "mem0ai", "opentelemetry", "phoenix", "ragaai", "redis", "mysql", "s3", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "profiling", "gunicorn"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -930,6 +936,20 @@ dependencies = [
 requires-dist = [
     { name = "aiqtoolkit", extras = ["opentelemetry"], editable = "." },
     { name = "ragaai-catalyst", specifier = ">=2.2.0,<2.3" },
+]
+
+[[package]]
+name = "aiqtoolkit-redis"
+source = { editable = "packages/aiqtoolkit_redis" }
+dependencies = [
+    { name = "aiqtoolkit" },
+    { name = "redis" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiqtoolkit", editable = "." },
+    { name = "redis", specifier = "~=4.3.4" },
 ]
 
 [[package]]
@@ -1235,6 +1255,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/4a/e7/82da0a03e7ba5141f05cce0d302e6eed121ae055e0456ca228bf693984bc/asttokens-3.0.0.tar.gz", hash = "sha256:0dcd8baa8d62b0c1d118b399b2ddba3c4aff271d0d7a9e0d4c1681c79035bbc7", size = 61978, upload-time = "2024-11-30T04:30:14.439Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/25/8a/c46dcc25341b5bce5472c718902eb3d38600a903b14fa6aeecef3f21a46f/asttokens-3.0.0-py3-none-any.whl", hash = "sha256:e3078351a059199dd5138cb1c706e6430c05eff2ff136af5eb4790f9d28932e2", size = 26918, upload-time = "2024-11-30T04:30:10.946Z" },
+]
+
+[[package]]
+name = "async-timeout"
+version = "5.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a5/ae/136395dfbfe00dfc94da3f3e136d0b13f394cba8f4841120e34226265780/async_timeout-5.0.1.tar.gz", hash = "sha256:d9321a7a3d5a6a5e187e824d2fa0793ce379a202935782d555d6e9d2735677d3", size = 9274, upload-time = "2024-11-06T16:41:39.6Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fe/ba/e2081de779ca30d473f21f5b30e0e737c438205440784c7dfc81efc2b029/async_timeout-5.0.1-py3-none-any.whl", hash = "sha256:39e3809566ff85354557ec2398b55e096c8364bacac9405a7a1fa429e77fe76c", size = 6233, upload-time = "2024-11-06T16:41:37.9Z" },
 ]
 
 [[package]]
@@ -6026,6 +6055,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5a/a9/104ec9234c8448c4379768221ea6df01260cd6c2ce13182d4eac531c8342/readme_renderer-44.0.tar.gz", hash = "sha256:8712034eabbfa6805cacf1402b4eeb2a73028f72d1166d6f5cb7f9c047c5d1e1", size = 32056, upload-time = "2024-07-08T15:00:57.805Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e1/67/921ec3024056483db83953ae8e48079ad62b92db7880013ca77632921dd0/readme_renderer-44.0-py3-none-any.whl", hash = "sha256:2fbca89b81a08526aadf1357a8c2ae889ec05fb03f5da67f9769c9a592166151", size = 13310, upload-time = "2024-07-08T15:00:56.577Z" },
+]
+
+[[package]]
+name = "redis"
+version = "4.3.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "async-timeout" },
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f2/52/2a4b3ceffe59483cdea5e653aaa40ebd7a90241612c40212dfc10fde9215/redis-4.3.6.tar.gz", hash = "sha256:7a462714dcbf7b1ad1acd81f2862b653cc8535cdfc879e28bf4947140797f948", size = 4577771, upload-time = "2023-03-22T16:24:20.179Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d6/f6/19237b28c632935c7359bddf703395ba13bbd134fc5e2eb297c4c120398c/redis-4.3.6-py3-none-any.whl", hash = "sha256:1ea4018b8b5d8a13837f0f1c418959c90bfde0a605cb689e8070cff368a3b177", size = 248834, upload-time = "2023-03-22T16:24:16.398Z" },
 ]
 
 [[package]]
