@@ -47,13 +47,12 @@ async def auth_tool(config: AuthTool, builder: Builder):
             auth_context: AuthResult = await basic_auth_client.authenticate(user_id=user_id)
 
             if not auth_context or not auth_context.credentials:
-                return f"Failed to authenticate user: {user_id}: Invalid credentials"
+                raise RuntimeError(f"Failed to authenticate user: {user_id}: Invalid credentials")
 
-            return (f"Your user: [{user_id}] is now authenticated.\n"
-                    f"Credentials: {auth_context.model_dump()}.\n")
+            return auth_context
 
         except Exception as e:
             logger.exception("HTTP Basic authentication failed", exc_info=True)
             return f"HTTP Basic authentication for '{user_id}' failed: {str(e)}"
 
-    yield FunctionInfo.from_fn(_arun, description="Perform authentication with a given provider.")
+    yield FunctionInfo.from_fn(_arun, description="Perform authentication with a given user ID.")
