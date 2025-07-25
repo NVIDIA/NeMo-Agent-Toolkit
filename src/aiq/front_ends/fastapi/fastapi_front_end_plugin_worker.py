@@ -830,7 +830,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 client_id=config.client_id,
                 client_secret=config.client_secret,
                 redirect_uri=config.redirect_uri,
-                scope=" ".join(config.scopes),
+                scope=" ".join(config.scopes) if config.scopes else None,
                 token_endpoint=config.token_url,
                 token_endpoint_auth_method=config.token_endpoint_auth_method
             )
