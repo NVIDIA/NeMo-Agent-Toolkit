@@ -25,9 +25,8 @@ from langgraph.prebuilt import ToolNode
 from pydantic import BaseModel
 from pydantic import Field
 
+from aiq.agent.base import AGENT_CALL_LOG_MESSAGE
 from aiq.agent.base import AGENT_LOG_PREFIX
-from aiq.agent.base import AGENT_RESPONSE_LOG_MESSAGE
-from aiq.agent.base import TOOL_RESPONSE_LOG_MESSAGE
 from aiq.agent.base import AgentDecision
 from aiq.agent.dual_node import DualNodeAgent
 
@@ -62,7 +61,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             response = await self.llm.ainvoke(state.messages, config=RunnableConfig(callbacks=self.callbacks))
             if self.detailed_logs:
                 agent_input = "\n".join(str(message.content) for message in state.messages)
-                logger.info(AGENT_RESPONSE_LOG_MESSAGE, agent_input, response)
+                logger.info(AGENT_CALL_LOG_MESSAGE, agent_input, response)
 
             state.messages += [response]
             return state
@@ -102,10 +101,7 @@ class ToolCallAgentGraph(DualNodeAgent):
 
             for response in tool_response.get('messages'):
                 if self.detailed_logs:
-                    # The tool response can be very large, so we log only the first 1000 characters
-                    response.content = response.content[:1000] + "..." if len(
-                        response.content) > 1000 else response.content
-                    logger.info(TOOL_RESPONSE_LOG_MESSAGE, tools, tool_input, response.content)
+                    self._log_tool_response(str(tools), str(tool_input), response.content)
                 state.messages += [response]
 
             return state

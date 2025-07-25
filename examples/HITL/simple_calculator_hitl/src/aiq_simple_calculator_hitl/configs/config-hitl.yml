@@ -41,9 +41,8 @@ functions:
       - calculator_subtract
     llm_name: nim_llm
     verbose: true
-    retry_parsing_errors: true
-    max_retries: 3
-    max_iterations: 1
+    parse_agent_response_max_retries: 3
+    max_tool_calls: 1
 
 llms:
   nim_llm:

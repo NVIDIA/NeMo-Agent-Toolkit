@@ -60,8 +60,7 @@ workflow:
   tool_names: [webpage_query, current_datetime]
   llm_name: nim_llm
   verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  parse_agent_response_max_retries: 3
 ```
 
 The workflow contains two tools: one that queries the LangSmith User Guide, and another that returns the current date and time. It also contains two models: an embedding model and an LLM model. After running the workflow, you can query it for information about LangSmith. This tutorial demonstrates how to customize this workflow.

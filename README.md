@@ -173,10 +173,8 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
       llm_name: nim_llm
       # Make it verbose
       verbose: true
-      # Retry parsing errors because LLMs are non-deterministic
-      retry_parsing_errors: true
       # Retry up to 3 times
-      max_retries: 3
+      parse_agent_response_max_retries: 3
    ```
 
 3. Run the Hello World example using the `aiq` CLI and the `workflow.yaml` file.

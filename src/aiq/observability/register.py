@@ -22,7 +22,7 @@ from aiq.cli.register_workflow import register_logging_method
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.observability.mixin.file_mixin import FileMode
+from aiq.observability.mixin.file_mode import FileMode
 
 logger = logging.getLogger(__name__)
 

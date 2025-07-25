@@ -22,7 +22,7 @@ import aiofiles
 import pytest
 
 from aiq.observability.mixin.file_mixin import FileExportMixin
-from aiq.observability.mixin.file_mixin import FileMode
+from aiq.observability.mixin.file_mode import FileMode
 
 
 class TestFileExportMixin:

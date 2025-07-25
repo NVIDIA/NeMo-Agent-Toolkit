@@ -1,6 +1,6 @@
 ---
 description: Follow these rules when the user's request involves integrating or selecting ReAct, Tool-Calling, Reasoning, or ReWOO agents within AIQ workflows
-globs: 
+globs:
 alwaysApply: false
 ---
 # AIQ Agents Integration & Selection Rules
@@ -19,14 +19,14 @@ These rules standardise how the four built-in AIQ agents are configured inside Y
 1. **ReAct Agent**
    - Use `_type: react_agent` in either the top-level `workflow:` or inside `functions:`.
    - Always provide `tool_names` (list of YAML-defined functions) and `llm_name`.
-   - Optional but recommended parameters: `verbose`, `max_iterations`, `handle_parsing_errors`, `max_retries`.
+   - Optional but recommended parameters: `verbose`, `max_tool_calls`, `parse_agent_response_max_retries`, `pass_tool_call_errors_to_agent`.
    - When overriding the prompt, keep `{tools}` and `{tool_names}` placeholders and ensure the LLM outputs in ReAct format.
 
 2. **Tool-Calling Agent**
    - Use `_type: tool_calling_agent`.
    - Requires an LLM that supports function/tool calling (e.g. OpenAI, Nim chat-completion).
    - Mandatory fields: `tool_names`, `llm_name`.
-   - Recommended fields: `verbose`, `handle_tool_errors`, `max_iterations`.
+   - Recommended fields: `verbose`, `handle_tool_errors`, `max_tool_calls`.
    - Tool input parameters must be well-named; the agent relies on them for routing.
 
 3. **ReWOO Agent**
