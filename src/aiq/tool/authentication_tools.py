@@ -35,23 +35,21 @@ async def auth_tool(config: HTTPAuthTool, builder: Builder):
     """
     Uses HTTP Basic authentication to authenticate to any registered API provider.
     """
+    basic_auth_client: AuthenticationClientBase = await builder.get_authentication('oauth2_authorization_code')
 
-    async def _arun(authentication_provider_name: str) -> str:
+    async def _arun(user_id: str) -> str:
         try:
-            # Get the http basic auth registered authentication client
-            basic_auth_client: AuthenticationClientBase = await builder.get_authentication(authentication_provider_name)
-
             # Perform authentication (this will invoke the user authentication callback)
-            auth_context: AuthResult = await basic_auth_client.authenticate(user_id="default_user")
+            auth_context: AuthResult = await basic_auth_client.authenticate(user_id=user_id)
 
             if not auth_context or not auth_context.credentials:
-                return f"Failed to authenticate provider: {authentication_provider_name}: Invalid credentials"
+                return f"Failed to authenticate user: {user_id}: Invalid credentials"
 
-            return (f"Your registered API Provider name: [{authentication_provider_name}] is now authenticated.\n"
+            return (f"Your user: [{user_id}] is now authenticated.\n"
                     f"Credentials: {auth_context.model_dump()}.\n")
 
         except Exception as e:
             logger.exception("HTTP Basic authentication failed", exc_info=True)
-            return f"HTTP Basic authentication to '{authentication_provider_name}' failed: {str(e)}"
+            return f"HTTP Basic authentication for '{user_id}' failed: {str(e)}"
 
     yield FunctionInfo.from_fn(_arun, description="Perform authentication with a given provider.")

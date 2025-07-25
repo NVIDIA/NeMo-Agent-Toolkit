@@ -44,7 +44,7 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
             client_id=config.client_id,
             client_secret=config.client_secret,
             redirect_uri=config.redirect_uri,
-            scope=config.scope,
+            scope=" ".join(config.scopes),
             token_endpoint=config.token_url,
         )
 

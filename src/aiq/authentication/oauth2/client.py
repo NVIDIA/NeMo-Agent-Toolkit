@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+
+from authlib.integrations.httpx_client import OAuth2Client as AuthlibOAuth2Client
 from pydantic import SecretStr
 
 from aiq.authentication.interfaces import AuthenticationClientBase
@@ -16,11 +19,43 @@ class OAuth2Client(AuthenticationClientBase):
         self._authenticated_tokens: dict[str, AuthResult] = {}
         self._context = AIQContext.get()
 
+    async def _attempt_token_refresh(self, user_id: str, auth_result: AuthResult) -> AuthResult | None:
+        refresh_token = auth_result.raw.get("refresh_token")
+        if not isinstance(refresh_token, str):
+            return None
+
+        with AuthlibOAuth2Client(
+            client_id=self.config.client_id,
+            client_secret=self.config.client_secret,
+        ) as client:
+            try:
+                new_token_data = client.refresh_token(self.config.token_url, refresh_token=refresh_token)
+            except Exception:
+                # On any failure, we'll fall back to the full auth flow.
+                return None
+
+        expires_at_ts = new_token_data.get("expires_at")
+        new_expires_at = datetime.fromtimestamp(expires_at_ts, tz=timezone.utc) if expires_at_ts else None
+
+        new_auth_result = AuthResult(
+            credentials=[BearerTokenCred(token=SecretStr(new_token_data["access_token"]))],
+            token_expires_at=new_expires_at,
+            raw=new_token_data,
+        )
+
+        self._authenticated_tokens[user_id] = new_auth_result
+        
+        return new_auth_result
+
     async def authenticate(self, user_id: str | None) -> AuthResult:
         if user_id and user_id in self._authenticated_tokens:
             auth_result = self._authenticated_tokens[user_id]
             if not auth_result.is_expired():
                 return auth_result
+
+            refreshed_auth_result = await self._attempt_token_refresh(user_id, auth_result)
+            if refreshed_auth_result:
+                return refreshed_auth_result
 
         auth_callback = self._context.user_auth_callback
         if not auth_callback:
