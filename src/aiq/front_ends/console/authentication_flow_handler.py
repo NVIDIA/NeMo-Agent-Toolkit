@@ -108,14 +108,12 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
 
             flow_state = ConsoleAuthenticationFlowHandler._flows[state]
 
-            client = AsyncOAuth2Client(
-                client_id=config.client_id,
-                client_secret=config.client_secret,
-                redirect_uri=config.redirect_uri,
-                scope=" ".join(config.scopes) if config.scopes else None,
-                token_endpoint=config.token_url,
-                token_endpoint_auth_method=config.token_endpoint_auth_method
-            )
+            client = AsyncOAuth2Client(client_id=config.client_id,
+                                       client_secret=config.client_secret,
+                                       redirect_uri=config.redirect_uri,
+                                       scope=" ".join(config.scopes) if config.scopes else None,
+                                       token_endpoint=config.token_url,
+                                       token_endpoint_auth_method=config.token_endpoint_auth_method)
             try:
                 flow_state.token = await client.fetch_token(url=config.token_url,
                                                             authorization_response=str(request.url))

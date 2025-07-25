@@ -26,7 +26,7 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
     _server_controller: _FastApiFrontEndController | None = None
     _server_lock: asyncio.Lock = asyncio.Lock()
     _active_flows: int = 0
-    web_socket: "AIQWebSocket" = None
+    web_socket = None
 
     @staticmethod
     async def authenticate(config: OAuth2AuthorizationCodeFlowConfig, method: AuthFlowType) -> AuthenticatedContext:

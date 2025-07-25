@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+from datetime import datetime
+from datetime import timezone
 
 from authlib.integrations.httpx_client import OAuth2Client as AuthlibOAuth2Client
 from pydantic import SecretStr
@@ -25,8 +26,8 @@ class OAuth2Client(AuthenticationClientBase):
             return None
 
         with AuthlibOAuth2Client(
-            client_id=self.config.client_id,
-            client_secret=self.config.client_secret,
+                client_id=self.config.client_id,
+                client_secret=self.config.client_secret,
         ) as client:
             try:
                 new_token_data = client.refresh_token(self.config.token_url, refresh_token=refresh_token)
@@ -44,7 +45,7 @@ class OAuth2Client(AuthenticationClientBase):
         )
 
         self._authenticated_tokens[user_id] = new_auth_result
-        
+
         return new_auth_result
 
     async def authenticate(self, user_id: str | None) -> AuthResult:
