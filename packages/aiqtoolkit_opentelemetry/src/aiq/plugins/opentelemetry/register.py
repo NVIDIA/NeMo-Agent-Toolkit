@@ -161,7 +161,8 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
                                   shutdown_timeout=config.shutdown_timeout)
 
 
-class GalileoTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="galileo"):  # pylint: disable=W0613  # noqa: E501
+# pylint: disable=W0613
+class GalileoTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="galileo"):
     """A telemetry exporter to transmit traces to externally hosted galileo service."""
 
     endpoint: str = Field(description="The galileo endpoint to export telemetry traces.",
