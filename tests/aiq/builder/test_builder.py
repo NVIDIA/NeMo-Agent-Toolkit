@@ -27,6 +27,7 @@ from aiq.builder.retriever import RetrieverProviderInfo
 from aiq.builder.workflow import Workflow
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.cli.register_workflow import register_authentication_provider
+from aiq.cli.register_workflow import register_authentication_client
 from aiq.cli.register_workflow import register_embedder_client
 from aiq.cli.register_workflow import register_embedder_provider
 from aiq.cli.register_workflow import register_function
@@ -174,6 +175,16 @@ async def _register():
             raise ValueError("Error")
 
         yield AuthenticationProviderInfo(config=config, description="An API authentication test provider.")
+
+    @register_authentication_client(config_type=TAuthenticationProviderConfig)
+    async def register_authentication_client_func(config: TAuthenticationProviderConfig, builder: Builder):
+        class TestAuthenticationClient(BaseModel):
+            model_config = ConfigDict(arbitrary_types_allowed=True)
+
+            config: TAuthenticationProviderConfig
+            builder: Builder
+
+        yield TestAuthenticationClient(config=config, builder=builder)
 
 
 async def test_build():
@@ -498,6 +509,27 @@ async def test_add_retriever():
 
         with pytest.raises(ValueError):
             await builder.add_retriever("retriever_name", TRetrieverProviderConfig())
+
+async def test_add_authentication():
+    async with WorkflowBuilder() as builder:
+        await builder.add_authentication("auth_name", TAuthenticationProviderConfig())
+
+        with pytest.raises(ValueError):
+            await builder.add_authentication("auth_name2", TAuthenticationProviderConfig(raise_error=True))
+
+        with pytest.raises(ValueError):
+            await builder.add_authentication("auth_name", TAuthenticationProviderConfig())
+
+
+async def test_get_authentication():
+    async with WorkflowBuilder() as builder:
+
+        config = TAuthenticationProviderConfig()
+
+        await builder.add_authentication("auth_name", config)
+
+        client = await builder.get_authentication("auth_name")
+        assert client is not None
 
 
 async def get_retriever():
