@@ -49,6 +49,8 @@ class OTLPSpanExporterMixin:
             endpoint: OTLP service endpoint URL.
             headers: HTTP headers for authentication and metadata.
         """
+        # Initialize exporter before super().__init__() to ensure it's available
+        # if parent class initialization potentially calls export_otel_spans()
         self._exporter = OTLPSpanExporter(endpoint=endpoint, headers=headers)
         super().__init__(*args, **kwargs)
 
