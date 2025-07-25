@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import logging
+
+from pydantic import Field
+
+from aiq.builder.builder import Builder
+from aiq.cli.register_workflow import register_telemetry_exporter
+from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from aiq.observability.mixin.batch_config_mixin import BatchConfigMixin
+
+logger = logging.getLogger(__name__)
+
+
+class DFWElasticsearchTelemetryExporter(TelemetryExporterBaseConfig,
+                                        BatchConfigMixin,
+                                        name="data_flywheel_elasticsearch"):
+    """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
+    client_id: str = Field(description="The data flywheel client ID.")
+    index: str = Field(description="The elasticsearch index name.")
+    endpoint: str = Field(description="The elasticsearch endpoint.")
+    elasticsearch_auth: tuple[str, str] = Field(
+        default=("elastic", "password"),
+        description="The elasticsearch authentication credentials (username, password).")
+    headers: dict | None = Field(default=None, description="Additional headers for elasticsearch requests.")
+
+
+@register_telemetry_exporter(config_type=DFWElasticsearchTelemetryExporter)
+async def dfw_elasticsearch_telemetry_exporter(config: DFWElasticsearchTelemetryExporter, builder: Builder):  # pylint: disable=unused-argument # noqa: E501
+    from aiq.plugins.data_flywheel.observability.exporter.dfw_elasticsearch_exporter import DFWElasticsearchExporter
+
+    yield DFWElasticsearchExporter(client_id=config.client_id,
+                                   index=config.index,
+                                   endpoint=config.endpoint,
+                                   elasticsearch_auth=config.elasticsearch_auth,
+                                   headers=config.headers,
+                                   batch_size=config.batch_size,
+                                   flush_interval=config.flush_interval,
+                                   max_queue_size=config.max_queue_size,
+                                   drop_on_overflow=config.drop_on_overflow,
+                                   shutdown_timeout=config.shutdown_timeout)

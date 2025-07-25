@@ -20,7 +20,7 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
   # Keep sorted!!!
   "aiqtoolkit~=1.2",
-  "jsonlines~=4.0",
+  "elasticsearch==8.17.2",
 ]
 requires-python = ">=3.11,<3.13"
 description = "Subpackage for NVIDIA Data Flywheel blueprint integration in AIQtoolkit"
@@ -38,4 +38,4 @@ aiqtoolkit = { workspace = true }
 
 
 [project.entry-points.'aiq.components']
-aiqtoolkit_data_flywheel = "aiq.plugins.data_flywheel.register"
+aiq_data_flywheel_observability = "aiq.plugins.data_flywheel.observability.register"

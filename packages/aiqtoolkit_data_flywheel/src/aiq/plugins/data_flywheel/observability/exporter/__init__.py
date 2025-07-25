@@ -12,18 +12,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import logging
-
-from aiq.data_models.span import Span
-from aiq.observability.exporter.span_exporter import SpanExporter
-from aiq.plugins.weave.mixins.weave_mixin import WeaveMixin
-
-logger = logging.getLogger(__name__)
-
-
-class WeaveExporter(WeaveMixin, SpanExporter[Span, Span]):  # pylint: disable=R0901
-    """A Weave exporter that exports telemetry traces to Weights & Biases Weave using OpenTelemetry."""
-
-    def __init__(self, context_state=None, **weave_kwargs):
-        super().__init__(context_state=context_state, **weave_kwargs)

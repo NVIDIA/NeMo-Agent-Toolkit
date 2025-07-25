@@ -64,6 +64,7 @@ llama-index = ["aiqtoolkit-llama-index"]
 mem0ai = ["aiqtoolkit-mem0ai"]
 opentelemetry = ["aiqtoolkit-opentelemetry"]
 phoenix = ["aiqtoolkit-phoenix"]
+data_flywheel = ["aiqtoolkit-data-flywheel"]
 ragaai = ["aiqtoolkit-ragaai"]
 mysql = ["aiqtoolkit-mysql"]
 s3 = ["aiqtoolkit-s3"]
@@ -73,6 +74,7 @@ telemetry = [
   "aiqtoolkit-phoenix",
   "aiqtoolkit-weave",
   "aiqtoolkit-ragaai",
+  "aiqtoolkit-data-flywheel",
 ]
 weave = ["aiqtoolkit-weave"]
 zep-cloud = ["aiqtoolkit-zep-cloud"]
@@ -132,6 +134,7 @@ aiqtoolkit-agno = { workspace = true }
 aiqtoolkit-weave = { workspace = true }
 aiqtoolkit-opentelemetry = { workspace = true }
 aiqtoolkit-phoenix = { workspace = true }
+aiqtoolkit-data-flywheel = { workspace = true }
 aiqtoolkit-ragaai = { workspace = true }
 
 # All examples here
