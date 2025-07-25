@@ -382,6 +382,19 @@ requires-dist = [
 ]
 
 [[package]]
+name = "aiq-simple-auth"
+source = { editable = "examples/authentication/simple_auth" }
+dependencies = [
+    { name = "aiqtoolkit", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiqtoolkit", editable = "." },
+    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
+]
+
+[[package]]
 name = "aiq-simple-calculator"
 source = { editable = "examples/getting_started/simple_calculator" }
 dependencies = [
@@ -578,6 +591,7 @@ examples = [
     { name = "aiq-profiler-agent" },
     { name = "aiq-redact-pii" },
     { name = "aiq-semantic-kernel-demo" },
+    { name = "aiq-simple-auth" },
     { name = "aiq-simple-calculator" },
     { name = "aiq-simple-calculator-custom-routes" },
     { name = "aiq-simple-calculator-eval" },
@@ -692,6 +706,7 @@ requires-dist = [
     { name = "aiq-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },
     { name = "aiq-redact-pii", marker = "extra == 'examples'", editable = "examples/observability/redact_pii" },
     { name = "aiq-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/frameworks/semantic_kernel_demo" },
+    { name = "aiq-simple-auth", marker = "extra == 'examples'", editable = "examples/authentication/simple_auth" },
     { name = "aiq-simple-calculator", marker = "extra == 'examples'", editable = "examples/getting_started/simple_calculator" },
     { name = "aiq-simple-calculator-custom-routes", marker = "extra == 'examples'", editable = "examples/front_ends/simple_calculator_custom_routes" },
     { name = "aiq-simple-calculator-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_calculator_eval" },
