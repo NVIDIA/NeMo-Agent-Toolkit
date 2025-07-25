@@ -28,7 +28,7 @@ with a demonstrative `OAuth 2.0` provider and then return the result of a tool t
 2. **User authenticates & grants consent** on the provider’s UI.
 3. **Provider redirects back** to `redirect_uri?code=XYZ&state=…` on your app.
 4. **Agent exchanges the code** for tokens by POST‑ing to `POST /oauth/token`  
-   with the **authorization code**, its `client_id`, the **client secret** (or PKCE
+   with the **authorization code**, its `client_id`, the **client secret** (or PKCE
    verifier for public clients), and the same `redirect_uri`.
 5. The provider returns a **JSON** payload:
    ```json
