@@ -34,14 +34,18 @@ class LlamaIndexRAGConfig(FunctionBaseConfig, name="local_llama_index_rag"):
     embedder_name: EmbedderRef = Field(description="The name of the embedder to use for the RAG engine.")
     data_dir: str = Field(description="The directory containing the data to use for the RAG engine.")
     description: str = Field(description="A description of the knowledge included in the RAG system.")
+    uri: str = Field(default="http://localhost:19530", description="The URI of the Milvus vector store.")
 
 
 @register_function(config_type=LlamaIndexRAGConfig, framework_wrappers=[LLMFrameworkEnum.LLAMA_INDEX])
 async def llama_index_rag_tool(config: LlamaIndexRAGConfig, builder: Builder):
     from llama_index.core import Settings
     from llama_index.core import SimpleDirectoryReader
+    from llama_index.core import StorageContext
     from llama_index.core import VectorStoreIndex
     from llama_index.core.node_parser import SentenceSplitter
+    from llama_index.vector_stores.milvus import MilvusVectorStore
+    from pymilvus.exceptions import MilvusException
 
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
     embedder = await builder.get_embedder(config.embedder_name, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
@@ -51,21 +55,32 @@ async def llama_index_rag_tool(config: LlamaIndexRAGConfig, builder: Builder):
 
     docs = SimpleDirectoryReader(input_files=[config.data_dir]).load_data()
     logger.info(f"Loaded {len(docs)} documents from {config.data_dir}")
-    if docs:
-        logger.info(f"First document content preview: {docs[0].text[:200]}...")
 
-    # Use SentenceSplitter with small chunks to stay under 512 token embedding limit
     parser = SentenceSplitter(
-        chunk_size=400,  # Smaller chunks for agent environment
-        chunk_overlap=20,  # Smaller overlap to reduce redundancy
+        chunk_size=400, 
+        chunk_overlap=20,
         separator=" ",
     )
     nodes = parser.get_nodes_from_documents(docs)
 
-    index = VectorStoreIndex(nodes)
+    try:
+        vector_store = MilvusVectorStore(
+            uri=config.uri,
+            collection_name="product_catalog_rag",
+            overwrite=True,
+            dim=1024,
+            enable_sparse=False,
+        )
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
+
+        index = VectorStoreIndex(nodes, storage_context=storage_context)
+    
+    except MilvusException as e:
+        logger.error(f"Error initializing Milvus vector store: {e}. Falling back to default vector store.")
+        index = VectorStoreIndex(nodes)
+
     query_engine = index.as_query_engine(
-        similarity_top_k=3,  # Use only 1 chunk to minimize context usage
-        response_mode="compact"  # Use compact response mode
+        similarity_top_k=3,
     )
 
     async def _arun(inputs: str) -> str:
@@ -76,7 +91,8 @@ async def llama_index_rag_tool(config: LlamaIndexRAGConfig, builder: Builder):
         """
         try:
             response = query_engine.query(inputs)
-            return str(response.response)  # Convert to string to avoid serialization issues
+            return str(response.response)
+
         except Exception as e:
             logger.error(f"RAG query failed: {e}")
             return f"Sorry, I couldn't retrieve information about that product. Error: {str(e)}"

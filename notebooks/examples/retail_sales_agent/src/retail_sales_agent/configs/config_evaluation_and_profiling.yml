@@ -10,11 +10,6 @@ general:
         _type: file
         path: /tmp/aiq_retail_sales_agent.log
         level: DEBUG
-    tracing:
-      phoenix:
-        _type: phoenix
-        endpoint: http://localhost:6006/v1/traces 
-        project: retail_sales_agent
 
 llms:
   supervisor_llm:

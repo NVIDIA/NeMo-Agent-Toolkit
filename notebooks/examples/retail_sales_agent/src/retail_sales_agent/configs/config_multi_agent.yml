@@ -40,7 +40,7 @@ functions:
     data_path: notebooks/examples/retail_sales_agent/data/retail_sales_data.csv
 
   data_analysis_agent:
-    _type: react_agent
+    _type: tool_calling_agent
     tool_names:
       - get_daily_sales_by_product
       - get_total_sales_per_day
@@ -76,7 +76,6 @@ functions:
     max_retries: 2
     retry_parsing_errors: true
 
-  # RAG agent
   product_catalog_rag:
     _type: local_llama_index_rag
     llm_name: nim_llm
@@ -89,9 +88,9 @@ functions:
     llm_name: nim_llm
     tool_names: 
       - product_catalog_rag
-    max_history: 3  # Reduced from 10 to minimize context usage
-    max_iterations: 5  # Reduced from 15 to minimize context usage
-    max_retries: 2  # Reduced from 3 to minimize context usage
+    max_history: 3
+    max_iterations: 5
+    max_retries: 2
     retry_parsing_errors: true
     description: "An assistant that can answer questions about products. Use product_catalog_rag to answer questions about products. Do not make up information."
     verbose: true
@@ -100,7 +99,7 @@ functions:
 workflow:
   _type: react_agent
   tool_names: [data_analysis_agent, data_visualization_agent, rag_agent]
-  llm_name: summarizer_llm
+  llm_name: supervisor_llm
   verbose: true
   handle_parsing_errors: true
   max_retries: 2
