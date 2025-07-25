@@ -14,8 +14,9 @@
 # limitations under the License.
 
 import typing
+from datetime import datetime
+from datetime import timezone
 from enum import Enum
-from datetime import datetime, timezone
 
 import httpx
 from pydantic import BaseModel
@@ -151,12 +152,13 @@ class RefreshTokenRequest(BaseModel):
 # OUTPUT TYPES
 ####################
 
+
 class CredentialKind(str, Enum):
     HEADER = "header"
     QUERY = "query"
     COOKIE = "cookie"
-    BASIC = "basic_auth"      # (user, pass) tuple
-    BEARER = "bearer_token"   # Authorization header
+    BASIC = "basic_auth"  # (user, pass) tuple
+    BEARER = "bearer_token"  # Authorization header
 
 
 class _CredBase(BaseModel):
@@ -191,7 +193,7 @@ class BasicAuthCred(_CredBase):
 class BearerTokenCred(_CredBase):
     kind: typing.Literal[CredentialKind.BEARER] = CredentialKind.BEARER
     token: SecretStr
-    scheme: str = "Bearer"           # override to "Token", etc.
+    scheme: str = "Bearer"  # override to "Token", etc.
     header_name: str = "Authorization"
 
 
@@ -210,14 +212,13 @@ Credential = typing.Annotated[
 class AuthResult(BaseModel):
     credentials: list[Credential]
     token_expires_at: datetime | None = None
-    raw: dict[str, typing.Any] = {}          # idP / debug blob
+    raw: dict[str, typing.Any] = {}  # idP / debug blob
 
     model_config = ConfigDict(extra="forbid")
 
     # ---------- helpers -------------------------------------------------------
     def is_expired(self) -> bool:
-        return bool(self.token_expires_at and
-                    datetime.now(timezone.utc) >= self.token_expires_at)
+        return bool(self.token_expires_at and datetime.now(timezone.utc) >= self.token_expires_at)
 
     def as_requests_kwargs(self) -> dict[str, typing.Any]:
         """Convert to kwargs usable by `requests` / `httpx`."""
@@ -232,9 +233,7 @@ class AuthResult(BaseModel):
                 case CookieCred():
                     kw["cookies"][cred.name] = cred.value.get_secret_value()
                 case BearerTokenCred():
-                    kw["headers"][cred.header_name] = (
-                        f"{cred.scheme} {cred.token.get_secret_value()}"
-                    )
+                    kw["headers"][cred.header_name] = (f"{cred.scheme} {cred.token.get_secret_value()}")
                 case BasicAuthCred():
                     kw["auth"] = (
                         cred.username.get_secret_value(),

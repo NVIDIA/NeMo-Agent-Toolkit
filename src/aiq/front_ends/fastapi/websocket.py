@@ -25,8 +25,6 @@ from fastapi import WebSocketException
 from starlette.endpoints import WebSocketEndpoint
 from starlette.websockets import WebSocketDisconnect
 
-from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import AuthenticationClientBase as OAuthClientBase
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.api_server import AIQChatResponseChunk
@@ -34,7 +32,7 @@ from aiq.data_models.api_server import AIQResponsePayloadOutput
 from aiq.data_models.api_server import AIQResponseSerializable
 from aiq.data_models.api_server import WebSocketMessageStatus
 from aiq.data_models.api_server import WorkflowSchemaType
-from aiq.data_models.authentication import ConsentPromptMode
+from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
 from aiq.front_ends.fastapi.message_handler import MessageHandler
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response
 from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
@@ -58,6 +56,8 @@ class AIQWebSocket(WebSocketEndpoint):
         }
         self._step_adaptor = step_adaptor
         super().__init__(*args, **kwargs)
+        # Register the WebSocket instance with the authentication flow handler
+        WebSocketAuthenticationFlowHandler.web_socket = self
 
     @property
     def workflow_schema_type(self) -> dict[str, Callable[..., Awaitable[Any]]]:
@@ -66,6 +66,10 @@ class AIQWebSocket(WebSocketEndpoint):
     @property
     def process_response_event(self) -> asyncio.Event:
         return self._process_response_event
+
+    @property
+    def message_handler(self) -> MessageHandler:
+        return self._message_handler
 
     async def on_connect(self, websocket: WebSocket):
         try:
@@ -120,7 +124,7 @@ class AIQWebSocket(WebSocketEndpoint):
         async with self._session_manager.session(
                 conversation_id=conversation_id,
                 user_input_callback=self._message_handler.human_interaction,
-                user_authentication_callback=self.user_auth_callback_websocket) as session:
+                user_authentication_callback=WebSocketAuthenticationFlowHandler.authenticate) as session:
 
             async for value in generate_streaming_response(payload,
                                                            session_manager=session,
@@ -155,40 +159,3 @@ class AIQWebSocket(WebSocketEndpoint):
     async def process_chat(self, payload: AIQChatRequest, conversation_id: str):
 
         return await self._process_message(payload, result_type=AIQChatResponse)
-
-    async def user_auth_callback_websocket(self, oauth_client: OAuthClientBase,
-                                           consent_prompt_mode: ConsentPromptMode) -> AuthenticationError | None:
-        """
-        Callback handler for user authentication in server websocket environment.
-
-        Args:
-            oauth_client (OAuthClientBase): The OAuth client to authenticate.
-            consent_prompt_mode (ConsentPromptMode): The consent prompt mode to use.
-
-        Returns:
-            AuthenticationError | None: The authentication error if the authentication fails, otherwise None.
-        """
-
-        from aiq.authentication.exceptions.call_back_exceptions import OAuthClientServerError
-
-        oauth_client.consent_prompt_mode = consent_prompt_mode
-
-        if oauth_client.response_manager is not None:
-            oauth_client.response_manager.message_handler = self._message_handler
-
-        try:
-            # Initiate the authorization flow and persist the oauth credentials.
-            await oauth_client.initiate_authorization_flow_server()
-
-            # If credentials were not persisted, raise an error.
-            if not await oauth_client.validate_credentials():
-                raise AuthenticationError(error_code="server_websocket_auth_error",
-                                          message="Failed to validate credentials")
-
-        except OAuthClientServerError as e:
-            error_message = f"Failed to complete Authorization Flow for: {oauth_client.config_name} Error: {str(e)}"
-            logger.error(error_message, exc_info=True)
-            await oauth_client.shut_down_code_flow_server()
-            raise AuthenticationError(error_code="server_websocket_auth_error", message=error_message) from e
-
-        return

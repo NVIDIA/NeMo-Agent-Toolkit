@@ -37,19 +37,17 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from pydantic import Field
 
-from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import AuthenticationClientBase as OAuthClientBase
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.api_server import AIQChatResponseChunk
 from aiq.data_models.api_server import AIQResponseIntermediateStep
 from aiq.data_models.authentication import AuthenticationEndpoint
-from aiq.data_models.authentication import ConsentPromptMode
 from aiq.data_models.config import AIQConfig
 from aiq.eval.config import EvaluationRunOutput
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
+from aiq.front_ends.fastapi.auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQAsyncGenerateResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQAsyncGenerationStatusResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateRequest
@@ -196,36 +194,6 @@ class RouteInfo(BaseModel):
 
 
 class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
-
-    @staticmethod
-    async def user_auth_callback_server_http(oauth_client: OAuthClientBase,
-                                             consent_prompt_mode: ConsentPromptMode) -> AuthenticationError | None:
-        """
-        Callback handler for user authentication in server HTTP environments.
-
-        Args:
-            oauth_client (OAuthClientBase): The OAuth client to authenticate.
-            consent_prompt_mode (ConsentPromptMode): The consent prompt mode to use.
-        """
-
-        from aiq.authentication.exceptions.call_back_exceptions import OAuthClientServerError
-        oauth_client.consent_prompt_mode = consent_prompt_mode
-
-        try:
-            # Initiate the authorization flow and persist the oauth credentials.
-            await oauth_client.initiate_authorization_flow_server()
-
-            # If credentials were not persisted, raise an error.
-            if not await oauth_client.validate_credentials():
-                raise AuthenticationError(error_code="server_http_auth_error", message="Failed to validate credentials")
-
-        except OAuthClientServerError as e:
-            error_message = f"Failed to complete Authorization Flow for: {oauth_client.config_name} Error: {str(e)}"
-            logger.error(error_message, exc_info=True)
-            await oauth_client.shut_down_code_flow_server()
-            raise AuthenticationError(error_code="server_http_auth_error", message=error_message) from e
-
-        return
 
     @staticmethod
     async def _periodic_cleanup(name: str, job_store: JobStore, sleep_time_sec: int = 300):
@@ -503,8 +471,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 response.headers["Content-Type"] = "application/json"
 
                 async with session_manager.session(
-                        request=request,
-                        user_authentication_callback=FastApiFrontEndPluginWorker.user_auth_callback_server_http):
+                        request=request, user_authentication_callback=HTTPAuthenticationFlowHandler.authenticate):
 
                     return await generate_single_response(None, session_manager, result_type=result_type)
 
@@ -515,8 +482,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             async def get_stream(request: Request):
 
                 async with session_manager.session(
-                        request=request,
-                        user_authentication_callback=FastApiFrontEndPluginWorker.user_auth_callback_server_http):
+                        request=request, user_authentication_callback=HTTPAuthenticationFlowHandler.authenticate):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
@@ -551,8 +517,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 response.headers["Content-Type"] = "application/json"
 
                 async with session_manager.session(
-                        request=request,
-                        user_authentication_callback=FastApiFrontEndPluginWorker.user_auth_callback_server_http):
+                        request=request, user_authentication_callback=HTTPAuthenticationFlowHandler.authenticate):
 
                     return await generate_single_response(payload, session_manager, result_type=result_type)
 
@@ -566,8 +531,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             async def post_stream(request: Request, payload: request_type):
 
                 async with session_manager.session(
-                        request=request,
-                        user_authentication_callback=FastApiFrontEndPluginWorker.user_auth_callback_server_http):
+                        request=request, user_authentication_callback=HTTPAuthenticationFlowHandler.authenticate):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
@@ -840,47 +804,43 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def add_authorization_route(self, app: FastAPI):
 
-        import httpx
+        from authlib.integrations.httpx_client import AsyncOAuth2Client
         from fastapi.responses import HTMLResponse
 
-        from aiq.authentication.credentials_manager import _CredentialsManager
-        from aiq.authentication.exceptions.auth_code_grant_exceptions import AuthCodeGrantFlowError
-        from aiq.data_models.authentication import PromptRedirectRequest
+        from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
         from aiq.front_ends.fastapi.html_snippets.auth_code_grant_success import AUTH_REDIRECT_SUCCESS_HTML
 
         async def redirect_uri(request: Request):
+            """
+            Handle the redirect URI for OAuth2 authentication.
+            Args:
+                request: The FastAPI request object containing query parameters.
 
-            authorization_code: str | None = request.query_params.get("code")
-            state: str | None = request.query_params.get("state")
+            Returns:
+                HTMLResponse: A response indicating the success of the authentication flow.
+            """
+            state = request.query_params.get("state")
+            if not state or state not in WebSocketAuthenticationFlowHandler._flows:
+                return "Invalid state. Please restart the authentication process."
 
-            if not (authorization_code and state):
-                error_message = "Authorization code and state not provided by authorization config"
-                raise AuthCodeGrantFlowError('auth_code_state_missing', error_message)
+            flow_state = WebSocketAuthenticationFlowHandler._flows[state]
+            config = WebSocketAuthenticationFlowHandler._configs[state]
 
-            oauth_client: OAuthClientBase | None = _CredentialsManager().get_authentication_client_by_state(state)
+            client = AsyncOAuth2Client(
+                client_id=config.client_id,
+                client_secret=config.client_secret,
+                redirect_uri=config.redirect_uri,
+                scope=config.scope,
+                token_endpoint=config.token_url,
+            )
 
-            if oauth_client is None:
-                error_message = "Authorization client not found by Authorization Code Grant state"
-                raise AuthCodeGrantFlowError('auth_client_not_found', error_message)
-
-            # Send Token HTTP Request
-            authorization_path = FastApiFrontEndConfig().authorization.path
-            if authorization_path is None:
-                error_message = "Authorization path is not configured"
-                raise AuthCodeGrantFlowError('auth_path_not_configured', error_message)
-
-            response: httpx.Response | None = await oauth_client.send_token_request(
-                client_authorization_path=authorization_path,
-                client_authorization_endpoint=AuthenticationEndpoint.REDIRECT_URI.value,
-                authorization_code=authorization_code)
-
-            if response is None:
-                error_message = "Invalid response received while exchanging authorization code for access token"
-                raise AuthCodeGrantFlowError('token_response_null', error_message)
-
-            await oauth_client.process_token_response(response)
-
-            await _CredentialsManager().set_oauth_credentials()
+            try:
+                flow_state.token = await client.fetch_token(url=config.token_url,
+                                                            authorization_response=str(request.url))
+            except Exception as e:
+                flow_state.error = e
+            finally:
+                flow_state.event.set()
 
             return HTMLResponse(content=AUTH_REDIRECT_SUCCESS_HTML,
                                 status_code=200,
@@ -888,33 +848,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                     "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"
                                 })
 
-        async def prompt_redirect_uri(request: Request, prompt_request_schema: PromptRedirectRequest):
-            from fastapi.responses import JSONResponse
-
-            oauth_client: OAuthClientBase | None = _CredentialsManager(
-            ).get_authentication_client_by_consent_prompt_key(prompt_request_schema.consent_prompt_key)
-
-            if (oauth_client is None):
-                raise HTTPException(status_code=403, detail="Consent prompt key not found.")
-
-            location_url: str | None = None
-
-            if (oauth_client.config is not None and oauth_client.config.consent_prompt_location_url is not None):
-                location_url = oauth_client.config.consent_prompt_location_url
-
-            await _CredentialsManager().set_consent_prompt_url()
-
-            return JSONResponse(content={"auth_provider_name": oauth_client.config_name, "redirect_url": location_url})
-
-        if self.front_end_config.authorization.path:
-            app.add_api_route(
-                path=f"{self.front_end_config.authorization.path}{AuthenticationEndpoint.REDIRECT_URI.value}",
-                endpoint=redirect_uri,
-                methods=["GET"],
-                description="Handles the authorization code and state returned from the Authorization Code Grant Flow.")
-
-            app.add_api_route(
-                path=f"{self.front_end_config.authorization.path}{AuthenticationEndpoint.PROMPT_REDIRECT_URI.value}",
-                endpoint=prompt_redirect_uri,
-                methods=["POST", "OPTIONS"],
-                description="Returns the consent prompt location URI to continue the Authorization Code Grant Flow.")
+        # Add the redirect URI route
+        app.add_api_route(
+            path=f"{self.front_end_config.authorization.path}{AuthenticationEndpoint.REDIRECT_URI.value}",
+            endpoint=redirect_uri,
+            methods=["GET"],
+            description="Handles the authorization code and state returned from the Authorization Code Grant Flow.")

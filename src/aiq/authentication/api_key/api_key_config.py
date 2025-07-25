@@ -26,7 +26,8 @@ from aiq.authentication.exceptions.api_key_exceptions import HeaderPrefixFieldEr
 from aiq.builder.authentication import AuthenticationProviderInfo
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_authentication_provider
-from aiq.data_models.authentication import AuthenticationBaseConfig, HeaderAuthScheme
+from aiq.data_models.authentication import AuthenticationBaseConfig
+from aiq.data_models.authentication import HeaderAuthScheme
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +50,8 @@ class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
                                       "with the header_name when HeaderAuthScheme is CUSTOM.",
                                       default=None)
     auth_scheme: HeaderAuthScheme = Field(default=HeaderAuthScheme.BEARER,
-                                            description=("The HTTP authentication scheme to use. "
-                                                         "Supported schemes: BEARER, X_API_KEY, BASIC, CUSTOM."))
-
+                                          description=("The HTTP authentication scheme to use. "
+                                                       "Supported schemes: BEARER, X_API_KEY, BASIC, CUSTOM."))
 
     @field_validator('raw_key')
     @classmethod
@@ -71,7 +71,7 @@ class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
 
         if any(c in string.whitespace for c in value):
             raise APIKeyFieldError('contains_whitespace', 'raw_key must not contain any '
-                                                          'whitespace characters.')
+                                   'whitespace characters.')
 
         return value
 
@@ -86,8 +86,7 @@ class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
                                        'header_name field value cannot have leading or trailing whitespace.')
 
         if any(c in string.whitespace for c in value):
-            raise HeaderNameFieldError('contains_whitespace',
-                                       'header_name must not contain any whitespace characters.')
+            raise HeaderNameFieldError('contains_whitespace', 'header_name must not contain any whitespace characters.')
 
         if not HEADER_NAME_REGEX.fullmatch(value):
             raise HeaderNameFieldError(
@@ -121,7 +120,7 @@ class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
     def validate_raw_key_after(cls, value: str) -> str:
         if not value:
             raise APIKeyFieldError('value_missing', 'raw_key field value is '
-                                                    'required after construction.')
+                                   'required after construction.')
 
         return value
 

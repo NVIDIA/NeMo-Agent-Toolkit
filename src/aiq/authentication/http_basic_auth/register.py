@@ -14,9 +14,9 @@
 # limitations under the License.
 
 from aiq.authentication.http_basic_auth.http_basic_auth_exchanger import HTTPBasicAuthExchanger
-from aiq.cli.register_workflow import register_authentication_client
 from aiq.builder.authentication import AuthenticationProviderInfo
 from aiq.builder.builder import Builder
+from aiq.cli.register_workflow import register_authentication_client
 from aiq.cli.register_workflow import register_authentication_provider
 from aiq.data_models.authentication import AuthenticationBaseConfig
 
@@ -28,8 +28,9 @@ class HTTPBasicAuthConfig(AuthenticationBaseConfig, name="http_basic_auth"):
 @register_authentication_provider(config_type=HTTPBasicAuthConfig)
 async def api_key(authentication_provider: HTTPBasicAuthConfig, builder: Builder):
 
-    yield AuthenticationProviderInfo(config=authentication_provider, description="HTTP Basic "
-                                                                                 "authentication provider.")
+    yield AuthenticationProviderInfo(config=authentication_provider,
+                                     description="HTTP Basic "
+                                     "authentication provider.")
 
 
 @register_authentication_client(config_type=HTTPBasicAuthConfig)

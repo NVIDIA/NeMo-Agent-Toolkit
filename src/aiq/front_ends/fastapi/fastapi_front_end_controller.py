@@ -17,7 +17,8 @@ import asyncio
 import logging
 
 from fastapi import FastAPI
-from uvicorn import Config, Server
+from uvicorn import Config
+from uvicorn import Server
 
 logger = logging.getLogger(__name__)
 
@@ -33,18 +34,13 @@ class _FastApiFrontEndController:
         self._server: Server | None = None
         self._server_background_task: asyncio.Task | None = None
 
-    async def start_server(self, host:str , port:int) -> None:
+    async def start_server(self, host: str, port: int) -> None:
         """Starts the API server."""
 
         server_host = host
         server_port = port
 
-        config = Config(
-            app=self._app,
-            host=server_host,
-            port=server_port,
-            log_level="warning"
-        )
+        config = Config(app=self._app, host=server_host, port=server_port, log_level="warning")
         self._server = Server(config=config)
 
         try:

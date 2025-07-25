@@ -16,7 +16,10 @@
 from abc import ABC
 from abc import abstractmethod
 
-from aiq.data_models.authentication import AuthenticationBaseConfig, AuthenticatedContext, AuthFlowType, AuthResult
+from aiq.data_models.authentication import AuthenticatedContext
+from aiq.data_models.authentication import AuthenticationBaseConfig
+from aiq.data_models.authentication import AuthFlowType
+from aiq.data_models.authentication import AuthResult
 
 AUTHORIZATION_HEADER = "Authorization"
 

@@ -1,11 +1,16 @@
 from pydantic import SecretStr
+
 from aiq.authentication.interfaces import AuthenticationClientBase
-from aiq.data_models.authentication import AuthFlowType, AuthResult, BearerTokenCred
 from aiq.builder.context import AIQContext
+from aiq.data_models.authentication import AuthFlowType
+from aiq.data_models.authentication import AuthResult
+from aiq.data_models.authentication import BearerTokenCred
+
 from .authorization_code_flow_config import OAuth2AuthorizationCodeFlowConfig
 
 
 class OAuth2Client(AuthenticationClientBase):
+
     def __init__(self, config: OAuth2AuthorizationCodeFlowConfig):
         super().__init__(config)
         self._authenticated_tokens: dict[str, AuthResult] = {}
@@ -16,7 +21,7 @@ class OAuth2Client(AuthenticationClientBase):
             auth_result = self._authenticated_tokens[user_id]
             if not auth_result.is_expired():
                 return auth_result
-        
+
         auth_callback = self._context.user_auth_callback
         if not auth_callback:
             raise RuntimeError("Authentication callback not set on AIQContext.")
@@ -41,4 +46,4 @@ class OAuth2Client(AuthenticationClientBase):
         if user_id:
             self._authenticated_tokens[user_id] = auth_result
 
-        return auth_result 
+        return auth_result

@@ -1,11 +1,14 @@
-
 from pydantic import SecretStr
 
-from aiq.data_models.authentication import AuthenticationBaseConfig, AuthenticatedContext, AuthFlowType, AuthResult, BasicAuthCred, BearerTokenCred
 from aiq.authentication.interfaces import AuthenticationClientBase
-
-
 from aiq.builder.context import AIQContext
+from aiq.data_models.authentication import AuthenticatedContext
+from aiq.data_models.authentication import AuthenticationBaseConfig
+from aiq.data_models.authentication import AuthFlowType
+from aiq.data_models.authentication import AuthResult
+from aiq.data_models.authentication import BasicAuthCred
+from aiq.data_models.authentication import BearerTokenCred
+
 
 class HTTPBasicAuthExchanger(AuthenticationClientBase):
     """
@@ -21,7 +24,6 @@ class HTTPBasicAuthExchanger(AuthenticationClientBase):
         super().__init__(config)
         self._authenticated_tokens: dict[str, AuthResult] = {}
         self._context = AIQContext.get()
-
 
     async def authenticate(self, user_id: str | None) -> AuthResult:
         """
@@ -43,20 +45,15 @@ class HTTPBasicAuthExchanger(AuthenticationClientBase):
             raise RuntimeError(f"Authentication callback failed: {str(e)}. Did you forget to set a "
                                f"callback handler for your frontend?") from e
 
-        basic_auth_credentials = BasicAuthCred(
-            username= SecretStr(auth_context.metadata.get("username", "")),
-            password= SecretStr(auth_context.metadata.get("password", ""))
-        )
+        basic_auth_credentials = BasicAuthCred(username=SecretStr(auth_context.metadata.get("username", "")),
+                                               password=SecretStr(auth_context.metadata.get("password", "")))
 
         # Get the auth token from the headers of auth context
         bearer_token = auth_context.headers.get("Authorization", "").split(" ")[-1]
         if not bearer_token:
             raise RuntimeError("Authentication failed: No Authorization header found in the response.")
 
-        bearer_token_cred = BearerTokenCred(
-            token=SecretStr(bearer_token),
-            scheme="Basic"
-        )
+        bearer_token_cred = BearerTokenCred(token=SecretStr(bearer_token), scheme="Basic")
 
         auth_result = AuthResult(credentials=[basic_auth_credentials, bearer_token_cred])
 

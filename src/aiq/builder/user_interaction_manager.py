@@ -91,7 +91,8 @@ class AIQUserInteractionManager:
 
         return sys_human_interaction
 
-    async def authenticate_oauth_client(self, oauth_client: AuthenticationClientBase,
+    async def authenticate_oauth_client(self,
+                                        oauth_client: AuthenticationClientBase,
                                         consent_prompt_handle: ConsentPromptMode) -> AuthenticationError | None:
         # pylint: disable=pointless-statement
         f"""

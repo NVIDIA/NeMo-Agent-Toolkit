@@ -14,20 +14,12 @@
 # limitations under the License.
 
 import logging
-import typing
 
-import httpx
-
-from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
 from aiq.authentication.interfaces import AuthenticationClientBase
 from aiq.builder.builder import Builder
-from aiq.builder.context import AIQContext
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
-from aiq.data_models.authentication import AuthenticatedContext, AuthResult
-from aiq.data_models.authentication import ConsentPromptMode
-from aiq.data_models.authentication import CredentialLocation
-from aiq.data_models.authentication import HeaderAuthScheme
+from aiq.data_models.authentication import AuthResult
 from aiq.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
@@ -36,6 +28,7 @@ logger = logging.getLogger(__name__)
 class HTTPAuthTool(FunctionBaseConfig, name="auth_tool"):
     """Authenticate to any registered API provider using OAuth2 authorization flow with browser consent handling."""
     pass
+
 
 @register_function(config_type=HTTPAuthTool)
 async def auth_tool(config: HTTPAuthTool, builder: Builder):
@@ -55,14 +48,10 @@ async def auth_tool(config: HTTPAuthTool, builder: Builder):
                 return f"Failed to authenticate provider: {authentication_provider_name}: Invalid credentials"
 
             return (f"Your registered API Provider name: [{authentication_provider_name}] is now authenticated.\n"
-                    f"Credentials: {auth_context.as_requests_kwargs()}.\n")
+                    f"Credentials: {auth_context.model_dump()}.\n")
 
         except Exception as e:
             logger.exception("HTTP Basic authentication failed", exc_info=True)
             return f"HTTP Basic authentication to '{authentication_provider_name}' failed: {str(e)}"
 
-    yield FunctionInfo.from_fn(
-        _arun,
-        description="Perform authentication with a given provider."
-    )
-
+    yield FunctionInfo.from_fn(_arun, description="Perform authentication with a given provider.")

@@ -15,12 +15,13 @@
 
 import logging
 
-from docutils.nodes import header
 from pydantic import SecretStr
 
 from aiq.authentication.api_key.api_key_config import APIKeyConfig
 from aiq.authentication.interfaces import AuthenticationClientBase
-from aiq.data_models.authentication import HeaderAuthScheme, AuthenticatedContext, AuthResult, BearerTokenCred
+from aiq.data_models.authentication import AuthResult
+from aiq.data_models.authentication import BearerTokenCred
+from aiq.data_models.authentication import HeaderAuthScheme
 
 logger = logging.getLogger(__name__)
 
@@ -51,18 +52,14 @@ class APIKeyClient(AuthenticationClientBase):
         header_auth_scheme = self.config.auth_scheme
 
         if header_auth_scheme == HeaderAuthScheme.BEARER:
-            return BearerTokenCred(
-                token=SecretStr(f"{self.config.raw_key}"),
-                scheme=HeaderAuthScheme.BEARER.value,
-                header_name=AUTHORIZATION_HEADER
-            )
+            return BearerTokenCred(token=SecretStr(f"{self.config.raw_key}"),
+                                   scheme=HeaderAuthScheme.BEARER.value,
+                                   header_name=AUTHORIZATION_HEADER)
 
         if header_auth_scheme == HeaderAuthScheme.X_API_KEY:
-            return BearerTokenCred(
-                token=SecretStr(f"{self.config.raw_key}"),
-                scheme=HeaderAuthScheme.X_API_KEY.value,
-                header_name=''
-            )
+            return BearerTokenCred(token=SecretStr(f"{self.config.raw_key}"),
+                                   scheme=HeaderAuthScheme.X_API_KEY.value,
+                                   header_name='')
 
         if header_auth_scheme == HeaderAuthScheme.CUSTOM:
             if not self.config.header_name:
@@ -73,15 +70,13 @@ class APIKeyClient(AuthenticationClientBase):
                 logger.error('header_prefix required when using header_auth_scheme CUSTOM')
                 return None
 
-            return BearerTokenCred(
-                token=SecretStr(f"{self.config.raw_key}"),
-                scheme=self.config.header_prefix,
-                header_name=self.config.header_name
-            )
+            return BearerTokenCred(token=SecretStr(f"{self.config.raw_key}"),
+                                   scheme=self.config.header_prefix,
+                                   header_name=self.config.header_name)
 
         return None
 
-    async def authenticate(self, user_id:str | None) -> AuthResult | None:
+    async def authenticate(self, user_id: str | None) -> AuthResult | None:
         """
         Authenticate the user using the API key credentials.
 
