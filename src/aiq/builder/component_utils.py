@@ -255,8 +255,8 @@ def build_dependency_sequence(config: "AIQConfig") -> list[ComponentInstanceData
     """
 
     total_node_count = len(config.embedders) + len(config.functions) + len(config.llms) + len(config.memory) + len(
-        config.object_stores) + len(config.retrievers) + len(config.its_strategies) +  len(
-        config.authentication) + 1  # +1 for the workflow
+        config.object_stores) + len(config.retrievers) + len(config.its_strategies) + len(
+            config.authentication) + 1  # +1 for the workflow
 
     dependency_map: dict
     dependency_graph: nx.DiGraph

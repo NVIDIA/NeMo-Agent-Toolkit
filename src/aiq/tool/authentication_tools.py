@@ -22,8 +22,8 @@ from aiq.builder.builder import Builder
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
 from aiq.data_models.authentication import AuthResult
-from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.component_ref import AuthenticationRef
+from aiq.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 class AuthTool(FunctionBaseConfig, name="auth_tool"):
     """Authenticate to any registered API provider using OAuth2 authorization flow with browser consent handling."""
     auth_provider: AuthenticationRef = Field(description="Reference to the authentication provider "
-                                                         "to use for authentication.")
+                                             "to use for authentication.")
 
 
 @register_function(config_type=AuthTool)
