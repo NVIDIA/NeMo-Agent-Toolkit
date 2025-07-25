@@ -27,6 +27,14 @@ This example demonstrates how to extend NVIDIA NeMo Agent toolkit applications w
 - **Production API Extension Patterns:** Provides patterns for building production-ready APIs with specialized endpoints for authentication, routing, and custom business logic while maintaining Agent toolkit workflow capabilities.
 - **FastAPI Integration:** Demonstrates seamless integration with FastAPI framework features while leveraging Agent toolkit workflow execution and function registration system.
 
+## Table of Contents
+
+- [What You'll Learn](#what-youll-learn)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+
 ## What You'll Learn
 
 - **Custom API routes**: Define and register custom endpoints through configuration

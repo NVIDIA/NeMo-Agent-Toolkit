@@ -19,6 +19,14 @@ limitations under the License.
 
 This example demonstrates how to integrate and use the web-based user interface of NVIDIA NeMo Agent toolkit for interactive workflow management. Learn to set up, configure, and customize the UI for seamless agent interaction through both HTTP and WebSocket connections.
 
+## Key Features
+
+- **Web-Based Interactive Interface:** Provides a complete web UI for interacting with NeMo Agent toolkit workflows through an intuitive chat interface with conversation history and real-time responses.
+- **Multi-Connection Support:** Demonstrates both HTTP and WebSocket connection modes for different use cases, enabling both simple request-response patterns and real-time streaming interactions.
+- **Real-Time Streaming:** Shows how to enable intermediate step streaming for enhanced user experience, allowing users to see agent reasoning and tool execution in real-time.
+- **UI Customization Options:** Supports theme customization, endpoint configuration, and display options to match different deployment environments and user preferences.
+- **Conversation Management:** Includes conversation history, session management, and context preservation across multiple interactions within the same session.
+
 ## What You'll Learn
 
 - **UI setup and configuration**: Launch and configure the Agent toolkit web interface
@@ -26,6 +34,22 @@ This example demonstrates how to integrate and use the web-based user interface 
 - **Connection management**: Configure HTTP and WebSocket connections for different use cases
 - **Real-time streaming**: Enable intermediate step streaming for enhanced user experience
 - **UI customization**: Customize themes, endpoints, and display options
+
+## Installation and Setup
+
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+
+### Prerequisites
+
+- NeMo Agent toolkit installed with UI dependencies
+- A running Agent toolkit server endpoint
+- Modern web browser with JavaScript enabled
+
+### Basic Setup
+
+1. Start your Agent toolkit server with any workflow configuration
+2. Launch the UI using the instructions in the quick start guide
+3. Configure connection settings to point to your server endpoint
 
 ## Quick Start
 

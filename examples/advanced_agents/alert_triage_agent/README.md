@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 # Alert Triage using Agent Intelligence Toolkit
-This example demonstrates how to build an intelligent alert triage system using AIQ toolkit and LangGraph. The system analyzes system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization. It showcases how to combine LLMs with domain-specific diagnostic tools to create an automated troubleshooting workflow.
+This example demonstrates how to build an intelligent alert triage system using NeMo Agent toolkit and LangGraph. The system analyzes system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization. It showcases how to combine LLMs with domain-specific diagnostic tools to create an automated troubleshooting workflow.
 
 ## Key Features
 
@@ -24,6 +24,14 @@ This example demonstrates how to build an intelligent alert triage system using 
 - **Dynamic Tool Selection:** Shows how the agent intelligently selects appropriate diagnostic tools based on alert type and context, demonstrating adaptive troubleshooting workflows.
 - **Structured Report Generation:** Produces markdown-formatted reports with alert summaries, collected metrics, analysis, recommended actions, and root cause categorization.
 - **Maintenance-Aware Processing:** Includes maintenance database integration to distinguish between actual issues and scheduled maintenance events.
+
+## Prerequisites
+
+Before using this alert triage agent example, ensure you meet the following requirements:
+
+- **NeMo Agent toolkit installed**: Follow the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to set up the development environment
+- **NVIDIA API Key**: Required for LLM services. See [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) for instructions
+- **Docker**: Required for live environment evaluation and testing
 
 ## Table of contents
 - [Alert Triage using Agent Intelligence Toolkit](#alert-triage-using-agent-intelligence-toolkit)
@@ -280,18 +288,18 @@ The list of evaluators can be extended or swapped out depending on your evaluati
 
 ## Installation and setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md) to create the development environment and install AIQ toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this workflow
 
-From the root directory of the AIQ toolkit library, run the following commands:
+From the root directory of the NeMo Agent toolkit library, run the following commands:
 
 ```bash
 uv pip install -e ./examples/advanced_agents/alert_triage_agent
 ```
 
 ### Set up environment variables
-As mentioned in the Install Guide, an `NVIDIA_API_KEY` environment variable is required to run AIQ toolkit.
+As mentioned in the Install Guide, an `NVIDIA_API_KEY` environment variable is required to run NeMo Agent toolkit.
 
 If you have your key in a `.env` file, use the following command to load it:
 ```bash
@@ -346,7 +354,7 @@ The example includes a Flask-based HTTP server ([`run.py`](./src/aiq_alert_triag
 To use this mode, first ensure you have configured your live environment as described in the previous section. Then:
 1. **Start the Alert Triage Server**
 
-   From the root directory of the AIQ toolkit library, run:
+   From the root directory of the NeMo Agent toolkit library, run:
    ```bash
    python examples/advanced_agents/alert_triage_agent/src/aiq_alert_triage_agent/run.py \
      --host 0.0.0.0 \
@@ -452,7 +460,9 @@ To run in offline mode:
    ```bash
    aiq run --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml --input "{your_alert_in_json_format}"
    ```
+   
    **Example:** To run the agent with a test question, use the following command:
+
    ```bash
    aiq run \
      --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml \
@@ -466,26 +476,10 @@ To run in offline mode:
        "timestamp": "2025-04-28T05:00:00.000000"
      }'
    ```
-   **Expected output:**
+
+   **Expected Workflow Result**
+   
    ```
-   2025-07-21 17:12:47,944 - aiq_alert_triage_agent - INFO - Preloaded test data from: examples/advanced_agents/alert_triage_agent/data/offline_data.csv
-   2025-07-21 17:12:47,945 - aiq_alert_triage_agent - INFO - Preloaded benign fallback data from: examples/advanced_agents/alert_triage_agent/data/benign_fallback_offline_data.json
-   2025-07-21 17:12:47,945 - aiq_alert_triage_agent - INFO - ================================================Running in offline mode=================================================
-
-   Configuration Summary:
-   --------------------
-   Workflow Type: alert_triage_agent
-   Number of Functions: 9
-   Number of LLMs: 6
-   Number of Embedders: 0
-   Number of Memory: 0
-   Number of Retrievers: 0
-
-   2025-07-21 17:12:47,960 - aiq_alert_triage_agent - INFO - Host: [test-instance-0.example.com] is NOT under maintenance according to the maintenance database
-   2025-07-21 17:14:45,234 - aiq_alert_triage_agent - INFO - Finished agent execution
-   2025-07-21 17:14:45,234 - aiq.front_ends.console.console_front_end_plugin - INFO -
-   --------------------------------------------------
-   Workflow Result:
    ## Step 1: Analyze the Alert
    The alert received is of type "InstanceDown" for the host "test-instance-0.example.com" with a critical severity. The description mentions that the instance is not available for scraping for the last 5 minutes.
 
@@ -529,10 +523,10 @@ To run in offline mode:
    false_positive
 
    The diagnostic checks, including network connectivity, monitoring processes, hardware health, and telemetry metrics analysis, all indicate that the host is operational and healthy, with no evidence to support the "InstanceDown" alert being a true indication of a problem.
-   --------------------------------------------------
-   2025-07-21 17:14:45,234 - aiq_alert_triage_agent - INFO - Cleaning up
    ```
+
    To evaluate the agent, use the following command:
+   
    ```bash
    aiq eval --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml
    ```
@@ -548,29 +542,29 @@ To run in offline mode:
 
    The output file will contain a new column named `output`, which includes the markdown report generated by the agent for each data point (i.e., each row in the CSV). Navigate to that rightmost `output` column to view the report for each test entry.
 
-   **Sample output snippet:**
-```
-## Alert Summary
-The alert received was for an "InstanceDown" event, indicating that the instance "test-instance-0.example.com" was not available for scraping for the last 5 minutes.
+   **Sample Workflow Result**
+  ```
+  ## Alert Summary
+  The alert received was for an "InstanceDown" event, indicating that the instance "test-instance-0.example.com" was not available for scraping for the last 5 minutes.
 
-## Collected Metrics
-The following metrics were collected:
-- Network connectivity check: Successful ping and telnet tests indicated that the host is reachable and the monitoring service is in place and running.
-- Monitoring process check: The telegraf service was found to be running and reporting metrics into InfluxDB.
-- Hardware check: IPMI output showed that the system's power status is ON, hardware health is normal, and there are no observed anomalies.
-- Telemetry metrics analysis: The host is up and running, and CPU usage is within normal limits.
+  ## Collected Metrics
+  The following metrics were collected:
+  - Network connectivity check: Successful ping and telnet tests indicated that the host is reachable and the monitoring service is in place and running.
+  - Monitoring process check: The telegraf service was found to be running and reporting metrics into InfluxDB.
+  - Hardware check: IPMI output showed that the system's power status is ON, hardware health is normal, and there are no observed anomalies.
+  - Telemetry metrics analysis: The host is up and running, and CPU usage is within normal limits.
 
-## Analysis
-Based on the collected metrics, it appears that the alert was a false positive. The host is currently up and running, and its CPU usage is within normal limits. The network connectivity and monitoring process checks also indicated that the host is reachable and the monitoring service is functioning.
+  ## Analysis
+  Based on the collected metrics, it appears that the alert was a false positive. The host is currently up and running, and its CPU usage is within normal limits. The network connectivity and monitoring process checks also indicated that the host is reachable and the monitoring service is functioning.
 
-## Recommended Actions
-No immediate action is required, as the host is up and running, and the alert appears to be a false positive. However, it is recommended to continue monitoring the host's performance and investigate the cause of the false positive alert to prevent similar incidents in the future.
+  ## Recommended Actions
+  No immediate action is required, as the host is up and running, and the alert appears to be a false positive. However, it is recommended to continue monitoring the host's performance and investigate the cause of the false positive alert to prevent similar incidents in the future.
 
-## Alert Status
-The alert status is "False alarm".
+  ## Alert Status
+  The alert status is "False alarm".
 
-## Root Cause Category
-false_positive
+  ## Root Cause Category
+  false_positive
 
-The alert was categorized as a false positive because all collected metrics indicated the host "test-instance-0.example.com" is up, reachable, and functioning normally, with no signs of hardware or software issues, and the monitoring services are running as expected.
-```
+  The alert was categorized as a false positive because all collected metrics indicated the host "test-instance-0.example.com" is up, reachable, and functioning normally, with no signs of hardware or software issues, and the monitoring services are running as expected.
+  ```

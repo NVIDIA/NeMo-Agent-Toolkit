@@ -19,5 +19,48 @@ limitations under the License.
 
 This directory contains configurations for running services used by the examples in this repo.
 
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Available Services](#available-services)
+- [Installation and Setup](#installation-and-setup)
+  - [Prerequisites](#prerequisites)
+  - [Running Services](#running-services)
+  - [Stopping Services](#stopping-services)
+
+## Key Features
+
+- **Docker Compose Services:** Provides pre-configured Docker Compose files for essential services used across NeMo Agent toolkit examples.
+- **Redis Service:** Includes `docker-compose.redis.yml` for running Redis memory backend with Redis Insight for memory-based examples.
+- **Phoenix Observability:** Includes `docker-compose.phoenix.yml` for running Phoenix observability server to monitor and debug workflows.
+- **Example Support Infrastructure:** Simplifies setup of supporting services required by various examples in the repository.
+
+## Available Services
+
 - **`redis`**: `docker-compose.redis.yml`
 - **`phoenix`**: `docker-compose.phoenix.yml`
+
+## Installation and Setup
+
+### Prerequisites
+
+- Docker and Docker Compose installed on your system
+
+### Running Services
+
+To start Redis (required for memory/redis examples):
+```bash
+docker compose -f examples/deploy/docker-compose.redis.yml up -d
+```
+
+To start Phoenix (for observability examples):
+```bash
+docker compose -f examples/deploy/docker-compose.phoenix.yml up -d
+```
+
+### Stopping Services
+
+```bash
+docker compose -f examples/deploy/docker-compose.redis.yml down
+docker compose -f examples/deploy/docker-compose.phoenix.yml down
+```
