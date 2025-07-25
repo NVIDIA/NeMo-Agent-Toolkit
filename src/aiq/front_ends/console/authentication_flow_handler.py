@@ -114,6 +114,7 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
                 redirect_uri=config.redirect_uri,
                 scope=" ".join(config.scope) if config.scope else None,
                 token_endpoint=config.token_url,
+                token_endpoint_auth_method=config.token_endpoint_auth_method
             )
             try:
                 flow_state.token = await client.fetch_token(url=config.token_url,

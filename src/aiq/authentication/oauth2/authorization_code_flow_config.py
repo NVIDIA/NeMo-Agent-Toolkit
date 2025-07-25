@@ -23,7 +23,10 @@ class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_a
     client_secret: str = Field(description="The secret associated with the client_id.")
     authorization_url: str = Field(description="The authorization URL for OAuth 2.0 authentication.")
     token_url: str = Field(description="The token URL for OAuth 2.0 authentication.")
-    scopes: list[str] = Field(description="The space-delimited scopes for OAuth 2.0 authentication.")
+    token_endpoint_auth_method: str = Field(description="The authentication method for the token endpoint.",
+                                            default="client_secret_post")
+    scopes: list[str] = Field(description="The space-delimited scopes for OAuth 2.0 authentication.", 
+                              default_factory=list)
 
     # Configuration for the local server that handles the redirect
     client_server_host: str = Field(default="localhost", description="Host for the local redirect server.")

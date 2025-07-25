@@ -832,6 +832,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 redirect_uri=config.redirect_uri,
                 scope=" ".join(config.scopes),
                 token_endpoint=config.token_url,
+                token_endpoint_auth_method=config.token_endpoint_auth_method
             )
 
             try:
