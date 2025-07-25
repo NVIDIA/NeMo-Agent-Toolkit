@@ -20,10 +20,7 @@ from io import StringIO
 import click
 from colorama import Fore
 
-from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import AuthenticationClientBase as OAuthClientBase
 from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.data_models.authentication import ConsentPromptMode
 from aiq.data_models.interactive import HumanPromptModelType
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import HumanResponseText
@@ -112,34 +109,3 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         # Print result
         logger.info(f"\n{'-' * 50}\n{Fore.GREEN}Workflow Result:\n%s{Fore.RESET}\n{'-' * 50}", runner_outputs)
 
-    async def user_auth_callback_console(self, oauth_client: OAuthClientBase,
-                                         consent_prompt_mode: ConsentPromptMode) -> AuthenticationError | None:
-        """
-        Callback handler for user authentication in console environments.
-
-        Args:
-            oauth_client (OAuthClientBase): The OAuth client to authenticate.
-            consent_prompt_mode (ConsentPromptMode): The consent prompt mode to use.
-
-        Returns:
-            AuthenticationError | None: The authentication error if the authentication fails, otherwise None.
-        """
-
-        from aiq.authentication.exceptions.call_back_exceptions import OAuthClientConsoleError
-        oauth_client.consent_prompt_mode = consent_prompt_mode
-
-        try:
-            # Initiate the authorization flow and persist the oauth credentials.
-            await oauth_client.initiate_authorization_flow_console()
-
-            # If credentials were not persisted, raise an error.
-            if not await oauth_client.validate_credentials():
-                raise AuthenticationError(error_code="console_auth_error", message="Failed to validate credentials")
-
-        except OAuthClientConsoleError as e:
-            error_message = f"Failed to complete Authorization Flow for: {oauth_client.config_name} Error: {str(e)}"
-            logger.error(error_message, exc_info=True)
-            await oauth_client.shut_down_code_flow_console()
-            raise AuthenticationError(error_code="console_auth_error", message=error_message) from e
-
-        return

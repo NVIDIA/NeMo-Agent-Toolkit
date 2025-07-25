@@ -84,11 +84,6 @@ class HTTPMethod(str, Enum):
     OPTIONS = "OPTIONS"
 
 
-class ConsentPromptMode(str, Enum):
-    BROWSER = "browser"
-    FRONTEND = "frontend"
-
-
 class AuthenticationEndpoint(str, Enum):
     REDIRECT_URI = "/redirect"
     PROMPT_REDIRECT_URI = "/prompt-uri"
