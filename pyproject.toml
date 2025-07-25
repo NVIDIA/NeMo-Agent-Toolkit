@@ -21,6 +21,7 @@ dependencies = [
   "aioboto3>=11.0.0",
   "click~=8.1",
   "colorama~=0.4.6",
+  "datasets~=4.0", # workaround for uv's solver choosing different versions of datasets based on sys_platform
   "expandvars~=1.0",
   "fastapi~=0.115.5",
   "httpx~=0.27",
@@ -33,8 +34,7 @@ dependencies = [
   "openpyxl~=3.1",
   "pkginfo~=1.12",
   "platformdirs~=4.3",
-  # work-around for arize-phoenix==6.1.0 incompatibility with pydantic==2.11.*, remove once we update arize-phoenix
-  "pydantic==2.10.*",
+  "pydantic==2.10.*", # work-around for arize-phoenix==6.1.0 incompatibility with pydantic==2.11.*, remove once we update arize-phoenix
   "pymilvus~=2.4",
   "PyYAML~=6.0",
   "ragas~=0.2.14",
