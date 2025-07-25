@@ -42,19 +42,32 @@ class _FlowState:
 
 
 class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
-    _flows: dict[str, _FlowState] = {}
-    _server_controller: _FastApiFrontEndController | None = None
-    _server_lock: asyncio.Lock = asyncio.Lock()
-    _active_flows: int = 0
+    def __init__(self):
+        super().__init__()
+        self._server_controller: _FastApiFrontEndController | None = None
+        self._flows: dict[str, _FlowState] = {}
+        self._active_flows = 0
+        self._server_lock: asyncio.Lock = asyncio.Lock()
+        self._oauth_client = None
 
-    @staticmethod
-    async def authenticate(config: OAuth2AuthorizationCodeFlowConfig, method: AuthFlowType) -> AuthenticatedContext:
+    async def authenticate(self, config: OAuth2AuthorizationCodeFlowConfig,
+                           method: AuthFlowType) -> AuthenticatedContext:
         if method == AuthFlowType.HTTP_BASIC:
             return ConsoleAuthenticationFlowHandler._handle_http_basic()
         elif method == AuthFlowType.OAUTH2_AUTHORIZATION_CODE:
-            return await ConsoleAuthenticationFlowHandler._handle_oauth2_auth_code_flow(config)
+            return await self._handle_oauth2_auth_code_flow(config)
 
         raise NotImplementedError(f"Authentication method '{method}' is not supported by the console frontend.")
+
+    def construct_oauth_client(self, config: OAuth2AuthorizationCodeFlowConfig) -> AsyncOAuth2Client:
+        client = AsyncOAuth2Client(client_id=config.client_id,
+                                   client_secret=config.client_secret,
+                                   redirect_uri=config.redirect_uri,
+                                   scope=" ".join(config.scopes) if config.scopes else None,
+                                   token_endpoint=config.token_url,
+                                   code_challenge_method='S256' if config.use_pkce else None)
+        self._oauth_client = client
+        return client
 
     @staticmethod
     def _handle_http_basic() -> AuthenticatedContext:
@@ -66,19 +79,11 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
                                         "username": username, "password": password
                                     })
 
-    @staticmethod
-    async def _handle_oauth2_auth_code_flow(config: OAuth2AuthorizationCodeFlowConfig) -> AuthenticatedContext:
+    async def _handle_oauth2_auth_code_flow(self, config: OAuth2AuthorizationCodeFlowConfig) -> AuthenticatedContext:
         state = secrets.token_urlsafe(16)
         flow_state = _FlowState()
 
-        client = AsyncOAuth2Client(
-            client_id=config.client_id,
-            client_secret=config.client_secret,
-            redirect_uri=config.redirect_uri,
-            scope=" ".join(config.scopes) if config.scopes else None,
-            token_endpoint=config.token_url,
-            code_challenge_method='S256' if config.use_pkce else None,
-        )
+        client = self.construct_oauth_client(config)
 
         if config.use_pkce:
             verifier, challenge = pkce.generate_pkce_pair()
@@ -92,11 +97,11 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
             code_challenge=flow_state.challenge if config.use_pkce else None
         )
 
-        async with ConsoleAuthenticationFlowHandler._server_lock:
-            if ConsoleAuthenticationFlowHandler._server_controller is None:
-                await ConsoleAuthenticationFlowHandler._start_redirect_server(config)
-            ConsoleAuthenticationFlowHandler._flows[state] = flow_state
-            ConsoleAuthenticationFlowHandler._active_flows += 1
+        async with self._server_lock:
+            if self._server_controller is None:
+                await self._start_redirect_server(config)
+            self._flows[state] = flow_state
+            self._active_flows += 1
 
         click.echo("Your browser has been opened to complete the authentication.")
         webbrowser.open(authorization_url)
@@ -106,12 +111,12 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
         except asyncio.TimeoutError:
             raise RuntimeError("Authentication flow timed out after 5 minutes.")
         finally:
-            async with ConsoleAuthenticationFlowHandler._server_lock:
-                if state in ConsoleAuthenticationFlowHandler._flows:
-                    del ConsoleAuthenticationFlowHandler._flows[state]
-                ConsoleAuthenticationFlowHandler._active_flows -= 1
-                if ConsoleAuthenticationFlowHandler._active_flows == 0:
-                    await ConsoleAuthenticationFlowHandler._stop_redirect_server()
+            async with self._server_lock:
+                if state in self._flows:
+                    del self._flows[state]
+                self._active_flows -= 1
+                if self._active_flows == 0:
+                    await self._stop_redirect_server()
 
         if flow_state.error:
             raise RuntimeError(f"Authentication failed: {flow_state.error}") from flow_state.error
@@ -125,31 +130,24 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
                                         "expires_at": token.get("expires_at"), "raw_token": token
                                     })
 
-    @staticmethod
-    async def _start_redirect_server(config: OAuth2AuthorizationCodeFlowConfig) -> None:
+    async def _start_redirect_server(self, config: OAuth2AuthorizationCodeFlowConfig) -> None:
         app = FastAPI()
 
         @app.get(config.redirect_path)
         async def handle_redirect(request: Request):
             state = request.query_params.get("state")
-            if not state or state not in ConsoleAuthenticationFlowHandler._flows:
+            if not state or state not in self._flows:
                 return "Invalid state. Please restart the authentication process."
 
-            flow_state = ConsoleAuthenticationFlowHandler._flows[state]
+            flow_state = self._flows[state]
             verifier = flow_state.verifier
 
-            client = AsyncOAuth2Client(client_id=config.client_id,
-                                       client_secret=config.client_secret,
-                                       redirect_uri=config.redirect_uri,
-                                       scope=" ".join(config.scopes) if config.scopes else None,
-                                       token_endpoint=config.token_url,
-                                       token_endpoint_auth_method=config.token_endpoint_auth_method,
-                                       code_challenge_method='S256' if config.use_pkce else None)
             try:
-                flow_state.token = await client.fetch_token(url=config.token_url,
-                                                            authorization_response=str(request.url),
-                                                            code_verifier=verifier if config.use_pkce else None,
-                                                            state=state)
+                flow_state.token = await self._oauth_client.fetch_token(
+                    url=config.token_url,
+                    authorization_response=str(request.url),
+                    code_verifier=verifier if config.use_pkce else None,
+                    state=state)
             except Exception as e:
                 flow_state.error = e
             finally:
@@ -157,13 +155,12 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
             return "Authentication successful! You can close this window."
 
         controller = _FastApiFrontEndController(app)
-        ConsoleAuthenticationFlowHandler._server_controller = controller
+        self._server_controller = controller
 
         asyncio.create_task(controller.start_server(host=config.client_server_host, port=config.client_server_port))
         await asyncio.sleep(1)
 
-    @staticmethod
-    async def _stop_redirect_server():
-        if ConsoleAuthenticationFlowHandler._server_controller:
-            await ConsoleAuthenticationFlowHandler._server_controller.stop_server()
-            ConsoleAuthenticationFlowHandler._server_controller = None
+    async def _stop_redirect_server(self):
+        if self._server_controller:
+            await self._server_controller.stop_server()
+            self._server_controller = None

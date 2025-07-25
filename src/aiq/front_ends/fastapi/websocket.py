@@ -44,7 +44,8 @@ logger = logging.getLogger(__name__)
 class AIQWebSocket(WebSocketEndpoint):
     encoding = "json"
 
-    def __init__(self, session_manager: AIQSessionManager, step_adaptor: StepAdaptor, *args, **kwargs):
+    def __init__(self, session_manager: AIQSessionManager, step_adaptor: StepAdaptor,
+                 ws_flow_handler: WebSocketAuthenticationFlowHandler, *args, **kwargs):
         self._session_manager: AIQSessionManager = session_manager
         self._message_handler: MessageHandler = MessageHandler(self)
         self._process_response_event: asyncio.Event = asyncio.Event()
@@ -58,6 +59,7 @@ class AIQWebSocket(WebSocketEndpoint):
         super().__init__(*args, **kwargs)
         # Register the WebSocket instance with the authentication flow handler
         WebSocketAuthenticationFlowHandler.web_socket = self
+        self._flow_handler = ws_flow_handler
 
     @property
     def workflow_schema_type(self) -> dict[str, Callable[..., Awaitable[Any]]]:
@@ -124,7 +126,7 @@ class AIQWebSocket(WebSocketEndpoint):
         async with self._session_manager.session(
                 conversation_id=conversation_id,
                 user_input_callback=self._message_handler.human_interaction,
-                user_authentication_callback=WebSocketAuthenticationFlowHandler.authenticate) as session:
+                user_authentication_callback=self._flow_handler.authenticate) as session:
 
             async for value in generate_streaming_response(payload,
                                                            session_manager=session,

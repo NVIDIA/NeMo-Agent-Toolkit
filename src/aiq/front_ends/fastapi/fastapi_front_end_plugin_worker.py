@@ -51,6 +51,7 @@ from aiq.eval.config import EvaluationRunOutput
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
 from aiq.front_ends.fastapi.auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
+from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQAsyncGenerateResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQAsyncGenerationStatusResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateRequest
@@ -82,6 +83,8 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
         self._cleanup_tasks: list[str] = []
         self._cleanup_tasks_lock = asyncio.Lock()
+        self._ws_flow_handler: WebSocketAuthenticationFlowHandler | None = WebSocketAuthenticationFlowHandler()
+        self._http_flow_handler: HTTPAuthenticationFlowHandler | None = HTTPAuthenticationFlowHandler()
 
     @property
     def config(self) -> AIQConfig:
@@ -517,7 +520,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         if (endpoint.websocket_path):
             app.add_websocket_route(endpoint.websocket_path,
-                                    partial(AIQWebSocket, session_manager, self.get_step_adaptor()))
+                                    partial(AIQWebSocket, session_manager, self.get_step_adaptor(),
+                                            self._ws_flow_handler))
 
         GenerateBodyType = workflow.input_schema  # pylint: disable=invalid-name
         GenerateStreamResponseType = workflow.streaming_output_schema  # pylint: disable=invalid-name
@@ -569,8 +573,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                async with session_manager.session(
-                        request=request, user_authentication_callback=HTTPAuthenticationFlowHandler.authenticate):
+                async with session_manager.session(request=request,
+                                                   user_authentication_callback=self._http_flow_handler.authenticate):
 
                     return await generate_single_response(None, session_manager, result_type=result_type)
 
@@ -580,8 +584,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def get_stream(request: Request):
 
-                async with session_manager.session(
-                        request=request, user_authentication_callback=HTTPAuthenticationFlowHandler.authenticate):
+                async with session_manager.session(request=request,
+                                                   user_authentication_callback=self._http_flow_handler.authenticate):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
@@ -615,8 +619,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 response.headers["Content-Type"] = "application/json"
 
-                async with session_manager.session(
-                        request=request, user_authentication_callback=HTTPAuthenticationFlowHandler.authenticate):
+                async with session_manager.session(request=request,
+                                                   user_authentication_callback=self._http_flow_handler.authenticate):
 
                     return await generate_single_response(payload, session_manager, result_type=result_type)
 
@@ -629,8 +633,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             async def post_stream(request: Request, payload: request_type):
 
-                async with session_manager.session(
-                        request=request, user_authentication_callback=HTTPAuthenticationFlowHandler.authenticate):
+                async with session_manager.session(request=request,
+                                                   user_authentication_callback=self._http_flow_handler.authenticate):
 
                     return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
                                              content=generate_streaming_response_as_str(
@@ -982,7 +986,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def add_authorization_route(self, app: FastAPI):
 
-        from authlib.integrations.httpx_client import AsyncOAuth2Client
         from fastapi.responses import HTMLResponse
 
         from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
@@ -998,20 +1001,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 HTMLResponse: A response indicating the success of the authentication flow.
             """
             state = request.query_params.get("state")
-            if not state or state not in WebSocketAuthenticationFlowHandler._flows:
+            if not state or state not in self._ws_flow_handler._flows:
                 return "Invalid state. Please restart the authentication process."
 
-            flow_state = WebSocketAuthenticationFlowHandler._flows[state]
-            config = WebSocketAuthenticationFlowHandler._configs[state]
+            flow_state = self._ws_flow_handler._flows[state]
+            config = self._ws_flow_handler._configs[state]
             verifier = flow_state.verifier
-
-            client = AsyncOAuth2Client(client_id=config.client_id,
-                                       client_secret=config.client_secret,
-                                       redirect_uri=config.redirect_uri,
-                                       scope=" ".join(config.scopes) if config.scopes else None,
-                                       token_endpoint=config.token_url,
-                                       token_endpoint_auth_method=config.token_endpoint_auth_method,
-                                       code_challenge_method='S256' if config.use_pkce else None)
+            client = self._ws_flow_handler._oauth_client
 
             try:
                 flow_state.token = await client.fetch_token(url=config.token_url,

@@ -13,29 +13,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 
 import pytest
-from pydantic import ValidationError, parse_obj_as
+from pydantic import ValidationError
+from pydantic import parse_obj_as
 
-from aiq.data_models.authentication import (
-    # enums
-    CredentialLocation,
-    AuthFlowType,
-    HeaderAuthScheme,
-    HTTPMethod,
-    AuthenticationEndpoint,
-    CredentialKind,
-    # models
-    AuthenticatedContext,
-    HeaderCred,
-    QueryCred,
-    CookieCred,
-    BasicAuthCred,
-    BearerTokenCred,
-    Credential,
-    AuthResult,
-)
+from aiq.data_models.authentication import AuthenticatedContext  # enums; models
+from aiq.data_models.authentication import AuthenticationEndpoint
+from aiq.data_models.authentication import AuthFlowType
+from aiq.data_models.authentication import AuthResult
+from aiq.data_models.authentication import BasicAuthCred
+from aiq.data_models.authentication import BearerTokenCred
+from aiq.data_models.authentication import CookieCred
+from aiq.data_models.authentication import Credential
+from aiq.data_models.authentication import CredentialKind
+from aiq.data_models.authentication import CredentialLocation
+from aiq.data_models.authentication import HeaderAuthScheme
+from aiq.data_models.authentication import HeaderCred
+from aiq.data_models.authentication import HTTPMethod
+from aiq.data_models.authentication import QueryCred
+
 
 # --------------------------------------------------------------------------- #
 # ENUM COVERAGE
@@ -109,15 +109,25 @@ def test_authenticated_context_extra_forbidden():
 @pytest.mark.parametrize(
     "payload, expected_cls",
     [
-        ({"kind": "header", "name": "X-API-Key", "value": "secret"}, HeaderCred),
-        ({"kind": "query", "name": "token", "value": "abc"}, QueryCred),
-        ({"kind": "cookie", "name": "session", "value": "xyz"}, CookieCred),
+        ({
+            "kind": "header", "name": "X-API-Key", "value": "secret"
+        }, HeaderCred),
+        ({
+            "kind": "query", "name": "token", "value": "abc"
+        }, QueryCred),
+        ({
+            "kind": "cookie", "name": "session", "value": "xyz"
+        }, CookieCred),
         (
-            {"kind": "basic_auth", "username": "u", "password": "p"},
+            {
+                "kind": "basic_auth", "username": "u", "password": "p"
+            },
             BasicAuthCred,
         ),
         (
-            {"kind": "bearer_token", "token": "tok"},
+            {
+                "kind": "bearer_token", "token": "tok"
+            },
             BearerTokenCred,
         ),
     ],
@@ -133,7 +143,9 @@ def test_credential_invalid_kind():
     with pytest.raises(ValidationError):
         parse_obj_as(
             Credential,
-            {"kind": "unknown", "name": "X", "value": "oops"},
+            {
+                "kind": "unknown", "name": "X", "value": "oops"
+            },
         )
 
 
@@ -173,8 +185,12 @@ def test_attach_merges_in_place():
     res = AuthResult(credentials=creds)
 
     target = {
-        "headers": {"User-Agent": "pytest"},
-        "params": {"existing": "param"},
+        "headers": {
+            "User-Agent": "pytest"
+        },
+        "params": {
+            "existing": "param"
+        },
     }
     res.attach(target)
 
@@ -190,7 +206,7 @@ def test_attach_merges_in_place():
 @pytest.mark.parametrize(
     "delta, expected",
     [
-        (-1, True),   # expired
+        (-1, True),  # expired
         (+10, False),  # not expired
         (None, False),  # no expiry supplied
     ],

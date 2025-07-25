@@ -50,6 +50,12 @@ async def prompt_for_input_cli(question: InteractionPrompt) -> HumanResponse:
 
 class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
 
+    def __init__(self, full_config):
+        super().__init__(full_config=full_config)
+
+        # Set the authentication flow handler
+        self.auth_flow_handler = ConsoleAuthenticationFlowHandler()
+
     async def pre_run(self):
 
         if (not self.front_end_config.input_query and not self.front_end_config.input_file):
@@ -84,7 +90,7 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
 
                 async with session_manager.session(
                         user_input_callback=prompt_for_input_cli,
-                        user_authentication_callback=ConsoleAuthenticationFlowHandler.authenticate) as session:
+                        user_authentication_callback=self.auth_flow_handler.authenticate) as session:
                     async with session.run(query) as runner:
                         base_output = await runner.result(to_type=str)
 
