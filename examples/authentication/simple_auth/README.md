@@ -104,6 +104,51 @@ to deploy the UI that works with the agent in this example. Configure it accordi
 
 ## Update Your Agent Configuration
 
+Update your agent's configuration file located at `examples/authentication/simple_auth/confgis/config.yml` to include the OAuth 2.0 settings. 
+
+Here is an example configuration. You should only need to modify the `client_id` and `client_secret` fields with the 
+values you copied from the dummy client registration step above.
+
+```yaml
+authentication:
+  test_auth_provider:
+    _type: oauth2_authorization_code 
+    client_server_host: "localhost"
+    client_server_port: 8000
+    authorization_url: http://127.0.0.1:5000/oauth/authorize
+    token_url: http://127.0.0.1:5000/oauth/token
+    token_endpoint_auth_method: client_secret_post
+    scope:
+      - openid
+      - profile
+      - email
+    client_id: <YOUR COPIED CLIENT ID>
+    client_secret: <YOUR COPIED CLIENT SECRET>
+```
+
 ## Serve The Agent
 
+In a new terminal, serve the agent using the following command:
+
+```bash
+aiq serve --config_file=examples/authentication/simple_auth/configs/config.yml
+```
+
+This will start a FastAPI server on `http://localhost:8000` that listens for requests from the UI and 
+handles authentication.
+
 ## Query the Agent
+
+Open the NeMo Agent Toolkit UI in your browser at `http://localhost:3000`. Ensure settings are configured correctly to point to your agent's API endpoint at `http://localhost:8000` and
+the WebSocket URL at `ws://127.0.0.1:8000/websocket`. 
+
+Close the settings window. In your chat window, ensure that `Websocket` mode is enabled by navigating to the top-right corner and selecting the `Websocket` option in the arrow pop-out. 
+
+Once you've successfully connected to the websocket, you can start querying the agent. Asking the agent the following query should initiate the demonstrative authentication flow and then return
+information about the IP address in question: 
+
+```text
+Can you give me information about the IP address 8.8.8.8 ? 
+```
+
+**Tip**: Remember to enable pop-ups in your browser to allow the OAuth 2.0 provider to open a new window for authentication.
