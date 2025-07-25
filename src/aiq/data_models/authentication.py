@@ -89,60 +89,6 @@ class AuthenticationEndpoint(str, Enum):
     PROMPT_REDIRECT_URI = "/prompt-uri"
 
 
-class PromptRedirectRequest(BaseModel):
-    consent_prompt_key: str = Field(description="The key used to retrieve the consent prompt 302 redirect, "
-                                    " triggering the browser to complete the OAuth process from the front end.")
-
-
-class OAuth2AuthorizationQueryParams(BaseModel):
-    """
-    Base Query Params for initiating authorization request (used in redirect-based flows).
-    """
-    model_config = ConfigDict(extra="forbid")
-    client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
-    audience: str = Field(description="The resource server the token is intended for.")
-    state: str = Field(description="Opaque value to maintain state between request and callback.")
-    redirect_uri: str = Field(description="Registered redirect URI for callback.")
-    response_type: str = Field(description="The type of response expected, e.g., 'code' or 'token'.")
-    scope: str = Field(description="Space-delimited list of requested scopes.")
-    prompt: str = Field(description="Type of consent prompt to show the user.")
-    code_challenge: str | None = Field(description="PKCE code challenge.", default=None)
-    code_challenge_method: str | None = Field(description="PKCE challenge method (e.g., 'S256').", default=None)
-
-
-class OAuth2TokenRequest(BaseModel):
-    """
-    Base OAuth 2.0 request body for exchanging access codes for access tokens.
-    """
-    model_config = ConfigDict(extra="forbid")
-    grant_type: str = Field(
-        description="OAuth 2.0 grant type identifier (e.g., 'authorization_code', 'client_credentials').")
-    client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
-    client_secret: str = Field(description="The client secret for OAuth 2.0 authentication.")
-    redirect_uri: str = Field(description="Registered redirect uri.")
-    code: str = Field(
-        description="Authorization code to be exchanged for an access token (if using authorization_code flow). "
-        "NOTE: Field must be named code or a HTTP 400 status error will be thrown. ")
-    refresh_token: str | None = Field(description="Refresh token (if using refresh_token flow).", default=None)
-    device_code: str | None = Field(description="Device code (if using device_code flow).", default=None)
-    username: str | None = Field(description="Resource owner username (if using password flow).", default=None)
-    password: str | None = Field(description="Resource owner password (if using password flow).", default=None)
-    scope: str | None = Field(description="Optional scopes for client_credentials/password flows.", default=None)
-    code_verifier: str | None = Field(description="PKCE code verifier (for authorization_code + PKCE).", default=None)
-
-
-class RefreshTokenRequest(BaseModel):
-    """
-    OAuth 2.0 request body for exchanging refresh tokens for access tokens.
-    """
-    model_config = ConfigDict(extra="forbid")
-    grant_type: str = Field(default="refresh_token", description="Authorization flow identifier.", frozen=True)
-    client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
-    client_secret: str = Field(description="The client secret for OAuth 2.0 authentication.")
-    refresh_token: str = Field(
-        description="The refresh token for OAuth 2.0 authentication used to obtain a new access token.")
-
-
 ####################
 # OUTPUT TYPES
 ####################
