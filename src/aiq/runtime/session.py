@@ -26,7 +26,9 @@ from fastapi import Request
 from aiq.builder.context import AIQContext
 from aiq.builder.context import AIQContextState
 from aiq.builder.workflow import Workflow
-from aiq.data_models.authentication import AuthFlowType, AuthenticationBaseConfig, AuthenticatedContext
+from aiq.data_models.authentication import AuthenticatedContext
+from aiq.data_models.authentication import AuthenticationBaseConfig
+from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
