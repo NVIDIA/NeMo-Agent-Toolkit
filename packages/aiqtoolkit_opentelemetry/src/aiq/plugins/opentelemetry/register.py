@@ -110,15 +110,24 @@ async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builde
 
     from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
+    # Default resource attributes
+    default_resource_attributes = {
+        "telemetry.sdk.language": "python",
+        "telemetry.sdk.name": "opentelemetry",
+        "telemetry.sdk.version": "1.35.0",
+        "service.name": config.project,
+    }
+
+    # Merge defaults with config, giving precedence to config
+    merged_resource_attributes = {**default_resource_attributes, **config.resource_attributes}
+
     yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
+                                  resource_attributes=merged_resource_attributes,
                                   batch_size=config.batch_size,
                                   flush_interval=config.flush_interval,
                                   max_queue_size=config.max_queue_size,
                                   drop_on_overflow=config.drop_on_overflow,
-                                  shutdown_timeout=config.shutdown_timeout,
-                                  resource_attributes={
-                                      "service.name": config.project,
-                                  })
+                                  shutdown_timeout=config.shutdown_timeout)
 
 
 class PatronusTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="patronus"):

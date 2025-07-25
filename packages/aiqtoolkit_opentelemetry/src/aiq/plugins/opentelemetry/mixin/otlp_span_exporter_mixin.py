@@ -49,9 +49,8 @@ class OTLPSpanExporterMixin:
             endpoint: OTLP service endpoint URL.
             headers: HTTP headers for authentication and metadata.
         """
-        super().__init__(*args, **kwargs)
-
         self._exporter = OTLPSpanExporter(endpoint=endpoint, headers=headers)
+        super().__init__(*args, **kwargs)
 
     async def export_otel_spans(self, spans: list[OtelSpan]) -> None:
         """Export a list of OtelSpans using the OTLP exporter.
