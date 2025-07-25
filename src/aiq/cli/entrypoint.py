@@ -34,6 +34,7 @@ from .commands.configure.configure import configure_command
 from .commands.evaluate import eval_command
 from .commands.info.info import info_command
 from .commands.registry.registry import registry_command
+from .commands.sizing.sizing import sizing
 from .commands.start import start_command
 from .commands.uninstall import uninstall_command
 from .commands.validate import validate_command
@@ -105,6 +106,7 @@ cli.add_command(start_command, name="start")
 cli.add_command(uninstall_command, name="uninstall")
 cli.add_command(validate_command, name="validate")
 cli.add_command(workflow_command, name="workflow")
+cli.add_command(sizing, name="sizing")
 
 # Aliases
 cli.add_command(start_command.get_command(None, "console"), name="run")  # type: ignore

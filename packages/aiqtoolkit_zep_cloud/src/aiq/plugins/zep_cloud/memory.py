@@ -16,9 +16,11 @@
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_memory
 from aiq.data_models.memory import MemoryBaseConfig
+from aiq.data_models.retry_mixin import RetryMixin
+from aiq.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
-class ZepMemoryClientConfig(MemoryBaseConfig, name="zep_memory"):
+class ZepMemoryClientConfig(MemoryBaseConfig, RetryMixin, name="zep_memory"):
     base_url: str | None = None
     timeout: float | None = None
     follow_redirects: bool | None = None
@@ -42,5 +44,11 @@ async def zep_memory_client(config: ZepMemoryClientConfig, builder: Builder):
                           timeout=config.timeout,
                           follow_redirects=config.follow_redirects)
     memory_editor = ZepEditor(zep_client)
+
+    if isinstance(config, RetryMixin):
+        memory_editor = patch_with_retry(memory_editor,
+                                         retries=config.num_retries,
+                                         retry_codes=config.retry_on_status_codes,
+                                         retry_on_messages=config.retry_on_errors)
 
     yield memory_editor

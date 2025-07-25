@@ -150,9 +150,9 @@ async def ReWOO_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
     else:
 
         async def _str_api_fn(input_message: str) -> str:
-            oai_input = GlobalTypeConverter.get().convert(input_message, to_type=AIQChatRequest)
+            oai_input = GlobalTypeConverter.get().try_convert(input_message, to_type=AIQChatRequest)
             oai_output = await _response_fn(oai_input)
 
-            return GlobalTypeConverter.get().convert(oai_output, to_type=str)
+            return GlobalTypeConverter.get().try_convert(oai_output, to_type=str)
 
         yield FunctionInfo.from_fn(_str_api_fn, description=config.description)

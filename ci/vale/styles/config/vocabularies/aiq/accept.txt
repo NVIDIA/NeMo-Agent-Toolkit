@@ -11,6 +11,7 @@ arXiv
 [Aa]sync
 [Aa]utoencoder
 [Aa]nonymize(d?)
+[Bb]ackoff
 [Bb]ackpressure
 [Bb]atcher
 [Bb]oolean
@@ -39,6 +40,7 @@ CuPy
 Cython
 Dask
 Databricks
+Datadog
 DB(s?)
 [Dd]eserialize
 [Dd]ev
@@ -100,6 +102,7 @@ PDF(s?)
 Pydantic
 PyPI
 pytest
+[Rr]edis
 [Rr]einstall(s?)
 [Rr]eplatform(ing)?
 [Rr]epo
@@ -121,7 +124,9 @@ Tavily
 triages
 [Uu]nencrypted
 [Uu]nittest(s?)
+[Uu]nprocessable
 [Uu]ploader
+[Uu]psert
 uv
 VectorDB
 [Ww]alkthrough

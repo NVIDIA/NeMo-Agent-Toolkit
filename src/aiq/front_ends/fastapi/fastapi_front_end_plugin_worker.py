@@ -31,6 +31,7 @@ from fastapi import Body
 from fastapi import FastAPI
 from fastapi import Request
 from fastapi import Response
+from fastapi import UploadFile
 from fastapi.exceptions import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -44,6 +45,8 @@ from aiq.data_models.api_server import AIQChatResponseChunk
 from aiq.data_models.api_server import AIQResponseIntermediateStep
 from aiq.data_models.authentication import AuthenticationEndpoint
 from aiq.data_models.config import AIQConfig
+from aiq.data_models.object_store import KeyAlreadyExistsError
+from aiq.data_models.object_store import NoSuchKeyError
 from aiq.eval.config import EvaluationRunOutput
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
@@ -61,6 +64,7 @@ from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
 from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
 from aiq.front_ends.fastapi.websocket import AIQWebSocket
+from aiq.object_store.models import ObjectStoreItem
 from aiq.runtime.session import AIQSessionManager
 
 logger = logging.getLogger(__name__)
@@ -236,6 +240,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         await self.add_default_route(app, AIQSessionManager(builder.build()))
         await self.add_evaluate_route(app, AIQSessionManager(builder.build()))
+        await self.add_static_files_route(app, builder)
         await self.add_authorization_route(app)
 
         for ep in self.front_end_config.endpoints:
@@ -409,6 +414,100 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 responses={500: response_500},
             )
 
+    async def add_static_files_route(self, app: FastAPI, builder: WorkflowBuilder):
+
+        if not self.front_end_config.object_store:
+            logger.debug("No object store configured, skipping static files route")
+            return
+
+        object_store_client = await builder.get_object_store_client(self.front_end_config.object_store)
+
+        def sanitize_path(path: str) -> str:
+            sanitized_path = os.path.normpath(path.strip("/"))
+            if sanitized_path == ".":
+                raise HTTPException(status_code=400, detail="Invalid file path.")
+            filename = os.path.basename(sanitized_path)
+            if not filename:
+                raise HTTPException(status_code=400, detail="Filename cannot be empty.")
+            return sanitized_path
+
+        # Upload static files to the object store; if key is present, it will fail with 409 Conflict
+        async def add_static_file(file_path: str, file: UploadFile):
+            sanitized_file_path = sanitize_path(file_path)
+            file_data = await file.read()
+
+            try:
+                await object_store_client.put_object(sanitized_file_path,
+                                                     ObjectStoreItem(data=file_data, content_type=file.content_type))
+            except KeyAlreadyExistsError as e:
+                raise HTTPException(status_code=409, detail=str(e)) from e
+
+            return {"filename": sanitized_file_path}
+
+        # Upsert static files to the object store; if key is present, it will overwrite the file
+        async def upsert_static_file(file_path: str, file: UploadFile):
+            sanitized_file_path = sanitize_path(file_path)
+            file_data = await file.read()
+
+            await object_store_client.upsert_object(sanitized_file_path,
+                                                    ObjectStoreItem(data=file_data, content_type=file.content_type))
+
+            return {"filename": sanitized_file_path}
+
+        # Get static files from the object store
+        async def get_static_file(file_path: str):
+
+            try:
+                file_data = await object_store_client.get_object(file_path)
+            except NoSuchKeyError as e:
+                raise HTTPException(status_code=404, detail=str(e)) from e
+
+            filename = file_path.split("/")[-1]
+
+            async def reader():
+                yield file_data.data
+
+            return StreamingResponse(reader(),
+                                     media_type=file_data.content_type,
+                                     headers={"Content-Disposition": f"attachment; filename={filename}"})
+
+        async def delete_static_file(file_path: str):
+            try:
+                await object_store_client.delete_object(file_path)
+            except NoSuchKeyError as e:
+                raise HTTPException(status_code=404, detail=str(e)) from e
+
+            return Response(status_code=204)
+
+        # Add the static files route to the FastAPI app
+        app.add_api_route(
+            path="/static/{file_path:path}",
+            endpoint=add_static_file,
+            methods=["POST"],
+            description="Upload a static file to the object store",
+        )
+
+        app.add_api_route(
+            path="/static/{file_path:path}",
+            endpoint=upsert_static_file,
+            methods=["PUT"],
+            description="Upsert a static file to the object store",
+        )
+
+        app.add_api_route(
+            path="/static/{file_path:path}",
+            endpoint=get_static_file,
+            methods=["GET"],
+            description="Get a static file from the object store",
+        )
+
+        app.add_api_route(
+            path="/static/{file_path:path}",
+            endpoint=delete_static_file,
+            methods=["DELETE"],
+            description="Delete a static file from the object store",
+        )
+
     async def add_route(self,
                         app: FastAPI,
                         endpoint: FastApiFrontEndConfig.EndpointBase,
@@ -564,6 +663,66 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                              filter_steps=filter_steps))
 
             return post_stream
+
+        def post_openai_api_compatible_endpoint(request_type: type):
+            """
+            OpenAI-compatible endpoint that handles both streaming and non-streaming
+            based on the 'stream' parameter in the request.
+            """
+
+            async def post_openai_api_compatible(response: Response, request: Request, payload: request_type):
+                # Check if streaming is requested
+                stream_requested = getattr(payload, 'stream', False)
+
+                async with session_manager.session(request=request):
+                    if stream_requested:
+                        # Return streaming response
+                        return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                                 content=generate_streaming_response_as_str(
+                                                     payload,
+                                                     session_manager=session_manager,
+                                                     streaming=True,
+                                                     step_adaptor=self.get_step_adaptor(),
+                                                     result_type=AIQChatResponseChunk,
+                                                     output_type=AIQChatResponseChunk))
+                    else:
+                        # Return single response - check if workflow supports non-streaming
+                        try:
+                            response.headers["Content-Type"] = "application/json"
+                            return await generate_single_response(payload, session_manager, result_type=AIQChatResponse)
+                        except ValueError as e:
+                            if "Cannot get a single output value for streaming workflows" in str(e):
+                                # Workflow only supports streaming, but client requested non-streaming
+                                # Fall back to streaming and collect the result
+                                chunks = []
+                                async for chunk_str in generate_streaming_response_as_str(
+                                        payload,
+                                        session_manager=session_manager,
+                                        streaming=True,
+                                        step_adaptor=self.get_step_adaptor(),
+                                        result_type=AIQChatResponseChunk,
+                                        output_type=AIQChatResponseChunk):
+                                    if chunk_str.startswith("data: ") and not chunk_str.startswith("data: [DONE]"):
+                                        chunk_data = chunk_str[6:].strip()  # Remove "data: " prefix
+                                        if chunk_data:
+                                            try:
+                                                chunk_json = AIQChatResponseChunk.model_validate_json(chunk_data)
+                                                if (chunk_json.choices and len(chunk_json.choices) > 0
+                                                        and chunk_json.choices[0].delta
+                                                        and chunk_json.choices[0].delta.content is not None):
+                                                    chunks.append(chunk_json.choices[0].delta.content)
+                                            except Exception:
+                                                continue
+
+                                # Create a single response from collected chunks
+                                content = "".join(chunks)
+                                single_response = AIQChatResponse.from_string(content)
+                                response.headers["Content-Type"] = "application/json"
+                                return single_response
+                            else:
+                                raise
+
+            return post_openai_api_compatible
 
         async def run_generation(job_id: str,
                                  payload: typing.Any,
@@ -778,26 +937,45 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             elif (endpoint.method == "POST"):
 
-                app.add_api_route(
-                    path=endpoint.openai_api_path,
-                    endpoint=post_single_endpoint(request_type=AIQChatRequest, result_type=AIQChatResponse),
-                    methods=[endpoint.method],
-                    response_model=AIQChatResponse,
-                    description=endpoint.description,
-                    responses={500: response_500},
-                )
+                # Check if OpenAI v1 compatible endpoint is configured
+                openai_v1_path = getattr(endpoint, 'openai_api_v1_path', None)
 
-                app.add_api_route(
-                    path=f"{endpoint.openai_api_path}/stream",
-                    endpoint=post_streaming_endpoint(request_type=AIQChatRequest,
-                                                     streaming=True,
-                                                     result_type=AIQChatResponseChunk,
-                                                     output_type=AIQChatResponseChunk),
-                    methods=[endpoint.method],
-                    response_model=AIQChatResponseChunk | AIQResponseIntermediateStep,
-                    description=endpoint.description,
-                    responses={500: response_500},
-                )
+                # Always create legacy endpoints for backward compatibility (unless they conflict with v1 path)
+                if not openai_v1_path or openai_v1_path != endpoint.openai_api_path:
+                    # <openai_api_path> = non-streaming (legacy behavior)
+                    app.add_api_route(
+                        path=endpoint.openai_api_path,
+                        endpoint=post_single_endpoint(request_type=AIQChatRequest, result_type=AIQChatResponse),
+                        methods=[endpoint.method],
+                        response_model=AIQChatResponse,
+                        description=endpoint.description,
+                        responses={500: response_500},
+                    )
+
+                    # <openai_api_path>/stream = streaming (legacy behavior)
+                    app.add_api_route(
+                        path=f"{endpoint.openai_api_path}/stream",
+                        endpoint=post_streaming_endpoint(request_type=AIQChatRequest,
+                                                         streaming=True,
+                                                         result_type=AIQChatResponseChunk,
+                                                         output_type=AIQChatResponseChunk),
+                        methods=[endpoint.method],
+                        response_model=AIQChatResponseChunk | AIQResponseIntermediateStep,
+                        description=endpoint.description,
+                        responses={500: response_500},
+                    )
+
+                # Create OpenAI v1 compatible endpoint if configured
+                if openai_v1_path:
+                    # OpenAI v1 Compatible Mode: Create single endpoint that handles both streaming and non-streaming
+                    app.add_api_route(
+                        path=openai_v1_path,
+                        endpoint=post_openai_api_compatible_endpoint(request_type=AIQChatRequest),
+                        methods=[endpoint.method],
+                        response_model=AIQChatResponse | AIQChatResponseChunk,
+                        description=f"{endpoint.description} (OpenAI Chat Completions API compatible)",
+                        responses={500: response_500},
+                    )
 
             else:
                 raise ValueError(f"Unsupported method {endpoint.method}")

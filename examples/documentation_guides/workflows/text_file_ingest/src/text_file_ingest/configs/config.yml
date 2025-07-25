@@ -56,15 +56,14 @@ workflow:
   tool_names: [doca_documents, current_datetime]
   llm_name: nim_llm
   verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  parse_agent_response_max_retries: 3
 
 eval:
   general:
-    output_dir: ./.tmp/aiq/examples/basic/functions/simple/
+    output_dir: ./.tmp/aiq/examples/getting_started/simple_web_query/
     dataset:
       _type: json
-      file_path: examples/basic/functions/simple/data/langsmith.json
+      file_path: examples/getting_started/simple_web_query/data/langsmith.json
     profiler:
       fit_model: True
 

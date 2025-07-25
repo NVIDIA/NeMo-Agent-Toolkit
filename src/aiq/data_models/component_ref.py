@@ -124,6 +124,17 @@ class MemoryRef(ComponentRef):
         return ComponentGroup.MEMORY
 
 
+class ObjectStoreRef(ComponentRef):
+    """
+    A reference to an object store in an AIQ toolkit configuration object.
+    """
+
+    @property
+    @typing.override
+    def component_group(self):
+        return ComponentGroup.OBJECT_STORES
+
+
 class RetrieverRef(ComponentRef):
     """
     A reference to a retriever in an AIQ Toolkit configuration object.
@@ -144,3 +155,14 @@ class AuthenticationRef(ComponentRef):
     @override
     def component_group(self):
         return ComponentGroup.AUTHENTICATION
+
+
+class ITSStrategyRef(ComponentRef):
+    """
+    A reference to an ITS strategy in an AgentIQ configuration object.
+    """
+
+    @property
+    @override
+    def component_group(self):
+        return ComponentGroup.ITS_STRATEGIES

@@ -123,7 +123,7 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
    ```
 
    > [!NOTE]
-   > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/basic/functions/simple/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
+   > Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `aiqtoolkit-langchain` plugin if you haven't already done so.
 
 
 
@@ -173,10 +173,8 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
       llm_name: nim_llm
       # Make it verbose
       verbose: true
-      # Retry parsing errors because LLMs are non-deterministic
-      retry_parsing_errors: true
       # Retry up to 3 times
-      max_retries: 3
+      parse_agent_response_max_retries: 3
    ```
 
 3. Run the Hello World example using the `aiq` CLI and the `workflow.yaml` file.
