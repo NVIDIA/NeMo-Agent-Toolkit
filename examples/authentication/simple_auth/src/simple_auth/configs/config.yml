@@ -48,8 +48,9 @@ authentication:
       - openid
       - profile
       - email
-    client_id: zHahts9MDgHLZ1vXv9iJ9lqH
-    client_secret: vPGkGDgUmE0PsmN9R3zOUI8rXQu44v71FQmJ8Ucf4KnbdZCg
+    client_id: <YOUR CLIENT ID>
+    client_secret: <YOUR CLIENT SECRET>
+    use_pkce: true
 
 workflow:
   _type: react_agent

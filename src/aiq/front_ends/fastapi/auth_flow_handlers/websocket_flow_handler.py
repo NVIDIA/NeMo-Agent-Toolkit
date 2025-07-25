@@ -18,6 +18,7 @@ import secrets
 from dataclasses import dataclass
 from dataclasses import field
 
+import pkce
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 
 from aiq.authentication.interfaces import FlowHandlerBase
@@ -33,6 +34,8 @@ class _FlowState:
     event: asyncio.Event = field(default_factory=asyncio.Event, init=False)
     token: dict | None = None
     error: Exception | None = None
+    challenge: str | None = None
+    verifier: str | None = None
 
 
 class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
@@ -61,9 +64,20 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
             redirect_uri=config.redirect_uri,
             scope=" ".join(config.scopes) if config.scopes else None,
             token_endpoint=config.token_url,
+            code_challenge_method='S256' if config.use_pkce else None,
         )
 
-        authorization_url, _ = client.create_authorization_url(config.authorization_url, state=state)
+        if config.use_pkce:
+            verifier, challenge = pkce.generate_pkce_pair()
+            flow_state.verifier = verifier
+            flow_state.challenge = challenge
+
+        authorization_url, _ = client.create_authorization_url(
+            config.authorization_url,
+            state=state,
+            code_verifier=flow_state.verifier if config.use_pkce else None,
+            code_challenge=flow_state.challenge if config.use_pkce else None
+        )
 
         async with WebSocketAuthenticationFlowHandler._server_lock:
             WebSocketAuthenticationFlowHandler._flows[state] = flow_state

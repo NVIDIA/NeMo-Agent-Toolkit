@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from dataclasses import field
 
 import click
+import pkce
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 from fastapi import FastAPI
 from fastapi import Request
@@ -36,6 +37,8 @@ class _FlowState:
     event: asyncio.Event = field(default_factory=asyncio.Event, init=False)
     token: dict | None = None
     error: Exception | None = None
+    challenge: str | None = None
+    verifier: str | None = None
 
 
 class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
@@ -74,9 +77,20 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
             redirect_uri=config.redirect_uri,
             scope=" ".join(config.scopes) if config.scopes else None,
             token_endpoint=config.token_url,
+            code_challenge_method='S256' if config.use_pkce else None,
         )
 
-        authorization_url, _ = client.create_authorization_url(config.authorization_url, state=state)
+        if config.use_pkce:
+            verifier, challenge = pkce.generate_pkce_pair()
+            flow_state.verifier = verifier
+            flow_state.challenge = challenge
+
+        authorization_url, _ = client.create_authorization_url(
+            config.authorization_url,
+            state=state,
+            code_verifier=flow_state.verifier if config.use_pkce else None,
+            code_challenge=flow_state.challenge if config.use_pkce else None
+        )
 
         async with ConsoleAuthenticationFlowHandler._server_lock:
             if ConsoleAuthenticationFlowHandler._server_controller is None:
@@ -122,16 +136,20 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
                 return "Invalid state. Please restart the authentication process."
 
             flow_state = ConsoleAuthenticationFlowHandler._flows[state]
+            verifier = flow_state.verifier
 
             client = AsyncOAuth2Client(client_id=config.client_id,
                                        client_secret=config.client_secret,
                                        redirect_uri=config.redirect_uri,
                                        scope=" ".join(config.scopes) if config.scopes else None,
                                        token_endpoint=config.token_url,
-                                       token_endpoint_auth_method=config.token_endpoint_auth_method)
+                                       token_endpoint_auth_method=config.token_endpoint_auth_method,
+                                       code_challenge_method='S256' if config.use_pkce else None)
             try:
                 flow_state.token = await client.fetch_token(url=config.token_url,
-                                                            authorization_response=str(request.url))
+                                                            authorization_response=str(request.url),
+                                                            code_verifier=verifier if config.use_pkce else None,
+                                                            state=state)
             except Exception as e:
                 flow_state.error = e
             finally:

@@ -1003,17 +1003,21 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
             flow_state = WebSocketAuthenticationFlowHandler._flows[state]
             config = WebSocketAuthenticationFlowHandler._configs[state]
+            verifier = flow_state.verifier
 
             client = AsyncOAuth2Client(client_id=config.client_id,
                                        client_secret=config.client_secret,
                                        redirect_uri=config.redirect_uri,
                                        scope=" ".join(config.scopes) if config.scopes else None,
                                        token_endpoint=config.token_url,
-                                       token_endpoint_auth_method=config.token_endpoint_auth_method)
+                                       token_endpoint_auth_method=config.token_endpoint_auth_method,
+                                       code_challenge_method='S256' if config.use_pkce else None)
 
             try:
                 flow_state.token = await client.fetch_token(url=config.token_url,
-                                                            authorization_response=str(request.url))
+                                                            authorization_response=str(request.url),
+                                                            code_verifier=verifier,
+                                                            state=state)
             except Exception as e:
                 flow_state.error = e
             finally:

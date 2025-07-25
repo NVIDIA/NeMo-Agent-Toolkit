@@ -33,6 +33,8 @@ class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_a
     client_server_port: int = Field(default=8000, description="Port for the local redirect server.")
     redirect_path: str = Field(default="/auth/redirect",
                                description="Path for the local redirect server to handle the callback.")
+    use_pkce: bool = Field(default=False,
+                           description="Whether to use PKCE (Proof Key for Code Exchange) in the OAuth 2.0 flow.")
 
     @property
     def redirect_uri(self) -> str:
