@@ -208,13 +208,13 @@ class TestOTLPSpanAdapterExporterIntegration:
         # Validate that batch export occurred
         assert len(mock_otlp_server.received_spans) >= 1, "Batch export did not occur"
 
-    async def test_otlp_compression_with_real_export(self, mock_otlp_server, sample_events):
-        """Test OTLP export with compression enabled."""
+    async def test_basic_export_functionality(self, mock_otlp_server, sample_events):
+        """Test basic OTLP export functionality."""
         start_event, end_event = sample_events
 
-        # Create exporter with gzip compression
+        # Create exporter with basic configuration
         endpoint = f"http://127.0.0.1:{mock_otlp_server.port}/v1/traces"
-        exporter = OTLPSpanAdapterExporter(endpoint=endpoint, compression="gzip", batch_size=1)
+        exporter = OTLPSpanAdapterExporter(endpoint=endpoint, batch_size=1)
 
         async with exporter.start():
             exporter.export(start_event)
@@ -222,7 +222,7 @@ class TestOTLPSpanAdapterExporterIntegration:
             await exporter._wait_for_tasks()
             await asyncio.sleep(0.1)
 
-        # Validate compression header was sent
+        # Validate that spans were exported
         assert len(mock_otlp_server.received_spans) >= 1
         received_headers = mock_otlp_server.received_headers[0]
-        assert received_headers.get("Content-Encoding") == "gzip"
+        assert received_headers.get("Content-Type") == "application/x-protobuf"

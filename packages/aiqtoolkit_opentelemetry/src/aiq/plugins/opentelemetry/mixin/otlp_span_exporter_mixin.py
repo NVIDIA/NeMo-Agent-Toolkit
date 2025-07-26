@@ -64,6 +64,6 @@ class OTLPSpanExporterMixin:
             Exception: If there's an error during span export (logged but not re-raised).
         """
         try:
-            self._exporter.export(spans)  # type: ignore
+            self._exporter.export(spans)  # type: ignore[arg-type]
         except Exception as e:
             logger.error("Error exporting spans: %s", e, exc_info=True)

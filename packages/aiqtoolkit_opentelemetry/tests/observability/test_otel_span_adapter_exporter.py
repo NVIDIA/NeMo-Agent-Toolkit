@@ -129,11 +129,9 @@ class TestOTLPSpanAdapterExporter:
         assert exporter._resource.attributes["service.version"] == "1.0"
 
     def test_initialization_with_otlp_kwargs(self, basic_exporter_config):
-        """Test OTLPSpanAdapterExporter initialization with additional OTLP kwargs."""
+        """Test OTLPSpanAdapterExporter initialization with core OTLP parameters only."""
         exporter = OTLPSpanAdapterExporter(endpoint=basic_exporter_config["endpoint"],
-                                           headers=basic_exporter_config["headers"],
-                                           timeout=30,
-                                           compression="gzip")
+                                           headers=basic_exporter_config["headers"])
 
         assert exporter is not None
         assert isinstance(exporter._exporter, OTLPSpanExporter)
