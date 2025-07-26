@@ -17,6 +17,7 @@ import asyncio
 import secrets
 from dataclasses import dataclass
 from dataclasses import field
+import logging
 
 import pkce
 from authlib.integrations.httpx_client import AsyncOAuth2Client
@@ -27,6 +28,8 @@ from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.interactive import _HumanPromptOAuthConsent
 from aiq.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEndController
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
