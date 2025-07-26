@@ -1009,10 +1009,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             client = self._ws_flow_handler._oauth_client
 
             try:
-                flow_state.future.set_result(await client.fetch_token(url=config.token_url,
-                                                                      authorization_response=str(request.url),
-                                                                      code_verifier=verifier,
-                                                                      state=state))
+                res = await client.fetch_token(url=config.token_url,
+                                               authorization_response=str(request.url),
+                                                code_verifier=verifier,
+                                                                      state=state)
+                flow_state.future.set_result(res)
             except Exception as e:
                 flow_state.future.set_exception(e)
 
