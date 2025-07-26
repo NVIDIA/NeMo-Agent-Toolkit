@@ -14,11 +14,15 @@
 # limitations under the License.
 
 from pydantic import Field
+from pydantic.config import ConfigDict
 
 from aiq.data_models.authentication import AuthenticationBaseConfig
 
 
 class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_authorization_code"):
+
+    model_config = ConfigDict(extra="forbid")
+
     client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
     client_secret: str = Field(description="The secret associated with the client_id.")
     authorization_url: str = Field(description="The authorization URL for OAuth 2.0 authentication.")

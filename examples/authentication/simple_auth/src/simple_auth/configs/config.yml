@@ -21,13 +21,9 @@ general:
       level: WARN
 
 functions:
-  auth_tool:
-    _type: auth_tool
+  who_am_i_function:
+    _type: who_am_i
     auth_provider: test_auth_provider
-
-  ip_info_tool:
-    _type: ip_lookup
-    authentication_function: auth_tool
 
 llms:
   nim_llm:
@@ -44,18 +40,18 @@ authentication:
     authorization_url: http://127.0.0.1:5000/oauth/authorize
     token_url: http://127.0.0.1:5000/oauth/token
     token_endpoint_auth_method: client_secret_post
-    scope:
+    scopes:
       - openid
       - profile
       - email
-    client_id: <YOUR CLIENT ID>
-    client_secret: <YOUR CLIENT SECRET>
+    client_id: ${AIQ_CLIENT_ID}
+    client_secret: ${AIQ_CLIENT_SECRET}
     use_pkce: true
 
 workflow:
   _type: react_agent
   tool_names:
-    - ip_info_tool
+    - who_am_i_function
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3
