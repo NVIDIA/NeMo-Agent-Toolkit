@@ -223,8 +223,8 @@ Run the following command from the root of the NeMo Agent toolkit repo to execut
 aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 67890"
 ```
 
-**Expected Workflow Result**
-```
+**Expected Workflow Output**
+```console
 The latest report for user 67890 is as follows:
 - Timestamp: 2025-04-21T15:40:00Z
 - System:
@@ -246,8 +246,8 @@ aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --
 ```
 
 
-**Expected Workflow Result**
-```
+**Expected Workflow Output**
+```console
 The latest report for user 12345 on April 15th, 2025, is as follows:
 
 - **System Information:**
@@ -285,8 +285,8 @@ aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --
 '
 ```
 
-**Expected Workflow Result**
-```
+**Expected Workflow Output**
+```console
 The latest report for user 6789 has been successfully created with the specified recommendations.
 ```
 
@@ -295,8 +295,8 @@ The latest report for user 6789 has been successfully created with the specified
 aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Get the latest report for user 6789'
 ```
 
-**Expected Workflow Result**
-```
+**Expected Workflow Output**
+```console
 The latest report for user 6789 includes the following recommendations:
 1. Update graphics driver
 2. Check for overheating hardware

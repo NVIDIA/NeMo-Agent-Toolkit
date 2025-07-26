@@ -73,70 +73,12 @@ Then, you can run the workflow with the LTM configuration as follows:
 aiq run --config_file examples/frameworks/semantic_kernel_demo/configs/config.yml --input "Create a 3-day travel itinerary for Tokyo in April, suggest hotels  within a USD 2000 budget. I like staying at expensive hotels and am vegan"
 ```
 
-**Expected Workflow Result**
-```
-Below is your final 3-day Tokyo itinerary along with a cost breakdown and special notes based on your preferences for upscale accommodations and vegan dining options. This plan keeps your overall USD 2000 budget in mind while highlighting luxury experiences and convenience.
+**Expected Workflow Output**
+The workflow produces a large amount of output, the end of the output should contain something similar to the following:
 
-──────────────────────────────
-Itinerary Overview
-──────────────────────────────
-• Trip dates: April 15 – April 18, 2024 (3 nights)
-• Location: Tokyo, Japan
-• Focus: Upscale hotel experience and vegan-friendly dining/activities
-• Estimated Total Budget: USD 2000
-
-──────────────────────────────
-Day 1 – Arrival & Check-In
-──────────────────────────────
-• Arrive in Tokyo and transfer to your hotel.
-• Check in at the Luxury Penthouse (approx. USD 250 per night). 
-   - 3-night cost: ~USD 750.
-• Spend the evening settling in and reviewing your itinerary.
-• Budget note: Approximately USD 1250 remains for transportation, meals (vegan options), and other expenses.
-
-──────────────────────────────
-Day 2 – Exploring Tokyo
-──────────────────────────────
-• Morning:
-   - Enjoy a leisurely breakfast at a nearby vegan-friendly café.
-   - Visit local attractions (e.g., upscale districts like Ginza or cultural areas such as Asakusa).
-• Afternoon:
-   - Explore boutique shopping, art galleries, or gardens.
-   - Alternatively, join a guided tour that includes stops at renowned cultural spots.
-• Evening:
-   - Dine at a well-reviewed vegan restaurant.
-   - Return to your hotel for a relaxing night.
-• Budget note: Allocate funds carefully for either private tours or special dining spots that cater to vegan diets.
-
-──────────────────────────────
-Day 3 – Final Day & Departure
-──────────────────────────────
-• Morning:
-   - Enjoy a hearty vegan breakfast.
-   - Visit any remaining attractions or enjoy some leisure time shopping.
-• Afternoon:
-   - Return to your hotel to check out.
-   - Ensure your remaining funds cover any last-minute transit for departure.
-• Evening:
-   - Depart for the airport, completing your upscale Tokyo experience.
-
-──────────────────────────────
-Cost Breakdown
-──────────────────────────────
-• Hotel (Luxury Penthouse): USD 250 per night × 3 = ~USD 750
-• Remaining Budget:
-   - Transportation, meals (vegan options), and incidental expenses: ~USD 1250
-   - This allows flexibility for private tours, upscale experiences, and vegan dining experiences.
-• Overall Estimated Expenditure: Within USD 2000
-
-──────────────────────────────
-Additional Notes
-──────────────────────────────
-• Your preference for expensive or upscale stays has been prioritized with the Luxury Penthouse option.
-• Vegan dining suggestions can be explored further by researching local vegan-friendly restaurants or booking a specialized food tour.
-• If you’d like more detailed recommendations on transit options, precise activity booking, or additional upscale experiences (e.g., fine dining, traditional cultural performances), please let me know!
-
-This plan gives you a luxury Tokyo experience within your budget while accommodating your vegan lifestyle. Enjoy your trip!
+```console
+Workflow Result:
+['Below is your final 3-day Tokyo itinerary along with a cost breakdown and special notes based on your preferences for upscale accommodations and vegan dining options. This plan keeps your overall USD 2000 budget in mind while highlighting luxury experiences and convenience.\n\n──────────────────────────────\nItinerary Overview\n──────────────────────────────\n• Trip dates: April 15 – April 18, 2024 (3 nights)\n• Location: Tokyo, Japan\n• Focus: Upscale hotel experience and vegan-friendly dining/activities\n• Estimated Total Budget: USD 2000\n\n──────────────────────────────\nDay 1 – Arrival & Check-In\n──────────────────────────────\n• Arrive in Tokyo and transfer to your hotel.\n• Check in at the Luxury Penthouse (approx. USD 250 per night). \n   - 3-night cost: ~USD 750.\n• Spend the evening settling in and reviewing your itinerary.\n• Budget note: Approximately USD 1250 remains for transportation, meals (vegan options), and other expenses.\n\n──────────────────────────────\nDay 2 – Exploring Tokyo\n──────────────────────────────\n• Morning:\n   - Enjoy a leisurely breakfast at a nearby vegan-friendly café.\n   - Visit local attractions (e.g., upscale districts like Ginza or cultural areas such as Asakusa).\n• Afternoon:\n   - Explore boutique shopping, art galleries, or gardens.\n   - Alternatively, join a guided tour that includes stops at renowned cultural spots.\n• Evening:\n   - Dine at a well-reviewed vegan restaurant.\n   - Return to your hotel for a relaxing night.\n• Budget note: Allocate funds carefully for either private tours or special dining spots that cater to vegan diets.\n\n──────────────────────────────\nDay 3 – Final Day & Departure\n──────────────────────────────\n• Morning:\n   - Enjoy a hearty vegan breakfast.\n   - Visit any remaining attractions or enjoy some leisure time shopping.\n• Afternoon:\n   - Return to your hotel to check out.\n   - Ensure your remaining funds cover any last-minute transit for departure.\n• Evening:\n   - Depart for the airport, completing your upscale Tokyo experience.\n\n──────────────────────────────\nCost Breakdown\n──────────────────────────────\n• Hotel (Luxury Penthouse): USD 250 per night × 3 = ~USD 750\n• Remaining Budget:\n   - Transportation, meals (vegan options), and incidental expenses: ~USD 1250\n   - This allows flexibility for private tours, upscale experiences, and vegan dining experiences.\n• Overall Estimated Expenditure: Within USD 2000\n\n──────────────────────────────\nAdditional Notes\n──────────────────────────────\n• Your preference for expensive or upscale stays has been prioritized with the Luxury Penthouse option.\n• Vegan dining suggestions can be explored further by researching local vegan-friendly restaurants or booking a specialized food tour.\n• If you’d like more detailed recommendations on transit options, precise activity booking, or additional upscale experiences (e.g., fine dining, traditional cultural performances), please let me know!\n\nThis plan gives you a luxury Tokyo experience within your budget while accommodating your vegan lifestyle. Enjoy your trip!']
 ```
 
 Please note that it is normal to see the LLM produce some errors on occasion as it handles complex structured tool calls. The workflow will automatically attempt to correct and retry the failed tool calls.
@@ -147,49 +89,10 @@ Assuming we've successfully added our preference for vegan restaurants in the la
 aiq run --config_file examples/frameworks/semantic_kernel_demo/configs/config.yml --input "On a 1-day travel itinerary for Tokyo in April, suggest restaurants I would enjoy."
 ```
 
-**Expected Workflow Result**
-```
-Here’s your final one-day Tokyo itinerary for April, with high-quality vegan-friendly dining recommendations that blend seamlessly with your sightseeing plans, along with a cost breakdown:
-
-─────────────────────────────  
-Itinerary Overview
-
-Morning/Breakfast – Ain Soph. Journey  
-• Start your day with a creative vegan breakfast. Enjoy dishes like hearty vegan pancakes or fresh smoothie bowls in a cozy atmosphere – an ideal energizer before hitting the city.  
-• Location: Options available in vibrant neighborhoods like Shinjuku or Ginza.
-
-Midday/Lunch – T’s Restaurant  
-• Savor a bowl of vegan ramen and other Japanese-inspired dishes. This spot is conveniently located near major transit hubs and popular attractions like the Imperial Palace, making it a perfect lunch stop.  
-• Location: Near Tokyo Station and central attractions.
-
-Afternoon Snack – Seasonal Cafe near Cherry Blossoms  
-• While sightseeing, particularly near parks like Ueno or along the Meguro River, take a break at a local boutique cafe. Enjoy a refreshing herbal tea and a light plant-based treat, complemented by the beautiful bloom of cherry blossoms.  
-• Location: In the vicinity of your chosen park or river stroll.
-
-Evening/Dinner – AIN SOPH. Soar (or Similar Venue)  
-• Conclude your day with an elegant dining experience. Indulge in innovative vegan courses that creatively reimagine traditional flavors, in a serene setting ideal for unwinding after a busy day.  
-• Location: Commonly found in stylish districts like Shinjuku.
-
-─────────────────────────────  
-Cost Breakdown (Estimates per Person)
-
-1. Breakfast at Ain Soph. Journey: ¥1,000–¥1,500  
-2. Lunch at T’s Restaurant: ¥800–¥1,300  
-3. Afternoon Snack at a Seasonal Cafe: ¥300–¥500  
-4. Dinner at AIN SOPH. Soar: ¥1,500–¥2,000  
-
-Total Estimated Daily Dining Cost: Approximately ¥3,600–¥5,300 per person
-
-─────────────────────────────  
-Additional Notes
-
-• Timing Tip: Plan your park visits for early morning or later afternoon to enjoy the cherry blossoms with fewer crowds and ideal light.  
-• Transportation: Utilize Tokyo’s efficient subway system to seamlessly move between Shinjuku, Ginza, Ueno, or other districts, ensuring you maximize your day.  
-• Reservations: It is advisable to reserve tables at popular spots like Ain Soph. Journey and AIN SOPH. Soar during the busy cherry blossom season.  
-• Dietary Focus: Each restaurant has been selected for its innovation with vegan-friendly menus, ensuring that each dining experience complements your travel itinerary.
-
-─────────────────────────────  
-Enjoy your one-day trip in Tokyo this April with delicious, thoughtfully curated dining stops and memorable sightseeing opportunities!
+**Expected Workflow Output**
+```console
+Workflow Result:
+['Here’s your final one-day Tokyo itinerary for April, with high-quality vegan-friendly dining recommendations that blend seamlessly with your sightseeing plans, along with a cost breakdown:\n\n─────────────────────────────  \nItinerary Overview\n\nMorning/Breakfast – Ain Soph. Journey  \n• Start your day with a creative vegan breakfast. Enjoy dishes like hearty vegan pancakes or fresh smoothie bowls in a cozy atmosphere – an ideal energizer before hitting the city.  \n• Location: Options available in vibrant neighborhoods like Shinjuku or Ginza.\n\nMidday/Lunch – T’s Restaurant  \n• Savor a bowl of vegan ramen and other Japanese-inspired dishes. This spot is conveniently located near major transit hubs and popular attractions like the Imperial Palace, making it a perfect lunch stop.  \n• Location: Near Tokyo Station and central attractions.\n\nAfternoon Snack – Seasonal Cafe near Cherry Blossoms  \n• While sightseeing, particularly near parks like Ueno or along the Meguro River, take a break at a local boutique cafe. Enjoy a refreshing herbal tea and a light plant-based treat, complemented by the beautiful bloom of cherry blossoms.  \n• Location: In the vicinity of your chosen park or river stroll.\n\nEvening/Dinner – AIN SOPH. Soar (or Similar Venue)  \n• Conclude your day with an elegant dining experience. Indulge in innovative vegan courses that creatively reimagine traditional flavors, in a serene setting ideal for unwinding after a busy day.  \n• Location: Commonly found in stylish districts like Shinjuku.\n\n─────────────────────────────  \nCost Breakdown (Estimates per Person)\n\n1. Breakfast at Ain Soph. Journey: ¥1,000–¥1,500  \n2. Lunch at T’s Restaurant: ¥800–¥1,300  \n3. Afternoon Snack at a Seasonal Cafe: ¥300–¥500  \n4. Dinner at AIN SOPH. Soar: ¥1,500–¥2,000  \n\nTotal Estimated Daily Dining Cost: Approximately ¥3,600–¥5,300 per person\n\n─────────────────────────────  \nAdditional Notes\n\n• Timing Tip: Plan your park visits for early morning or later afternoon to enjoy the cherry blossoms with fewer crowds and ideal light.  \n• Transportation: Utilize Tokyo’s efficient subway system to seamlessly move between Shinjuku, Ginza, Ueno, or other districts, ensuring you maximize your day.  \n• Reservations: It is advisable to reserve tables at popular spots like Ain Soph. Journey and AIN SOPH. Soar during the busy cherry blossom season.  \n• Dietary Focus: Each restaurant has been selected for its innovation with vegan-friendly menus, ensuring that each dining experience complements your travel itinerary.\n\n─────────────────────────────  \nEnjoy your one-day trip in Tokyo this April with delicious, thoughtfully curated dining stops and memorable sightseeing opportunities!']
 ```
 
 The above output demonstrates that the agent was able to draw from memory to provide vegan-friendly recommendations.

@@ -22,7 +22,6 @@ This example demonstrates **human in the loop capabilities** of the NeMo Agent t
 ## Table of Contents
 
 - [Key Features](#key-features)
-- [Prerequisites](#prerequisites)
 - [Installation and Setup](#installation-and-setup)
   - [Install this Workflow](#install-this-workflow)
   - [Set Up API Keys](#set-up-api-keys)
@@ -38,12 +37,10 @@ This example demonstrates **human in the loop capabilities** of the NeMo Agent t
 - **Conditional Workflow Continuation:** Shows how agent behavior can be gated based on user responses, allowing workflows to stop or continue based on human approval.
 - **Retry ReAct Agent:** Uses a custom `retry_react_agent` workflow that can recover from recursion limits with user permission and increased iteration capacity.
 
-## Prerequisites
-
-1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
-2. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
 
 ## Installation and Setup
+
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow
 
@@ -105,12 +102,37 @@ aiq run --config_file examples/HITL/simple_calculator_hitl/configs/config-hitl.y
 
 **Expected Workflow Result When Giving Permission**
 
-```
-Yes, 2 * 4 is greater than 5.
+```console
+<snipped for brevity>
+
+langgraph.errors.GraphRecursionError: Recursion limit of 4 reached without hitting a stop condition. You can increase the limit by setting the `recursion_limit` config key.
+For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/GRAPH_RECURSION_LIMIT
+2025-07-03 17:04:54,696 - aiq_simple_calculator_hitl.register - INFO - Recursion error detected, prompting user to increase recursion limit
+You have reached the maximum number of iterations.
+Please confirm if you would like to proceed with more iterations.
+ Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: yes
+2025-07-03 17:04:56,267 - aiq_simple_calculator_hitl.register - INFO - Attempt 2: Increasing max_iterations to 2
+
+<snipped for brevity>
+
+
+Workflow Result:
+['Yes, 2 * 4 is greater than 5.']
 ```
 
 **Expected Workflow Result When Not Giving Permission**
 
-```
-I seem to be having a problem.
+```console
+<snipped for brevity>
+
+langgraph.errors.GraphRecursionError: Recursion limit of 4 reached without hitting a stop condition. You can increase the limit by setting the `recursion_limit` config key.
+For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/GRAPH_RECURSION_LIMIT
+2025-07-03 17:07:04,105 - aiq_simple_calculator_hitl.register - INFO - Recursion error detected, prompting user to increase recursion limit
+You have reached the maximum number of iterations.
+Please confirm if you would like to proceed with more iterations.
+ Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: no
+
+<snipped for brevity>
+Workflow Result:
+['I seem to be having a problem.']
 ```

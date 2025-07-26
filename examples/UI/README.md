@@ -35,22 +35,6 @@ This example demonstrates how to integrate and use the web-based user interface 
 - **Real-time streaming**: Enable intermediate step streaming for enhanced user experience
 - **UI customization**: Customize themes, endpoints, and display options
 
-## Installation and Setup
-
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
-
-### Prerequisites
-
-- NeMo Agent toolkit installed with UI dependencies
-- A running Agent toolkit server endpoint
-- Modern web browser with JavaScript enabled
-
-### Basic Setup
-
-1. Start your Agent toolkit server with any workflow configuration
-2. Launch the UI using the instructions in the quick start guide
-3. Configure connection settings to point to your server endpoint
-
 ## Quick Start
 
 For complete setup and usage instructions, refer to the comprehensive guide: [Launching the UI](../../docs/source/quick-start/launching-ui.md).

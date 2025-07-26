@@ -41,7 +41,9 @@ This example provides a skeleton workflow which can be used to implement predict
 
 ## Prerequisites
 
-SWE bench evaluations run inside a Docker container. Ensure that Docker is installed and the Docker service is running before proceeding.
+SWE bench evaluations run inside a Docker container.
+
+Ensure that Docker is installed and the Docker service is running before proceeding.
 
 - Install Docker: Follow the official installation guide for your platform: [Docker Installation Guide](https://docs.docker.com/engine/install/)
 - Start Docker Service:

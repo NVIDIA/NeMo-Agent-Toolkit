@@ -25,7 +25,7 @@ The profiler agent is a tool that allows you to analyze the performance of NeMo 
 - [Installation and Setup](#installation-and-setup)
   - [Install this Workflow](#install-this-workflow)
   - [Set Up API Keys](#set-up-api-keys)
-- [Usage](#usage)
+- [Run the Workflow](#run-the-workflow)
 - [Features](#features)
 
 ## Key Features
@@ -55,7 +55,7 @@ If you have not already done so, follow the [Obtaining API Keys](../../../docs/s
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
-## Usage
+## Run the Workflow
 
 1. Start the Phoenix server if not already running. If you are using a remote Phoenix server, you can skip this step and modify the config/config.yml to point to the URL.
    ```bash

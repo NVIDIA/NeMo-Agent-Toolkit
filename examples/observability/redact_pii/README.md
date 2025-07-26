@@ -29,7 +29,6 @@ This example demonstrates how to use Weights & Biases (W&B) Weave with PII redac
 - [Key Features](#key-features)
 - [Installation and Setup](#installation-and-setup)
   - [Install this Workflow](#install-this-workflow)
-  - [Install Additional Dependencies](#install-additional-dependencies)
   - [Set Up Weights & Biases Account](#set-up-weights-and-biases-account)
   - [Set Up API Keys](#set-up-api-keys)
 - [Example Files](#example-files)
@@ -55,16 +54,6 @@ From the root directory of the NeMo Agent toolkit library, run the following com
 ```bash
 uv pip install -e examples/observability/redact_pii
 ```
-
-### Install Additional Dependencies:
-
-Install the required dependencies for PII redaction and Weave:
-
-```bash
-pip install -e '.[weave]'
-```
-
-This will install the `presidio-analyzer` and `presidio-anonymizer` packages alongside the `aiqtoolkit-weave` package.
 
 ### Set Up Weights and Biases Account:
 

@@ -27,7 +27,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 - [Installation and Setup](#installation-and-setup)
   - [Install this Workflow](#install-this-workflow)
   - [Set Up API Keys](#set-up-api-keys)
-- [Usage](#usage)
+- [Run the Workflow](#run-the-workflow)
   - [Running Evaluation](#running-evaluation)
   - [Understanding Results](#understanding-results)
   - [Available Configurations](#available-configurations)
@@ -72,7 +72,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 export OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>  # For OpenAI evaluations
 ```
 
-## Usage
+## Run the Workflow
 
 ### Running Evaluation
 

@@ -21,19 +21,16 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the NeMo Ag
 
 ## Table of Contents
 
-- [A Simple LLM Calculator](#a-simple-llm-calculator)
-  - [Table of Contents](#table-of-contents)
-  - [Key Features](#key-features)
-  - [Installation and Setup](#installation-and-setup)
-    - [Install this Workflow:](#install-this-workflow)
-    - [Set Up API Keys](#set-up-api-keys)
-    - [Run the Workflow](#run-the-workflow)
-  - [Deployment-Oriented Setup](#deployment-oriented-setup)
-    - [Build the Docker Image](#build-the-docker-image)
-    - [Run the Docker Container](#run-the-docker-container)
-    - [Test the API](#test-the-api)
-    - [Expected API Output](#expected-api-output)
-
+- [Key Features](#key-features)
+- [Installation and Setup](#installation-and-setup)
+  - [Install this Workflow:](#install-this-workflow)
+  - [Set Up API Keys](#set-up-api-keys)
+  - [Run the Workflow](#run-the-workflow)
+- [Deployment-Oriented Setup](#deployment-oriented-setup)
+  - [Build the Docker Image](#build-the-docker-image)
+  - [Run the Docker Container](#run-the-docker-container)
+  - [Test the API](#test-the-api)
+  - [Expected API Output](#expected-api-output)
 
 ---
 
@@ -75,7 +72,7 @@ Return to your original terminal, and run the following command from the root of
 aiq run --config_file examples/getting_started/simple_calculator/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
-**Expected Workflow Result**
+**Expected Workflow Output**
 Note that the output is subject to the time of day when the workflow was run. For this example output, it was run in the afternoon.
 ```
 No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 15).

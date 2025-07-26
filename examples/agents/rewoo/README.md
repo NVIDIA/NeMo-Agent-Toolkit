@@ -89,11 +89,83 @@ Run the following command from the root of the NeMo Agent toolkit repo to execut
 aiq run --config_file=examples/agents/rewoo/configs/config.yml --input "Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?"
 ```
 
-**Expected Workflow Result**
-```
+**Expected Workflow Output**
+```console
+<snipped for brevity>
+
+- ReWOO agent planner output:
+------------------------------
+[AGENT]
+Agent input: Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?
+Agent's thoughts:
+[
+  {
+    "plan": "Compare the numbers 1996 and 2004 to determine the bigger number.",
+    "evidence": {
+      "placeholder": "#E1",
+      "tool": "calculator_inequality",
+      "tool_input": {"text": "2004 > 1996"}
+    }
+  },
+  {
+    "plan": "Since 2004 is indeed bigger, search for the city that held the Olympic Games in 2004.",
+    "evidence": {
+      "placeholder": "#E2",
+      "tool": "internet_search",
+      "tool_input": {"question": "Which city held the Olympic Games in 2004?"}
+    }
+  }
+]
+------------------------------
+2025-04-23 15:02:11,047 - aiq.agent.rewoo_agent.agent - INFO - ReWOO agent executor output:
+------------------------------
+[AGENT]
+Calling tools: calculator_inequality
+Tool's input: {'text': '2004 > 1996'}
+Tool's response:
+First number 2004 is greater than the second number 1996
+------------------------------
+2025-04-23 15:02:13,096 - aiq.agent.rewoo_agent.agent - INFO - ReWOO agent executor output:
+------------------------------
+[AGENT]
+Calling tools: internet_search
+Tool's input: {'question': 'Which city held the Olympic Games in 2004?'}
+Tool's response:
+<Document href="https://en.wikipedia.org/wiki/2004_Summer_Olympics"/>
+The 2004 Summer Olympics (Greek: Θερινοί Ολυμπιακοί Αγώνες 2004, romanized: Theriní Olympiakí Agónes 2004),[b] officially the Games of the XXVIII Olympiad (Αγώνες της 28ης Ολυμπιάδας, Agónes tis 28is Olympiádas), and officially branded as Athens 2004 (Αθήνα 2004), were an international multi-sport event held from 13 to 29 August 2004 in Athens, Greece. [...] Emblem of the 2004 Summer Olympics[a]
+Location    Athens, Greece
+Motto   Welcome Home
+(Greek: Καλώς ήρθατε σπίτι, romanized: Kalós írthate spíti)
+Nations 201
+Athletes    10,557 (6,257 men, 4,300 women)
+Events  301 in 28 sports (40 disciplines)
+Opening 13 August 2004
+Closing 29 August 2004
+Opened by   President Konstantinos Stephanopoulos[1]
+Closed by   IOC President Jacques Rogge
+Cauldron    Nikolaos Kaklamanakis[1]
+Stadium Olympic Stadium
+Summer
+← Sydney 2000
+Beijing 2008 →
+Winter [...] See also[edit]
+    Olympic Games portal
+2004 Summer Paralympics
+Olympic Game...
+------------------------------
+2025-04-23 15:02:13,382 - aiq.agent.rewoo_agent.agent - INFO - ReWOO agent solver output:
+------------------------------
+[AGENT]
+Agent input: Which city held the Olympic game in the year represented by the bigger number of 1996 and 2004?
+Agent's thoughts:
 Athens
+------------------------------
+2025-04-23 15:02:13,385 - aiq.front_ends.console.console_front_end_plugin - INFO -
+--------------------------------------------------
+Workflow Result:
+['Athens']
+--------------------------------------------------
 ```
----
 
 ### Starting the NeMo Agent Toolkit Server
 

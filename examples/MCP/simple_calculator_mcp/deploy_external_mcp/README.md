@@ -25,7 +25,7 @@ This example demonstrates how to set up and run an MCP (Model Control Protocol) 
 - [Prerequisites](#prerequisites)
 - [Available MCP Services](#available-mcp-services)
 - [Installation and Setup](#installation-and-setup)
-- [Usage](#usage)
+- [Run the Workflow](#run-the-workflow)
 - [Client Configuration](#client-configuration)
 
 ## Key Features
@@ -46,6 +46,8 @@ This example demonstrates how to set up and run an MCP (Model Control Protocol) 
 This example uses the `mcp-server-time` service. For a list of available public MCP services, please refer to the [MCP Server GitHub repository](https://github.com/modelcontextprotocol/servers).
 
 ## Installation and Setup
+
+If you have not already done so, follow the instructions in the [Install Guide](../../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 1. Change the service name and brief name to the service you want to use. Additionally specify any optional service arguments.
 
@@ -118,7 +120,7 @@ docker ps
 docker logs -f ${CONTAINER_NAME}
 ```
 
-## Usage
+## Run the Workflow
 
 The MCP server will be available at `http://localhost:${SERVER_PORT}/sse`. You can use it with any MCP-compatible client.
 

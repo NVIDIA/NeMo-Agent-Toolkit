@@ -102,9 +102,32 @@ Run the following command from the root of the NeMo Agent Toolkit repo to execut
 aiq run --config_file=examples/agents/tool_calling/configs/config.yml --input "who was Djikstra?"
 ```
 
-**Expected Workflow Result**
-```
-Edsger Wybe Dijkstra was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist. He was born on May 11, 1930, in Rotterdam, Netherlands, and studied mathematics and physics at the University of Leiden. Dijkstra worked as the first computer programmer in the Netherlands at the Mathematical Centre in Amsterdam from 1952 to 1962. He formulated and solved the shortest path problem in 1956 and developed the first compiler for the programming language ALGOL 60 in 1960. Dijkstra moved to Eindhoven in 1962 and became a professor in the Mathematics Department at the Technische Hogeschool Eindhoven. He built the THE multiprogramming system in the late 1960s, which influenced the development of operating systems.'
+**Expected Workflow Output**
+```console
+<snipped for brevity>
+
+[AGENT]
+Calling tools: ['wikipedia_search']
+Tool's input: content='' additional_kwargs={'tool_calls': [{'id': 'chatcmpl-tool-25c373f4cc544ab995e2b424c30eb00a', 'type': 'function', 'function': {'name': 'wikipedia_search', 'arguments': '{"question": "Djikstra"}'}}]} response_metadata={'role': 'assistant', 'content': None, 'tool_calls': [{'id': 'chatcmpl-tool-25c373f4cc544ab995e2b424c30eb00a', 'type': 'function', 'function': {'name': 'wikipedia_search', 'arguments': '{"question": "Djikstra"}'}}], 'token_usage': {'prompt_tokens': 451, 'total_tokens': 465, 'completion_tokens': 14}, 'finish_reason': 'tool_calls', 'model_name': 'meta/llama-3.1-70b-instruct'} id='run-f82d064d-422a-4241-9d95-e56dd76ed447-0' tool_calls=[{'name': 'wikipedia_search', 'args': {'question': 'Djikstra'}, 'id': 'chatcmpl-tool-25c373f4cc544ab995e2b424c30eb00a', 'type': 'tool_call'}] usage_metadata={'input_tokens': 451, 'output_tokens': 14, 'total_tokens': 465} role='assistant'
+Tool's response:
+<Document source="https://en.wikipedia.org/wiki/Edsger_W._Dijkstra" page=""/>
+Edsger Wybe Dijkstra ( DYKE-strə; Dutch: [ˈɛtsxər ˈʋibə ˈdɛikstraː] ; 11 May 1930 – 6 August 2002) was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist.
+Born in Rotterdam in the Netherlands, Dijkstra studied mathematics and physics and then theoretical physics at the University of Leiden. Adriaan van Wijngaarden offered him a job as the first computer programmer in the Netherlands at the Mathematical Centre in Amsterdam, where he worked from 1952 until 1962. He formulated and solved the shortest path problem in 1956, and in 1960 developed the first compiler for the programming language ALGOL 60 in conjunction with colleague Jaap A. Zonneveld. In 1962 he moved to Eindhoven, and later to Nuenen, where he became a professor in the Mathematics Department at the Technische Hogeschool Eindhoven. In the late 1960s he built the THE multiprogramming system, which influence...
+------------------------------
+2025-04-23 15:03:59,211 - aiq.agent.tool_calling_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: who was Djikstra?
+
+<Document source="https://en.wikipedia.org/wiki/Edsger_W._Dijkstra" page=""/>
+Edsger Wybe Dijkstra ( DYKE-strə; Dutch: [ˈɛtsxər ˈʋibə ˈdɛikstraː] ; 11 May 1930 – 6 August 2002) was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist.
+Born in Rotterdam in the Netherlands, Dijkstra studied mathematics and physics and then theoretical physics at the University of Leiden. Adriaan van Wijngaarden offered him a job as the first computer programmer in the Netherlands at the Mathematical Centre in Amsterdam, where he worked from 1952 until 1962. He formulated and solved the shortest path problem in 1956, and in 1960 developed the first compiler for the programming language ALGOL 60 in conjunction with colleague Jaap A. Zonneveld. In 1962 he moved to Eindhoven, and later to Nuenen, where he became a professor in the Mathematics Department at the Technische Hogeschool Eindhoven. In the late 1960s he built the THE multiprogramming system, which influence...
+
+<snipped for brevity>
+
+--------------------------------------------------
+Workflow Result:
+['Edsger Wybe Dijkstra was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist. He was born on May 11, 1930, in Rotterdam, Netherlands, and studied mathematics and physics at the University of Leiden. Dijkstra worked as the first computer programmer in the Netherlands at the Mathematical Centre in Amsterdam from 1952 to 1962. He formulated and solved the shortest path problem in 1956 and developed the first compiler for the programming language ALGOL 60 in 1960. Dijkstra moved to Eindhoven in 1962 and became a professor in the Mathematics Department at the Technische Hogeschool Eindhoven. He built the THE multiprogramming system in the late 1960s, which influenced the development of operating systems.']
 ```
 ---
 

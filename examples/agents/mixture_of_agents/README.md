@@ -72,17 +72,6 @@ From the root directory of the NeMo Agent toolkit repository, run the following 
 uv pip install -e .
 ```
 
-The `code_generation` and `wiki_search` tools are part of the `aiqtoolkit[langchain]` package.  To install the package run the following command:
-```bash
-# local package install from source
-uv pip install -e '.[langchain]'
-```
-
-In addition to this the example utilizes some tools from the `examples/getting_started/simple_web_query` example.  To install the package run the following command:
-```bash
-uv pip install -e examples/getting_started/simple_web_query
-```
-
 ### Set Up API Keys
 If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 ```bash
@@ -99,8 +88,50 @@ aiq run --config_file=examples/agents/mixture_of_agents/configs/config.yml --inp
 
 **Expected Output**
 
-```
-"Edsger W. Dijkstra was a Dutch computer scientist, and Dijkstra's algorithm is a well-known algorithm in graph theory used to find the shortest path between two nodes in a graph."
+```console
+<snipped for brevity>
+
+2025-04-23 14:57:14,060 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: who was Djikstra?
+Agent's thoughts:
+Thought: I should search the internet for information on Djikstra.
+Action: internet_agent
+Action Input: {'input_message': 'Djikstra'}
+Observation
+------------------------------
+2025-04-23 14:57:20,638 - aiq.agent.tool_calling_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: Djikstra
+Agent's thoughts:
+content="Dijkstra's algorithm is a well-known algorithm in graph theory, named after the Dutch computer scientist Edsger W. Dijkstra. It is used to find the shortest path between two nodes in a graph. The algorithm works by maintaining a list of unvisited nodes and iteratively selecting the node with the shortest distance from the starting node. The distance to each node is updated as the algorithm progresses, and the node with the shortest distance is added to the list of visited nodes. The algorithm terminates when the destination node is reached, and the shortest path is constructed by tracing back the nodes from the destination to the starting node.\n\nDijkstra's algorithm has many applications in computer science and other fields, such as network routing, traffic optimization, and resource allocation. It is also used in many real-world problems, such as finding the shortest path between two cities, optimizing traffic flow, and scheduling tasks.\n\nThe algorithm has a time complexity of O(|E| + |V|log|V|) in the worst case, where |E| is the number of edges and |V| is the number of vertices in the graph. This makes it efficient for large graphs. However, it can be slow for very large graphs or graphs with a large number" additional_kwargs={} response_metadata={'role': 'assistant', 'content': "Dijkstra's algorithm is a well-known algorithm in graph theory, named after the Dutch computer scientist Edsger W. Dijkstra. It is used to find the shortest path between two nodes in a graph. The algorithm works by maintaining a list of unvisited nodes and iteratively selecting the node with the shortest distance from the starting node. The distance to each node is updated as the algorithm progresses, and the node with the shortest distance is added to the list of visited nodes. The algorithm terminates when the destination node is reached, and the shortest path is constructed by tracing back the nodes from the destination to the starting node.\n\nDijkstra's algorithm has many applications in computer science and other fields, such as network routing, traffic optimization, and resource allocation. It is also used in many real-world problems, such as finding the shortest path between two cities, optimizing traffic flow, and scheduling tasks.\n\nThe algorithm has a time complexity of O(|E| + |V|log|V|) in the worst case, where |E| is the number of edges and |V| is the number of vertices in the graph. This makes it efficient for large graphs. However, it can be slow for very large graphs or graphs with a large number", 'token_usage': {'prompt_tokens': 363, 'total_tokens': 613, 'completion_tokens': 250}, 'finish_reason': 'length', 'model_name': 'meta/llama-3.3-70b-instruct'} id='run-44bec667-41ec-43a8-bbe2-ecacfe0580e8-0' usage_metadata={'input_tokens': 363, 'output_tokens': 250, 'total_tokens': 613} role='assistant'
+------------------------------
+2025-04-23 14:57:20,641 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: internet_agent
+Tool's input: {"input_message": "Djikstra"}
+Tool's response:
+Dijkstra's algorithm is a well-known algorithm in graph theory, named after the Dutch computer scientist Edsger W. Dijkstra. It is used to find the shortest path between two nodes in a graph. The algorithm works by maintaining a list of unvisited nodes and iteratively selecting the node with the shortest distance from the starting node. The distance to each node is updated as the algorithm progresses, and the node with the shortest distance is added to the list of visited nodes. The algorithm terminates when the destination node is reached, and the shortest path is constructed by tracing back the nodes from the destination to the starting node.
+
+Dijkstra's algorithm has many applications in computer science and other fields, such as network routing, traffic optimization, and resource allocation. It is also used in many real-world problems, such as finding the shortest path between two cities, optimizing traffic flow, and scheduling tasks.
+
+The algorithm has a time complexity of O(|E| +...
+------------------------------
+2025-04-23 14:57:22,680 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: who was Djikstra?
+Agent's thoughts:
+Thought: I now know the final answer
+Final Answer: Edsger W. Dijkstra was a Dutch computer scientist, and Dijkstra's algorithm is a well-known algorithm in graph theory used to find the shortest path between two nodes in a graph.
+------------------------------
+2025-04-23 14:57:22,684 - aiq.front_ends.console.console_front_end_plugin - INFO -
+--------------------------------------------------
+Workflow Result:
+["Edsger W. Dijkstra was a Dutch computer scientist, and Dijkstra's algorithm is a well-known algorithm in graph theory used to find the shortest path between two nodes in a graph."]
 ```
 ---
 

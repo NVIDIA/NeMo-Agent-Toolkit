@@ -33,19 +33,6 @@ This guide demonstrates how to quickly scaffold and generate new NVIDIA NeMo Age
 - **Project templates**: Use predefined templates for common workflow patterns
 - **Cursor rules integration**: Leverage intelligent code completion and project-specific rules
 
-## Installation and Setup
-
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
-
-### Prerequisites
-
-- NeMo Agent toolkit installed and configured
-- Python 3.11 or 3.12
-- Git for version control
-
-### Basic Usage
-
-The scaffolding tools are built into the NeMo Agent toolkit CLI. Access them through the standard `aiq` command with appropriate scaffolding options.
 
 ## Detailed Workflow Creation
 

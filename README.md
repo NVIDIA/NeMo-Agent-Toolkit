@@ -185,14 +185,9 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
 
    This will run the workflow and output the results to the console.
 
-   ```
-   Here are five subspecies of Aardvarks:
-   
-   1. Orycteropus afer afer (Southern aardvark)
-   2. O. a. adametzi  Grote, 1921 (Western aardvark)
-   3. O. a. aethiopicus  Sundevall, 1843
-   4. O. a. angolensis  Zukowsky & Haltenorth, 1957
-   5. O. a. erikssoni  Lönnberg, 1906
+   ```console
+   Workflow Result:
+   ['Here are five subspecies of Aardvarks:\n\n1. Orycteropus afer afer (Southern aardvark)\n2. O. a. adametzi  Grote, 1921 (Western aardvark)\n3. O. a. aethiopicus  Sundevall, 1843\n4. O. a. angolensis  Zukowsky & Haltenorth, 1957\n5. O. a. erikssoni  Lönnberg, 1906']
    ```
 
 ## Feedback

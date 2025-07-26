@@ -17,6 +17,33 @@ limitations under the License.
 # Alert Triage using Agent Intelligence Toolkit
 This example demonstrates how to build an intelligent alert triage system using NeMo Agent toolkit and LangGraph. The system analyzes system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization. It showcases how to combine LLMs with domain-specific diagnostic tools to create an automated troubleshooting workflow.
 
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Installation and Setup](#installation-and-setup)
+- [Use case description](#use-case-description)
+  - [Why use an agentic design?](#why-use-an-agentic-design)
+- [How it works](#how-it-works)
+    - [1. Alert Received](#1-alert-received)
+    - [2. Maintenance Check](#2-maintenance-check)
+    - [3. Alert Triage Agent](#3-alert-triage-agent)
+    - [4. Dynamic Tool Invocation](#4-dynamic-tool-invocation)
+    - [5. Root Cause Categorization](#5-root-cause-categorization)
+    - [6. Report Generation](#6-report-generation)
+    - [7. Analyst Review](#7-analyst-review)
+  - [Understanding the Configuration](#understanding-the-configuration)
+    - [Functions](#functions)
+    - [Workflow](#workflow)
+    - [LLMs](#llms)
+    - [Evaluation](#evaluation)
+      - [General](#general)
+      - [Evaluators](#evaluators)
+- [Example Usage](#example-usage)
+  - [Running in a live environment](#running-in-a-live-environment)
+    - [Credentials and Access](#credentials-and-access)
+  - [Running live with a HTTP server listening for alerts](#running-live-with-a-http-server-listening-for-alerts)
+  - [Running in offline mode](#running-in-offline-mode)
+
 ## Key Features
 
 - **Automated Alert Triage System:** Demonstrates an `alert_triage_agent` that autonomously investigates system monitoring alerts and generates structured triage reports with root cause analysis.
@@ -25,46 +52,25 @@ This example demonstrates how to build an intelligent alert triage system using 
 - **Structured Report Generation:** Produces markdown-formatted reports with alert summaries, collected metrics, analysis, recommended actions, and root cause categorization.
 - **Maintenance-Aware Processing:** Includes maintenance database integration to distinguish between actual issues and scheduled maintenance events.
 
-## Prerequisites
+## Installation and Setup
 
-Before using this alert triage agent example, ensure you meet the following requirements:
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit, and follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
 
-- **NeMo Agent toolkit installed**: Follow the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to set up the development environment
-- **NVIDIA API Key**: Required for LLM services. See [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) for instructions
-- **Docker**: Required for live environment evaluation and testing
+### Install This Workflow
 
-## Table of contents
-- [Alert Triage using Agent Intelligence Toolkit](#alert-triage-using-agent-intelligence-toolkit)
-  - [Key Features](#key-features)
-  - [Table of contents](#table-of-contents)
-  - [Use case description](#use-case-description)
-    - [Why use an agentic design?](#why-use-an-agentic-design)
-  - [How it works](#how-it-works)
-      - [1. Alert Received](#1-alert-received)
-      - [2. Maintenance Check](#2-maintenance-check)
-      - [3. Alert Triage Agent](#3-alert-triage-agent)
-      - [4. Dynamic Tool Invocation](#4-dynamic-tool-invocation)
-      - [5. Root Cause Categorization](#5-root-cause-categorization)
-      - [6. Report Generation](#6-report-generation)
-      - [7. Analyst Review](#7-analyst-review)
-    - [Understanding the config](#understanding-the-config)
-      - [Functions](#functions)
-      - [Workflow](#workflow)
-      - [LLMs](#llms)
-      - [Evaluation](#evaluation)
-        - [General](#general)
-        - [Evaluators](#evaluators)
-  - [Installation and setup](#installation-and-setup)
-    - [Install this workflow](#install-this-workflow)
-    - [Set up environment variables](#set-up-environment-variables)
-  - [Example Usage](#example-usage)
-    - [Running in a live environment](#running-in-a-live-environment)
-      - [Credentials and Access](#credentials-and-access)
-    - [Running live with a HTTP server listening for alerts](#running-live-with-a-http-server-listening-for-alerts)
-    - [Running in offline mode](#running-in-offline-mode)
+From the root directory of the NeMo Agent toolkit library, run the following commands:
+```bash
+uv pip install -e examples/RAG/simple_rag
+```
 
+### Set Up API Keys
 
-## Use case description
+Export your NVIDIA API key:
+```bash
+export NVIDIA_API_KEY=<YOUR API KEY HERE>
+```
+
+## Use Case Description
 This example provides an agentic system designed to automate the triage of server-monitoring alerts. The system aims to address several key challenges in alert management:
 
 * **High alert volume** overwhelms security teams and makes timely triage difficult.
@@ -100,7 +106,7 @@ An agentic design powered by LLMs provides key benefits over traditional rule-ba
 - **Chooses the right tools dynamically**: Based on the alert context, the system can select the most relevant tools and data sources without manual intervention.
 - **Built-in Reporting**: Every investigation ends with a natural language summary (with analysis, findings, and next steps), saving time and providing traceability.
 
-## How it works
+## How It Works
 Here's a step-by-step breakdown of the workflow:
 
 ![Alert Triage Agent Architecture](./src/aiq_alert_triage_agent/data/ata_diagram.png)
@@ -165,7 +171,7 @@ The triage agent may call one or more of the following tools based on the alert 
 #### 7. Analyst Review
 - The final report is presented to an Analyst for review, action, or escalation.
 
-### Understanding the config
+### Understanding the Configuration
 
 #### Functions
 
@@ -286,25 +292,6 @@ Each entry under `evaluators` defines a specific metric to evaluate the pipeline
 
 The list of evaluators can be extended or swapped out depending on your evaluation goals.
 
-## Installation and setup
-
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md) to create the development environment and install NeMo Agent toolkit.
-
-### Install this workflow
-
-From the root directory of the NeMo Agent toolkit library, run the following commands:
-
-```bash
-uv pip install -e ./examples/advanced_agents/alert_triage_agent
-```
-
-### Set up environment variables
-As mentioned in the Install Guide, an `NVIDIA_API_KEY` environment variable is required to run NeMo Agent toolkit.
-
-If you have your key in a `.env` file, use the following command to load it:
-```bash
-export $(grep -v '^#' .env | xargs)
-```
 
 ## Example Usage
 You can run the agent in [offline mode](#running-in-offline-mode) or [live mode](#running-live-with-a-http-server-listening-for-alerts). Offline mode allows you to evaluate the agent in a controlled, offline environment using synthetic data. Live mode allows you to run the agent in a real environment.
@@ -438,13 +425,13 @@ To use this mode, first ensure you have configured your live environment as desc
 
    You can monitor the progress of the triage process through these logs and the generated reports.
 
-### Running in offline mode
+### Running in Offline Mode
 Offline mode lets you evaluate the triage agent in a controlled, offline environment using synthetic data. Instead of calling real systems, the agent uses predefined inputs to simulate alerts and tool outputs, ideal for development, debugging, and tuning.
 
 To run in offline mode:
 1. **Set required environment variables**
 
-   Make sure `offline_mode: true` is set in both the `workflow` section and individual tool sections of your config file (see [Understanding the config](#understanding-the-config) section).
+   Make sure `offline_mode: true` is set in both the `workflow` section and individual tool sections of your config file (see [Understanding the configuration](#understanding-the-configuration) section).
 
 2. **How offline mode works:**
 
@@ -477,9 +464,10 @@ To run in offline mode:
      }'
    ```
 
-   **Expected Workflow Result**
+   **Expected Workflow Output**
    
-   ```
+   ```console
+   <snipped for brevity>
    ## Step 1: Analyze the Alert
    The alert received is of type "InstanceDown" for the host "test-instance-0.example.com" with a critical severity. The description mentions that the instance is not available for scraping for the last 5 minutes.
 
@@ -523,6 +511,8 @@ To run in offline mode:
    false_positive
 
    The diagnostic checks, including network connectivity, monitoring processes, hardware health, and telemetry metrics analysis, all indicate that the host is operational and healthy, with no evidence to support the "InstanceDown" alert being a true indication of a problem.
+   --------------------------------------------------
+   2025-07-21 17:14:45,234 - aiq_alert_triage_agent - INFO - Cleaning up
    ```
 
    To evaluate the agent, use the following command:
@@ -543,28 +533,28 @@ To run in offline mode:
    The output file will contain a new column named `output`, which includes the markdown report generated by the agent for each data point (i.e., each row in the CSV). Navigate to that rightmost `output` column to view the report for each test entry.
 
    **Sample Workflow Result**
-  ```
-  ## Alert Summary
-  The alert received was for an "InstanceDown" event, indicating that the instance "test-instance-0.example.com" was not available for scraping for the last 5 minutes.
+```
+## Alert Summary
+The alert received was for an "InstanceDown" event, indicating that the instance "test-instance-0.example.com" was not available for scraping for the last 5 minutes.
 
-  ## Collected Metrics
-  The following metrics were collected:
-  - Network connectivity check: Successful ping and telnet tests indicated that the host is reachable and the monitoring service is in place and running.
-  - Monitoring process check: The telegraf service was found to be running and reporting metrics into InfluxDB.
-  - Hardware check: IPMI output showed that the system's power status is ON, hardware health is normal, and there are no observed anomalies.
-  - Telemetry metrics analysis: The host is up and running, and CPU usage is within normal limits.
+## Collected Metrics
+The following metrics were collected:
+- Network connectivity check: Successful ping and telnet tests indicated that the host is reachable and the monitoring service is in place and running.
+- Monitoring process check: The telegraf service was found to be running and reporting metrics into InfluxDB.
+- Hardware check: IPMI output showed that the system's power status is ON, hardware health is normal, and there are no observed anomalies.
+- Telemetry metrics analysis: The host is up and running, and CPU usage is within normal limits.
 
-  ## Analysis
-  Based on the collected metrics, it appears that the alert was a false positive. The host is currently up and running, and its CPU usage is within normal limits. The network connectivity and monitoring process checks also indicated that the host is reachable and the monitoring service is functioning.
+## Analysis
+Based on the collected metrics, it appears that the alert was a false positive. The host is currently up and running, and its CPU usage is within normal limits. The network connectivity and monitoring process checks also indicated that the host is reachable and the monitoring service is functioning.
 
-  ## Recommended Actions
-  No immediate action is required, as the host is up and running, and the alert appears to be a false positive. However, it is recommended to continue monitoring the host's performance and investigate the cause of the false positive alert to prevent similar incidents in the future.
+## Recommended Actions
+No immediate action is required, as the host is up and running, and the alert appears to be a false positive. However, it is recommended to continue monitoring the host's performance and investigate the cause of the false positive alert to prevent similar incidents in the future.
 
-  ## Alert Status
-  The alert status is "False alarm".
+## Alert Status
+The alert status is "False alarm".
 
-  ## Root Cause Category
-  false_positive
+## Root Cause Category
+false_positive
 
-  The alert was categorized as a false positive because all collected metrics indicated the host "test-instance-0.example.com" is up, reachable, and functioning normally, with no signs of hardware or software issues, and the monitoring services are running as expected.
-  ```
+The alert was categorized as a false positive because all collected metrics indicated the host "test-instance-0.example.com" is up, reachable, and functioning normally, with no signs of hardware or software issues, and the monitoring services are running as expected.
+```

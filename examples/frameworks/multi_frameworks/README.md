@@ -107,8 +107,8 @@ note: the below is an example command to use and query this and trigger `rag_age
 aiq run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "tell me about this workflow"
 ```
 
-**Expected Workflow Result**
-```
+**Expected Workflow Output**
+```console
 This workflow is a multi-frameworks example that can be installed locally and run using specific commands. To install the workflow, you need to run `uv pip install -e examples/frameworks/multi_frameworks`. After installation, you can run the workflow using the command `aiq run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "your query here"`. You can replace "your query here" with any input you want to query the workflow with.
 ```
 
@@ -117,7 +117,7 @@ Note: the below is an example command to use and query this and trigger `researc
 ```bash
 aiq run --config_file=examples/frameworks/multi_frameworks/configs/config.yml --input "what is RAG?"
 ```
-**Expected Workflow Result**
-```
+**Expected Workflow Output**
+```console
 Retrieval-Augmented Generation (RAG) is the process of optimizing the output of a large language model, so it references an authoritative knowledge base outside of its training data sources before generating a response. Large Language Models (LLMs) are trained on vast volumes of data and use billions of parameters to generate original output for tasks like answering questions, translating languages, and completing sentences. RAG extends the already powerful capabilities of LLMs to specific
 ```

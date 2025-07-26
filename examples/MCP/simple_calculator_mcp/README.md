@@ -27,7 +27,7 @@ This example demonstrates how to integrate the NVIDIA NeMo Agent toolkit with Mo
 - [Prerequisites](#prerequisites)
 - [Installation and Setup](#installation-and-setup)
   - [Install this Workflow](#install-this-workflow)
-- [Usage](#usage)
+- [Run the Workflow](#run-the-workflow)
   - [AIQ Toolkit as an MCP Client](#aiq-toolkit-as-an-mcp-client)
   - [AIQ Toolkit as an MCP Server](#aiq-toolkit-as-an-mcp-server)
 - [Configuration Examples](#configuration-examples)
@@ -63,6 +63,8 @@ Model Context Protocol (MCP) is a standard protocol that enables AI applications
 
 ## Installation and Setup
 
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+
 ### Install this Workflow
 
 Install this example:
@@ -71,7 +73,7 @@ Install this example:
 uv pip install -e examples/MCP/simple_calculator_mcp
 ```
 
-## Usage
+## Run the Workflow
 
 ### AIQ Toolkit as an MCP Client
 You can run the simple calculator workflow using Remote MCP tools. In this case, the workflow acts as a MCP client and connects to the MCP server running on the specified URL. Details are provided in the [MCP Client Guide](../../../docs/source/workflows/mcp/mcp-client.md).

@@ -22,10 +22,11 @@ A minimal example demonstrating an end-to-end Jira ticket creating agentic workf
 ## Table of Contents
 
 - [Key Features](#key-features)
+- [Prerequisites](#prerequisites)
 - [Installation and Setup](#installation-and-setup)
   - [Install this Workflow](#install-this-workflow)
   - [Set Up API Keys](#set-up-api-keys)
-  - [Update `Config.yml` with Jira domain and PROJECT KEY](#update-configyml-with-jira-domain-and-project-key)
+  - [Update `config.yml` with Jira domain and PROJECT KEY](#update-configyml-with-jira-domain-and-project-key)
   - [Human in the Loop (HITL) Configuration](#human-in-the-loop-hitl-configuration)
 - [Example Usage](#example-usage)
   - [Run the Workflow](#run-the-workflow)
@@ -38,6 +39,14 @@ A minimal example demonstrating an end-to-end Jira ticket creating agentic workf
 - **Intelligent Story Point Assignment:** Automatically assigns story points based on complexity and effort estimation using LLM analysis of extracted requirements.
 - **Structured Requirement Extraction:** Processes requirement documents to identify and categorize different work items with appropriate descriptions, priorities, and ticket types.
 
+## Prerequisites
+
+Access to a Jira system is required. You will need enough permissions to obtain a Jira token.
+
+Steps to create a Jira token:
+1. Go to `User Profile`
+2. Navigate to `API token authentication`
+3. Click `Create a new API token`
 
 ## Installation and Setup
 
@@ -60,9 +69,7 @@ export JIRA_USERID=<YOUR_JIRA_USERNAME>
 export JIRA_TOKEN=<YOUR_JIRA_TOKEN>
 ```
 
-Steps to create a Jira token: Go to `User Profile` -> `API token authentication`-> `Creat a new API token`
-
-### Update `Config.yml` with Jira domain and PROJECT KEY
+### Update `config.yml` with Jira domain and PROJECT KEY
 ```
     jira_domain: "https://<YOUR_COMPANY_DOMAIN>.com"
     jira_project_key: "<YOUR_JIRA_PROJECTKEY>"
@@ -139,13 +146,45 @@ aiq run --config_file examples/por_to_jiratickets/configs/config.yml  --input "C
 ```
 
 **Expected Workflow Result When Giving Permission**
+```console
+<snipped for brevity>
 
-```
-Jira tickets for epics and tasks have been created. Epics: AIQ-1158, AIQ-1163, AIQ-1159, AIQ-1162, AIQ-1161, AIQ-1160. Tasks: AIQ-1166, AIQ-1169, AIQ-1170, AIQ-1164, AIQ-1171, AIQ-1168, AIQ-1172, AIQ-1174, AIQ-1165, AIQ-1175, AIQ-1173, AIQ-1167.
+------------------------------
+[AGENT]
+Calling tools: extract_por_tool
+Tool's input: {"input_text": "por_requirements.txt"}
+Tool's response:
+Extraction complete. You can now ask me to show epics or tasks.
+------------------------------
+
+<snipped for brevity>
+
+------------------------------
+[AGENT]
+Agent input: Can you extract por file por_requirements.txt, assign story points and create jira tickets for epics first and then followed by tasks?
+Agent's thoughts:
+Thought: I now know the final answer
+
+<snipped for brevity>
+
+Workflow Result:
+['Jira tickets for epics and tasks have been created. Epics: AIQ-1158, AIQ-1163, AIQ-1159, AIQ-1162, AIQ-1161, AIQ-1160. Tasks: AIQ-1166, AIQ-1169, AIQ-1170, AIQ-1164, AIQ-1171, AIQ-1168, AIQ-1172, AIQ-1174, AIQ-1165, AIQ-1175, AIQ-1173, AIQ-1167.']
 ```
 
 **Expected Workflow Result When Not Giving Permission**
 
-```
-Jira tickets for epics were not created due to lack of user confirmation.
+```console
+<snipped for brevity>
+
+Action: create_jira_tickets_tool
+Action Input: {'input_text': 'epics'}
+2025-03-12 16:49:54,916 - aiq.agent.react_agent.agent - INFO - Calling tool create_jira_tickets_tool with input: {'input_text': 'epics'}
+2025-03-12 16:49:54,916 - aiq.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
+I would like to create Jira tickets for the extracted data. Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: no
+
+<snipped for brevity>
+
+Workflow Result:
+['Jira tickets for epics were not created due to lack of user confirmation.']
+
 ```

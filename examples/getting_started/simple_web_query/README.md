@@ -22,6 +22,7 @@ A minimal example demonstrating a simple LangSmith-Documentation agent. This age
 ## Table of Contents
 
 * [Key Features](#key-features)
+* [Prerequisites](#prerequisites)
 * [Installation and Setup](#installation-and-setup)
 * [Running the Workflow](#running-the-workflow)
 * [Deployment-Oriented Setup](#docker-quickstart)
@@ -36,7 +37,18 @@ A minimal example demonstrating a simple LangSmith-Documentation agent. This age
 - **End-to-End Web RAG:** Complete example of Retrieval-Augmented Generation (RAG) using web-scraped content as the knowledge source.
 - **YAML-based Configuration:** Fully configurable workflow demonstrating integration of web scraping, embeddings, and agent reasoning through simple configuration.
 
----
+## Prerequisites
+
+Ensure that Docker is installed and the Docker service is running before proceeding.
+
+- Install Docker: Follow the official installation guide for your platform: [Docker Installation Guide](https://docs.docker.com/engine/install/)
+- Start Docker Service:
+  - Linux: Run`sudo systemctl start docker` (ensure your user has permission to run Docker).
+  - Mac & Windows: Docker Desktop should be running in the background.
+- Verify Docker Installation: Run the following command to verify that Docker is installed and running correctly:
+```bash
+docker info
+```
 
 ## Installation and Setup
 
@@ -65,9 +77,12 @@ Run the following command from the root of the NeMo Agent toolkit repo to execut
 aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"
 ```
 
-**Expected Workflow Result**
-```
-LangSmith is a platform for building production-grade LLM (Large Language Model) applications, allowing users to monitor and evaluate their applications, and providing features such as observability, evaluation, and prompt engineering. It is framework-agnostic and can be used with or without LangChain's open source frameworks.
+**Expected Workflow Output**
+```console
+<snipped for brevity>
+
+Workflow Result:
+['LangSmith is a platform for building production-grade LLM (Large Language Model) applications, allowing users to monitor and evaluate their applications, and providing features such as observability, evaluation, and prompt engineering. It is framework-agnostic and can be used with or without LangChain's open source frameworks.']
 ```
 
 ## Docker Quickstart
