@@ -14,25 +14,21 @@
 # limitations under the License.
 
 import socket
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs
+from urllib.parse import urlparse
 
 import httpx
 import pytest
 from httpx import ASGITransport
+from mock_oauth2_server import MockOAuth2Server
 
-from aiq.authentication.oauth2.authorization_code_flow_config import (
-    OAuth2AuthorizationCodeFlowConfig,
-)
+from aiq.authentication.oauth2.authorization_code_flow_config import OAuth2AuthorizationCodeFlowConfig
 from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.config import AIQConfig
-from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import (
-    FastApiFrontEndPluginWorker,
-)
+from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
+from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 from aiq.test.functions import EchoFunctionConfig
-from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import (
-    WebSocketAuthenticationFlowHandler,
-)
-from mock_oauth2_server import MockOAuth2Server
+
 
 # --------------------------------------------------------------------------- #
 # helpers                                                                     #
@@ -104,13 +100,14 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server):
     cfg_aiq = AIQConfig(workflow=EchoFunctionConfig())
     worker = FastApiFrontEndPluginWorker(cfg_aiq)
     # we need the add/remove‑flow callbacks but NOT the worker’s WS endpoint
-    add_flow = worker._add_flow          # pylint: disable=protected-access
-    remove_flow = worker._remove_flow    # pylint: disable=protected-access
+    add_flow = worker._add_flow  # pylint: disable=protected-access
+    remove_flow = worker._remove_flow  # pylint: disable=protected-access
 
     # ----------------- dummy WebSocket “UI” handler --------------------- #
     opened: list[str] = []
 
     class _DummyWSHandler:  # minimal stand‑in for the UI layer
+
         def set_flow_handler(self, _):  # called by worker – ignore
             return
 
@@ -159,7 +156,7 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server):
         token_url="http://testserver/oauth/token",
         scopes=["read"],
         use_pkce=True,
-        run_local_redirect_server=False,          # no uvicorn
+        run_local_redirect_server=False,  # no uvicorn
         client_url=f"http://localhost:{redirect_port}",
         local_redirect_server_port=redirect_port,
     )
