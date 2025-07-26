@@ -65,6 +65,7 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
                                    redirect_uri=config.redirect_uri,
                                    scope=" ".join(config.scopes) if config.scopes else None,
                                    token_endpoint=config.token_url,
+                                   token_endpoint_auth_method=config.token_endpoint_auth_method,
                                    code_challenge_method='S256' if config.use_pkce else None)
         self._oauth_client = client
         return client
