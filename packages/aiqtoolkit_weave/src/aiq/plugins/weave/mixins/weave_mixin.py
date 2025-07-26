@@ -192,3 +192,10 @@ class WeaveMixin:
 
         # Finish the call with outputs
         self._gc.finish_call(call, outputs)
+
+    async def _cleanup_weave_calls(self) -> None:
+        # Clean up any lingering Weave calls if Weave is available and initialized
+        if self._gc is not None and self._weave_calls:
+            for _, call in list(self._weave_calls.items()):
+                self._gc.finish_call(call, {"status": "incomplete"})
+            self._weave_calls.clear()

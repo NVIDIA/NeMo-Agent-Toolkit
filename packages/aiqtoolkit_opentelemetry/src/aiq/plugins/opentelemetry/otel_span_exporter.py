@@ -15,6 +15,8 @@
 
 import logging
 from abc import abstractmethod
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version
 
 from opentelemetry.sdk.resources import Resource
 
@@ -27,6 +29,19 @@ from aiq.plugins.opentelemetry.otel_span import OtelSpan
 from aiq.plugins.opentelemetry.span_converter import convert_span_to_otel
 
 logger = logging.getLogger(__name__)
+
+
+def get_opentelemetry_sdk_version() -> str:
+    """Get the OpenTelemetry SDK version dynamically.
+
+    Returns:
+        The version of the opentelemetry-sdk package, or 'unknown' if not found.
+    """
+    try:
+        return version("opentelemetry-sdk")
+    except PackageNotFoundError:
+        logger.warning("Could not determine opentelemetry-sdk version")
+        return "unknown"
 
 
 class SpanToOtelProcessor(Processor[Span, OtelSpan]):
