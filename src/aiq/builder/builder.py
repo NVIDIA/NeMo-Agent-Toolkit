@@ -20,6 +20,7 @@ from abc import abstractmethod
 from collections.abc import Sequence
 from pathlib import Path
 
+from aiq.authentication.interfaces import AuthenticationClientBase
 from aiq.builder.context import AIQContext
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function import Function
@@ -122,7 +123,7 @@ class Builder(ABC):  # pylint: disable=too-many-public-methods
         pass
 
     @abstractmethod
-    async def get_authentication(self, authentication_config_name: str) -> typing.Any:
+    async def get_authentication(self, authentication_config_name: str) -> AuthenticationClientBase:
         pass
 
     @abstractmethod

@@ -21,13 +21,9 @@ general:
       level: WARN
 
 functions:
-  auth_tool:
-    _type: auth_tool
+  who_am_i_function:
+    _type: who_am_i
     auth_provider: test_auth_provider
-
-  ip_info_tool:
-    _type: ip_lookup
-    authentication_function: auth_tool
 
 llms:
   nim_llm:
@@ -54,7 +50,7 @@ authentication:
 workflow:
   _type: react_agent
   tool_names:
-    - ip_info_tool
+    - who_am_i_function
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3

@@ -23,7 +23,6 @@ from abc import abstractmethod
 from collections.abc import Awaitable
 from collections.abc import Callable
 from contextlib import asynccontextmanager
-from functools import partial
 from pathlib import Path
 
 from fastapi import BackgroundTasks
@@ -37,6 +36,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from pydantic import Field
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.websockets import WebSocket
 
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.api_server import AIQChatRequest
@@ -60,11 +61,11 @@ from aiq.front_ends.fastapi.fastapi_front_end_config import AIQEvaluateStatusRes
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from aiq.front_ends.fastapi.job_store import JobInfo
 from aiq.front_ends.fastapi.job_store import JobStore
+from aiq.front_ends.fastapi.message_handler import WebSocketMessageHandler
 from aiq.front_ends.fastapi.response_helpers import generate_single_response
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
 from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
-from aiq.front_ends.fastapi.websocket import AIQWebSocket
 from aiq.object_store.models import ObjectStoreItem
 from aiq.runtime.session import AIQSessionManager
 
@@ -518,11 +519,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         workflow = session_manager.workflow
 
-        if (endpoint.websocket_path):
-            app.add_websocket_route(
-                endpoint.websocket_path,
-                partial(AIQWebSocket, session_manager, self.get_step_adaptor(), self._ws_flow_handler))
-
         GenerateBodyType = workflow.input_schema  # pylint: disable=invalid-name
         GenerateStreamResponseType = workflow.streaming_output_schema  # pylint: disable=invalid-name
         GenerateSingleResponseType = workflow.single_output_schema  # pylint: disable=invalid-name
@@ -818,6 +814,18 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 logger.info("Found job %s with status %s", job_id, job.status)
                 return _job_status_to_response(job)
 
+        async def websocket_endpoint(websocket: WebSocket):
+
+            async with WebSocketMessageHandler(websocket,
+                                               session_manager,
+                                               self.get_step_adaptor(),
+                                               self._ws_flow_handler) as handler:
+
+                await handler.run()
+
+        if (endpoint.websocket_path):
+            app.add_websocket_route(endpoint.websocket_path, websocket_endpoint)
+
         if (endpoint.path):
 
             if (endpoint.method == "GET"):
@@ -1006,7 +1014,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             flow_state = self._ws_flow_handler._flows[state]
             config = self._ws_flow_handler._configs[state]
             verifier = flow_state.verifier
-            client = self._ws_flow_handler._oauth_client
+            client = flow_state.client
 
             try:
                 flow_state.future.set_result(await client.fetch_token(url=config.token_url,

@@ -37,6 +37,7 @@ class _FlowState:
     future: asyncio.Future = field(default_factory=asyncio.Future, init=False)
     challenge: str | None = None
     verifier: str | None = None
+    client: AsyncOAuth2Client | None = None
 
 
 class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
@@ -47,7 +48,6 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
         self._server_controller: _FastApiFrontEndController | None = None
         self._server_lock: asyncio.Lock = asyncio.Lock()
         self._active_flows: int = 0
-        self._oauth_client = None
         self.web_socket = None
 
     async def authenticate(self, config: OAuth2AuthorizationCodeFlowConfig,
@@ -58,28 +58,26 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
         raise NotImplementedError(f"Authentication method '{method}' is not supported by the websocket frontend.")
 
     def create_oauth_client(self, config: OAuth2AuthorizationCodeFlowConfig):
-        if self._oauth_client is None:
-            self._oauth_client = AsyncOAuth2Client(client_id=config.client_id,
-                                                   client_secret=config.client_secret,
-                                                   redirect_uri=config.redirect_uri,
-                                                   scope=" ".join(config.scopes) if config.scopes else None,
-                                                   token_endpoint=config.token_url,
-                                                   token_endpoint_auth_method=config.token_endpoint_auth_method,
-                                                   code_challenge_method='S256' if config.use_pkce else None)
-        return self._oauth_client
+        return AsyncOAuth2Client(client_id=config.client_id,
+                                 client_secret=config.client_secret,
+                                 redirect_uri=config.redirect_uri,
+                                 scope=" ".join(config.scopes) if config.scopes else None,
+                                 token_endpoint=config.token_url,
+                                 code_challenge_method='S256' if config.use_pkce else None,
+                                 token_endpoint_auth_method=config.token_endpoint_auth_method)
 
     async def _handle_oauth2_auth_code_flow(self, config: OAuth2AuthorizationCodeFlowConfig) -> AuthenticatedContext:
         state = secrets.token_urlsafe(16)
         flow_state = _FlowState()
 
-        client = self.create_oauth_client(config)
+        flow_state.client = self.create_oauth_client(config)
 
         if config.use_pkce:
             verifier, challenge = pkce.generate_pkce_pair()
             flow_state.verifier = verifier
             flow_state.challenge = challenge
 
-        authorization_url, _ = client.create_authorization_url(
+        authorization_url, _ = flow_state.client.create_authorization_url(
             config.authorization_url,
             state=state,
             code_verifier=flow_state.verifier if config.use_pkce else None,
