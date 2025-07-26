@@ -125,8 +125,9 @@ class TypedBaseModel(BaseModel):
 
     def model_post_init(self, __context):
         """Set the type field to the correct value after instance creation."""
-        if hasattr(self.__class__, '_typed_model_name'):
+        if hasattr(self.__class__, '_typed_model_name') and self.__class__._typed_model_name is not None:
             object.__setattr__(self, 'type', self.__class__._typed_model_name)
+        # If no type name is set, the field retains its default "unknown" value
 
     @classmethod
     def static_type(cls):
