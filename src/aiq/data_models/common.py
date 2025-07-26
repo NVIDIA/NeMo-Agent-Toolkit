@@ -93,7 +93,8 @@ class TypedBaseModel(BaseModel):
     Subclass of Pydantic BaseModel that allows for specifying the object type. Use in Pydantic discriminated unions.
     """
 
-    type: str = Field(init=False,
+    type: str = Field(default="unknown",
+                      init=False,
                       serialization_alias="_type",
                       validation_alias=AliasChoices('type', '_type'),
                       description="The type of the object",
@@ -101,6 +102,7 @@ class TypedBaseModel(BaseModel):
                       repr=False)
 
     full_type: typing.ClassVar[str]
+    _typed_model_name: typing.ClassVar[str | None] = None
 
     def __init_subclass__(cls, name: str | None = None):
         super().__init_subclass__()
@@ -117,14 +119,19 @@ class TypedBaseModel(BaseModel):
 
             full_name = f"{package_name}/{name}"
 
-            type_field = cls.model_fields.get("type")
-            if type_field is not None:
-                type_field.default = name
+            # Store the type name as a class attribute - no field manipulation needed!
+            cls._typed_model_name = name  # type: ignore
             cls.full_type = full_name
+
+    def model_post_init(self, __context):
+        """Set the type field to the correct value after instance creation."""
+        if hasattr(self.__class__, '_typed_model_name'):
+            object.__setattr__(self, 'type', self.__class__._typed_model_name)
 
     @classmethod
     def static_type(cls):
-        return cls.model_fields.get("type").default
+        # Use our class attribute instead of the shared field's default
+        return getattr(cls, '_typed_model_name', None)
 
     @classmethod
     def static_full_type(cls):
