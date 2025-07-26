@@ -44,7 +44,6 @@ def _patch_context(monkeypatch: pytest.MonkeyPatch, callback):
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.asyncio
 async def test_success(monkeypatch):
     """Happy-path: callback supplies username/password and Authorization header."""
 
@@ -73,7 +72,6 @@ async def test_success(monkeypatch):
     assert bearer.token.get_secret_value() == "dXNlcjpwYXNz"
 
 
-@pytest.mark.asyncio
 async def test_caching(monkeypatch):
     """Second call with same user_id should NOT re-invoke the callback."""
     hits = {"n": 0}
@@ -96,7 +94,6 @@ async def test_caching(monkeypatch):
     assert hits["n"] == 1
 
 
-@pytest.mark.asyncio
 async def test_missing_authorization_header(monkeypatch):
     """Callback returns no `Authorization` header → RuntimeError."""
 
@@ -111,7 +108,6 @@ async def test_missing_authorization_header(monkeypatch):
         await exchanger.authenticate("u123")
 
 
-@pytest.mark.asyncio
 async def test_callback_exception_bubbles(monkeypatch):
     """Errors in the callback are wrapped in a helpful RuntimeError."""
 

@@ -131,7 +131,6 @@ def test_config_invalid_header_prefix_nonascii():
 # --------------------------------------------------------------------------- #
 # APIKeyClient – _construct_authentication_header
 # --------------------------------------------------------------------------- #
-@pytest.mark.asyncio
 async def test_construct_header_bearer(monkeypatch: pytest.MonkeyPatch):
     cfg = make_config()
     client = APIKeyClient(cfg)
@@ -143,7 +142,6 @@ async def test_construct_header_bearer(monkeypatch: pytest.MonkeyPatch):
     assert hdr.token.get_secret_value() == cfg.raw_key
 
 
-@pytest.mark.asyncio
 async def test_construct_header_x_api_key():
     cfg = make_config(
         scheme=HeaderAuthScheme.X_API_KEY,
@@ -158,7 +156,6 @@ async def test_construct_header_x_api_key():
     assert hdr.token.get_secret_value() == cfg.raw_key
 
 
-@pytest.mark.asyncio
 async def test_construct_header_custom():
     cfg = make_config(
         scheme=HeaderAuthScheme.CUSTOM,
@@ -176,7 +173,6 @@ async def test_construct_header_custom():
 # --------------------------------------------------------------------------- #
 # APIKeyClient – authenticate high-level method
 # --------------------------------------------------------------------------- #
-@pytest.mark.asyncio
 async def test_authenticate_returns_authresult():
     cfg = make_config()
     client = APIKeyClient(cfg)

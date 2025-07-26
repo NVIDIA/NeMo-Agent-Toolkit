@@ -18,8 +18,8 @@ from datetime import timedelta
 from datetime import timezone
 
 import pytest
+from pydantic import TypeAdapter
 from pydantic import ValidationError
-from pydantic import parse_obj_as
 
 from aiq.data_models.authentication import AuthenticatedContext  # enums; models
 from aiq.data_models.authentication import AuthenticationEndpoint
@@ -133,7 +133,7 @@ def test_authenticated_context_extra_forbidden():
     ],
 )
 def test_credential_discriminator_parsing(payload, expected_cls):
-    cred = parse_obj_as(Credential, payload)
+    cred = TypeAdapter(Credential).validate_python(payload)
     assert isinstance(cred, expected_cls)
     # discriminator preserved
     assert cred.kind.value == payload["kind"]
@@ -141,12 +141,7 @@ def test_credential_discriminator_parsing(payload, expected_cls):
 
 def test_credential_invalid_kind():
     with pytest.raises(ValidationError):
-        parse_obj_as(
-            Credential,
-            {
-                "kind": "unknown", "name": "X", "value": "oops"
-            },
-        )
+        TypeAdapter(Credential).validate_python({"kind": "unknown", "name": "X", "value": "oops"})
 
 
 # --------------------------------------------------------------------------- #
