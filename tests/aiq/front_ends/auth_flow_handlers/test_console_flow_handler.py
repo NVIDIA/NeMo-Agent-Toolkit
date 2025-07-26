@@ -19,118 +19,74 @@ import socket
 import httpx
 import pytest
 from httpx import ASGITransport
-
-from aiq.authentication.oauth2.authorization_code_flow_config import (
-    OAuth2AuthorizationCodeFlowConfig,
-)
-from aiq.data_models.authentication import AuthFlowType
-from aiq.front_ends.console.authentication_flow_handler import ConsoleAuthenticationFlowHandler
 from mock_oauth2_server import MockOAuth2Server
 
+from aiq.authentication.oauth2.authorization_code_flow_config import OAuth2AuthorizationCodeFlowConfig
+from aiq.data_models.authentication import AuthFlowType
+from aiq.front_ends.console.authentication_flow_handler import ConsoleAuthenticationFlowHandler
+
 
 # --------------------------------------------------------------------------- #
-# Utilities
+# Helpers                                                                     #
 # --------------------------------------------------------------------------- #
 def _free_port() -> int:
-    """Reserve an available TCP port and immediately release it."""
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
 
 
+class _TestHandler(ConsoleAuthenticationFlowHandler):
+    """
+    Override *one* factory so the OAuth2 client talks to the in‑process
+    FastAPI mock (no real network), everything else kept intact.
+    """
+
+    def __init__(self, oauth_server: MockOAuth2Server):
+        super().__init__()
+        self._oauth_server = oauth_server
+
+    def construct_oauth_client(self, cfg):
+        transport = ASGITransport(app=self._oauth_server._app)
+        from authlib.integrations.httpx_client import AsyncOAuth2Client
+
+        client = AsyncOAuth2Client(
+            client_id=cfg.client_id,
+            client_secret=cfg.client_secret,
+            redirect_uri=cfg.redirect_uri,
+            scope=" ".join(cfg.scopes) if cfg.scopes else None,
+            token_endpoint=cfg.token_url,
+            base_url="http://testserver",  # matches host passed below
+            transport=transport,
+        )
+        self._oauth_client = client
+        return client
+
+
 # --------------------------------------------------------------------------- #
-# Fixtures
+# Fixtures                                                                    #
 # --------------------------------------------------------------------------- #
 @pytest.fixture(scope="module")
 def mock_server() -> MockOAuth2Server:
-    """
-    FastAPI mock‑server *without* uvicorn:
-    we use its app directly via ASGITransport.
-    """
-    srv = MockOAuth2Server(host="testserver", port=0)  # uvicorn not started
-    # we still need a client registered so the /authorize handler is happy
-    srv.register_client(
-        client_id="cid",
-        client_secret="secret",
-        redirect_base="http://127.0.0.1:9999",  # dummy; overridden per test
-    )
+    srv = MockOAuth2Server(host="testserver", port=0)  # no uvicorn needed
+    # dummy client (redirect updated per test)
+    srv.register_client(client_id="cid", client_secret="secret", redirect_base="http://x")
     return srv
 
 
-@pytest.fixture()
-def browser_driver(monkeypatch: pytest.MonkeyPatch, mock_server: MockOAuth2Server):
-    """
-    Patch `webbrowser.open` so the test drives the flow over httpx.
-
-    • First request hits the mock auth‑server (in‑process via ASGITransport).
-    • That endpoint responds 302 → localhost redirect‑server spun up
-      by the handler; we follow it with a *real* network call.
-    """
-    opened: list[str] = []
-
-    async def _drive(url: str):
-        opened.append(url)
-
-        # 1) hit mock server (testserver)
-        async with httpx.AsyncClient(
-            transport=ASGITransport(app=mock_server._app),
-            base_url="http://testserver",
-            follow_redirects=False,
-            timeout=10,
-        ) as client:
-            r = await client.get(url)
-            assert r.status_code == 302
-            redirect_url = r.headers["location"]
-
-        # 2) follow redirect to handler’s local FastAPI server
-        async with httpx.AsyncClient(follow_redirects=True, timeout=10) as client:
-            await client.get(redirect_url)
-
-    def _fake_open(url: str, *_a, **_kw):
-        asyncio.get_event_loop().create_task(_drive(url))
-        return True
-
-    monkeypatch.setattr("webbrowser.open", _fake_open, raising=True)
-    monkeypatch.setattr("click.echo", lambda *_: None, raising=True)
-    return opened
-
-
-@pytest.fixture()
-def handler(mock_server: MockOAuth2Server):
-    """Subclass handler so its OAuth2 client talks to our in‑process mock."""
-    class _TestHandler(ConsoleAuthenticationFlowHandler):
-        def __init__(self, srv):
-            super().__init__()
-            self._srv = srv
-
-        # override *one* method to inject ASGITransport
-        def construct_oauth_client(self, cfg):
-            transport = ASGITransport(app=self._srv._app)
-            from authlib.integrations.httpx_client import AsyncOAuth2Client
-
-            client = AsyncOAuth2Client(
-                client_id=cfg.client_id,
-                client_secret=cfg.client_secret,
-                redirect_uri=cfg.redirect_uri,
-                scope=" ".join(cfg.scopes) if cfg.scopes else None,
-                token_endpoint=cfg.token_url,
-                base_url="http://testserver",
-                transport=transport,
-            )
-            self._oauth_client = client
-            return client
-
-    return _TestHandler(mock_server)
-
-
 # --------------------------------------------------------------------------- #
-# Integration test
+# The integration test                                                        #
 # --------------------------------------------------------------------------- #
-@pytest.mark.asyncio
-async def test_oauth2_authorization_code_flow(handler, mock_server, browser_driver):
-    """Run the full flow (incl. redirect server) with minimal stubbing."""
+async def test_oauth2_flow_in_process(monkeypatch, mock_server):
+    """
+    1. Handler builds its redirect FastAPI app in‑memory (no uvicorn).
+    2. webbrowser.open is patched to:
+         • hit /oauth/authorize on the mock server via ASGITransport
+         • follow the 302 to the handler’s *in‑process* redirect app.
+    3. The whole Authorization‑Code dance finishes with a valid token.
+    """
     redirect_port = _free_port()
-    # Register *again* with correct redirect URI for this test incarnation
+
+    # Re‑register the client with the proper redirect URI for this test
     mock_server.register_client(
         client_id="cid",
         client_secret="secret",
@@ -144,21 +100,54 @@ async def test_oauth2_authorization_code_flow(handler, mock_server, browser_driv
         token_url="http://testserver/oauth/token",
         scopes=["read"],
         use_pkce=True,
+        run_redirect_local_server=False,  # ← key line: no uvicorn
         client_url=f"http://localhost:{redirect_port}",
-        run_redirect_local_server=True,
-        local_redirect_server_port=redirect_port,
+        local_redirect_server_port=redirect_port,  # still used in redirect_uri
     )
 
+    handler = _TestHandler(mock_server)
+
+    # ----------------- patch browser ---------------------------------- #
+    opened: list[str] = []
+
+    async def _drive(url: str):
+        opened.append(url)
+        # 1) hit mock auth server (ASGI)
+        async with httpx.AsyncClient(
+            transport=ASGITransport(app=mock_server._app),
+            base_url="http://testserver",
+            follow_redirects=False,
+            timeout=10,
+        ) as c:
+            r = await c.get(url)
+            assert r.status_code == 302
+            redirect_url = r.headers["location"]
+
+        # 2) follow redirect to handler's in‑memory FastAPI app
+        #    (wait until it exists – very quick)
+        while handler.redirect_app is None:
+            await asyncio.sleep(0.01)
+
+        async with httpx.AsyncClient(
+                transport=ASGITransport(app=handler.redirect_app),
+                base_url="http://localhost",
+                follow_redirects=True,
+                timeout=10,
+        ) as c:
+            await c.get(redirect_url)
+
+    monkeypatch.setattr("webbrowser.open", lambda url, *_: asyncio.create_task(_drive(url)), raising=True)
+    monkeypatch.setattr("click.echo", lambda *_: None, raising=True)  # silence CLI
+
+    # ----------------- run flow ---------------------------------------- #
     ctx = await handler.authenticate(cfg, AuthFlowType.OAUTH2_AUTHORIZATION_CODE)
 
-    # ---- Assertions ------------------------------------------------------ #
-    assert browser_driver, "webbrowser.open was never invoked"
-    assert ctx.headers["Authorization"].startswith("Bearer ")
+    # ----------------- assertions -------------------------------------- #
+    assert opened, "Browser was never opened"
+    tok = ctx.headers["Authorization"].split()[1]
+    assert tok in mock_server.tokens  # issued by mock server
 
-    token = ctx.headers["Authorization"].split()[1]
-    # token should be present in mock‑server's db
-    assert token in mock_server.tokens
-
-    # handler cleaned up its flow bookkeeping
+    # internal cleanup
     assert handler._active_flows == 0
     assert not handler._flows
+    assert handler.redirect_app is None  # released after flow end

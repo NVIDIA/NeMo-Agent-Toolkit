@@ -84,7 +84,6 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
         self._cleanup_tasks: list[str] = []
         self._cleanup_tasks_lock = asyncio.Lock()
-        # self._ws_flow_handler: WebSocketAuthenticationFlowHandler | None = WebSocketAuthenticationFlowHandler()
         self._http_flow_handler: HTTPAuthenticationFlowHandler | None = HTTPAuthenticationFlowHandler()
 
     @property
@@ -1030,8 +1029,8 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             try:
                 res = await client.fetch_token(url=config.token_url,
                                                authorization_response=str(request.url),
-                                                code_verifier=verifier,
-                                                                      state=state)
+                                               code_verifier=verifier,
+                                               state=state)
                 flow_state.future.set_result(res)
             except Exception as e:
                 flow_state.future.set_exception(e)

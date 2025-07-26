@@ -21,12 +21,21 @@ import string
 import threading
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 
 import uvicorn
-from fastapi import FastAPI, Form, Header, HTTPException, Query, status
+from fastapi import FastAPI
+from fastapi import Form
+from fastapi import Header
+from fastapi import HTTPException
+from fastapi import Query
+from fastapi import status
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from pydantic import Field
+
 
 # =============================================================================
 # Models
@@ -99,6 +108,7 @@ def _parse_basic_auth(auth_header: str | None) -> tuple[str, str] | None:
 # Server
 # =============================================================================
 class MockOAuth2Server:
+
     def __init__(self, host: str = "localhost", port: int = 0) -> None:
         self._app = FastAPI(title="Mock OAuth 2 Server")
         self._host, self._port_cfg = host, port
@@ -113,9 +123,7 @@ class MockOAuth2Server:
         self._mount_routes()
 
     # -------------------- public helpers ---------------------------------
-    def register_client(
-        self, *, client_id: str, client_secret: str | None, redirect_base: str
-    ) -> _Client:
+    def register_client(self, *, client_id: str, client_secret: str | None, redirect_base: str) -> _Client:
         client = _Client(
             client_id=client_id,
             client_secret=client_secret,
@@ -176,13 +184,13 @@ class MockOAuth2Server:
         # ---- Authorization endpoint ---------------------------------
         @app.get("/oauth/authorize")
         async def authorize(
-            response_type: str = Query(...),
-            client_id: str = Query(...),
-            redirect_uri: str = Query(...),
-            scope: str = Query("read"),
-            state: str | None = Query(None),
-            code_challenge: str | None = Query(None),
-            code_challenge_method: str | None = Query("S256"),
+                response_type: str = Query(...),
+                client_id: str = Query(...),
+                redirect_uri: str = Query(...),
+                scope: str = Query("read"),
+                state: str | None = Query(None),
+                code_challenge: str | None = Query(None),
+                code_challenge_method: str | None = Query("S256"),
         ):
             if response_type != "code":
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, "unsupported_response_type")
@@ -212,9 +220,9 @@ class MockOAuth2Server:
         # ---- Device‑Code issuance -----------------------------------
         @app.post("/oauth/device/code")
         async def device_code(
-            client_id: str = Form(...),
-            scope: str = Form("read"),
-            interval: int = Form(5),
+                client_id: str = Form(...),
+                scope: str = Form("read"),
+                interval: int = Form(5),
         ):
             if client_id not in self._clients:
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, "invalid_client")
@@ -240,14 +248,14 @@ class MockOAuth2Server:
         # ---- Token endpoint -----------------------------------------
         @app.post("/oauth/token")
         async def token(
-            grant_type: str = Form(...),
-            code: str | None = Form(None),
-            redirect_uri: str | None = Form(None),
-            code_verifier: str | None = Form(None),
-            device_code: str | None = Form(None),
-            authorization: str | None = Header(None),
-            client_id_form: str | None = Form(None, alias="client_id"),
-            client_secret_form: str | None = Form(None, alias="client_secret"),
+                grant_type: str = Form(...),
+                code: str | None = Form(None),
+                redirect_uri: str | None = Form(None),
+                code_verifier: str | None = Form(None),
+                device_code: str | None = Form(None),
+                authorization: str | None = Header(None),
+                client_id_form: str | None = Form(None, alias="client_id"),
+                client_secret_form: str | None = Form(None, alias="client_secret"),
         ):
             # ---- Authorization‑Code grant ---------------------------
             if grant_type == "authorization_code":

@@ -23,14 +23,12 @@ from dataclasses import field
 
 import pkce
 from authlib.integrations.httpx_client import AsyncOAuth2Client
-from fastapi import WebSocket
 
 from aiq.authentication.interfaces import FlowHandlerBase
 from aiq.authentication.oauth2.authorization_code_flow_config import OAuth2AuthorizationCodeFlowConfig
 from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.interactive import _HumanPromptOAuthConsent
-from aiq.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEndController
 from aiq.front_ends.fastapi.message_handler import WebSocketMessageHandler
 
 logger = logging.getLogger(__name__)
@@ -51,11 +49,7 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
                  add_flow_cb: Callable[[str, FlowState], Awaitable[None]],
                  remove_flow_cb: Callable[[str], Awaitable[None]],
                  web_socket_message_handler: WebSocketMessageHandler):
-        # self._flows: dict[str, _FlowState] = {}
-        # self._configs: dict[str, OAuth2AuthorizationCodeFlowConfig] = {}
-        # self._server_controller: _FastApiFrontEndController | None = None
-        # self._server_lock: asyncio.Lock = asyncio.Lock()
-        # self._active_flows: int = 0
+
         self._add_flow_cb: Callable[[str, FlowState], Awaitable[None]] = add_flow_cb
         self._remove_flow_cb: Callable[[str], Awaitable[None]] = remove_flow_cb
         self._web_socket_message_handler: WebSocketMessageHandler = web_socket_message_handler
@@ -100,24 +94,13 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
         )
 
         await self._add_flow_cb(state, flow_state)
-
-        # async with self._server_lock:
-        #     self._flows[state] = flow_state
-        #     self._active_flows += 1
-        #     self._configs[state] = config
-
         await self._web_socket_message_handler.create_websocket_message(_HumanPromptOAuthConsent(text=authorization_url)
                                                                         )
-
         try:
             token = await asyncio.wait_for(flow_state.future, timeout=300)
         except asyncio.TimeoutError:
             raise RuntimeError("Authentication flow timed out after 5 minutes.")
         finally:
-            # async with self._server_lock:
-            #     if state in self._flows:
-            #         del self._flows[state]
-            #     self._active_flows -= 1
 
             await self._remove_flow_cb(state)
 

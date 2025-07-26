@@ -154,7 +154,7 @@ async def who_am_i_function(config: WhoAmIConfig, builder: Builder):
                 return json.dumps(data, indent=2)
 
         except httpx.TimeoutException:
-            error_msg = f"Request timeout while looking up user"
+            error_msg = "Request timeout while looking up user"
             logger.error(error_msg)
             return json.dumps({"error": "Request timeout", "status": "failed"})
         except httpx.HTTPStatusError as e:
