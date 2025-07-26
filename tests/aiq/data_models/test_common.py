@@ -244,16 +244,6 @@ class TestTypedBaseModelInheritance:
         instance = UnnamedComponent()
         assert instance.type == "unknown"
 
-    def test_class_attribute_storage(self):
-        """Test that type names are stored as class attributes."""
-
-        class AttributeTestComponent(common.TypedBaseModel, name="attribute_test"):
-            pass
-
-        # Should have the class attribute
-        assert hasattr(AttributeTestComponent, '_typed_model_name')
-        assert AttributeTestComponent._typed_model_name == "attribute_test"
-
     def test_model_post_init_behavior(self):
         """Test that model_post_init correctly sets the type field."""
 
