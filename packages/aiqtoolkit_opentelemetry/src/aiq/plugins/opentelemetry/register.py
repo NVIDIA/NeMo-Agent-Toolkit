@@ -108,13 +108,14 @@ class OtelCollectorTelemetryExporter(BatchConfigMixin,
 async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder):  # pylint: disable=W0613
     """Create an OpenTelemetry telemetry exporter."""
 
+    from aiq.plugins.opentelemetry.otel_span_exporter import get_opentelemetry_sdk_version
     from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
     # Default resource attributes
     default_resource_attributes = {
         "telemetry.sdk.language": "python",
         "telemetry.sdk.name": "opentelemetry",
-        "telemetry.sdk.version": "1.35.0",
+        "telemetry.sdk.version": get_opentelemetry_sdk_version(),
         "service.name": config.project,
     }
 
