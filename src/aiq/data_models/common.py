@@ -130,7 +130,6 @@ class TypedBaseModel(BaseModel):
 
     @classmethod
     def static_type(cls):
-        # Use our class attribute instead of the shared field's default
         return getattr(cls, '_typed_model_name', None)
 
     @classmethod
