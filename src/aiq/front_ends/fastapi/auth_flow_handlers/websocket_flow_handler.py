@@ -39,7 +39,6 @@ class _FlowState:
 
 
 class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
-    web_socket = None
 
     def __init__(self):
         self._flows: dict[str, _FlowState] = {}
@@ -48,6 +47,7 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
         self._server_lock: asyncio.Lock = asyncio.Lock()
         self._active_flows: int = 0
         self._oauth_client = None
+        self.web_socket = None
 
     async def authenticate(self, config: OAuth2AuthorizationCodeFlowConfig,
                            method: AuthFlowType) -> AuthenticatedContext:
@@ -90,11 +90,10 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
             self._active_flows += 1
             self._configs[state] = config
 
-        if WebSocketAuthenticationFlowHandler.web_socket is None:
+        if self.web_socket is None:
             raise RuntimeError("WebSocket instance is not available for handling authentication.")
 
-        await WebSocketAuthenticationFlowHandler.web_socket.message_handler.create_websocket_message(
-            _HumanPromptOAuthConsent(text=authorization_url))
+        await self.web_socket.message_handler.create_websocket_message(_HumanPromptOAuthConsent(text=authorization_url))
 
         try:
             await asyncio.wait_for(flow_state.event.wait(), timeout=300)

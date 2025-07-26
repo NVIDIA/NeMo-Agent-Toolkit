@@ -112,9 +112,8 @@ values you copied from the dummy client registration step above.
 ```yaml
 authentication:
   test_auth_provider:
-    _type: oauth2_authorization_code 
-    client_server_host: "localhost"
-    client_server_port: 8000
+    _type: oauth2_authorization_code
+    client_url: http://localhost:8000
     authorization_url: http://127.0.0.1:5000/oauth/authorize
     token_url: http://127.0.0.1:5000/oauth/token
     token_endpoint_auth_method: client_secret_post

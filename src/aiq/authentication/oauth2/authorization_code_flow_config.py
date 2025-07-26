@@ -19,8 +19,7 @@ from aiq.data_models.authentication import AuthenticationBaseConfig
 
 
 class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_authorization_code"):
-    client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
-    client_secret: str = Field(description="The secret associated with the client_id.")
+    client_url: str = Field(description="The client URL for OAuth 2.0 authentication.", default="http://localhost:8000")
     authorization_url: str = Field(description="The authorization URL for OAuth 2.0 authentication.")
     token_url: str = Field(description="The token URL for OAuth 2.0 authentication.")
     token_endpoint_auth_method: str | None = Field(description="The authentication method for the token endpoint.",
@@ -38,4 +37,4 @@ class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_a
 
     @property
     def redirect_uri(self) -> str:
-        return f"http://{self.client_server_host}:{self.client_server_port}{self.redirect_path}"
+        return f"{self.client_url}{self.redirect_path}"

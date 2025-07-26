@@ -42,6 +42,7 @@ class _FlowState:
 
 
 class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
+
     def __init__(self):
         super().__init__()
         self._server_controller: _FastApiFrontEndController | None = None

@@ -519,9 +519,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         workflow = session_manager.workflow
 
         if (endpoint.websocket_path):
-            app.add_websocket_route(endpoint.websocket_path,
-                                    partial(AIQWebSocket, session_manager, self.get_step_adaptor(),
-                                            self._ws_flow_handler))
+            app.add_websocket_route(
+                endpoint.websocket_path,
+                partial(AIQWebSocket, session_manager, self.get_step_adaptor(), self._ws_flow_handler))
 
         GenerateBodyType = workflow.input_schema  # pylint: disable=invalid-name
         GenerateStreamResponseType = workflow.streaming_output_schema  # pylint: disable=invalid-name
@@ -987,8 +987,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
     async def add_authorization_route(self, app: FastAPI):
 
         from fastapi.responses import HTMLResponse
-
-        from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
         from aiq.front_ends.fastapi.html_snippets.auth_code_grant_success import AUTH_REDIRECT_SUCCESS_HTML
 
         async def redirect_uri(request: Request):
