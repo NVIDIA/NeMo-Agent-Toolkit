@@ -131,9 +131,9 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
 
         # Register flow + maybe spin up redirect handler
         async with self._server_lock:
-            if self._server_controller is None and cfg.run_redirect_local_server:
+            if self._server_controller is None and cfg.run_local_redirect_server:
                 await self._start_redirect_server(cfg)
-            elif not cfg.run_redirect_local_server and self._redirect_app is None:
+            elif not cfg.run_local_redirect_server and self._redirect_app is None:
                 await self._start_redirect_server(cfg)
             self._flows[state] = flow_state
             self._active_flows += 1
@@ -150,9 +150,9 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
             async with self._server_lock:
                 self._flows.pop(state, None)
                 self._active_flows -= 1
-                if self._active_flows == 0 and cfg.run_redirect_local_server:
+                if self._active_flows == 0 and cfg.run_local_redirect_server:
                     await self._stop_redirect_server()
-                if self._active_flows == 0 and not cfg.run_redirect_local_server:
+                if self._active_flows == 0 and not cfg.run_local_redirect_server:
                     self._redirect_app = None
 
         return AuthenticatedContext(
@@ -190,7 +190,7 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
             return "Authentication successful – you may close this tab."
 
         # ----------- Option A: in‑process (tests) or external service configured --------------------- #
-        if not cfg.run_redirect_local_server:
+        if not cfg.run_local_redirect_server:
             # Nothing else to spin up – expose the app for the test.
             self._redirect_app = app
             return

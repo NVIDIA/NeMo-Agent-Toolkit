@@ -100,7 +100,7 @@ async def test_oauth2_flow_in_process(monkeypatch, mock_server):
         token_url="http://testserver/oauth/token",
         scopes=["read"],
         use_pkce=True,
-        run_redirect_local_server=False,  # ← key line: no uvicorn
+        run_local_redirect_server=False,  # ← key line: no uvicorn
         client_url=f"http://localhost:{redirect_port}",
         local_redirect_server_port=redirect_port,  # still used in redirect_uri
     )

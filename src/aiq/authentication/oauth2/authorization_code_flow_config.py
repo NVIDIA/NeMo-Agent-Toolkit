@@ -34,7 +34,7 @@ class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_a
 
     # Configuration for the local server that handles the redirect
     client_url: str = Field(description="The base URL for the client application.", default="http://localhost:8000")
-    run_redirect_local_server: bool = Field(default=False,
+    run_local_redirect_server: bool = Field(default=False,
                                             description="Whether to run a local server to handle the redirect URI.")
     local_redirect_server_port: int = Field(default=8000,
                                             description="Port for the local redirect "
