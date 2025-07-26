@@ -137,7 +137,7 @@ async def who_am_i_function(config: WhoAmIConfig, builder: Builder):
         try:
 
             # Trigger the authentication flow
-            auth_result = await auth_provider.authenticate(user_id="default")
+            auth_result = await auth_provider.authenticate()
 
             auth_header: BearerTokenCred = auth_result.credentials[0]
 

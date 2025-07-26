@@ -21,7 +21,7 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from contextlib import nullcontext
 
-from fastapi import Request
+from starlette.requests import HTTPConnection
 
 from aiq.builder.context import AIQContext
 from aiq.builder.context import AIQContextState
@@ -89,7 +89,7 @@ class AIQSessionManager:
     @asynccontextmanager
     async def session(self,
                       user_manager=None,
-                      request: Request | None = None,
+                      request: HTTPConnection | None = None,
                       conversation_id: str | None = None,
                       user_input_callback: Callable[[InteractionPrompt], Awaitable[HumanResponse]] = None,
                       user_authentication_callback: Callable[[AuthenticationBaseConfig, AuthFlowType],
@@ -135,7 +135,7 @@ class AIQSessionManager:
             async with self._workflow.run(message) as runner:
                 yield runner
 
-    def set_metadata_from_http_request(self, request: Request | None) -> None:
+    def set_metadata_from_http_request(self, request: HTTPConnection | None) -> None:
         """
         Extracts and sets user metadata request attributes from a HTTP request.
         If request is None, no attributes are set.
@@ -143,7 +143,7 @@ class AIQSessionManager:
         if request is None:
             return
 
-        self._context.metadata._request.method = request.method
+        self._context.metadata._request.method = getattr(request, "method", None)
         self._context.metadata._request.url_path = request.url.path
         self._context.metadata._request.url_port = request.url.port
         self._context.metadata._request.url_scheme = request.url.scheme

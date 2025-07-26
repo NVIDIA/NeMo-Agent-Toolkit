@@ -273,6 +273,7 @@ class WebSocketMessageHandler:
         try:
             async with self._session_manager.session(
                     conversation_id=conversation_id,
+                    request=self._socket,
                     user_input_callback=self.human_interaction_callback,
                     user_authentication_callback=(self._flow_handler.authenticate
                                                   if self._flow_handler else None)) as session:

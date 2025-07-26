@@ -76,7 +76,7 @@ class APIKeyClient(AuthenticationClientBase):
 
         return None
 
-    async def authenticate(self, user_id: str | None) -> AuthResult | None:
+    async def authenticate(self, user_id: str | None = None) -> AuthResult | None:
         """
         Authenticate the user using the API key credentials.
 

@@ -40,7 +40,7 @@ class HTTPBasicAuthExchanger(AuthenticationClientBase):
         self._authenticated_tokens: dict[str, AuthResult] = {}
         self._context = AIQContext.get()
 
-    async def authenticate(self, user_id: str | None) -> AuthResult:
+    async def authenticate(self, user_id: str | None = None) -> AuthResult:
         """
         Performs simple HTTP Authentication using the provided user ID.
         Args:

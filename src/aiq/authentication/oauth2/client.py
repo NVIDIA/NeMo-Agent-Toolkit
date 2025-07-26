@@ -63,7 +63,14 @@ class OAuth2Client(AuthenticationClientBase):
 
         return new_auth_result
 
-    async def authenticate(self, user_id: str | None) -> AuthResult:
+    async def authenticate(self, user_id: str | None = None) -> AuthResult:
+        if (user_id is None):
+            session_id = AIQContext.get().metadata.cookies.get("aiqtoolkit-session", None)
+            if not session_id:
+                raise RuntimeError("Authentication failed. No session ID found. Cannot identify user.")
+
+            user_id = session_id
+
         if user_id and user_id in self._authenticated_tokens:
             auth_result = self._authenticated_tokens[user_id]
             if not auth_result.is_expired():
