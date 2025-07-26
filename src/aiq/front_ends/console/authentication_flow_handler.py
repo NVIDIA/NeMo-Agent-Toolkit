@@ -34,9 +34,7 @@ from aiq.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEnd
 
 @dataclass
 class _FlowState:
-    event: asyncio.Event = field(default_factory=asyncio.Event, init=False)
-    token: dict | None = None
-    error: Exception | None = None
+    future: asyncio.Future = field(default_factory=asyncio.Future, init=False)
     challenge: str | None = None
     verifier: str | None = None
 
@@ -109,7 +107,7 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
         webbrowser.open(authorization_url)
 
         try:
-            await asyncio.wait_for(flow_state.event.wait(), timeout=300)
+            token = await asyncio.wait_for(flow_state.future, timeout=300)
         except asyncio.TimeoutError:
             raise RuntimeError("Authentication flow timed out after 5 minutes.")
         finally:
@@ -119,13 +117,6 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
                 self._active_flows -= 1
                 if self._active_flows == 0:
                     await self._stop_redirect_server()
-
-        if flow_state.error:
-            raise RuntimeError(f"Authentication failed: {flow_state.error}") from flow_state.error
-        if not flow_state.token:
-            raise RuntimeError("Authentication failed: Did not receive token.")
-
-        token = flow_state.token
 
         return AuthenticatedContext(headers={"Authorization": f"Bearer {token['access_token']}"},
                                     metadata={
@@ -145,15 +136,13 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
             verifier = flow_state.verifier
 
             try:
-                flow_state.token = await self._oauth_client.fetch_token(
+                flow_state.future.set_result(await self._oauth_client.fetch_token(
                     url=config.token_url,
                     authorization_response=str(request.url),
                     code_verifier=verifier if config.use_pkce else None,
-                    state=state)
+                    state=state))
             except Exception as e:
-                flow_state.error = e
-            finally:
-                flow_state.event.set()
+                flow_state.future.set_exception(e)
             return "Authentication successful! You can close this window."
 
         controller = _FastApiFrontEndController(app)

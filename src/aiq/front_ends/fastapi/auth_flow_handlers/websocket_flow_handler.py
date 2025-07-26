@@ -14,10 +14,10 @@
 # limitations under the License.
 
 import asyncio
+import logging
 import secrets
 from dataclasses import dataclass
 from dataclasses import field
-import logging
 
 import pkce
 from authlib.integrations.httpx_client import AsyncOAuth2Client
@@ -34,9 +34,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class _FlowState:
-    event: asyncio.Event = field(default_factory=asyncio.Event, init=False)
-    token: dict | None = None
-    error: Exception | None = None
+    future: asyncio.Future = field(default_factory=asyncio.Future, init=False)
     challenge: str | None = None
     verifier: str | None = None
 
@@ -99,7 +97,7 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
         await self.web_socket.message_handler.create_websocket_message(_HumanPromptOAuthConsent(text=authorization_url))
 
         try:
-            await asyncio.wait_for(flow_state.event.wait(), timeout=300)
+            token = await asyncio.wait_for(flow_state.future, timeout=300)
         except asyncio.TimeoutError:
             raise RuntimeError("Authentication flow timed out after 5 minutes.")
         finally:
@@ -107,13 +105,6 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
                 if state in self._flows:
                     del self._flows[state]
                 self._active_flows -= 1
-
-        if flow_state.error:
-            raise RuntimeError(f"Authentication failed: {flow_state.error}") from flow_state.error
-        if not flow_state.token:
-            raise RuntimeError("Authentication failed: Did not receive token.")
-
-        token = flow_state.token
 
         return AuthenticatedContext(headers={"Authorization": f"Bearer {token['access_token']}"},
                                     metadata={

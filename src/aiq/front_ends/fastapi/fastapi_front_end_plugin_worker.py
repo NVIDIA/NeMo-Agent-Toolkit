@@ -987,6 +987,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
     async def add_authorization_route(self, app: FastAPI):
 
         from fastapi.responses import HTMLResponse
+
         from aiq.front_ends.fastapi.html_snippets.auth_code_grant_success import AUTH_REDIRECT_SUCCESS_HTML
 
         async def redirect_uri(request: Request):
@@ -1008,14 +1009,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             client = self._ws_flow_handler._oauth_client
 
             try:
-                flow_state.token = await client.fetch_token(url=config.token_url,
-                                                            authorization_response=str(request.url),
-                                                            code_verifier=verifier,
-                                                            state=state)
+                flow_state.future.set_result(await client.fetch_token(url=config.token_url,
+                                                                      authorization_response=str(request.url),
+                                                                      code_verifier=verifier,
+                                                                      state=state))
             except Exception as e:
-                flow_state.error = e
-            finally:
-                flow_state.event.set()
+                flow_state.future.set_exception(e)
 
             return HTMLResponse(content=AUTH_REDIRECT_SUCCESS_HTML,
                                 status_code=200,
