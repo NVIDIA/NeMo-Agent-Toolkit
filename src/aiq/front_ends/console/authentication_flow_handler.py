@@ -136,11 +136,12 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
             verifier = flow_state.verifier
 
             try:
-                flow_state.future.set_result(await self._oauth_client.fetch_token(
+                res = await self._oauth_client.fetch_token(
                     url=config.token_url,
                     authorization_response=str(request.url),
                     code_verifier=verifier if config.use_pkce else None,
-                    state=state))
+                    state=state)
+                flow_state.future.set_result(res)
             except Exception as e:
                 flow_state.future.set_exception(e)
             return "Authentication successful! You can close this window."
@@ -148,8 +149,19 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
         controller = _FastApiFrontEndController(app)
         self._server_controller = controller
 
-        asyncio.create_task(controller.start_server(host=config.client_server_host, port=config.client_server_port))
+        await self._start_server_task(config)
         await asyncio.sleep(1)
+
+    async def _start_server_task(self, config: OAuth2AuthorizationCodeFlowConfig):
+        if self._server_controller is None:
+            raise RuntimeError("Server controller not initialized.")
+        try:
+            if config.run_redirect_local_server:
+                asyncio.create_task(
+                    self._server_controller.start_server(host="localhost", port=config.local_redirect_server_port))
+        except Exception as e:
+            error_message = f"Failed to start redirect server: {str(e)}"
+            raise RuntimeError(error_message) from e
 
     async def _stop_redirect_server(self):
         if self._server_controller:
