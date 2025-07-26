@@ -59,7 +59,7 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
 
 1. Clone the NeMo Agent toolkit repository to your local machine.
     ```bash
-    git clone git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit
+    git clone -b main git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit
     cd aiqtoolkit
     ```
 
