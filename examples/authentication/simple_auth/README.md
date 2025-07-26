@@ -102,28 +102,14 @@ Browse to **`http://127.0.0.1:5000/`** – you should see the demo home page. Si
 Follow the instructions at the GitHub repository to deploy the [NeMo Agent Toolkit UI](https://github.com/NVIDIA/NeMo-Agent-Toolkit-UI)
 to deploy the UI that works with the agent in this example. Configure it according to the instructions in the README.
 
-## Update Your Agent Configuration
+## Update Your Environment Variables
 
-Update your agent's configuration file located at `examples/authentication/simple_auth/confgis/config.yml` to include the OAuth 2.0 settings. 
+Export your saved client ID and secret to the following environment variables:
 
-Here is an example configuration. You should only need to modify the `client_id` and `client_secret` fields with the 
-values you copied from the dummy client registration step above.
-
-```yaml
-authentication:
-  test_auth_provider:
-    _type: oauth2_authorization_code
-    client_url: http://localhost:8000
-    authorization_url: http://127.0.0.1:5000/oauth/authorize
-    token_url: http://127.0.0.1:5000/oauth/token
-    token_endpoint_auth_method: client_secret_post
-    scope:
-      - openid
-      - profile
-      - email
-    client_id: <YOUR COPIED CLIENT ID>
-    client_secret: <YOUR COPIED CLIENT SECRET>
-```
+```bash
+export OAUTH_CLIENT_ID=<your_client_id>
+export OAUTH_CLIENT_SECRET=<your_client_secret>
+````
 
 ## Serve The Agent
 
