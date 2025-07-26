@@ -16,11 +16,14 @@
 import asyncio
 import logging
 import secrets
+from collections.abc import Awaitable
+from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import field
 
 import pkce
 from authlib.integrations.httpx_client import AsyncOAuth2Client
+from fastapi import WebSocket
 
 from aiq.authentication.interfaces import FlowHandlerBase
 from aiq.authentication.oauth2.authorization_code_flow_config import OAuth2AuthorizationCodeFlowConfig
@@ -28,27 +31,34 @@ from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.interactive import _HumanPromptOAuthConsent
 from aiq.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEndController
+from aiq.front_ends.fastapi.message_handler import WebSocketMessageHandler
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class _FlowState:
+class FlowState:
     future: asyncio.Future = field(default_factory=asyncio.Future, init=False)
     challenge: str | None = None
     verifier: str | None = None
     client: AsyncOAuth2Client | None = None
+    config: OAuth2AuthorizationCodeFlowConfig | None = None
 
 
 class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
 
-    def __init__(self):
-        self._flows: dict[str, _FlowState] = {}
-        self._configs: dict[str, OAuth2AuthorizationCodeFlowConfig] = {}
-        self._server_controller: _FastApiFrontEndController | None = None
-        self._server_lock: asyncio.Lock = asyncio.Lock()
-        self._active_flows: int = 0
-        self.web_socket = None
+    def __init__(self,
+                 add_flow_cb: Callable[[str, FlowState], Awaitable[None]],
+                 remove_flow_cb: Callable[[str], Awaitable[None]],
+                 web_socket_message_handler: WebSocketMessageHandler):
+        # self._flows: dict[str, _FlowState] = {}
+        # self._configs: dict[str, OAuth2AuthorizationCodeFlowConfig] = {}
+        # self._server_controller: _FastApiFrontEndController | None = None
+        # self._server_lock: asyncio.Lock = asyncio.Lock()
+        # self._active_flows: int = 0
+        self._add_flow_cb: Callable[[str, FlowState], Awaitable[None]] = add_flow_cb
+        self._remove_flow_cb: Callable[[str], Awaitable[None]] = remove_flow_cb
+        self._web_socket_message_handler: WebSocketMessageHandler = web_socket_message_handler
 
     async def authenticate(self, config: OAuth2AuthorizationCodeFlowConfig,
                            method: AuthFlowType) -> AuthenticatedContext:
@@ -68,7 +78,7 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
 
     async def _handle_oauth2_auth_code_flow(self, config: OAuth2AuthorizationCodeFlowConfig) -> AuthenticatedContext:
         state = secrets.token_urlsafe(16)
-        flow_state = _FlowState()
+        flow_state = FlowState(config=config)
 
         flow_state.client = self.create_oauth_client(config)
 
@@ -84,25 +94,27 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
             code_challenge=flow_state.challenge if config.use_pkce else None
         )
 
-        async with self._server_lock:
-            self._flows[state] = flow_state
-            self._active_flows += 1
-            self._configs[state] = config
+        await self._add_flow_cb(state, flow_state)
 
-        if self.web_socket is None:
-            raise RuntimeError("WebSocket instance is not available for handling authentication.")
+        # async with self._server_lock:
+        #     self._flows[state] = flow_state
+        #     self._active_flows += 1
+        #     self._configs[state] = config
 
-        await self.web_socket.message_handler.create_websocket_message(_HumanPromptOAuthConsent(text=authorization_url))
+        await self._web_socket_message_handler.create_websocket_message(_HumanPromptOAuthConsent(text=authorization_url)
+                                                                        )
 
         try:
             token = await asyncio.wait_for(flow_state.future, timeout=300)
         except asyncio.TimeoutError:
             raise RuntimeError("Authentication flow timed out after 5 minutes.")
         finally:
-            async with self._server_lock:
-                if state in self._flows:
-                    del self._flows[state]
-                self._active_flows -= 1
+            # async with self._server_lock:
+            #     if state in self._flows:
+            #         del self._flows[state]
+            #     self._active_flows -= 1
+
+            await self._remove_flow_cb(state)
 
         return AuthenticatedContext(headers={"Authorization": f"Bearer {token['access_token']}"},
                                     metadata={

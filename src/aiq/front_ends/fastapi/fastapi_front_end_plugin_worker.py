@@ -36,7 +36,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from pydantic import Field
-from starlette.middleware.sessions import SessionMiddleware
 from starlette.websockets import WebSocket
 
 from aiq.builder.workflow_builder import WorkflowBuilder
@@ -52,6 +51,7 @@ from aiq.eval.config import EvaluationRunOutput
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
 from aiq.front_ends.fastapi.auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
+from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
 from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQAsyncGenerateResponse
 from aiq.front_ends.fastapi.fastapi_front_end_config import AIQAsyncGenerationStatusResponse
@@ -84,7 +84,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
         self._cleanup_tasks: list[str] = []
         self._cleanup_tasks_lock = asyncio.Lock()
-        self._ws_flow_handler: WebSocketAuthenticationFlowHandler | None = WebSocketAuthenticationFlowHandler()
+        # self._ws_flow_handler: WebSocketAuthenticationFlowHandler | None = WebSocketAuthenticationFlowHandler()
         self._http_flow_handler: HTTPAuthenticationFlowHandler | None = HTTPAuthenticationFlowHandler()
 
     @property
@@ -202,6 +202,12 @@ class RouteInfo(BaseModel):
 
 
 class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
+
+    def __init__(self, config: AIQConfig):
+        super().__init__(config)
+
+        self._outstanding_flows: dict[str, FlowState] = {}
+        self._outstanding_flows_lock = asyncio.Lock()
 
     @staticmethod
     async def _periodic_cleanup(name: str, job_store: JobStore, sleep_time_sec: int = 300):
@@ -816,10 +822,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         async def websocket_endpoint(websocket: WebSocket):
 
-            async with WebSocketMessageHandler(websocket,
-                                               session_manager,
-                                               self.get_step_adaptor(),
-                                               self._ws_flow_handler) as handler:
+            async with WebSocketMessageHandler(websocket, session_manager, self.get_step_adaptor()) as handler:
+
+                flow_handler = WebSocketAuthenticationFlowHandler(self._add_flow, self._remove_flow, handler)
+
+                # Ugly hack to set the flow handler on the message handler. Both need eachother to be set.
+                handler.set_flow_handler(flow_handler)
 
                 await handler.run()
 
@@ -1008,11 +1016,14 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 HTMLResponse: A response indicating the success of the authentication flow.
             """
             state = request.query_params.get("state")
-            if not state or state not in self._ws_flow_handler._flows:
-                return "Invalid state. Please restart the authentication process."
 
-            flow_state = self._ws_flow_handler._flows[state]
-            config = self._ws_flow_handler._configs[state]
+            async with self._outstanding_flows_lock:
+                if not state or state not in self._outstanding_flows:
+                    return "Invalid state. Please restart the authentication process."
+
+                flow_state = self._outstanding_flows[state]
+
+            config = flow_state.config
             verifier = flow_state.verifier
             client = flow_state.client
 
@@ -1036,3 +1047,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             endpoint=redirect_uri,
             methods=["GET"],
             description="Handles the authorization code and state returned from the Authorization Code Grant Flow.")
+
+    async def _add_flow(self, state: str, flow_state: FlowState):
+        async with self._outstanding_flows_lock:
+            self._outstanding_flows[state] = flow_state
+
+    async def _remove_flow(self, state: str):
+        async with self._outstanding_flows_lock:
+            del self._outstanding_flows[state]

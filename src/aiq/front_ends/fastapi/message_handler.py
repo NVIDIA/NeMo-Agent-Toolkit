@@ -24,6 +24,7 @@ from pydantic import BaseModel
 from pydantic import ValidationError
 from starlette.websockets import WebSocketDisconnect
 
+from aiq.authentication.interfaces import FlowHandlerBase
 from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.api_server import AIQResponsePayloadOutput
 from aiq.data_models.api_server import AIQResponseSerializable
@@ -42,7 +43,6 @@ from aiq.data_models.interactive import HumanPromptNotification
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import HumanResponseNotification
 from aiq.data_models.interactive import InteractionPrompt
-from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
 from aiq.front_ends.fastapi.message_validator import MessageValidator
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response
 from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
@@ -53,21 +53,21 @@ logger = logging.getLogger(__name__)
 
 class WebSocketMessageHandler:
 
-    def __init__(self,
-                 socket: WebSocket,
-                 session_manager: AIQSessionManager,
-                 step_adaptor: StepAdaptor,
-                 flow_handler: WebSocketAuthenticationFlowHandler):
+    def __init__(self, socket: WebSocket, session_manager: AIQSessionManager, step_adaptor: StepAdaptor):
         self._socket: WebSocket = socket
         self._session_manager: AIQSessionManager = session_manager
         self._step_adaptor: StepAdaptor = step_adaptor
-        self._flow_handler: WebSocketAuthenticationFlowHandler = flow_handler
 
         self._message_validator: MessageValidator = MessageValidator()
         self._running_workflow_task: asyncio.Task | None = None
         self._message_parent_id: str = "default_id"
         self._workflow_schema_type: str = None
         self._user_interaction_response: asyncio.Future[HumanResponse] | None = None
+
+        self._flow_handler: FlowHandlerBase | None = None
+
+    def set_flow_handler(self, flow_handler: FlowHandlerBase) -> None:
+        self._flow_handler = flow_handler
 
     async def __aenter__(self) -> "WebSocketMessageHandler":
         await self._socket.accept()
@@ -108,7 +108,7 @@ class WebSocketMessageHandler:
                     self._user_interaction_response.set_result(user_content)
             except (asyncio.CancelledError, WebSocketDisconnect):
                 # TODO: Handle the disconnect
-                pass
+                break
 
         return None
 
@@ -150,9 +150,13 @@ class WebSocketMessageHandler:
 
             if isinstance(content, TextContent) and (self._running_workflow_task is None):
 
+                def _done_callback(task: asyncio.Task):
+                    self._running_workflow_task = None
+
                 # await self._process_response()
                 self._running_workflow_task = asyncio.create_task(
-                    self._run_workflow(content.text, conversation_id, result_type=AIQChatResponse))
+                    self._run_workflow(content.text, conversation_id,
+                                       result_type=AIQChatResponse)).add_done_callback(_done_callback)
 
         except ValueError as e:
             logger.error("User message content not found: %s", str(e), exc_info=True)
@@ -270,7 +274,8 @@ class WebSocketMessageHandler:
             async with self._session_manager.session(
                     conversation_id=conversation_id,
                     user_input_callback=self.human_interaction_callback,
-                    user_authentication_callback=self._flow_handler.authenticate) as session:
+                    user_authentication_callback=(self._flow_handler.authenticate
+                                                  if self._flow_handler else None)) as session:
 
                 async for value in generate_streaming_response(payload,
                                                                session_manager=session,
