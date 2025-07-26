@@ -267,3 +267,168 @@ class TestTypedBaseModelInheritance:
 
         # Other fields should work normally
         assert instance.field1 == "value1"
+
+    def test_json_schema_generation_basic(self):
+        """Test that JSON schema generation shows correct defaults for named components."""
+        from pydantic import Field
+
+        class SchemaTestComponent(common.TypedBaseModel, name="schema_test"):
+            field1: str = Field(description="A test field")
+            field2: int = Field(default=42, description="A number field")
+
+        schema = SchemaTestComponent.model_json_schema()
+
+        # Check that schema has correct structure
+        assert "properties" in schema
+        assert "type" in schema["properties"]
+
+        # Check type field has correct default (not "unknown")
+        type_field = schema["properties"]["type"]
+        assert type_field["default"] == "schema_test"
+        assert type_field["description"] == "The type of the object"
+        assert type_field["type"] == "string"
+
+        # Check other fields are preserved
+        assert "field1" in schema["properties"]
+        assert "field2" in schema["properties"]
+        assert schema["properties"]["field2"]["default"] == 42
+
+    def test_json_schema_generation_multiple_components(self):
+        """Test that different components get different schema defaults."""
+
+        class ComponentX(common.TypedBaseModel, name="component_x"):
+            pass
+
+        class ComponentY(common.TypedBaseModel, name="component_y"):
+            pass
+
+        schema_x = ComponentX.model_json_schema()
+        schema_y = ComponentY.model_json_schema()
+
+        # Each should have its own correct default
+        assert schema_x["properties"]["type"]["default"] == "component_x"
+        assert schema_y["properties"]["type"]["default"] == "component_y"
+
+        # Schemas should be different
+        assert schema_x["properties"]["type"]["default"] != schema_y["properties"]["type"]["default"]
+
+    def test_json_schema_generation_unnamed_component(self):
+        """Test that unnamed components show 'unknown' in schema."""
+
+        class UnnamedSchemaComponent(common.TypedBaseModel):
+            pass
+
+        schema = UnnamedSchemaComponent.model_json_schema()
+
+        # Unnamed component should have "unknown" default
+        assert schema["properties"]["type"]["default"] == "unknown"
+
+    def test_json_schema_generation_mixin_inheritance(self):
+        """Test that mixin inheritance components have correct schema defaults."""
+
+        class SchemaBatchMixin:
+            batch_size: int = 100
+
+        class SchemaCollectorMixin:
+            endpoint: str = "http://localhost"
+
+        class SchemaTelemetryBase(common.TypedBaseModel):
+            pass
+
+        class SchemaWeaveExporter(SchemaTelemetryBase, name="weave_schema"):
+            pass
+
+        class SchemaPhoenixExporter(SchemaBatchMixin, SchemaCollectorMixin, SchemaTelemetryBase, name="phoenix_schema"):
+            pass
+
+        weave_schema = SchemaWeaveExporter.model_json_schema()
+        phoenix_schema = SchemaPhoenixExporter.model_json_schema()
+
+        # Each should have correct schema default despite complex inheritance
+        assert weave_schema["properties"]["type"]["default"] == "weave_schema"
+        assert phoenix_schema["properties"]["type"]["default"] == "phoenix_schema"
+
+    def test_json_schema_consistency_with_runtime(self):
+        """Test that schema defaults match actual runtime behavior."""
+
+        class ConsistencyTestA(common.TypedBaseModel, name="consistency_a"):
+            pass
+
+        class ConsistencyTestB(common.TypedBaseModel, name="consistency_b"):
+            pass
+
+        # Get schema defaults
+        schema_a = ConsistencyTestA.model_json_schema()
+        schema_b = ConsistencyTestB.model_json_schema()
+        schema_default_a = schema_a["properties"]["type"]["default"]
+        schema_default_b = schema_b["properties"]["type"]["default"]
+
+        # Get runtime values
+        instance_a = ConsistencyTestA()
+        instance_b = ConsistencyTestB()
+        static_a = ConsistencyTestA.static_type()
+        static_b = ConsistencyTestB.static_type()
+
+        # All should match
+        assert schema_default_a == instance_a.type == static_a == "consistency_a"
+        assert schema_default_b == instance_b.type == static_b == "consistency_b"
+
+    def test_json_schema_field_metadata_preserved(self):
+        """Test that other field metadata is preserved in schema generation."""
+        from pydantic import Field
+
+        class MetadataTestComponent(common.TypedBaseModel, name="metadata_test"):
+            required_field: str = Field(description="This field is required")
+            optional_field: str = Field(default="default_value",
+                                        description="This field is optional",
+                                        title="Optional Field")
+            number_field: int = Field(default=100, ge=0, le=1000, description="A constrained number field")
+
+        schema = MetadataTestComponent.model_json_schema()
+
+        # Check that type field metadata is correct
+        type_field = schema["properties"]["type"]
+        assert type_field["default"] == "metadata_test"
+        assert type_field["description"] == "The type of the object"
+        assert type_field["title"] == "Type"
+
+        # Check that other field metadata is preserved
+        required_field = schema["properties"]["required_field"]
+        assert required_field["description"] == "This field is required"
+        assert "default" not in required_field  # Required field should not have default
+
+        optional_field = schema["properties"]["optional_field"]
+        assert optional_field["default"] == "default_value"
+        assert optional_field["description"] == "This field is optional"
+        assert optional_field["title"] == "Optional Field"
+
+        number_field = schema["properties"]["number_field"]
+        assert number_field["default"] == 100
+        assert number_field["minimum"] == 0
+        assert number_field["maximum"] == 1000
+
+        # Check required fields
+        assert "required_field" in schema["required"]
+        assert "optional_field" not in schema["required"]
+        assert "type" not in schema["required"]  # type field should not be required
+
+    def test_json_schema_deep_inheritance(self):
+        """Test that deep inheritance chains have correct schema defaults."""
+
+        class SchemaBaseComponent(common.TypedBaseModel, name="schema_base"):
+            pass
+
+        class SchemaMiddleComponent(SchemaBaseComponent, name="schema_middle"):
+            pass
+
+        class SchemaLeafComponent(SchemaMiddleComponent, name="schema_leaf"):
+            pass
+
+        base_schema = SchemaBaseComponent.model_json_schema()
+        middle_schema = SchemaMiddleComponent.model_json_schema()
+        leaf_schema = SchemaLeafComponent.model_json_schema()
+
+        # Each level should have its own correct default
+        assert base_schema["properties"]["type"]["default"] == "schema_base"
+        assert middle_schema["properties"]["type"]["default"] == "schema_middle"
+        assert leaf_schema["properties"]["type"]["default"] == "schema_leaf"
