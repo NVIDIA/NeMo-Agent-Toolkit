@@ -49,9 +49,10 @@ class OTLPSpanExporterMixin:
             endpoint: OTLP service endpoint URL.
             headers: HTTP headers for authentication and metadata.
         """
-        super().__init__(*args, **kwargs)
-
+        # Initialize exporter before super().__init__() to ensure it's available
+        # if parent class initialization potentially calls export_otel_spans()
         self._exporter = OTLPSpanExporter(endpoint=endpoint, headers=headers)
+        super().__init__(*args, **kwargs)
 
     async def export_otel_spans(self, spans: list[OtelSpan]) -> None:
         """Export a list of OtelSpans using the OTLP exporter.
@@ -63,6 +64,6 @@ class OTLPSpanExporterMixin:
             Exception: If there's an error during span export (logged but not re-raised).
         """
         try:
-            self._exporter.export(spans)  # type: ignore
+            self._exporter.export(spans)  # type: ignore[arg-type]
         except Exception as e:
             logger.error("Error exporting spans: %s", e, exc_info=True)

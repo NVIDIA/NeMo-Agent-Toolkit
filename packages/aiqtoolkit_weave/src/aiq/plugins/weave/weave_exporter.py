@@ -27,3 +27,7 @@ class WeaveExporter(WeaveMixin, SpanExporter[Span, Span]):  # pylint: disable=R0
 
     def __init__(self, context_state=None, **weave_kwargs):
         super().__init__(context_state=context_state, **weave_kwargs)
+
+    async def _cleanup(self) -> None:
+        await self._cleanup_weave_calls()
+        await super()._cleanup()

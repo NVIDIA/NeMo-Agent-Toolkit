@@ -108,17 +108,27 @@ class OtelCollectorTelemetryExporter(BatchConfigMixin,
 async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder):  # pylint: disable=W0613
     """Create an OpenTelemetry telemetry exporter."""
 
+    from aiq.plugins.opentelemetry.otel_span_exporter import get_opentelemetry_sdk_version
     from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
+    # Default resource attributes
+    default_resource_attributes = {
+        "telemetry.sdk.language": "python",
+        "telemetry.sdk.name": "opentelemetry",
+        "telemetry.sdk.version": get_opentelemetry_sdk_version(),
+        "service.name": config.project,
+    }
+
+    # Merge defaults with config, giving precedence to config
+    merged_resource_attributes = {**default_resource_attributes, **config.resource_attributes}
+
     yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
+                                  resource_attributes=merged_resource_attributes,
                                   batch_size=config.batch_size,
                                   flush_interval=config.flush_interval,
                                   max_queue_size=config.max_queue_size,
                                   drop_on_overflow=config.drop_on_overflow,
-                                  shutdown_timeout=config.shutdown_timeout,
-                                  resource_attributes={
-                                      "service.name": config.project,
-                                  })
+                                  shutdown_timeout=config.shutdown_timeout)
 
 
 class PatronusTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="patronus"):
@@ -152,7 +162,8 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
                                   shutdown_timeout=config.shutdown_timeout)
 
 
-class GalileoTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="galileo"):  # pylint: disable=W0613  # noqa: E501
+# pylint: disable=W0613
+class GalileoTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="galileo"):
     """A telemetry exporter to transmit traces to externally hosted galileo service."""
 
     endpoint: str = Field(description="The galileo endpoint to export telemetry traces.",
