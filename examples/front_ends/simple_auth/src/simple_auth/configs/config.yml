@@ -24,12 +24,6 @@ functions:
   who_am_i_function:
     _type: who_am_i
     auth_provider: test_auth_provider
-  ip_lookup_fn:
-    _type: ip_lookup
-    authentication_function: test_auth_provider_fn
-  test_auth_provider_fn:
-    _type: auth_tool
-    auth_provider: test_auth_provider
 
 
 llms:
@@ -58,7 +52,6 @@ workflow:
   _type: react_agent
   tool_names:
     - who_am_i_function
-    - ip_lookup_fn
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3
