@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Adding an API Authentication Provider to NVIDIA Agent Intelligence Toolkit
+# Adding an API Authentication Provider to NeMo Agent Toolkit
 :::{note}
 We recommend reading the [Streamlining API Authentication](../reference/api-authentication.md) guide before proceeding with
 this detailed documentation.
