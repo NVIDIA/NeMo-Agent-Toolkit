@@ -203,12 +203,12 @@ Below is a table listing the current support for the various authentication meth
 | # | Authentication Method                                | `aiq run` | `aiq serve` | Support Level                                         | 
 |---|------------------------------------------------------|-----------|-------------|-------------------------------------------------------|
 | 1 | OAuth2.0 Authorization Code Grant Flow               | ✅         | ✅           | Full support with front-end UI only in websocket mode |
-| 2 | API Key Authenticatoin                               | ✅         | ✅           | Full support across all configurations                |
-| 3 | HTTP Basic Authentication with Username adn Password | ✅         | ❌           | Only available when using a console frontend          |
+| 2 | API Key Authentication                               | ✅         | ✅           | Full support across all configurations                |
+| 3 | HTTP Basic Authentication with Username and Password | ✅         | ❌           | Only available when using a console frontend          |
 
 The sections below detail how OAuth2.0 authentication is handled in each supported configuration.
 
 > ⚠️ **Important:**
 > If using the OAuth2.0 Authorization Code Grant Flow, ensure that the `redirect_uri` in your workflow configuration matches the
 > registered redirect URI in the API provider's console. Mismatched URIs will result in authentication failures. If you are using it
-> in conjuction with the front-end UI, ensure that your browser supports popups and that the redirect URI is accessible from the browser.
+> in conjunction with the front-end UI, ensure that your browser supports popups and that the redirect URI is accessible from the browser.

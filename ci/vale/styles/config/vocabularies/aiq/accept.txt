@@ -10,6 +10,7 @@ Arize
 arXiv
 [Aa]sync
 [Aa]utoencoder
+[Au]thlib
 [Aa]nonymize(d?)
 [Bb]ackoff
 [Bb]ackpressure
@@ -130,6 +131,7 @@ triages
 uv
 VectorDB
 [Ww]alkthrough
+[Ww]ebsocket(s?)
 XGBoost
 zsh
 Zep
