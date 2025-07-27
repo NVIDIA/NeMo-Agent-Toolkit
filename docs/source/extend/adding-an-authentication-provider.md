@@ -20,7 +20,7 @@ limitations under the License.
 We recommend reading the [Streamlining API Authentication](../reference/api-authentication.md) guide before proceeding with
 this detailed documentation.
 :::
-The NeMo Agent Toolkit offers a set of built-in authentication providers for accessing API resources. Additionally, it includes
+The NeMo Agent toolkit offers a set of built-in authentication providers for accessing API resources. Additionally, it includes
 a plugin system that allows developers to define and integrate custom authentication providers.
 
 ## Existing API Authentication Providers
@@ -30,7 +30,7 @@ aiq info components -t authentication_provider
 ```
 
 ## Provider Types
-In the NeMo Agent Toolkit, the providers (credentials) required to authenticate with an API resource are defined separately
+In the NeMo Agent toolkit, the providers (credentials) required to authenticate with an API resource are defined separately
 from the clients that facilitate the authentication process. Authentication providers, such as `APIKeyConfig` and
 `AuthCodeGrantConfig`, store the authentication credentials, while clients like `APIKeyClient` and
 `AuthCodeGrantClient` use those credentials to perform authentication.
@@ -75,7 +75,7 @@ class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_a
 
 ### Registering the Provider
 An asynchronous function decorated with {py:deco}`aiq.cli.register_workflow.register_authentication_provider` is used to
-register the provider with NeMo Agent Toolkit by yielding an instance of
+register the provider with NeMo Agent toolkit by yielding an instance of
 {class}`aiq.builder.authentication.AuthenticationProviderInfo`.
 
 The `OAuth2AuthorizationCodeFlowConfig` from the previous section is registered as follows:
@@ -87,11 +87,11 @@ async def oauth2(authentication_provider: OAuth2AuthorizationCodeFlowConfig, bui
 ## Extending the API Authentication Client
 As described earlier, each API authentication provider defines the credentials and parameters required to authenticate
 with a specific API service. A corresponding API authentication client uses this configuration to initiate and
-complete the authentication process. NeMo Agent Toolkit provides an extensible base class `AuthenticationClientBase`
+complete the authentication process. NeMo Agent toolkit provides an extensible base class `AuthenticationClientBase`
 to simplify the development of custom authentication clients for various authentication methods.
  These base classes provide a structured interface for implementing key functionality, including:
 - Validating configuration credentials
-- Interfacing with the NeMo Agent Toolkit frontend authentication flow handlers
+- Interfacing with the NeMo Agent toolkit frontend authentication flow handlers
 - Returning appropriate authentication tokens or credentials
 
 To implement a custom client, extend the appropriate base class and override the required methods. For detailed
@@ -128,7 +128,7 @@ how this is defined are found in the [Entry Point](../extend/plugins.md#entry-po
 By convention, the entry point module is named `register.py`, but this is not a requirement.
 
 In the entry point module, it is important that the provider is defined first followed by the client. This ensures that
-the provider is added to the NeMo Agent Toolkit registry before the client is registered. A hypothetical `register.py` file
+the provider is added to the NeMo Agent toolkit registry before the client is registered. A hypothetical `register.py` file
 could be defined as follows:
 
 ```python
