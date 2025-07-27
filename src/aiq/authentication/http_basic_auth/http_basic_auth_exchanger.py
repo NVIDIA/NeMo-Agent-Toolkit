@@ -49,6 +49,15 @@ class HTTPBasicAuthExchanger(AuthenticationClientBase):
         Returns:
             AuthenticatedContext: The context containing authentication headers.
         """
+
+        if user_id is None and hasattr(AIQContext.get(), "metadata") and hasattr(
+                AIQContext.get().metadata, "cookies") and AIQContext.get().metadata.cookies is not None:
+            session_id = AIQContext.get().metadata.cookies.get("aiqtoolkit-session", None)
+            if not session_id:
+                raise RuntimeError("Authentication failed. No session ID found. Cannot identify user.")
+
+            user_id = session_id
+
         if user_id and user_id in self._authenticated_tokens:
             return self._authenticated_tokens[user_id]
 
