@@ -35,7 +35,6 @@ dependencies = [
   "pkce==1.0.3",
   "pkginfo~=1.12",
   "platformdirs~=4.3",
-  "pyarrow<21.0.0",
   # work-around for arize-phoenix==6.1.0 incompatibility with pydantic==2.11.*, remove once we update arize-phoenix
   "pydantic==2.10.*",
   "pymilvus~=2.4",
