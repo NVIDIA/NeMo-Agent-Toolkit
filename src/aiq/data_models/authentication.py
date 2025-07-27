@@ -29,6 +29,9 @@ from .common import TypedBaseModel
 
 
 class AuthenticationBaseConfig(TypedBaseModel, BaseModelRegistryTag):
+    """
+    Base configuration for authentication models.
+    """
     pass
 
 
@@ -36,6 +39,9 @@ AuthenticationBaseConfigT = typing.TypeVar("AuthenticationBaseConfigT", bound=Au
 
 
 class CredentialLocation(str, Enum):
+    """
+    Enum representing the location of credentials in an HTTP request.
+    """
     HEADER = "header"
     QUERY = "query"
     COOKIE = "cookie"
@@ -43,6 +49,9 @@ class CredentialLocation(str, Enum):
 
 
 class AuthFlowType(str, Enum):
+    """
+    Enum representing different types of authentication flows.
+    """
     API_KEY = "api_key"
     OAUTH2_CLIENT_CREDENTIALS = "oauth2_client_credentials"
     OAUTH2_AUTHORIZATION_CODE = "oauth2_authorization_code"
@@ -53,6 +62,9 @@ class AuthFlowType(str, Enum):
 
 
 class AuthenticatedContext(BaseModel):
+    """
+    Represents an authenticated context for making requests.
+    """
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     headers: dict[str, str] | httpx.Headers | None = Field(default=None,
                                                            description="HTTP headers used for authentication.")
@@ -64,6 +76,9 @@ class AuthenticatedContext(BaseModel):
 
 
 class HeaderAuthScheme(str, Enum):
+    """
+    Enum representing different header authentication schemes.
+    """
     BEARER = "Bearer"
     X_API_KEY = "X-API-Key"
     BASIC = "Basic"
@@ -71,6 +86,9 @@ class HeaderAuthScheme(str, Enum):
 
 
 class HTTPMethod(str, Enum):
+    """
+    Enum representing HTTP methods used in requests.
+    """
     GET = "GET"
     POST = "POST"
     PUT = "PUT"
@@ -81,51 +99,75 @@ class HTTPMethod(str, Enum):
 
 
 class AuthenticationEndpoint(str, Enum):
+    """
+    Enum representing common authentication endpoints.
+    """
     REDIRECT_URI = "/redirect"
     PROMPT_REDIRECT_URI = "/prompt-uri"
 
 
 class CredentialKind(str, Enum):
+    """
+    Enum representing different kinds of credentials used for authentication.
+    """
     HEADER = "header"
     QUERY = "query"
     COOKIE = "cookie"
-    BASIC = "basic_auth"  # (user, pass) tuple
-    BEARER = "bearer_token"  # Authorization header
+    BASIC = "basic_auth"
+    BEARER = "bearer_token"
 
 
 class _CredBase(BaseModel):
+    """
+    Base class for credentials used in authentication.
+    """
     kind: CredentialKind
     model_config = ConfigDict(extra="forbid")
 
 
 class HeaderCred(_CredBase):
+    """
+    Represents a credential that is sent in the HTTP header.
+    """
     kind: typing.Literal[CredentialKind.HEADER] = CredentialKind.HEADER
     name: str
     value: SecretStr
 
 
 class QueryCred(_CredBase):
+    """
+    Represents a credential that is sent as a query parameter in the URL.
+    """
     kind: typing.Literal[CredentialKind.QUERY] = CredentialKind.QUERY
     name: str
     value: SecretStr
 
 
 class CookieCred(_CredBase):
+    """
+    Represents a credential that is sent as a cookie in the HTTP request.
+    """
     kind: typing.Literal[CredentialKind.COOKIE] = CredentialKind.COOKIE
     name: str
     value: SecretStr
 
 
 class BasicAuthCred(_CredBase):
+    """
+    Represents credentials for HTTP Basic Authentication.
+    """
     kind: typing.Literal[CredentialKind.BASIC] = CredentialKind.BASIC
     username: SecretStr
     password: SecretStr
 
 
 class BearerTokenCred(_CredBase):
+    """
+    Represents a credential for Bearer Token Authentication.
+    """
     kind: typing.Literal[CredentialKind.BEARER] = CredentialKind.BEARER
     token: SecretStr
-    scheme: str = "Bearer"  # override to "Token", etc.
+    scheme: str = "Bearer"
     header_name: str = "Authorization"
 
 
@@ -142,16 +184,28 @@ Credential = typing.Annotated[
 
 
 class AuthResult(BaseModel):
-    credentials: list[Credential]
-    token_expires_at: datetime | None = None
-    raw: dict[str, typing.Any] = {}  # idP / debug blob
+    """
+    Represents the result of an authentication process.
+    """
+    credentials: list[Credential] = Field(default_factory=list,
+                                          description="List of credentials used for authentication.")
+    token_expires_at: datetime | None = Field(default=None,
+                                               description="Expiration time of the token, if applicable.")
+    raw: dict[str, typing.Any] = Field(default_factory=dict,
+                                        description="Raw response data from the authentication process.")
 
     model_config = ConfigDict(extra="forbid")
 
     def is_expired(self) -> bool:
+        """
+        Checks if the authentication token has expired.
+        """
         return bool(self.token_expires_at and datetime.now(timezone.utc) >= self.token_expires_at)
 
     def as_requests_kwargs(self) -> dict[str, typing.Any]:
+        """
+        Converts the authentication credentials into a format suitable for use with the `httpx` library.
+        """
         kw: dict[str, typing.Any] = {"headers": {}, "params": {}, "cookies": {}}
 
         for cred in self.credentials:
@@ -173,6 +227,9 @@ class AuthResult(BaseModel):
         return kw
 
     def attach(self, target_kwargs: dict[str, typing.Any]) -> None:
+        """
+        Attaches the authentication credentials to the target request kwargs.
+        """
         merged = self.as_requests_kwargs()
         for k, v in merged.items():
             if isinstance(v, dict):
