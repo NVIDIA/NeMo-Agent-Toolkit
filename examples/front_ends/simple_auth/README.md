@@ -52,7 +52,7 @@ which provides information about the authenticated user.
 
 ## Running the Demo OAuth Provider Locally
 
-In a separate terminal, you can run a demo OAuth 2.0 provider using the [Authlib](https://docs.authlib.org/en/latest/) 
+In a separate terminal, you can run a demo OAuth 2.0 provider using the [`Authlib`](https://docs.authlib.org/en/latest/) 
 library. This will allow you to test the OAuth 2.0 Authorization Code Flow with your agent.
 
 ### Clone & enter the repo
