@@ -13,31 +13,45 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
 from abc import ABC
 from abc import abstractmethod
 
 from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.authentication import AuthProviderBaseConfig
+from aiq.data_models.authentication import AuthProviderBaseConfigT
 from aiq.data_models.authentication import AuthResult
 
 AUTHORIZATION_HEADER = "Authorization"
 
 
-class AuthenticationClientBase(ABC):
+class AuthProviderBase(typing.Generic[AuthProviderBaseConfigT], ABC):
     """
     Base class for authenticating to API services.
     This class provides an interface for authenticating to API services.
     """
 
-    def __init__(self, config: AuthProviderBaseConfig):
+    def __init__(self, config: AuthProviderBaseConfigT):
         """
-        Initialize the AuthenticationClientBase with the given configuration.
+        Initialize the AuthProviderBase with the given configuration.
 
         Args:
-            config (AuthenticationBaseConfig): Configuration items for authentication.
+            config (AuthProviderBaseConfig): Configuration items for authentication.
         """
-        self.config = config
+        self._config = config
+
+    @property
+    def config(self) -> AuthProviderBaseConfigT:
+        """
+        Returns the auth provider configuration object.
+
+        Returns
+        -------
+        AuthProviderBaseConfigT
+            The auth provider configuration object.
+        """
+        return self._config
 
     @abstractmethod
     async def authenticate(self, user_id: str | None = None) -> AuthResult:

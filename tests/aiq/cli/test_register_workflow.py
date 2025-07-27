@@ -18,14 +18,12 @@ from contextlib import asynccontextmanager
 
 import pytest
 
-from _utils.configs import AuthenticationProviderTestConfig
 from _utils.configs import EmbedderProviderTestConfig
 from _utils.configs import FunctionTestConfig
 from _utils.configs import LLMProviderTestConfig
 from _utils.configs import MemoryTestConfig
 from _utils.configs import ObjectStoreTestConfig
 from _utils.configs import RegistryHandlerTestConfig
-from aiq.builder.authentication import AuthProviderInfo
 from aiq.builder.builder import Builder
 from aiq.builder.embedder import EmbedderProviderInfo
 from aiq.builder.framework_enum import LLMFrameworkEnum

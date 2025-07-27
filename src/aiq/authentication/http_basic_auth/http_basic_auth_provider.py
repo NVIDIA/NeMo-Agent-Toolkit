@@ -15,7 +15,7 @@
 
 from pydantic import SecretStr
 
-from aiq.authentication.interfaces import AuthenticationClientBase
+from aiq.authentication.interfaces import AuthProviderBase
 from aiq.builder.context import AIQContext
 from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
@@ -25,7 +25,7 @@ from aiq.data_models.authentication import BasicAuthCred
 from aiq.data_models.authentication import BearerTokenCred
 
 
-class HTTPBasicAuthExchanger(AuthenticationClientBase):
+class HTTPBasicAuthProvider(AuthProviderBase):
     """
     Abstract base class for HTTP Basic Authentication exchangers.
     """
@@ -35,17 +35,19 @@ class HTTPBasicAuthExchanger(AuthenticationClientBase):
         Initialize the HTTP Basic Auth Exchanger with the given configuration.
         """
         super().__init__(config)
+
         self._authenticated_tokens: dict[str, AuthResult] = {}
-        self._context = AIQContext.get()
 
     async def authenticate(self, user_id: str | None = None) -> AuthResult:
         """
         Performs simple HTTP Authentication using the provided user ID.
         """
 
-        if user_id is None and hasattr(AIQContext.get(), "metadata") and hasattr(
-                AIQContext.get().metadata, "cookies") and AIQContext.get().metadata.cookies is not None:
-            session_id = AIQContext.get().metadata.cookies.get("aiqtoolkit-session", None)
+        context = AIQContext.get()
+
+        if user_id is None and hasattr(context, "metadata") and hasattr(
+                context.metadata, "cookies") and context.metadata.cookies is not None:
+            session_id = context.metadata.cookies.get("aiqtoolkit-session", None)
             if not session_id:
                 raise RuntimeError("Authentication failed. No session ID found. Cannot identify user.")
 
@@ -54,7 +56,7 @@ class HTTPBasicAuthExchanger(AuthenticationClientBase):
         if user_id and user_id in self._authenticated_tokens:
             return self._authenticated_tokens[user_id]
 
-        auth_callback = self._context.user_auth_callback
+        auth_callback = context.user_auth_callback
 
         try:
             auth_context: AuthenticatedContext = await auth_callback(self.config, AuthFlowType.HTTP_BASIC)

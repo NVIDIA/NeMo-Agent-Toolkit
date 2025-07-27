@@ -19,9 +19,7 @@ from pydantic.config import ConfigDict
 from aiq.data_models.authentication import AuthProviderBaseConfig
 
 
-class OAuth2AuthCodeFlowConfig(AuthProviderBaseConfig, name="oauth2_authorization_code"):
-
-    model_config = ConfigDict(extra="forbid")
+class OAuth2AuthCodeFlowProviderConfig(AuthProviderBaseConfig, name="oauth2_auth_code_flow"):
 
     client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
     client_secret: str = Field(description="The secret associated with the client_id.")

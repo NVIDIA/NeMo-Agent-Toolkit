@@ -15,8 +15,8 @@
 
 import pytest
 
-from aiq.authentication.http_basic_auth.http_basic_auth_exchanger import HTTPBasicAuthExchanger
-from aiq.authentication.http_basic_auth.register import HTTPBasicAuthConfig
+from aiq.authentication.http_basic_auth.http_basic_auth_provider import HTTPBasicAuthProvider
+from aiq.authentication.http_basic_auth.register import HTTPBasicAuthProviderConfig
 from aiq.builder.context import AIQContext
 from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
@@ -58,7 +58,7 @@ async def test_success(monkeypatch):
 
     _patch_context(monkeypatch, cb)
 
-    exchanger = HTTPBasicAuthExchanger(HTTPBasicAuthConfig())
+    exchanger = HTTPBasicAuthProvider(HTTPBasicAuthProviderConfig())
     res = await exchanger.authenticate(user_id="42")
 
     # two credentials: BasicAuthCred + BearerTokenCred
@@ -87,7 +87,7 @@ async def test_caching(monkeypatch):
 
     _patch_context(monkeypatch, cb)
 
-    exchanger = HTTPBasicAuthExchanger(HTTPBasicAuthConfig())
+    exchanger = HTTPBasicAuthProvider(HTTPBasicAuthProviderConfig())
     await exchanger.authenticate("dup")
     await exchanger.authenticate("dup")  # should use cached result
 
@@ -102,7 +102,7 @@ async def test_missing_authorization_header(monkeypatch):
 
     _patch_context(monkeypatch, cb)
 
-    exchanger = HTTPBasicAuthExchanger(HTTPBasicAuthConfig())
+    exchanger = HTTPBasicAuthProvider(HTTPBasicAuthProviderConfig())
 
     with pytest.raises(RuntimeError, match="No Authorization header"):
         await exchanger.authenticate("u123")
@@ -116,7 +116,7 @@ async def test_callback_exception_bubbles(monkeypatch):
 
     _patch_context(monkeypatch, cb)
 
-    exchanger = HTTPBasicAuthExchanger(HTTPBasicAuthConfig())
+    exchanger = HTTPBasicAuthProvider(HTTPBasicAuthProviderConfig())
 
     with pytest.raises(RuntimeError, match="Authentication callback failed"):
         await exchanger.authenticate("u456")

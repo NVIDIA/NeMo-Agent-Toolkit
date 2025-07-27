@@ -14,14 +14,15 @@
 # limitations under the License.
 
 from aiq.authentication.interfaces import FlowHandlerBase
-from aiq.authentication.oauth2.authorization_code_flow_config import OAuth2AuthCodeFlowConfig
+from aiq.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
+from aiq.data_models.authentication import AuthProviderBaseConfig
 
 
 class HTTPAuthenticationFlowHandler(FlowHandlerBase):
 
-    async def authenticate(self, config: OAuth2AuthCodeFlowConfig, method: AuthFlowType) -> AuthenticatedContext:
+    async def authenticate(self, config: AuthProviderBaseConfig, method: AuthFlowType) -> AuthenticatedContext:
 
         raise NotImplementedError(f"Authentication method '{method}' is not supported by the HTTP frontend."
                                   f" Do you have Websockets enabled?")

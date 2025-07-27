@@ -19,18 +19,17 @@ from datetime import timezone
 from authlib.integrations.httpx_client import OAuth2Client as AuthlibOAuth2Client
 from pydantic import SecretStr
 
-from aiq.authentication.interfaces import AuthenticationClientBase
+from aiq.authentication.interfaces import AuthProviderBase
+from aiq.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from aiq.builder.context import AIQContext
 from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.authentication import AuthResult
 from aiq.data_models.authentication import BearerTokenCred
 
-from .authorization_code_flow_config import OAuth2AuthCodeFlowConfig
 
+class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConfig]):
 
-class OAuth2Client(AuthenticationClientBase):
-
-    def __init__(self, config: OAuth2AuthCodeFlowConfig):
+    def __init__(self, config: OAuth2AuthCodeFlowProviderConfig):
         super().__init__(config)
         self._authenticated_tokens: dict[str, AuthResult] = {}
         self._context = AIQContext.get()

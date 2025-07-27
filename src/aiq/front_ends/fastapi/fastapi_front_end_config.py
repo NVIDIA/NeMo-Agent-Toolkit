@@ -201,11 +201,9 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         description="Evaluates the performance and accuracy of the workflow on a dataset",
     )
 
-    authorization: typing.Annotated[EndpointBase, Field(
-        description="OAuth2.0 authentication endpoint.")] = EndpointBase(
-            method="GET",
-            path="/auth",
-            description="Handles authentication request from providers and custom front-ends.")
+    oauth2_callback_path: str | None = Field(
+        default="/auth/redirect",
+        description="OAuth2.0 authentication callback endpoint. If None, no OAuth2 callback endpoint is created.")
 
     endpoints: list[Endpoint] = Field(
         default_factory=list,

@@ -44,7 +44,7 @@ authenticate with the target API resource.
 The following example shows how to define and register a custom evaluator and can be found here:
 {class}`aiq.authentication.oauth2.OAuth2AuthorizationCodeFlowConfig` class:
 ```python
-class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_authorization_code"):
+class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_auth_code_flow"):
 
     model_config = ConfigDict(extra="forbid")
 

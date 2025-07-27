@@ -22,7 +22,7 @@ import pytest
 from httpx import ASGITransport
 from mock_oauth2_server import MockOAuth2Server
 
-from aiq.authentication.oauth2.authorization_code_flow_config import OAuth2AuthCodeFlowConfig
+from aiq.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.config import AIQConfig
 from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
@@ -149,7 +149,7 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server):
     )
 
     # ----------------- flow config ------------------------------------- #
-    cfg_flow = OAuth2AuthCodeFlowConfig(
+    cfg_flow = OAuth2AuthCodeFlowProviderConfig(
         client_id="cid",
         client_secret="secret",
         authorization_url="http://testserver/oauth/authorize",

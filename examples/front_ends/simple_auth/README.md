@@ -23,12 +23,12 @@ which provides information about the authenticated user.
 
 ## How the OAuth2.0 Authorization‑Code Flow Works
 
-1. **Agent launches login** – it sends the user’s browser to the OAuth provider’s  
+1. **Agent launches login** – it sends the user’s browser to the OAuth provider’s
    `GET /oauth/authorize` endpoint with parameters:<br>
    `client_id`, `redirect_uri`, requested `scope`, and a random `state`.
 2. **User authenticates & grants consent** on the provider’s UI.
 3. **Provider redirects back** to `redirect_uri?code=XYZ&state=…` on your app.
-4. **Agent exchanges the code** for tokens by POST‑ing to `POST /oauth/token`  
+4. **Agent exchanges the code** for tokens by POST‑ing to `POST /oauth/token`
    with the **authorization code**, its `client_id`, the **client secret** (or PKCE
    verifier for public clients), and the same `redirect_uri`.
 5. The provider returns a **JSON** payload:
@@ -44,15 +44,15 @@ which provides information about the authenticated user.
 6. The agent stores the tokens and uses the `access_token` in the
    `Authorization: Bearer …` header when invoking tools that need auth.
 
-*Why this flow?*  
-- Supports **confidential clients** (can keep a secret) *and* public clients with **PKCE**.  
-- Refresh tokens keep long‑running agents from re‑prompting the user.  
+*Why this flow?*
+- Supports **confidential clients** (can keep a secret) *and* public clients with **PKCE**.
+- Refresh tokens keep long‑running agents from re‑prompting the user.
 - Works across browsers, CLI apps, and UI front‑ends.
 
 
 ## Running the Demo OAuth Provider Locally
 
-In a separate terminal, you can run a demo OAuth 2.0 provider using the [`Authlib`](https://docs.authlib.org/en/latest/) 
+In a separate terminal, you can run a demo OAuth 2.0 provider using the [`Authlib`](https://docs.authlib.org/en/latest/)
 library. This will allow you to test the OAuth 2.0 Authorization Code Flow with your agent.
 
 ### Clone & enter the repo
@@ -78,12 +78,12 @@ export AUTHLIB_INSECURE_TRANSPORT=1   # dev‑only, allows http:// callbacks
 flask run                             # serves http://127.0.0.1:5000
 ```
 
-Browse to **`http://127.0.0.1:5000/`** – you should see the demo home page. Sign up with any name. 
+Browse to **`http://127.0.0.1:5000/`** – you should see the demo home page. Sign up with any name.
 
 
 ## Registering a Dummy Client (“test”)
 
-1. Open **Clients → Create New Client** in the demo UI.  
+1. Open **Clients → Create New Client** in the demo UI.
 2. Fill the form exactly as below and click **Submit**:
 
 | Field                      | Value                                                 |
@@ -108,8 +108,8 @@ to deploy the UI that works with the agent in this example. Configure it accordi
 Export your saved client ID and secret to the following environment variables:
 
 ```bash
-export OAUTH_CLIENT_ID=<your_client_id>
-export OAUTH_CLIENT_SECRET=<your_client_secret>
+export AIQ_OAUTH_CLIENT_ID=<your_client_id>
+export AIQ_OAUTH_CLIENT_SECRET=<your_client_secret>
 ````
 
 ## Serve The Agent
@@ -120,18 +120,18 @@ In a new terminal, serve the agent using the following command:
 aiq serve --config_file=examples/authentication/simple_auth/configs/config.yml
 ```
 
-This will start a FastAPI server on `http://localhost:8000` that listens for requests from the UI and 
+This will start a FastAPI server on `http://localhost:8000` that listens for requests from the UI and
 handles authentication.
 
 ## Query the Agent
 
 Open the NeMo Agent Toolkit UI in your browser at `http://localhost:3000`. Ensure settings are configured correctly to point to your agent's API endpoint at `http://localhost:8000` and
-the WebSocket URL at `ws://127.0.0.1:8000/websocket`. 
+the WebSocket URL at `ws://127.0.0.1:8000/websocket`.
 
-Close the settings window. In your chat window, ensure that `Websocket` mode is enabled by navigating to the top-right corner and selecting the `Websocket` option in the arrow pop-out. 
+Close the settings window. In your chat window, ensure that `Websocket` mode is enabled by navigating to the top-right corner and selecting the `Websocket` option in the arrow pop-out.
 
 Once you've successfully connected to the websocket, you can start querying the agent. Asking the agent the following query should initiate the demonstrative authentication flow and then return
-information about the IP address in question: 
+information about the IP address in question:
 
 ```text
 Who am I logged in as?

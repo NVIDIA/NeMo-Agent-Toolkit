@@ -41,7 +41,7 @@ llms:
 
 authentication:
   test_auth_provider:
-    _type: oauth2_authorization_code
+    _type: oauth2_auth_code_flow
     client_url: http://localhost:8000
     authorization_url: http://127.0.0.1:5000/oauth/authorize
     token_url: http://127.0.0.1:5000/oauth/token
@@ -50,8 +50,8 @@ authentication:
       - openid
       - profile
       - email
-    client_id: ${OAUTH_CLIENT_ID}
-    client_secret: ${OAUTH_CLIENT_SECRET}
+    client_id: ${AIQ_OAUTH_CLIENT_ID}
+    client_secret: ${AIQ_OAUTH_CLIENT_SECRET}
     use_pkce: false
     # For testing with `aiq run` command, we need to run a local redirect server
     run_local_redirect_server: true

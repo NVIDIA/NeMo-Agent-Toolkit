@@ -13,18 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.authentication.http_basic_auth.http_basic_auth_exchanger import HTTPBasicAuthExchanger
-from aiq.builder.authentication import AuthProviderInfo
 from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_authentication_client
+from aiq.cli.register_workflow import register_auth_provider
 from aiq.data_models.authentication import AuthProviderBaseConfig
 
 
-class HTTPBasicAuthConfig(AuthProviderBaseConfig, name="http_basic"):
+class HTTPBasicAuthProviderConfig(AuthProviderBaseConfig, name="http_basic"):
     pass
 
 
-@register_authentication_client(config_type=HTTPBasicAuthConfig)
-async def api_key_client(authentication_provider: HTTPBasicAuthConfig, builder: Builder):
+@register_auth_provider(config_type=HTTPBasicAuthProviderConfig)
+async def http_basic_auth_provider(config: HTTPBasicAuthProviderConfig, builder: Builder):
 
-    yield HTTPBasicAuthExchanger(authentication_provider)
+    from aiq.authentication.http_basic_auth.http_basic_auth_provider import HTTPBasicAuthProvider
+
+    yield HTTPBasicAuthProvider(config)

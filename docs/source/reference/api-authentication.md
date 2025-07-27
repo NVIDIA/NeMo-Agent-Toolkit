@@ -23,7 +23,7 @@ protected API resources directly from workflow tools, abstracting away low-level
 greater focus on data retrieval and processing. Users can define multiple authentication providers in their workflow
 configuration file, each uniquely identified by a provider name. The toolkit provides utility functions such as
 `authenticate_oauth_client` to complete the authentication process, particularly for flows that require user consent,
-like the OAuth 2.0 Authorization Code Flow. Authentication is supported in headless and server modes. Credentials are 
+like the OAuth 2.0 Authorization Code Flow. Authentication is supported in headless and server modes. Credentials are
 securely loaded into memory at runtime,
 accessed by provider name, and are never logged or persisted. They are available only during workflow execution to
 ensure secure and centralized handling. Currently supported authentication configurations include OAuth 2.0
@@ -107,14 +107,14 @@ In the Workflow Configuration YAML file, user credentials required for API authe
 `authentication` key. Users should provide all required and valid credentials for each authentication method to ensure
 the library can authenticate requests without encountering credential related errors. Examples of currently supported
 API configurations are
-[OAuth 2.0 Authorization Code Grant Flow Configuration](../../../src/aiq/authentication/oauth2/authorization_code_flow_config.py), 
+[OAuth 2.0 Authorization Code Grant Flow Configuration](../../../src/aiq/authentication/oauth2/authorization_code_flow_config.py),
 [API Key Configuration](../../../src/aiq/authentication/api_key/api_key_config.py), and [Basic HTTP Authentication](../../../src/aiq/authentication/http_basic_auth/register.py).
 
 ### Authentication YAML Configuration Example
 ```yaml
 authentication:
   test_auth_provider:
-    _type: oauth2_authorization_code
+    _type: oauth2_auth_code_flow
     client_url: http://localhost:8000
     authorization_url: http://127.0.0.1:5000/oauth/authorize
     token_url: http://127.0.0.1:5000/oauth/token
@@ -123,8 +123,8 @@ authentication:
       - openid
       - profile
       - email
-    client_id: ${OAUTH_CLIENT_ID}
-    client_secret: ${OAUTH_CLIENT_SECRET}
+    client_id: ${AIQ_OAUTH_CLIENT_ID}
+    client_secret: ${AIQ_OAUTH_CLIENT_SECRET}
     use_pkce: false
 
   example_provider_name_api_key:
@@ -138,7 +138,7 @@ authentication:
 | Field Name                    | Description                                                                                                                        |
 |-------------------------------|------------------------------------------------------------------------------------------------------------------------------------|
 | `example_provider_name_oauth` | A unique name used to identify the client credentials required to access the API provider.                                         |
-| `_type`                       | Specifies the authentication type. For OAuth 2.0 Authorization Code Grant authentication, set this to `oauth2_authorization_code`. |
+| `_type`                       | Specifies the authentication type. For OAuth 2.0 Authorization Code Grant authentication, set this to `oauth2_auth_code_flow`. |
 | `client_url`                  | URL of the OAuth 2.0 client server.                                                                                                |
 | `authorization_url`           | URL used to initiate the authorization flow, where an authorization code is obtained to be later exchanged for an access token.    |
 | `token_url`                   | URL used to exchange an authorization code for an access token and optional refresh token.                                         |
@@ -193,14 +193,14 @@ async def auth_tool(config: AuthTool, builder: Builder):
 ```
 
 ## 4. Authentication by Application Configuration
-Authentication methods not needing consent prompts, such as API Keys are supported uniformly across all deployment methods. 
+Authentication methods not needing consent prompts, such as API Keys are supported uniformly across all deployment methods.
 In contrast, support for methods that require user interaction can vary depending on the application's deployment and available
 components. In some configurations, the system’s default browser handles the redirect directly, while in others, the
-front-end UI is responsible for rendering the consent prompt in the browser. 
+front-end UI is responsible for rendering the consent prompt in the browser.
 
 Below is a table listing the current support for the various authentication methods based on the application
 
-| # | Authentication Method                                | `aiq run` | `aiq serve` | Support Level                                         | 
+| # | Authentication Method                                | `aiq run` | `aiq serve` | Support Level                                         |
 |---|------------------------------------------------------|-----------|-------------|-------------------------------------------------------|
 | 1 | OAuth2.0 Authorization Code Grant Flow               | ✅         | ✅           | Full support with front-end UI only in websocket mode |
 | 2 | API Key Authentication                               | ✅         | ✅           | Full support across all configurations                |

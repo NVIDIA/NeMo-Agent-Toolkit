@@ -17,7 +17,7 @@ import logging
 
 from pydantic import Field
 
-from aiq.authentication.interfaces import AuthenticationClientBase
+from aiq.authentication.interfaces import AuthProviderBase
 from aiq.builder.builder import Builder
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
@@ -39,7 +39,7 @@ async def auth_tool(config: AuthTool, builder: Builder):
     """
     Uses HTTP Basic authentication to authenticate to any registered API provider.
     """
-    basic_auth_client: AuthenticationClientBase = await builder.get_auth_provider(config.auth_provider)
+    basic_auth_client: AuthProviderBase = await builder.get_auth_provider(config.auth_provider)
 
     async def _arun(user_id: str) -> AuthResult:
         try:

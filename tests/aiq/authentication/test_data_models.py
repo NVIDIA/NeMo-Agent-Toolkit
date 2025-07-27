@@ -49,7 +49,7 @@ from aiq.data_models.authentication import QueryCred
         (CredentialLocation.BODY, "body"),
         (AuthFlowType.API_KEY, "api_key"),
         (AuthFlowType.OAUTH2_CLIENT_CREDENTIALS, "oauth2_client_credentials"),
-        (AuthFlowType.OAUTH2_AUTHORIZATION_CODE, "oauth2_authorization_code"),
+        (AuthFlowType.OAUTH2_AUTHORIZATION_CODE, "oauth2_auth_code_flow"),
         (AuthFlowType.OAUTH2_PASSWORD, "oauth2_password"),
         (AuthFlowType.OAUTH2_DEVICE_CODE, "oauth2_device_code"),
         (AuthFlowType.HTTP_BASIC, "http_basic"),

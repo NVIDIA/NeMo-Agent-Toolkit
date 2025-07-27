@@ -24,15 +24,17 @@ from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import SecretStr
 
-from .common import BaseModelRegistryTag
-from .common import TypedBaseModel
+from aiq.data_models.common import BaseModelRegistryTag
+from aiq.data_models.common import TypedBaseModel
 
 
 class AuthProviderBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     """
     Base configuration for authentication providers.
     """
-    pass
+
+    # Default, forbid extra fields to prevent unexpected behavior or miss typed options
+    model_config = ConfigDict(extra="forbid")
 
 
 AuthProviderBaseConfigT = typing.TypeVar("AuthProviderBaseConfigT", bound=AuthProviderBaseConfig)
@@ -54,7 +56,7 @@ class AuthFlowType(str, Enum):
     """
     API_KEY = "api_key"
     OAUTH2_CLIENT_CREDENTIALS = "oauth2_client_credentials"
-    OAUTH2_AUTHORIZATION_CODE = "oauth2_authorization_code"
+    OAUTH2_AUTHORIZATION_CODE = "oauth2_auth_code_flow"
     OAUTH2_PASSWORD = "oauth2_password"
     OAUTH2_DEVICE_CODE = "oauth2_device_code"
     HTTP_BASIC = "http_basic"
@@ -96,14 +98,6 @@ class HTTPMethod(str, Enum):
     PATCH = "PATCH"
     HEAD = "HEAD"
     OPTIONS = "OPTIONS"
-
-
-class AuthenticationEndpoint(str, Enum):
-    """
-    Enum representing common authentication endpoints.
-    """
-    REDIRECT_URI = "/redirect"
-    PROMPT_REDIRECT_URI = "/prompt-uri"
 
 
 class CredentialKind(str, Enum):

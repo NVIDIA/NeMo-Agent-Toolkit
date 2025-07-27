@@ -17,8 +17,8 @@ import logging
 
 from pydantic import SecretStr
 
-from aiq.authentication.api_key.api_key_config import APIKeyConfig
-from aiq.authentication.interfaces import AuthenticationClientBase
+from aiq.authentication.api_key.api_key_auth_provider_config import APIKeyAuthProviderConfig
+from aiq.authentication.interfaces import AuthProviderBase
 from aiq.data_models.authentication import AuthResult
 from aiq.data_models.authentication import BearerTokenCred
 from aiq.data_models.authentication import HeaderAuthScheme
@@ -26,13 +26,13 @@ from aiq.data_models.authentication import HeaderAuthScheme
 logger = logging.getLogger(__name__)
 
 
-class APIKeyClient(AuthenticationClientBase):
+class APIKeyAuthProvider(AuthProviderBase[APIKeyAuthProviderConfig]):
 
-    def __init__(self, config: APIKeyConfig, config_name: str | None = None) -> None:
-        assert isinstance(config, APIKeyConfig), ("Config is not APIKeyConfig")
+    def __init__(self, config: APIKeyAuthProviderConfig, config_name: str | None = None) -> None:
+        assert isinstance(config, APIKeyAuthProviderConfig), ("Config is not APIKeyConfig")
         super().__init__(config)
 
-    async def _construct_authentication_header(self) -> BearerTokenCred | None:
+    async def _construct_authentication_header(self) -> BearerTokenCred:
         """
         Constructs the authenticated HTTP header based on the authentication scheme.
         Basic Authentication follows the OpenAPI 3.0 Basic Authentication standard as well as RFC 7617.
@@ -49,32 +49,32 @@ class APIKeyClient(AuthenticationClientBase):
 
         from aiq.authentication.interfaces import AUTHORIZATION_HEADER
 
-        header_auth_scheme = self.config.auth_scheme
+        config: APIKeyAuthProviderConfig = self.config
+
+        header_auth_scheme = config.auth_scheme
 
         if header_auth_scheme == HeaderAuthScheme.BEARER:
-            return BearerTokenCred(token=SecretStr(f"{self.config.raw_key}"),
+            return BearerTokenCred(token=SecretStr(f"{config.raw_key}"),
                                    scheme=HeaderAuthScheme.BEARER.value,
                                    header_name=AUTHORIZATION_HEADER)
 
         if header_auth_scheme == HeaderAuthScheme.X_API_KEY:
-            return BearerTokenCred(token=SecretStr(f"{self.config.raw_key}"),
+            return BearerTokenCred(token=SecretStr(f"{config.raw_key}"),
                                    scheme=HeaderAuthScheme.X_API_KEY.value,
                                    header_name='')
 
         if header_auth_scheme == HeaderAuthScheme.CUSTOM:
-            if not self.config.header_name:
-                logger.error('header_name required when using header_auth_scheme CUSTOM')
-                return None
+            if not config.custom_header_name:
+                raise ValueError('custom_header_name required when using header_auth_scheme=CUSTOM')
 
-            if not self.config.header_prefix:
-                logger.error('header_prefix required when using header_auth_scheme CUSTOM')
-                return None
+            if not config.custom_header_prefix:
+                raise ValueError('custom_header_prefix required when using header_auth_scheme=CUSTOM')
 
-            return BearerTokenCred(token=SecretStr(f"{self.config.raw_key}"),
-                                   scheme=self.config.header_prefix,
-                                   header_name=self.config.header_name)
+            return BearerTokenCred(token=SecretStr(f"{config.raw_key}"),
+                                   scheme=config.custom_header_prefix,
+                                   header_name=config.custom_header_name)
 
-        return None
+        raise ValueError(f"Unsupported header auth scheme: {header_auth_scheme}")
 
     async def authenticate(self, user_id: str | None = None) -> AuthResult | None:
         """
@@ -88,9 +88,5 @@ class APIKeyClient(AuthenticationClientBase):
         """
 
         headers = await self._construct_authentication_header()
-
-        if not headers:
-            logger.error("Failed to construct authentication headers.")
-            return None
 
         return AuthResult(credentials=[headers])

@@ -26,9 +26,10 @@ from fastapi import FastAPI
 from fastapi import Request
 
 from aiq.authentication.interfaces import FlowHandlerBase
-from aiq.authentication.oauth2.authorization_code_flow_config import OAuth2AuthCodeFlowConfig
+from aiq.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
+from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEndController
 
 
@@ -66,18 +67,21 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
     # ----------------------------- public API ---------------------------- #
     async def authenticate(
         self,
-        config: OAuth2AuthCodeFlowConfig,
+        config: AuthProviderBaseConfig,
         method: AuthFlowType,
     ) -> AuthenticatedContext:
         if method == AuthFlowType.HTTP_BASIC:
             return self._handle_http_basic()
         if method == AuthFlowType.OAUTH2_AUTHORIZATION_CODE:
+            if (not isinstance(config, OAuth2AuthCodeFlowProviderConfig)):
+                raise ValueError("Requested OAuth2 Authorization Code Flow but passed invalid config")
+
             return await self._handle_oauth2_auth_code_flow(config)
 
         raise NotImplementedError(f"Auth method “{method}” not supported.")
 
     # --------------------- OAuth2 helper factories ----------------------- #
-    def construct_oauth_client(self, cfg: OAuth2AuthCodeFlowConfig) -> AsyncOAuth2Client:
+    def construct_oauth_client(self, cfg: OAuth2AuthCodeFlowProviderConfig) -> AsyncOAuth2Client:
         """
         Separated for easy overriding in tests (to inject ASGITransport).
         """
@@ -111,7 +115,7 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
         )
 
     # --------------------- OAuth2 Authorization‑Code --------------------- #
-    async def _handle_oauth2_auth_code_flow(self, cfg: OAuth2AuthCodeFlowConfig) -> AuthenticatedContext:
+    async def _handle_oauth2_auth_code_flow(self, cfg: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext:
         state = secrets.token_urlsafe(16)
         flow_state = _FlowState()
         client = self.construct_oauth_client(cfg)
@@ -164,7 +168,7 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
         )
 
     # --------------- redirect server / in‑process app -------------------- #
-    async def _start_redirect_server(self, cfg: OAuth2AuthCodeFlowConfig) -> None:
+    async def _start_redirect_server(self, cfg: OAuth2AuthCodeFlowProviderConfig) -> None:
         """
         * If cfg.run_redirect_local_server == True → start a uvicorn server (old behaviour).
         * Else → only build the FastAPI app and save it to `self._redirect_app`
@@ -203,7 +207,7 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
         # Give uvicorn a moment to bind sockets before we return
         await asyncio.sleep(0.3)
 
-    async def _start_server_task(self, cfg: OAuth2AuthCodeFlowConfig) -> None:
+    async def _start_server_task(self, cfg: OAuth2AuthCodeFlowProviderConfig) -> None:
         if not self._server_controller:
             raise RuntimeError("Server controller uninitialised.")
         try:

@@ -23,8 +23,6 @@ from pydantic import field_validator
 from aiq.authentication.exceptions.api_key_exceptions import APIKeyFieldError
 from aiq.authentication.exceptions.api_key_exceptions import HeaderNameFieldError
 from aiq.authentication.exceptions.api_key_exceptions import HeaderPrefixFieldError
-from aiq.builder.authentication import AuthProviderInfo
-from aiq.builder.builder import Builder
 from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.data_models.authentication import HeaderAuthScheme
 
@@ -34,7 +32,7 @@ logger = logging.getLogger(__name__)
 HEADER_NAME_REGEX = re.compile(r"^[!#$%&'*+\-.^_`|~0-9a-zA-Z]+$")
 
 
-class APIKeyConfig(AuthProviderBaseConfig, name="api_key"):
+class APIKeyAuthProviderConfig(AuthProviderBaseConfig, name="api_key"):
     """
     API Key authentication configuration model.
     """

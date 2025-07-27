@@ -20,21 +20,21 @@ from typing import Any
 
 import pytest
 
-import aiq.authentication.api_key.api_key_client as api_key_client
+import aiq.authentication.api_key.api_key_auth_provider as api_key_auth_provider
 # --------------------------------------------------------------------------- #
 # Import the modules we are testing
 # --------------------------------------------------------------------------- #
-import aiq.authentication.api_key.api_key_config as api_key_config
+import aiq.authentication.api_key.api_key_auth_provider_config as api_key_auth_provider_config
 
 # Handy names
-APIKeyConfig = api_key_config.APIKeyConfig
-HeaderAuthScheme = api_key_config.HeaderAuthScheme
-APIKeyFieldError = api_key_config.APIKeyFieldError
-HeaderNameFieldError = api_key_config.HeaderNameFieldError
-HeaderPrefixFieldError = api_key_config.HeaderPrefixFieldError
-APIKeyClient = api_key_client.APIKeyClient
-BearerTokenCred = api_key_client.BearerTokenCred
-AuthResult = api_key_client.AuthResult
+APIKeyConfig = api_key_auth_provider_config.APIKeyAuthProviderConfig
+HeaderAuthScheme = api_key_auth_provider_config.HeaderAuthScheme
+APIKeyFieldError = api_key_auth_provider_config.APIKeyFieldError
+HeaderNameFieldError = api_key_auth_provider_config.HeaderNameFieldError
+HeaderPrefixFieldError = api_key_auth_provider_config.HeaderPrefixFieldError
+APIKeyClient = api_key_auth_provider.APIKeyAuthProvider
+BearerTokenCred = api_key_auth_provider.BearerTokenCred
+AuthResult = api_key_auth_provider.AuthResult
 
 
 # --------------------------------------------------------------------------- #
@@ -62,7 +62,7 @@ def _patch_interfaces(monkeypatch: pytest.MonkeyPatch) -> None:
     sys.modules["aiq.authentication.interfaces"] = dummy
 
     # Re-import the client module so it picks up the patched base/constant.
-    importlib.reload(api_key_client)
+    importlib.reload(api_key_auth_provider)
 
 
 # --------------------------------------------------------------------------- #

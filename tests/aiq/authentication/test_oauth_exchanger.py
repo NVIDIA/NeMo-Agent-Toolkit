@@ -21,8 +21,8 @@ from typing import Callable
 
 import pytest
 
-from aiq.authentication.oauth2.authorization_code_flow_config import OAuth2AuthCodeFlowConfig
-from aiq.authentication.oauth2.client import OAuth2Client
+from aiq.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
+from aiq.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from aiq.builder.context import AIQContext
 from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
@@ -35,7 +35,7 @@ from aiq.data_models.authentication import BearerTokenCred
 # --------------------------------------------------------------------------- #
 def _patch_context(
     monkeypatch: pytest.MonkeyPatch,
-    callback: Callable[[OAuth2AuthCodeFlowConfig, AuthFlowType], Awaitable[AuthenticatedContext]],
+    callback: Callable[[OAuth2AuthCodeFlowProviderConfig, AuthFlowType], Awaitable[AuthenticatedContext]],
 ) -> None:
 
     class _DummyCtx:
@@ -47,14 +47,14 @@ def _patch_context(
 
 
 @pytest.fixture()
-def cfg() -> OAuth2AuthCodeFlowConfig:
-    return OAuth2AuthCodeFlowConfig(client_id="cid",
-                                    client_secret="secret",
-                                    authorization_url="https://example.com/auth",
-                                    token_url="https://example.com/token",
-                                    scopes=["openid", "profile"],
-                                    use_pkce=True,
-                                    client_url="http://localhost:9000")
+def cfg() -> OAuth2AuthCodeFlowProviderConfig:
+    return OAuth2AuthCodeFlowProviderConfig(client_id="cid",
+                                            client_secret="secret",
+                                            authorization_url="https://example.com/auth",
+                                            token_url="https://example.com/token",
+                                            scopes=["openid", "profile"],
+                                            use_pkce=True,
+                                            client_url="http://localhost:9000")
 
 
 def _bearer_ctx(token: str, expires_at: datetime) -> AuthenticatedContext:
@@ -73,7 +73,7 @@ def _bearer_ctx(token: str, expires_at: datetime) -> AuthenticatedContext:
 # 1. Config model tests
 # --------------------------------------------------------------------------- #
 def test_config_redirect_uri_defaults():
-    cfg = OAuth2AuthCodeFlowConfig(
+    cfg = OAuth2AuthCodeFlowProviderConfig(
         client_id="id",
         client_secret="sec",
         authorization_url="a",
@@ -104,7 +104,7 @@ async def test_authenticate_success(monkeypatch, cfg):
 
     _patch_context(monkeypatch, cb)
 
-    client = OAuth2Client(cfg)
+    client = OAuth2AuthCodeFlowProvider(cfg)
     res = await client.authenticate(user_id="u1")
 
     assert calls["n"] == 1
@@ -128,7 +128,7 @@ async def test_authenticate_caches(monkeypatch, cfg):
         )
 
     _patch_context(monkeypatch, cb)
-    client = OAuth2Client(cfg)
+    client = OAuth2AuthCodeFlowProvider(cfg)
 
     await client.authenticate("dup")
     await client.authenticate("dup")  # cached
@@ -170,7 +170,7 @@ async def test_refresh_expired_token(monkeypatch, cfg):
 
     _patch_context(monkeypatch, fail_cb)
 
-    client = OAuth2Client(cfg)
+    client = OAuth2AuthCodeFlowProvider(cfg)
     past = datetime.now(timezone.utc) - timedelta(seconds=1)
     client._authenticated_tokens["bob"] = AuthResult(
         credentials=[BearerTokenCred(token="stale")],  # type: ignore[arg-type]
@@ -219,7 +219,7 @@ async def test_refresh_fallback_to_callback(monkeypatch, cfg):
 
     _patch_context(monkeypatch, cb)
 
-    client = OAuth2Client(cfg)
+    client = OAuth2AuthCodeFlowProvider(cfg)
     past = datetime.now(timezone.utc) - timedelta(minutes=1)
     client._authenticated_tokens["eve"] = AuthResult(
         credentials=[BearerTokenCred(token="old")],  # type: ignore[arg-type]
@@ -241,7 +241,7 @@ async def test_invalid_authorization_header(monkeypatch, cfg):
         return AuthenticatedContext(headers={"Authorization": "Token abc"}, metadata={})
 
     _patch_context(monkeypatch, cb)
-    client = OAuth2Client(cfg)
+    client = OAuth2AuthCodeFlowProvider(cfg)
 
     with pytest.raises(RuntimeError, match="Invalid Authorization header"):
         await client.authenticate("bad")
@@ -254,6 +254,6 @@ async def test_callback_error(monkeypatch, cfg):
 
     _patch_context(monkeypatch, cb)
 
-    client = OAuth2Client(cfg)
+    client = OAuth2AuthCodeFlowProvider(cfg)
     with pytest.raises(RuntimeError):
         await client.authenticate(None)

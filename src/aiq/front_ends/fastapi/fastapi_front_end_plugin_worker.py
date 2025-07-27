@@ -43,7 +43,6 @@ from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.api_server import AIQChatResponseChunk
 from aiq.data_models.api_server import AIQResponseIntermediateStep
-from aiq.data_models.authentication import AuthenticationEndpoint
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.object_store import KeyAlreadyExistsError
 from aiq.data_models.object_store import NoSuchKeyError
@@ -174,9 +173,10 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         """
         from aiq.utils.log_utils import LogFilter
 
-        logs_to_suppress: list[str] = [
-            AuthenticationEndpoint.REDIRECT_URI.value, AuthenticationEndpoint.PROMPT_REDIRECT_URI.value
-        ]
+        logs_to_suppress: list[str] = []
+
+        if (self.front_end_config.oauth2_callback_path):
+            logs_to_suppress.append(self.front_end_config.oauth2_callback_path)
 
         logging.getLogger("uvicorn.access").addFilter(LogFilter(logs_to_suppress))
         try:
@@ -1075,12 +1075,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                     "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"
                                 })
 
-        # Add the redirect URI route
-        app.add_api_route(
-            path=f"{self.front_end_config.authorization.path}{AuthenticationEndpoint.REDIRECT_URI.value}",
-            endpoint=redirect_uri,
-            methods=["GET"],
-            description="Handles the authorization code and state returned from the Authorization Code Grant Flow.")
+        if (self.front_end_config.oauth2_callback_path):
+            # Add the redirect URI route
+            app.add_api_route(
+                path=self.front_end_config.oauth2_callback_path,
+                endpoint=redirect_uri,
+                methods=["GET"],
+                description="Handles the authorization code and state returned from the Authorization Code Grant Flow.")
 
     async def _add_flow(self, state: str, flow_state: FlowState):
         async with self._outstanding_flows_lock:

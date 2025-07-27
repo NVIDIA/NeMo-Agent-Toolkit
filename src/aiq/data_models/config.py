@@ -61,7 +61,7 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
             if (info.field_name in ('workflow', 'functions')):
                 registered_keys = GlobalTypeRegistry.get().get_registered_functions()
             elif (info.field_name == "authentication"):
-                registered_keys = GlobalTypeRegistry.get().get_registered_authentication_providers()
+                registered_keys = GlobalTypeRegistry.get().get_registered_auth_providers()
             elif (info.field_name == "llms"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_llm_providers()
             elif (info.field_name == "embedders"):
