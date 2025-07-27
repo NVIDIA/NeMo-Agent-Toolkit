@@ -53,7 +53,7 @@ application. During registration, you typically provide the following:
 |---------------------|----------------------------------------------------------------------------------|
 | **Application Name**  | A human-readable name for your application. This is shown to users during consent.|
 | **Redirect URI(s)**   | The URL(s) where the API will redirect users after authorization.               |
-| **Grant Type(s)**     | The OAuth 2.0 flows the toolkit supports (e.g., Authorization Code, Client Credential).         |
+| **Grant Type(s)**     | The OAuth 2.0 flows the toolkit supports (for example, Authorization Code or Client Credential).         |
 | **Scopes**            | The permissions your app is requesting (e.g., `read:user`, `write:data`).       |
 
 ### Registering Redirect URIs for Development vs. Production Environments
