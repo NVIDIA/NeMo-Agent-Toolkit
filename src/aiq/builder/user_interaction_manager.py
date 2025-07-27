@@ -17,10 +17,6 @@ import logging
 import time
 import uuid
 
-from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import OAuthClientBase
-from aiq.data_models.authentication import AuthenticationEndpoint
-from aiq.data_models.authentication import ConsentPromptMode
 from aiq.data_models.interactive import HumanPrompt
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
@@ -54,20 +50,6 @@ class AIQUserInteractionManager:
         """
         raise NotImplementedError("No human prompt callback was registered. Unable to handle requested prompt.")
 
-    @staticmethod
-    async def user_auth_callback_default(oauth_client: OAuthClientBase,
-                                         consent_prompt_mode: ConsentPromptMode) -> AuthenticationError | None:
-        """
-        Default callback handler for user authentication strategy. This no-op function raises a NotImplementedError
-        error, to indicate that a valid authentication callback was not registered.
-
-        Args:
-            oauth_client (OAuthClientBase): The OAuth client to be used for authentication.
-            consent_prompt_mode (ConsentPromptMode): The consent prompt mode to be used for browser handling..
-        """
-        raise NotImplementedError(
-            "No authentication callback was registered. Unable to execute authentication strategy.")
-
     async def prompt_user_input(self, content: HumanPrompt) -> InteractionResponse:
         """
         Ask the user a question and wait for input. This calls out to
@@ -90,40 +72,3 @@ class AIQUserInteractionManager:
         sys_human_interaction = InteractionResponse(id=uuid_req, status=status, timestamp=timestamp, content=resp)
 
         return sys_human_interaction
-
-    async def authenticate_oauth_client(self, oauth_client: OAuthClientBase,
-                                        consent_prompt_handle: ConsentPromptMode) -> AuthenticationError | None:
-        # pylint: disable=pointless-statement
-        f"""
-        Authenticate to an OAuth2.0 API provider using the OAuth2.0 authentication flow with configurable
-        consent handling.
-
-        - BROWSER mode: Automatically opens the user's default web browser to the authorization URL. The user
-          completes the consent prompt directly in the browser, and upon successful authorization, the browser
-          redirects back with an authorization code that is automatically captured and exchanged for access tokens.
-
-        - FRONTEND mode: Logs to the console notifying the user to complete the consent prompt. The user can retreive
-        the consent prompt redirect URL by sending a post request to the consent prompt redirect uri:
-        {AuthenticationEndpoint.PROMPT_REDIRECT_URI} with the consent prompt key in the request body. The consent
-        prompt key is the value of the consent_prompt_key field in the authentication provider configuration.
-
-        Args:
-            oauth_client (OAuthClientBase): The OAuth client to be used for authentication.
-            consent_prompt_handle (ConsentPromptMode): The consent prompt mode (BROWSER or FRONTEND) that determines
-                                                      how the user consent flow is handled.
-
-        Returns:
-            AuthenticationError | None: None if authentication succeeds, otherwise returns an AuthenticationError
-                                       with details about the failure.
-        """
-        try:
-
-            await self._context_state.user_auth_callback.get()(oauth_client, consent_prompt_handle)
-
-        except AuthenticationError as e:
-            logger.error("Authentication failed while trying to authenticate provider: %s",
-                         oauth_client.config_name,
-                         exc_info=True)
-            return AuthenticationError(error_code="oauth_client_auth_error", message=e)
-
-        return

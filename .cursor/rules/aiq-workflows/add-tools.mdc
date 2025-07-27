@@ -1,6 +1,6 @@
 ---
 description: Follow these rules when the user's request involves adding, integrating, implementing, or configuring tools for AIQ workflows
-globs: 
+globs:
 alwaysApply: false
 ---
 # Adding Tools to AIQ Workflows
@@ -184,6 +184,5 @@ workflow:
   tool_names: [langsmith_docs, langgraph_docs, current_datetime]
   llm_name: nim_llm
   verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  parse_agent_response_max_retries: 3
 ```

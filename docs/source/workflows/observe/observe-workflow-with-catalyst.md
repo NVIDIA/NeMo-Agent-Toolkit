@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observing a Workflow with Catalyst
 
-This guide provides a step-by-step process to enable observability in an AIQ toolkit workflow using Catalyst for tracing. By the end of this guide, you will have:
+This guide provides a step-by-step process to enable observability in a NeMo Agent toolkit workflow using Catalyst for tracing. By the end of this guide, you will have:
 - Configured telemetry in your workflow.
 - Able to view traces in the Catalyst platform.
 
@@ -29,12 +29,12 @@ After logging in, create a new project.
 - Project Name: Choose any name.
 - Use Case: `Agentic Application`
 
-### Step3: Generate API Credentials
+### Step 3: Generate API Credentials
 Go to your [profile](https://catalyst.raga.ai/settings/authenticate) settings to generate your:
 - access key
 - secret key
 
-### Step4: Configure Your Environment
+### Step 4: Configure Your Environment
 Set the following environment variables in your terminal
 ```yaml
 export CATALYST_ACCESS_KEY=YOUR_ACCESS_KEY
@@ -58,7 +58,7 @@ general:
 ```
 
 ### Step 6: Run Your Workflow
-From the root directory of the AIQ toolkit library, install dependencies and execute your workflow.
+From the root directory of the NeMo Agent toolkit library, install dependencies and execute your workflow.
 
 **Example:**
 ```bash

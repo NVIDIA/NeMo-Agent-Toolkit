@@ -27,6 +27,7 @@ from aiq.builder.authentication import AuthenticationProviderInfo
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_authentication_provider
 from aiq.data_models.authentication import AuthenticationBaseConfig
+from aiq.data_models.authentication import HeaderAuthScheme
 
 logger = logging.getLogger(__name__)
 
@@ -48,10 +49,9 @@ class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
     header_prefix: str | None = Field(description="The HTTP header prefix that MUST be used in conjunction "
                                       "with the header_name when HeaderAuthScheme is CUSTOM.",
                                       default=None)
-    username: str | None = Field(
-        description="The username used for basic authentication according to the OpenAPI 3.0 spec.", default=None)
-    password: str | None = Field(
-        description="The password used for basic authentication according to the OpenAPI 3.0 spec.", default=None)
+    auth_scheme: HeaderAuthScheme = Field(default=HeaderAuthScheme.BEARER,
+                                          description=("The HTTP authentication scheme to use. "
+                                                       "Supported schemes: BEARER, X_API_KEY, BASIC, CUSTOM."))
 
     @field_validator('raw_key')
     @classmethod
@@ -70,7 +70,8 @@ class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
                                    'raw_key field value cannot have leading or trailing whitespace.')
 
         if any(c in string.whitespace for c in value):
-            raise APIKeyFieldError('contains_whitespace', 'raw_key must not contain any whitespace characters.')
+            raise APIKeyFieldError('contains_whitespace', 'raw_key must not contain any '
+                                   'whitespace characters.')
 
         return value
 
@@ -102,7 +103,8 @@ class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
 
         if value != value.strip():
             raise HeaderPrefixFieldError('whitespace_found',
-                                         'header_prefix field value cannot have leading or trailing whitespace.')
+                                         'header_prefix field value cannot have '
+                                         'leading or trailing whitespace.')
 
         if any(c in string.whitespace for c in value):
             raise HeaderPrefixFieldError('contains_whitespace',
@@ -110,6 +112,15 @@ class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
 
         if not value.isascii():
             raise HeaderPrefixFieldError('invalid_format', 'header_prefix must be ASCII.')
+
+        return value
+
+    @field_validator('raw_key', mode='after')
+    @classmethod
+    def validate_raw_key_after(cls, value: str) -> str:
+        if not value:
+            raise APIKeyFieldError('value_missing', 'raw_key field value is '
+                                   'required after construction.')
 
         return value
 

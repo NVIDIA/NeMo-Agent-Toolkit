@@ -15,8 +15,10 @@
 
 from pydantic import BaseModel
 
+from aiq.profiler.inference_metrics_model import InferenceMetricsModel
 from aiq.profiler.inference_optimization.data_models import WorkflowRuntimeMetrics
 
 
 class ProfilerResults(BaseModel):
     workflow_runtime_metrics: WorkflowRuntimeMetrics | None = None
+    llm_latency_ci: InferenceMetricsModel | None = None

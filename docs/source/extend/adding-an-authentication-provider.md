@@ -20,7 +20,7 @@ limitations under the License.
 We recommend reading the [Streamlining API Authentication](../reference/api-authentication.md) guide before proceeding with
 this detailed documentation.
 :::
-The AIQ Toolkit offers a set of built-in authentication providers for accessing API resources. Additionally, it includes
+The NeMo Agent Toolkit offers a set of built-in authentication providers for accessing API resources. Additionally, it includes
 a plugin system that allows developers to define and integrate custom authentication providers.
 
 ## Existing API Authentication Providers
@@ -30,7 +30,7 @@ aiq info components -t authentication_provider
 ```
 
 ## Provider Types
-In the AIQ Toolkit, the providers (credentials) required to authenticate with an API resource are defined separately
+In the NeMo Agent Toolkit, the providers (credentials) required to authenticate with an API resource are defined separately
 from the clients that facilitate the authentication process. Authentication providers, such as `APIKeyConfig` and
 `AuthCodeGrantConfig`, store the authentication credentials, while clients like `APIKeyClient` and
 `AuthCodeGrantClient` use those credentials to perform authentication.
@@ -41,44 +41,58 @@ The first step in adding an authentication provider is to create a configuration
 authenticate with the target API resource.
 
 The following example shows how to define and register a custom evaluator and can be found here:
-{class}`aiq.authentication.oauth2.AuthCodeGrantConfig` class:
+{class}`aiq.authentication.oauth2.OAuth2AuthorizationCodeFlowConfig` class:
 ```python
-class AuthCodeGrantConfig(OAuthUserConsentConfigBase, name="oauth2_authorization_code_grant"):
-    """
-    OAuth 2.0 authorization code grant authentication configuration model.
-    """
-    client_server_url: str = Field(description="The base url of the API server instance. "
-                                   "This is needed to properly construct the redirect uri i.e: http://localhost:8000")
-    authorization_url: str = Field(description="The base url to the authorization server in which authorization "
-                                   "requests are made to receive access codes.")
-    authorization_token_url: str = Field(
-        description="The base url to the authorization token server in which access codes "
-        "are exchanged for access tokens.")
+class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_authorization_code"):
+
+    model_config = ConfigDict(extra="forbid")
+
+    client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
+    client_secret: str = Field(description="The secret associated with the client_id.")
+    authorization_url: str = Field(description="The authorization URL for OAuth 2.0 authentication.")
+    token_url: str = Field(description="The token URL for OAuth 2.0 authentication.")
+    token_endpoint_auth_method: str | None = Field(description="The authentication method for the token endpoint.",
+                                                   default=None)
+    scopes: list[str] = Field(description="The space-delimited scopes for OAuth 2.0 authentication.",
+                              default_factory=list)
+
+    # Configuration for the local server that handles the redirect
+    client_url: str = Field(description="The base URL for the client application.", default="http://localhost:8000")
+    run_local_redirect_server: bool = Field(default=False,
+                                            description="Whether to run a local server to handle the redirect URI.")
+    local_redirect_server_port: int = Field(default=8000,
+                                            description="Port for the local redirect "
+                                            "server to listen on.")
+    redirect_path: str = Field(default="/auth/redirect",
+                               description="Path for the local redirect server to handle the callback.")
+    use_pkce: bool = Field(default=False,
+                           description="Whether to use PKCE (Proof Key for Code Exchange) in the OAuth 2.0 flow.")
+
+    @property
+    def redirect_uri(self) -> str:
+        return f"{self.client_url}{self.redirect_path}"
 ```
 
 ### Registering the Provider
 An asynchronous function decorated with {py:deco}`aiq.cli.register_workflow.register_authentication_provider` is used to
-register the provider with AIQ toolkit by yielding an instance of
+register the provider with NeMo Agent Toolkit by yielding an instance of
 {class}`aiq.builder.authentication.AuthenticationProviderInfo`.
 
-The `AuthCodeGrantConfig` from the previous section is registered as follows:
-`src/aiq/authentication/oauth2/auth_code_grant_config.py`:
+The `OAuth2AuthorizationCodeFlowConfig` from the previous section is registered as follows:
 ```python
-@register_authentication_provider(config_type=AuthCodeGrantConfig)
-async def oauth2_authorization_code_grant(authentication_provider: AuthCodeGrantConfig, builder: Builder):
-
-    yield AuthenticationProviderInfo(config=authentication_provider,
-                                     description="OAuth 2.0 Authorization Code Grant authentication provider.")
+@register_authentication_provider(config_type=OAuth2AuthorizationCodeFlowConfig)
+async def oauth2(authentication_provider: OAuth2AuthorizationCodeFlowConfig, builder: Builder):
+    yield AuthenticationProviderInfo(config=authentication_provider, description="OAuth 2.0 authentication provider.")
 ```
 ## Extending the API Authentication Client
 As described earlier, each API authentication provider defines the credentials and parameters required to authenticate
 with a specific API service. A corresponding API authentication client uses this configuration to initiate and
-complete the authentication process. AIQ Toolkit provides two extensible base classes `AuthenticationClientBase` and
- `OAuthClientBase` to simplify the development of custom authentication clients for various authentication methods.
+complete the authentication process. NeMo Agent Toolkit provides an extensible base class `AuthenticationClientBase`
+to simplify the development of custom authentication clients for various authentication methods.
  These base classes provide a structured interface for implementing key functionality, including:
 - Validating configuration credentials
-- Constructing authenticated request parameters
-- Completing OAuth flows across different execution environments
+- Interfacing with the NeMo Agent Toolkit frontend authentication flow handlers
+- Returning appropriate authentication tokens or credentials
 
 To implement a custom client, extend the appropriate base class and override the required methods. For detailed
 documentation on the methods and expected behavior, refer to the docstrings provided in the
@@ -92,57 +106,18 @@ with the provider.
 
 `src/aiq/authentication/oauth2/register.py`:
 ```python
-@register_authentication_client(config_type=AuthCodeGrantConfig)
-async def oauth2_authorization_code_grant_client(authentication_provider: AuthCodeGrantConfig, builder: Builder):
-
-    yield AuthCodeGrantClient(config=authentication_provider)
+@register_authentication_client(config_type=OAuth2AuthorizationCodeFlowConfig)
+async def oauth2_client(authentication_provider: OAuth2AuthorizationCodeFlowConfig, builder: Builder):
+    yield OAuth2Client(authentication_provider)
 ```
 Similar to the registration function for the provider, the client registration function can perform any necessary setup
 actions before yielding the client, along with cleanup actions after the `yield` statement.
 
 ## Testing an Authentication Client
 After implementing a new authentication client, it’s important to verify that the required functionality works as
-expected. This can be done by writing integration tests. To test a standard authentication client, use the
-`AuthenticationClientTester` class located in the {py:mod}`tests.aiq.authentication.test_custom_authentication_client`
-module. For clients that implement OAuth flows, use the `OAuth2FlowTester` class provided in the
-{py:mod}`tests.aiq.authentication.oauth2_mock_server` module.
-
-```python
-async def test_api_key_client_integration():
-    """Authentication Client Integration tests."""
-    from test_custom_authentication_client import AuthenticationClientTester
-
-    client = APIKeyClient(config=APIKeyConfig(raw_key="test_api_key_12345",
-                                              header_name="X-API-Key",
-                                              header_prefix="Bearer"),
-                          config_name="test_api_key")
-
-    tester = AuthenticationClientTester(auth_client=client)
-
-    # Run the complete Authentication Client integration test suite
-    assert await tester.run() is True
-```
-
-```python
-async def test_oauth2_full_flow():
-    """Test the complete OAuth2 authorization code flow."""
-    # Create OAuth2FlowTester instance with a minimal config and client for testing
-    minimal_config = AuthCodeGrantConfig(client_server_url="https://test.com",
-                                         authorization_url="https://test.com/auth",
-                                         authorization_token_url="https://test.com/token",
-                                         consent_prompt_key="test_key_secure",
-                                         client_secret="test_secret_secure_16_chars_minimum",
-                                         client_id="test_client",
-                                         audience="test_audience",
-                                         scope=["test_scope"])
-
-    auth_client = AuthCodeGrantClient(config=minimal_config, config_name="test_config")
-
-    tester = OAuth2FlowTester(oauth_client=auth_client, flow=OAuth2Flow.AUTHORIZATION_CODE)
-
-    # Run the complete OAuth2 flow test suite
-    assert await tester.run() is True
-```
+expected. This can be done by writing integration tests. It is important to minimize the amount of mocking in the tests
+to ensure that the client behaves as expected in a real-world scenario. You can find examples of existing tests in the repository 
+at `tests/aiq/authentication`. 
 
 ## Packaging the Provider and Client
 
@@ -153,7 +128,7 @@ how this is defined are found in the [Entry Point](../extend/plugins.md#entry-po
 By convention, the entry point module is named `register.py`, but this is not a requirement.
 
 In the entry point module it is important that the provider is defined first followed by the client, this ensures that
-the provider is added to the AIQ toolkit registry before the client is registered. A hypothetical `register.py` file
+the provider is added to the NeMo Agent Toolkit registry before the client is registered. A hypothetical `register.py` file
 could be defined as follows:
 
 ```python

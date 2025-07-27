@@ -187,17 +187,7 @@ class StartCommandGroup(click.Group):
 
         config = validate_schema(config_dict, AIQConfig)
 
-        # Store the config in the credential manager to spin up an authentication server for serverless execution modes.
-        from copy import deepcopy
-
-        from aiq.authentication.credentials_manager import _CredentialsManager
-        from aiq.runtime.loader import load_config
-
         # Override default front end config with values from the config file for serverless execution modes.
-        _CredentialsManager().full_config = deepcopy(config)
-        serverless_aiq_config: AIQConfig = load_config(config_file)
-        _CredentialsManager().validate_and_set_cors_config(serverless_aiq_config.general.front_end)
-
         # Check that we have the right kind of front end
         if (not isinstance(config.general.front_end, front_end.config_type)):
             logger.warning(

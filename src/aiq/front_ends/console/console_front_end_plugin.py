@@ -20,14 +20,12 @@ from io import StringIO
 import click
 from colorama import Fore
 
-from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import OAuthClientBase
 from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.data_models.authentication import ConsentPromptMode
 from aiq.data_models.interactive import HumanPromptModelType
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import HumanResponseText
 from aiq.data_models.interactive import InteractionPrompt
+from aiq.front_ends.console.authentication_flow_handler import ConsoleAuthenticationFlowHandler
 from aiq.front_ends.console.console_front_end_config import ConsoleFrontEndConfig
 from aiq.front_ends.simple_base.simple_front_end_plugin_base import SimpleFrontEndPluginBase
 from aiq.runtime.session import AIQSessionManager
@@ -46,11 +44,17 @@ async def prompt_for_input_cli(question: InteractionPrompt) -> HumanResponse:
 
         return HumanResponseText(text=user_response)
 
-    raise ValueError("Unsupported human propmt input type. The run command only supports the 'HumanPromptText' "
+    raise ValueError("Unsupported human prompt input type. The run command only supports the 'HumanPromptText' "
                      "input type. Please use the 'serve' command to ensure full support for all input types.")
 
 
 class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
+
+    def __init__(self, full_config):
+        super().__init__(full_config=full_config)
+
+        # Set the authentication flow handler
+        self.auth_flow_handler = ConsoleAuthenticationFlowHandler()
 
     async def pre_run(self):
 
@@ -86,7 +90,7 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
 
                 async with session_manager.session(
                         user_input_callback=prompt_for_input_cli,
-                        user_authentication_callback=self.user_auth_callback_console) as session:
+                        user_authentication_callback=self.auth_flow_handler.authenticate) as session:
                     async with session.run(query) as runner:
                         base_output = await runner.result(to_type=str)
 
@@ -110,35 +114,3 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
 
         # Print result
         logger.info(f"\n{'-' * 50}\n{Fore.GREEN}Workflow Result:\n%s{Fore.RESET}\n{'-' * 50}", runner_outputs)
-
-    async def user_auth_callback_console(self, oauth_client: OAuthClientBase,
-                                         consent_prompt_mode: ConsentPromptMode) -> AuthenticationError | None:
-        """
-        Callback handler for user authentication in console environments.
-
-        Args:
-            oauth_client (OAuthClientBase): The OAuth client to authenticate.
-            consent_prompt_mode (ConsentPromptMode): The consent prompt mode to use.
-
-        Returns:
-            AuthenticationError | None: The authentication error if the authentication fails, otherwise None.
-        """
-
-        from aiq.authentication.exceptions.call_back_exceptions import OAuthClientConsoleError
-        oauth_client.consent_prompt_mode = consent_prompt_mode
-
-        try:
-            # Initiate the authorization flow and persist the oauth credentials.
-            await oauth_client.initiate_authorization_flow_console()
-
-            # If credentials were not persisted, raise an error.
-            if not await oauth_client.validate_credentials():
-                raise AuthenticationError(error_code="console_auth_error", message="Failed to validate credentials")
-
-        except OAuthClientConsoleError as e:
-            error_message = f"Failed to complete Authorization Flow for: {oauth_client.config_name} Error: {str(e)}"
-            logger.error(error_message, exc_info=True)
-            await oauth_client.shut_down_code_flow_console()
-            raise AuthenticationError(error_code="console_auth_error", message=error_message) from e
-
-        return

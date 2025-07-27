@@ -18,8 +18,12 @@
 # isort:skip_file
 
 # Import any providers which need to be automatically registered here
-from .oauth2.auth_code_grant_config import oauth2_authorization_code_grant
-from .api_key.api_key_config import api_key
+#from .oauth2.auth_code_grant_config import oauth2_authorization_code_grant
+#from .api_key.api_key_config import api_key
 
-from aiq.authentication.oauth2.register import oauth2_authorization_code_grant_client
-from aiq.authentication.api_key.register import api_key_client
+#from aiq.authentication.oauth2.register import oauth2_authorization_code_grant_client
+#from aiq.authentication.api_key.register import api_key_client
+
+from aiq.authentication.http_basic_auth import register
+from aiq.authentication.oauth2 import register
+from aiq.authentication.api_key import register

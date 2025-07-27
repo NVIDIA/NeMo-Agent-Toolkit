@@ -30,42 +30,39 @@ class _FastApiFrontEndController:
     """
 
     def __init__(self, app: FastAPI):
-        from aiq.authentication.credentials_manager import _CredentialsManager
         self._app: FastAPI = app
-        self._config: Config = Config(app=self._app,
-                                      host=_CredentialsManager().full_config.general.front_end.host,
-                                      port=_CredentialsManager().full_config.general.front_end.port,
-                                      workers=_CredentialsManager().full_config.general.front_end.workers,
-                                      log_level="warning")
-        self._server: Server = Server(config=self._config)
-        self._server_background_task: asyncio.Task = None
+        self._server: Server | None = None
+        self._server_background_task: asyncio.Task | None = None
 
-    async def start_server(self) -> None:
-        "Starts the API server."
-        from aiq.authentication.oauth2.auth_code_grant_client import AuthCodeGrantFlowError
+    async def start_server(self, host: str, port: int) -> None:
+        """Starts the API server."""
+
+        server_host = host
+        server_port = port
+
+        config = Config(app=self._app, host=server_host, port=server_port, log_level="warning")
+        self._server = Server(config=config)
+
         try:
             self._server_background_task = asyncio.create_task(self._server.serve())
-
         except asyncio.CancelledError as e:
-            error_message = f"Task error occurred while starting OAuth2.0 server: {str(e)}"
+            error_message = f"Task error occurred while starting API server: {str(e)}"
             logger.error(error_message, exc_info=True)
-            raise AuthCodeGrantFlowError('server_start_cancelled', error_message) from e
-
+            raise RuntimeError(error_message) from e
         except Exception as e:
-            error_message = f"Unexpected error occurred while starting OAuth2.0 server: {str(e)}"
+            error_message = f"Unexpected error occurred while starting API server: {str(e)}"
             logger.error(error_message, exc_info=True)
-            raise AuthCodeGrantFlowError('server_start_failed', error_message) from e
+            raise RuntimeError(error_message) from e
 
     async def stop_server(self) -> None:
-        "Stops the API server."
+        """Stops the API server."""
+        if not self._server or not self._server_background_task:
+            return
+
         try:
-            # Shut the server instance down.
             self._server.should_exit = True
-
-            # Wait for the background task to clean up.
             await self._server_background_task
-
         except asyncio.CancelledError as e:
             logger.error("Server shutdown failed: %s", str(e), exc_info=True)
         except Exception as e:
-            logger.error("Unexpected error occured: %s", str(e), exc_info=True)
+            logger.error("Unexpected error occurred: %s", str(e), exc_info=True)

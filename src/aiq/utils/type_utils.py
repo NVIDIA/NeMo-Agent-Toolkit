@@ -395,3 +395,90 @@ class DecomposedType:
         converters.append(_convert_to_schema)
 
         return schema
+
+    @staticmethod
+    def extract_generic_parameters_from_class(target_class: type,
+                                              expected_param_count: int | None = None) -> tuple[type, ...]:
+        """
+        Extract generic type parameters from a class's inheritance chain.
+
+        This method searches through __orig_bases__ to find generic parameters,
+        which is useful for classes that inherit from generic base classes.
+
+        Parameters
+        ----------
+        target_class : type
+            The class to extract parameters from
+        expected_param_count : int | None, optional
+            Expected number of parameters. If specified, only matches with this count are considered.
+
+        Returns
+        -------
+        tuple[type, ...]
+            Tuple of generic type parameters found
+
+        Raises
+        ------
+        ValueError
+            If no generic parameters matching the expected count are found
+
+        Examples
+        --------
+        >>> class MyClass(SomeGeneric[int, str, bool]):
+        ...     pass
+        >>> DecomposedType.extract_generic_parameters_from_class(MyClass, 3)
+        (int, str, bool)
+        """
+        for base_cls in getattr(target_class, '__orig_bases__', []):
+            base_cls_args = typing.get_args(base_cls)
+
+            if expected_param_count is None or len(base_cls_args) == expected_param_count:
+                if base_cls_args:  # Only return if we actually found parameters
+                    return base_cls_args
+
+        if expected_param_count is not None:
+            raise ValueError(
+                f"Could not find generic parameters with count {expected_param_count} for class {target_class}")
+        raise ValueError(f"Could not find any generic parameters for class {target_class}")
+
+    @staticmethod
+    def is_type_compatible(source_type: type, target_type: type) -> bool:
+        """
+        Check if a source type is compatible with a target type.
+
+        This handles direct compatibility and special cases like batch compatibility
+        where list[T] can be compatible with targets that expect T.
+
+        Parameters
+        ----------
+        source_type : type
+            The source type to check
+        target_type : type
+            The target type to check compatibility with
+
+        Returns
+        -------
+        bool
+            True if types are compatible, False otherwise
+        """
+        # Direct compatibility check
+        try:
+            if issubclass(source_type, target_type):
+                return True
+        except TypeError:
+            # Handle generic types that can't use issubclass
+            pass
+
+        # Check if source outputs list[T] and target expects T
+        source_decomposed = DecomposedType(source_type)
+        if source_decomposed.origin is list and source_decomposed.args:
+            inner_type = source_decomposed.args[0]
+            try:
+                if issubclass(inner_type, target_type):
+                    return True
+            except TypeError:
+                # If we can't use issubclass, check type equality
+                if inner_type == target_type:
+                    return True
+
+        return False

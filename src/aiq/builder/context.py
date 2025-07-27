@@ -20,11 +20,11 @@ from collections.abc import Callable
 from contextlib import contextmanager
 from contextvars import ContextVar
 
-from aiq.authentication.exceptions.call_back_exceptions import AuthenticationError
-from aiq.authentication.interfaces import OAuthClientBase
 from aiq.builder.intermediate_step_manager import IntermediateStepManager
 from aiq.builder.user_interaction_manager import AIQUserInteractionManager
-from aiq.data_models.authentication import ConsentPromptMode
+from aiq.data_models.authentication import AuthenticatedContext
+from aiq.data_models.authentication import AuthenticationBaseConfig
+from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
 from aiq.data_models.intermediate_step import IntermediateStep
@@ -79,16 +79,9 @@ class AIQContextState(metaclass=Singleton):
                                              | None] = ContextVar(
                                                  "user_input_callback",
                                                  default=AIQUserInteractionManager.default_callback_handler)
-        # MITIGATION STRATEGY:
-        # The self.user_auth_callback is being reset during HTTP streaming request due to the session manager not
-        # executing the callback during the session, it is exiting and resetting the callback. Defaulting to
-        # `user_auth_callback_server_http` since this bug only happens during streaming requests.
-        from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
-        self.user_auth_callback: ContextVar[Callable[[OAuthClientBase, ConsentPromptMode],
-                                                     Awaitable[AuthenticationError | None]]
-                                            | None] = ContextVar(
-                                                "user_auth_callback",
-                                                default=FastApiFrontEndPluginWorker.user_auth_callback_server_http)
+        self.user_auth_callback: ContextVar[Callable[[AuthenticationBaseConfig, AuthFlowType],
+                                                     Awaitable[AuthenticatedContext]]
+                                            | None] = ContextVar("user_auth_callback", default=None)
 
     @staticmethod
     def get() -> "AIQContextState":
@@ -236,6 +229,26 @@ class AIQContext:
             str: The active span ID.
         """
         return self._context_state.active_span_id_stack.get()[-1]
+
+    @property
+    def user_auth_callback(self) -> Callable[[AuthenticationBaseConfig, AuthFlowType], Awaitable[AuthenticatedContext]]:
+        """
+        Retrieves the user authentication callback function from the context state.
+
+        This property provides access to the user authentication callback function stored in the context state.
+        The callback function is responsible for handling user authentication based on the provided configuration.
+
+        Returns:
+            Callable[[AuthenticationBaseConfig], Awaitable[AuthenticatedContext]]: The user authentication
+            callback function.
+
+        Raises:
+            RuntimeError: If the user authentication callback is not set in the context.
+        """
+        callback = self._context_state.user_auth_callback.get()
+        if callback is None:
+            raise RuntimeError("User authentication callback is not set in the context.")
+        return callback
 
     @staticmethod
     def get() -> "AIQContext":
