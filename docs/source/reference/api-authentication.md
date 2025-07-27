@@ -77,7 +77,7 @@ under the `authentication` key.
 | `authorization_url`   | URL to which users are redirected to authorize the application.|
 | `token_url`           | URL where the authorization code is exchanged for access and optionally refresh tokens.|
 | `redirect_uri`        | The callback URL the provider redirects to after user authorization. Must match the registered value.|
-| `scope`               | A list of requested permissions or access scopes (e.g., `read`, `write`, `email`).|
+| `scope`               | A list of requested permissions or access scopes (for example, `read`, `write`, or `email`).|
 | `state`               | An optional CSRF protection value; helps maintain request integrity between client and server.|
 | `code_challenge`      | Used for PKCE; a hashed version of `code_verifier` sent in the initial authorization request.|
 | `code_verifier`       | Used for PKCE; a high-entropy string used to validate the code exchange.|
