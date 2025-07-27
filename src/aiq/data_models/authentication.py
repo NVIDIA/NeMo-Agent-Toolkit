@@ -53,9 +53,6 @@ class AuthFlowType(str, Enum):
 
 
 class AuthenticatedContext(BaseModel):
-    """
-    Represents an authenticated context for making requests, containing headers, query parameters
-    """
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
     headers: dict[str, str] | httpx.Headers | None = Field(default=None,
                                                            description="HTTP headers used for authentication.")
@@ -86,11 +83,6 @@ class HTTPMethod(str, Enum):
 class AuthenticationEndpoint(str, Enum):
     REDIRECT_URI = "/redirect"
     PROMPT_REDIRECT_URI = "/prompt-uri"
-
-
-####################
-# OUTPUT TYPES
-####################
 
 
 class CredentialKind(str, Enum):
@@ -156,14 +148,10 @@ class AuthResult(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    # ---------- helpers -------------------------------------------------------
     def is_expired(self) -> bool:
         return bool(self.token_expires_at and datetime.now(timezone.utc) >= self.token_expires_at)
 
     def as_requests_kwargs(self) -> dict[str, typing.Any]:
-        """
-        Convert to kwargs usable by `requests` / `httpx`.
-        """
         kw: dict[str, typing.Any] = {"headers": {}, "params": {}, "cookies": {}}
 
         for cred in self.credentials:
@@ -185,9 +173,6 @@ class AuthResult(BaseModel):
         return kw
 
     def attach(self, target_kwargs: dict[str, typing.Any]) -> None:
-        """
-        In-place merge into an existing kwargs dict.
-        """
         merged = self.as_requests_kwargs()
         for k, v in merged.items():
             if isinstance(v, dict):
