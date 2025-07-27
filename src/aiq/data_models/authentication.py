@@ -189,10 +189,9 @@ class AuthResult(BaseModel):
     """
     credentials: list[Credential] = Field(default_factory=list,
                                           description="List of credentials used for authentication.")
-    token_expires_at: datetime | None = Field(default=None,
-                                               description="Expiration time of the token, if applicable.")
+    token_expires_at: datetime | None = Field(default=None, description="Expiration time of the token, if applicable.")
     raw: dict[str, typing.Any] = Field(default_factory=dict,
-                                        description="Raw response data from the authentication process.")
+                                       description="Raw response data from the authentication process.")
 
     model_config = ConfigDict(extra="forbid")
 

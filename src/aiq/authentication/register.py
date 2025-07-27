@@ -16,6 +16,6 @@
 # pylint: disable=unused-import
 # flake8: noqa
 
+from aiq.authentication.api_key import register as register_api_key
 from aiq.authentication.http_basic_auth import register as register_http_basic_auth
 from aiq.authentication.oauth2 import register as register_oauth2
-from aiq.authentication.api_key import register as register_api_key
