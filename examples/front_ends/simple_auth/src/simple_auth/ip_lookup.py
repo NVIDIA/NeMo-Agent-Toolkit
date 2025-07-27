@@ -36,7 +36,7 @@ class WhoAmIConfig(FunctionBaseConfig, name="who_am_i"):
     auth_provider: AuthenticationRef = Field(description=("Reference to the authentication provider to use for "
                                                           "authentication before making the who am i request."))
 
-    api_url: str = Field(default="http://localhost:5000/api/me", description="Base URL for the who am i API")
+    api_url: str = Field(default="http://127.0.0.1:5000/api/me", description="Base URL for the who am i API")
     timeout: int = Field(default=10, description="Request timeout in seconds")
 
 
@@ -64,7 +64,6 @@ async def who_am_i_function(config: WhoAmIConfig, builder: Builder):
             auth_header: BearerTokenCred = auth_result.credentials[0]
 
             async with httpx.AsyncClient(timeout=config.timeout) as client:
-
                 response = await client.get(config.api_url,
                                             headers={"Authorization": f"Bearer {auth_header.token.get_secret_value()}"})
                 response.raise_for_status()
