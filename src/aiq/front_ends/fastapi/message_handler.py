@@ -101,7 +101,9 @@ class WebSocketMessageHandler:
                         WebSocketSystemResponseTokenMessage,
                         WebSocketSystemIntermediateStepMessage,
                         WebSocketSystemInteractionMessage)):
-                    await self._out_going_messages_queue.put(validated_message.model_dump())
+                    # These messages are already handled by self.create_websocket_message(data_model=value, …)
+                    # No further processing is needed here.
+                    pass
 
                 elif (isinstance(validated_message, WebSocketUserInteractionResponseMessage)):
                     user_content = await self.process_user_message_content(validated_message)
