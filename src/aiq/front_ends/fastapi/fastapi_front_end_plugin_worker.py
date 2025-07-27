@@ -820,31 +820,40 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 return _job_status_to_response(job)
 
         async def websocket_endpoint(websocket: WebSocket):
-            
-            # Handle cross-origin WebSocket connections by extracting session from query params
+
+            # Universal cookie handling: works for both cross-origin and same-origin connections
             session_id = websocket.query_params.get("session")
             if session_id:
-                # Add the session cookie to the websocket headers for session management
                 headers = list(websocket.scope.get("headers", []))
                 cookie_header = f"aiqtoolkit-session={session_id}"
-                
-                # Check if there's already a cookie header and append to it
+
+                # Check if the session cookie already exists to avoid duplicates
                 cookie_exists = False
+                existing_session_cookie = False
+
                 for i, (name, value) in enumerate(headers):
                     if name == b"cookie":
-                        # Append to existing cookie header
-                        headers[i] = (name, value + f"; {cookie_header}".encode())
                         cookie_exists = True
+                        cookie_str = value.decode()
+
+                        # Check if aiqtoolkit-session already exists in cookies
+                        if "aiqtoolkit-session=" in cookie_str:
+                            existing_session_cookie = True
+                            logger.info("WebSocket: Session cookie already present in headers (same-origin)")
+                        else:
+                            # Append to existing cookie header (cross-origin case)
+                            headers[i] = (name, f"{cookie_str}; {cookie_header}".encode())
+                            logger.info("WebSocket: Added session cookie to existing cookie header: %s",
+                                        session_id[:10] + "...")
                         break
-                
-                if not cookie_exists:
-                    # Add new cookie header
+
+                # Add new cookie header only if no cookies exist and no session cookie found
+                if not cookie_exists and not existing_session_cookie:
                     headers.append((b"cookie", cookie_header.encode()))
-                
+                    logger.info("WebSocket: Added new session cookie header: %s", session_id[:10] + "...")
+
                 # Update the websocket scope with the modified headers
                 websocket.scope["headers"] = headers
-                
-                logger.info("WebSocket: Added session cookie from query parameter: %s", session_id[:10] + "...")
 
             async with WebSocketMessageHandler(websocket, session_manager, self.get_step_adaptor()) as handler:
 
