@@ -53,8 +53,8 @@ application. During registration, you typically provide the following:
 |---------------------|----------------------------------------------------------------------------------|
 | **Application Name**  | A human-readable name for your application. This is shown to users during consent.|
 | **Redirect URI(s)**   | The URL(s) where the API will redirect users after authorization.               |
-| **Grant Type(s)**     | The OAuth 2.0 flows the toolkit supports (e.g., Authorization Code, Client Credential).         |
-| **Scopes**            | The permissions your app is requesting (e.g., `read:user`, `write:data`).       |
+| **Grant Type(s)**     | The OAuth 2.0 flows the toolkit supports (for example, Authorization Code or Client Credential).         |
+| **Scopes**            | The permissions your app is requesting (for example, `read:user` or `write:data`).       |
 
 ### Registering Redirect URIs for Development vs. Production Environments
 **IMPORTANT**: Most OAuth providers require exact matches for redirect URIs.
@@ -77,7 +77,7 @@ under the `authentication` key.
 | `authorization_url`   | URL to which users are redirected to authorize the application.|
 | `token_url`           | URL where the authorization code is exchanged for access and optionally refresh tokens.|
 | `redirect_uri`        | The callback URL the provider redirects to after user authorization. Must match the registered value.|
-| `scope`               | A list of requested permissions or access scopes (e.g., `read`, `write`, `email`).|
+| `scope`               | A list of requested permissions or access scopes (for example, `read`, `write`, or `email`).|
 | `state`               | An optional CSRF protection value; helps maintain request integrity between client and server.|
 | `code_challenge`      | Used for PKCE; a hashed version of `code_verifier` sent in the initial authorization request.|
 | `code_verifier`       | Used for PKCE; a high-entropy string used to validate the code exchange.|
@@ -89,7 +89,7 @@ under the `authentication` key.
 | `client_id`          | The unique ID assigned to your application by the API provider.  |
 | `client_secret`      | A secret key used to authenticate the application with the token server. |
 | `token_url`          | URL where the authorization code is exchanged for access and optionally refresh tokens. |
-| `scope` (optional)   | A list of requested permissions or access scopes (e.g., `read`, `write`, `email`).|
+| `scope` (optional)   | A list of requested permissions or access scopes (for example, `read`, `write`, or `email`).|
 
 #### Common Device Authorization Flow Credentials
 
@@ -98,7 +98,7 @@ under the `authentication` key.
 | `client_id`                | The unique ID of your app registered with the API provider.|
 | `device_authorization_url` | The endpoint where the app requests a `device_code` and `user_code`.|
 | `token_url`                | The endpoint to poll and exchange the `device_code` for an access token.|
-| `scope`                    | A list of requested permissions or access scopes (e.g., `read`, `write`, `email`).|
+| `scope`                    | A list of requested permissions or access scopes (for example, `read`, `write`, or `email`).|
 | `verification_uri`         | URL the user visits on a separate device to authorize the app.|
 
 

@@ -127,7 +127,7 @@ toolkit as a [plugin](../extend/plugins.md). In the `pyproject.toml` file of the
 how this is defined are found in the [Entry Point](../extend/plugins.md#entry-point) section of the plugins document.
 By convention, the entry point module is named `register.py`, but this is not a requirement.
 
-In the entry point module it is important that the provider is defined first followed by the client, this ensures that
+In the entry point module, it is important that the provider is defined first followed by the client. This ensures that
 the provider is added to the NeMo Agent Toolkit registry before the client is registered. A hypothetical `register.py` file
 could be defined as follows:
 
