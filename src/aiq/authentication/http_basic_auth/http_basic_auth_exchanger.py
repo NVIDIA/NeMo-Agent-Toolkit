@@ -33,8 +33,6 @@ class HTTPBasicAuthExchanger(AuthenticationClientBase):
     def __init__(self, config: AuthenticationBaseConfig):
         """
         Initialize the HTTP Basic Auth Exchanger with the given configuration.
-        Args:
-            config: Configuration for the authentication process.
         """
         super().__init__(config)
         self._authenticated_tokens: dict[str, AuthResult] = {}
@@ -43,11 +41,6 @@ class HTTPBasicAuthExchanger(AuthenticationClientBase):
     async def authenticate(self, user_id: str | None = None) -> AuthResult:
         """
         Performs simple HTTP Authentication using the provided user ID.
-        Args:
-            user_id: User identifier for whom to perform authentication.
-
-        Returns:
-            AuthenticatedContext: The context containing authentication headers.
         """
 
         if user_id is None and hasattr(AIQContext.get(), "metadata") and hasattr(
