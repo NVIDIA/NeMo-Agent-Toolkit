@@ -131,7 +131,7 @@ triages
 uv
 VectorDB
 [Ww]alkthrough
-[Ww]ebsocket
+[Ww]eb[Ss]ocket
 [We]ebSocket
 XGBoost
 zsh
