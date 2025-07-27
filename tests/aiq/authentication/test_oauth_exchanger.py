@@ -255,5 +255,5 @@ async def test_callback_error(monkeypatch, cfg):
     _patch_context(monkeypatch, cb)
 
     client = OAuth2Client(cfg)
-    with pytest.raises(AttributeError):
+    with pytest.raises(RuntimeError):
         await client.authenticate(None)
