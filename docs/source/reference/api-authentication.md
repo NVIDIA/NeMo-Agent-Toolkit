@@ -89,7 +89,7 @@ under the `authentication` key.
 | `client_id`          | The unique ID assigned to your application by the API provider.  |
 | `client_secret`      | A secret key used to authenticate the application with the token server. |
 | `token_url`          | URL where the authorization code is exchanged for access and optionally refresh tokens. |
-| `scope` (optional)   | A list of requested permissions or access scopes (e.g., `read`, `write`, `email`).|
+| `scope` (optional)   | A list of requested permissions or access scopes (for example, `read`, `write`, or `email`).|
 
 #### Common Device Authorization Flow Credentials
 
@@ -98,7 +98,7 @@ under the `authentication` key.
 | `client_id`                | The unique ID of your app registered with the API provider.|
 | `device_authorization_url` | The endpoint where the app requests a `device_code` and `user_code`.|
 | `token_url`                | The endpoint to poll and exchange the `device_code` for an access token.|
-| `scope`                    | A list of requested permissions or access scopes (e.g., `read`, `write`, `email`).|
+| `scope`                    | A list of requested permissions or access scopes (for example, `read`, `write`, or `email`).|
 | `verification_uri`         | URL the user visits on a separate device to authorize the app.|
 
 
