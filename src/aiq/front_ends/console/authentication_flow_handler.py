@@ -127,6 +127,7 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
             state=state,
             code_verifier=flow_state.verifier if cfg.use_pkce else None,
             code_challenge=flow_state.challenge if cfg.use_pkce else None,
+            **(cfg.authorization_kwargs or {})
         )
 
         # Register flow + maybe spin up redirect handler

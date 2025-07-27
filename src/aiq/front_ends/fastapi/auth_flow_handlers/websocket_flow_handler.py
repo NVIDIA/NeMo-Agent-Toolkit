@@ -90,7 +90,8 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
             config.authorization_url,
             state=state,
             code_verifier=flow_state.verifier if config.use_pkce else None,
-            code_challenge=flow_state.challenge if config.use_pkce else None
+            code_challenge=flow_state.challenge if config.use_pkce else None,
+            **(config.authorization_kwargs or {})
         )
 
         await self._add_flow_cb(state, flow_state)

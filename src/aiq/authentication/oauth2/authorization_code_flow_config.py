@@ -44,6 +44,10 @@ class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_a
     use_pkce: bool = Field(default=False,
                            description="Whether to use PKCE (Proof Key for Code Exchange) in the OAuth 2.0 flow.")
 
+    authorization_kwargs: dict[str, str] | None = Field(description="Additional keyword arguments for the "
+                                                        "authorization request.",
+                                                        default=None)
+
     @property
     def redirect_uri(self) -> str:
         return f"{self.client_url}{self.redirect_path}"
