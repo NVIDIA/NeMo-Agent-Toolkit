@@ -471,6 +471,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return self._llms[llm_name].config
 
     @override
+    @aiq_experimental
     async def add_auth_provider(self, name: str | AuthenticationRef,
                                 config: AuthProviderBaseConfig) -> AuthProviderBase:
 
@@ -490,6 +491,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise e
 
     @override
+    @aiq_experimental
     async def get_auth_provider(self, auth_provider_name: str) -> AuthProviderBase:
 
         if auth_provider_name not in self._auth_providers:

@@ -65,6 +65,7 @@ from aiq.data_models.memory import MemoryBaseConfigT
 from aiq.data_models.object_store import ObjectStoreBaseConfigT
 from aiq.data_models.registry_handler import RegistryHandlerBaseConfigT
 from aiq.data_models.retriever import RetrieverBaseConfigT
+from aiq.experimental.decorators.experimental_warning_decorator import aiq_experimental
 
 
 def register_telemetry_exporter(config_type: type[TelemetryExporterConfigT]):
@@ -200,6 +201,7 @@ def register_llm_provider(config_type: type[LLMBaseConfigT]):
     return register_llm_provider_inner
 
 
+@aiq_experimental
 def register_auth_provider(config_type: type[AuthProviderBaseConfigT]):
 
     def register_auth_provider_inner(
@@ -371,6 +373,7 @@ def register_object_store(config_type: type[ObjectStoreBaseConfigT]):
     return register_kv_store_inner
 
 
+@aiq_experimental
 def register_its_strategy(config_type: type[ITSStrategyRegisterCallableT]):
 
     def register_its_strategy_inner(
