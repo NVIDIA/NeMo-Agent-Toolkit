@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from pydantic import Field
-from pydantic.config import ConfigDict
 
 from aiq.data_models.authentication import AuthProviderBaseConfig
 

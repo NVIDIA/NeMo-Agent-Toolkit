@@ -22,7 +22,6 @@ from pydantic import TypeAdapter
 from pydantic import ValidationError
 
 from aiq.data_models.authentication import AuthenticatedContext  # enums; models
-from aiq.data_models.authentication import AuthenticationEndpoint
 from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.authentication import AuthResult
 from aiq.data_models.authentication import BasicAuthCred
@@ -57,7 +56,7 @@ from aiq.data_models.authentication import QueryCred
         (HeaderAuthScheme.BEARER, "Bearer"),
         (HeaderAuthScheme.X_API_KEY, "X-API-Key"),
         (HeaderAuthScheme.BASIC, "Basic"),
-        (HeaderAuthScheme.CUSTOM, "custom"),
+        (HeaderAuthScheme.CUSTOM, "Custom"),
         (HTTPMethod.GET, "GET"),
         (HTTPMethod.POST, "POST"),
         (HTTPMethod.PUT, "PUT"),
@@ -65,8 +64,6 @@ from aiq.data_models.authentication import QueryCred
         (HTTPMethod.PATCH, "PATCH"),
         (HTTPMethod.HEAD, "HEAD"),
         (HTTPMethod.OPTIONS, "OPTIONS"),
-        (AuthenticationEndpoint.REDIRECT_URI, "/redirect"),
-        (AuthenticationEndpoint.PROMPT_REDIRECT_URI, "/prompt-uri"),
         (CredentialKind.HEADER, "header"),
         (CredentialKind.QUERY, "query"),
         (CredentialKind.COOKIE, "cookie"),

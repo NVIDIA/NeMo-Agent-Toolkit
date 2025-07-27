@@ -13,11 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib
-import sys
-from types import ModuleType
-from typing import Any
-
 import pytest
 
 import aiq.authentication.api_key.api_key_auth_provider as api_key_auth_provider
@@ -25,6 +20,8 @@ import aiq.authentication.api_key.api_key_auth_provider as api_key_auth_provider
 # Import the modules we are testing
 # --------------------------------------------------------------------------- #
 import aiq.authentication.api_key.api_key_auth_provider_config as api_key_auth_provider_config
+from aiq.builder.workflow_builder import WorkflowBuilder
+from aiq.data_models.authentication import CredentialKind
 
 # Handy names
 APIKeyConfig = api_key_auth_provider_config.APIKeyAuthProviderConfig
@@ -35,34 +32,6 @@ HeaderPrefixFieldError = api_key_auth_provider_config.HeaderPrefixFieldError
 APIKeyClient = api_key_auth_provider.APIKeyAuthProvider
 BearerTokenCred = api_key_auth_provider.BearerTokenCred
 AuthResult = api_key_auth_provider.AuthResult
-
-
-# --------------------------------------------------------------------------- #
-# Patching helpers
-# --------------------------------------------------------------------------- #
-@pytest.fixture(autouse=True)
-def _patch_interfaces(monkeypatch: pytest.MonkeyPatch) -> None:
-    """
-    Several symbols live in `aiq.authentication.interfaces`.  Create a dummy
-    module with the bare minimum so we can import/patch it without the full
-    runtime.
-    """
-    dummy = ModuleType("aiq.authentication.interfaces")
-    dummy.AUTHORIZATION_HEADER = "Authorization"
-
-    # A no-op base class so APIKeyClient super().__init__() succeeds
-    class _DummyBase:  # noqa: D401  (simple / imperative name)
-
-        def __init__(self, config: Any) -> None:
-            self.config = config
-
-    dummy.AuthenticationClientBase = _DummyBase
-
-    # Expose the dummy in sys.modules **before** the client under test is used.
-    sys.modules["aiq.authentication.interfaces"] = dummy
-
-    # Re-import the client module so it picks up the patched base/constant.
-    importlib.reload(api_key_auth_provider)
 
 
 # --------------------------------------------------------------------------- #
@@ -133,13 +102,20 @@ def test_config_invalid_header_prefix_nonascii():
 # --------------------------------------------------------------------------- #
 async def test_construct_header_bearer(monkeypatch: pytest.MonkeyPatch):
     cfg = make_config()
-    client = APIKeyClient(cfg)
 
-    hdr: BearerTokenCred = await client._construct_authentication_header()  # type: ignore[attr-defined]
+    async with WorkflowBuilder() as builder:
 
-    assert hdr.header_name == "Authorization"
-    assert hdr.scheme == "Bearer"
-    assert hdr.token.get_secret_value() == cfg.raw_key
+        provider = await builder.add_auth_provider(name="test", config=cfg)
+
+        result = await provider.authenticate(user_id="1")
+
+        assert isinstance(result.credentials[0], BearerTokenCred)
+
+        cred: BearerTokenCred = result.credentials[0]
+
+        assert cred.header_name == "Authorization"
+        assert cred.scheme == "Bearer"
+        assert cred.token.get_secret_value() == cfg.raw_key
 
 
 async def test_construct_header_x_api_key():
@@ -148,12 +124,20 @@ async def test_construct_header_x_api_key():
         header_name="X-API-KEY",
         header_prefix="X-API-KEY",
     )
-    client = APIKeyClient(cfg)
-    hdr: BearerTokenCred = await client._construct_authentication_header()  # type: ignore[attr-defined]
 
-    assert hdr.scheme == "X-API-Key"
-    assert hdr.header_name == ""  # per implementation
-    assert hdr.token.get_secret_value() == cfg.raw_key
+    async with WorkflowBuilder() as builder:
+
+        provider = await builder.add_auth_provider(name="test", config=cfg)
+
+        result = await provider.authenticate(user_id="1")
+
+        assert isinstance(result.credentials[0], BearerTokenCred)
+
+        cred: BearerTokenCred = result.credentials[0]
+
+        assert cred.scheme == "X-API-Key"
+        assert cred.header_name == ""  # per implementation
+        assert cred.token.get_secret_value() == cfg.raw_key
 
 
 async def test_construct_header_custom():
@@ -162,23 +146,17 @@ async def test_construct_header_custom():
         header_name="X-Custom",
         header_prefix="Token",
     )
-    client = APIKeyClient(cfg)
-    hdr: BearerTokenCred = await client._construct_authentication_header()  # type: ignore[attr-defined]
 
-    assert hdr.header_name == "X-Custom"
-    assert hdr.scheme == "Token"
-    assert hdr.token.get_secret_value() == cfg.raw_key
+    async with WorkflowBuilder() as builder:
 
+        provider = await builder.add_auth_provider(name="test", config=cfg)
 
-# --------------------------------------------------------------------------- #
-# APIKeyClient – authenticate high-level method
-# --------------------------------------------------------------------------- #
-async def test_authenticate_returns_authresult():
-    cfg = make_config()
-    client = APIKeyClient(cfg)
-    res: AuthResult = await client.authenticate(user_id="user-123")  # type: ignore[attr-defined]
+        result = await provider.authenticate(user_id="1")
 
-    assert isinstance(res, AuthResult)
-    assert len(res.credentials) == 1
-    cred: BearerTokenCred = res.credentials[0]  # type: ignore[assignment]
-    assert cred.token.get_secret_value() == cfg.raw_key
+        assert isinstance(result.credentials[0], BearerTokenCred)
+
+        cred: BearerTokenCred = result.credentials[0]
+
+        assert cred.header_name == "X-Custom"
+        assert cred.scheme == "Token"
+        assert cred.token.get_secret_value() == cfg.raw_key
