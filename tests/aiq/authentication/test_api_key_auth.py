@@ -21,7 +21,6 @@ import aiq.authentication.api_key.api_key_auth_provider as api_key_auth_provider
 # --------------------------------------------------------------------------- #
 import aiq.authentication.api_key.api_key_auth_provider_config as api_key_auth_provider_config
 from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.data_models.authentication import CredentialKind
 
 # Handy names
 APIKeyConfig = api_key_auth_provider_config.APIKeyAuthProviderConfig

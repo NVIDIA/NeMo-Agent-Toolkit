@@ -107,8 +107,8 @@ In the Workflow Configuration YAML file, user credentials required for API authe
 `authentication` key. Users should provide all required and valid credentials for each authentication method to ensure
 the library can authenticate requests without encountering credential related errors. Examples of currently supported
 API configurations are
-[OAuth 2.0 Authorization Code Grant Flow Configuration](../../../src/aiq/authentication/oauth2/authorization_code_flow_config.py),
-[API Key Configuration](../../../src/aiq/authentication/api_key/api_key_config.py), and [Basic HTTP Authentication](../../../src/aiq/authentication/http_basic_auth/register.py).
+[OAuth 2.0 Authorization Code Grant Flow Configuration](../../../src/aiq/authentication/oauth2/oauth2_auth_code_flow_provider_config.py),
+[API Key Configuration](../../../src/aiq/authentication/api_key/api_key_auth_provider_config.py), and [Basic HTTP Authentication](../../../src/aiq/authentication/http_basic_auth/register.py).
 
 ### Authentication YAML Configuration Example
 ```yaml
