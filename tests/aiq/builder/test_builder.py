@@ -26,8 +26,8 @@ from aiq.builder.llm import LLMProviderInfo
 from aiq.builder.retriever import RetrieverProviderInfo
 from aiq.builder.workflow import Workflow
 from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.cli.register_workflow import register_authentication_provider
 from aiq.cli.register_workflow import register_authentication_client
+from aiq.cli.register_workflow import register_authentication_provider
 from aiq.cli.register_workflow import register_embedder_client
 from aiq.cli.register_workflow import register_embedder_provider
 from aiq.cli.register_workflow import register_function
@@ -178,6 +178,7 @@ async def _register():
 
     @register_authentication_client(config_type=TAuthenticationProviderConfig)
     async def register_authentication_client_func(config: TAuthenticationProviderConfig, builder: Builder):
+
         class TestAuthenticationClient(BaseModel):
             model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -509,6 +510,7 @@ async def test_add_retriever():
 
         with pytest.raises(ValueError):
             await builder.add_retriever("retriever_name", TRetrieverProviderConfig())
+
 
 async def test_add_authentication():
     async with WorkflowBuilder() as builder:
