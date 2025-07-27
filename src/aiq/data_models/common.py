@@ -21,6 +21,8 @@ from hashlib import sha512
 from pydantic import AliasChoices
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic.json_schema import GenerateJsonSchema
+from pydantic.json_schema import JsonSchemaMode
 
 _LT = typing.TypeVar("_LT")
 
@@ -67,8 +69,8 @@ def subclass_depth(cls: type) -> int:
     Compute a class' subclass depth.
     """
     depth = 0
-    while (cls is not object):
-        cls = cls.__base__
+    while (cls is not object and cls.__base__ is not None):
+        cls = cls.__base__  # type: ignore
         depth += 1
     return depth
 
@@ -93,7 +95,8 @@ class TypedBaseModel(BaseModel):
     Subclass of Pydantic BaseModel that allows for specifying the object type. Use in Pydantic discriminated unions.
     """
 
-    type: str = Field(init=False,
+    type: str = Field(default="unknown",
+                      init=False,
                       serialization_alias="_type",
                       validation_alias=AliasChoices('type', '_type'),
                       description="The type of the object",
@@ -101,6 +104,7 @@ class TypedBaseModel(BaseModel):
                       repr=False)
 
     full_type: typing.ClassVar[str]
+    _typed_model_name: typing.ClassVar[str | None] = None
 
     def __init_subclass__(cls, name: str | None = None):
         super().__init_subclass__()
@@ -117,14 +121,38 @@ class TypedBaseModel(BaseModel):
 
             full_name = f"{package_name}/{name}"
 
-            type_field = cls.model_fields.get("type")
-            if type_field is not None:
-                type_field.default = name
+            # Store the type name as a class attribute - no field manipulation needed!
+            cls._typed_model_name = name  # type: ignore
             cls.full_type = full_name
+
+    def model_post_init(self, __context):
+        """Set the type field to the correct value after instance creation."""
+        if hasattr(self.__class__, '_typed_model_name') and self.__class__._typed_model_name is not None:
+            object.__setattr__(self, 'type', self.__class__._typed_model_name)
+        # If no type name is set, the field retains its default "unknown" value
+
+    @classmethod
+    def model_json_schema(cls,
+                          by_alias: bool = True,
+                          ref_template: str = '#/$defs/{model}',
+                          schema_generator: "type[GenerateJsonSchema]" = GenerateJsonSchema,
+                          mode: JsonSchemaMode = 'validation') -> dict:
+        """Override to provide correct default for type field in schema."""
+        schema = super().model_json_schema(by_alias=by_alias,
+                                           ref_template=ref_template,
+                                           schema_generator=schema_generator,
+                                           mode=mode)
+
+        # Fix the type field default to show the actual component type instead of "unknown"
+        if ('properties' in schema and 'type' in schema['properties'] and hasattr(cls, '_typed_model_name')
+                and cls._typed_model_name is not None):
+            schema['properties']['type']['default'] = cls._typed_model_name
+
+        return schema
 
     @classmethod
     def static_type(cls):
-        return cls.model_fields.get("type").default
+        return getattr(cls, '_typed_model_name', None)
 
     @classmethod
     def static_full_type(cls):
