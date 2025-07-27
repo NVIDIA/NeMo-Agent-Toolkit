@@ -112,6 +112,7 @@ Adding a Custom Evaluator <./extend/custom-evaluator.md>
 ./extend/memory.md
 Adding an LLM Provider <./extend/adding-an-llm-provider.md>
 Adding an Object Store Provider <./extend/object-store.md>
+Adding an Authentication Provider <./extend/adding-an-authentication-provider.md>
 Integrating AWS Bedrock Models <./extend/integrating-aws-bedrock-models.md>
 Cursor Rules Developer Guide <./extend/cursor-rules-developer-guide.md>
 Adding a Telemetry Exporter <./extend/telemetry-exporters.md>
@@ -122,9 +123,10 @@ Adding a Telemetry Exporter <./extend/telemetry-exporters.md>
 :caption: Reference
 
 ./api/index.rst
-./reference/interactive-models.md
+API Authentication <./reference/api-authentication.md>
+Interactive Models <./reference/interactive-models.md>
 API Server Endpoints <./reference/api-server-endpoints.md>
-./reference/websockets.md
+Websockets <./reference/websockets.md>
 Command Line Interface (CLI) <./reference/cli.md>
 Cursor Rules Reference <./reference/cursor-rules-reference.md>
 Evaluation <./reference/evaluate.md>

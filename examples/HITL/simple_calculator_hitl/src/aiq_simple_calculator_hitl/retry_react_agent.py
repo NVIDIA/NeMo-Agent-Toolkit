@@ -18,6 +18,7 @@ import logging
 from pydantic import Field
 
 from aiq.builder.builder import Builder
+from aiq.builder.context import AIQContext
 from aiq.builder.function_info import FunctionInfo
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.cli.register_workflow import register_function
@@ -25,6 +26,8 @@ from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.function import FunctionBaseConfig
+from aiq.data_models.interactive import HumanPromptText
+from aiq.data_models.interactive import InteractionResponse
 
 logger = logging.getLogger(__name__)
 
@@ -206,3 +209,20 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
             return AIQChatResponse.from_string("I seem to be having a problem.")
 
     yield FunctionInfo.from_fn(_response_fn, description=config.description)
+
+
+class TimeZonePromptConfig(FunctionBaseConfig, name="time_zone_prompt"):
+    pass
+
+
+@register_function(config_type=TimeZonePromptConfig)
+async def time_zone_prompt(config: TimeZonePromptConfig, builder: Builder):
+
+    async def _response_fn(empty: None) -> str:
+
+        response: InteractionResponse = await AIQContext.get().user_interaction_manager.prompt_user_input(
+            HumanPromptText(text="What is the current time in the user's timezone?", required=True, placeholder=""))
+
+        return response.content.text
+
+    yield FunctionInfo.from_fn(_response_fn, description="Prompt the user for their time zone")

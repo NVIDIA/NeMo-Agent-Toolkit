@@ -46,6 +46,7 @@ Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular f
 
 ### Front Ends ([`front_ends`](front_ends/))
 - **[`simple_calculator_custom_routes`](front_ends/simple_calculator_custom_routes/)**: Simple calculator example with custom API routing and endpoint configuration
+- **[`simple_auth`](front_ends/simple_auth/)**: Simple example demonstrating authentication and authorization using OAuth 2.0 Authorization Code Flow
 
 ### Human In The Loop (HITL) ([`HITL`](HITL/))
 - **[`por_to_jiratickets`](HITL/por_to_jiratickets/)**: Project requirements to Jira ticket conversion with human oversight

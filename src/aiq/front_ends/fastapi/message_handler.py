@@ -15,14 +15,19 @@
 
 import asyncio
 import logging
+import typing
 import uuid
 from typing import Any
 
 from fastapi import WebSocket
 from pydantic import BaseModel
 from pydantic import ValidationError
-from starlette.endpoints import WebSocketEndpoint
+from starlette.websockets import WebSocketDisconnect
 
+from aiq.authentication.interfaces import FlowHandlerBase
+from aiq.data_models.api_server import AIQChatResponse
+from aiq.data_models.api_server import AIQResponsePayloadOutput
+from aiq.data_models.api_server import AIQResponseSerializable
 from aiq.data_models.api_server import Error
 from aiq.data_models.api_server import ErrorTypes
 from aiq.data_models.api_server import SystemResponseContent
@@ -39,74 +44,72 @@ from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import HumanResponseNotification
 from aiq.data_models.interactive import InteractionPrompt
 from aiq.front_ends.fastapi.message_validator import MessageValidator
+from aiq.front_ends.fastapi.response_helpers import generate_streaming_response
+from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
+from aiq.runtime.session import AIQSessionManager
 
 logger = logging.getLogger(__name__)
 
 
-class MessageHandler:
+class WebSocketMessageHandler:
 
-    def __init__(self, websocket_reference: WebSocketEndpoint):
-        self._websocket_reference: WebSocketEndpoint = websocket_reference
+    def __init__(self, socket: WebSocket, session_manager: AIQSessionManager, step_adaptor: StepAdaptor):
+        self._socket: WebSocket = socket
+        self._session_manager: AIQSessionManager = session_manager
+        self._step_adaptor: StepAdaptor = step_adaptor
+
         self._message_validator: MessageValidator = MessageValidator()
-        self._messages_queue: asyncio.Queue[dict[str, str]] = asyncio.Queue()
-        self._out_going_messages_queue: asyncio.Queue[dict] = asyncio.Queue()
-        self._process_messages_task: asyncio.Task | None = None
-        self._process_out_going_messages_task: asyncio.Task = None
-        self._background_task: asyncio.Task = None
+        self._running_workflow_task: asyncio.Task | None = None
         self._message_parent_id: str = "default_id"
         self._workflow_schema_type: str = None
-        self._user_interaction_response: asyncio.Future[TextContent] = asyncio.Future()
+        self._user_interaction_response: asyncio.Future[HumanResponse] | None = None
 
-    @property
-    def messages_queue(self) -> asyncio.Queue[dict[str, str]]:
-        return self._messages_queue
+        self._flow_handler: FlowHandlerBase | None = None
 
-    @property
-    def background_task(self) -> asyncio.Task:
-        return self._background_task
+    def set_flow_handler(self, flow_handler: FlowHandlerBase) -> None:
+        self._flow_handler = flow_handler
 
-    @property
-    def process_messages_task(self) -> asyncio.Task | None:
-        return self._process_messages_task
+    async def __aenter__(self) -> "WebSocketMessageHandler":
+        await self._socket.accept()
 
-    @process_messages_task.setter
-    def process_messages_task(self, process_messages_task) -> None:
-        self._process_messages_task = process_messages_task
+        return self
 
-    @property
-    def process_out_going_messages_task(self) -> asyncio.Task:
-        return self._process_out_going_messages_task
+    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
 
-    @process_out_going_messages_task.setter
-    def process_out_going_messages_task(self, process_out_going_messages_task) -> None:
-        self._process_out_going_messages_task = process_out_going_messages_task
+        # TODO: Handle the exit
+        pass
 
-    async def process_messages(self) -> None:
+    async def run(self) -> None:
         """
         Processes received messages from websocket and routes them appropriately.
         """
         while True:
 
             try:
-                message: dict[str, Any] = await self._messages_queue.get()
+
+                message: dict[str, Any] = await self._socket.receive_json()
 
                 validated_message: BaseModel = await self._message_validator.validate_message(message)
 
+                # Received a request to start a workflow
                 if (isinstance(validated_message, WebSocketUserMessage)):
-                    await self.process_user_message(validated_message)
+                    await self.process_workflow_request(validated_message)
 
-                if isinstance(
+                elif isinstance(
                         validated_message,
                     (  # noqa: E131
                         WebSocketSystemResponseTokenMessage,
                         WebSocketSystemIntermediateStepMessage,
                         WebSocketSystemInteractionMessage)):
-                    await self._out_going_messages_queue.put(validated_message.model_dump())
+                    # These messages are already handled by self.create_websocket_message(data_model=value, …)
+                    # No further processing is needed here.
+                    pass
 
-                if (isinstance(validated_message, WebSocketUserInteractionResponseMessage)):
+                elif (isinstance(validated_message, WebSocketUserInteractionResponseMessage)):
                     user_content = await self.process_user_message_content(validated_message)
                     self._user_interaction_response.set_result(user_content)
-            except (asyncio.CancelledError):
+            except (asyncio.CancelledError, WebSocketDisconnect):
+                # TODO: Handle the disconnect
                 break
 
         return None
@@ -130,7 +133,7 @@ class MessageHandler:
 
         return None
 
-    async def process_user_message(self, user_message_as_validated_type: WebSocketUserMessage) -> None:
+    async def process_workflow_request(self, user_message_as_validated_type: WebSocketUserMessage) -> None:
         """
         Process user messages and routes them appropriately.
 
@@ -147,13 +150,15 @@ class MessageHandler:
             if content is None:
                 raise ValueError(f"User message content could not be found: {user_message_as_validated_type}")
 
-            if isinstance(content, TextContent) and (self._background_task is None):
+            if isinstance(content, TextContent) and (self._running_workflow_task is None):
 
-                await self._process_response()
-                self._background_task = asyncio.create_task(
-                    self._websocket_reference.workflow_schema_type.get(self._workflow_schema_type)(
-                        content.text, conversation_id)).add_done_callback(
-                            lambda task: asyncio.create_task(self._on_process_stream_task_done(task)))
+                def _done_callback(task: asyncio.Task):
+                    self._running_workflow_task = None
+
+                # await self._process_response()
+                self._running_workflow_task = asyncio.create_task(
+                    self._run_workflow(content.text, conversation_id,
+                                       result_type=AIQChatResponse)).add_done_callback(_done_callback)
 
         except ValueError as e:
             logger.error("User message content not found: %s", str(e), exc_info=True)
@@ -221,41 +226,10 @@ class MessageHandler:
                 content=Error(code=ErrorTypes.UNKNOWN_ERROR, message="default", details=str(e)))
 
         finally:
-            await self._messages_queue.put(message.model_dump())
+            if (message is not None):
+                await self._socket.send_json(message.model_dump())
 
-    async def _on_process_stream_task_done(self, task: asyncio.Task) -> None:
-        await self.create_websocket_message(data_model=SystemResponseContent(),
-                                            message_type=WebSocketMessageType.RESPONSE_MESSAGE,
-                                            status=WebSocketMessageStatus.COMPLETE)
-
-        return None
-
-    async def process_out_going_messages(self, websocket: WebSocket) -> None:
-        """
-        Spawns out going message processing task.
-
-        :param websocket: Websocket instance.
-        """
-        while True:
-            try:
-                out_going_message = await self._out_going_messages_queue.get()
-                await self._websocket_reference.on_send(websocket, out_going_message)
-
-            except (asyncio.CancelledError, ValidationError):
-                break
-
-        return None
-
-    async def _process_response(self):
-        self._websocket_reference.process_response_event.set()
-
-    async def _pause_response(self):
-        self._websocket_reference.process_response_event.clear()
-
-    async def __reset_user_interaction_response(self):
-        self._user_interaction_response = asyncio.Future()
-
-    async def human_interaction(self, prompt: InteractionPrompt) -> HumanResponse:
+    async def human_interaction_callback(self, prompt: InteractionPrompt) -> HumanResponse:
         """
         Registered human interaction callback that processes human interactions and returns
         responses from websocket connection.
@@ -263,18 +237,62 @@ class MessageHandler:
         :param prompt: Incoming interaction content data model.
         :return: A Text Content Base Pydantic model.
         """
-        await self.create_websocket_message(data_model=prompt.content,
-                                            message_type=WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE,
-                                            status=WebSocketMessageStatus.IN_PROGRESS)
 
-        if (isinstance(prompt.content, HumanPromptNotification)):
-            return HumanResponseNotification()
+        # First create a future from the loop for the human response
+        human_response_future: asyncio.Future[HumanResponse] = asyncio.get_running_loop().create_future()
 
-        user_message_repsonse_content: TextContent = await self._user_interaction_response
-        interaction_response: HumanResponse = await self._message_validator.convert_text_content_to_human_response(
-            user_message_repsonse_content, prompt.content)
+        # Then add the future to the outstanding human prompts dictionary
+        self._user_interaction_response = human_response_future
 
-        await self.__reset_user_interaction_response()
-        await self._process_response()
+        try:
 
-        return interaction_response
+            await self.create_websocket_message(data_model=prompt.content,
+                                                message_type=WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE,
+                                                status=WebSocketMessageStatus.IN_PROGRESS)
+
+            if (isinstance(prompt.content, HumanPromptNotification)):
+
+                return HumanResponseNotification()
+
+            # Wait for the human response future to complete
+            interaction_response: HumanResponse = await human_response_future
+
+            interaction_response: HumanResponse = await self._message_validator.convert_text_content_to_human_response(
+                interaction_response, prompt.content)
+
+            return interaction_response
+
+        finally:
+            # Delete the future from the outstanding human prompts dictionary
+            self._user_interaction_response = None
+
+    async def _run_workflow(self,
+                            payload: typing.Any,
+                            conversation_id: str | None = None,
+                            result_type: type | None = None,
+                            output_type: type | None = None) -> None:
+
+        try:
+            async with self._session_manager.session(
+                    conversation_id=conversation_id,
+                    request=self._socket,
+                    user_input_callback=self.human_interaction_callback,
+                    user_authentication_callback=(self._flow_handler.authenticate
+                                                  if self._flow_handler else None)) as session:
+
+                async for value in generate_streaming_response(payload,
+                                                               session_manager=session,
+                                                               streaming=True,
+                                                               step_adaptor=self._step_adaptor,
+                                                               result_type=result_type,
+                                                               output_type=output_type):
+
+                    if not isinstance(value, AIQResponseSerializable):
+                        value = AIQResponsePayloadOutput(payload=value)
+
+                    await self.create_websocket_message(data_model=value, status=WebSocketMessageStatus.IN_PROGRESS)
+
+        finally:
+            await self.create_websocket_message(data_model=SystemResponseContent(),
+                                                message_type=WebSocketMessageType.RESPONSE_MESSAGE,
+                                                status=WebSocketMessageStatus.COMPLETE)

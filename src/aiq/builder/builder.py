@@ -20,9 +20,12 @@ from abc import abstractmethod
 from collections.abc import Sequence
 from pathlib import Path
 
+from aiq.authentication.interfaces import AuthProviderBase
 from aiq.builder.context import AIQContext
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function import Function
+from aiq.data_models.authentication import AuthProviderBaseConfig
+from aiq.data_models.component_ref import AuthenticationRef
 from aiq.data_models.component_ref import EmbedderRef
 from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.component_ref import ITSStrategyRef
@@ -98,6 +101,10 @@ class Builder(ABC):  # pylint: disable=too-many-public-methods
     async def add_llm(self, name: str | LLMRef, config: LLMBaseConfig):
         pass
 
+    @abstractmethod
+    async def get_llm(self, llm_name: str | LLMRef, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
+        pass
+
     async def get_llms(self, llm_names: Sequence[str | LLMRef],
                        wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
 
@@ -108,12 +115,24 @@ class Builder(ABC):  # pylint: disable=too-many-public-methods
         return list(llms)
 
     @abstractmethod
-    async def get_llm(self, llm_name: str | LLMRef, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
+    def get_llm_config(self, llm_name: str | LLMRef) -> LLMBaseConfig:
         pass
 
     @abstractmethod
-    def get_llm_config(self, llm_name: str | LLMRef) -> LLMBaseConfig:
+    async def add_auth_provider(self, name: str | AuthenticationRef, config: AuthProviderBaseConfig):
         pass
+
+    @abstractmethod
+    async def get_auth_provider(self, auth_provider_name: str | AuthenticationRef) -> AuthProviderBase:
+        pass
+
+    async def get_auth_providers(self, auth_provider_names: list[str | AuthenticationRef]):
+
+        coros = [self.get_auth_provider(auth_provider_name=n) for n in auth_provider_names]
+
+        auth_providers = await asyncio.gather(*coros, return_exceptions=False)
+
+        return list(auth_providers)
 
     @abstractmethod
     async def add_object_store(self, name: str | ObjectStoreRef, config: ObjectStoreBaseConfig):

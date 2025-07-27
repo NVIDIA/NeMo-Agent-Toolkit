@@ -21,6 +21,7 @@ from contextlib import AbstractAsyncContextManager
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 
+from aiq.authentication.interfaces import AuthProviderBase
 from aiq.builder.builder import Builder
 from aiq.builder.builder import UserManagerHolder
 from aiq.builder.component_utils import ComponentInstanceData
@@ -37,7 +38,9 @@ from aiq.builder.retriever import RetrieverProviderInfo
 from aiq.builder.workflow import Workflow
 from aiq.cli.type_registry import GlobalTypeRegistry
 from aiq.cli.type_registry import TypeRegistry
+from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.data_models.component import ComponentGroup
+from aiq.data_models.component_ref import AuthenticationRef
 from aiq.data_models.component_ref import EmbedderRef
 from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.component_ref import ITSStrategyRef
@@ -113,6 +116,12 @@ class ConfiguredRetriever:
 
 
 @dataclasses.dataclass
+class ConfiguredAuthProvider:
+    config: AuthProviderBaseConfig
+    instance: AuthProviderBase
+
+
+@dataclasses.dataclass
 class ConfiguredITSStrategy:
     config: ITSStrategyBaseConfig
     instance: StrategyBase
@@ -140,6 +149,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._workflow: ConfiguredFunction | None = None
 
         self._llms: dict[str, ConfiguredLLM] = {}
+        self._auth_providers: dict[str, ConfiguredAuthProvider] = {}
         self._embedders: dict[str, ConfiguredEmbedder] = {}
         self._memory_clients: dict[str, ConfiguredMemory] = {}
         self._object_stores: dict[str, ConfiguredObjectStore] = {}
@@ -459,6 +469,33 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         # Return the tool configuration object
         return self._llms[llm_name].config
+
+    @override
+    async def add_auth_provider(self, name: str | AuthenticationRef,
+                                config: AuthProviderBaseConfig) -> AuthProviderBase:
+
+        if (name in self._auth_providers):
+            raise ValueError(f"Authentication `{name}` already exists in the list of Authentication Providers")
+
+        try:
+            authentication_info = self._registry.get_auth_provider(type(config))
+
+            info_obj = await self._get_exit_stack().enter_async_context(authentication_info.build_fn(config, self))
+
+            self._auth_providers[name] = ConfiguredAuthProvider(config=config, instance=info_obj)
+
+            return info_obj
+        except Exception as e:
+            logger.error("Error adding authentication `%s` with config `%s`", name, config, exc_info=True)
+            raise e
+
+    @override
+    async def get_auth_provider(self, auth_provider_name: str) -> AuthProviderBase:
+
+        if auth_provider_name not in self._auth_providers:
+            raise ValueError(f"Authentication `{auth_provider_name}` not found")
+
+        return self._auth_providers[auth_provider_name].instance
 
     @override
     async def add_embedder(self, name: str | EmbedderRef, config: EmbedderBaseConfig):
@@ -831,6 +868,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                         await self.add_function(component_instance.name, component_instance.config)
                 elif component_instance.component_group == ComponentGroup.ITS_STRATEGIES:
                     await self.add_its_strategy(component_instance.name, component_instance.config)
+
+                elif component_instance.component_group == ComponentGroup.AUTHENTICATION:
+                    await self.add_auth_provider(component_instance.name, component_instance.config)
                 else:
                     raise ValueError(f"Unknown component group {component_instance.component_group}")
 
@@ -916,6 +956,14 @@ class ChildBuilder(Builder):
     @override
     async def add_llm(self, name: str, config: LLMBaseConfig):
         return await self._workflow_builder.add_llm(name, config)
+
+    @override
+    async def add_auth_provider(self, name: str, config: AuthProviderBaseConfig):
+        return await self._workflow_builder.add_auth_provider(name, config)
+
+    @override
+    async def get_auth_provider(self, auth_provider_name: str):
+        return await self._workflow_builder.get_auth_provider(auth_provider_name)
 
     @override
     async def get_llm(self, llm_name: str, wrapper_type: LLMFrameworkEnum | str):

@@ -10,6 +10,7 @@ Arize
 arXiv
 [Aa]sync
 [Aa]utoencoder
+[Au]thlib
 [Aa]nonymize(d?)
 [Bb]ackoff
 [Bb]ackpressure
@@ -85,6 +86,8 @@ NIM(s?)
 npm
 NumPy
 NVIDIA
+OAuth
+URIs
 OTel
 onboarding
 [Oo]verfitting
@@ -128,6 +131,8 @@ triages
 uv
 VectorDB
 [Ww]alkthrough
+[Ww]eb[Ss]ocket
+[We]ebSocket
 XGBoost
 zsh
 Zep
