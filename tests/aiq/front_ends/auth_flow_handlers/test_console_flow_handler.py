@@ -21,7 +21,7 @@ import pytest
 from httpx import ASGITransport
 from mock_oauth2_server import MockOAuth2Server
 
-from aiq.authentication.oauth2.authorization_code_flow_config import OAuth2AuthorizationCodeFlowConfig
+from aiq.authentication.oauth2.authorization_code_flow_config import OAuth2AuthCodeFlowConfig
 from aiq.data_models.authentication import AuthFlowType
 from aiq.front_ends.console.authentication_flow_handler import ConsoleAuthenticationFlowHandler
 
@@ -93,7 +93,7 @@ async def test_oauth2_flow_in_process(monkeypatch, mock_server):
         redirect_base=f"http://localhost:{redirect_port}",
     )
 
-    cfg = OAuth2AuthorizationCodeFlowConfig(
+    cfg = OAuth2AuthCodeFlowConfig(
         client_id="cid",
         client_secret="secret",
         authorization_url="http://testserver/oauth/authorize",

@@ -27,8 +27,8 @@ from aiq.builder.context import AIQContext
 from aiq.builder.context import AIQContextState
 from aiq.builder.workflow import Workflow
 from aiq.data_models.authentication import AuthenticatedContext
-from aiq.data_models.authentication import AuthenticationBaseConfig
 from aiq.data_models.authentication import AuthFlowType
+from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
@@ -92,7 +92,7 @@ class AIQSessionManager:
                       request: HTTPConnection | None = None,
                       conversation_id: str | None = None,
                       user_input_callback: Callable[[InteractionPrompt], Awaitable[HumanResponse]] = None,
-                      user_authentication_callback: Callable[[AuthenticationBaseConfig, AuthFlowType],
+                      user_authentication_callback: Callable[[AuthProviderBaseConfig, AuthFlowType],
                                                              Awaitable[AuthenticatedContext | None]] = None):
 
         token_user_input = None

@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.data_models.authentication import AuthenticationBaseConfig
+from aiq.data_models.authentication import AuthProviderBaseConfig
 
 
-class AuthenticationProviderInfo:
+class AuthProviderInfo:
 
-    def __init__(self, *, config: AuthenticationBaseConfig, description: str):
+    def __init__(self, *, config: AuthProviderBaseConfig, description: str):
         self.config = config
         self.provider_type = type(config).static_type()
         self.description = description

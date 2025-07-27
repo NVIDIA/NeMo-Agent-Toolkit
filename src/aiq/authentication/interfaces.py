@@ -17,8 +17,8 @@ from abc import ABC
 from abc import abstractmethod
 
 from aiq.data_models.authentication import AuthenticatedContext
-from aiq.data_models.authentication import AuthenticationBaseConfig
 from aiq.data_models.authentication import AuthFlowType
+from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.data_models.authentication import AuthResult
 
 AUTHORIZATION_HEADER = "Authorization"
@@ -30,7 +30,7 @@ class AuthenticationClientBase(ABC):
     This class provides an interface for authenticating to API services.
     """
 
-    def __init__(self, config: AuthenticationBaseConfig):
+    def __init__(self, config: AuthProviderBaseConfig):
         """
         Initialize the AuthenticationClientBase with the given configuration.
 
@@ -65,7 +65,7 @@ class FlowHandlerBase(ABC):
     """
 
     @abstractmethod
-    async def authenticate(self, config: AuthenticationBaseConfig, method: AuthFlowType) -> AuthenticatedContext:
+    async def authenticate(self, config: AuthProviderBaseConfig, method: AuthFlowType) -> AuthenticatedContext:
         """
         Perform the authentication process for the client.
 

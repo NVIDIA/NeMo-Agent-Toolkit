@@ -14,6 +14,6 @@
 # limitations under the License.
 
 from .client import OAuth2Client
-from .authorization_code_flow_config import OAuth2AuthorizationCodeFlowConfig
+from .authorization_code_flow_config import OAuth2AuthCodeFlowConfig
 
-__all__ = ["OAuth2Client", "OAuth2AuthorizationCodeFlowConfig"]
+__all__ = ["OAuth2Client", "OAuth2AuthCodeFlowConfig"]

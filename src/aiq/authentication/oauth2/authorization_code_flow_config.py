@@ -16,10 +16,10 @@
 from pydantic import Field
 from pydantic.config import ConfigDict
 
-from aiq.data_models.authentication import AuthenticationBaseConfig
+from aiq.data_models.authentication import AuthProviderBaseConfig
 
 
-class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_authorization_code"):
+class OAuth2AuthCodeFlowConfig(AuthProviderBaseConfig, name="oauth2_authorization_code"):
 
     model_config = ConfigDict(extra="forbid")
 
@@ -29,8 +29,13 @@ class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_a
     token_url: str = Field(description="The token URL for OAuth 2.0 authentication.")
     token_endpoint_auth_method: str | None = Field(description="The authentication method for the token endpoint.",
                                                    default=None)
-    scopes: list[str] = Field(description="The space-delimited scopes for OAuth 2.0 authentication.",
-                              default_factory=list)
+    scopes: list[str] = Field(description="The scopes for OAuth 2.0 authentication.", default_factory=list)
+    use_pkce: bool = Field(default=False,
+                           description="Whether to use PKCE (Proof Key for Code Exchange) in the OAuth 2.0 flow.")
+
+    authorization_kwargs: dict[str, str] | None = Field(description=("Additional keyword arguments for the "
+                                                                     "authorization request."),
+                                                        default=None)
 
     # Configuration for the local server that handles the redirect
     client_url: str = Field(description="The base URL for the client application.", default="http://localhost:8000")
@@ -41,12 +46,6 @@ class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_a
                                             "server to listen on.")
     redirect_path: str = Field(default="/auth/redirect",
                                description="Path for the local redirect server to handle the callback.")
-    use_pkce: bool = Field(default=False,
-                           description="Whether to use PKCE (Proof Key for Code Exchange) in the OAuth 2.0 flow.")
-
-    authorization_kwargs: dict[str, str] | None = Field(description="Additional keyword arguments for the "
-                                                        "authorization request.",
-                                                        default=None)
 
     @property
     def redirect_uri(self) -> str:

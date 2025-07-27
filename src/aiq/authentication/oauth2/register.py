@@ -13,20 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.builder.authentication import AuthenticationProviderInfo
+from aiq.builder.authentication import AuthProviderInfo
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_authentication_client
-from aiq.cli.register_workflow import register_authentication_provider
 
-from .authorization_code_flow_config import OAuth2AuthorizationCodeFlowConfig
+from .authorization_code_flow_config import OAuth2AuthCodeFlowConfig
 from .client import OAuth2Client
 
 
-@register_authentication_provider(config_type=OAuth2AuthorizationCodeFlowConfig)
-async def oauth2(authentication_provider: OAuth2AuthorizationCodeFlowConfig, builder: Builder):
-    yield AuthenticationProviderInfo(config=authentication_provider, description="OAuth 2.0 authentication provider.")
-
-
-@register_authentication_client(config_type=OAuth2AuthorizationCodeFlowConfig)
-async def oauth2_client(authentication_provider: OAuth2AuthorizationCodeFlowConfig, builder: Builder):
+@register_authentication_client(config_type=OAuth2AuthCodeFlowConfig)
+async def oauth2_client(authentication_provider: OAuth2AuthCodeFlowConfig, builder: Builder):
     yield OAuth2Client(authentication_provider)

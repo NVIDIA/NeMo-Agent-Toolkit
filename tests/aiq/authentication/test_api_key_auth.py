@@ -79,8 +79,8 @@ def make_config(
     return APIKeyConfig(
         raw_key=raw_key,
         auth_scheme=scheme,
-        header_name=header_name,
-        header_prefix=header_prefix,
+        custom_header_name=header_name,
+        custom_header_prefix=header_prefix,
     )
 
 
@@ -108,8 +108,8 @@ def test_config_valid_custom():
         header_name="X-Custom-Auth",
         header_prefix="Token",
     )
-    assert cfg.header_name == "X-Custom-Auth"
-    assert cfg.header_prefix == "Token"
+    assert cfg.custom_header_name == "X-Custom-Auth"
+    assert cfg.custom_header_prefix == "Token"
 
 
 @pytest.mark.parametrize("bad_key", ["short", " white space ", "bad key\n"])

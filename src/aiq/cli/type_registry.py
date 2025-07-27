@@ -31,7 +31,7 @@ from pydantic import computed_field
 from pydantic import field_validator
 
 from aiq.authentication.interfaces import AuthenticationClientBase
-from aiq.builder.authentication import AuthenticationProviderInfo
+from aiq.builder.authentication import AuthProviderInfo
 from aiq.builder.builder import Builder
 from aiq.builder.builder import EvalBuilder
 from aiq.builder.embedder import EmbedderProviderInfo
@@ -42,8 +42,8 @@ from aiq.builder.function_base import FunctionBase
 from aiq.builder.function_info import FunctionInfo
 from aiq.builder.llm import LLMProviderInfo
 from aiq.builder.retriever import RetrieverProviderInfo
-from aiq.data_models.authentication import AuthenticationBaseConfig
-from aiq.data_models.authentication import AuthenticationBaseConfigT
+from aiq.data_models.authentication import AuthProviderBaseConfig
+from aiq.data_models.authentication import AuthProviderBaseConfigT
 from aiq.data_models.common import TypedBaseModelT
 from aiq.data_models.component import AIQComponentEnum
 from aiq.data_models.config import AIQConfig
@@ -80,13 +80,12 @@ from aiq.registry_handlers.registry_handler_base import AbstractRegistryHandler
 
 logger = logging.getLogger(__name__)
 
-AuthenticationProviderBuildCallableT = Callable[[AuthenticationBaseConfigT, Builder],
-                                                AsyncIterator[AuthenticationProviderInfo]]
-AuthenticationProviderRegisteredCallableT = Callable[[AuthenticationBaseConfigT, Builder],
-                                                     AbstractAsyncContextManager[AuthenticationProviderInfo]]
-AuthenticationClientBuildCallableT = Callable[[AuthenticationBaseConfigT, Builder],
+AuthenticationProviderBuildCallableT = Callable[[AuthProviderBaseConfigT, Builder], AsyncIterator[AuthProviderInfo]]
+AuthenticationProviderRegisteredCallableT = Callable[[AuthProviderBaseConfigT, Builder],
+                                                     AbstractAsyncContextManager[AuthProviderInfo]]
+AuthenticationClientBuildCallableT = Callable[[AuthProviderBaseConfigT, Builder],
                                               AsyncIterator[AuthenticationClientBase]]
-AuthenticationClientRegisteredCallableT = Callable[[AuthenticationBaseConfigT, Builder],
+AuthenticationClientRegisteredCallableT = Callable[[AuthProviderBaseConfigT, Builder],
                                                    AbstractAsyncContextManager[AuthenticationClientBase]]
 FrontEndBuildCallableT = Callable[[FrontEndConfigT, AIQConfig], AsyncIterator[FrontEndBase]]
 TelemetryExporterBuildCallableT = Callable[[TelemetryExporterConfigT, Builder], AsyncIterator[BaseExporter]]
@@ -194,14 +193,14 @@ class RegisteredLLMProviderInfo(RegisteredInfo[LLMBaseConfig]):
     build_fn: LLMProviderRegisteredCallableT = Field(repr=False)
 
 
-class RegisteredAuthenticationProviderInfo(RegisteredInfo[AuthenticationBaseConfig]):
+class RegisteredAuthenticationProviderInfo(RegisteredInfo[AuthProviderBaseConfig]):
     """
     Represents a registered API Authentication provider e.g. OAuth2, API Key, etc.
     """
     build_fn: AuthenticationProviderRegisteredCallableT = Field(repr=False)
 
 
-class RegisteredAuthenticationClientInfo(RegisteredInfo[AuthenticationBaseConfig]):
+class RegisteredAuthenticationClientInfo(RegisteredInfo[AuthProviderBaseConfig]):
     """
     Represents a registered Authentication client. Authentication clients are the actual implementations
     that facilitate the authentication process.
@@ -334,13 +333,13 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         self._llm_client_framework_to_provider: dict[str, dict[type[LLMBaseConfig], RegisteredLLMClientInfo]] = {}
 
         # Authentication
-        self._registered_authentication_provider_infos: dict[type[AuthenticationBaseConfig],
+        self._registered_authentication_provider_infos: dict[type[AuthProviderBaseConfig],
                                                              RegisteredAuthenticationProviderInfo] = {}
-        self._registered_authentication_client_infos: dict[type[AuthenticationBaseConfig],
+        self._registered_authentication_client_infos: dict[type[AuthProviderBaseConfig],
                                                            RegisteredAuthenticationClientInfo] = {}
 
         self._authentication_client_framework_to_provider: dict[str,
-                                                                dict[type[AuthenticationBaseConfig],
+                                                                dict[type[AuthProviderBaseConfig],
                                                                      RegisteredAuthenticationClientInfo]] = {}
 
         # Embedders
@@ -518,34 +517,15 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
             raise KeyError(f"Could not find a registered LLM provider for config `{config_type}`. "
                            f"Registered configs: {set(self._registered_llm_provider_infos.keys())}") from err
 
-    def register_authentication_provider(self, info: RegisteredAuthenticationProviderInfo):
-
-        if (info.config_type in self._registered_authentication_provider_infos):
-            raise ValueError(
-                f"An Authentication Provider with the same config type `{info.config_type}` has already been "
-                "registered.")
-
-        self._registered_authentication_provider_infos[info.config_type] = info
-
-        self._registration_changed()
-
-    def get_authentication_provider(
-            self, config_type: type[AuthenticationBaseConfig]) -> RegisteredAuthenticationProviderInfo:
-        try:
-            return self._registered_authentication_provider_infos[config_type]
-        except KeyError as err:
-            raise KeyError(f"Could not find a registered API Authentication provider for config `{config_type}`. "
-                           f"Registered configs: {set(self._registered_authentication_provider_infos.keys())}") from err
-
     def get_authentication_client(self,
-                                  config_type: type[AuthenticationBaseConfig]) -> RegisteredAuthenticationClientInfo:
+                                  config_type: type[AuthProviderBaseConfig]) -> RegisteredAuthenticationClientInfo:
         try:
             return self._registered_authentication_client_infos[config_type]
         except KeyError as err:
             raise KeyError(f"Could not find a registered Authentication Client for config `{config_type}`. "
                            f"Registered configs: {set(self._registered_authentication_client_infos.keys())}") from err
 
-    def get_registered_authentication_providers(self) -> list[RegisteredInfo[AuthenticationBaseConfig]]:
+    def get_registered_authentication_providers(self) -> list[RegisteredInfo[AuthProviderBaseConfig]]:
         return list(self._registered_authentication_provider_infos.values())
 
     def register_authentication_client(self, info: RegisteredAuthenticationClientInfo):
@@ -979,7 +959,7 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
     def compute_annotation(self, cls: type[TypedBaseModelT]):
 
-        if issubclass(cls, AuthenticationBaseConfig):
+        if issubclass(cls, AuthProviderBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_authentication_providers())
 
         if issubclass(cls, EmbedderBaseConfig):

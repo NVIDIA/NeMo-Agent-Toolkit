@@ -55,7 +55,7 @@ from aiq.cli.type_registry import TeleExporterRegisteredCallableT
 from aiq.cli.type_registry import TelemetryExporterBuildCallableT
 from aiq.cli.type_registry import TelemetryExporterConfigT
 from aiq.cli.type_registry import ToolWrapperBuildCallableT
-from aiq.data_models.authentication import AuthenticationBaseConfigT
+from aiq.data_models.authentication import AuthProviderBaseConfigT
 from aiq.data_models.component import AIQComponentEnum
 from aiq.data_models.discovery_metadata import DiscoveryMetadata
 from aiq.data_models.embedder import EmbedderBaseConfigT
@@ -202,35 +202,11 @@ def register_llm_provider(config_type: type[LLMBaseConfigT]):
     return register_llm_provider_inner
 
 
-def register_authentication_provider(config_type: type[AuthenticationBaseConfigT]):
-
-    def register_authentication_provider_inner(
-        fn: AuthenticationProviderBuildCallableT[AuthenticationBaseConfigT]
-    ) -> AuthenticationProviderRegisteredCallableT[AuthenticationBaseConfigT]:
-        from .type_registry import GlobalTypeRegistry
-        from .type_registry import RegisteredAuthenticationProviderInfo
-
-        context_manager_fn = asynccontextmanager(fn)
-
-        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=AIQComponentEnum.AUTHENTICATION_PROVIDER)
-
-        GlobalTypeRegistry.get().register_authentication_provider(
-            RegisteredAuthenticationProviderInfo(full_type=config_type.full_type,
-                                                 config_type=config_type,
-                                                 build_fn=context_manager_fn,
-                                                 discovery_metadata=discovery_metadata))
-
-        return context_manager_fn
-
-    return register_authentication_provider_inner
-
-
-def register_authentication_client(config_type: type[AuthenticationBaseConfigT]):
+def register_authentication_client(config_type: type[AuthProviderBaseConfigT]):
 
     def register_authentication_client_inner(
-        fn: AuthenticationClientBuildCallableT[AuthenticationBaseConfigT]
-    ) -> AuthenticationClientRegisteredCallableT[AuthenticationBaseConfigT]:
+        fn: AuthenticationClientBuildCallableT[AuthProviderBaseConfigT]
+    ) -> AuthenticationClientRegisteredCallableT[AuthProviderBaseConfigT]:
         from .type_registry import GlobalTypeRegistry
         from .type_registry import RegisteredAuthenticationClientInfo
 

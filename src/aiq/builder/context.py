@@ -23,8 +23,8 @@ from contextvars import ContextVar
 from aiq.builder.intermediate_step_manager import IntermediateStepManager
 from aiq.builder.user_interaction_manager import AIQUserInteractionManager
 from aiq.data_models.authentication import AuthenticatedContext
-from aiq.data_models.authentication import AuthenticationBaseConfig
 from aiq.data_models.authentication import AuthFlowType
+from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
 from aiq.data_models.intermediate_step import IntermediateStep
@@ -79,7 +79,7 @@ class AIQContextState(metaclass=Singleton):
                                              | None] = ContextVar(
                                                  "user_input_callback",
                                                  default=AIQUserInteractionManager.default_callback_handler)
-        self.user_auth_callback: ContextVar[Callable[[AuthenticationBaseConfig, AuthFlowType],
+        self.user_auth_callback: ContextVar[Callable[[AuthProviderBaseConfig, AuthFlowType],
                                                      Awaitable[AuthenticatedContext]]
                                             | None] = ContextVar("user_auth_callback", default=None)
 
@@ -231,7 +231,7 @@ class AIQContext:
         return self._context_state.active_span_id_stack.get()[-1]
 
     @property
-    def user_auth_callback(self) -> Callable[[AuthenticationBaseConfig, AuthFlowType], Awaitable[AuthenticatedContext]]:
+    def user_auth_callback(self) -> Callable[[AuthProviderBaseConfig, AuthFlowType], Awaitable[AuthenticatedContext]]:
         """
         Retrieves the user authentication callback function from the context state.
 

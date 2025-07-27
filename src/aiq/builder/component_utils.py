@@ -21,7 +21,7 @@ from collections.abc import Iterable
 import networkx as nx
 from pydantic import BaseModel
 
-from aiq.data_models.authentication import AuthenticationBaseConfig
+from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.data_models.common import TypedBaseModel
 from aiq.data_models.component import ComponentGroup
 from aiq.data_models.component_ref import ComponentRef
@@ -101,7 +101,7 @@ def group_from_component(component: TypedBaseModel) -> ComponentGroup | None:
             component is not a valid runtime instance, None is returned.
     """
 
-    if (isinstance(component, AuthenticationBaseConfig)):
+    if (isinstance(component, AuthProviderBaseConfig)):
         return ComponentGroup.AUTHENTICATION
     if (isinstance(component, EmbedderBaseConfig)):
         return ComponentGroup.EMBEDDERS

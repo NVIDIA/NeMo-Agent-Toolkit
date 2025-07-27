@@ -20,6 +20,7 @@ limitations under the License.
 We recommend reading the [Streamlining API Authentication](../reference/api-authentication.md) guide before proceeding with
 this detailed documentation.
 :::
+
 The NeMo Agent toolkit offers a set of built-in authentication providers for accessing API resources. Additionally, it includes
 a plugin system that allows developers to define and integrate custom authentication providers.
 
@@ -116,8 +117,8 @@ actions before yielding the client, along with cleanup actions after the `yield`
 ## Testing an Authentication Client
 After implementing a new authentication client, it’s important to verify that the required functionality works as
 expected. This can be done by writing integration tests. It is important to minimize the amount of mocking in the tests
-to ensure that the client behaves as expected in a real-world scenario. You can find examples of existing tests in the repository 
-at `tests/aiq/authentication`. 
+to ensure that the client behaves as expected in a real-world scenario. You can find examples of existing tests in the repository
+at `tests/aiq/authentication`.
 
 ## Packaging the Provider and Client
 

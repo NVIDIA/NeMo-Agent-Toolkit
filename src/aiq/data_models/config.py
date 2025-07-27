@@ -34,7 +34,7 @@ from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 
-from .authentication import AuthenticationBaseConfig
+from .authentication import AuthProviderBaseConfig
 from .common import HashableBaseModel
 from .common import TypedBaseModel
 from .embedder import EmbedderBaseConfig
@@ -264,7 +264,7 @@ class AIQConfig(HashableBaseModel):
     workflow: FunctionBaseConfig = EmptyFunctionConfig()
 
     # Authentication Configuration
-    authentication: dict[str, AuthenticationBaseConfig] = {}
+    authentication: dict[str, AuthProviderBaseConfig] = {}
 
     # Evaluation Options
     eval: EvalConfig = EvalConfig()
@@ -317,7 +317,7 @@ class AIQConfig(HashableBaseModel):
 
         AuthenticationProviderAnnotation = dict[str,
                                                 typing.Annotated[
-                                                    type_registry.compute_annotation(AuthenticationBaseConfig),
+                                                    type_registry.compute_annotation(AuthProviderBaseConfig),
                                                     Discriminator(TypedBaseModel.discriminator)]]
 
         EmbeddersAnnotation = dict[str,

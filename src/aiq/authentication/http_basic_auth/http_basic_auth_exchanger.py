@@ -18,8 +18,8 @@ from pydantic import SecretStr
 from aiq.authentication.interfaces import AuthenticationClientBase
 from aiq.builder.context import AIQContext
 from aiq.data_models.authentication import AuthenticatedContext
-from aiq.data_models.authentication import AuthenticationBaseConfig
 from aiq.data_models.authentication import AuthFlowType
+from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.data_models.authentication import AuthResult
 from aiq.data_models.authentication import BasicAuthCred
 from aiq.data_models.authentication import BearerTokenCred
@@ -30,7 +30,7 @@ class HTTPBasicAuthExchanger(AuthenticationClientBase):
     Abstract base class for HTTP Basic Authentication exchangers.
     """
 
-    def __init__(self, config: AuthenticationBaseConfig):
+    def __init__(self, config: AuthProviderBaseConfig):
         """
         Initialize the HTTP Basic Auth Exchanger with the given configuration.
         """

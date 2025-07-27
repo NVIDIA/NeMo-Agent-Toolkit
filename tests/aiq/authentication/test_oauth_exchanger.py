@@ -21,7 +21,7 @@ from typing import Callable
 
 import pytest
 
-from aiq.authentication.oauth2.authorization_code_flow_config import OAuth2AuthorizationCodeFlowConfig
+from aiq.authentication.oauth2.authorization_code_flow_config import OAuth2AuthCodeFlowConfig
 from aiq.authentication.oauth2.client import OAuth2Client
 from aiq.builder.context import AIQContext
 from aiq.data_models.authentication import AuthenticatedContext
@@ -35,7 +35,7 @@ from aiq.data_models.authentication import BearerTokenCred
 # --------------------------------------------------------------------------- #
 def _patch_context(
     monkeypatch: pytest.MonkeyPatch,
-    callback: Callable[[OAuth2AuthorizationCodeFlowConfig, AuthFlowType], Awaitable[AuthenticatedContext]],
+    callback: Callable[[OAuth2AuthCodeFlowConfig, AuthFlowType], Awaitable[AuthenticatedContext]],
 ) -> None:
 
     class _DummyCtx:
@@ -47,14 +47,14 @@ def _patch_context(
 
 
 @pytest.fixture()
-def cfg() -> OAuth2AuthorizationCodeFlowConfig:
-    return OAuth2AuthorizationCodeFlowConfig(client_id="cid",
-                                             client_secret="secret",
-                                             authorization_url="https://example.com/auth",
-                                             token_url="https://example.com/token",
-                                             scopes=["openid", "profile"],
-                                             use_pkce=True,
-                                             client_url="http://localhost:9000")
+def cfg() -> OAuth2AuthCodeFlowConfig:
+    return OAuth2AuthCodeFlowConfig(client_id="cid",
+                                    client_secret="secret",
+                                    authorization_url="https://example.com/auth",
+                                    token_url="https://example.com/token",
+                                    scopes=["openid", "profile"],
+                                    use_pkce=True,
+                                    client_url="http://localhost:9000")
 
 
 def _bearer_ctx(token: str, expires_at: datetime) -> AuthenticatedContext:
@@ -73,7 +73,7 @@ def _bearer_ctx(token: str, expires_at: datetime) -> AuthenticatedContext:
 # 1. Config model tests
 # --------------------------------------------------------------------------- #
 def test_config_redirect_uri_defaults():
-    cfg = OAuth2AuthorizationCodeFlowConfig(
+    cfg = OAuth2AuthCodeFlowConfig(
         client_id="id",
         client_secret="sec",
         authorization_url="a",

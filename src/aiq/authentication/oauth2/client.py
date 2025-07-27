@@ -25,12 +25,12 @@ from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.authentication import AuthResult
 from aiq.data_models.authentication import BearerTokenCred
 
-from .authorization_code_flow_config import OAuth2AuthorizationCodeFlowConfig
+from .authorization_code_flow_config import OAuth2AuthCodeFlowConfig
 
 
 class OAuth2Client(AuthenticationClientBase):
 
-    def __init__(self, config: OAuth2AuthorizationCodeFlowConfig):
+    def __init__(self, config: OAuth2AuthCodeFlowConfig):
         super().__init__(config)
         self._authenticated_tokens: dict[str, AuthResult] = {}
         self._context = AIQContext.get()

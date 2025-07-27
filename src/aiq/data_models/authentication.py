@@ -28,14 +28,14 @@ from .common import BaseModelRegistryTag
 from .common import TypedBaseModel
 
 
-class AuthenticationBaseConfig(TypedBaseModel, BaseModelRegistryTag):
+class AuthProviderBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     """
-    Base configuration for authentication models.
+    Base configuration for authentication providers.
     """
     pass
 
 
-AuthenticationBaseConfigT = typing.TypeVar("AuthenticationBaseConfigT", bound=AuthenticationBaseConfig)
+AuthProviderBaseConfigT = typing.TypeVar("AuthProviderBaseConfigT", bound=AuthProviderBaseConfig)
 
 
 class CredentialLocation(str, Enum):
@@ -82,7 +82,7 @@ class HeaderAuthScheme(str, Enum):
     BEARER = "Bearer"
     X_API_KEY = "X-API-Key"
     BASIC = "Basic"
-    CUSTOM = "custom"
+    CUSTOM = "Custom"
 
 
 class HTTPMethod(str, Enum):

@@ -25,13 +25,12 @@ from _utils.configs import LLMProviderTestConfig
 from _utils.configs import MemoryTestConfig
 from _utils.configs import ObjectStoreTestConfig
 from _utils.configs import RegistryHandlerTestConfig
-from aiq.builder.authentication import AuthenticationProviderInfo
+from aiq.builder.authentication import AuthProviderInfo
 from aiq.builder.builder import Builder
 from aiq.builder.embedder import EmbedderProviderInfo
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function import Function
 from aiq.builder.llm import LLMProviderInfo
-from aiq.cli.register_workflow import register_authentication_provider
 from aiq.cli.register_workflow import register_embedder_client
 from aiq.cli.register_workflow import register_embedder_provider
 from aiq.cli.register_workflow import register_function
@@ -108,21 +107,6 @@ def test_register_llm_provider(registry: TypeRegistry):
     assert llm_info.local_name == LLMProviderTestConfig.static_type()
     assert llm_info.config_type is LLMProviderTestConfig
     assert llm_info.build_fn is build_fn
-
-
-def test_register_authentication_provider(registry: TypeRegistry):
-    with pytest.raises(KeyError):
-        registry.get_authentication_provider(AuthenticationProviderTestConfig)
-
-    @register_authentication_provider(config_type=AuthenticationProviderTestConfig)
-    async def build_fn(config: AuthenticationProviderTestConfig, builder: Builder):
-        yield AuthenticationProviderInfo(config=config, description="test authentication")
-
-    authentication_info = registry.get_authentication_provider(AuthenticationProviderTestConfig)
-    assert authentication_info.full_type == AuthenticationProviderTestConfig.static_full_type()
-    assert authentication_info.local_name == AuthenticationProviderTestConfig.static_type()
-    assert authentication_info.config_type is AuthenticationProviderTestConfig
-    assert authentication_info.build_fn is build_fn
 
 
 def test_register_llm_client(registry: TypeRegistry):

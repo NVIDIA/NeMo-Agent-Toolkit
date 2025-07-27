@@ -23,10 +23,9 @@ from pydantic import field_validator
 from aiq.authentication.exceptions.api_key_exceptions import APIKeyFieldError
 from aiq.authentication.exceptions.api_key_exceptions import HeaderNameFieldError
 from aiq.authentication.exceptions.api_key_exceptions import HeaderPrefixFieldError
-from aiq.builder.authentication import AuthenticationProviderInfo
+from aiq.builder.authentication import AuthProviderInfo
 from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_authentication_provider
-from aiq.data_models.authentication import AuthenticationBaseConfig
+from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.data_models.authentication import HeaderAuthScheme
 
 logger = logging.getLogger(__name__)
@@ -35,7 +34,7 @@ logger = logging.getLogger(__name__)
 HEADER_NAME_REGEX = re.compile(r"^[!#$%&'*+\-.^_`|~0-9a-zA-Z]+$")
 
 
-class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
+class APIKeyConfig(AuthProviderBaseConfig, name="api_key"):
     """
     API Key authentication configuration model.
     """
@@ -43,15 +42,16 @@ class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
     raw_key: str = Field(description=("Raw API token or credential to be injected into the request parameter. "
                                       "Used for 'bearer','x-api-key','custom', and other schemes. "))
 
-    header_name: str | None = Field(description="The HTTP header name that MUST be used in conjunction "
-                                    "with the header_prefix when HeaderAuthScheme is CUSTOM.",
-                                    default=None)
-    header_prefix: str | None = Field(description="The HTTP header prefix that MUST be used in conjunction "
-                                      "with the header_name when HeaderAuthScheme is CUSTOM.",
-                                      default=None)
     auth_scheme: HeaderAuthScheme = Field(default=HeaderAuthScheme.BEARER,
                                           description=("The HTTP authentication scheme to use. "
                                                        "Supported schemes: BEARER, X_API_KEY, BASIC, CUSTOM."))
+
+    custom_header_name: str | None = Field(description="The HTTP header name that MUST be used in conjunction "
+                                           "with the custom_header_prefix when HeaderAuthScheme is CUSTOM.",
+                                           default=None)
+    custom_header_prefix: str | None = Field(description="The HTTP header prefix that MUST be used in conjunction "
+                                             "with the custom_header_name when HeaderAuthScheme is CUSTOM.",
+                                             default=None)
 
     @field_validator('raw_key')
     @classmethod
@@ -75,43 +75,44 @@ class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
 
         return value
 
-    @field_validator('header_name')
+    @field_validator('custom_header_name')
     @classmethod
-    def validate_header_name(cls, value: str) -> str:
+    def validate_custom_header_name(cls, value: str) -> str:
         if not value:
-            raise HeaderNameFieldError('value_missing', 'header_name is required.')
+            raise HeaderNameFieldError('value_missing', 'custom_header_name is required.')
 
         if value != value.strip():
             raise HeaderNameFieldError('whitespace_found',
-                                       'header_name field value cannot have leading or trailing whitespace.')
+                                       'custom_header_name field value cannot have leading or trailing whitespace.')
 
         if any(c in string.whitespace for c in value):
-            raise HeaderNameFieldError('contains_whitespace', 'header_name must not contain any whitespace characters.')
+            raise HeaderNameFieldError('contains_whitespace',
+                                       'custom_header_name must not contain any whitespace characters.')
 
         if not HEADER_NAME_REGEX.fullmatch(value):
             raise HeaderNameFieldError(
                 'invalid_format',
-                'header_name must match the HTTP token syntax: ASCII letters, digits, or allowed symbols.')
+                'custom_header_name must match the HTTP token syntax: ASCII letters, digits, or allowed symbols.')
 
         return value
 
-    @field_validator('header_prefix')
+    @field_validator('custom_header_prefix')
     @classmethod
-    def validate_header_prefix(cls, value: str) -> str:
+    def validate_custom_header_prefix(cls, value: str) -> str:
         if not value:
-            raise HeaderPrefixFieldError('value_missing', 'header_prefix is required.')
+            raise HeaderPrefixFieldError('value_missing', 'custom_header_prefix is required.')
 
         if value != value.strip():
-            raise HeaderPrefixFieldError('whitespace_found',
-                                         'header_prefix field value cannot have '
-                                         'leading or trailing whitespace.')
+            raise HeaderPrefixFieldError(
+                'whitespace_found', 'custom_header_prefix field value cannot have '
+                'leading or trailing whitespace.')
 
         if any(c in string.whitespace for c in value):
             raise HeaderPrefixFieldError('contains_whitespace',
-                                         'header_prefix must not contain any whitespace characters.')
+                                         'custom_header_prefix must not contain any whitespace characters.')
 
         if not value.isascii():
-            raise HeaderPrefixFieldError('invalid_format', 'header_prefix must be ASCII.')
+            raise HeaderPrefixFieldError('invalid_format', 'custom_header_prefix must be ASCII.')
 
         return value
 
@@ -123,9 +124,3 @@ class APIKeyConfig(AuthenticationBaseConfig, name="api_key"):
                                    'required after construction.')
 
         return value
-
-
-@register_authentication_provider(config_type=APIKeyConfig)
-async def api_key(authentication_provider: APIKeyConfig, builder: Builder):
-
-    yield AuthenticationProviderInfo(config=authentication_provider, description="API key authentication provider.")

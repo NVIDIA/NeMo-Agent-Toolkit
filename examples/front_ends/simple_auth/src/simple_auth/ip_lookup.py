@@ -43,7 +43,7 @@ class WhoAmIConfig(FunctionBaseConfig, name="who_am_i"):
 @register_function(config_type=WhoAmIConfig)
 async def who_am_i_function(config: WhoAmIConfig, builder: Builder):
 
-    auth_provider = await builder.get_authentication(config.auth_provider)
+    auth_provider = await builder.get_auth_provider(config.auth_provider)
 
     async def _inner(empty: None) -> str:
         """

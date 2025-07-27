@@ -25,7 +25,7 @@ import pkce
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 
 from aiq.authentication.interfaces import FlowHandlerBase
-from aiq.authentication.oauth2.authorization_code_flow_config import OAuth2AuthorizationCodeFlowConfig
+from aiq.authentication.oauth2.authorization_code_flow_config import OAuth2AuthCodeFlowConfig
 from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.interactive import _HumanPromptOAuthConsent
@@ -40,7 +40,7 @@ class FlowState:
     challenge: str | None = None
     verifier: str | None = None
     client: AsyncOAuth2Client | None = None
-    config: OAuth2AuthorizationCodeFlowConfig | None = None
+    config: OAuth2AuthCodeFlowConfig | None = None
 
 
 class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
@@ -54,14 +54,13 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
         self._remove_flow_cb: Callable[[str], Awaitable[None]] = remove_flow_cb
         self._web_socket_message_handler: WebSocketMessageHandler = web_socket_message_handler
 
-    async def authenticate(self, config: OAuth2AuthorizationCodeFlowConfig,
-                           method: AuthFlowType) -> AuthenticatedContext:
+    async def authenticate(self, config: OAuth2AuthCodeFlowConfig, method: AuthFlowType) -> AuthenticatedContext:
         if method == AuthFlowType.OAUTH2_AUTHORIZATION_CODE:
             return await self._handle_oauth2_auth_code_flow(config)
 
         raise NotImplementedError(f"Authentication method '{method}' is not supported by the websocket frontend.")
 
-    def create_oauth_client(self, config: OAuth2AuthorizationCodeFlowConfig):
+    def create_oauth_client(self, config: OAuth2AuthCodeFlowConfig):
         return AsyncOAuth2Client(client_id=config.client_id,
                                  client_secret=config.client_secret,
                                  redirect_uri=config.redirect_uri,
@@ -70,7 +69,7 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
                                  code_challenge_method='S256' if config.use_pkce else None,
                                  token_endpoint_auth_method=config.token_endpoint_auth_method)
 
-    async def _handle_oauth2_auth_code_flow(self, config: OAuth2AuthorizationCodeFlowConfig) -> AuthenticatedContext:
+    async def _handle_oauth2_auth_code_flow(self, config: OAuth2AuthCodeFlowConfig) -> AuthenticatedContext:
 
         if config.run_local_redirect_server:
             logger.warning("Running a local redirect server is not supported in the WebSocket flow handler. Ignoring "

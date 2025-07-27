@@ -39,7 +39,7 @@ async def auth_tool(config: AuthTool, builder: Builder):
     """
     Uses HTTP Basic authentication to authenticate to any registered API provider.
     """
-    basic_auth_client: AuthenticationClientBase = await builder.get_authentication(config.auth_provider)
+    basic_auth_client: AuthenticationClientBase = await builder.get_auth_provider(config.auth_provider)
 
     async def _arun(user_id: str) -> AuthResult:
         try:

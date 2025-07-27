@@ -21,7 +21,7 @@ from contextlib import AbstractAsyncContextManager
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 
-from aiq.builder.authentication import AuthenticationProviderInfo
+from aiq.builder.authentication import AuthProviderInfo
 from aiq.builder.builder import Builder
 from aiq.builder.builder import UserManagerHolder
 from aiq.builder.component_utils import ComponentInstanceData
@@ -38,7 +38,7 @@ from aiq.builder.retriever import RetrieverProviderInfo
 from aiq.builder.workflow import Workflow
 from aiq.cli.type_registry import GlobalTypeRegistry
 from aiq.cli.type_registry import TypeRegistry
-from aiq.data_models.authentication import AuthenticationBaseConfig
+from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.data_models.component import ComponentGroup
 from aiq.data_models.component_ref import AuthenticationRef
 from aiq.data_models.component_ref import EmbedderRef
@@ -116,9 +116,9 @@ class ConfiguredRetriever:
 
 
 @dataclasses.dataclass
-class ConfiguredAuthentication:
-    config: AuthenticationBaseConfig
-    instance: AuthenticationProviderInfo
+class ConfiguredAuthProvider:
+    config: AuthProviderBaseConfig
+    instance: AuthProviderInfo
 
 
 @dataclasses.dataclass
@@ -149,7 +149,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._workflow: ConfiguredFunction | None = None
 
         self._llms: dict[str, ConfiguredLLM] = {}
-        self._authentications: dict[str, ConfiguredAuthentication] = {}
+        self._auth_providers: dict[str, ConfiguredAuthProvider] = {}
         self._embedders: dict[str, ConfiguredEmbedder] = {}
         self._memory_clients: dict[str, ConfiguredMemory] = {}
         self._object_stores: dict[str, ConfiguredObjectStore] = {}
@@ -441,9 +441,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise e
 
     @override
-    async def add_authentication(self, name: str | AuthenticationRef, config: AuthenticationBaseConfig):
+    async def add_auth_provider(self, name: str | AuthenticationRef, config: AuthProviderBaseConfig):
 
-        if (name in self._authentications):
+        if (name in self._auth_providers):
             raise ValueError(f"Authentication `{name}` already exists in the list of Authentication Providers")
 
         try:
@@ -451,20 +451,20 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
             info_obj = await self._get_exit_stack().enter_async_context(authentication_info.build_fn(config, self))
 
-            self._authentications[name] = ConfiguredAuthentication(config=config, instance=info_obj)
+            self._auth_providers[name] = ConfiguredAuthProvider(config=config, instance=info_obj)
         except Exception as e:
             logger.error("Error adding authentication `%s` with config `%s`", name, config, exc_info=True)
             raise e
 
     @override
-    async def get_authentication(self, authentication_config_name: str):
+    async def get_auth_provider(self, auth_provider_config_name: str):
 
-        if authentication_config_name not in self._authentications:
-            raise ValueError(f"Authentication `{authentication_config_name}` not found")
+        if auth_provider_config_name not in self._auth_providers:
+            raise ValueError(f"Authentication `{auth_provider_config_name}` not found")
 
         try:
             # Get authentication config info
-            authentication_config_info = self._authentications[authentication_config_name]
+            authentication_config_info = self._auth_providers[auth_provider_config_name]
 
             authentication_client_info = self._registry.get_authentication_client(
                 config_type=type(authentication_config_info.config))
@@ -473,13 +473,13 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 authentication_client_info.build_fn(authentication_config_info.config, self))
 
             # Set the config name
-            authentication_client.config_name = authentication_config_name
+            authentication_client.config_name = auth_provider_config_name
 
             # Return the authentication client
             return authentication_client
 
         except Exception as e:
-            logger.error("Error getting authentication client `%s`", authentication_config_name, exc_info=True)
+            logger.error("Error getting authentication client `%s`", auth_provider_config_name, exc_info=True)
             raise e
 
     @override
@@ -885,7 +885,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                     await self.add_its_strategy(component_instance.name, component_instance.config)
 
                 elif component_instance.component_group == ComponentGroup.AUTHENTICATION:
-                    await self.add_authentication(component_instance.name, component_instance.config)
+                    await self.add_auth_provider(component_instance.name, component_instance.config)
                 else:
                     raise ValueError(f"Unknown component group {component_instance.component_group}")
 
@@ -973,12 +973,12 @@ class ChildBuilder(Builder):
         return await self._workflow_builder.add_llm(name, config)
 
     @override
-    async def add_authentication(self, name: str, config: AuthenticationBaseConfig):
-        return await self._workflow_builder.add_authentication(name, config)
+    async def add_auth_provider(self, name: str, config: AuthProviderBaseConfig):
+        return await self._workflow_builder.add_auth_provider(name, config)
 
     @override
-    async def get_authentication(self, authentication_config_name: str):
-        return await self._workflow_builder.get_authentication(authentication_config_name)
+    async def get_auth_provider(self, authentication_config_name: str):
+        return await self._workflow_builder.get_auth_provider(authentication_config_name)
 
     @override
     async def get_llm(self, llm_name: str, wrapper_type: LLMFrameworkEnum | str):
