@@ -18,7 +18,8 @@ limitations under the License.
 # Using Authentication in the NeMo Agent Toolkit
 This example demonstrates how to use the library's native support for authentication to allow agents to use tools that require
 authentication to use. Particularly, this example highlights how to use the `OAuth 2.0 Authorization Code Flow` to authenticate
-with a demonstrative `OAuth 2.0` provider and then return the result of a tool that provides info about a given IP.
+with a demonstrative `OAuth 2.0` provider and then return information from the authorization server's demonstrative `api/me` endpoint
+which provides information about the authenticated user.
 
 ## How the OAuth2.0 Authorization‑Code Flow Works
 
@@ -133,7 +134,7 @@ Once you've successfully connected to the websocket, you can start querying the 
 information about the IP address in question: 
 
 ```text
-Can you give me information about the IP address 8.8.8.8 ? 
+Who am I logged in as?
 ```
 
 **Tip**: Remember to enable pop-ups in your browser to allow the OAuth 2.0 provider to open a new window for authentication.
