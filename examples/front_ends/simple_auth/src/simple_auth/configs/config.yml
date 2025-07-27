@@ -19,6 +19,12 @@ general:
     console:
       _type: console
       level: WARN
+  front_end:
+      _type: fastapi
+      cors:
+        allow_origins: ["http://localhost:3000", "http://localhost:5000"]
+        allow_headers: ["*"]
+        allow_methods: ["*"]
 
 functions:
   who_am_i_function:
@@ -47,6 +53,9 @@ authentication:
     client_id: ${OAUTH_CLIENT_ID}
     client_secret: ${OAUTH_CLIENT_SECRET}
     use_pkce: false
+    # For testing with `aiq run` command, we need to run a local redirect server
+    run_local_redirect_server: true
+    local_redirect_server_port: 8000
 
 workflow:
   _type: react_agent
