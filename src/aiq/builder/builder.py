@@ -20,22 +20,32 @@ from abc import abstractmethod
 from collections.abc import Sequence
 from pathlib import Path
 
+from aiq.authentication.interfaces import AuthProviderBase
 from aiq.builder.context import AIQContext
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function import Function
+from aiq.data_models.authentication import AuthProviderBaseConfig
+from aiq.data_models.component_ref import AuthenticationRef
 from aiq.data_models.component_ref import EmbedderRef
 from aiq.data_models.component_ref import FunctionRef
+from aiq.data_models.component_ref import ITSStrategyRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.component_ref import MemoryRef
+from aiq.data_models.component_ref import ObjectStoreRef
 from aiq.data_models.component_ref import RetrieverRef
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.evaluator import EvaluatorBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.function_dependencies import FunctionDependencies
+from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
+from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
 from aiq.memory.interfaces import MemoryEditor
+from aiq.object_store.interfaces import ObjectStore
 from aiq.retriever.interface import AIQRetriever
 
 
@@ -91,6 +101,10 @@ class Builder(ABC):  # pylint: disable=too-many-public-methods
     async def add_llm(self, name: str | LLMRef, config: LLMBaseConfig):
         pass
 
+    @abstractmethod
+    async def get_llm(self, llm_name: str | LLMRef, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
+        pass
+
     async def get_llms(self, llm_names: Sequence[str | LLMRef],
                        wrapper_type: LLMFrameworkEnum | str) -> list[typing.Any]:
 
@@ -101,11 +115,41 @@ class Builder(ABC):  # pylint: disable=too-many-public-methods
         return list(llms)
 
     @abstractmethod
-    async def get_llm(self, llm_name: str | LLMRef, wrapper_type: LLMFrameworkEnum | str) -> typing.Any:
+    def get_llm_config(self, llm_name: str | LLMRef) -> LLMBaseConfig:
         pass
 
     @abstractmethod
-    def get_llm_config(self, llm_name: str | LLMRef) -> LLMBaseConfig:
+    async def add_auth_provider(self, name: str | AuthenticationRef, config: AuthProviderBaseConfig):
+        pass
+
+    @abstractmethod
+    async def get_auth_provider(self, auth_provider_name: str | AuthenticationRef) -> AuthProviderBase:
+        pass
+
+    async def get_auth_providers(self, auth_provider_names: list[str | AuthenticationRef]):
+
+        coros = [self.get_auth_provider(auth_provider_name=n) for n in auth_provider_names]
+
+        auth_providers = await asyncio.gather(*coros, return_exceptions=False)
+
+        return list(auth_providers)
+
+    @abstractmethod
+    async def add_object_store(self, name: str | ObjectStoreRef, config: ObjectStoreBaseConfig):
+        pass
+
+    async def get_object_store_clients(self, object_store_names: Sequence[str | ObjectStoreRef]) -> list[ObjectStore]:
+        """
+        Return a list of all object store clients.
+        """
+        return list(await asyncio.gather(*[self.get_object_store_client(name) for name in object_store_names]))
+
+    @abstractmethod
+    async def get_object_store_client(self, object_store_name: str | ObjectStoreRef) -> ObjectStore:
+        pass
+
+    @abstractmethod
+    def get_object_store_config(self, object_store_name: str | ObjectStoreRef) -> ObjectStoreBaseConfig:
         pass
 
     @abstractmethod
@@ -185,6 +229,24 @@ class Builder(ABC):  # pylint: disable=too-many-public-methods
 
     @abstractmethod
     async def get_retriever_config(self, retriever_name: str | RetrieverRef) -> RetrieverBaseConfig:
+        pass
+
+    @abstractmethod
+    async def add_its_strategy(self, name: str | str, config: ITSStrategyBaseConfig):
+        pass
+
+    @abstractmethod
+    async def get_its_strategy(self,
+                               strategy_name: str | ITSStrategyRef,
+                               pipeline_type: PipelineTypeEnum,
+                               stage_type: StageTypeEnum):
+        pass
+
+    @abstractmethod
+    async def get_its_strategy_config(self,
+                                      strategy_name: str | ITSStrategyRef,
+                                      pipeline_type: PipelineTypeEnum,
+                                      stage_type: StageTypeEnum) -> ITSStrategyBaseConfig:
         pass
 
     @abstractmethod

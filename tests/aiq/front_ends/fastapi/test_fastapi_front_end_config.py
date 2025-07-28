@@ -58,7 +58,8 @@ FAST_API_FRONT_END_CONFIG_ALL_VALUES = {
     "endpoints": [ENDPOINT_ALL_VALUES.copy()],
     "cors": CORS_ALL_VALUES.copy(),
     "use_gunicorn": True,
-    "runner_class": "test_runner_class"
+    "runner_class": "test_runner_class",
+    "object_store": "test_object_store",
 }
 
 FAST_API_FRONT_END_CONFIG_REQUIRES_VALUES = {}
@@ -139,3 +140,4 @@ def test_fast_api_front_end_config(config_kwargs: dict):
         assert isinstance(model.cors, FastApiFrontEndConfig.CrossOriginResourceSharing)
         assert isinstance(model.use_gunicorn, bool)
         assert (isinstance(model.runner_class, str) or model.runner_class is None)
+        assert (isinstance(model.object_store, str) or model.object_store is None)

@@ -25,6 +25,11 @@ from web_utils import cache_html
 from web_utils import get_file_path_from_url
 from web_utils import scrape
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+)
 logger = logging.getLogger(__name__)
 
 
@@ -37,11 +42,30 @@ async def main(*,
                base_path: str = "./.tmp/data"):
 
     embedder = NVIDIAEmbeddings(model=embedding_model, truncate="END")
+
+    # Create the Milvus vector store
     vector_store = Milvus(
         embedding_function=embedder,
         collection_name=collection_name,
         connection_args={"uri": milvus_uri},
     )
+
+    # Check if collection existed (Milvus connects to existing collections during init)
+    collection_existed_before = vector_store.col is not None
+
+    if collection_existed_before:
+        logger.info("Using existing Milvus collection: %s", collection_name)
+        # Get collection info for logging
+        try:
+            num_entities = vector_store.client.query(collection_name=collection_name,
+                                                     filter="",
+                                                     output_fields=["count(*)"])
+            entity_count = num_entities[0]["count(*)"] if num_entities else "unknown number of"
+            logger.info("Collection '%s' contains %s documents", collection_name, entity_count)
+        except Exception as e:
+            logger.warning("Could not get collection info: %s", e)
+    else:
+        logger.info("Collection '%s' does not exist, will be created when documents are added", collection_name)
 
     filenames = [
         get_file_path_from_url(url, base_path)[0] for url in urls
@@ -76,6 +100,12 @@ async def main(*,
         if clean_cache:
             logger.info("Removing %s", filename)
             os.remove(filename)
+
+    # Final status check
+    if collection_existed_before:
+        logger.info("Successfully added %s new documents to existing collection '%s'", len(doc_ids), collection_name)
+    else:
+        logger.info("Successfully created collection '%s' and added %s new documents", collection_name, len(doc_ids))
 
     return doc_ids
 

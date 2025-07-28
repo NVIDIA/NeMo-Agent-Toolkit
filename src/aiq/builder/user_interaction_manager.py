@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import time
 import uuid
 
@@ -21,6 +22,8 @@ from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
 from aiq.data_models.interactive import InteractionResponse
 from aiq.data_models.interactive import InteractionStatus
+
+logger = logging.getLogger(__name__)
 
 
 class AIQUserInteractionManager:
