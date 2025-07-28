@@ -212,7 +212,7 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
   aiq --version
   ```
 
- Use the first two digits of the version number. For example, if the version is `1.1.0`, then the dependency would be `aiqtoolkit[langchain]~=1.1`.
+  Use the first two digits of the version number. For example, if the version is `1.1.0`, then the dependency would be `aiqtoolkit[langchain]~=1.1`.
 
   ```toml
   dependencies = [
@@ -222,6 +222,26 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
   ```
 
   In this example, you have been using NeMo Agent toolkit with LangChain. This is why the dependency is declared on `aiqtoolkit[langchain]`, that is to say NeMo Agent toolkit with the LangChain integration plugin. If you want to use LlamaIndex, declare the dependency on `aiqtoolkit[llama-index]`. This is described in more detail in [Framework Integrations](../quick-start/installing.md#framework-integrations).
+
+- **Version**: In this example, and in NeMo Agent toolkit in general, we use [setuptools-scm](https://setuptools-scm.readthedocs.io/en/latest/) to automatically determine the version of the package based on the Git tags. We did this by setting `dynamic = ["version"]` and declaring a build dependency on both `setuptools` and `setuptools_scm` in the `build-system` section of `pyproject.toml`:
+  ```toml
+  [build-system]
+  requires = ["setuptools", "setuptools_scm"]
+  build-backend = "setuptools.build_meta"
+  ```
+
+  Alternately if we did not want to do this we would instead:
+  ```toml
+  [build-system]
+  build-backend = "setuptools.build_meta"
+  requires = ["setuptools >= 64"]
+
+  [project]
+  name = "text_file_ingest"
+  version = "0.1.0"
+  ...
+  ```
+
 
 - **Entry Points**: This tells NeMo Agent toolkit where to find your workflow registration.
 
