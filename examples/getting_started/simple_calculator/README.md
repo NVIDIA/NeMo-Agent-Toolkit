@@ -135,7 +135,7 @@ docker rm simple_calculator_container
 The example can be run with the NeMo-Agent-Toolkit UI. After building the simple_calculator image previously, this will build the UI docker image, and deploy both with network connectivity via a docker compose file. 
 
 **Prerequisites:**
-- You must have built the `simple_calculator` image (see [Build the Docker Image](#build-the-docker-image) above)
+- You must have the built `simple_calculator` image (see [Build the Docker Image](#build-the-docker-image) above)
 
 #### Build UI Docker Image
 
@@ -149,7 +149,7 @@ cd $WORKPATH/NeMo-Agent-Toolkit-UI
 # Set Next.js build environment variables for UI 
 cp $WORKPATH/NeMo-Agent-Toolkit/examples/getting_started/simple_calculator/.env.docker.ui .env.production
 
-docker build -t aiqtoolkit-ui .
+docker build -t nemoagenttoolkit-ui .
 ```
 
 #### Deploy Simple LLM Calculator + UI
@@ -157,7 +157,7 @@ docker build -t aiqtoolkit-ui .
 After building the UI image above use docker compose to deploy:
 
 ```bash
-cd $WORKPATH/NeMo-Agent-Toolkit/examples/basic/functions/simple_calculator
+cd $WORKPATH/NeMo-Agent-Toolkit/examples/getting_started/simple_calculator
 
 docker compose -f compose_calculator.yaml up -d
 ```
@@ -177,8 +177,8 @@ This will:
 
 2. **View logs:**
    ```bash
-   docker logs aiq-server
-   docker logs aiq-ui
+   docker logs nemoagenttoolkit-server
+   docker logs nemoagenttoolkit-ui
    ```
 
 3. **Access the services:**
@@ -191,7 +191,7 @@ Interact with the chat interface by prompting the agent with the message:
 Is 4 + 4 greater than the current hour of the day?
 ```
 
-![AIQ Toolkit Web UI Workflow Result](public/screenshots/ui_generate_example.png)
+![AIQ Toolkit Web UI Workflow Result](https://github.com/NVIDIA/NeMo-Agent-Toolkit-UI/raw/main/public/screenshots/ui_generate_example.png)
 
 #### Stop the Services
 

@@ -1,15 +1,14 @@
 services:
 
-  aiq-server:
+  nemoagenttoolkit-server:
     image: simple_calculator
-    container_name: aiq-calculator-server
+    container_name: nemoagenttoolkit-server
     ports:
       - "8000:8000"
-      - "6006:6006"  # Phoenix telemetry service
     environment:
-      - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+      - NVIDIA_API_KEY=${OPENAI_API_KEY}
     networks:
-      - aiq-network
+      - nemoagenttoolkit-network
     healthcheck:
       test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/docs\")' || exit 1"]
       interval: 30s
@@ -17,17 +16,17 @@ services:
       retries: 3
       start_period: 40s
 
-  aiq-ui:
-    image: aiqtoolkit-ui
-    container_name: aiq-ui
+  nemoagenttoolkit-ui:
+    image: nemoagenttoolkit-ui
+    container_name: nemoagenttoolkit-ui
     ports:
       - "3000:3000"
     networks:
-      - aiq-network
+      - nemoagenttoolkit-network
     depends_on:
-      aiq-server:
+      nemoagenttoolkit-server:
         condition: service_healthy
 
 networks:
-  aiq-network:
+  nemoagenttoolkit-network:
     driver: bridge
