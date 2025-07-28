@@ -22,7 +22,18 @@ limitations under the License.
 
 # Mixture of Agents Example
 
-An example of a Mixture of Agents (naive Mixture of Experts / naive Agent Hypervisor). This agent leverages the AIQ toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflows, and workflows as tools. Key elements are summarized below:
+An example of a Mixture of Agents (naive Mixture of Experts / naive Agent Hypervisor). This agent leverages the NeMo Agent toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflows, and workflows as tools. Key elements are summarized below:
+
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Graph Structure](#graph-structure)
+- [Installation and Setup](#installation-and-setup)
+  - [Install this Workflow](#install-this-workflow)
+  - [Set Up API Keys](#set-up-api-keys)
+  - [Run the Workflow](#run-the-workflow)
+  - [Starting the AIQ Toolkit Server](#starting-the-aiq-toolkit-server)
+  - [Making Requests to the AIQ Toolkit Server](#making-requests-to-the-aiq-toolkit-server)
 
 ## Key Features
 
@@ -51,25 +62,14 @@ This consistent architecture allows both ReAct and Tool Calling agents to work s
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
-### Install this Workflow:
+### Install this Workflow
 
-From the root directory of the AIQ toolkit repository, run the following commands:
+From the root directory of the NeMo Agent toolkit repository, run the following commands:
 
 ```bash
 uv pip install -e .
-```
-
-The `code_generation` and `wiki_search` tools are part of the `aiqtoolkit[langchain]` package.  To install the package run the following command:
-```bash
-# local package install from source
-uv pip install -e '.[langchain]'
-```
-
-In addition to this the example utilizes some tools from the `examples/getting_started/simple_web_query` example.  To install the package run the following command:
-```bash
-uv pip install -e examples/getting_started/simple_web_query
 ```
 
 ### Set Up API Keys
@@ -80,7 +80,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ### Run the Workflow
 
-Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
+Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
 aiq run --config_file=examples/agents/mixture_of_agents/configs/config.yml --input "who was Djikstra?"
@@ -89,24 +89,7 @@ aiq run --config_file=examples/agents/mixture_of_agents/configs/config.yml --inp
 **Expected Output**
 
 ```console
-$ aiq run --config_file=examples/agents/mixture_of_agents/configs/config.yml --input "who was Djikstra?"
-2025-04-23 14:57:12,020 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (503.239393 ms). Ensure all imports are inside your registered functions.
-2025-04-23 14:57:12,284 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/agents/mixture_of_agents/configs/config.yml'
-2025-04-23 14:57:12,293 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
-2025-04-23 14:57:12,375 - aiq.profiler.utils - WARNING - Discovered frameworks: {<LLMFrameworkEnum.LANGCHAIN: 'langchain'>} in function code_generation_tool by inspecting source. It is recommended and more reliable to instead add the used LLMFrameworkEnum types in the framework_wrappers argument when calling @register_function.
-2025-04-23 14:57:12,375 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Initializing code generation tool
-Getting tool LLM from config
-2025-04-23 14:57:12,376 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Filling tool's prompt variable from config
-2025-04-23 14:57:12,376 - aiq.plugins.langchain.tools.code_generation_tool - INFO - Initialized code generation tool
-
-Configuration Summary:
---------------------
-Workflow Type: react_agent
-Number of Functions: 8
-Number of LLMs: 2
-Number of Embedders: 0
-Number of Memory: 0
-Number of Retrievers: 0
+<snipped for brevity>
 
 2025-04-23 14:57:14,060 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
@@ -149,13 +132,12 @@ Final Answer: Edsger W. Dijkstra was a Dutch computer scientist, and Dijkstra's 
 --------------------------------------------------
 Workflow Result:
 ["Edsger W. Dijkstra was a Dutch computer scientist, and Dijkstra's algorithm is a well-known algorithm in graph theory used to find the shortest path between two nodes in a graph."]
---------------------------------------------------
 ```
 ---
 
 ### Starting the AIQ Toolkit Server
 
-You can start the AIQ toolkit server using the `aiq serve` command with the appropriate configuration file.
+You can start the NeMo Agent toolkit server using the `aiq serve` command with the appropriate configuration file.
 
 **Starting the Mixture of Agents Example Workflow**
 
@@ -188,4 +170,3 @@ curl --request POST \
   --header 'Content-Type: application/json' \
   --data '{"input_message": "What are LLMs?"}'
 ```
----

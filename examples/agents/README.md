@@ -17,14 +17,39 @@ limitations under the License.
 
 # Agent Examples
 
-The agent examples demonstrate how AIQ toolkit accelerates and enables AI Agent development.
-The examples showcase 5 distinct AI Agent architectures solving a similar problem in different ways. By leveraging the AIQ toolkit plugin system and the `Builder` object, you can use both pre-built and custom agentic workflows and tools in a flexible manner.
+The agent examples demonstrate how NeMo Agent toolkit accelerates and enables AI Agent development.
+The examples showcase 5 distinct AI Agent architectures solving a similar problem in different ways.
+By leveraging the NeMo Agent toolkit plugin system and the `Builder` object, you can use both pre-built and
+custom agentic workflows and tools in a flexible manner.
 
+## Table of Contents
 
-* [ReAct Agent Example](./react/README.md)
-* [Tool Calling Agent Example](./tool_calling/README.md)
-* [Mixture of Agents Example](./mixture_of_agents/README.md) - A ReAct Agent calling multiple Tool Calling Agents
-* [ReWOO Agent Example](./rewoo/README.md)
+- [Installation and Setup](#installation-and-setup)
+  - [Set Up API Keys](#set-up-api-keys)
+- [Example Usage](#example-usage)
+- [Learn More](#learn-more)
+
+## Installation and Setup
+
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+
+### Set Up API Keys
+
+If you have not already done so, follow the [Obtaining API Keys](../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+
+```bash
+export NVIDIA_API_KEY=<YOUR_API_KEY>
+```
+
+## Example Usage
+
+Each agent example contains its own installation and usage instructions. Navigate to the specific example directory and follow the README instructions:
+
+- **ReAct Agent**: See [react/README.md](./react/README.md) for step-by-step reasoning agent implementation
+- **Tool Calling Agent**: See [tool_calling/README.md](./tool_calling/README.md) for direct tool invocation agent
+- **Mixture of Agents**: See [mixture_of_agents/README.md](./mixture_of_agents/README.md) for multi-agent orchestration
+- **ReWOO Agent**: See [rewoo/README.md](./rewoo/README.md) for planning-based agent workflow
+
 ## Learn More
 
 For a deeper dive into the AI Agents utilized in the examples, refer to the component documentation:

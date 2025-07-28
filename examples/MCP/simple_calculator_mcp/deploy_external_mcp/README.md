@@ -19,6 +19,23 @@ limitations under the License.
 
 This example demonstrates how to set up and run an MCP (Model Control Protocol) server using a reusable `Dockerfile`.
 
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Prerequisites](#prerequisites)
+- [Available MCP Services](#available-mcp-services)
+- [Installation and Setup](#installation-and-setup)
+- [Run the Workflow](#run-the-workflow)
+- [Client Configuration](#client-configuration)
+
+## Key Features
+
+- **Reusable Docker MCP Server:** Demonstrates how to deploy any MCP server using a standardized Docker container approach with configurable service parameters and arguments.
+- **MCP Service Integration:** Shows integration with public MCP services including `mcp-server-time` and other available services from the Model Context Protocol ecosystem.
+- **Dynamic Service Configuration:** Provides flexible configuration through environment variables for service names, arguments, ports, and container settings.
+- **Docker Compose Orchestration:** Includes complete Docker Compose setup for easy deployment and management of MCP services with proper networking and volume configurations.
+- **Production-Ready Deployment:** Offers patterns for deploying MCP servers in production environments with proper containerization and service management.
+
 ## Prerequisites
 
 - Docker
@@ -28,7 +45,9 @@ This example demonstrates how to set up and run an MCP (Model Control Protocol) 
 
 This example uses the `mcp-server-time` service. For a list of available public MCP services, please refer to the [MCP Server GitHub repository](https://github.com/modelcontextprotocol/servers).
 
-## Setup
+## Installation and Setup
+
+If you have not already done so, follow the instructions in the [Install Guide](../../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 1. Change the service name and brief name to the service you want to use. Additionally specify any optional service arguments.
 
@@ -39,7 +58,6 @@ export SERVICE_NAME=mcp-server-time
 export SERVICE_BRIEF_NAME=time
 # Any arguments to pass to the service. Example: `mcp-server-time` requires --local-timezone if the container's timezone hasn't been configured.
 export SERVICE_ARGS=--"local-timezone \"America/New_York\""
-
 ```
 
 2. Set the service directory, server port, and container name.
@@ -102,13 +120,13 @@ docker ps
 docker logs -f ${CONTAINER_NAME}
 ```
 
-## Usage
+## Run the Workflow
 
 The MCP server will be available at `http://localhost:${SERVER_PORT}/sse`. You can use it with any MCP-compatible client.
 
 ## Client Configuration
 
-To use the MCP service in your AIQ toolkit application, configure the MCP tool wrapper in your config file:
+To use the MCP service in your NeMo Agent toolkit application, configure the MCP tool wrapper in your config file:
 
 ```yaml
 functions:

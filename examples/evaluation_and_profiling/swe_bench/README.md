@@ -18,36 +18,55 @@ limitations under the License.
 # Solving problems in a SWE bench dataset using AIQ Toolkit
 This example provides a skeleton workflow which can be used to implement predictors to solve problems in a SWE bench dataset.
 
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Prerequisites](#prerequisites)
+- [Installation and Setup](#installation-and-setup)
+- [Quickstart](#quickstart)
+- [Datasets](#datasets)
+  - [Filtering dataset entries](#filtering-dataset-entries)
+- [Predictors](#predictors)
+  - [Adding a net new predictor](#adding-a-net-new-predictor)
+- [Evaluation](#evaluation)
+  - [Sample output](#sample-output)
+
 ## Key Features
 
-- **SWE-bench Dataset Integration:** Demonstrates how to use AIQ toolkit with Software Engineering benchmark datasets including SWE-bench_Lite and SWE-bench_Verified for systematic code problem solving evaluation.
+- **SWE-bench Dataset Integration:** Demonstrates how to use NeMo Agent toolkit with Software Engineering benchmark datasets including SWE-bench_Lite and SWE-bench_Verified for systematic code problem solving evaluation.
 - **Docker-based Evaluation Environment:** Shows containerized evaluation setup ensuring consistent and isolated environments for running code modifications and testing solutions against benchmark problems.
 - **Multi-Dataset Support:** Supports multiple SWE-bench dataset formats including JSON and Parquet files from HuggingFace datasets, with both local and remote dataset loading capabilities.
 - **Configurable Problem Filtering:** Provides filtering mechanisms to limit dataset entries for focused evaluation and testing, enabling iterative development and debugging of solutions.
 - **Pydantic Model Integration:** Uses structured `SWEBenchInput` data models for type-safe processing of software engineering problems with clear input/output specifications.
 
-# Pre-requisites
-SWE bench evaluations run inside a Docker container. Ensure that Docker is installed and the Docker service is running before proceeding.
+## Prerequisites
 
-## Installation & Running Docker
-- Install AIQ toolkit: If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source)
+SWE bench evaluations run inside a Docker container.
+
+Ensure that Docker is installed and the Docker service is running before proceeding.
+
 - Install Docker: Follow the official installation guide for your platform: [Docker Installation Guide](https://docs.docker.com/engine/install/)
 - Start Docker Service:
   - Linux: Run`sudo systemctl start docker` (ensure your user has permission to run Docker).
   - Mac & Windows: Docker Desktop should be running in the background.
-
-## Verify Docker Installation
-Run the following command to verify that Docker is installed and running correctly:
+- Verify Docker Installation: Run the following command to verify that Docker is installed and running correctly:
 ```bash
 docker info
 ```
 
-# Quickstart
-1. Install the `swe_bench` example:
+## Installation and Setup
+
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source)
+
+### Install this Workflow
+
+Install the `swe_bench` example:
 ```bash
 uv pip install -e examples/evaluation_and_profiling/swe_bench
 ```
-2. Run the example via the `aiq eval` CLI command:
+
+## Quickstart
+Run the example via the `aiq eval` CLI command:
 ```bash
 aiq eval --config_file examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
 ```
@@ -137,7 +156,7 @@ in the input instance.
 
 That information is only used for evaluation. Using it can taint the predictor and lead to overfitting.
 
-These predictors are provided in this AIQ toolkit example:
+These predictors are provided in this NeMo Agent toolkit example:
 - `gold` - Uses the patch from the `SWEBenchInput` instance, bypassing problem-solving logic. See [predict_gold_stub.py](src/aiq_swe_bench/predictors/predict_gold/predict_gold_stub.py) and configuration file `examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml`.
 - `skeleton` - Skeleton code for creating a problem-solving workflow. This code can be copied to create a net-new predictor. See [predict_skeleton.py](src/aiq_swe_bench/predictors/predict_skeleton/predict_skeleton.py) and configuration file `examples/evaluation_and_profiling/swe_bench/configs/config_skeleton.yml`.
 
@@ -145,7 +164,7 @@ These predictors are provided in this AIQ toolkit example:
 To add a new predictor:
 - Create a new directory in the predictors directory, copy over the contents of [predictors/predict_skeleton](src/aiq_swe_bench/predictors/predict_skeleton/). Rename the files and fill in the logic to solve the problem.
 - Register the new predictor class with an unique name using the `@register_predictor` decorator.
-- Import the new predictor class in [predictors/register.py](src/aiq_swe_bench/predictors/register.py) to make it discoverable by the AIQ toolkit `swe_bench` harness.
+- Import the new predictor class in [predictors/register.py](src/aiq_swe_bench/predictors/register.py) to make it discoverable by the NeMo Agent toolkit `swe_bench` harness.
 
 ## Evaluation
 The `model_patch` returned by the `swe_bench` workflow is run through the `swe_bench` evaluation harness. This harness -

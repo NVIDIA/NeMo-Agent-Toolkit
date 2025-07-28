@@ -30,6 +30,7 @@ from pydantic import Tag
 from pydantic import computed_field
 from pydantic import field_validator
 
+from aiq.authentication.interfaces import AuthProviderBase
 from aiq.builder.builder import Builder
 from aiq.builder.builder import EvalBuilder
 from aiq.builder.embedder import EmbedderProviderInfo
@@ -40,6 +41,8 @@ from aiq.builder.function_base import FunctionBase
 from aiq.builder.function_info import FunctionInfo
 from aiq.builder.llm import LLMProviderInfo
 from aiq.builder.retriever import RetrieverProviderInfo
+from aiq.data_models.authentication import AuthProviderBaseConfig
+from aiq.data_models.authentication import AuthProviderBaseConfigT
 from aiq.data_models.common import TypedBaseModelT
 from aiq.data_models.component import AIQComponentEnum
 from aiq.data_models.config import AIQConfig
@@ -76,43 +79,45 @@ from aiq.registry_handlers.registry_handler_base import AbstractRegistryHandler
 
 logger = logging.getLogger(__name__)
 
-FrontEndBuildCallableT = Callable[[FrontEndConfigT, AIQConfig], AsyncIterator[FrontEndBase]]
-TelemetryExporterBuildCallableT = Callable[[TelemetryExporterConfigT, Builder], AsyncIterator[BaseExporter]]
-LoggingMethodBuildCallableT = Callable[[LoggingMethodConfigT, Builder], AsyncIterator[Handler]]
-FunctionBuildCallableT = Callable[[FunctionConfigT, Builder], AsyncIterator[FunctionInfo | Callable | FunctionBase]]
-LLMProviderBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[LLMProviderInfo]]
-LLMClientBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[typing.Any]]
-EmbedderProviderBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncIterator[EmbedderProviderInfo]]
+AuthProviderBuildCallableT = Callable[[AuthProviderBaseConfigT, Builder], AsyncIterator[AuthProviderBase]]
 EmbedderClientBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncIterator[typing.Any]]
+EmbedderProviderBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncIterator[EmbedderProviderInfo]]
 EvaluatorBuildCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AsyncIterator[EvaluatorInfo]]
+FrontEndBuildCallableT = Callable[[FrontEndConfigT, AIQConfig], AsyncIterator[FrontEndBase]]
+FunctionBuildCallableT = Callable[[FunctionConfigT, Builder], AsyncIterator[FunctionInfo | Callable | FunctionBase]]
+ITSStrategyBuildCallableT = Callable[[ITSStrategyBaseConfigT, Builder], AsyncIterator[StrategyBase]]
+LLMClientBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[typing.Any]]
+LLMProviderBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[LLMProviderInfo]]
+LoggingMethodBuildCallableT = Callable[[LoggingMethodConfigT, Builder], AsyncIterator[Handler]]
 MemoryBuildCallableT = Callable[[MemoryBaseConfigT, Builder], AsyncIterator[MemoryEditor]]
 ObjectStoreBuildCallableT = Callable[[ObjectStoreBaseConfigT, Builder], AsyncIterator[ObjectStore]]
-
-RetrieverProviderBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], AsyncIterator[RetrieverProviderInfo]]
-RetrieverClientBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], AsyncIterator[typing.Any]]
 RegistryHandlerBuildCallableT = Callable[[RegistryHandlerBaseConfigT], AsyncIterator[AbstractRegistryHandler]]
+RetrieverClientBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], AsyncIterator[typing.Any]]
+RetrieverProviderBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], AsyncIterator[RetrieverProviderInfo]]
+TelemetryExporterBuildCallableT = Callable[[TelemetryExporterConfigT, Builder], AsyncIterator[BaseExporter]]
 ToolWrapperBuildCallableT = Callable[[str, Function, Builder], typing.Any]
-ITSStrategyBuildCallableT = Callable[[ITSStrategyBaseConfigT, Builder], AsyncIterator[StrategyBase]]
 
-TeleExporterRegisteredCallableT = Callable[[TelemetryExporterConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
-LoggingMethodRegisteredCallableT = Callable[[LoggingMethodConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
+AuthProviderRegisteredCallableT = Callable[[AuthProviderBaseConfigT, Builder],
+                                           AbstractAsyncContextManager[AuthProviderBase]]
+EmbedderClientRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
+EmbedderProviderRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder],
+                                               AbstractAsyncContextManager[EmbedderProviderInfo]]
+EvaluatorRegisteredCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AbstractAsyncContextManager[EvaluatorInfo]]
 FrontEndRegisteredCallableT = Callable[[FrontEndConfigT, AIQConfig], AbstractAsyncContextManager[FrontEndBase]]
 FunctionRegisteredCallableT = Callable[[FunctionConfigT, Builder],
                                        AbstractAsyncContextManager[FunctionInfo | Callable | FunctionBase]]
-LLMProviderRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[LLMProviderInfo]]
+ITSStrategyRegisterCallableT = Callable[[ITSStrategyBaseConfigT, Builder], AbstractAsyncContextManager[StrategyBase]]
 LLMClientRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
-EmbedderProviderRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder],
-                                               AbstractAsyncContextManager[EmbedderProviderInfo]]
-EmbedderClientRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
-EvaluatorRegisteredCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AbstractAsyncContextManager[EvaluatorInfo]]
+LLMProviderRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[LLMProviderInfo]]
+LoggingMethodRegisteredCallableT = Callable[[LoggingMethodConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 MemoryRegisteredCallableT = Callable[[MemoryBaseConfigT, Builder], AbstractAsyncContextManager[MemoryEditor]]
 ObjectStoreRegisteredCallableT = Callable[[ObjectStoreBaseConfigT, Builder], AbstractAsyncContextManager[ObjectStore]]
-RetrieverProviderRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder],
-                                                AbstractAsyncContextManager[RetrieverProviderInfo]]
-RetrieverClientRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 RegistryHandlerRegisteredCallableT = Callable[[RegistryHandlerBaseConfigT],
                                               AbstractAsyncContextManager[AbstractRegistryHandler]]
-ITSStrategyRegisterCallableT = Callable[[ITSStrategyBaseConfigT, Builder], AbstractAsyncContextManager[StrategyBase]]
+RetrieverClientRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
+RetrieverProviderRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder],
+                                                AbstractAsyncContextManager[RetrieverProviderInfo]]
+TeleExporterRegisteredCallableT = Callable[[TelemetryExporterConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 
 
 class RegisteredInfo(BaseModel, typing.Generic[TypedBaseModelT]):
@@ -180,6 +185,14 @@ class RegisteredLLMProviderInfo(RegisteredInfo[LLMBaseConfig]):
     """
 
     build_fn: LLMProviderRegisteredCallableT = Field(repr=False)
+
+
+class RegisteredAuthProviderInfo(RegisteredInfo[AuthProviderBaseConfig]):
+    """
+    Represents a registered Authentication provider. Authentication providers facilitate the authentication process.
+    """
+
+    build_fn: AuthProviderRegisteredCallableT = Field(repr=False)
 
 
 class RegisteredLLMClientInfo(RegisteredInfo[LLMBaseConfig]):
@@ -304,6 +317,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         self._registered_llm_provider_infos: dict[type[LLMBaseConfig], RegisteredLLMProviderInfo] = {}
         self._llm_client_provider_to_framework: dict[type[LLMBaseConfig], dict[str, RegisteredLLMClientInfo]] = {}
         self._llm_client_framework_to_provider: dict[str, dict[type[LLMBaseConfig], RegisteredLLMClientInfo]] = {}
+
+        # Authentication
+        self._registered_auth_provider_infos: dict[type[AuthProviderBaseConfig], RegisteredAuthProviderInfo] = {}
 
         # Embedders
         self._registered_embedder_provider_infos: dict[type[EmbedderBaseConfig], RegisteredEmbedderProviderInfo] = {}
@@ -481,8 +497,28 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
                            f"Registered configs: {set(self._registered_llm_provider_infos.keys())}") from err
 
     def get_registered_llm_providers(self) -> list[RegisteredInfo[LLMBaseConfig]]:
-
         return list(self._registered_llm_provider_infos.values())
+
+    def register_auth_provider(self, info: RegisteredAuthProviderInfo):
+
+        if (info.config_type in self._registered_auth_provider_infos):
+            raise ValueError(
+                f"An Authentication Provider with the same config type `{info.config_type}` has already been "
+                "registered.")
+
+        self._registered_auth_provider_infos[info.config_type] = info
+
+        self._registration_changed()
+
+    def get_auth_provider(self, config_type: type[AuthProviderBaseConfig]) -> RegisteredAuthProviderInfo:
+        try:
+            return self._registered_auth_provider_infos[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered Authentication Provider for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_auth_provider_infos.keys())}") from err
+
+    def get_registered_auth_providers(self) -> list[RegisteredInfo[AuthProviderBaseConfig]]:
+        return list(self._registered_auth_provider_infos.values())
 
     def register_llm_client(self, info: RegisteredLLMClientInfo):
 
@@ -748,6 +784,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         if component_type == AIQComponentEnum.FRONT_END:
             return self._registered_front_end_infos
 
+        if component_type == AIQComponentEnum.AUTHENTICATION_PROVIDER:
+            return self._registered_auth_provider_infos
+
         if component_type == AIQComponentEnum.FUNCTION:
             return self._registered_functions
 
@@ -890,6 +929,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         return typing.Union[tuple(typing.Annotated[x_type, Tag(x_id)] for x_id, x_type in type_list)]
 
     def compute_annotation(self, cls: type[TypedBaseModelT]):
+
+        if issubclass(cls, AuthProviderBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_auth_providers())
 
         if issubclass(cls, EmbedderBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_embedder_providers())

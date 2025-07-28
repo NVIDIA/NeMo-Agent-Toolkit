@@ -68,3 +68,5 @@ def get_app():
 
     except ImportError as e:
         raise ValueError(f"Front end worker {front_end_worker_full_name} not found.") from e
+    except Exception as e:
+        raise ValueError(f"Error loading front end worker {front_end_worker_full_name}: {e}") from e

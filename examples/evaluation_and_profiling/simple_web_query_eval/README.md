@@ -17,13 +17,26 @@ limitations under the License.
 
 # Simple LangSmith-Documentation Agent - Evaluation and Profiling
 
-This example demonstrates how to evaluate and profile AI agent performance using the NVIDIA AIQ toolkit. You'll learn to systematically measure your agent's accuracy and analyze its behavior using the Simple LangSmith-Documentation Agent workflow.
+This example demonstrates how to evaluate and profile AI agent performance using the NVIDIA NeMo Agent toolkit. You'll learn to systematically measure your agent's accuracy and analyze its behavior using the Simple LangSmith-Documentation Agent workflow.
+
+## Table of Contents
+
+- [Key Features](#key-features)
+- [What You'll Learn](#what-youll-learn)
+- [Prerequisites](#prerequisites)
+- [Installation and Setup](#installation-and-setup)
+  - [Install this Workflow](#install-this-workflow)
+  - [Set Up API Keys](#set-up-api-keys)
+- [Run the Workflow](#run-the-workflow)
+  - [Running Evaluation](#running-evaluation)
+  - [Understanding Results](#understanding-results)
+  - [Available Configurations](#available-configurations)
 
 ## Key Features
 
 - **Web Query Agent Evaluation:** Demonstrates comprehensive evaluation of the `simple_web_query` agent that retrieves and processes LangSmith documentation using `webpage_query` tools and `react_agent` reasoning.
 - **Multi-Model Performance Testing:** Shows systematic comparison across different LLM providers including OpenAI models, Llama 3.1, and Llama 3.3 to identify optimal configurations for documentation retrieval tasks.
-- **Evaluation Framework Integration:** Uses the AIQ toolkit `aiq eval` command with various evaluation configurations to measure response quality, accuracy scores, and documentation retrieval effectiveness.
+- **Evaluation Framework Integration:** Uses the NeMo Agent toolkit `aiq eval` command with various evaluation configurations to measure response quality, accuracy scores, and documentation retrieval effectiveness.
 - **Question-by-Question Analysis:** Provides detailed breakdown of individual agent responses with comprehensive metrics for identifying failure patterns in LangSmith documentation queries.
 - **Dataset Management Workflow:** Demonstrates working with evaluation datasets for consistent testing and performance tracking over time, including evaluation-only modes and result upload capabilities.
 
@@ -40,16 +53,15 @@ This example demonstrates how to evaluate and profile AI agent performance using
 1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 2. **Base workflow**: This example builds upon the Getting Started [Simple Web Query](../../getting_started/simple_web_query/) example. Make sure you are familiar with the example before proceeding.
 
+## Installation and Setup
 
-## Installation
+### Install this Workflow
 
 Install this evaluation example:
 
 ```bash
 uv pip install -e examples/evaluation_and_profiling/simple_web_query_eval
 ```
-
-## Usage
 
 ### Set Up API Keys
 
@@ -59,6 +71,8 @@ Follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#o
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 export OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>  # For OpenAI evaluations
 ```
+
+## Run the Workflow
 
 ### Running Evaluation
 

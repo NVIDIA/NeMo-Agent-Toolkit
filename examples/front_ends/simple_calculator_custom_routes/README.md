@@ -19,6 +19,17 @@ limitations under the License.
 
 This example demonstrates how to extend NVIDIA NeMo Agent toolkit applications with custom API routes and HTTP request metadata access. Build sophisticated APIs that capture rich request context for authentication, routing, and specialized business logic.
 
+## Table of Contents
+
+- [Key Features](#key-features)
+- [What You'll Learn](#what-youll-learn)
+- [Configuration][#configuration]
+- [Installation and Setup](#installation-and-setup)
+  - [Install this Workflow](#install-this-workflow)
+  - [Set Up API Keys](#set-up-api-keys)
+- [Example Usage](#example-usage)
+  - [Run the Workflow](#run-the-workflow)
+
 ## Key Features
 
 - **Custom API Route Registration:** Demonstrates how to define and register custom endpoints through YAML configuration that are dynamically added to the FastAPI server alongside standard Agent toolkit endpoints.
@@ -33,45 +44,6 @@ This example demonstrates how to extend NVIDIA NeMo Agent toolkit applications w
 - **Request metadata access**: Capture HTTP headers, query parameters, and client information
 - **Context management**: Access request context throughout function execution
 - **API extension patterns**: Build production-ready APIs with specialized endpoints
-
-## Prerequisites
-
-1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
-2. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
-
-## Installation
-
-Install this example:
-
-```bash
-uv pip install -e examples/front_ends/simple_calculator_custom_routes
-```
-
-## Quick Start
-
-### Start the API Server
-
-```bash
-aiq serve --config_file examples/front_ends/simple_calculator_custom_routes/configs/config-metadata.yml
-```
-
-The server starts with both standard and custom endpoints:
-
-- **Standard endpoint**: `POST /generate` - Default Agent toolkit workflow endpoint
-- **Custom endpoint**: `POST /get_request_metadata` - Demonstrates metadata access
-
-### Test the Custom Route
-
-Access comprehensive request metadata:
-
-```bash
-curl -X 'POST' \
-  'http://localhost:8000/get_request_metadata' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer token123' \
-  -d '{"unused": "show me request details"}'
-```
 
 ## Configuration
 
@@ -122,4 +94,49 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
 
     yield FunctionInfo.from_fn(_get_request_attributes,
                                description="Returns the acquired user defined request attriubutes.")
+```
+
+## Installation and Setup
+
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+
+### Install this Workflow:
+
+From the root directory of the NeMo Agent toolkit library, run the following commands:
+
+```bash
+uv pip install -e examples/front_ends/simple_calculator_custom_routes
+```
+
+### Set Up API Keys
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+
+```bash
+export NVIDIA_API_KEY=<YOUR_API_KEY>
+```
+
+## Example Usage
+
+### Run the Workflow
+
+```bash
+aiq serve --config_file examples/front_ends/simple_calculator_custom_routes/configs/config-metadata.yml
+```
+
+The server starts with both standard and custom endpoints:
+
+- **Standard endpoint**: `POST /generate` - Default Agent toolkit workflow endpoint
+- **Custom endpoint**: `POST /get_request_metadata` - Demonstrates metadata access
+
+
+
+Access comprehensive request metadata:
+
+```bash
+curl -X 'POST' \
+  'http://localhost:8000/get_request_metadata' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer token123' \
+  -d '{"unused": "show me request details"}'
 ```

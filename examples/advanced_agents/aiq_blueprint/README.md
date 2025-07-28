@@ -21,6 +21,28 @@ limitations under the License.
 
 This documentation points to the official NVIDIA AIQ Blueprint for building an AI agent designed for enterprise research use cases.
 
+## Key Features
+
+- **Enterprise Research Agent Architecture:** Provides a comprehensive blueprint for building production-ready AI agents specifically designed for enterprise research workflows and use cases.
+- **NVIDIA NIM Integration:** Demonstrates best practices for leveraging NVIDIA NIM (NVIDIA Inference Microservices) for scalable AI solutions in enterprise environments.
+- **Blueprint-Based Development:** Offers structured guidance and pre-built templates for implementing research-focused workflows with proven enterprise patterns.
+- **Production Deployment Guidance:** Includes comprehensive documentation for enterprise deployment, scaling, and maintenance of AI research agents.
+- **Official NVIDIA Support:** Backed by official NVIDIA documentation and support resources for enterprise customers and developers.
+
+## Installation and Setup
+
+### Prerequisites
+
+- Access to NVIDIA NIM services
+- Enterprise-grade development environment
+- NeMo Agent toolkit installed and configured
+
+### Getting Started
+
+1. Visit the official blueprint link below for complete setup instructions
+2. Follow the comprehensive enterprise deployment guide
+3. Configure your environment according to blueprint specifications
+
 ## NVIDIA AIQ Blueprint
 
 🔗 **[Build an AI Agent for Enterprise Research Blueprint by NVIDIA | NVIDIA NIM](https://build.nvidia.com/nvidia/aiq/blueprintcard)**

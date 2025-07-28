@@ -33,6 +33,7 @@ class HumanPromptModelType(str, Enum):
     RADIO = "radio"
     CHECKBOX = "checkbox"
     DROPDOWN = "dropdown"
+    OAUTH_CONSENT = "oauth_consent"
 
 
 class BinaryChoiceOptionsType(str, Enum):
@@ -145,6 +146,14 @@ class HumanPromptNotification(HumanPromptBase):
     input_type: typing.Literal[HumanPromptModelType.NOTIFICATION] = HumanPromptModelType.NOTIFICATION
 
 
+class _HumanPromptOAuthConsent(HumanPromptBase):
+    """
+    Represents an OAuth consent prompt interaction used to notify the UI to open the authentication page for completing
+    the consent flow.
+    """
+    input_type: typing.Literal[HumanPromptModelType.OAUTH_CONSENT] = HumanPromptModelType.OAUTH_CONSENT
+
+
 class HumanPromptBinary(HumanPromptBase):
     """
     Represents a binary interaction.
@@ -190,7 +199,7 @@ class HumanPromptDropdown(HumanPromptMultipleChoiceBase):
 
 
 HumanPrompt = typing.Annotated[HumanPromptText | HumanPromptNotification | HumanPromptBinary | HumanPromptRadio
-                               | HumanPromptCheckbox | HumanPromptDropdown,
+                               | HumanPromptCheckbox | HumanPromptDropdown | _HumanPromptOAuthConsent,
                                Discriminator("input_type")]
 
 

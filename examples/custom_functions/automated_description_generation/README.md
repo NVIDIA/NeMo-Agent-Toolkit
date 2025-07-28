@@ -24,7 +24,7 @@ limitations under the License.
 
 The automated description generation workflow, is a workflow that can be used to build on top of the RAG service and enhances the accuracy of the  multi-query collection workflow. The goal of the workflow is to automatically generate descriptions of collections within VectorDB's, which can be leveraged by the multi-query collection tool to empower retrieval of context, typically documents, across multiple collections within a given vector database. This document will cover the tooling and the process leveraged to execute the description generation workflow.
 
-The documentation will also cover configuration considerations and how to set up an AIQ toolkit pipeline that leverages the workflow. The current implementation is Milvus focused, with a plans to extend functionality to other vector databases.
+The documentation will also cover configuration considerations and how to set up an NeMo Agent toolkit pipeline that leverages the workflow. The current implementation is Milvus focused, with a plans to extend functionality to other vector databases.
 
 ## Table of Contents
 
@@ -38,16 +38,16 @@ The documentation will also cover configuration considerations and how to set up
 - **VectorDB Collection Analysis:** Demonstrates automated generation of intelligent descriptions for VectorDB collections using document retrieval and LLM-based summarization to capture the essence of stored documents.
 - **Multi-Query Collection Enhancement:** Shows how to enhance multi-query collection workflows by automatically generating feature-rich descriptions that improve retrieval accuracy across multiple collections.
 - **Map-Reduce Summarization:** Implements a sophisticated approach using dummy embeddings for document retrieval, LLM-generated local summaries, and map-reduce techniques for final description generation.
-- **Milvus Integration with Extensible Design:** Currently focused on Milvus vector database with plans for extension to other VectorDBs, demonstrating how to work with the AIQ toolkit retriever interface.
+- **Milvus Integration with Extensible Design:** Currently focused on Milvus vector database with plans for extension to other VectorDBs, demonstrating how to work with the NeMo Agent toolkit retriever interface.
 - **RAG Service Enhancement:** Provides a foundation for improving RAG (Retrieval-Augmented Generation) services by automatically generating more accurate collection metadata for better document retrieval.
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AIQ toolkit library, run the following commands:
+From the root directory of the NeMo Agent toolkit library, run the following commands:
 
 ```bash
 uv pip install -e ./examples/custom_functions/automated_description_generation
@@ -62,14 +62,14 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ### Setting Up Milvus
 
-This example uses a Milvus vector database to demonstrate how descriptions can be generated for collections. However, because this workflow uses the built-in AIQ toolkit abstractions for retrievers, this example will work for any database that implements the required methods of the AIQ toolkit `retriever` interface.
+This example uses a Milvus vector database to demonstrate how descriptions can be generated for collections. However, because this workflow uses the built-in NeMo Agent toolkit abstractions for retrievers, this example will work for any database that implements the required methods of the NeMo Agent toolkit `retriever` interface.
 
 The rest of this example assumes you have a running instance of Milvus at `localhost:19530`. If you would like a guide on setting up the database used in this example, please follow
-the instructions in the `simple_rag` example of AIQ toolkit [here](../../RAG/simple_rag/README.md).
+the instructions in the `simple_rag` example of NeMo Agent toolkit [here](../../RAG/simple_rag/README.md).
 
 If you have a different Milvus database you would like to use, please modify the `./configs/config.yml` with the appropriate URLs to your database instance.
 
-To use this example, you will also need to create a `wikipedia_docs` and a `cuda_docs` collection in your Milvus database. You can do this by following the instructions in the `simple_rag` example of AIQ toolkit [here](../../RAG/simple_rag/README.md) and running the following command:
+To use this example, you will also need to create a `wikipedia_docs` and a `cuda_docs` collection in your Milvus database. You can do this by following the instructions in the `simple_rag` example of NeMo Agent toolkit [here](../../RAG/simple_rag/README.md) and running the following command:
 
 ```bash
 python scripts/langchain_web_ingest.py --collection_name=cuda_docs
@@ -128,8 +128,7 @@ Let us explore the output of running the agent without an automated description 
 aiq run --config_file examples/custom_functions/automated_description_generation/configs/config_no_auto.yml --input "List 5 subspecies of Aardvark?"
 ```
 
-The expected output is as follows:
-
+**Expected Workflow Output**
 ```console
 2025-03-14 06:23:47,362 - aiq.front_ends.console.console_front_end_plugin - INFO - Processing input: ('List 5 subspecies of Aardvark?',)
 2025-03-14 06:23:47,365 - aiq.agent.react_agent.agent - INFO - Querying agent, attempt: 1
@@ -156,10 +155,9 @@ Final Answer: There is only one species of Aardvark, Orycteropus afer, and it ha
 2025-03-14 06:23:49,758 - aiq.front_ends.console.console_front_end_plugin - INFO - --------------------------------------------------
 Workflow Result:
 ['There is only one species of Aardvark, Orycteropus afer, and it has no recognized subspecies.']
---------------------------------------------------
 ```
 
-We see that the agent did not call tool for retrieval as it was incorrectly described. However, let us see what happens if we use the automated description generate function to intelligently sample the documents in the retriever and create an appropriate description. We could do so with the following configuration:
+If we look at the full output from the toolkit, we see that the agent did not call tool for retrieval as it was incorrectly described. However, let us see what happens if we use the automated description generate function to intelligently sample the documents in the retriever and create an appropriate description. We could do so with the following configuration:
 
 ```yaml
 llms:
@@ -213,30 +211,8 @@ If we run the updated configuration, we see the following output:
 aiq run --config_file examples/custom_functions/automated_description_generation/configs/config.yml --input "List 5 subspecies of Aardvark?"
 ```
 
-The expected output is as follows:
-
+**Expected Workflow Output**
 ```console
-$ aiq run --config_file examples/custom_functions/automated_description_generation/configs/config.yml --input "List 5 subspecies of Aardvark?"
-2025-05-16 11:07:32,969 - aiq.runtime.loader - WARNING - Loading module 'aiq_profiler_agent.register' from entry point 'aiq_profiler_agent' took a long time (317.265034 ms). Ensure all imports are inside your registered functions.
-2025-05-16 11:07:33,468 - aiq.runtime.loader - WARNING - Loading module 'aiq.agent.register' from entry point 'aiq_agents' took a long time (366.579533 ms). Ensure all imports are inside your registered functions.
-2025-05-16 11:07:33,675 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/custom_functions/automated_description_generation/configs/config.yml'
-2025-05-16 11:07:33,687 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
-2025-05-16 11:07:33,898 - aiq.retriever.milvus.retriever - INFO - Mivlus Retriever using _search for search.
-2025-05-16 11:07:33,900 - aiq_automated_description_generation.register - INFO - Building necessary components for the Automated Description Generation Workflow
-2025-05-16 11:07:33,928 - aiq_automated_description_generation.register - INFO - Components built, starting the Automated Description Generation Workflow
-None of PyTorch, TensorFlow >= 2.0, or Flax have been found. Models won't be available and only tokenizers, configuration and file/data utilities can be used.
-Token indices sequence length is longer than the specified maximum sequence length for this model (1253 > 1024). Running this sequence through the model will result in indexing errors
-2025-05-16 11:07:37,298 - aiq_automated_description_generation.register - INFO - Generated the dynamic description: Ask questions about the following collection of text: This collection appears to be a technical documentation of NVIDIA's CUDA toolkit, storing various code snippets, instructions, and guidelines for optimizing GPU-accelerated applications, with the primary purpose of assisting developers in harnessing the power of NVIDIA GPUs for general-purpose computing.
-
-Configuration Summary:
---------------------
-Workflow Type: react_agent
-Number of Functions: 2
-Number of LLMs: 1
-Number of Embedders: 1
-Number of Memory: 0
-Number of Retrievers: 1
-
 2025-05-16 11:07:40,778 - aiq.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
@@ -361,7 +337,6 @@ Final Answer: The 5 subspecies of Aardvark are:
 --------------------------------------------------
 Workflow Result:
 ['The 5 subspecies of Aardvark are:\n\n1. Orycteropus afer afer (Southern aardvark)\n2. O. a. adametzi  Grote, 1921 (Western aardvark)\n3. O. a. aethiopicus  Sundevall, 1843\n4. O. a. angolensis  Zukowsky & Haltenorth, 1957\n5. O. a. erikssoni  Lönnberg, 1906']
---------------------------------------------------
 ```
 
 We see that the agent called the `retrieve_tool`. This demonstrates how the automated description generation tool can be used to automatically generate descriptions for collections within a vector database. While this is a toy example, this can be quite helpful when descriptions are vague, or you have too many collections to describe!

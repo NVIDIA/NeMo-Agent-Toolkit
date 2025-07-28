@@ -152,7 +152,7 @@ class TypedBaseModel(BaseModel):
 
     @classmethod
     def static_type(cls):
-        return getattr(cls, '_typed_model_name', None)
+        return getattr(cls, '_typed_model_name')
 
     @classmethod
     def static_full_type(cls):

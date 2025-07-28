@@ -15,6 +15,12 @@
 
 general:
   use_uvloop: true
+  front_end:
+    _type: fastapi
+    cors:
+      allow_origins: ["http://localhost:3000"]
+      allow_headers: ["*"]
+      allow_methods: ["*"]
 
 functions:
   extract_por_tool:
@@ -46,7 +52,7 @@ llms:
     model_name: meta/llama-3.3-70b-instruct
     # model_name: "deepseek-ai/deepseek-r1"
     temperature: 0.0
-    seed : 33
+    seed: 33
     max_tokens: 2000
   agent_llm:
     _type: nim
@@ -54,15 +60,15 @@ llms:
     # model_name: mistralai/mixtral-8x22b-instruct-v0.1
     model_name: meta/llama-3.3-70b-instruct
     temperature: 0.0
-    seed : 33
+    seed: 33
     max_tokens: 2000
 
 workflow:
   _type: react_agent
   llm_name: agent_llm
   tool_names:
-   - extract_por_tool
-   - show_jira_tickets
-   - create_jira_tickets_tool
-   - get_jira_tickets_tool
+    - extract_por_tool
+    - show_jira_tickets
+    - create_jira_tickets_tool
+    - get_jira_tickets_tool
   verbose: true

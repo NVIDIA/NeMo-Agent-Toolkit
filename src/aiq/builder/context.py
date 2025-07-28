@@ -22,6 +22,9 @@ from contextvars import ContextVar
 
 from aiq.builder.intermediate_step_manager import IntermediateStepManager
 from aiq.builder.user_interaction_manager import AIQUserInteractionManager
+from aiq.data_models.authentication import AuthenticatedContext
+from aiq.data_models.authentication import AuthFlowType
+from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
 from aiq.data_models.intermediate_step import IntermediateStep
@@ -76,6 +79,9 @@ class AIQContextState(metaclass=Singleton):
                                              | None] = ContextVar(
                                                  "user_input_callback",
                                                  default=AIQUserInteractionManager.default_callback_handler)
+        self.user_auth_callback: ContextVar[Callable[[AuthProviderBaseConfig, AuthFlowType],
+                                                     Awaitable[AuthenticatedContext]]
+                                            | None] = ContextVar("user_auth_callback", default=None)
 
     @staticmethod
     def get() -> "AIQContextState":
@@ -223,6 +229,26 @@ class AIQContext:
             str: The active span ID.
         """
         return self._context_state.active_span_id_stack.get()[-1]
+
+    @property
+    def user_auth_callback(self) -> Callable[[AuthProviderBaseConfig, AuthFlowType], Awaitable[AuthenticatedContext]]:
+        """
+        Retrieves the user authentication callback function from the context state.
+
+        This property provides access to the user authentication callback function stored in the context state.
+        The callback function is responsible for handling user authentication based on the provided configuration.
+
+        Returns:
+            Callable[[AuthenticationBaseConfig], Awaitable[AuthenticatedContext]]: The user authentication
+            callback function.
+
+        Raises:
+            RuntimeError: If the user authentication callback is not set in the context.
+        """
+        callback = self._context_state.user_auth_callback.get()
+        if callback is None:
+            raise RuntimeError("User authentication callback is not set in the context.")
+        return callback
 
     @staticmethod
     def get() -> "AIQContext":
