@@ -31,6 +31,7 @@ from aiq.data_models.function import EmptyFunctionConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.logging import LoggingBaseConfig
+from aiq.data_models.optimizer import OptimizerConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 
@@ -254,6 +255,9 @@ class AIQConfig(HashableBaseModel):
     # Object Stores Configuration
     object_stores: dict[str, ObjectStoreBaseConfig] = {}
 
+    # Optimizer Configuration
+    optimizer: OptimizerConfig = OptimizerConfig()
+
     # Retriever Configuration
     retrievers: dict[str, RetrieverBaseConfig] = {}
 
@@ -336,6 +340,9 @@ class AIQConfig(HashableBaseModel):
                                      typing.Annotated[type_registry.compute_annotation(ObjectStoreBaseConfig),
                                                       Discriminator(TypedBaseModel.discriminator)]]
 
+        OptimizerAnnotation = typing.Annotated[type_registry.compute_annotation(OptimizerConfig),
+                                               Discriminator(TypedBaseModel.discriminator)]
+
         RetrieverAnnotation = dict[str,
                                    typing.Annotated[type_registry.compute_annotation(RetrieverBaseConfig),
                                                     Discriminator(TypedBaseModel.discriminator)]]
@@ -377,6 +384,11 @@ class AIQConfig(HashableBaseModel):
         object_stores_field = cls.model_fields.get("object_stores")
         if object_stores_field is not None and object_stores_field.annotation != ObjectStoreAnnotation:
             object_stores_field.annotation = ObjectStoreAnnotation
+            should_rebuild = True
+
+        optimizer_field = cls.model_fields.get("optimizer")
+        if optimizer_field is not None and optimizer_field.annotation != OptimizerAnnotation:
+            optimizer_field.annotation = OptimizerAnnotation
             should_rebuild = True
 
         retrievers_field = cls.model_fields.get("retrievers")

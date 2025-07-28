@@ -33,6 +33,7 @@ dependencies = [
   "numpy~=1.26",
   "openinference-semantic-conventions~=0.1.14",
   "openpyxl~=3.1",
+  "optuna~=4.4.0",
   "pkce==1.0.3",
   "pkginfo~=1.12",
   "platformdirs~=4.3",

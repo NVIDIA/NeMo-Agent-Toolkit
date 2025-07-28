@@ -575,6 +575,7 @@ dependencies = [
     { name = "numpy" },
     { name = "openinference-semantic-conventions" },
     { name = "openpyxl" },
+    { name = "optuna" },
     { name = "pkce" },
     { name = "pkginfo" },
     { name = "platformdirs" },
@@ -768,6 +769,7 @@ requires-dist = [
     { name = "numpy", specifier = "~=1.26" },
     { name = "openinference-semantic-conventions", specifier = "~=0.1.14" },
     { name = "openpyxl", specifier = "~=3.1" },
+    { name = "optuna", specifier = "~=4.4.0" },
     { name = "pkce", specifier = "==1.0.3" },
     { name = "pkginfo", specifier = "~=1.12" },
     { name = "platformdirs", specifier = "~=4.3" },
@@ -1745,6 +1747,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/cc/c7/eed8f27100517e8c0e6b923d5f0845d0cb99763da6fdee00478f91db7325/coloredlogs-15.0.1.tar.gz", hash = "sha256:7c991aa71a4577af2f82600d8f8f3a89f936baeaf9b50a9c197da014e5bf16b0", size = 278520, upload-time = "2021-06-11T10:22:45.202Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a7/06/3d6badcf13db419e25b07041d9c7b4a2c331d3f4e7134445ec5df57714cd/coloredlogs-15.0.1-py2.py3-none-any.whl", hash = "sha256:612ee75c546f53e92e70049c9dbfcc18c935a2b9a53b66085ce9ef6a6e5c0934", size = 46018, upload-time = "2021-06-11T10:22:42.561Z" },
+]
+
+[[package]]
+name = "colorlog"
+version = "6.9.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d3/7a/359f4d5df2353f26172b3cc39ea32daa39af8de522205f512f458923e677/colorlog-6.9.0.tar.gz", hash = "sha256:bfba54a1b93b94f54e1f4fe48395725a3d92fd2a4af702f6bd70946bdc0c6ac2", size = 16624, upload-time = "2024-10-29T18:34:51.011Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e3/51/9b208e85196941db2f0654ad0357ca6388ab3ed67efdbfc799f35d1f83aa/colorlog-6.9.0-py3-none-any.whl", hash = "sha256:5906e71acd67cb07a71e779c47c4bcb45fb8c2993eebe9e5adcd6a6f1b283eff", size = 11424, upload-time = "2024-10-29T18:34:49.815Z" },
 ]
 
 [[package]]
@@ -4954,6 +4968,24 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/32/8e/214fa817f63b9f068519463d8ab46afd5d03b98930c39394a37ae3e741d0/opentelemetry_semantic_conventions-0.56b0.tar.gz", hash = "sha256:c114c2eacc8ff6d3908cb328c811eaf64e6d68623840be9224dc829c4fd6c2ea", size = 124221, upload-time = "2025-07-11T12:23:40.71Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/3f/e80c1b017066a9d999efffe88d1cce66116dcf5cb7f80c41040a83b6e03b/opentelemetry_semantic_conventions-0.56b0-py3-none-any.whl", hash = "sha256:df44492868fd6b482511cc43a942e7194be64e94945f572db24df2e279a001a2", size = 201625, upload-time = "2025-07-11T12:23:25.63Z" },
+]
+
+[[package]]
+name = "optuna"
+version = "4.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "alembic" },
+    { name = "colorlog" },
+    { name = "numpy" },
+    { name = "packaging" },
+    { name = "pyyaml" },
+    { name = "sqlalchemy" },
+    { name = "tqdm" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a5/e0/b303190ae8032d12f320a24c42af04038bacb1f3b17ede354dd1044a5642/optuna-4.4.0.tar.gz", hash = "sha256:a9029f6a92a1d6c8494a94e45abd8057823b535c2570819072dbcdc06f1c1da4", size = 467708, upload-time = "2025-06-16T05:13:00.024Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5c/5e/068798a8c7087863e7772e9363a880ab13fe55a5a7ede8ec42fab8a1acbb/optuna-4.4.0-py3-none-any.whl", hash = "sha256:fad8d9c5d5af993ae1280d6ce140aecc031c514a44c3b639d8c8658a8b7920ea", size = 395949, upload-time = "2025-06-16T05:12:58.37Z" },
 ]
 
 [[package]]

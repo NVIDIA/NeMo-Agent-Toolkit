@@ -22,6 +22,8 @@ from aiq.builder.builder import Builder
 from aiq.builder.llm import LLMProviderInfo
 from aiq.cli.register_workflow import register_llm_provider
 from aiq.data_models.llm import LLMBaseConfig
+from aiq.data_models.optimizable import OptimizableField
+from aiq.data_models.optimizable import SearchSpace
 from aiq.data_models.retry_mixin import RetryMixin
 
 
@@ -35,9 +37,15 @@ class NIMModelConfig(LLMBaseConfig, RetryMixin, name="nim"):
     model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
                             serialization_alias="model",
                             description="The model name for the hosted NIM.")
-    temperature: float = Field(default=0.0, description="Sampling temperature in [0, 1].")
-    top_p: float = Field(default=1.0, description="Top-p for distribution sampling.")
-    max_tokens: PositiveInt = Field(default=300, description="Maximum number of tokens to generate.")
+    temperature: float = OptimizableField(default=0.0,
+                                          description="Sampling temperature in [0, 1].",
+                                          space=SearchSpace(high=0.8, low=0.1, step=0.2))
+    top_p: float = OptimizableField(default=1.0,
+                                    description="Top-p for distribution sampling.",
+                                    space=SearchSpace(high=1.0, low=0.5, step=0.1))
+    max_tokens: PositiveInt = OptimizableField(default=300,
+                                               description="Maximum number of tokens to generate.",
+                                               space=SearchSpace(high=2048, low=128, step=512))
 
 
 @register_llm_provider(config_type=NIMModelConfig)
