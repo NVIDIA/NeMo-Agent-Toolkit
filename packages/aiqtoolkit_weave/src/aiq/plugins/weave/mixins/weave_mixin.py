@@ -24,6 +24,7 @@ from weave.trace.weave_client import Call
 
 from aiq.data_models.span import Span
 from aiq.data_models.span import SpanAttributes
+from aiq.observability.exporter.base_exporter import IsolatedAttribute
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,8 @@ class WeaveMixin:
         entity (str | None): The entity name to group the telemetry traces.
     """
 
+    _weave_calls: IsolatedAttribute[dict[str, Call]] = IsolatedAttribute(dict)
+
     def __init__(self, *args, project: str, entity: str | None = None, **kwargs):
         """Initialize the Weave exporter with the specified project and entity.
 
@@ -49,7 +52,6 @@ class WeaveMixin:
         self._gc = weave_client_context.require_weave_client()
         self._project = project
         self._entity = entity
-        self._weave_calls = {}
         super().__init__(*args, **kwargs)
 
     async def export_processed(self, item: Span | list[Span]) -> None:
