@@ -17,7 +17,11 @@ limitations under the License.
 
 # Agent Intelligence Toolkit Examples
 
-Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular feature or use case of the AIQ toolkit library. Most of these contain a custom [workflow](../docs/source/tutorials/index.md) along with a set of custom tools ([functions](../docs/source/workflows/functions/index.md) in AIQ toolkit). These examples can be used as a starting off point for creating your own custom workflows and tools. Each example contains a `README.md` file that explains the use case along with instructions on how to run the example.
+Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular feature or use case of the NeMo Agent toolkit library. Most of these contain a custom [workflow](../docs/source/tutorials/index.md) along with a set of custom tools ([functions](../docs/source/workflows/functions/index.md) in NeMo Agent toolkit). These examples can be used as a starting off point for creating your own custom workflows and tools. Each example contains a `README.md` file that explains the use case along with instructions on how to run the example.
+
+## Installation and Setup
+
+To run the examples, install the NeMo Agent toolkit from source, if you haven't already done so, by following the instructions in [Install From Source](../docs/source/quick-start/installing.md#install-from-source).
 
 ## Example Categories
 
@@ -59,11 +63,12 @@ Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular f
 - **[`redact_pii`](observability/redact_pii/)**: Demonstrates how to use Weights & Biases (W&B) Weave with PII redaction
 - **[`simple_calculator_observability`](observability/simple_calculator_observability/)**: Basic simple calculator with integrated monitoring, telemetry, and observability features
 - **[`alert_triage_agent`](advanced_agents/alert_triage_agent/)**: Production-ready intelligent alert triage system using LangGraph that automates system monitoring diagnostics with tools for hardware checks, network connectivity, performance analysis, and generates structured triage reports with root cause categorization
-- **[`profiler_agent`](advanced_agents/profiler_agent/)**: Performance profiling agent for analyzing AIQ toolkit workflow performance and bottlenecks using Phoenix observability server with comprehensive metrics collection and analysis
+- **[`profiler_agent`](advanced_agents/profiler_agent/)**: Performance profiling agent for analyzing NeMo Agent toolkit workflow performance and bottlenecks using Phoenix observability server with comprehensive metrics collection and analysis
 - **[`email_phishing_analyzer`](evaluation_and_profiling/email_phishing_analyzer/)**: Security-focused email analysis system that detects phishing attempts using multiple LLMs, including its evaluation and profiling configurations
 - **[`text_file_ingest`](documentation_guides/workflows/text_file_ingest/)**: Text file processing and ingestion pipeline for document workflows
 
 ### Memory ([`memory`](memory/))
+- **[`redis`](memory/redis/)**: Basic long-term memory example using redis
 - **[`simple_rag`](RAG/simple_rag/)**: Complete RAG system with Milvus vector database, document ingestion, and long-term memory using Mem0 platform
 - **[`semantic_kernel_demo`](frameworks/semantic_kernel_demo/)**: Multi-agent travel planning system using Microsoft Semantic Kernel with specialized agents for itinerary creation, budget management, and report formatting, including long-term memory for user preferences
 
@@ -80,7 +85,7 @@ Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular f
 
 ## Advanced Agents ([`advanced_agents`](advanced_agents/))
 - **[`alert_triage_agent`](advanced_agents/alert_triage_agent/)**: Production-ready intelligent alert triage system using LangGraph that automates system monitoring diagnostics with tools for hardware checks, network connectivity, performance analysis, and generates structured triage reports with root cause categorization
-- **[`profiler_agent`](advanced_agents/profiler_agent/)**: Performance profiling agent for analyzing AIQ toolkit workflow performance and bottlenecks using Phoenix observability server with comprehensive metrics collection and analysis
+- **[`profiler_agent`](advanced_agents/profiler_agent/)**: Performance profiling agent for analyzing NeMo Agent toolkit workflow performance and bottlenecks using Phoenix observability server with comprehensive metrics collection and analysis
 - **[`AIQ Blueprint`](advanced_agents/aiq_blueprint/)**: Blueprint documentation for the official NVIDIA AIQ Blueprint for building an AI agent designed for enterprise research use cases.
 
 ### Documentation Guides ([`documentation_guides`](documentation_guides/))
@@ -88,5 +93,3 @@ Each NVIDIA Agent Intelligence (AIQ) toolkit example demonstrates a particular f
 - **[`workflows`](documentation_guides/workflows/)**: Workflow examples for documentation and tutorials:
   - **[`custom_workflow`](documentation_guides/workflows/custom_workflow/)**: Extended version of the basic simple example with multiple documentation sources (LangSmith and LangGraph)
   - **[`text_file_ingest`](documentation_guides/workflows/text_file_ingest/)**: Text file processing and ingestion pipeline for document workflows
-
-To run the examples, install the AIQ toolkit from source, if you haven't already done so, by following the instructions in  [Install From Source](../docs/source/quick-start/installing.md#install-from-source) .

@@ -17,12 +17,20 @@ limitations under the License.
 
 # AIQ Profiler Agent
 
-The profiler agent is a tool that allows you to analyze the performance of AIQ toolkit workflows. It uses the Phoenix server to store and retrieve traces of workflow runs.
+The profiler agent is a tool that allows you to analyze the performance of NeMo Agent toolkit workflows. It uses the Phoenix server to store and retrieve traces of workflow runs.
 
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Installation and Setup](#installation-and-setup)
+  - [Install this Workflow](#install-this-workflow)
+  - [Set Up API Keys](#set-up-api-keys)
+- [Run the Workflow](#run-the-workflow)
+- [Features](#features)
 
 ## Key Features
 
-- **Workflow Performance Analysis:** Demonstrates a specialized agent that analyzes AIQ toolkit workflow performance using Phoenix server traces for comprehensive performance monitoring.
+- **Workflow Performance Analysis:** Demonstrates a specialized agent that analyzes NeMo Agent toolkit workflow performance using Phoenix server traces for comprehensive performance monitoring.
 - **Token Usage Tracking:** Shows how to retrieve and analyze token consumption patterns across multiple workflow runs, providing insights into LLM resource utilization.
 - **Trace Visualization:** Generates flowcharts and visual representations of workflow execution patterns from stored Phoenix traces using natural language queries.
 - **Phoenix Server Integration:** Demonstrates integration with Phoenix observability platform for storing, retrieving, and analyzing workflow telemetry data.
@@ -30,11 +38,11 @@ The profiler agent is a tool that allows you to analyze the performance of AIQ t
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md) to create the development environment and install AIQ toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AIQ toolkit library, run the following commands:
+From the root directory of the NeMo Agent toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/advanced_agents/profiler_agent
@@ -47,7 +55,7 @@ If you have not already done so, follow the [Obtaining API Keys](../../../docs/s
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
-## Usage
+## Run the Workflow
 
 1. Start the Phoenix server if not already running. If you are using a remote Phoenix server, you can skip this step and modify the config/config.yml to point to the URL.
    ```bash
