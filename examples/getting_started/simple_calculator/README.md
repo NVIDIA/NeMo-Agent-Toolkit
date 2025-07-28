@@ -184,7 +184,6 @@ This will:
 3. **Access the services:**
    - Web UI: http://localhost:3000
    - API Documentation: http://localhost:8000/docs
-   - Phoenix Telemetry: http://localhost:6006
 
 Interact with the chat interface by prompting the agent with the message:
 ```
