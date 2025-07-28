@@ -40,7 +40,7 @@ class WeaveMixin:
         entity (str | None): The entity name to group the telemetry traces.
     """
 
-    _weave_calls: IsolatedAttribute[dict[str, Call]] = IsolatedAttribute(factory=dict)
+    _weave_calls: IsolatedAttribute[dict[str, Call]] = IsolatedAttribute(dict)
 
     def __init__(self, *args, project: str, entity: str | None = None, **kwargs):
         """Initialize the Weave exporter with the specified project and entity.
