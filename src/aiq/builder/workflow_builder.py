@@ -470,9 +470,32 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Return the tool configuration object
         return self._llms[llm_name].config
 
+    @aiq_experimental(feature_name="Authentication")
     @override
     async def add_auth_provider(self, name: str | AuthenticationRef,
                                 config: AuthProviderBaseConfig) -> AuthProviderBase:
+        """
+        Add an authentication provider to the workflow by constructing it from a configuration object.
+
+        Note: The Authentication Provider API is experimental and the API may change in future releases.
+
+        Parameters
+        ----------
+        name : str | AuthenticationRef
+            The name of the authentication provider to add.
+        config : AuthProviderBaseConfig
+            The configuration for the authentication provider.
+
+        Returns
+        -------
+        AuthProviderBase
+            The authentication provider instance.
+
+        Raises
+        ------
+        ValueError
+            If the authentication provider is already in the list of authentication providers.
+        """
 
         if (name in self._auth_providers):
             raise ValueError(f"Authentication `{name}` already exists in the list of Authentication Providers")
@@ -491,6 +514,26 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     @override
     async def get_auth_provider(self, auth_provider_name: str) -> AuthProviderBase:
+        """
+        Get the authentication provider instance for the given name.
+
+        Note: The Authentication Provider API is experimental and the API may change in future releases.
+
+        Parameters
+        ----------
+        auth_provider_name : str
+            The name of the authentication provider to get.
+
+        Returns
+        -------
+        AuthProviderBase
+            The authentication provider instance.
+
+        Raises
+        ------
+        ValueError
+            If the authentication provider is not found.
+        """
 
         if auth_provider_name not in self._auth_providers:
             raise ValueError(f"Authentication `{auth_provider_name}` not found")
@@ -656,8 +699,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return self._retrievers[retriever_name].config
 
+    @aiq_experimental(feature_name="ITS")
     @override
-    @aiq_experimental
     async def add_its_strategy(self, name: str | str, config: ITSStrategyBaseConfig):
         if (name in self._its_strategies):
             raise ValueError(f"ITS strategy '{name}' already exists in the list of ITS strategies")
@@ -675,7 +718,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise e
 
     @override
-    @aiq_experimental
     async def get_its_strategy(self,
                                strategy_name: str | ITSStrategyRef,
                                pipeline_type: PipelineTypeEnum,
@@ -705,7 +747,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise e
 
     @override
-    @aiq_experimental
     async def get_its_strategy_config(self,
                                       strategy_name: str | ITSStrategyRef,
                                       pipeline_type: PipelineTypeEnum,
