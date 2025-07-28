@@ -240,9 +240,11 @@ To estimate the GPU count required for the workflow, the calculator performs the
 
 3. **R² Value**
    - The calculator computes the R² (coefficient of determination) to indicate how well the linear model fits your data. An R² value close to 1.0 means a good fit.
+   - If the R² value is less than 0.7, the calculator will not use the linear fit to estimate the GPU count.
 
 4. **Outlier Removal**
-   - Outliers (data points that deviate significantly from the trend) are automatically detected and removed to ensure a robust fit. The R² value is used to determine, which points are considered outliers and should be excluded from the fit.
+   - Outliers (data points that deviate significantly from the trend) are automatically detected and removed to ensure a robust fit using the Interquartile Range (IQR) method.
+   - For datasets with fewer than 8 data points, outliers are detected using raw time metric values. For larger datasets, outliers are detected using residuals from the linear fit.
 
 5. **Estimating Required Concurrency**
    - Using your target time metric (for example, target workflow runtime), the calculator determines the maximum concurrency that can be supported for the `test_gpu_count`, while still meeting the target time. This is the `calculated_concurrency` in the formula below.
@@ -328,5 +330,3 @@ asyncio.run(run_calc())
 `CalcRunnerConfig` is a Pydantic model that contains the configuration for the calculator. It provides fine-grained control over the calculator's behavior.
 `CalcRunnerOutput` is a Pydantic model that contains the per-concurrency metrics and the GPU count estimates.
 For more information, refer to the [calculator data models](../../../src/aiq/profiler/calc/data_models.py).
-
-
