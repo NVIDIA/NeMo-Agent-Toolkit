@@ -61,7 +61,7 @@ uv pip install -e examples/getting_started/simple_calculator
 If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
-export OPENAI_API_KEY=<YOUR_API_KEY>  # OPTIONAL
+export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
 ### Run the Workflow
@@ -90,14 +90,14 @@ Prior to building the Docker image ensure that you have followed the steps in th
 From the root directory of the NeMo-Agent-Toolkit repository, build the Docker image:
 
 ```bash
-docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t simple_calculator -f examples/getting_started/simple_calculator Dockerfile .
+docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t simple_calculator -f examples/getting_started/simple_calculator/Dockerfile .
 ```
 
 ### Run the Docker Container
 Deploy the container:
 
 ```bash
-docker run --name simple_calculator_container -p 8000:8000 -p 6006:6006 -e OPENAI_API_KEY simple_calculator
+docker run --name simple_calculator_container -p 8000:8000 -p 6006:6006 -e NVIDIA_API_KEY simple_calculator
 ```
 
 Note, a phoenix telemetry service will be exposed at port 6006.
