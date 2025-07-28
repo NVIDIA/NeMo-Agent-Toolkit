@@ -51,8 +51,8 @@ authentication:
     client_url: "http://localhost:8000"
     authorization_url: https://auth.atlassian.com/authorize
     token_url: https://auth.atlassian.com/oauth/token
-    client_id: ${OAUTH_CLIENT_ID}
-    client_secret: ${OAUTH_CLIENT_SECRET}
+    client_id: ${AIQ_OAUTH_CLIENT_ID}
+    client_secret: ${AIQ_OAUTH_CLIENT_SECRET}
     token_endpoint_auth_method: client_secret_post
     response_type: code
     authorization_kwargs:
@@ -84,8 +84,8 @@ authentication:
       - openid
       - profile
       - email
-    client_id: ${OAUTH_CLIENT_ID}
-    client_secret: ${OAUTH_CLIENT_SECRET}
+    client_id: ${AIQ_OAUTH_CLIENT_ID}
+    client_secret: ${AIQ_OAUTH_CLIENT_SECRET}
     use_pkce: false
     # For testing with `aiq run` command, we need to run a local redirect server
     run_local_redirect_server: true
