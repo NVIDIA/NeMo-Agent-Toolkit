@@ -15,7 +15,34 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 # Alert Triage using Agent Intelligence Toolkit
-This example demonstrates how to build an intelligent alert triage system using AIQ toolkit and LangGraph. The system analyzes system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization. It showcases how to combine LLMs with domain-specific diagnostic tools to create an automated troubleshooting workflow.
+This example demonstrates how to build an intelligent alert triage system using NeMo Agent toolkit and LangGraph. The system analyzes system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization. It showcases how to combine LLMs with domain-specific diagnostic tools to create an automated troubleshooting workflow.
+
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Installation and Setup](#installation-and-setup)
+- [Use case description](#use-case-description)
+  - [Why use an agentic design?](#why-use-an-agentic-design)
+- [How it works](#how-it-works)
+    - [1. Alert Received](#1-alert-received)
+    - [2. Maintenance Check](#2-maintenance-check)
+    - [3. Alert Triage Agent](#3-alert-triage-agent)
+    - [4. Dynamic Tool Invocation](#4-dynamic-tool-invocation)
+    - [5. Root Cause Categorization](#5-root-cause-categorization)
+    - [6. Report Generation](#6-report-generation)
+    - [7. Analyst Review](#7-analyst-review)
+  - [Understanding the Configuration](#understanding-the-configuration)
+    - [Functions](#functions)
+    - [Workflow](#workflow)
+    - [LLMs](#llms)
+    - [Evaluation](#evaluation)
+      - [General](#general)
+      - [Evaluators](#evaluators)
+- [Example Usage](#example-usage)
+  - [Running in a live environment](#running-in-a-live-environment)
+    - [Credentials and Access](#credentials-and-access)
+  - [Running live with a HTTP server listening for alerts](#running-live-with-a-http-server-listening-for-alerts)
+  - [Running in offline mode](#running-in-offline-mode)
 
 ## Key Features
 
@@ -25,38 +52,25 @@ This example demonstrates how to build an intelligent alert triage system using 
 - **Structured Report Generation:** Produces markdown-formatted reports with alert summaries, collected metrics, analysis, recommended actions, and root cause categorization.
 - **Maintenance-Aware Processing:** Includes maintenance database integration to distinguish between actual issues and scheduled maintenance events.
 
-## Table of contents
-- [Alert Triage using Agent Intelligence Toolkit](#alert-triage-using-agent-intelligence-toolkit)
-  - [Key Features](#key-features)
-  - [Table of contents](#table-of-contents)
-  - [Use case description](#use-case-description)
-    - [Why use an agentic design?](#why-use-an-agentic-design)
-  - [How it works](#how-it-works)
-      - [1. Alert Received](#1-alert-received)
-      - [2. Maintenance Check](#2-maintenance-check)
-      - [3. Alert Triage Agent](#3-alert-triage-agent)
-      - [4. Dynamic Tool Invocation](#4-dynamic-tool-invocation)
-      - [5. Root Cause Categorization](#5-root-cause-categorization)
-      - [6. Report Generation](#6-report-generation)
-      - [7. Analyst Review](#7-analyst-review)
-    - [Understanding the config](#understanding-the-config)
-      - [Functions](#functions)
-      - [Workflow](#workflow)
-      - [LLMs](#llms)
-      - [Evaluation](#evaluation)
-        - [General](#general)
-        - [Evaluators](#evaluators)
-  - [Installation and setup](#installation-and-setup)
-    - [Install this workflow](#install-this-workflow)
-    - [Set up environment variables](#set-up-environment-variables)
-  - [Example Usage](#example-usage)
-    - [Running in a live environment](#running-in-a-live-environment)
-      - [Credentials and Access](#credentials-and-access)
-    - [Running live with a HTTP server listening for alerts](#running-live-with-a-http-server-listening-for-alerts)
-    - [Running in offline mode](#running-in-offline-mode)
+## Installation and Setup
 
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit, and follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
 
-## Use case description
+### Install This Workflow
+
+From the root directory of the NeMo Agent toolkit library, run the following commands:
+```bash
+uv pip install -e examples/RAG/simple_rag
+```
+
+### Set Up API Keys
+
+Export your NVIDIA API key:
+```bash
+export NVIDIA_API_KEY=<YOUR API KEY HERE>
+```
+
+## Use Case Description
 This example provides an agentic system designed to automate the triage of server-monitoring alerts. The system aims to address several key challenges in alert management:
 
 * **High alert volume** overwhelms security teams and makes timely triage difficult.
@@ -92,7 +106,7 @@ An agentic design powered by LLMs provides key benefits over traditional rule-ba
 - **Chooses the right tools dynamically**: Based on the alert context, the system can select the most relevant tools and data sources without manual intervention.
 - **Built-in Reporting**: Every investigation ends with a natural language summary (with analysis, findings, and next steps), saving time and providing traceability.
 
-## How it works
+## How It Works
 Here's a step-by-step breakdown of the workflow:
 
 ![Alert Triage Agent Architecture](./src/aiq_alert_triage_agent/data/ata_diagram.png)
@@ -157,7 +171,7 @@ The triage agent may call one or more of the following tools based on the alert 
 #### 7. Analyst Review
 - The final report is presented to an Analyst for review, action, or escalation.
 
-### Understanding the config
+### Understanding the Configuration
 
 #### Functions
 
@@ -278,25 +292,6 @@ Each entry under `evaluators` defines a specific metric to evaluate the pipeline
 
 The list of evaluators can be extended or swapped out depending on your evaluation goals.
 
-## Installation and setup
-
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md) to create the development environment and install AIQ toolkit.
-
-### Install this workflow
-
-From the root directory of the AIQ toolkit library, run the following commands:
-
-```bash
-uv pip install -e ./examples/advanced_agents/alert_triage_agent
-```
-
-### Set up environment variables
-As mentioned in the Install Guide, an `NVIDIA_API_KEY` environment variable is required to run AIQ toolkit.
-
-If you have your key in a `.env` file, use the following command to load it:
-```bash
-export $(grep -v '^#' .env | xargs)
-```
 
 ## Example Usage
 You can run the agent in [offline mode](#running-in-offline-mode) or [live mode](#running-live-with-a-http-server-listening-for-alerts). Offline mode allows you to evaluate the agent in a controlled, offline environment using synthetic data. Live mode allows you to run the agent in a real environment.
@@ -346,7 +341,7 @@ The example includes a Flask-based HTTP server ([`run.py`](./src/aiq_alert_triag
 To use this mode, first ensure you have configured your live environment as described in the previous section. Then:
 1. **Start the Alert Triage Server**
 
-   From the root directory of the AIQ toolkit library, run:
+   From the root directory of the NeMo Agent toolkit library, run:
    ```bash
    python examples/advanced_agents/alert_triage_agent/src/aiq_alert_triage_agent/run.py \
      --host 0.0.0.0 \
@@ -430,13 +425,13 @@ To use this mode, first ensure you have configured your live environment as desc
 
    You can monitor the progress of the triage process through these logs and the generated reports.
 
-### Running in offline mode
+### Running in Offline Mode
 Offline mode lets you evaluate the triage agent in a controlled, offline environment using synthetic data. Instead of calling real systems, the agent uses predefined inputs to simulate alerts and tool outputs, ideal for development, debugging, and tuning.
 
 To run in offline mode:
 1. **Set required environment variables**
 
-   Make sure `offline_mode: true` is set in both the `workflow` section and individual tool sections of your config file (see [Understanding the config](#understanding-the-config) section).
+   Make sure `offline_mode: true` is set in both the `workflow` section and individual tool sections of your config file (see [Understanding the configuration](#understanding-the-configuration) section).
 
 2. **How offline mode works:**
 
@@ -452,7 +447,9 @@ To run in offline mode:
    ```bash
    aiq run --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml --input "{your_alert_in_json_format}"
    ```
+   
    **Example:** To run the agent with a test question, use the following command:
+
    ```bash
    aiq run \
      --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml \
@@ -466,26 +463,11 @@ To run in offline mode:
        "timestamp": "2025-04-28T05:00:00.000000"
      }'
    ```
-   **Expected output:**
-   ```
-   2025-07-21 17:12:47,944 - aiq_alert_triage_agent - INFO - Preloaded test data from: examples/advanced_agents/alert_triage_agent/data/offline_data.csv
-   2025-07-21 17:12:47,945 - aiq_alert_triage_agent - INFO - Preloaded benign fallback data from: examples/advanced_agents/alert_triage_agent/data/benign_fallback_offline_data.json
-   2025-07-21 17:12:47,945 - aiq_alert_triage_agent - INFO - ================================================Running in offline mode=================================================
 
-   Configuration Summary:
-   --------------------
-   Workflow Type: alert_triage_agent
-   Number of Functions: 9
-   Number of LLMs: 6
-   Number of Embedders: 0
-   Number of Memory: 0
-   Number of Retrievers: 0
-
-   2025-07-21 17:12:47,960 - aiq_alert_triage_agent - INFO - Host: [test-instance-0.example.com] is NOT under maintenance according to the maintenance database
-   2025-07-21 17:14:45,234 - aiq_alert_triage_agent - INFO - Finished agent execution
-   2025-07-21 17:14:45,234 - aiq.front_ends.console.console_front_end_plugin - INFO -
-   --------------------------------------------------
-   Workflow Result:
+   **Expected Workflow Output**
+   
+   ```console
+   <snipped for brevity>
    ## Step 1: Analyze the Alert
    The alert received is of type "InstanceDown" for the host "test-instance-0.example.com" with a critical severity. The description mentions that the instance is not available for scraping for the last 5 minutes.
 
@@ -532,7 +514,9 @@ To run in offline mode:
    --------------------------------------------------
    2025-07-21 17:14:45,234 - aiq_alert_triage_agent - INFO - Cleaning up
    ```
+
    To evaluate the agent, use the following command:
+   
    ```bash
    aiq eval --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml
    ```
@@ -548,7 +532,7 @@ To run in offline mode:
 
    The output file will contain a new column named `output`, which includes the markdown report generated by the agent for each data point (i.e., each row in the CSV). Navigate to that rightmost `output` column to view the report for each test entry.
 
-   **Sample output snippet:**
+   **Sample Workflow Result**
 ```
 ## Alert Summary
 The alert received was for an "InstanceDown" event, indicating that the instance "test-instance-0.example.com" was not available for scraping for the last 5 minutes.

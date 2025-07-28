@@ -44,11 +44,11 @@ limitations under the License.
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AIQ toolkit library, run the following commands:
+From the root directory of the NeMo Agent toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/evaluation_and_profiling/email_phishing_analyzer
@@ -65,7 +65,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ### Run the Workflow
 
-Run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
+Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
 aiq run --config_file examples/evaluation_and_profiling/email_phishing_analyzer/configs/config.yml --input "Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of $[Amount] to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]"
@@ -73,9 +73,8 @@ aiq run --config_file examples/evaluation_and_profiling/email_phishing_analyzer/
 
 The configuration file specified above contains configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/workflows/profiler.md).
 
-**Expected Output**
+**Expected Workflow Output**
 ```console
-$ aiq run --config_file examples/evaluation_and_profiling/email_phishing_analyzer/configs/config.yml --input "Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of $[Amount] to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]"
 2025-04-23 15:24:54,183 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (502.501011 ms). Ensure all imports are inside your registered functions.
 2025-04-23 15:24:54,483 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/evaluation_and_profiling/email_phishing_analyzer/configs/config.yml'
 2025-04-23 15:24:54,495 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
@@ -122,8 +121,8 @@ Final Answer: This email is likely a phishing attempt, as it requests sensitive 
 --------------------------------------------------
 Workflow Result:
 ['This email is likely a phishing attempt, as it requests sensitive personal information and exhibits other suspicious signals.']
---------------------------------------------------
 ```
+
 ---
 
 ## Deployment-Oriented Setup
@@ -132,7 +131,7 @@ For a production deployment, use Docker:
 
 ### Build the Docker Image
 
-Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AIQ toolkit virtual environment.
+Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the NeMo Agent toolkit virtual environment.
 
 From the root directory of the Simple Calculator repository, build the Docker image:
 
@@ -161,6 +160,6 @@ curl -X 'POST' \
 ### Expected API Output
 The API response should look like this:
 
-```bash
+```json
 {"value":"This email is likely a phishing attempt. It requests sensitive information, such as account and routing numbers, which is a common tactic used by scammers. The email also lacks specific details about the purchase, which is unusual for a refund notification. Additionally, the greeting is impersonal, which suggests a lack of personalization. It is recommended to be cautious when responding to such emails and to verify the authenticity of the email before providing any sensitive information."}
 ```

@@ -17,23 +17,20 @@ limitations under the License.
 
 # A Simple LLM Calculator
 
-This example demonstrates an end-to-end (E2E) agentic workflow using the AIQ toolkit library, fully configured through a YAML file. It showcases the AIQ toolkit plugin system and `Builder` to seamlessly integrate pre-built and custom tools into workflows.
+This example demonstrates an end-to-end (E2E) agentic workflow using the NeMo Agent toolkit library, fully configured through a YAML file. It showcases the NeMo Agent toolkit plugin system and `Builder` to seamlessly integrate pre-built and custom tools into workflows.
 
 ## Table of Contents
 
-- [A Simple LLM Calculator](#a-simple-llm-calculator)
-  - [Table of Contents](#table-of-contents)
-  - [Key Features](#key-features)
-  - [Installation and Setup](#installation-and-setup)
-    - [Install this Workflow:](#install-this-workflow)
-    - [Set Up API Keys](#set-up-api-keys)
-    - [Run the Workflow](#run-the-workflow)
-  - [Deployment-Oriented Setup](#deployment-oriented-setup)
-    - [Build the Docker Image](#build-the-docker-image)
-    - [Run the Docker Container](#run-the-docker-container)
-    - [Test the API](#test-the-api)
-    - [Expected API Output](#expected-api-output)
-
+- [Key Features](#key-features)
+- [Installation and Setup](#installation-and-setup)
+  - [Install this Workflow:](#install-this-workflow)
+  - [Set Up API Keys](#set-up-api-keys)
+  - [Run the Workflow](#run-the-workflow)
+- [Deployment-Oriented Setup](#deployment-oriented-setup)
+  - [Build the Docker Image](#build-the-docker-image)
+  - [Run the Docker Container](#run-the-docker-container)
+  - [Test the API](#test-the-api)
+  - [Expected API Output](#expected-api-output)
 
 ---
 
@@ -42,18 +39,18 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the AIQ too
 - **Custom Calculator Tools:** Demonstrates five mathematical tools - `calculator_multiply`, `calculator_inequality`, `calculator_divide`, `calculator_subtract`, and `current_datetime` for mathematical operations and time-based comparisons.
 - **ReAct Agent Integration:** Uses a `react_agent` that performs reasoning between tool calls to solve complex mathematical queries requiring multiple steps.
 - **Multi-step Problem Solving:** Shows how an agent can break down complex questions like "Is the product of 2 * 4 greater than the current hour?" into sequential tool calls.
-- **Custom Function Registration:** Demonstrates the AIQ toolkit plugin system for registering custom mathematical functions with proper validation and error handling.
+- **Custom Function Registration:** Demonstrates the NeMo Agent toolkit plugin system for registering custom mathematical functions with proper validation and error handling.
 - **YAML-based Configuration:** Fully configurable workflow that showcases how to orchestrate multiple tools through simple configuration.
 
 ---
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AIQ toolkit library, run the following commands:
+From the root directory of the NeMo Agent toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/getting_started/simple_calculator
@@ -69,98 +66,16 @@ export OPENAI_API_KEY=<YOUR_API_KEY>  # OPTIONAL
 
 ### Run the Workflow
 
-Return to your original terminal, and run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
+Return to your original terminal, and run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
 aiq run --config_file examples/getting_started/simple_calculator/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
-**Expected Output**
-The workflow output can be quite lengthy, the end of the workflow output should contain something similar to the following (the final answer will depend on the time of day the workflow is run):
-```console
-$ aiq run --config_file examples/getting_started/simple_calculator/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
-2025-04-23 15:58:34,877 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (440.151215 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:58:35,193 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/getting_started/simple_calculator/configs/config.yml'
-2025-04-23 15:58:35,199 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
-
-Configuration Summary:
---------------------
-Workflow Type: react_agent
-Number of Functions: 5
-Number of LLMs: 2
-Number of Embedders: 0
-Number of Memory: 0
-Number of Retrievers: 0
-
-2025-04-23 15:58:36,674 - aiq.agent.react_agent.agent - INFO -
-------------------------------
-[AGENT]
-Agent input: Is the product of 2 * 4 greater than the current hour of the day?
-Agent's thoughts:
-Thought: To answer this question, I need to calculate the product of 2 and 4, and then compare it to the current hour of the day.
-
-Action: calculator_multiply
-Action Input: {'text': '2 * 4'}
-
-
-------------------------------
-2025-04-23 15:58:36,682 - aiq.agent.react_agent.agent - INFO -
-------------------------------
-[AGENT]
-Calling tools: calculator_multiply
-Tool's input: {"text": "2 * 4"}
-Tool's response:
-The product of 2 * 4 is 8
-------------------------------
-2025-04-23 15:58:37,704 - aiq.agent.react_agent.agent - INFO -
-------------------------------
-[AGENT]
-Agent input: Is the product of 2 * 4 greater than the current hour of the day?
-Agent's thoughts:
-Thought: Now that I have the product of 2 and 4, I need to get the current hour of the day to compare it with the product.
-
-Action: current_datetime
-Action Input: None
-------------------------------
-2025-04-23 15:58:37,710 - aiq.agent.react_agent.agent - INFO -
-------------------------------
-[AGENT]
-Calling tools: current_datetime
-Tool's input: None
-Tool's response:
-The current time of day is 2025-04-23 15:58:37
-------------------------------
-2025-04-23 15:58:38,865 - aiq.agent.react_agent.agent - INFO -
-------------------------------
-[AGENT]
-Agent input: Is the product of 2 * 4 greater than the current hour of the day?
-Agent's thoughts:
-Thought: Now that I have the current time of day, I can extract the hour and compare it with the product of 2 and 4.
-
-Action: calculator_inequality
-Action Input: {'text': '8 > 15'}
-------------------------------
-2025-04-23 15:58:38,871 - aiq.agent.react_agent.agent - INFO -
-------------------------------
-[AGENT]
-Calling tools: calculator_inequality
-Tool's input: {"text": "8 > 15"}
-Tool's response:
-First number 8 is less than the second number 15
-------------------------------
-2025-04-23 15:58:39,978 - aiq.agent.react_agent.agent - INFO -
-------------------------------
-[AGENT]
-Agent input: Is the product of 2 * 4 greater than the current hour of the day?
-Agent's thoughts:
-Thought: I now know the final answer
-
-Final Answer: No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 15).
-------------------------------
-2025-04-23 15:58:39,981 - aiq.front_ends.console.console_front_end_plugin - INFO -
---------------------------------------------------
-Workflow Result:
-['No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 15).']
+**Expected Workflow Output**
+Note that the output is subject to the time of day when the workflow was run. For this example output, it was run in the afternoon.
+```
+No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 15).
 ```
 
 
@@ -170,7 +85,7 @@ For a production deployment, use Docker:
 
 ### Build the Docker Image
 
-Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AIQ toolkit virtual environment.
+Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the NeMo Agent toolkit virtual environment.
 
 From the root directory of the Simple Calculator repository, build the Docker image:
 

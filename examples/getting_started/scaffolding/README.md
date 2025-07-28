@@ -19,6 +19,14 @@ limitations under the License.
 
 This guide demonstrates how to quickly scaffold and generate new NVIDIA NeMo Agent toolkit workflows using automated commands and intelligent code generation. Learn to create structured projects with proper configuration, dependencies, and Cursor rules integration for enhanced development experience.
 
+## Key Features
+
+- **Automated Workflow Scaffolding:** Demonstrates quick generation of complete NeMo Agent toolkit workflow projects with proper directory structure, configuration files, and dependency management.
+- **Project Template System:** Provides predefined templates for common workflow patterns including ReAct agents, tool-calling agents, and custom function implementations.
+- **Cursor Rules Integration:** Shows how to leverage intelligent code completion and project-specific development rules for enhanced development experience.
+- **Configuration Generation:** Automatically generates YAML configuration files with appropriate settings for different workflow types and agent architectures.
+- **Dependency Management:** Handles automatic setup of required dependencies and virtual environment configuration for new workflow projects.
+
 ## What You'll Learn
 
 - **Workflow scaffolding**: Generate complete workflow projects with proper structure

@@ -72,10 +72,6 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
 
     async def _handle_oauth2_auth_code_flow(self, config: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext:
 
-        if config.run_local_redirect_server:
-            logger.warning("Running a local redirect server is not supported in the WebSocket flow handler. Ignoring "
-                           "this setting.")
-
         state = secrets.token_urlsafe(16)
         flow_state = FlowState(config=config)
 

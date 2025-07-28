@@ -65,41 +65,7 @@ application. During registration, you typically provide the following:
 | Production      | `https://yourdomain.com/auth/redirect`| Should use HTTPS and match exactly.|
 
 ### Configuring Registered App Credentials in Workflow Configuration YAML
-After registering your application upload your API authentication credentials in the Workflow Configuration YAML file
-under the `authentication` key.
-
-#### Common Authorization Code Grant Flow Credentials
-
-| **Field**                | **Description**     |
-|--------------------------|---------------------|
-| `client_id`           | The unique ID assigned to your application by the API provider.|
-| `client_secret`       | A secret key used to authenticate the application with the token server.|
-| `authorization_url`   | URL to which users are redirected to authorize the application.|
-| `token_url`           | URL where the authorization code is exchanged for access and optionally refresh tokens.|
-| `redirect_uri`        | The callback URL the provider redirects to after user authorization. Must match the registered value.|
-| `scope`               | A list of requested permissions or access scopes (for example, `read`, `write`, or `email`).|
-| `state`               | An optional CSRF protection value; helps maintain request integrity between client and server.|
-| `code_challenge`      | Used for PKCE; a hashed version of `code_verifier` sent in the initial authorization request.|
-| `code_verifier`       | Used for PKCE; a high-entropy string used to validate the code exchange.|
-
-#### Common Client Credentials Flow Credentials
-
-| **Field**                | **Description**     |
-|--------------------------|---------------------|
-| `client_id`          | The unique ID assigned to your application by the API provider.  |
-| `client_secret`      | A secret key used to authenticate the application with the token server. |
-| `token_url`          | URL where the authorization code is exchanged for access and optionally refresh tokens. |
-| `scope` (optional)   | A list of requested permissions or access scopes (for example, `read`, `write`, or `email`).|
-
-#### Common Device Authorization Flow Credentials
-
-| **Field**                  | **Description**      |
-|----------------------------|----------------------|
-| `client_id`                | The unique ID of your app registered with the API provider.|
-| `device_authorization_url` | The endpoint where the app requests a `device_code` and `user_code`.|
-| `token_url`                | The endpoint to poll and exchange the `device_code` for an access token.|
-| `scope`                    | A list of requested permissions or access scopes (for example, `read`, `write`, or `email`).|
-| `verification_uri`         | URL the user visits on a separate device to authorize the app.|
+After registering your application note the any credentials you need to use in the workflow configuration YAML file such as the client ID and client secret. These will be used in the next section when configuring the authentication provider.
 
 
 ## 2. Configuring Authentication Credentials
@@ -111,6 +77,9 @@ API configurations are
 [API Key Configuration](../../../src/aiq/authentication/api_key/api_key_auth_provider_config.py), and [Basic HTTP Authentication](../../../src/aiq/authentication/http_basic_auth/register.py).
 
 ### Authentication YAML Configuration Example
+
+The following example shows how to configure the authentication credentials for the OAuth 2.0 Authorization Code Grant Flow and API Key authentication. More information about each field can be queried using the `aiq info components -t authentication_provider` command.
+
 ```yaml
 authentication:
   test_auth_provider:
@@ -157,39 +126,38 @@ authentication:
 | `header_prefix`                 | Optional prefix for the HTTP header used to transmit the API key in authenticated requests (e.g., Bearer). |
 
 
-## 3. Using the OAuth Authentication Utility Function
-The `auth_tool` function can be used to authenticate to API resources or serve as an example for integrating authentication in your own `Functions`.
+## 3. Using the Authentication Provider
+To use the authentication provider in your workflow, you can use the `AuthenticationRef` data model to retrieve the authentication provider from the `WorkflowBuilder` object.
 
 ### Sample Authentication Tool and Authentication Usage
 ```python
-class AuthTool(FunctionBaseConfig, name="auth_tool"):
-    """Authenticate to any registered API provider using OAuth2 authorization flow with browser consent handling."""
-    auth_provider: AuthenticationRef = Field(description="Reference to the authentication provider "
-                                             "to use for authentication.")
+class WhoAmIConfig(FunctionBaseConfig, name="who_am_i"):
+    """Find out who the currently logged in user is."""
+    auth_provider: AuthenticationRef = Field(description="Reference to the authentication provider to use for authentication.")
 
 
-@register_function(config_type=AuthTool)
-async def auth_tool(config: AuthTool, builder: Builder):
+@register_function(config_type=WhoAmIConfig)
+async def auth_tool(config: WhoAmIConfig, builder: Builder):
     """
     Uses authentication to authenticate to any registered API provider.
     """
-    basic_auth_client: AuthenticationClientBase = await builder.get_authentication(config.auth_provider)
+    auth_provider: AuthProviderBase = await builder.get_authentication(config.auth_provider)
 
-    async def _arun(user_id: str) -> AuthResult:
+    async def _arun(user_id: str) -> str:
         try:
             # Perform authentication (this will invoke the user authentication callback)
-            auth_context: AuthResult = await basic_auth_client.authenticate(user_id=user_id)
+            auth_context: AuthResult = await auth_provider.authenticate(user_id=user_id)
 
-            if not auth_context or not auth_context.credentials:
-                raise RuntimeError(f"Failed to authenticate user: {user_id}: Invalid credentials")
-
-            return auth_context
+            # With the auth context, we can make a request to the protected API resource
+            async with httpx.AsyncClient(auth=auth_context) as client:
+                response = await client.get("https://api.example.com/user")
+                return response.json()
 
         except Exception as e:
             logger.exception("HTTP Basic authentication failed", exc_info=True)
             return f"HTTP Basic authentication for '{user_id}' failed: {str(e)}"
 
-    yield FunctionInfo.from_fn(_arun, description="Perform authentication with a given user ID.")
+    yield FunctionInfo.from_fn(_arun, description="Find out who the currently logged in user is.")
 ```
 
 ## 4. Authentication by Application Configuration

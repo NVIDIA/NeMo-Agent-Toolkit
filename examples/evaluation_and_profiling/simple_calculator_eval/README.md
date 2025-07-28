@@ -47,7 +47,7 @@ Install this evaluation example:
 uv pip install -e examples/evaluation_and_profiling/simple_calculator_eval
 ```
 
-## Usage
+## Run the Workflow
 
 ### Running Evaluation
 
