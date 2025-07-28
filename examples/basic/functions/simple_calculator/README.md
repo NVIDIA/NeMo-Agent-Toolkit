@@ -33,6 +33,7 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the AIQ too
     - [Run the Docker Container](#run-the-docker-container)
     - [Test the API](#test-the-api)
     - [Expected API Output](#expected-api-output)
+    - [Deployment with UI](#deployment-with-ui)
 
 
 ---
@@ -171,7 +172,7 @@ For a production deployment, use Docker:
 
 Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AIQ toolkit virtual environment.
 
-From the root directory of the Simple Calculator repository, build the Docker image:
+From the root directory of the NeMo-Agent-Toolkit repository, build the Docker image:
 
 ```bash
 docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t simple_calculator -f examples/basic/functions/simple_calculator/Dockerfile .
@@ -181,7 +182,7 @@ docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t simple_calcu
 Deploy the container:
 
 ```bash
-docker run -p 8000:8000 -p 6006:6006 -e NVIDIA_API_KEY simple_calculator
+docker run --name simple_calculator_container -p 8000:8000 -p 6006:6006 -e NVIDIA_API_KEY simple_calculator
 ```
 
 Note, a phoenix telemetry service will be exposed at port 6006.
@@ -205,4 +206,81 @@ The API response should be similar to the following:
   "input": "Is the product of 2 * 4 greater than the current hour of the day?",
   "output": "No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 16)."
 }
+```
+
+To stop and remove the container:
+
+```bash
+docker stop simple_calculator_container
+docker rm simple_calculator_container
+```
+
+### Deployment with UI
+
+The example can be run with the NeMo-Agent-Toolkit UI. After building the simple_calculator image previously, this will build the UI docker image, and deploy both with network connectivity via a docker compose file. 
+
+**Prerequisites:**
+- You must have built the `simple_calculator` image (see [Build the Docker Image](#build-the-docker-image) above)
+
+#### Build UI Docker Image
+
+```bash
+export WORKPATH=~/Projects  # Set this to the parent directory containing NeMo-Agent-Toolkit
+
+git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit-UI.git $WORKPATH/NeMo-Agent-Toolkit-UI
+
+cd $WORKPATH/NeMo-Agent-Toolkit-UI
+
+# Set Next.js build environment variables for UI 
+cp $WORKPATH/NeMo-Agent-Toolkit/examples/basic/functions/simple_calculator/.env.docker.ui .env.production
+
+docker build -t aiqtoolkit-ui .
+```
+
+#### Deploy Simple LLM Calculator + UI
+
+After building the UI image above use docker compose to deploy:
+
+```bash
+cd $WORKPATH/NeMo-Agent-Toolkit/examples/basic/functions/simple_calculator
+
+docker compose -f compose_calculator.yaml up -d
+```
+
+This will:
+- Build and start the calculator server on port 8000
+- Build and start the web UI on port 3000
+- Set Phoenix telemetry on port 6006
+- Create a secure bridge network for container communication
+
+#### Verify Deployment
+
+1. **Check service status:**
+   ```bash
+   docker compose ps -a
+   ```
+
+2. **View logs:**
+   ```bash
+   docker logs aiq-server
+   docker logs aiq-ui
+   ```
+
+3. **Access the services:**
+   - Web UI: http://localhost:3000
+   - API Documentation: http://localhost:8000/docs
+   - Phoenix Telemetry: http://localhost:6006
+
+Interact with the chat interface by prompting the agent with the message:
+```
+Is 4 + 4 greater than the current hour of the day?
+```
+
+![AIQ Toolkit Web UI Workflow Result](public/screenshots/ui_generate_example.png)
+
+#### Stop the Services
+
+To stop all services:
+```bash
+docker compose -f compose_calculator.yaml down
 ```

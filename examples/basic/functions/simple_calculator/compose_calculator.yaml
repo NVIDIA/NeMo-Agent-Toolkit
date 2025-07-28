@@ -1,0 +1,33 @@
+services:
+
+  aiq-server:
+    image: simple_calculator
+    container_name: aiq-calculator-server
+    ports:
+      - "8000:8000"
+      - "6006:6006"  # Phoenix telemetry service
+    environment:
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+    networks:
+      - aiq-network
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/docs\")' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  aiq-ui:
+    image: aiqtoolkit-ui
+    container_name: aiq-ui
+    ports:
+      - "3000:3000"
+    networks:
+      - aiq-network
+    depends_on:
+      aiq-server:
+        condition: service_healthy
+
+networks:
+  aiq-network:
+    driver: bridge
