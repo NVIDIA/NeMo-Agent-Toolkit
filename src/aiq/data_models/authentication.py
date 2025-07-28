@@ -229,3 +229,23 @@ class AuthResult(BaseModel):
                 target_kwargs.setdefault(k, {}).update(v)
             else:
                 target_kwargs[k] = v
+
+
+class HTTPResponse(BaseModel):
+    """
+    Represents the result of an HTTP request including response data, metadata, and authentication context.
+
+    This model encapsulates both the HTTP response details and the authentication result used to make the request,
+    providing a complete context for request/response handling in authenticated workflows.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    status_code: int = Field(description="HTTP status code returned by the server")
+    headers: dict[str, str] = Field(default_factory=dict, description="HTTP response headers")
+    body: typing.Union[dict[str, typing.Any], list[typing.Any], str, bytes] | None = Field(
+        default=None, description="Response body content (JSON dict/array, plain text, or raw bytes)")
+    cookies: dict[str, str] | None = Field(default=None, description="Cookies returned by the server")
+    content_type: str | None = Field(default=None, description="Content-Type header value")
+    url: str | None = Field(default=None, description="Final URL after any redirects")
+    elapsed: float | None = Field(default=None, description="Request duration in seconds")
+    auth_result: AuthResult | None = Field(default=None, description="Authentication result used for this request")
