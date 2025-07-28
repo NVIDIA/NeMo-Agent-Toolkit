@@ -61,6 +61,14 @@ class _TestHandler(ConsoleAuthenticationFlowHandler):
         self._oauth_client = client
         return client
 
+    async def _start_redirect_server(self) -> None:
+        # Dont start the uvicorn server
+        pass
+
+    async def _stop_redirect_server(self) -> None:
+        # Dont stop the uvicorn server
+        pass
+
 
 # --------------------------------------------------------------------------- #
 # Fixtures                                                                    #
@@ -100,9 +108,7 @@ async def test_oauth2_flow_in_process(monkeypatch, mock_server):
         token_url="http://testserver/oauth/token",
         scopes=["read"],
         use_pkce=True,
-        run_local_redirect_server=False,  # ← key line: no uvicorn
-        client_url=f"http://localhost:{redirect_port}",
-        local_redirect_server_port=redirect_port,  # still used in redirect_uri
+        redirect_uri=f"http://localhost:{redirect_port}/auth/redirect",
     )
 
     handler = _TestHandler(mock_server)
@@ -150,4 +156,3 @@ async def test_oauth2_flow_in_process(monkeypatch, mock_server):
     # internal cleanup
     assert handler._active_flows == 0
     assert not handler._flows
-    assert handler.redirect_app is None  # released after flow end

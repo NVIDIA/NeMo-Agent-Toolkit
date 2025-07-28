@@ -42,7 +42,7 @@ llms:
 authentication:
   test_auth_provider:
     _type: oauth2_auth_code_flow
-    client_url: http://localhost:8000
+    redirect_uri: http://localhost:8000/auth/redirect
     authorization_url: http://127.0.0.1:5000/oauth/authorize
     token_url: http://127.0.0.1:5000/oauth/token
     token_endpoint_auth_method: client_secret_post
@@ -53,9 +53,6 @@ authentication:
     client_id: ${AIQ_OAUTH_CLIENT_ID}
     client_secret: ${AIQ_OAUTH_CLIENT_SECRET}
     use_pkce: false
-    # For testing with `aiq run` command, we need to run a local redirect server
-    run_local_redirect_server: true
-    local_redirect_server_port: 8000
 
 workflow:
   _type: react_agent

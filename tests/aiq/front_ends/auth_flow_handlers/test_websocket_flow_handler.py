@@ -156,9 +156,7 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server):
         token_url="http://testserver/oauth/token",
         scopes=["read"],
         use_pkce=True,
-        run_local_redirect_server=False,  # no uvicorn
-        client_url=f"http://localhost:{redirect_port}",
-        local_redirect_server_port=redirect_port,
+        redirect_uri=f"http://localhost:{redirect_port}/auth/redirect",
     )
 
     monkeypatch.setattr("click.echo", lambda *_: None, raising=True)  # silence CLI
