@@ -65,7 +65,6 @@ from aiq.data_models.memory import MemoryBaseConfigT
 from aiq.data_models.object_store import ObjectStoreBaseConfigT
 from aiq.data_models.registry_handler import RegistryHandlerBaseConfigT
 from aiq.data_models.retriever import RetrieverBaseConfigT
-from aiq.experimental.decorators.experimental_warning_decorator import aiq_experimental
 
 
 def register_telemetry_exporter(config_type: type[TelemetryExporterConfigT]):

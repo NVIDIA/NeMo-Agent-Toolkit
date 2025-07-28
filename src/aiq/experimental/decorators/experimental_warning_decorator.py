@@ -91,7 +91,7 @@ def aiq_experimental(func: Any = None, *, feature_name: str | None = None, metad
 
         @functools.wraps(func)
         async def async_gen_wrapper(*args, **kwargs):
-            issue_experimental_warning(function_name, metadata)
+            issue_experimental_warning(function_name, feature_name, metadata)
             async for item in func(*args, **kwargs):
                 yield item  # yield the original item
 
@@ -103,7 +103,7 @@ def aiq_experimental(func: Any = None, *, feature_name: str | None = None, metad
         # ---------------------
         @functools.wraps(func)
         async def async_wrapper(*args, **kwargs):
-            issue_experimental_warning(function_name, metadata)
+            issue_experimental_warning(function_name, feature_name, metadata)
             result = await func(*args, **kwargs)
             return result
 
@@ -115,7 +115,7 @@ def aiq_experimental(func: Any = None, *, feature_name: str | None = None, metad
         # ---------------------
         @functools.wraps(func)
         def sync_gen_wrapper(*args, **kwargs):
-            issue_experimental_warning(function_name, metadata)
+            issue_experimental_warning(function_name, feature_name, metadata)
             for item in func(*args, **kwargs):
                 yield item  # yield the original item
 
@@ -123,7 +123,7 @@ def aiq_experimental(func: Any = None, *, feature_name: str | None = None, metad
 
     @functools.wraps(func)
     def sync_wrapper(*args, **kwargs):
-        issue_experimental_warning(function_name, metadata)
+        issue_experimental_warning(function_name, feature_name, metadata)
         result = func(*args, **kwargs)
         return result
 
