@@ -165,7 +165,6 @@ docker compose -f compose_calculator.yaml up -d
 This will:
 - Build and start the calculator server on port 8000
 - Build and start the web UI on port 3000
-- Set Phoenix telemetry on port 6006
 - Create a secure bridge network for container communication
 
 #### Verify Deployment
