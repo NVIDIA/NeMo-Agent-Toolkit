@@ -17,65 +17,150 @@ limitations under the License.
 
 # A Simple LLM Calculator
 
-This example demonstrates an end-to-end (E2E) agentic workflow using the NeMo Agent toolkit library, fully configured through a YAML file. It showcases the NeMo Agent toolkit plugin system and `Builder` to seamlessly integrate pre-built and custom tools into workflows.
+This example demonstrates an end-to-end (E2E) agentic workflow using the AIQ toolkit library, fully configured through a YAML file. It showcases the AIQ toolkit plugin system and `Builder` to seamlessly integrate pre-built and custom tools into workflows.
 
 ## Table of Contents
 
-- [Key Features](#key-features)
-- [Installation and Setup](#installation-and-setup)
-  - [Install this Workflow:](#install-this-workflow)
-  - [Set Up API Keys](#set-up-api-keys)
-  - [Run the Workflow](#run-the-workflow)
-- [Deployment-Oriented Setup](#deployment-oriented-setup)
-  - [Build the Docker Image](#build-the-docker-image)
-  - [Run the Docker Container](#run-the-docker-container)
-  - [Test the API](#test-the-api)
-  - [Expected API Output](#expected-api-output)
+- [A Simple LLM Calculator](#a-simple-llm-calculator)
+  - [Table of Contents](#table-of-contents)
+  - [Key Features](#key-features)
+  - [Installation and Setup](#installation-and-setup)
+    - [Install this Workflow:](#install-this-workflow)
+    - [Set Up API Keys](#set-up-api-keys)
+    - [Run the Workflow](#run-the-workflow)
+  - [Deployment-Oriented Setup](#deployment-oriented-setup)
+    - [Build the Docker Image](#build-the-docker-image)
+    - [Run the Docker Container](#run-the-docker-container)
+    - [Test the API](#test-the-api)
+    - [Expected API Output](#expected-api-output)
+    - [Deployment with UI](#deployment-with-ui)
+
 
 ---
 
 ## Key Features
 
-- **Custom Calculator Tools:** Demonstrates five mathematical tools - `calculator_multiply`, `calculator_inequality`, `calculator_divide`, `calculator_subtract`, and `current_datetime` for mathematical operations and time-based comparisons.
-- **ReAct Agent Integration:** Uses a `react_agent` that performs reasoning between tool calls to solve complex mathematical queries requiring multiple steps.
-- **Multi-step Problem Solving:** Shows how an agent can break down complex questions like "Is the product of 2 * 4 greater than the current hour?" into sequential tool calls.
-- **Custom Function Registration:** Demonstrates the NeMo Agent toolkit plugin system for registering custom mathematical functions with proper validation and error handling.
-- **YAML-based Configuration:** Fully configurable workflow that showcases how to orchestrate multiple tools through simple configuration.
+- **Pre-built Tools:** Leverages core AIQ toolkit library tools.
+- **Custom Plugin System:** Developers can bring in new tools using plugins.
+- **High-level API:** Enables defining functions that transform into asynchronous LangChain tools.
+- **Agentic Workflows:** Fully configurable via YAML for flexibility and productivity.
+- **Ease of Use:** Simplifies developer experience and deployment.
 
 ---
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the AIQ toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/getting_started/simple_calculator
+uv pip install -e examples/basic/functions/simple_calculator
 ```
 
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
-export OPENAI_API_KEY=<YOUR_API_KEY>  # OPTIONAL
 ```
 
 ### Run the Workflow
 
-Return to your original terminal, and run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
+Return to your original terminal, and run the following command from the root of the AIQ toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file examples/getting_started/simple_calculator/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+aiq run --config_file examples/basic/functions/simple_calculator/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
-**Expected Workflow Output**
-Note that the output is subject to the time of day when the workflow was run. For this example output, it was run in the afternoon.
-```
-No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 15).
+**Expected Output**
+The workflow output can be quite lengthy, the end of the workflow output should contain something similar to the following (the final answer will depend on the time of day the workflow is run):
+```console
+$ aiq run --config_file examples/basic/functions/simple_calculator/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+2025-04-23 15:58:34,877 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (440.151215 ms). Ensure all imports are inside your registered functions.
+2025-04-23 15:58:35,193 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/basic/functions/simple_calculator/configs/config.yml'
+2025-04-23 15:58:35,199 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
+
+Configuration Summary:
+--------------------
+Workflow Type: react_agent
+Number of Functions: 5
+Number of LLMs: 2
+Number of Embedders: 0
+Number of Memory: 0
+Number of Retrievers: 0
+
+2025-04-23 15:58:36,674 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: Is the product of 2 * 4 greater than the current hour of the day?
+Agent's thoughts:
+Thought: To answer this question, I need to calculate the product of 2 and 4, and then compare it to the current hour of the day.
+
+Action: calculator_multiply
+Action Input: {'text': '2 * 4'}
+
+
+------------------------------
+2025-04-23 15:58:36,682 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: calculator_multiply
+Tool's input: {"text": "2 * 4"}
+Tool's response:
+The product of 2 * 4 is 8
+------------------------------
+2025-04-23 15:58:37,704 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: Is the product of 2 * 4 greater than the current hour of the day?
+Agent's thoughts:
+Thought: Now that I have the product of 2 and 4, I need to get the current hour of the day to compare it with the product.
+
+Action: current_datetime
+Action Input: None
+------------------------------
+2025-04-23 15:58:37,710 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: current_datetime
+Tool's input: None
+Tool's response:
+The current time of day is 2025-04-23 15:58:37
+------------------------------
+2025-04-23 15:58:38,865 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: Is the product of 2 * 4 greater than the current hour of the day?
+Agent's thoughts:
+Thought: Now that I have the current time of day, I can extract the hour and compare it with the product of 2 and 4.
+
+Action: calculator_inequality
+Action Input: {'text': '8 > 15'}
+------------------------------
+2025-04-23 15:58:38,871 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Calling tools: calculator_inequality
+Tool's input: {"text": "8 > 15"}
+Tool's response:
+First number 8 is less than the second number 15
+------------------------------
+2025-04-23 15:58:39,978 - aiq.agent.react_agent.agent - INFO -
+------------------------------
+[AGENT]
+Agent input: Is the product of 2 * 4 greater than the current hour of the day?
+Agent's thoughts:
+Thought: I now know the final answer
+
+Final Answer: No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 15).
+------------------------------
+2025-04-23 15:58:39,981 - aiq.front_ends.console.console_front_end_plugin - INFO -
+--------------------------------------------------
+Workflow Result:
+['No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 15).']
 ```
 
 
@@ -85,19 +170,19 @@ For a production deployment, use Docker:
 
 ### Build the Docker Image
 
-Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the NeMo Agent toolkit virtual environment.
+Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the AIQ toolkit virtual environment.
 
-From the root directory of the Simple Calculator repository, build the Docker image:
+From the root directory of the NeMo-Agent-Toolkit repository, build the Docker image:
 
 ```bash
-docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t simple_calculator -f examples/getting_started/simple_calculator/Dockerfile .
+docker build --build-arg AIQ_VERSION=$(python -m setuptools_scm) -t simple_calculator -f examples/basic/functions/simple_calculator/Dockerfile .
 ```
 
 ### Run the Docker Container
 Deploy the container:
 
 ```bash
-docker run -p 8000:8000 -p 6006:6006 -e NVIDIA_API_KEY -e OPENAI_API_KEY simple_calculator
+docker run --name simple_calculator_container -p 8000:8000 -p 6006:6006 -e NVIDIA_API_KEY simple_calculator
 ```
 
 Note, a phoenix telemetry service will be exposed at port 6006.
@@ -119,6 +204,83 @@ The API response should be similar to the following:
 ```bash
 {
   "input": "Is the product of 2 * 4 greater than the current hour of the day?",
-  "value": "No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 16)."
+  "output": "No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 16)."
 }
+```
+
+To stop and remove the container:
+
+```bash
+docker stop simple_calculator_container
+docker rm simple_calculator_container
+```
+
+### Deployment with UI
+
+The example can be run with the NeMo-Agent-Toolkit UI. After building the simple_calculator image previously, this will build the UI docker image, and deploy both with network connectivity via a docker compose file. 
+
+**Prerequisites:**
+- You must have built the `simple_calculator` image (see [Build the Docker Image](#build-the-docker-image) above)
+
+#### Build UI Docker Image
+
+```bash
+export WORKPATH=~/Projects  # Set this to the parent directory containing NeMo-Agent-Toolkit
+
+git clone git@github.com:NVIDIA/NeMo-Agent-Toolkit-UI.git $WORKPATH/NeMo-Agent-Toolkit-UI
+
+cd $WORKPATH/NeMo-Agent-Toolkit-UI
+
+# Set Next.js build environment variables for UI 
+cp $WORKPATH/NeMo-Agent-Toolkit/examples/basic/functions/simple_calculator/.env.docker.ui .env.production
+
+docker build -t aiqtoolkit-ui .
+```
+
+#### Deploy Simple LLM Calculator + UI
+
+After building the UI image above use docker compose to deploy:
+
+```bash
+cd $WORKPATH/NeMo-Agent-Toolkit/examples/basic/functions/simple_calculator
+
+docker compose -f compose_calculator.yaml up -d
+```
+
+This will:
+- Build and start the calculator server on port 8000
+- Build and start the web UI on port 3000
+- Set Phoenix telemetry on port 6006
+- Create a secure bridge network for container communication
+
+#### Verify Deployment
+
+1. **Check service status:**
+   ```bash
+   docker compose ps -a
+   ```
+
+2. **View logs:**
+   ```bash
+   docker logs aiq-server
+   docker logs aiq-ui
+   ```
+
+3. **Access the services:**
+   - Web UI: http://localhost:3000
+   - API Documentation: http://localhost:8000/docs
+   - Phoenix Telemetry: http://localhost:6006
+
+Interact with the chat interface by prompting the agent with the message:
+```
+Is 4 + 4 greater than the current hour of the day?
+```
+
+![AIQ Toolkit Web UI Workflow Result](public/screenshots/ui_generate_example.png)
+
+#### Stop the Services
+
+To stop all services:
+```bash
+docker compose -f compose_calculator.yaml down
 ```
