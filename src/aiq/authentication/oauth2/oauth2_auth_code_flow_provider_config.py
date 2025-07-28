@@ -24,8 +24,12 @@ class OAuth2AuthCodeFlowProviderConfig(AuthProviderBaseConfig, name="oauth2_auth
     client_secret: str = Field(description="The secret associated with the client_id.")
     authorization_url: str = Field(description="The authorization URL for OAuth 2.0 authentication.")
     token_url: str = Field(description="The token URL for OAuth 2.0 authentication.")
-    token_endpoint_auth_method: str | None = Field(description="The authentication method for the token endpoint.",
-                                                   default=None)
+    token_endpoint_auth_method: str | None = Field(
+        description=("The authentication method for the token endpoint. "
+                     "Usually one of `client_secret_post` or `client_secret_basic`."),
+        default=None)
+    redirect_uri: str = Field(description="The redirect URI for OAuth 2.0 authentication. Must match the registered "
+                              "redirect URI with the OAuth provider.")
     scopes: list[str] = Field(description="The scopes for OAuth 2.0 authentication.", default_factory=list)
     use_pkce: bool = Field(default=False,
                            description="Whether to use PKCE (Proof Key for Code Exchange) in the OAuth 2.0 flow.")
@@ -33,17 +37,3 @@ class OAuth2AuthCodeFlowProviderConfig(AuthProviderBaseConfig, name="oauth2_auth
     authorization_kwargs: dict[str, str] | None = Field(description=("Additional keyword arguments for the "
                                                                      "authorization request."),
                                                         default=None)
-
-    # Configuration for the local server that handles the redirect
-    client_url: str = Field(description="The base URL for the client application.", default="http://localhost:8000")
-    run_local_redirect_server: bool = Field(default=False,
-                                            description="Whether to run a local server to handle the redirect URI.")
-    local_redirect_server_port: int = Field(default=8000,
-                                            description="Port for the local redirect "
-                                            "server to listen on.")
-    redirect_path: str = Field(default="/auth/redirect",
-                               description="Path for the local redirect server to handle the callback.")
-
-    @property
-    def redirect_uri(self) -> str:
-        return f"{self.client_url}{self.redirect_path}"

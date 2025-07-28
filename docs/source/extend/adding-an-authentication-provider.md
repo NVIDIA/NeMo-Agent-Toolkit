@@ -56,22 +56,11 @@ class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_a
                                                    default=None)
     scopes: list[str] = Field(description="The space-delimited scopes for OAuth 2.0 authentication.",
                               default_factory=list)
+    redirect_uri: str = Field(description="The redirect URI for OAuth 2.0 authentication. Must match the registered "
+                              "redirect URI with the OAuth provider.")
 
-    # Configuration for the local server that handles the redirect
-    client_url: str = Field(description="The base URL for the client application.", default="http://localhost:8000")
-    run_local_redirect_server: bool = Field(default=False,
-                                            description="Whether to run a local server to handle the redirect URI.")
-    local_redirect_server_port: int = Field(default=8000,
-                                            description="Port for the local redirect "
-                                            "server to listen on.")
-    redirect_path: str = Field(default="/auth/redirect",
-                               description="Path for the local redirect server to handle the callback.")
     use_pkce: bool = Field(default=False,
                            description="Whether to use PKCE (Proof Key for Code Exchange) in the OAuth 2.0 flow.")
-
-    @property
-    def redirect_uri(self) -> str:
-        return f"{self.client_url}{self.redirect_path}"
 ```
 
 ### Registering the Provider

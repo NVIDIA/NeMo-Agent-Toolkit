@@ -54,7 +54,7 @@ def cfg() -> OAuth2AuthCodeFlowProviderConfig:
                                             token_url="https://example.com/token",
                                             scopes=["openid", "profile"],
                                             use_pkce=True,
-                                            client_url="http://localhost:9000")
+                                            redirect_uri="http://localhost:9000/auth/redirect")
 
 
 def _bearer_ctx(token: str, expires_at: datetime) -> AuthenticatedContext:
@@ -78,6 +78,7 @@ def test_config_redirect_uri_defaults():
         client_secret="sec",
         authorization_url="a",
         token_url="t",
+        redirect_uri="http://localhost:8000/auth/redirect",
     )
     assert cfg.redirect_uri == "http://localhost:8000/auth/redirect"
 

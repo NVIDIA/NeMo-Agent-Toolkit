@@ -41,6 +41,8 @@ class _FlowState:
     future: asyncio.Future = field(default_factory=asyncio.Future, init=False)
     challenge: str | None = None
     verifier: str | None = None
+    token_url: str | None = None
+    use_pkce: bool | None = None
 
 
 # --------------------------------------------------------------------------- #
@@ -120,6 +122,9 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
         flow_state = _FlowState()
         client = self.construct_oauth_client(cfg)
 
+        flow_state.token_url = cfg.token_url
+        flow_state.use_pkce = cfg.use_pkce
+
         # PKCE bits
         if cfg.use_pkce:
             verifier, challenge = pkce.generate_pkce_pair()
@@ -136,10 +141,11 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
 
         # Register flow + maybe spin up redirect handler
         async with self._server_lock:
-            if self._server_controller is None and cfg.run_local_redirect_server:
-                await self._start_redirect_server(cfg)
-            elif not cfg.run_local_redirect_server and self._redirect_app is None:
-                await self._start_redirect_server(cfg)
+            if (not self._redirect_app):
+                self._redirect_app = await self._build_redirect_app()
+
+            await self._start_redirect_server()
+
             self._flows[state] = flow_state
             self._active_flows += 1
 
@@ -155,10 +161,9 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
             async with self._server_lock:
                 self._flows.pop(state, None)
                 self._active_flows -= 1
-                if self._active_flows == 0 and cfg.run_local_redirect_server:
+
+                if self._active_flows == 0:
                     await self._stop_redirect_server()
-                if self._active_flows == 0 and not cfg.run_local_redirect_server:
-                    self._redirect_app = None
 
         return AuthenticatedContext(
             headers={"Authorization": f"Bearer {token['access_token']}"},
@@ -168,7 +173,7 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
         )
 
     # --------------- redirect server / in‑process app -------------------- #
-    async def _start_redirect_server(self, cfg: OAuth2AuthCodeFlowProviderConfig) -> None:
+    async def _build_redirect_app(self) -> FastAPI:
         """
         * If cfg.run_redirect_local_server == True → start a uvicorn server (old behaviour).
         * Else → only build the FastAPI app and save it to `self._redirect_app`
@@ -176,7 +181,7 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
         """
         app = FastAPI()
 
-        @app.get(cfg.redirect_path)
+        @app.get("/auth/redirect")
         async def handle_redirect(request: Request):
             state = request.query_params.get("state")
             if not state or state not in self._flows:
@@ -184,9 +189,9 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
             flow_state = self._flows[state]
             try:
                 token = await self._oauth_client.fetch_token(  # type: ignore[arg-type]
-                    url=cfg.token_url,
+                    url=flow_state.token_url,
                     authorization_response=str(request.url),
-                    code_verifier=flow_state.verifier if cfg.use_pkce else None,
+                    code_verifier=flow_state.verifier if flow_state.use_pkce else None,
                     state=state,
                 )
                 flow_state.future.set_result(token)
@@ -194,25 +199,22 @@ class ConsoleAuthenticationFlowHandler(FlowHandlerBase):
                 flow_state.future.set_exception(exc)
             return "Authentication successful – you may close this tab."
 
-        # ----------- Option A: in‑process (tests) or external service configured --------------------- #
-        if not cfg.run_local_redirect_server:
-            # Nothing else to spin up – expose the app for the test.
-            self._redirect_app = app
+        return app
+
+    async def _start_redirect_server(self) -> None:
+        # If the server is already running, do nothing
+        if self._server_controller:
             return
-
-        # ----------- Option B: real uvicorn server -------------------- #
-        controller = _FastApiFrontEndController(app)
-        self._server_controller = controller
-        await self._start_server_task(cfg)
-        # Give uvicorn a moment to bind sockets before we return
-        await asyncio.sleep(0.3)
-
-    async def _start_server_task(self, cfg: OAuth2AuthCodeFlowProviderConfig) -> None:
-        if not self._server_controller:
-            raise RuntimeError("Server controller uninitialised.")
         try:
-            asyncio.create_task(
-                self._server_controller.start_server(host="localhost", port=cfg.local_redirect_server_port))
+            if not self._redirect_app:
+                raise RuntimeError("Redirect app not built.")
+
+            self._server_controller = _FastApiFrontEndController(self._redirect_app)
+
+            asyncio.create_task(self._server_controller.start_server(host="localhost", port=8000))
+
+            # Give uvicorn a moment to bind sockets before we return
+            await asyncio.sleep(0.3)
         except Exception as exc:  # noqa: BLE001
             raise RuntimeError(f"Failed to start redirect server: {exc}") from exc
 
