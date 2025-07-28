@@ -201,7 +201,6 @@ def register_llm_provider(config_type: type[LLMBaseConfigT]):
     return register_llm_provider_inner
 
 
-@aiq_experimental
 def register_auth_provider(config_type: type[AuthProviderBaseConfigT]):
 
     def register_auth_provider_inner(
@@ -373,7 +372,6 @@ def register_object_store(config_type: type[ObjectStoreBaseConfigT]):
     return register_kv_store_inner
 
 
-@aiq_experimental
 def register_its_strategy(config_type: type[ITSStrategyRegisterCallableT]):
 
     def register_its_strategy_inner(
