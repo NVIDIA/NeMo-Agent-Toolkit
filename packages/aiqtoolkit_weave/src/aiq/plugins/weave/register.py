@@ -36,6 +36,7 @@ class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
     redact_keys: list[str] | None = Field(
         default=None,
         description="Additional keys to redact from traces beyond the default (api_key, auth_headers, authorization).")
+    verbose: bool = Field(default=False, description="Whether to enable verbose logging.")
 
 
 @register_telemetry_exporter(config_type=WeaveTelemetryExporter)
@@ -63,12 +64,13 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
     # Handle custom redact keys if specified
     if config.redact_keys and config.redact_pii:
         # Need to create a new list combining default keys and custom ones
-        default_keys = weave.trace.sanitize.REDACT_KEYS
+        from weave.trace import sanitize
+        default_keys = sanitize.REDACT_KEYS
 
         # Create a new list with all keys
         all_keys = list(default_keys) + config.redact_keys
 
         # Replace the default REDACT_KEYS with our extended list
-        weave.trace.sanitize.REDACT_KEYS = tuple(all_keys)
+        sanitize.REDACT_KEYS = tuple(all_keys)
 
-    yield WeaveExporter(project=config.project, entity=config.entity)
+    yield WeaveExporter(project=config.project, entity=config.entity, verbose=config.verbose)
