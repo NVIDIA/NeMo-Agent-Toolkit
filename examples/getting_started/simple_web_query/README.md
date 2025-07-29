@@ -46,9 +46,9 @@ Ensure that Docker is installed and the Docker service is running before proceed
   - Linux: Run`sudo systemctl start docker` (ensure your user has permission to run Docker).
   - Mac & Windows: Docker Desktop should be running in the background.
 - Verify Docker Installation: Run the following command to verify that Docker is installed and running correctly:
-```bash
-docker info
-```
+  ```bash
+  docker info
+  ```
 
 ## Installation and Setup
 
