@@ -32,7 +32,7 @@ from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
 from aiq.profiler.parameter_optimization.parameter_selection import pick_trial
 
-from .update_helpers import apply_suggestions
+from aiq.profiler.parameter_optimization.update_helpers import apply_suggestions
 
 logger = logging.getLogger(__name__)
 

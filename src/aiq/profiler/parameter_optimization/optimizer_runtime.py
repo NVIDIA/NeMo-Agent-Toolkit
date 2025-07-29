@@ -20,9 +20,9 @@ from pydantic import BaseModel
 from aiq.data_models.optimizer import OptimizerRunConfig
 from aiq.runtime.loader import load_config
 
-from .optimizable_utils import walk_optimizables
-from .parameter_optimizer import optimize_parameters
-from .prompt_optimizer import optimize_prompts
+from aiq.profiler.parameter_optimization.optimizable_utils import walk_optimizables
+from aiq.profiler.parameter_optimization.parameter_optimizer import optimize_parameters
+from aiq.profiler.parameter_optimization.prompt_optimizer import optimize_prompts
 
 logger = logging.getLogger(__name__)
 
