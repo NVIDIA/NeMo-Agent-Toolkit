@@ -20,6 +20,7 @@ from .common import TypedBaseModel
 
 
 class MemoryBaseConfig(TypedBaseModel, BaseModelRegistryTag):
+    """ The base level config object for a memory object. Memories provide an interface for storing and retrieving. """
     pass
 
 

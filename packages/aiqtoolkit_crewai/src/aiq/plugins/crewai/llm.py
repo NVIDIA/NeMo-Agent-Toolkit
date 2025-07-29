@@ -18,8 +18,10 @@ import os
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_llm_client
+from aiq.data_models.retry_mixin import RetryMixin
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
+from aiq.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
@@ -45,7 +47,16 @@ async def nim_crewai(llm_config: NIMModelConfig, builder: Builder):
                 # Transfer the key to the correct environment variable for LiteLLM
                 os.environ["NVIDIA_NIM_API_KEY"] = nvidai_api_key
 
-    yield LLM(**config_obj)
+    client = LLM(**config_obj)
+
+    if isinstance(llm_config, RetryMixin):
+
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
+
+    yield client
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
@@ -57,4 +68,13 @@ async def openai_crewai(llm_config: OpenAIModelConfig, builder: Builder):
         **llm_config.model_dump(exclude={"type"}, by_alias=True),
     }
 
-    yield LLM(**config_obj)
+    client = LLM(**config_obj)
+
+    if isinstance(llm_config, RetryMixin):
+
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
+
+    yield client

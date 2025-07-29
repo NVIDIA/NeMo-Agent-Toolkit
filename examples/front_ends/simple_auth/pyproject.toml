@@ -1,0 +1,24 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+root = "../../.."
+
+[project]
+name = "aiq_simple_auth"
+dynamic = ["version"]
+dependencies = [
+  "aiqtoolkit",
+  "aiqtoolkit[langchain]",
+  "httpx",
+]
+requires-python = ">=3.11,<3.13"
+description = "Custom AIQ Toolkit Workflow"
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+aiqtoolkit = { path = "../../..", editable = true }
+
+[project.entry-points.'aiq.components']
+simple_auth = "simple_auth.register"

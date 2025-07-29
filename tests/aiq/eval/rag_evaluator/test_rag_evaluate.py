@@ -14,12 +14,14 @@
 # limitations under the License.
 
 from collections.abc import Sequence
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pandas as pd
 import pytest
+from pydantic import BaseModel
 from ragas.evaluation import EvaluationDataset
 from ragas.evaluation import SingleTurnSample
 from ragas.llms import LangchainLLMWrapper
@@ -29,6 +31,11 @@ from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.rag_evaluator.evaluate import RAGEvaluator
 
 # pylint: disable=redefined-outer-name
+
+
+class ExampleModel(BaseModel):
+    content: str
+    other: str
 
 
 @pytest.fixture
@@ -57,6 +64,12 @@ def rag_evaluator(ragas_judge_llm, ragas_metrics) -> RAGEvaluator:
 @pytest.fixture
 def metric_name() -> str:
     return "AnswerAccuracy"
+
+
+@pytest.fixture
+def rag_evaluator_content(ragas_judge_llm, ragas_metrics) -> RAGEvaluator:
+    """RAGEvaluator configured to extract a specific field (`content`) from BaseModel or dict input objects."""
+    return RAGEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics, input_obj_field="content")
 
 
 def test_eval_input_to_ragas(rag_evaluator, rag_eval_input, intermediate_step_adapter):
@@ -152,6 +165,47 @@ def test_ragas_to_eval_output_unexpected_entries(rag_evaluator,
     assert round(eval_output.average_score, 4) == round(expected_avg_score, 4)
 
 
+def test_ragas_to_eval_output_nan_handling(rag_evaluator, rag_eval_input, metric_name):
+    """
+    Ensure that NaN or None scores are coerced to 0.0 for both the
+    per‑item scores and the computed average score.
+    """
+    # fmt: off
+    test_cases = [
+        # (scores list, expected per‑item scores list, expected average)
+        ([{metric_name: float("nan")}],            [0.0],           0.0),
+        ([{metric_name: None}],                   [0.0],           0.0),
+        ([{metric_name: float("nan")},
+          {metric_name: 0.9}],                    [0.0, 0.9],      0.45),
+        ([{metric_name: None},
+          {metric_name: 0.9},
+          {metric_name: float("nan")}],           [0.0, 0.9, 0.0], 0.3),
+    ]
+    # fmt: on
+
+    for scores, expected_item_scores, expected_avg in test_cases:
+        # Mock ragas results
+        mock_results_dataset = MagicMock()
+        mock_results_dataset.scores = scores
+
+        # Build the mocked pandas DataFrame using the raw (possibly NaN/None) values
+        mock_data = pd.DataFrame([{
+            "user_input": f"Question {i+1}", metric_name: score[metric_name]
+        } for i, score in enumerate(scores)])
+        mock_results_dataset.to_pandas.return_value = mock_data
+
+        # Invoke the method under test
+        eval_output = rag_evaluator.ragas_to_eval_output(rag_eval_input, mock_results_dataset)
+
+        # --- Assertions ---
+        # Average score should match the expected value (with small tolerance for float ops)
+        assert round(eval_output.average_score, 4) == round(expected_avg, 4)
+
+        # Each individual item score should match the expected coercion results
+        actual_item_scores = [item.score for item in eval_output.eval_output_items]
+        assert actual_item_scores == expected_item_scores
+
+
 async def test_rag_evaluate_success(rag_evaluator, rag_eval_input, ragas_judge_llm, ragas_metrics):
     """
     Test evaluate function to verify the following functions are called
@@ -223,3 +277,38 @@ async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input, ragas_judge_l
         assert isinstance(output, EvalOutput)
         assert output.average_score == 0.0
         assert output.eval_output_items == []  # No results due to failure
+
+
+def test_extract_input_obj_base_model_with_field(rag_evaluator_content):
+    """Ensure extract_input_obj returns the specified field from a Pydantic BaseModel."""
+    model_obj = ExampleModel(content="hello world", other="ignore me")
+    dummy_item = SimpleNamespace(input_obj=model_obj)
+
+    extracted = rag_evaluator_content.extract_input_obj(dummy_item)
+    assert extracted == "hello world"
+
+
+def test_extract_input_obj_dict_with_field(rag_evaluator_content):
+    """Ensure extract_input_obj returns the specified key when input_obj is a dict."""
+    dict_obj = {"content": "dict hello", "other": 123}
+    dummy_item = SimpleNamespace(input_obj=dict_obj)
+
+    extracted = rag_evaluator_content.extract_input_obj(dummy_item)
+    assert extracted == "dict hello"
+
+
+def test_extract_input_obj_base_model_without_field(rag_evaluator, rag_evaluator_content):
+    """
+    When no input_obj_field is supplied, extract_input_obj should default to the model's JSON.
+    Compare behaviour between default evaluator and one with a field configured.
+    """
+    model_obj = ExampleModel(content="json hello", other="data")
+    dummy_item = SimpleNamespace(input_obj=model_obj)
+
+    extracted_default = rag_evaluator.extract_input_obj(dummy_item)
+    extracted_with_field = rag_evaluator_content.extract_input_obj(dummy_item)
+
+    # Default evaluator returns the full JSON string, evaluator with field returns the field value.
+    assert extracted_with_field == "json hello"
+    assert extracted_default != extracted_with_field
+    assert '"content":"json hello"' in extracted_default  # basic sanity check on JSON output

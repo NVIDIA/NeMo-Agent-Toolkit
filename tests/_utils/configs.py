@@ -13,10 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
 
 
@@ -50,5 +52,13 @@ class MemoryTestConfig(MemoryBaseConfig, name="test_memory"):
     pass
 
 
+class ObjectStoreTestConfig(ObjectStoreBaseConfig, name="test_object_store"):
+    pass
+
+
 class RegistryHandlerTestConfig(RegistryHandlerBaseConfig, name="test_registry_handler"):
+    pass
+
+
+class AuthenticationProviderTestConfig(AuthProviderBaseConfig, name="test_authentication"):
     pass

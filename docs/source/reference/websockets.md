@@ -16,15 +16,15 @@ limitations under the License.
 -->
 
 # WebSocket Message Schema
-This document defines the schema for WebSocket messages exchanged between the client and the AIQ toolkit server. Its primary
-purpose is to guide users on how to interact with the AIQ toolkit server via WebSocket connection. Users can reliably
+This document defines the schema for WebSocket messages exchanged between the client and the NeMo Agent toolkit server. Its primary
+purpose is to guide users on how to interact with the NeMo Agent toolkit server via WebSocket connection. Users can reliably
 send and receive data while ensuring compatibility with the web server’s expected format. Additionally, this schema
 provides flexibility for users to build and customize their own user interface by defining how different message types
 should be handled, displayed, and processed. With a clear understanding of the message structure, developers can
-seamlessly integrate their customized user interfaces with the AIQ toolkit server.
+seamlessly integrate their customized user interfaces with the NeMo Agent toolkit server.
 
 ## Overview
-The message schema described below facilitates transactional interactions with the AIQ toolkit server. The messages follow a
+The message schema described below facilitates transactional interactions with the NeMo Agent toolkit server. The messages follow a
 structured JSON format to ensure consistency in communication and can be categorized into two main types: `User Messages`
 and `System Messages`. User messages are sent from the client to the server. System messages are sent from the server
 to the client.
@@ -41,7 +41,7 @@ to the client.
 - `schema_type`:  Defines the response schema for a given workflow
 - `id`: A unique identifier for the message.
     - Purpose: Used for tracking, referencing, and updating messages.
-- `thread_id`: Identifies the conversation thread to which the message belongs.
+- `conversation_id`: A unique identifier used to associate all messages and interactions with a specific conversation session.
     - Purpose: Groups-related messages within the same conversation/chat feed.
 - `parent_id`: Links a message to its originating message.
     -   Optional: Used for responses, updates, or continuations of earlier messages.
@@ -75,7 +75,7 @@ running workflow.
   "type": "user_message",
   "schema_type": "string",
   "id": "string",
-  "thread_id": "string",
+  "conversation_id": "string",
   "content": {
     "messages": [
       {

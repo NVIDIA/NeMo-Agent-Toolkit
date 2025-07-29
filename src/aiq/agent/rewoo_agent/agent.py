@@ -30,12 +30,11 @@ from langgraph.graph import StateGraph
 from pydantic import BaseModel
 from pydantic import Field
 
+from aiq.agent.base import AGENT_CALL_LOG_MESSAGE
 from aiq.agent.base import AGENT_LOG_PREFIX
-from aiq.agent.base import AGENT_RESPONSE_LOG_MESSAGE
 from aiq.agent.base import INPUT_SCHEMA_MESSAGE
 from aiq.agent.base import NO_INPUT_ERROR_MESSAGE
 from aiq.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
-from aiq.agent.base import TOOL_RESPONSE_LOG_MESSAGE
 from aiq.agent.base import AgentDecision
 from aiq.agent.base import BaseAgent
 
@@ -65,7 +64,7 @@ class ReWOOAgentGraph(BaseAgent):
                  solver_prompt: ChatPromptTemplate,
                  tools: list[BaseTool],
                  use_tool_schema: bool = True,
-                 callbacks: list[AsyncCallbackHandler] = None,
+                 callbacks: list[AsyncCallbackHandler] | None = None,
                  detailed_logs: bool = False):
         super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs)
 
@@ -91,7 +90,7 @@ class ReWOOAgentGraph(BaseAgent):
 
         logger.debug("%s Initialized ReWOO Agent Graph", AGENT_LOG_PREFIX)
 
-    def _get_tool(self, tool_name):
+    def _get_tool(self, tool_name: str):
         try:
             return self.tools_dict.get(tool_name)
         except Exception as ex:
@@ -180,22 +179,24 @@ class ReWOOAgentGraph(BaseAgent):
             logger.debug("%s Starting the ReWOO Planner Node", AGENT_LOG_PREFIX)
 
             planner = self.planner_prompt | self.llm
-            task = state.task.content
+            task = str(state.task.content)
             if not task:
                 logger.error("%s No task provided to the ReWOO Agent. Please provide a valid task.", AGENT_LOG_PREFIX)
                 return {"result": NO_INPUT_ERROR_MESSAGE}
 
-            plan = ""
-            async for event in planner.astream({"task": task}, config=RunnableConfig(callbacks=self.callbacks)):
-                plan += event.content
+            plan = await self._stream_llm(
+                planner,
+                {"task": task},
+                RunnableConfig(callbacks=self.callbacks)  # type: ignore
+            )
 
-            steps = self._parse_planner_output(plan)
+            steps = self._parse_planner_output(str(plan.content))
 
             if self.detailed_logs:
-                agent_response_log_message = AGENT_RESPONSE_LOG_MESSAGE % (task, plan)
+                agent_response_log_message = AGENT_CALL_LOG_MESSAGE % (task, str(plan.content))
                 logger.info("ReWOO agent planner output: %s", agent_response_log_message)
 
-            return {"plan": AIMessage(content=plan), "steps": steps}
+            return {"plan": plan, "steps": steps}
 
         except Exception as ex:
             logger.exception("%s Failed to call planner_node: %s", AGENT_LOG_PREFIX, ex, exc_info=True)
@@ -213,10 +214,20 @@ class ReWOOAgentGraph(BaseAgent):
                              current_step)
                 raise RuntimeError(f"ReWOO Executor is invoked with an invalid step number: {current_step}")
 
-            step_info = state.steps.content[current_step]["evidence"]
-            placeholder = step_info.get("placeholder", "")
-            tool = step_info.get("tool", "")
-            tool_input = step_info.get("tool_input", "")
+            steps_content = state.steps.content
+            if isinstance(steps_content, list) and current_step < len(steps_content):
+                step = steps_content[current_step]
+                if isinstance(step, dict) and "evidence" in step:
+                    step_info = step["evidence"]
+                    placeholder = step_info.get("placeholder", "")
+                    tool = step_info.get("tool", "")
+                    tool_input = step_info.get("tool_input", "")
+                else:
+                    logger.error("%s Invalid step format at index %s", AGENT_LOG_PREFIX, current_step)
+                    return {"intermediate_results": state.intermediate_results}
+            else:
+                logger.error("%s Invalid steps content or index %s", AGENT_LOG_PREFIX, current_step)
+                return {"intermediate_results": state.intermediate_results}
 
             intermediate_results = state.intermediate_results
 
@@ -250,12 +261,10 @@ class ReWOOAgentGraph(BaseAgent):
 
             # Run the tool. Try to use structured input, if possible
             tool_input_parsed = self._parse_tool_input(tool_input)
-            tool_response = await requested_tool.ainvoke(tool_input_parsed,
-                                                         config=RunnableConfig(callbacks=self.callbacks))
-
-            # some tools, such as Wikipedia, will return an empty response when no search results are found
-            if tool_response is None or tool_response == "":
-                tool_response = "The tool provided an empty response.\n"
+            tool_response = await self._call_tool(requested_tool,
+                                                  tool_input_parsed,
+                                                  RunnableConfig(callbacks=self.callbacks),
+                                                  max_retries=3)
 
             # ToolMessage only accepts str or list[str | dict] as content.
             # Convert into list if the response is a dict.
@@ -264,15 +273,8 @@ class ReWOOAgentGraph(BaseAgent):
 
             tool_response_message = ToolMessage(name=tool, tool_call_id=tool, content=tool_response)
 
-            logger.debug("%s Successfully called the tool", AGENT_LOG_PREFIX)
             if self.detailed_logs:
-                # The tool response can be very large, so we log only the first 1000 characters
-                tool_response_str = tool_response_message.content
-                tool_response_str = tool_response_str[:1000] + "..." if len(
-                    tool_response_str) > 1000 else tool_response_str
-                tool_response_log_message = TOOL_RESPONSE_LOG_MESSAGE % (
-                    requested_tool.name, tool_input_parsed, tool_response_str)
-                logger.info("ReWOO agent executor output: %s", tool_response_log_message)
+                self._log_tool_response(requested_tool.name, tool_input_parsed, str(tool_response))
 
             intermediate_results[placeholder] = tool_response_message
             return {"intermediate_results": intermediate_results}
@@ -308,16 +310,15 @@ class ReWOOAgentGraph(BaseAgent):
                 tool = step_info.get("tool")
                 plan += f"Plan: {_plan}\n{placeholder} = {tool}[{tool_input}]"
 
-            task = state.task.content
+            task = str(state.task.content)
             solver_prompt = self.solver_prompt.partial(plan=plan)
             solver = solver_prompt | self.llm
-            output_message = ""
-            async for event in solver.astream({"task": task}, config=RunnableConfig(callbacks=self.callbacks)):
-                output_message += event.content
 
-            output_message = AIMessage(content=output_message)
+            output_message = await self._stream_llm(solver, {"task": task},
+                                                    RunnableConfig(callbacks=self.callbacks))  # type: ignore
+
             if self.detailed_logs:
-                solver_output_log_message = AGENT_RESPONSE_LOG_MESSAGE % (task, output_message.content)
+                solver_output_log_message = AGENT_CALL_LOG_MESSAGE % (task, str(output_message.content))
                 logger.info("ReWOO agent solver output: %s", solver_output_log_message)
 
             return {"result": output_message}

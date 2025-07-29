@@ -17,13 +17,18 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
+from aiq.eval.evaluator.evaluator_model import EvalInput
+from aiq.eval.evaluator.evaluator_model import EvalOutput
+from aiq.eval.usage_stats import UsageStats
+from aiq.profiler.data_models import ProfilerResults
+
 
 class EvaluationRunConfig(BaseModel):
     """
     Parameters used for a single evaluation run.
     """
     config_file: Path
-    dataset: str | None  # dataset file path can be specified in the config file
+    dataset: str | None = None  # dataset file path can be specified in the config file
     result_json_path: str = "$"
     skip_workflow: bool = False
     skip_completed_entries: bool = False
@@ -31,6 +36,14 @@ class EvaluationRunConfig(BaseModel):
     endpoint_timeout: int = 300
     reps: int = 1
     override: tuple[tuple[str, str], ...] = ()
+    # If false, the output will not be written to the output directory. This is
+    # useful when running evaluation via another tool.
+    write_output: bool = True
+    # if true, the dataset is adjusted to a multiple of the concurrency
+    adjust_dataset_size: bool = False
+    # number of passes at each concurrency, if 0 the dataset is adjusted to a multiple of the
+    # concurrency. The is only used if adjust_dataset_size is true
+    num_passes: int = 0
 
 
 class EvaluationRunOutput(BaseModel):
@@ -40,3 +53,8 @@ class EvaluationRunOutput(BaseModel):
     workflow_output_file: Path | None
     evaluator_output_files: list[Path]
     workflow_interrupted: bool
+
+    eval_input: EvalInput
+    evaluation_results: list[tuple[str, EvalOutput]]
+    usage_stats: UsageStats | None = None
+    profiler_results: ProfilerResults

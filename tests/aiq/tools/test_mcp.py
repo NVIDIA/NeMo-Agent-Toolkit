@@ -15,11 +15,13 @@
 import argparse
 import asyncio
 import os
+from typing import get_args
 
 import pytest
 import uvicorn
 from mcp.server.fastmcp.server import FastMCP
 from mcp.types import TextContent
+from pydantic import ValidationError
 from pydantic.networks import HttpUrl
 from pytest_httpserver import HTTPServer
 
@@ -68,6 +70,17 @@ def _get_sample_schema():
                 'minLength': 1,
                 'title': 'OptionalString',
                 'type': 'string'
+            },
+            'optional_string_field_no_default': {
+                'description': 'Optional field that needs to be a string',
+                'minLength': 1,
+                'title': 'OptionalString',
+                'type': 'string'
+            },
+            'optional_union_field': {
+                'description': 'Optional field that needs to be a string or an integer',
+                'title': 'OptionalUnion',
+                'type': ['string', 'integer', 'null']
             },
             'required_int_field': {
                 'description': 'Required int field.',
@@ -159,6 +172,40 @@ def test_schema_generation(sample_schema):
 
     m = _model.model_validate(test_input)
     assert isinstance(m, _model)
+
+    # Check that the optional field with no default is
+    # 1. present
+    # 2. has a default value of None
+    # 3. has a type of str | None
+    assert hasattr(m, "optional_string_field_no_default")
+    assert m.optional_string_field_no_default is None
+    field_type = m.model_fields["optional_string_field_no_default"].annotation
+    args = get_args(field_type)
+    assert str in args and type(None) in args, f"Expected str | None, got {field_type}"
+
+    # Check that the optional union field is present
+    assert hasattr(m, "optional_union_field")
+    assert m.optional_union_field is None
+    field_type = m.model_fields["optional_union_field"].annotation
+    args = get_args(field_type)
+    assert str in args and type(None) in args and int in args, f"Expected str | None | int, got {field_type}"
+
+
+def test_schema_missing_required_fields_raises(sample_schema):
+    """Ensure that the required descriptor is respected in the schema generation"""
+    _model = model_from_mcp_schema("test_model", sample_schema)
+
+    incomplete_input = {
+        "required_string_field": "ok",  # 'required_int_field' is missing
+        "required_float_field": 5.5
+    }
+
+    with pytest.raises(ValidationError) as exc_info:
+        _model.model_validate(incomplete_input)
+
+    errors = exc_info.value.errors()
+    missing_fields = {e['loc'][0] for e in errors if e['type'] == 'missing'}
+    assert 'required_int_field' in missing_fields
 
 
 @pytest.fixture(name="mcp_client", params=["stdio", "sse", "streamable-http"])

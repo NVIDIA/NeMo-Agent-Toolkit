@@ -18,3 +18,11 @@ limitations under the License.
 # Documentation Examples
 
 This directory contains the code for examples used in documentation guides which are located under the `docs/source` directory.
+
+## Installation and Setup
+
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
+
+### Using Documentation Examples:
+
+The examples in this directory are referenced in various documentation guides. Each subdirectory contains specific examples used in tutorials and guides. Refer to the main documentation for detailed instructions on running these examples.

@@ -15,21 +15,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# AIQ Toolkit as an MCP Client
+# NeMo Agent Toolkit as an MCP Client
 
 Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to LLMs. You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
-You can use AIQ toolkit as an MCP Client to connect to and use tools served by remote MCP servers.
+You can use NeMo Agent toolkit as an MCP Client to connect to and use tools served by remote MCP servers.
 
-This guide will cover how to use AIQ toolkit as an MCP Client. For more information on how to use AIQ toolkit as an MCP Server, please refer to the [MCP Server](./mcp-server.md) documentation.
+This guide will cover how to use NeMo Agent toolkit as an MCP Client. For more information on how to use NeMo Agent toolkit as an MCP Server, please refer to the [MCP Server](./mcp-server.md) documentation.
 
 ## Usage
-Tools served by remote MCP servers can be leveraged as AIQ toolkit functions through configuration of an `mcp_tool_wrapper`.
+Tools served by remote MCP servers can be leveraged as NeMo Agent toolkit functions through configuration of an `mcp_tool_wrapper`.
 
 ```python
 class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
     """
-    Function which connects to a Model Context Protocol (MCP) server and wraps the selected tool as an AIQ function.
+    Function which connects to a Model Context Protocol (MCP) server and wraps the selected tool as a NeMo Agent toolkit
+    function.
     """
     # Add your custom configuration parameters here
     url: HttpUrl | None = Field(default=None, description="The URL of the MCP server (for SSE mode)")
@@ -43,10 +44,14 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
         description="""
         Description for the tool that will override the description provided by the MCP server. Should only be used if
         the description provided by the server is poor or nonexistent
-        """
-    )
-```
+        """)
+    return_exception: bool = Field(default=True,
+                                   description="""
+        If true, the tool will return the exception message if the tool call fails.
+        If false, raise the exception.
+        """)
 
+```
 The configuration supports two client types:
 
 1. **SSE (Server-Sent Events)**: The default client type that connects to an MCP server over HTTP. This is the primary and recommended mode for most use cases.
@@ -89,7 +94,7 @@ functions:
     mcp_tool_name: "github_tool"
 ```
 
-The final configuration parameter (the `description`) is optional, and should only be used if the description provided by the MCP server is not sufficient, or if there is no description provided by the server.
+The optional configuration parameters (`description` and `return_exception`) provide additional control over the tool behavior. The `description` parameter should only be used if the description provided by the MCP server is not sufficient, or if there is no description provided by the server. The `return_exception` parameter controls whether exceptions are returned as messages or raised directly.
 
 Once configured, a Pydantic input schema will be generated based on the input schema provided by the MCP server. This input schema is included with the configured function and is accessible by any agent or function calling the configured `mcp_tool_wrapper` function. The `mcp_tool_wrapper` function can accept the following type of arguments as long as they satisfy the input schema:
  * a validated instance of it's input schema
@@ -101,7 +106,7 @@ Once configured, a Pydantic input schema will be generated based on the input sc
 ## Example
 The simple calculator workflow can be configured to use remote MCP tools. Sample configuration is provided in the `config-mcp-date.yml` file.
 
-`examples/simple_calculator/configs/config-mcp-date.yml`:
+`examples/MCP/simple_calculator_mcp/configs/config-mcp-date.yml`:
 ```yaml
 functions:
   mcp_time_tool:
@@ -112,7 +117,7 @@ functions:
 ```
 
 To run the simple calculator workflow using remote MCP tools, follow these steps:
-1. Start the remote MCP server, `mcp-server-time`, by following the instructions in the `examples/simple_calculator/deploy_external_mcp/README.md` file. Check that the server is running by running the following command:
+1. Start the remote MCP server, `mcp-server-time`, by following the instructions in the `examples/MCP/simple_calculator_mcp/deploy_external_mcp/README.md` file. Check that the server is running by running the following command:
 ```bash
 docker ps --filter "name=mcp-proxy-aiq-time"
 ```
@@ -124,7 +129,7 @@ CONTAINER ID   IMAGE                      COMMAND                  CREATED      
 
 2. Run the workflow using the `aiq run` command.
 ```bash
-aiq run --config_file examples/simple_calculator/configs/config-mcp-date.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+aiq run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-date.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 This will use the `mcp_time_tool` function to get the current hour of the day from the MCP server.
 

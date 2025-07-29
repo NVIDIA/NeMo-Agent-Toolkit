@@ -22,6 +22,7 @@ from _utils.configs import EmbedderProviderTestConfig
 from _utils.configs import FunctionTestConfig
 from _utils.configs import LLMProviderTestConfig
 from _utils.configs import MemoryTestConfig
+from _utils.configs import ObjectStoreTestConfig
 from _utils.configs import RegistryHandlerTestConfig
 from aiq.builder.builder import Builder
 from aiq.builder.embedder import EmbedderProviderInfo
@@ -34,6 +35,7 @@ from aiq.cli.register_workflow import register_function
 from aiq.cli.register_workflow import register_llm_client
 from aiq.cli.register_workflow import register_llm_provider
 from aiq.cli.register_workflow import register_memory
+from aiq.cli.register_workflow import register_object_store
 from aiq.cli.register_workflow import register_registry_handler
 from aiq.cli.register_workflow import register_tool_wrapper
 from aiq.cli.type_registry import TypeRegistry
@@ -179,6 +181,22 @@ def test_register_memory_client(registry: TypeRegistry):
     assert memory_client_info.local_name == MemoryTestConfig.static_type()
     assert memory_client_info.config_type is MemoryTestConfig
     assert memory_client_info.build_fn is build_fn
+
+
+def test_register_object_store(registry: TypeRegistry):
+
+    with pytest.raises(KeyError):
+        registry.get_object_store(ObjectStoreTestConfig)
+
+    @register_object_store(config_type=ObjectStoreTestConfig)
+    async def build_fn(config: ObjectStoreTestConfig, builder: Builder):
+        yield
+
+    object_store_info = registry.get_object_store(ObjectStoreTestConfig)
+    assert object_store_info.full_type == ObjectStoreTestConfig.static_full_type()
+    assert object_store_info.local_name == ObjectStoreTestConfig.static_type()
+    assert object_store_info.config_type is ObjectStoreTestConfig
+    assert object_store_info.build_fn is build_fn
 
 
 def test_register_tool_wrapper(registry: TypeRegistry):

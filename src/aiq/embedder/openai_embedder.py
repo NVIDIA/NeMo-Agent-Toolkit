@@ -21,9 +21,10 @@ from aiq.builder.builder import Builder
 from aiq.builder.embedder import EmbedderProviderInfo
 from aiq.cli.register_workflow import register_embedder_provider
 from aiq.data_models.embedder import EmbedderBaseConfig
+from aiq.data_models.retry_mixin import RetryMixin
 
 
-class OpenAIEmbedderModelConfig(EmbedderBaseConfig, name="openai"):
+class OpenAIEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="openai"):
     """An OpenAI LLM provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=())

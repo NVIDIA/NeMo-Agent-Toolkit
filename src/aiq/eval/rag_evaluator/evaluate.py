@@ -14,8 +14,10 @@
 # limitations under the License.
 
 import logging
+import math
 from collections.abc import Sequence
 
+from pydantic import BaseModel
 from ragas import EvaluationDataset
 from ragas import SingleTurnSample
 from ragas.dataset_schema import EvaluationResult
@@ -25,6 +27,7 @@ from tqdm import tqdm
 
 from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.eval.evaluator.evaluator_model import EvalInput
+from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.evaluator.evaluator_model import EvalOutputItem
 from aiq.eval.utils.tqdm_position_registry import TqdmPositionRegistry
@@ -34,13 +37,36 @@ logger = logging.getLogger(__name__)
 
 class RAGEvaluator:
 
-    def __init__(self, evaluator_llm: LangchainLLMWrapper, metrics: Sequence[Metric], max_concurrency=8):
+    def __init__(self,
+                 evaluator_llm: LangchainLLMWrapper,
+                 metrics: Sequence[Metric],
+                 max_concurrency=8,
+                 input_obj_field: str | None = None):
         self.evaluator_llm = evaluator_llm
         self.metrics = metrics
         self.max_concurrency = max_concurrency
+        self.input_obj_field = input_obj_field
 
-    @staticmethod
-    def eval_input_to_ragas(eval_input: EvalInput) -> EvaluationDataset:
+    def extract_input_obj(self, item: EvalInputItem) -> str:
+        """Extracts the input object from EvalInputItem based on the configured input_obj_field."""
+        input_obj = item.input_obj
+        if isinstance(input_obj, BaseModel):
+            if self.input_obj_field and hasattr(input_obj, self.input_obj_field):
+                # If input_obj_field is specified, return the value of that field
+                return str(getattr(input_obj, self.input_obj_field, ""))
+
+            # If no input_obj_field is specified, return the string representation of the model
+            return input_obj.model_dump_json()
+
+        if isinstance(input_obj, dict):
+            # If input_obj is a dict, return the JSON string representation
+            if self.input_obj_field and self.input_obj_field in input_obj:
+                # If input_obj_field is specified, return the value of that field
+                return str(input_obj[self.input_obj_field])
+
+        return str(input_obj)  # Fallback to string representation of the dict
+
+    def eval_input_to_ragas(self, eval_input: EvalInput) -> EvaluationDataset:
         """Converts EvalInput into a Ragas-compatible EvaluationDataset."""
         from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
         event_filter = [IntermediateStepType.TOOL_END, IntermediateStepType.LLM_END, IntermediateStepType.CUSTOM_END]
@@ -49,7 +75,7 @@ class RAGEvaluator:
         intermediate_step_adapter = IntermediateStepAdapter()
         for item in eval_input.eval_input_items:
             # Extract required fields from EvalInputItem
-            user_input = item.input_obj  # Assumes input_obj is a string (modify if needed)
+            user_input = self.extract_input_obj(item)  # Extract input object as string
             reference = item.expected_output_obj  # Reference correct answer
             response = item.output_obj  # Model's generated response
 
@@ -80,19 +106,29 @@ class RAGEvaluator:
             return EvalOutput(average_score=0.0, eval_output_items=[])
 
         scores: list[dict[str, float]] = results_dataset.scores
+
+        # If Ragas returned no scores, return empty output to avoid downstream errors
         if not scores:
-            logger.error("Ragas returned empty score list")
+            logger.warning("Ragas returned empty score list")
             return EvalOutput(average_score=0.0, eval_output_items=[])
 
-        # Convert from list of dicts to dict of lists
-        scores_dict = {metric: [score[metric] for score in scores] for metric in scores[0]}
+        def _nan_to_zero(v: float | None) -> float:
+            """Convert NaN or None to 0.0 for safe arithmetic/serialization."""
+            return 0.0 if v is None or (isinstance(v, float) and math.isnan(v)) else v
 
-        # Compute the average of each metric
-        average_scores = {metric: sum(values) / len(values) for metric, values in scores_dict.items()}
+        # Convert from list of dicts to dict of lists, coercing NaN/None to 0.0
+        scores_dict = {metric: [_nan_to_zero(score.get(metric)) for score in scores] for metric in scores[0]}
+        first_metric_name = list(scores_dict.keys())[0] if scores_dict else None
 
-        # Extract the first (and only) metric's average score
-        first_avg_score = next(iter(average_scores.values()))
-        first_metric_name = list(scores_dict.keys())[0]
+        # Compute the average of each metric, guarding against empty lists
+        average_scores = {
+            metric: (sum(values) / len(values) if values else 0.0)
+            for metric, values in scores_dict.items()
+        }
+
+        first_avg_score = average_scores.get(list(scores_dict.keys())[0], 0.0)
+        if isinstance(first_avg_score, float) and math.isnan(first_avg_score):
+            first_avg_score = 0.0
 
         df = results_dataset.to_pandas()
         # Get id from eval_input if df size matches number of eval_input_items
@@ -105,7 +141,7 @@ class RAGEvaluator:
         eval_output_items = [
             EvalOutputItem(
                 id=ids[i],
-                score=getattr(row, first_metric_name, 0.0),
+                score=_nan_to_zero(getattr(row, first_metric_name, 0.0) if first_metric_name else 0.0),
                 reasoning={
                     key:
                         getattr(row, key, None)  # Use getattr to safely access attributes
