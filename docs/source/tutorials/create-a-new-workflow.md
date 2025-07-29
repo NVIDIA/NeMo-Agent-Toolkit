@@ -230,6 +230,12 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
   build-backend = "setuptools.build_meta"
   ```
 
+  In addition to this, we also need to tell `setuptools_scm` where to find the root of git repository, this can be omitted if the `pyproject.toml` file is located at the root of the repository:
+  ```toml
+  [tool.setuptools_scm]
+  root = "../../../.."
+  ```
+
   Alternately if we did not want to do this we would instead:
   ```toml
   [build-system]
@@ -239,9 +245,7 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
   [project]
   name = "text_file_ingest"
   version = "0.1.0"
-  ...
   ```
-
 
 - **Entry Points**: This tells NeMo Agent toolkit where to find your workflow registration.
 
