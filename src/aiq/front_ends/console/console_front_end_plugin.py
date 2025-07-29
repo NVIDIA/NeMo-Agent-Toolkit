@@ -112,6 +112,9 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         else:
             assert False, "Should not reach here. Should have been caught by pre_run"
 
+        if isinstance(runner_outputs, list):
+            # try to improve the formatting of the output
+            runner_outputs = "\n".join(str(part) for part in runner_outputs)
+
         # Print result
-        logger.info(f"\n{'-' * 50}\n{Fore.GREEN}Workflow Result:\n%s{Fore.RESET}\n{'-' * 50}",
-                    "\n".join(str(part) for part in runner_outputs))
+        logger.info(f"\n{'-' * 50}\n{Fore.GREEN}Workflow Result:\n%s{Fore.RESET}\n{'-' * 50}", runner_outputs)
