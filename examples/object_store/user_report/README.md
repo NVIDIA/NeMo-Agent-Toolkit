@@ -56,50 +56,10 @@ uv pip install -e examples/object_store/user_report
 ### Setting up MinIO (Optional)
 If you want to run this example in a local setup without creating a bucket in AWS, you can set up MinIO in your local machine. MinIO is an object storage system and acts as drop-in replacement for AWS S3.
 
-For the up-to-date installation instructions of MinIO, see [MinIO Page](https://github.com/minio/minio) and MinIO client see [MinIO Client Page](https://github.com/minio/mc)
+You can use the [docker-compose.minio.yml](../../deploy/docker-compose.minio.yml) file to start a MinIO server in a local docker container.
 
-#### macOS
-To install MinIO on your macOS machine, run the following commands:
 ```bash
-brew install minio/stable/mc
-mc --help
-mc alias set myminio http://localhost:9000 minioadmin minioadmin
-
-brew install minio/stable/minio
-```
-
-#### Linux
-To install MinIO on your Linux machine, run the following commands:
-```bash
-curl https://dl.min.io/client/mc/release/linux-amd64/mc \
-  --create-dirs \
-  -o $HOME/minio-binaries/mc
-
-chmod +x $HOME/minio-binaries/mc
-export PATH=$PATH:$HOME/minio-binaries/
-mc --help
-mc alias set myminio http://localhost:9000 minioadmin minioadmin
-
-wget https://dl.min.io/server/minio/release/linux-amd64/archive/minio_20250422221226.0.0_amd64.deb -O minio.deb
-sudo dpkg -i minio.deb
-```
-
-### Start the MinIO Server
-To start the MinIO server, run the following command:
-```bash
-minio server ~/.minio
-```
-
-### Useful MinIO Commands
-
-List buckets:
-```bash
-mc ls myminio
-```
-
-List all files in a bucket:
-```bash
-mc ls --recursive myminio/my-bucket
+docker compose -f examples/deploy/docker-compose.minio.yml up -d
 ```
 
 ### Load Mock Data to MiniIO
@@ -110,74 +70,26 @@ cd examples/object_store/user_report/
 ./upload_to_minio.sh data/object_store myminio my-bucket
 ```
 
+Note: This is not a secure configuration and should not to be used in production systems.
+
 ### Setting up the MySQL Server (Optional)
 
-#### Linux (Ubuntu)
+If you want to use a MySQL server, you can use the [docker-compose.mysql.yml](../../deploy/docker-compose.mysql.yml) file to start a MySQL server in a local docker container.
 
-1. Install MySQL Server:
+You should specify the `MYSQL_ROOT_PASSWORD` environment variable as part of your environment variables.
+
 ```bash
-sudo apt update
-sudo apt install mysql-server
-```
-
-2. Verify installation:
-```
-sudo systemctl status mysql
-```
-
-Make sure that the service is `active (running)`.
-
-3. The default installation of the MySQL server allows root access only if you’re the system user "root" (socket-based authentication). To be able to connect using the root user and password, run the following command:
-```
-sudo mysql
-```
-
-4. Inside the MySQL console, run the following command (you can choose any password but make sure it matches the one used in the config):
-```
-ALTER USER 'root'@'localhost'
-  IDENTIFIED WITH mysql_native_password BY 'my_password';
-FLUSH PRIVILEGES;
-quit
+MYSQL_ROOT_PASSWORD=<password> docker compose -f examples/deploy/docker-compose.mysql.yml up -d
 ```
 
 Note: This is not a secure configuration and should not to be used in production systems.
 
-5. Back in the terminal:
-```bash
-sudo service mysql restart
-```
-
 ### Load Mock Data to MySQL Server
-To load mock data to the MySQL server:
-
-1. Update the MYSQL configuration:
-```bash
-sudo tee /etc/mysql/my.cnf > /dev/null <<EOF
-[mysqld]
-secure_file_priv=""
-EOF
-```
-
-2. Append this rule to MySQL's AppArmor profile local override:
-```bash
-echo "/tmp/** r," | sudo tee -a /etc/apparmor.d/local/usr.sbin.mysqld
-```
-
-3. Reload the AppArmor policy:
-```bash
-sudo apparmor_parser -r /etc/apparmor.d/usr.sbin.mysqld
-```
-
-4. Restart the MySQL server:
-```bash
-sudo systemctl restart mysql
-```
-
-5. Use the `upload_to_mysql.sh` script in this directory. For this example, we will load the mock user reports in the `data/object_store` directory.
+To load mock data to the MySQL server, use the `upload_to_mysql.sh` script in this directory. For this example, we will load the mock user reports in the `data/object_store` directory.
 
 ```bash
 cd examples/object_store/user_report/
-./upload_to_mysql.sh root my_password data/object_store my-bucket
+MYSQL_ROOT_PASSWORD=<password> ./upload_to_mysql.sh data/object_store my-bucket
 ```
 
 ## NeMo Agent Toolkit File Server
