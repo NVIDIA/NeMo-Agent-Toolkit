@@ -60,7 +60,7 @@ def optimize_parameters(
         suggestions = {p: spec.suggest(trial, p) for p, spec in space.items()}
         cfg_trial = apply_suggestions(base_cfg, suggestions)
 
-        async def _single_eval() -> list[float]:
+        async def _single_eval(trial_idx: int) -> list[float]:
             eval_cfg = EvaluationRunConfig(
                 config_file=cfg_trial,
                 dataset=opt_run_config.dataset,
@@ -73,9 +73,13 @@ def optimize_parameters(
             for metric_name in eval_metrics:
                 metric = next(r[1] for r in scores.evaluation_results if r[0] == metric_name)
                 values.append(metric.average_score)
+
+            with (out_dir / f"config_numeric_trial_{trial._trial_id}_run_{trial_idx}.yml").open("w") as fh:
+                yaml.dump(cfg_trial.model_dump(), fh)
+
             return values
 
-        all_scores = asyncio.run(asyncio.gather(*(_single_eval() for _ in range(reps))))
+        all_scores = asyncio.run(asyncio.gather(*(_single_eval(i) for i in range(reps))))
         return [sum(run[i] for run in all_scores) / reps for i in range(len(eval_metrics))]
 
     logger.info("Starting numeric / enum parameter optimization...")
