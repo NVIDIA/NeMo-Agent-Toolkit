@@ -41,7 +41,7 @@ Ensure that Docker is installed and the Docker service is running before proceed
 
 - Install Docker: Follow the official installation guide for your platform: [Docker Installation Guide](https://docs.docker.com/engine/install/)
 - Start Docker Service:
-  - Linux: Run`sudo systemctl start docker` (ensure your user has permission to run Docker).
+  - Linux: Run `sudo systemctl start docker` (ensure your user has permission to run Docker).
   - Mac & Windows: Docker Desktop should be running in the background.
 - Verify Docker Installation: Run the following command to verify that Docker is installed and running correctly:
 ```bash
@@ -51,6 +51,11 @@ docker info
 ## Installation and Setup
 
 If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+
+To run this example, install the required dependencies by running the following command:
+```bash
+uv sync --extra langchain --extra redis --extra telemetry
+```
 
 ### Start Services
 
@@ -68,7 +73,7 @@ docker compose -f examples/deploy/docker-compose.phoenix.yml up
 
 ## Run the Workflow
 
-This examples shows how to have a simple chat that uses a redis memory backend for creating and retrieving memories.
+This example shows how to have a simple chat that uses a Redis memory backend for creating and retrieving memories.
 
 An embeddings model is used to create embeddings for queries and for stored memories. Uses HNSW and L2 distance metric.
 
