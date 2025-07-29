@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 class AuthenticatedRequestConfig(FunctionBaseConfig, name="authenticated_request"):
     """
-    Simple function for making authenticated HTTP requests.
+    Simple configuration for making authenticated HTTP requests.
 
     Takes direct parameters for user_id, HTTP method, and URL to make authenticated requests or unauthenticated
     requests.
@@ -53,12 +53,6 @@ async def authenticated_request_function(config: AuthenticatedRequestConfig, bui
         """
         Make HTTP requests using the AuthProviderMixin unified request method.
 
-        This function demonstrates the AuthProviderMixin capabilities:
-        - Unified request method for all HTTP methods
-        - Authenticated requests as first citizen (default behavior)
-        - Optional unauthenticated requests when needed
-        - Returns actual API response content as text
-
         Args:
             url (str): The full URL to request
             method (str): HTTP method to use (GET, POST, PUT, DELETE, PATCH)
@@ -70,7 +64,6 @@ async def authenticated_request_function(config: AuthenticatedRequestConfig, bui
             str: The actual API response content as text, or error message as text
         """
         try:
-            # Use the unified request method from AuthProviderMixin
             response: HTTPResponse = await auth_provider.request(  # type: ignore[attr-defined]
                 method=method,
                 url=url,
@@ -78,34 +71,29 @@ async def authenticated_request_function(config: AuthenticatedRequestConfig, bui
                 apply_auth=authenticated,
                 body_data=json_data if json_data else None)
 
-            # Log the successful request
             auth_status = "authenticated" if authenticated else "public"
-            logger.info(f"Successfully made {auth_status} {method.upper()} request to {url} "
-                        f"(status: {response.status_code})")
+            logger.info("Successfully made %s %s request to %s (status: %s)",
+                        auth_status,
+                        method.upper(),
+                        url,
+                        response.status_code)
 
-            # Return only the actual API response content as text
             if response.body is not None:
-                # If it's already a string, return it directly
                 if isinstance(response.body, str):
                     return response.body
-
-                # If it's a dict/object, return it as formatted JSON
                 try:
                     return json.dumps(response.body, indent=2)
                 except (TypeError, ValueError):
-                    # If it can't be JSON serialized, convert to string
                     return str(response.body)
             else:
                 return f"No response content received (HTTP {response.status_code})"
 
         except ValueError as e:
-            # This catches user_id validation errors and other value errors
             error_msg = f"Validation error: {str(e)}"
             logger.error(error_msg)
             return error_msg
 
         except Exception as e:
-            # Catch any other errors
             error_msg = f"Request failed: {str(e)}"
             logger.error(error_msg)
             return error_msg

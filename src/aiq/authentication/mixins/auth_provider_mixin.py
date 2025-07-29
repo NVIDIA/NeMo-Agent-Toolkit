@@ -30,23 +30,6 @@ class AuthProviderMixin(httpx.AsyncClient):
 
     Provides persistent httpx.AsyncClient for connection pooling and reuse,
     while keeping HTTP configuration flexible at the request level.
-
-    Design Principle: Pure capability extension, zero coupling.
-    - HTTP client connection pooling → Provided by this mixin
-    - Authentication logic → Handled by AuthProviderBase implementations
-    - HTTP infrastructure config → Handled by individual request methods
-
-    Usage:
-        client = OAuth2AuthProvider(config=oauth_config)  # Pure auth config
-        response = await client.request("GET", "/user", timeout=30, verify=False)
-        public_response = await client.request("GET", "/public", apply_auth=False)
-
-    Key Features:
-    - Connection pooling and persistent connections via httpx.AsyncClient
-    - Automatic credential injection via existing AuthResult.attach()
-    - Structured HTTPResponse objects with authentication context
-    - Complete separation: auth config vs HTTP config vs request config
-    - Maximum flexibility for different HTTP settings per request
     """
 
     def __init__(self, **kwargs):
