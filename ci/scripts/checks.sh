@@ -29,7 +29,7 @@ PY_CHECKS_RETVAL=$?
 echo "Checking copyright headers"
 python ${SCRIPT_DIR}/copyright.py --verify-apache-v2
 COPYRIGHT_RETVAL=$?
-if [[ ${PRE_COMMIT_RETVAL} -eq 0 ]]; then
+if [[ ${COPYRIGHT_RETVAL} -eq 0 ]]; then
    echo -e "\n\n>>>> PASSED: copyright check\n\n"
 else
    echo -e "\n\n>>>> FAILED: copyright check\n\n"
