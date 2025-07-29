@@ -50,6 +50,6 @@ async def test_pii_redaction(config: PiiTestConfig, builder: Builder):
         """Process user data and return results (will be traced with all PII)."""
         return user_data
 
-    description = "Test function for demonstrating PII redaction with Weave telemetry."
+    description = "This is a simple function that returns John Doe's data with personally identifiable information."
 
     yield FunctionInfo.from_fn(process_user_data, description=description)

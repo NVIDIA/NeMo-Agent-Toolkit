@@ -85,50 +85,70 @@ telemetry:
       redact_pii: true
       redact_pii_fields:
         - EMAIL_ADDRESS
-        - PHONE_NUMBER
-        - CREDIT_CARD
-        - US_SSN
-        - PERSON
-      redact_keys:
+        # Uncomment other entity types as needed
+        # - PHONE_NUMBER
+        # - CREDIT_CARD
+        # - US_SSN
+        # - PERSON      redact_keys:
         - custom_secret
         - api_key
         - auth_token
 ```
 
-2. Run the workflow:
+2. Serve the workflow:
 
-```bash
-aiq run --config_file examples/observability/redact_pii/configs/weave_redact_pii_config.yml --input "Test query"
+```console
+aiq serve --config_file examples/observability/redact_pii/configs/weave_redact_pii_config.yml
 ```
 
-3. Go to your Weights & Biases dashboard (https://wandb.ai) and navigate to the "aiqtoolkit-pii" project.
+3. Invoke the workflow:
 
-4. Open the Weave trace viewer to see the redacted PII data. Look for:
+In another terminal, submit a POST request to invoke the served workflow
+
+```console
+curl -X 'POST'   'http://localhost:8000/generate'
+   -H 'accept: application/json'
+   -H 'Content-Type: application/json'   -d '{
+  "input_message": "What is John Doe'\''s contact information?"
+}'
+{"value":"John Doe's contact information is:\n\n* Email: test@example.com\n* Phone: 555-123-4567"}
+```
+
+4. Go to your Weights & Biases dashboard (https://wandb.ai) and navigate to the "aiqtoolkit-pii" project.
+
+Note: Because observability does not block workflow execution, PII redacted traces might take a few minutes to arrive in the Weights & Biases dashboard.
+
+5. Open the Weave trace viewer to see the redacted PII data. With the default configuration, you'll see:
    - Redacted email addresses (`EMAIL_ADDRESS`)
+   - Redacted custom keys (`custom_secret`, `api_key`, `auth_token`)
+
+   If you enable additional entity types, you may also see:
    - Redacted phone numbers (`PHONE_NUMBER`)
    - Redacted credit card information (`CREDIT_CARD`)
    - Redacted social security numbers (`US_SSN`)
    - Redacted person names (`PERSON`)
-   - Redacted custom keys (`custom_secret`)
 
 ![Weave PII Redaction](images/redact_weave_trace.png)
 
 ## Customizing PII Redaction
 
-You can customize what gets redacted by modifying these fields in the `weave_pii_test.yaml` file:
+You can customize what gets redacted by modifying these fields in the `weave_redact_pii_config.yml` file:
 
 ### Entity Types
 
-The `redact_pii_fields` array specifies which PII entity types to redact. For a full list of the entities that can be detected and redacted, see PII entities supported by [Presidio](https://microsoft.github.io/presidio/supported_entities/).
+The `redact_pii_fields` array specifies which PII entity types to redact. By default, only `EMAIL_ADDRESS` is enabled. Additional entity types can be enabled as needed, but may impact tracing latency.
+
+For a full list of entities that can be detected and redacted, see PII entities supported by [Presidio](https://microsoft.github.io/presidio/supported_entities/).
 
 ```yaml
 redact_pii_fields:
   - EMAIL_ADDRESS
-  - PHONE_NUMBER
-  - CREDIT_CARD
-  - US_SSN
-  - PERSON
-  # Add other entity types as needed
+  # Optional entity types (uncomment as needed):
+  # - PHONE_NUMBER
+  # - CREDIT_CARD
+  # - US_SSN
+  # - PERSON
+  # Note: Enabling additional entity types may impact tracing latency performance
 ```
 
 ### Custom Keys

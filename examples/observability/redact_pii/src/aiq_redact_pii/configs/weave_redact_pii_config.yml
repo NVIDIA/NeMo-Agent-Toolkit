@@ -23,10 +23,12 @@ general:
         redact_pii: true
         redact_pii_fields:
           - EMAIL_ADDRESS
-          - PHONE_NUMBER
-          - CREDIT_CARD
-          - US_SSN
-          - PERSON
+          # Uncomment other entity types as needed
+          # - PHONE_NUMBER
+          # - CREDIT_CARD
+          # - US_SSN
+          # - PERSON
+          # Note: Enabling additional entity types may impact tracing latency performance
         redact_keys:
           - custom_secret
           - api_key
