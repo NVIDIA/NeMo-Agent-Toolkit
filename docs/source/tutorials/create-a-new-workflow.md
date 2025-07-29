@@ -174,7 +174,7 @@ async def text_file_ingest_tool(config: TextFileIngestToolConfig, builder: Build
 
 ## Creating the Workflow Configuration
 
-Starting from the `custom_config.yml` file you created in the previous section, replace the two `webpage_query` tools with the new `text_file_ingest` tool. For the data source, you can use a collection of text files located in the `examples/docs/workflows/text_file_ingest/data` directory that describes [DOCA GPUNetIO](https://docs.nvidia.com/doca/sdk/doca+gpunetio/index.html).
+Starting from the `custom_config.yml` file you created in the previous section, replace the two `webpage_query` tools with the new `text_file_ingest` tool. For the data source, you can use a collection of text files located in the `examples/documentation_guides/workflows/text_file_ingest/data` directory that describes [DOCA GPUNetIO](https://docs.nvidia.com/doca/sdk/doca+gpunetio/index.html).
 
 :::{note}
 If you are following this document and building this tool from scratch, you can either copy the contents of `examples/documentation_guides/workflows/text_file_ingest/data` into `examples/text_file_ingest/src/text_file_ingest/data` or populate it with your own text files.
@@ -269,7 +269,7 @@ aiq workflow delete text_file_ingest
 ## Running the Workflow
 
 :::{note}
-The following commands reference the pre-built workflow located in `examples/docs/workflows/text_file_ingest`. If you are following this document and building this tool from the beginning, replace `examples/docs/workflows/text_file_ingest` with `examples/text_file_ingest`.
+The following commands reference the pre-built workflow located in `examples/documentation_guides/workflows/text_file_ingest`. If you are following this document and building this tool from the beginning, replace `examples/documentation_guides/workflows/text_file_ingest` with `examples/text_file_ingest`.
 :::
 
 After completed, install the tool into the environment:
