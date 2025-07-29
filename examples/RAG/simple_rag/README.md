@@ -178,7 +178,7 @@ aiq run --config_file examples/RAG/simple_rag/configs/milvus_rag_config.yml --in
     3. Download the NVIDIA CUDA Toolkit from the official NVIDIA website.
     4. Install the CUDA Toolkit using the chosen installation method.
     5. Perform post-installation actions, such as updating the Apt repository cache and installing additional packages.
-    
+
     For specific instructions, please refer to the official NVIDIA documentation for your operating system: https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html or https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html.
     ```
 
@@ -282,7 +282,7 @@ aiq run --config_file=examples/RAG/simple_rag/configs/milvus_memory_rag_config.y
 The expected workflow result of the above run is:
 
 ```
-🎉 To install CUDA, follow these steps: 
+🎉 To install CUDA, follow these steps:
 1. Verify that your system has a CUDA-capable GPU 🖥️
 2. Download the NVIDIA CUDA Toolkit from the official website 📦
 3. Install the CUDA Software by executing the CUDA installer and following the on-screen prompts 💻
@@ -344,17 +344,17 @@ This code creates a sample array, transfers it to the GPU, performs some operati
 You can also use the experimental `inference_time_scaling` feature to scale the inference time of the agent. This feature allows you to control the inference time of the agent. Particularly, in this example, we demonstrate how to enable multiple
 executions of the retrieval agent with a higher LLM temperature to encourage diversity. We then merge the outputs of the multiple runs with another LLM call to synthesize one comprehensive answer from multiple searches.
 
-An example configuration can be found in the `configs/milvus_rag_config_its.yml` file. Notably, it has a few additions to the standard configuration: 
+An example configuration can be found in the `configs/milvus_rag_config_its.yml` file. Notably, it has a few additions to the standard configuration:
 - An `its_strategies` section of the configuration that details which inference time scaling techniques will be used in the workflow
-- A `selection_strategy` called `llm_based_agent_output_merging` selection, that takes the output of multiple workflow runs and combines them using a single LLM call. 
-- A new `workflow` entrypoint called the `execute_score_select` function. The function executes the `augmented_fn` (the ReAct agent here) `num_iterations` times, and then passes the outputs to the selector. 
+- A `selection_strategy` called `llm_based_agent_output_merging` selection, that takes the output of multiple workflow runs and combines them using a single LLM call.
+- A new `workflow` entrypoint called the `execute_score_select` function. The function executes the `augmented_fn` (the ReAct agent here) `num_iterations` times, and then passes the outputs to the selector.
 
 To run this workflow, you can use the following command:
 ```bash
-aiq run --config_file examples/simple_rag/configs/milvus_rag_config_its.yml --input "What is the difference between CUDA and MCP?"
+aiq run --config_file examples/RAG/simple_rag/configs/milvus_rag_config_its.yml --input "What is the difference between CUDA and MCP?"
 ```
 
-You should see a workflow result that looks similar to the following: 
+You should see a workflow result that looks similar to the following:
 ```
 CUDA and MCP are two distinct technologies with different purposes and cannot be directly compared. CUDA is a parallel computing platform and programming model, primarily used for compute-intensive tasks such as scientific simulations, data analytics, and machine learning, whereas MCP is an open protocol designed for providing context to Large Language Models (LLMs), particularly for natural language processing and other AI-related tasks. While they serve different purposes, CUDA and MCP share a common goal of enabling developers to create powerful and efficient applications. They are complementary technologies that can be utilized together in certain applications to achieve innovative outcomes, although their differences in design and functionality set them apart. In essence, CUDA focuses on parallel computing and is developed by NVIDIA, whereas MCP is focused on context provision for LLMs, making them unique in their respective fields but potentially synergistic in specific use cases.
 ```
