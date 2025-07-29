@@ -15,5 +15,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA Agent Intelligence Toolkit Code of Conduct
+# NVIDIA NeMo Agent Toolkit Code of Conduct
 This project has adopted the [Contributor Covenant Code of Conduct](https://docs.rapids.ai/resources/conduct/).

@@ -44,7 +44,8 @@ class EvalInputCustomScriptConfig(BaseModel):
 
 class EvalS3Config(BaseModel):
 
-    endpoint_url: str
+    endpoint_url: str | None = None
+    region_name: str | None = None
     bucket: str
     access_key: str
     secret_key: str

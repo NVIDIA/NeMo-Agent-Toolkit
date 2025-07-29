@@ -46,7 +46,11 @@ async def code_execution_tool(config: CodeExecutionToolConfig, builder: Builder)
     class CodeExecutionInputSchema(BaseModel):
         generated_code: str = Field(description="String containing the code to be executed")
 
-    sandbox = get_sandbox(sandbox_type=config.sandbox_type, uri=config.uri)
+    # Create sandbox without working_directory
+    sandbox_kwargs = {"uri": config.uri}
+
+    sandbox = get_sandbox(sandbox_type=config.sandbox_type, **sandbox_kwargs)
+    logger.info(f"[DEBUG] Created sandbox of type: {config.sandbox_type}")
 
     async def _execute_code(generated_code: str) -> dict:
         logger.info("Executing code in the sandbox at %s", config.uri)
@@ -54,12 +58,12 @@ async def code_execution_tool(config: CodeExecutionToolConfig, builder: Builder)
             output = await sandbox.execute_code(
                 generated_code=generated_code,
                 language="python",
-                timeout=config.timeout,
+                timeout_seconds=config.timeout,
                 max_output_characters=config.max_output_characters,
             )
         except Exception as e:
             logger.exception("Error when executing code in the sandbox, %s", e)
-            return {"process_status": "error", "stdout": "", "stderr": e}
+            return {"process_status": "error", "stdout": "", "stderr": str(e)}
         return output
 
     yield FunctionInfo.from_fn(

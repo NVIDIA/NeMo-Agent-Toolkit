@@ -15,12 +15,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA Agent Intelligence Toolkit Quick Start Guide
+# NVIDIA NeMo Agent Toolkit Quick Start Guide
 
 ```{toctree}
 :hidden:
 :caption: Quick Start Guide
 
-Installing Agent Intelligence Toolkit <./installing.md>
+Installing NeMo Agent Toolkit <./installing.md>
 Launching the API Server and UI <./launching-ui.md>
 ```

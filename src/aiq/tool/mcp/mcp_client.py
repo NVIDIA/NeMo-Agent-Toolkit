@@ -27,6 +27,9 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import create_model
 
+from aiq.tool.mcp.exceptions import MCPToolNotFoundError
+from aiq.utils.exception_handlers.mcp import mcp_exception_handler
+
 logger = logging.getLogger(__name__)
 
 
@@ -45,6 +48,7 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
     }
 
     properties = mcp_input_schema.get("properties", {})
+    required_fields = set(mcp_input_schema.get("required", []))
     schema_dict = {}
 
     def _generate_valid_classname(class_name: str):
@@ -67,10 +71,30 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
             else:
                 item_type = _type_map.get(item_properties.get("type", "string"), Any)
             field_type = list[item_type]
+        elif isinstance(json_type, list):
+            field_type = None
+            for t in json_type:
+                mapped = _type_map.get(t, Any)
+                field_type = mapped if field_type is None else field_type | mapped
+
+            return field_type, Field(
+                default=field_properties.get("default", None if "null" in json_type else ...),
+                description=field_properties.get("description", "")
+            )
         else:
             field_type = _type_map.get(json_type, Any)
 
-        default_value = field_properties.get("default", ...)
+        # Determine the default value based on whether the field is required
+        if field_name in required_fields:
+            # Field is required - use explicit default if provided, otherwise make it required
+            default_value = field_properties.get("default", ...)
+        else:
+            # Field is optional - use explicit default if provided, otherwise None
+            default_value = field_properties.get("default", None)
+            # Make the type optional if no default was provided
+            if "default" not in field_properties:
+                field_type = field_type | None
+
         nullable = field_properties.get("nullable", False)
         description = field_properties.get("description", "")
 
@@ -117,9 +141,16 @@ class MCPBuilder(MCPSSEClient):
         super().__init__(url)
         self._tools = None
 
+    @mcp_exception_handler
     async def get_tools(self):
         """
         Retrieve a dictionary of all tools served by the MCP server.
+
+        Returns:
+            Dict of tool name to MCPToolClient
+
+        Raises:
+            MCPError: If connection or tool retrieval fails
         """
         async with self.connect_to_sse_server() as session:
             response = await session.list_tools()
@@ -129,6 +160,7 @@ class MCPBuilder(MCPSSEClient):
             for tool in response.tools
         }
 
+    @mcp_exception_handler
     async def get_tool(self, tool_name: str) -> MCPToolClient:
         """
         Get an MCP Tool by name.
@@ -139,17 +171,19 @@ class MCPBuilder(MCPSSEClient):
         Returns:
             MCPToolClient for the configured tool.
 
-        Raise:
-            ValueError if no tool is available with that name.
+        Raises:
+            MCPToolNotFoundError: If no tool is available with that name
+            MCPError: If connection fails
         """
         if not self._tools:
             self._tools = await self.get_tools()
 
         tool = self._tools.get(tool_name)
         if not tool:
-            raise ValueError(f"Tool {tool_name} not available at {self.url}")
+            raise MCPToolNotFoundError(tool_name, self.url)
         return tool
 
+    @mcp_exception_handler
     async def call_tool(self, tool_name: str, tool_args: dict | None):
         async with self.connect_to_sse_server() as session:
             result = await session.call_tool(tool_name, tool_args)
@@ -200,6 +234,7 @@ class MCPToolClient(MCPSSEClient):
         """
         self._tool_description = description
 
+    @mcp_exception_handler
     async def acall(self, tool_args: dict) -> str:
         """
         Call the MCP tool with the provided arguments.

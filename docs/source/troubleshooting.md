@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NVIDIA Agent Intelligence Toolkit Troubleshooting
+# NVIDIA NeMo Agent Toolkit Troubleshooting
 
 If you encounter any issues:
 
@@ -25,4 +25,4 @@ If you encounter any issues:
 
 - **Environment Variables**: Double-check that your `NVIDIA_API_KEY` is correctly set.
 
-- **[429] Too Many Requests**: This error might arise during executing workflows that involve LLM calls because of rate limiting on the LLM models. It is recommended to pause briefly and then attempt the operation again a few times. For warm fix set the `retry_parsing_errors: false` in `config.yaml` for the `react_agent`. Usually happens that the `react_agent` exhausts the available LLM rate with entire error stack trace.
+- **[429] Too Many Requests**: This error might arise during executing workflows that involve LLM calls because of rate limiting on the LLM models. It is recommended to pause briefly and then attempt the operation again a few times. For warm fix set the `parse_agent_response_max_retries: 1` in `config.yaml` for the `react_agent`. Usually happens that the `react_agent` exhausts the available LLM rate with entire error stack trace.

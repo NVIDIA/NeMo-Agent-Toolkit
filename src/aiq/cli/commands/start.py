@@ -187,6 +187,7 @@ class StartCommandGroup(click.Group):
 
         config = validate_schema(config_dict, AIQConfig)
 
+        # Override default front end config with values from the config file for serverless execution modes.
         # Check that we have the right kind of front end
         if (not isinstance(config.general.front_end, front_end.config_type)):
             logger.warning(

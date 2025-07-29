@@ -20,6 +20,7 @@ from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
 from aiq.data_models.intermediate_step import StreamEventData
+from aiq.data_models.invocation_node import InvocationNode
 from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
 
 # pylint: disable=redefined-outer-name
@@ -52,11 +53,14 @@ def mock_intermediate_steps(llm_name, tool_name):
 
     def create_step(event_type, name=llm_name, input_data=None, output_data=None, chunk=None):
         """Helper to create an `IntermediateStep`."""
-        return IntermediateStep(
-            payload=IntermediateStepPayload(event_type=event_type,
-                                            framework=framework,
-                                            name=name,
-                                            data=StreamEventData(input=input_data, output=output_data, chunk=chunk)))
+        return IntermediateStep(parent_id="root",
+                                function_ancestry=InvocationNode(function_name=name, function_id="test-function-id"),
+                                payload=IntermediateStepPayload(event_type=event_type,
+                                                                framework=framework,
+                                                                name=name,
+                                                                data=StreamEventData(input=input_data,
+                                                                                     output=output_data,
+                                                                                     chunk=chunk)))
 
     return [
         create_step(IntermediateStepType.LLM_START, input_data=user_input),

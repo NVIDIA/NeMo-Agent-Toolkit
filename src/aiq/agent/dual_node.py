@@ -34,7 +34,7 @@ class DualNodeAgent(BaseAgent):
     def __init__(self,
                  llm: BaseChatModel,
                  tools: list[BaseTool],
-                 callbacks: list[AsyncCallbackHandler] = None,
+                 callbacks: list[AsyncCallbackHandler] | None = None,
                  detailed_logs: bool = False):
         super().__init__(llm=llm, tools=tools, callbacks=callbacks, detailed_logs=detailed_logs)
 

@@ -102,14 +102,55 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
 
         return tools
 
+    def _log_build_failure_evaluator(self,
+                                     failing_evaluator_name: str,
+                                     completed_evaluators: list[str],
+                                     remaining_evaluators: list[str],
+                                     original_error: Exception) -> None:
+        """
+        Log comprehensive evaluator build failure information.
+
+        Args:
+            failing_evaluator_name (str): The name of the evaluator that failed to build
+            completed_evaluators (list[str]): List of evaluator names that were successfully built
+            remaining_evaluators (list[str]): List of evaluator names still to be built
+            original_error (Exception): The original exception that caused the failure
+        """
+        # Convert evaluator names to (name, type) tuples for consistent logging
+        completed_components = [(name, "evaluator") for name in completed_evaluators]
+        remaining_components = [(name, "evaluator") for name in remaining_evaluators]
+
+        # Use the inherited common logging method from WorkflowBuilder
+        self._log_build_failure(failing_evaluator_name,
+                                "evaluator",
+                                completed_components,
+                                remaining_components,
+                                original_error)
+
     async def populate_builder(self, config: AIQConfig):
         # Skip setting workflow if workflow config is EmptyFunctionConfig
         skip_workflow = isinstance(config.workflow, EmptyFunctionConfig)
 
         await super().populate_builder(config, skip_workflow)
-        # Instantiate the evaluators
+
+        # Initialize progress tracking for evaluators
+        completed_evaluators = []
+        remaining_evaluators = list(config.eval.evaluators.keys())
+
+        # Instantiate the evaluators with enhanced error logging
         for name, evaluator_config in config.eval.evaluators.items():
-            await self.add_evaluator(name, evaluator_config)
+            try:
+                # Remove from remaining as we start building
+                remaining_evaluators.remove(name)
+
+                await self.add_evaluator(name, evaluator_config)
+
+                # Add to completed after successful build
+                completed_evaluators.append(name)
+
+            except Exception as e:
+                self._log_build_failure_evaluator(name, completed_evaluators, remaining_evaluators, e)
+                raise
 
     @classmethod
     @asynccontextmanager

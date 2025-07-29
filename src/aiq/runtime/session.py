@@ -21,11 +21,14 @@ from collections.abc import Callable
 from contextlib import asynccontextmanager
 from contextlib import nullcontext
 
-from fastapi import Request
+from starlette.requests import HTTPConnection
 
 from aiq.builder.context import AIQContext
 from aiq.builder.context import AIQContextState
 from aiq.builder.workflow import Workflow
+from aiq.data_models.authentication import AuthenticatedContext
+from aiq.data_models.authentication import AuthFlowType
+from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
@@ -86,8 +89,11 @@ class AIQSessionManager:
     @asynccontextmanager
     async def session(self,
                       user_manager=None,
-                      request: Request = None,
-                      user_input_callback: Callable[[InteractionPrompt], Awaitable[HumanResponse]] = None):
+                      request: HTTPConnection | None = None,
+                      conversation_id: str | None = None,
+                      user_input_callback: Callable[[InteractionPrompt], Awaitable[HumanResponse]] = None,
+                      user_authentication_callback: Callable[[AuthProviderBaseConfig, AuthFlowType],
+                                                             Awaitable[AuthenticatedContext | None]] = None):
 
         token_user_input = None
         if user_input_callback is not None:
@@ -97,7 +103,14 @@ class AIQSessionManager:
         if user_manager is not None:
             token_user_manager = self._context_state.user_manager.set(user_manager)
 
-        self.set_request_attributes(request)
+        token_user_authentication = None
+        if user_authentication_callback is not None:
+            token_user_authentication = self._context_state.user_auth_callback.set(user_authentication_callback)
+
+        if conversation_id is not None and request is None:
+            self._context_state.conversation_id.set(conversation_id)
+
+        self.set_metadata_from_http_request(request)
 
         try:
             yield self
@@ -106,6 +119,8 @@ class AIQSessionManager:
                 self._context_state.user_manager.reset(token_user_manager)
             if token_user_input is not None:
                 self._context_state.user_input_callback.reset(token_user_input)
+            if token_user_authentication is not None:
+                self._context_state.user_auth_callback.reset(token_user_authentication)
 
     @asynccontextmanager
     async def run(self, message):
@@ -120,15 +135,15 @@ class AIQSessionManager:
             async with self._workflow.run(message) as runner:
                 yield runner
 
-    def set_request_attributes(self, request: Request) -> None:
+    def set_metadata_from_http_request(self, request: HTTPConnection | None) -> None:
         """
-        Extracts and sets request attributes from an HTTP request.
+        Extracts and sets user metadata request attributes from a HTTP request.
         If request is None, no attributes are set.
         """
         if request is None:
             return
 
-        self._context.metadata._request.method = request.method
+        self._context.metadata._request.method = getattr(request, "method", None)
         self._context.metadata._request.url_path = request.url.path
         self._context.metadata._request.url_port = request.url.port
         self._context.metadata._request.url_scheme = request.url.scheme
@@ -138,3 +153,6 @@ class AIQSessionManager:
         self._context.metadata._request.client_host = request.client.host
         self._context.metadata._request.client_port = request.client.port
         self._context.metadata._request.cookies = request.cookies
+
+        if request.headers.get("conversation-id"):
+            self._context_state.conversation_id.set(request.headers["conversation-id"])

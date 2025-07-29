@@ -70,7 +70,7 @@ class TypeConverter:
         self._converters.setdefault(to_type, OrderedDict())[from_type] = converter
         # to do(MDD): If needed, sort by specificity here.
 
-    def try_convert(self, data, to_type: type[_T]) -> _T | None:
+    def _convert(self, data, to_type: type[_T]) -> _T | None:
         """
         Attempts to convert `data` into `to_type`. Returns None if no path is found.
         """
@@ -100,7 +100,7 @@ class TypeConverter:
         Converts or raises ValueError if no path is found.
         We also give the parent a chance if self fails.
         """
-        result = self.try_convert(data, to_type)
+        result = self._convert(data, to_type)
         if result is None and self._parent:
             # fallback on parent entirely
             return self._parent.convert(data, to_type)
@@ -108,6 +108,18 @@ class TypeConverter:
         if result is not None:
             return result
         raise ValueError(f"Cannot convert type {type(data)} to {to_type}. No match found.")
+
+    def try_convert(self, data, to_type: type[_T]) -> _T:
+        """
+        Converts with graceful error handling. If conversion fails, returns the original data
+        and continues processing.
+        """
+        try:
+            return self.convert(data, to_type)
+        except ValueError:
+            logger.warning("Type conversion failed, using original value. From %s to %s", type(data), to_type)
+            # Return original data, let downstream code handle it
+            return data
 
     # -------------------------------------------------
     # INTERNAL DIRECT CONVERSION (with parent fallback)
@@ -220,6 +232,10 @@ class GlobalTypeConverter:
     @staticmethod
     def convert(data, to_type: type[_T]) -> _T:
         return GlobalTypeConverter._global_converter.convert(data, to_type)
+
+    @staticmethod
+    def try_convert(data, to_type: type[_T]) -> _T:
+        return GlobalTypeConverter._global_converter.try_convert(data, to_type)
 
 
 TypeConverter._global_initialized = True

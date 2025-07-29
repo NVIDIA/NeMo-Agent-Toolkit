@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA Agent Intelligence Toolkit](https://media.githubusercontent.com/media/NVIDIA/AIQToolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
+![NVIDIA Agent Intelligence Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
 
 # NVIDIA Agent Intelligence Toolkit
 
@@ -38,11 +38,11 @@ With AIQ toolkit, you can move quickly, experiment freely, and ensure reliabilit
  * [Documentation](https://docs.nvidia.com/aiqtoolkit/1.2.0/index.html): Explore the full documentation for AIQ toolkit.
 
 ## First time user?
- If this is your first time using AIQ toolkit, it is recommended to install the latest version from the [source repository](https://github.com/NVIDIA/AIQToolkit?tab=readme-ov-file#quick-start) on GitHub. This package is intended for users who are familiar with AIQ toolkit applications and need to add AIQ toolkit as a dependency to their project.
+ If this is your first time using AIQ toolkit, it is recommended to install the latest version from the [source repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit?tab=readme-ov-file#quick-start) on GitHub. This package is intended for users who are familiar with AIQ toolkit applications and need to add AIQ toolkit as a dependency to their project.
 
 ## Feedback
 
-We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/AIQToolkit/issues) if you have any feedback or feature requests.
+We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) if you have any feedback or feature requests.
 
 ## Acknowledgements
 
