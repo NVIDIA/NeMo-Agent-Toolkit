@@ -47,41 +47,62 @@ def walk_optimizables(
     inside `obj`, including   • direct sub‑models
                               • dict[str, BaseModel] maps
                               • any nesting depth.
+    If the model defines an `optimizable_params` attribute (via `OptimizableMixin`), only the fields listed there will be considered.
+    Models with optimizable fields **but** without this attribute will trigger a warning and those fields are ignored.
     """
     spaces: Dict[str, SearchSpace] = {}
+
+    # Determine if this model narrows the set of optimizable fields
+    allowed_params_raw = getattr(obj, "optimizable_params", None)
+    allowed_params = set(allowed_params_raw) if allowed_params_raw is not None else None
+    has_optimizable_flag = False  # track if *any* field in this model is optimizable
 
     for name, fld in obj.model_fields.items():
         full = f"{path}.{name}" if path else name
         extra = fld.json_schema_extra or {}
 
-        # 1 Plain field marked as optimizable
-        if extra.get("optimizable"):
+        is_field_optimizable = extra.get("optimizable", False)
+        # Record presence of optimizable fields irrespective of filtering
+        has_optimizable_flag = has_optimizable_flag or is_field_optimizable
+
+        # If the model specifies a white‑list, honour it
+        if allowed_params is not None and name not in allowed_params:
+            # Skip both recording this field and recursing into it
+            continue
+
+        # 1. Plain optimizable field
+        if is_field_optimizable:
             spaces[full] = extra["search_space"]
 
         value = getattr(obj, name, None)
 
-        # 2 Nested BaseModel instance
+        # 2. Nested BaseModel instance
         if isinstance(value, BaseModel):
             spaces.update(walk_optimizables(value, full))
 
-        # 3 Dict[str, BaseModel] container
+        # 3. Dict[str, BaseModel] container
         elif isinstance(value, dict):
-            # runtime check: is the dict's *value* type a BaseModel?
-            # works even with untyped dicts
             for key, subval in value.items():
                 if isinstance(subval, BaseModel):
                     new_path = f"{full}.{key}"
                     spaces.update(walk_optimizables(subval, new_path))
 
-        # 4 static-type fallback for *class* parsing
+        # 4. Static‑type fallback for *class* parsing
         elif isinstance(obj, type):
             ann = fld.annotation
             if get_origin(ann) in (dict, Dict):
                 _, val_t = get_args(ann) or (None, None)
                 if isinstance(val_t, type) and issubclass(val_t, BaseModel):
-                    # We can't know the keys here, so we expose the
-                    # container itself; caller can refine later.
-                    spaces[f"{full}.*"] = SearchSpace(low=None, high=None)  # sentinel
+                    if allowed_params is None or name in allowed_params:
+                        spaces[f"{full}.*"] = SearchSpace(low=None, high=None)  # sentinel
+
+    # Warn if optimizable fields exist but the model does not expose an allow‑list
+    if allowed_params is None and has_optimizable_flag:
+        logger.warning(
+            "Model %s contains optimizable fields but no `optimizable_params` were defined; "
+            "these fields will be ignored. Does your config have an OptimizableMixin?",
+            obj.__class__.__name__,
+        )
     return spaces
 
 

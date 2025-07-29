@@ -23,11 +23,12 @@ from aiq.builder.llm import LLMProviderInfo
 from aiq.cli.register_workflow import register_llm_provider
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.optimizable import OptimizableField
+from aiq.data_models.optimizable import OptimizableMixin
 from aiq.data_models.optimizable import SearchSpace
 from aiq.data_models.retry_mixin import RetryMixin
 
 
-class NIMModelConfig(LLMBaseConfig, RetryMixin, name="nim"):
+class NIMModelConfig(LLMBaseConfig, OptimizableMixin, RetryMixin, name="nim"):
     """An NVIDIA Inference Microservice (NIM) llm provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=())

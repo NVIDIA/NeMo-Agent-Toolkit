@@ -22,9 +22,10 @@ from aiq.builder.llm import LLMProviderInfo
 from aiq.cli.register_workflow import register_llm_provider
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.retry_mixin import RetryMixin
+from aiq.data_models.optimizable import OptimizableMixin, OptimizableField, SearchSpace
 
 
-class OpenAIModelConfig(LLMBaseConfig, RetryMixin, name="openai"):
+class OpenAIModelConfig(LLMBaseConfig, OptimizableMixin, RetryMixin, name="openai"):
     """An OpenAI LLM provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
@@ -34,9 +35,15 @@ class OpenAIModelConfig(LLMBaseConfig, RetryMixin, name="openai"):
     model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
                             serialization_alias="model",
                             description="The OpenAI hosted model name.")
-    temperature: float = Field(default=0.0, description="Sampling temperature in [0, 1].")
-    top_p: float = Field(default=1.0, description="Top-p for distribution sampling.")
-    seed: int | None = Field(default=None, description="Random seed to set for generation.")
+
+    temperature: float = OptimizableField(default=0.0,
+                                          description="Sampling temperature in [0, 1].",
+                                          space=SearchSpace(high=0.8, low=0.1, step=0.2))
+    top_p: float = OptimizableField(default=1.0,
+                                    description="Top-p for distribution sampling.",
+                                    space=SearchSpace(high=1.0, low=0.5, step=0.1))
+
+seed: int | None = Field(default=None, description="Random seed to set for generation.")
     max_retries: int = Field(default=10, description="The max number of retries for the request.")
 
 

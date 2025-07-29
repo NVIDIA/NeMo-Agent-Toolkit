@@ -22,9 +22,10 @@ from aiq.builder.llm import LLMProviderInfo
 from aiq.cli.register_workflow import register_llm_provider
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.retry_mixin import RetryMixin
+from aiq.data_models.optimizable import OptimizableMixin, OptimizableField, SearchSpace
 
 
-class AWSBedrockModelConfig(LLMBaseConfig, RetryMixin, name="aws_bedrock"):
+class AWSBedrockModelConfig(LLMBaseConfig, OptimizableMixin, RetryMixin, name="aws_bedrock"):
     """An AWS Bedrock llm provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=())
@@ -33,11 +34,14 @@ class AWSBedrockModelConfig(LLMBaseConfig, RetryMixin, name="aws_bedrock"):
     model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
                             serialization_alias="model",
                             description="The model name for the hosted AWS Bedrock.")
-    temperature: float = Field(default=0.0, ge=0.0, le=1.0, description="Sampling temperature in [0, 1].")
-    max_tokens: int | None = Field(default=1024,
-                                   gt=0,
-                                   description="Maximum number of tokens to generate."
-                                   "This field is ONLY required when using AWS Bedrock with Langchain.")
+
+    temperature: float = OptimizableField(default=0.0,
+                                          description="Sampling temperature in [0, 1].",
+                                          space=SearchSpace(high=0.8, low=0.1, step=0.2))
+    max_tokens: int = OptimizableField(default=300,
+                                               description="Maximum number of tokens to generate.",
+                                               space=SearchSpace(high=2048, low=128, step=512))
+
     context_size: int | None = Field(default=1024,
                                      gt=0,
                                      description="Maximum number of tokens to generate."

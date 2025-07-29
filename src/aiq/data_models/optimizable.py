@@ -19,6 +19,7 @@ from typing import Generic
 from typing import Sequence
 from typing import TypeVar
 
+from pydantic import BaseModel
 from pydantic import Field
 
 T = TypeVar("T", int, float, bool, str)
@@ -105,24 +106,9 @@ def OptimizableField(
     return Field(default, json_schema_extra=merged_extra, **fld_kw)
 
 
-# --------------------------------------------------------------------- #
-# 2.  OptimizableMixin base class                                       #
-# --------------------------------------------------------------------- #
-
-
-class OptimizableMixin:
-
-    @classmethod
-    def __init_subclass__(cls, **kwargs):
-        """Co‑operate with other bases; accept & forward all kwargs."""
-        super().__init_subclass__(**kwargs)  # ← do *not* drop this!
-
-    # hyper‑parameter introspection -----------------------------------
-    @classmethod
-    def search_space(cls) -> dict[str, SearchSpace]:
-        out: dict[str, SearchSpace] = {}
-        for name, fld in cls.model_fields.items():  # Pydantic v2 API
-            meta = fld.json_schema_extra or {}
-            if meta.get("optimizable"):
-                out[name] = meta["search_space"]
-        return out
+class OptimizableMixin(BaseModel):
+    """
+    Mixin for models that can be optimized.
+    """
+    optimizable_params: list[str] = Field(default_factory=list,
+                                            description="List of parameters that can be optimized.")
