@@ -33,7 +33,7 @@ NeMo Agent toolkit utilizes the this plugin system for all first party component
 
 NeMo Agent toolkit currently supports the following plugin types:
 
-- **Embedder Clients**: Embedder Clients are implementations of embedder providers, which are specific to a LLM framework. For example, when using the OpenAI embedder provider with the LangChain framework, the a LangChain OpenAI embedder client needs to be registered. To register an embedder client, you can use the {py:deco}`aiq.cli.register_workflow.register_embedder_client` decorator.
+- **Embedder Clients**: Embedder Clients are implementations of embedder providers, which are specific to a LLM framework. For example, when using the OpenAI embedder provider with the LangChain framework, the LangChain OpenAI embedder client needs to be registered. To register an embedder client, you can use the {py:deco}`aiq.cli.register_workflow.register_embedder_client` decorator.
 - **Embedder Providers**: Embedder Providers are services that provide a way to embed text. For example, OpenAI and NVIDIA NIMs are embedder providers. To register an embedder provider, you can use the {py:deco}`aiq.cli.register_workflow.register_embedder_provider` decorator.
 - **Evaluators**: Evaluators are used by the evaluation framework to evaluate the performance of NeMo Agent toolkit workflows. To register an evaluator, you can use the {py:deco}`aiq.cli.register_workflow.register_evaluator` decorator.
 - **Front Ends**: Front ends are the mechanism by which NeMo Agent toolkit workflows are executed. Examples of front ends include a FastAPI server or a CLI. To register a front end, you can use the {py:deco}`aiq.cli.register_workflow.register_front_end` decorator.
@@ -47,6 +47,7 @@ NeMo Agent toolkit currently supports the following plugin types:
 - **Retriever Providers**: Retriever providers are services that provide a way to retrieve information from a database. Examples of retriever providers include Chroma and Milvus. To register a retriever provider, you can use the {py:deco}`aiq.cli.register_workflow.register_retriever_provider` decorator.
 - **Telemetry Exporters**: Telemetry exporters send telemetry data to a telemetry service. To register a telemetry exporter, you can use the {py:deco}`aiq.cli.register_workflow.register_telemetry_exporter` decorator.
 - **Tool Wrappers**: Tool wrappers are used to wrap functions in a way that is specific to a LLM framework. For example, when using the LangChain framework, NeMo Agent toolkit functions need to be wrapped in `BaseTool` class to be compatible with LangChain. To register a tool wrapper, you can use the {py:deco}`aiq.cli.register_workflow.register_tool_wrapper` decorator.
+- **API Authentication Providers**: API authentication providers are services that provide a way to authenticate requests to an API provider. Examples of authentication providers include OAuth 2.0 Authorization Code Grant and API Key. To register an API authentication provider, you can use the {py:deco}`aiq.cli.register_workflow.register_authentication_provider` decorator.
 
 ## Anatomy of a Plugin
 

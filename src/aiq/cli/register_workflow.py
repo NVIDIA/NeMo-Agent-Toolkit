@@ -16,6 +16,8 @@
 from contextlib import asynccontextmanager
 
 from aiq.builder.framework_enum import LLMFrameworkEnum
+from aiq.cli.type_registry import AuthProviderBuildCallableT
+from aiq.cli.type_registry import AuthProviderRegisteredCallableT
 from aiq.cli.type_registry import EmbedderClientBuildCallableT
 from aiq.cli.type_registry import EmbedderClientRegisteredCallableT
 from aiq.cli.type_registry import EmbedderProviderBuildCallableT
@@ -51,6 +53,7 @@ from aiq.cli.type_registry import TeleExporterRegisteredCallableT
 from aiq.cli.type_registry import TelemetryExporterBuildCallableT
 from aiq.cli.type_registry import TelemetryExporterConfigT
 from aiq.cli.type_registry import ToolWrapperBuildCallableT
+from aiq.data_models.authentication import AuthProviderBaseConfigT
 from aiq.data_models.component import AIQComponentEnum
 from aiq.data_models.discovery_metadata import DiscoveryMetadata
 from aiq.data_models.embedder import EmbedderBaseConfigT
@@ -195,6 +198,30 @@ def register_llm_provider(config_type: type[LLMBaseConfigT]):
         return context_manager_fn
 
     return register_llm_provider_inner
+
+
+def register_auth_provider(config_type: type[AuthProviderBaseConfigT]):
+
+    def register_auth_provider_inner(
+        fn: AuthProviderBuildCallableT[AuthProviderBaseConfigT]
+    ) -> AuthProviderRegisteredCallableT[AuthProviderBaseConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredAuthProviderInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=AIQComponentEnum.AUTHENTICATION_PROVIDER)
+
+        GlobalTypeRegistry.get().register_auth_provider(
+            RegisteredAuthProviderInfo(full_type=config_type.full_type,
+                                       config_type=config_type,
+                                       build_fn=context_manager_fn,
+                                       discovery_metadata=discovery_metadata))
+
+        return context_manager_fn
+
+    return register_auth_provider_inner
 
 
 def register_llm_client(config_type: type[LLMBaseConfigT], wrapper_type: LLMFrameworkEnum | str):

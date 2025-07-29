@@ -34,6 +34,7 @@ from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 
+from .authentication import AuthProviderBaseConfig
 from .common import HashableBaseModel
 from .common import TypedBaseModel
 from .embedder import EmbedderBaseConfig
@@ -59,6 +60,8 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
 
             if (info.field_name in ('workflow', 'functions')):
                 registered_keys = GlobalTypeRegistry.get().get_registered_functions()
+            elif (info.field_name == "authentication"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_auth_providers()
             elif (info.field_name == "llms"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_llm_providers()
             elif (info.field_name == "embedders"):
@@ -260,6 +263,9 @@ class AIQConfig(HashableBaseModel):
     # Workflow Configuration
     workflow: FunctionBaseConfig = EmptyFunctionConfig()
 
+    # Authentication Configuration
+    authentication: dict[str, AuthProviderBaseConfig] = {}
+
     # Evaluation Options
     eval: EvalConfig = EvalConfig()
 
@@ -278,6 +284,7 @@ class AIQConfig(HashableBaseModel):
         stream.write(f"Number of Object Stores: {len(self.object_stores)}\n")
         stream.write(f"Number of Retrievers: {len(self.retrievers)}\n")
         stream.write(f"Number of ITS Strategies: {len(self.its_strategies)}\n")
+        stream.write(f"Number of Authentication Providers: {len(self.authentication)}\n")
 
     @field_validator("functions",
                      "llms",
@@ -286,6 +293,7 @@ class AIQConfig(HashableBaseModel):
                      "retrievers",
                      "workflow",
                      "its_strategies",
+                     "authentication",
                      mode="wrap")
     @classmethod
     def validate_components(cls, value: typing.Any, handler: ValidatorFunctionWrapHandler, info: ValidationInfo):
@@ -307,12 +315,17 @@ class AIQConfig(HashableBaseModel):
                               typing.Annotated[type_registry.compute_annotation(LLMBaseConfig),
                                                Discriminator(TypedBaseModel.discriminator)]]
 
+        AuthenticationProviderAnnotation = dict[str,
+                                                typing.Annotated[
+                                                    type_registry.compute_annotation(AuthProviderBaseConfig),
+                                                    Discriminator(TypedBaseModel.discriminator)]]
+
         EmbeddersAnnotation = dict[str,
                                    typing.Annotated[type_registry.compute_annotation(EmbedderBaseConfig),
                                                     Discriminator(TypedBaseModel.discriminator)]]
 
         FunctionsAnnotation = dict[str,
-                                   typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig, ),
+                                   typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig),
                                                     Discriminator(TypedBaseModel.discriminator)]]
 
         MemoryAnnotation = dict[str,
@@ -335,6 +348,11 @@ class AIQConfig(HashableBaseModel):
                                               Discriminator(TypedBaseModel.discriminator)]
 
         should_rebuild = False
+
+        auth_providers_field = cls.model_fields.get("authentication")
+        if auth_providers_field is not None and auth_providers_field.annotation != AuthenticationProviderAnnotation:
+            auth_providers_field.annotation = AuthenticationProviderAnnotation
+            should_rebuild = True
 
         llms_field = cls.model_fields.get("llms")
         if llms_field is not None and llms_field.annotation != LLMsAnnotation:

@@ -17,18 +17,18 @@ import logging
 
 import pytest
 
-from aiq.experimental.decorators.experimental_warning_decorator import WARNING_MESSAGE
+from aiq.experimental.decorators.experimental_warning_decorator import BASE_WARNING_MESSAGE
+from aiq.experimental.decorators.experimental_warning_decorator import _warning_issued
 from aiq.experimental.decorators.experimental_warning_decorator import aiq_experimental
-from aiq.experimental.decorators.experimental_warning_decorator import issue_warning
-from aiq.experimental.decorators.experimental_warning_decorator import warning_issued
+from aiq.experimental.decorators.experimental_warning_decorator import issue_experimental_warning
 
 
 # Reset warning state before each test
 @pytest.fixture(autouse=True)
 def clear_warnings():
-    warning_issued.clear()
+    _warning_issued.clear()
     yield
-    warning_issued.clear()
+    _warning_issued.clear()
 
 
 def test_sync_function_logs_warning_once(caplog):
@@ -40,7 +40,7 @@ def test_sync_function_logs_warning_once(caplog):
 
     # first call should log
     assert foo(1) == 2
-    assert any(WARNING_MESSAGE in rec.message for rec in caplog.records)
+    assert any(BASE_WARNING_MESSAGE in rec.message for rec in caplog.records)
 
     caplog.clear()
 
@@ -59,7 +59,7 @@ async def test_async_function_logs_warning_once(caplog):
     # first await should log
     result1 = await bar(3)
     assert result1 == 6
-    assert any(WARNING_MESSAGE in rec.message for rec in caplog.records)
+    assert any(BASE_WARNING_MESSAGE in rec.message for rec in caplog.records)
 
     caplog.clear()
 
@@ -80,7 +80,7 @@ def test_sync_generator_logs_and_yields(caplog):
     # iterate first time
     out = list(gen(3))
     assert out == [0, 1, 2]
-    assert any(WARNING_MESSAGE in rec.message for rec in caplog.records)
+    assert any(BASE_WARNING_MESSAGE in rec.message for rec in caplog.records)
 
     caplog.clear()
 
@@ -103,7 +103,7 @@ async def test_async_generator_logs_and_yields(caplog):
     async for v in agen(4):
         collected.append(v)
     assert collected == [0, 1, 2, 3]
-    assert any(WARNING_MESSAGE in rec.message for rec in caplog.records)
+    assert any(BASE_WARNING_MESSAGE in rec.message for rec in caplog.records)
 
     caplog.clear()
 
@@ -119,10 +119,10 @@ def test_issue_warning_idempotent(caplog):
     caplog.set_level(logging.WARNING)
 
     # directly issue warning twice
-    issue_warning("myfunc")
-    issue_warning("myfunc")
+    issue_experimental_warning("myfunc")
+    issue_experimental_warning("myfunc")
 
-    records = [r for r in caplog.records if WARNING_MESSAGE in r.message]
+    records = [r for r in caplog.records if BASE_WARNING_MESSAGE in r.message]
     assert len(records) == 1
 
 

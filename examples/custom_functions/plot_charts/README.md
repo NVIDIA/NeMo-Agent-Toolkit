@@ -34,7 +34,7 @@ A simple and reusable example that demonstrates creating charts from data using 
 ## Key Features
 
 - **Data Visualization Workflow:** Demonstrates a custom `plot_charts` workflow type that generates line charts, bar charts, and scatter plots from JSON data files based on natural language requests.
-- **Python Plotting Integration:** Shows how to integrate Python's `matplotlib` library for chart generation within the AIQ toolkit framework.
+- **Python Plotting Integration:** Shows how to integrate Python's `matplotlib` library for chart generation within the NeMo Agent toolkit framework.
 - **JSON Data Processing:** Demonstrates parsing and visualization of structured JSON data with configurable x-values and multiple y-value series with labels.
 - **LLM-Enhanced Descriptions:** Uses configured LLMs to generate intelligent, contextual descriptions of the created charts for better user understanding.
 - **Configurable Chart Parameters:** Shows how to customize chart types, data sources, output directories, figure sizes, and data point limits through YAML configuration.
@@ -43,11 +43,11 @@ A simple and reusable example that demonstrates creating charts from data using 
 
 ### Setup Virtual Environment and Install AIQ Toolkit
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install AIQ toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the AIQ toolkit library, run the following commands:
+From the root directory of the NeMo Agent toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/custom_functions/plot_charts
@@ -111,26 +111,15 @@ The data file should be in JSON format with the following structure:
 
 ### Run the Workflow
 
-Run the following command from the root of the AIQ toolkit repo to execute this workflow:
+Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow:
 
 ```bash
 aiq run --config_file examples/custom_functions/plot_charts/src/aiq_plot_charts/configs/config.yml --input "create a line chart"
 ```
 
-**Expected Output**
-
+**Expected Workflow Output**
 ```console
-aiq run --config_file examples/custom_functions/plot_charts/src/aiq_plot_charts/configs/config.yml --input "create a line chart"
-
-
-Configuration Summary:
---------------------
-Workflow Type: plot_charts
-Number of Functions: 0
-Number of LLMs: 1
-Number of Embedders: 0
-Number of Memory: 0
-Number of Retrievers: 0
+<snipped for brevity>
 
 2025-07-18 14:48:28,247 - aiq_plot_charts.register - INFO - Processing chart request: create a line chart
 2025-07-18 14:48:28,249 - aiq_plot_charts.register - INFO - Successfully loaded data from /Users/yuchenz/Desktop/Work/Project/AgentIQ/examples/custom_functions/plot_charts/src/aiq_plot_charts/../../example_data.json
@@ -160,7 +149,7 @@ aiq run --config_file examples/custom_functions/plot_charts/src/aiq_plot_charts/
 
 ### Launch the Workflow Server
 
-Run the following command from the root of the AIQ toolkit repo to serve this workflow:
+Run the following command from the root of the NeMo Agent toolkit repo to serve this workflow:
 
 ```bash
 aiq serve --config_file examples/custom_functions/plot_charts/src/aiq_plot_charts/configs/config.yml

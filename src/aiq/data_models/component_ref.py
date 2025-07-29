@@ -146,6 +146,17 @@ class RetrieverRef(ComponentRef):
         return ComponentGroup.RETRIEVERS
 
 
+class AuthenticationRef(ComponentRef):
+    """
+    A reference to an API Authentication Provider in an AIQ Toolkit configuration object.
+    """
+
+    @property
+    @override
+    def component_group(self):
+        return ComponentGroup.AUTHENTICATION
+
+
 class ITSStrategyRef(ComponentRef):
     """
     A reference to an ITS strategy in an AgentIQ configuration object.
