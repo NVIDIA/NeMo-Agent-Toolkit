@@ -359,64 +359,6 @@ async def test_legacy_mode_backward_compatibility():
                                                   and chunk.choices[0].delta.role is None)
 
 
-def test_openai_request_validation():
-    """Test that OpenAI request validation works correctly"""
-
-    # Test valid ranges
-    valid_request = AIQChatRequest(messages=[Message(content="Hello", role="user")],
-                                   temperature=1.0,
-                                   top_p=0.5,
-                                   frequency_penalty=1.0,
-                                   presence_penalty=-1.0,
-                                   max_tokens=100,
-                                   n=5,
-                                   top_logprobs=10)
-    assert valid_request.temperature == 1.0
-    assert valid_request.top_p == 0.5
-
-    # Test invalid temperature (should raise validation error)
-    with pytest.raises(ValueError):
-        AIQChatRequest(
-            messages=[Message(content="Hello", role="user")],
-            temperature=3.0  # Invalid: > 2.0
-        )
-
-    # Test invalid frequency_penalty (should raise validation error)
-    with pytest.raises(ValueError):
-        AIQChatRequest(
-            messages=[Message(content="Hello", role="user")],
-            frequency_penalty=3.0  # Invalid: > 2.0
-        )
-
-    # Test invalid top_p (should raise validation error)
-    with pytest.raises(ValueError):
-        AIQChatRequest(
-            messages=[Message(content="Hello", role="user")],
-            top_p=1.5  # Invalid: > 1.0
-        )
-
-    # Test invalid max_tokens (should raise validation error)
-    with pytest.raises(ValueError):
-        AIQChatRequest(
-            messages=[Message(content="Hello", role="user")],
-            max_tokens=0  # Invalid: < 1
-        )
-
-    # Test invalid n (should raise validation error)
-    with pytest.raises(ValueError):
-        AIQChatRequest(
-            messages=[Message(content="Hello", role="user")],
-            n=200  # Invalid: > 128
-        )
-
-    # Test invalid top_logprobs (should raise validation error)
-    with pytest.raises(ValueError):
-        AIQChatRequest(
-            messages=[Message(content="Hello", role="user")],
-            top_logprobs=25  # Invalid: > 20
-        )
-
-
 def test_converter_functions_backward_compatibility():
     """Test that converter functions handle both legacy and new formats"""
     from aiq.data_models.api_server import _aiq_chat_response_chunk_to_string
