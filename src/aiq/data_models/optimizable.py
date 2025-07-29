@@ -110,5 +110,4 @@ class OptimizableMixin(BaseModel):
     """
     Mixin for models that can be optimized.
     """
-    optimizable_params: list[str] = Field(default_factory=list,
-                                            description="List of parameters that can be optimized.")
+    optimizable_params: list[str] = Field(default_factory=list, description="List of parameters that can be optimized.")

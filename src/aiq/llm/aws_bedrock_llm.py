@@ -21,8 +21,10 @@ from aiq.builder.builder import Builder
 from aiq.builder.llm import LLMProviderInfo
 from aiq.cli.register_workflow import register_llm_provider
 from aiq.data_models.llm import LLMBaseConfig
+from aiq.data_models.optimizable import OptimizableField
+from aiq.data_models.optimizable import OptimizableMixin
+from aiq.data_models.optimizable import SearchSpace
 from aiq.data_models.retry_mixin import RetryMixin
-from aiq.data_models.optimizable import OptimizableMixin, OptimizableField, SearchSpace
 
 
 class AWSBedrockModelConfig(LLMBaseConfig, OptimizableMixin, RetryMixin, name="aws_bedrock"):
@@ -39,8 +41,8 @@ class AWSBedrockModelConfig(LLMBaseConfig, OptimizableMixin, RetryMixin, name="a
                                           description="Sampling temperature in [0, 1].",
                                           space=SearchSpace(high=0.8, low=0.1, step=0.2))
     max_tokens: int = OptimizableField(default=300,
-                                               description="Maximum number of tokens to generate.",
-                                               space=SearchSpace(high=2048, low=128, step=512))
+                                       description="Maximum number of tokens to generate.",
+                                       space=SearchSpace(high=2048, low=128, step=512))
 
     context_size: int | None = Field(default=1024,
                                      gt=0,

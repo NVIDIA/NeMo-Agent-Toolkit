@@ -21,8 +21,10 @@ from aiq.builder.builder import Builder
 from aiq.builder.llm import LLMProviderInfo
 from aiq.cli.register_workflow import register_llm_provider
 from aiq.data_models.llm import LLMBaseConfig
+from aiq.data_models.optimizable import OptimizableField
+from aiq.data_models.optimizable import OptimizableMixin
+from aiq.data_models.optimizable import SearchSpace
 from aiq.data_models.retry_mixin import RetryMixin
-from aiq.data_models.optimizable import OptimizableMixin, OptimizableField, SearchSpace
 
 
 class OpenAIModelConfig(LLMBaseConfig, OptimizableMixin, RetryMixin, name="openai"):
@@ -43,7 +45,7 @@ class OpenAIModelConfig(LLMBaseConfig, OptimizableMixin, RetryMixin, name="opena
                                     description="Top-p for distribution sampling.",
                                     space=SearchSpace(high=1.0, low=0.5, step=0.1))
 
-seed: int | None = Field(default=None, description="Random seed to set for generation.")
+    seed: int | None = Field(default=None, description="Random seed to set for generation.")
     max_retries: int = Field(default=10, description="The max number of retries for the request.")
 
 
