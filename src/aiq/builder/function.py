@@ -144,12 +144,12 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         with self._context.push_active_function(self.instance_name,
                                                 input_data=value) as manager:  # Set the current invocation context
             try:
-                converted_input: InputT = self._convert_input(value)  # type: ignore
+                converted_input: InputT = self._convert_input(value)
 
                 result = await self._ainvoke(converted_input)
 
                 if to_type is not None and not isinstance(result, to_type):
-                    result = self._converter.convert(result, to_type=to_type)
+                    result = self.convert(result, to_type)
 
                 manager.set_output(result)
 
@@ -234,14 +234,14 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
 
         with self._context.push_active_function(self.instance_name, input_data=value) as manager:
             try:
-                converted_input: InputT = self._convert_input(value)  # type: ignore
+                converted_input: InputT = self._convert_input(value)
 
                 # Collect streaming outputs to capture the final result
                 final_output: list[typing.Any] = []
 
                 async for data in self._astream(converted_input):
                     if to_type is not None and not isinstance(data, to_type):
-                        converted_data = self._converter.convert(data, to_type=to_type)
+                        converted_data = self.convert(data, to_type=to_type)
                         final_output.append(converted_data)
                         yield converted_data
                     else:
