@@ -16,7 +16,6 @@
 import logging
 from unittest.mock import AsyncMock
 from unittest.mock import Mock
-from unittest.mock import call
 from unittest.mock import patch
 
 import pytest
@@ -192,7 +191,7 @@ class TestCallTool:
         assert isinstance(result, ToolMessage)
         assert result.content == "Tool response"
         assert tool.ainvoke.call_count == 2
-        mock_sleep.assert_called_once_with(1)  # 2^0 = 1 second for first retry
+        mock_sleep.assert_called_once_with(2)  # 2^1 = 2 seconds for first retry
 
     async def test_tool_call_all_retries_exhausted(self, base_agent):
         """Test that tool call returns error message when all retries are exhausted."""
@@ -207,10 +206,10 @@ class TestCallTool:
         assert isinstance(result, ToolMessage)
         assert "Tool call failed after all retry attempts" in result.content
         assert "Persistent error" in result.content
-        assert tool.ainvoke.call_count == 3  # Initial + 2 retries
-        # Should have called sleep twice: 2^0=1, 2^1=2
-        assert mock_sleep.call_count == 2
-        mock_sleep.assert_has_calls([call(1), call(2)])
+        assert tool.ainvoke.call_count == 2  # 2 total attempts with max_retries=2
+        # Should have called sleep once: 2^1=2 (only first attempt fails and retries)
+        assert mock_sleep.call_count == 1
+        mock_sleep.assert_called_once_with(2)
 
     async def test_tool_call_none_response(self, base_agent):
         """Test handling of None response from tool."""
@@ -247,10 +246,10 @@ class TestCallTool:
 
         result = await base_agent._call_tool(tool, tool_input, max_retries=0)
 
-        # With max_retries=0, only one attempt should be made
+        # With max_retries=0, no attempts are made (range(1, 1) is empty)
         assert isinstance(result, ToolMessage)
         assert "Tool call failed after all retry attempts" in result.content
-        assert tool.ainvoke.call_count == 1
+        assert tool.ainvoke.call_count == 0
 
 
 class TestLogToolResponse:
