@@ -41,6 +41,9 @@ class OptimizerConfig(BaseModel):
 
     n_trials_prompt: int = Field(description="Number of trials for the prompt optimization.", default=20)
 
+    reps_per_param_set: int = Field(default=3,
+                                    description="Number of repetitions per parameter set for the optimization.")
+
     target: float | None = Field(description="Target value for the optimization. "
                                  "If set, the optimization will stop when this value is reached.",
                                  default=None)

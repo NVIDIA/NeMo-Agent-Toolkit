@@ -169,28 +169,53 @@ def _optimize_parameters(
         return await runner.run_and_evaluate()
 
     def _objective(trial):
+        # -----------------------------------------------------------------
+        # Determine how many repetitions to run for this parameter set
+        # -----------------------------------------------------------------
+        reps = max(1, getattr(optimizer_config, "reps_per_param_set", 1))
+
+        # -----------------------------------------------------------------
+        # 1. Build the trial‑specific configuration
+        # -----------------------------------------------------------------
         suggestions = {p: spec.suggest(trial, p) for p, spec in space.items()}
         cfg_trial = apply_suggestions(base_cfg, suggestions)
 
-        eval_cfg = EvaluationRunConfig(
-            config_file=cfg_trial,
-            dataset=opt_run_config.dataset,
-            result_json_path=opt_run_config.result_json_path,
-            endpoint=opt_run_config.endpoint,
-            endpoint_timeout=opt_run_config.endpoint_timeout,
-        )
-        eval_runner = EvaluationRun(config=eval_cfg)
-        eval_results = asyncio.run(_run_eval(eval_runner))
-        eval_results = eval_results.evaluation_results
+        # -----------------------------------------------------------------
+        # 2. Helper coroutine to execute a single evaluation run
+        # -----------------------------------------------------------------
+        async def _single_eval() -> list[float]:
+            eval_cfg = EvaluationRunConfig(
+                config_file=cfg_trial,
+                dataset=opt_run_config.dataset,
+                result_json_path=opt_run_config.result_json_path,
+                endpoint=opt_run_config.endpoint,
+                endpoint_timeout=opt_run_config.endpoint_timeout,
+            )
+            eval_runner = EvaluationRun(config=eval_cfg)
+            outcome = await eval_runner.run_and_evaluate()
+            eval_results = outcome.evaluation_results
 
-        metric_results = []
-        for metric_name in eval_metrics:
-            metric_result = next((r[1] for r in eval_results if r[0] == metric_name), None)
-            if metric_result is None:
-                raise ValueError(f"Metric '{metric_name}' not found in eval results")
-            metric_results.append(metric_result.average_score)
+            scores: list[float] = []
+            for metric_name in eval_metrics:
+                metric_result = next(
+                    (r[1] for r in eval_results if r[0] == metric_name),
+                    None,
+                )
+                if metric_result is None:
+                    raise ValueError(f"Metric '{metric_name}' not found in eval results")
+                scores.append(metric_result.average_score)
+            return scores
 
-        return metric_results
+        # -----------------------------------------------------------------
+        # 3. Run the evaluation `reps` times concurrently
+        # -----------------------------------------------------------------
+        all_scores: list[list[float]] = asyncio.run(asyncio.gather(*[_single_eval() for _ in range(reps)]))
+
+        # -----------------------------------------------------------------
+        # 4. Average the metric scores element‑wise across repetitions
+        # -----------------------------------------------------------------
+        averaged_scores = [sum(run[i] for run in all_scores) / reps for i in range(len(eval_metrics))]
+        return averaged_scores
 
     # --------------------------------------------------------------------- #
     # 2.  main optimization loop                                            #
@@ -227,6 +252,7 @@ async def _optimize_prompts(
     opt_run_config: OptimizerRunConfig,
 ) -> None:
     """optimize any prompt‑style search spaces and write them to disk."""
+    import asyncio
     import json
 
     import optuna
@@ -289,37 +315,61 @@ async def _optimize_prompts(
 
         cfg_trial = apply_suggestions(base_cfg, suggestions)
 
-        eval_cfg = EvaluationRunConfig(
-            config_file=cfg_trial,
-            dataset=opt_run_config.dataset,
-            result_json_path=opt_run_config.result_json_path,
-            endpoint=opt_run_config.endpoint,
-            endpoint_timeout=opt_run_config.endpoint_timeout,
-            override=opt_run_config.override,
-        )
-        eval_runner = EvaluationRun(config=eval_cfg, skip_output=True)
-        eval_results = await eval_runner.run_and_evaluate()
-        eval_results = eval_results.evaluation_results
+        # -----------------------------------------------------------------
+        # Evaluate the trial `reps_per_param_set` times concurrently
+        # -----------------------------------------------------------------
+        reps = max(1, getattr(optimizer_config, "reps_per_param_set", 1))
 
+        async def _single_eval() -> list[tuple[str, Any]]:
+            local_eval_cfg = EvaluationRunConfig(
+                config_file=cfg_trial,
+                dataset=opt_run_config.dataset,
+                result_json_path=opt_run_config.result_json_path,
+                endpoint=opt_run_config.endpoint,
+                endpoint_timeout=opt_run_config.endpoint_timeout,
+                override=opt_run_config.override,
+            )
+            runner = EvaluationRun(config=local_eval_cfg, skip_output=True)
+            outcome = await runner.run_and_evaluate()
+            return outcome.evaluation_results
+
+        # Run the evaluations concurrently
+        all_eval_results = await asyncio.gather(*(_single_eval() for _ in range(reps)))
+
+        # Use the first run's results for feedback/oracle processing
+        eval_results = all_eval_results[0]
+
+        # -----------------------------------------------------------------
+        # 1. Feedback processing based on first run
+        # -----------------------------------------------------------------
         for metric_name, direction in zip(eval_metrics, directions):
             output = next((o for n, o in eval_results if n == metric_name), None)
             if output and getattr(output, "eval_output_items", None):
-                # For "maximize" sort ascending; for "minimize" sort descending
                 output.eval_output_items.sort(
                     key=lambda item: item.score,
                     reverse=(direction == "minimize"),
                 )
+
         num_fb = optimizer_config.num_feedback
         for metric_name, output in eval_results:
             if getattr(output, "eval_output_items", None):
                 feedback_lists[metric_name] = [it.reasoning for it in output.eval_output_items[:num_fb]]
 
+        # -----------------------------------------------------------------
+        # 2. Compute metric values averaged across repetitions
+        # -----------------------------------------------------------------
         metric_values: list[float] = []
         for metric_name in eval_metrics:
-            m = next((r[1] for r in eval_results if r[0] == metric_name), None)
-            if m is None:
-                raise ValueError(f"Metric '{metric_name}' not found in eval results")
-            metric_values.append(m.average_score)
+            scores = []
+            for run_results in all_eval_results:
+                metric = next(
+                    (r[1] for r in run_results if r[0] == metric_name),
+                    None,
+                )
+                if metric is None:
+                    raise ValueError(f"Metric '{metric_name}' not found in eval results")
+                scores.append(metric.average_score)
+            metric_values.append(sum(scores) / reps)
 
         study.tell(trial, metric_values)
         logger.info("Prompt trial complete – current Pareto size %d", len(study.best_trials))

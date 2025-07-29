@@ -98,8 +98,7 @@ def pick_trial(
         else:
             rp = np.ones(norm.shape[1]) if ref_point is None else np.asarray(ref_point, float)
             base_hv = compute_hypervolume(norm, rp)
-            contrib = np.array([base_hv - compute_hypervolume(np.delete(norm, i, 0), rp
-                                                              ) for i in range(len(front))])
+            contrib = np.array([base_hv - compute_hypervolume(np.delete(norm, i, 0), rp) for i in range(len(front))])
             best_idx = contrib.argmax()  # bigger contribution wins
 
     else:
