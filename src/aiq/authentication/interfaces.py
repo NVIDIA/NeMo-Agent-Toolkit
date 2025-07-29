@@ -40,6 +40,7 @@ class AuthProviderBase(typing.Generic[AuthProviderBaseConfigT], ABC):
             config (AuthProviderBaseConfig): Configuration items for authentication.
         """
         self._config = config
+        super().__init__()
 
     @property
     def config(self) -> AuthProviderBaseConfigT:

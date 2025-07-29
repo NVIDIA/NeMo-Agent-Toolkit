@@ -16,6 +16,7 @@
 from pydantic import SecretStr
 
 from aiq.authentication.interfaces import AuthProviderBase
+from aiq.authentication.mixins import AuthProviderMixin
 from aiq.builder.context import AIQContext
 from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
@@ -25,7 +26,7 @@ from aiq.data_models.authentication import BasicAuthCred
 from aiq.data_models.authentication import BearerTokenCred
 
 
-class HTTPBasicAuthProvider(AuthProviderBase):
+class HTTPBasicAuthProvider(AuthProviderBase, AuthProviderMixin):
     """
     Abstract base class for HTTP Basic Authentication exchangers.
     """
@@ -42,6 +43,9 @@ class HTTPBasicAuthProvider(AuthProviderBase):
         """
         Performs simple HTTP Authentication using the provided user ID.
         """
+
+        if user_id is not None and isinstance(user_id, str) and user_id.strip() == "":
+            raise ValueError("user_id cannot be empty or whitespace-only.")
 
         context = AIQContext.get()
 

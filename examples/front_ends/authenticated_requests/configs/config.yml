@@ -1,0 +1,76 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+general:
+  use_uvloop: true
+  logging:
+    console:
+      _type: console
+      level: WARN
+  front_end:
+    _type: fastapi
+    cors:
+      allow_origins: ["http://localhost:3000", "http://localhost:5000"]
+      allow_headers: ["*"]
+      allow_methods: ["*"]
+
+functions:
+  authenticated_request:
+    _type: authenticated_request
+    auth_provider: jira
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+    max_tokens: 1024
+
+authentication:
+  jira:
+    _type: oauth2_auth_code_flow
+    authorization_url: https://auth.atlassian.com/authorize
+    token_url: https://auth.atlassian.com/oauth/token
+    client_id: ${AIQ_OAUTH_CLIENT_ID}
+    client_secret: ${AIQ_OAUTH_CLIENT_SECRET}
+    token_endpoint_auth_method: client_secret_post
+    response_type: code
+    authorization_kwargs:
+      prompt: consent
+      audience: api.atlassian.com
+      client_url: "http://localhost:8000"
+    scopes:
+      - report:personal-data
+      - read:jira-work
+      - manage:jira-project
+      - manage:jira-configuration
+      - read:jira-user
+      - write:jira-work
+      - manage:jira-webhook
+      - manage:jira-data-provider
+      - read:servicedesk-request
+      - manage:servicedesk-customer
+      - write:servicedesk-request
+      - read:servicemanagement-insight-objects
+      - "offline_access"
+    use_pkce: false
+
+workflow:
+  _type: react_agent
+  tool_names:
+    - authenticated_request
+  llm_name: nim_llm
+  verbose: true
+  parse_agent_response_max_retries: 3

@@ -20,6 +20,7 @@ from authlib.integrations.httpx_client import OAuth2Client as AuthlibOAuth2Clien
 from pydantic import SecretStr
 
 from aiq.authentication.interfaces import AuthProviderBase
+from aiq.authentication.mixins import AuthProviderMixin
 from aiq.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from aiq.builder.context import AIQContext
 from aiq.data_models.authentication import AuthFlowType
@@ -27,7 +28,7 @@ from aiq.data_models.authentication import AuthResult
 from aiq.data_models.authentication import BearerTokenCred
 
 
-class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConfig]):
+class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConfig], AuthProviderMixin):
 
     def __init__(self, config: OAuth2AuthCodeFlowProviderConfig):
         super().__init__(config)
@@ -63,6 +64,9 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
         return new_auth_result
 
     async def authenticate(self, user_id: str | None = None) -> AuthResult:
+        if user_id is not None and isinstance(user_id, str) and user_id.strip() == "":
+            raise ValueError("user_id cannot be empty or whitespace-only.")
+
         if user_id is None and hasattr(AIQContext.get(), "metadata") and hasattr(
                 AIQContext.get().metadata, "cookies") and AIQContext.get().metadata.cookies is not None:
             session_id = AIQContext.get().metadata.cookies.get("aiqtoolkit-session", None)

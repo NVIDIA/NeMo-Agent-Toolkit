@@ -19,6 +19,7 @@ from pydantic import SecretStr
 
 from aiq.authentication.api_key.api_key_auth_provider_config import APIKeyAuthProviderConfig
 from aiq.authentication.interfaces import AuthProviderBase
+from aiq.authentication.mixins import AuthProviderMixin
 from aiq.data_models.authentication import AuthResult
 from aiq.data_models.authentication import BearerTokenCred
 from aiq.data_models.authentication import HeaderAuthScheme
@@ -26,7 +27,7 @@ from aiq.data_models.authentication import HeaderAuthScheme
 logger = logging.getLogger(__name__)
 
 
-class APIKeyAuthProvider(AuthProviderBase[APIKeyAuthProviderConfig]):
+class APIKeyAuthProvider(AuthProviderBase[APIKeyAuthProviderConfig], AuthProviderMixin):
 
     def __init__(self, config: APIKeyAuthProviderConfig, config_name: str | None = None) -> None:
         assert isinstance(config, APIKeyAuthProviderConfig), ("Config is not APIKeyConfig")
@@ -86,6 +87,9 @@ class APIKeyAuthProvider(AuthProviderBase[APIKeyAuthProviderConfig]):
         Returns:
             AuthenticatedContext: The authenticated context containing headers, query params, cookies, etc.
         """
+
+        if user_id is not None and isinstance(user_id, str) and user_id.strip() == "":
+            raise ValueError("user_id cannot be empty or whitespace-only.")
 
         headers = await self._construct_authentication_header()
 
