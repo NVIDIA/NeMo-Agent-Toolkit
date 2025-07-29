@@ -22,6 +22,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import field_validator
 
+from aiq.data_models.component_ref import ObjectStoreRef
 from aiq.data_models.front_end import FrontEndBaseConfig
 from aiq.data_models.step_adaptor import StepAdaptorConfig
 
@@ -138,6 +139,13 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
             description=("Path for the default workflow using the OpenAI API Specification. "
                          "If None, no workflow endpoint with the OpenAI API Specification is created."),
         )
+        openai_api_v1_path: str | None = Field(
+            default=None,
+            description=("Path for the OpenAI v1 Chat Completions API compatible endpoint. "
+                         "If provided, creates a single endpoint that handles both streaming and "
+                         "non-streaming requests based on the 'stream' parameter, following the "
+                         "OpenAI Chat Completions API specification exactly."),
+        )
 
     class Endpoint(EndpointBase):
         function_name: str = Field(description="The name of the function to call for this endpoint")
@@ -183,6 +191,7 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         path="/generate",
         websocket_path="/websocket",
         openai_api_path="/chat",
+        openai_api_v1_path="/v1/chat/completions",
         description="Executes the default AIQ Toolkit workflow from the loaded configuration ",
     )
 
@@ -191,6 +200,10 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         path="/evaluate",
         description="Evaluates the performance and accuracy of the workflow on a dataset",
     )
+
+    oauth2_callback_path: str | None = Field(
+        default="/auth/redirect",
+        description="OAuth2.0 authentication callback endpoint. If None, no OAuth2 callback endpoint is created.")
 
     endpoints: list[Endpoint] = Field(
         default_factory=list,
@@ -212,3 +225,10 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
                      "Each runner is responsible for loading and running the AIQ Toolkit workflow. "
                      "Note: This is different from the worker class used by Gunicorn."),
     )
+
+    object_store: ObjectStoreRef | None = Field(
+        default=None,
+        description=(
+            "Object store reference for the FastAPI app. If present, static files can be uploaded via a POST "
+            "request to '/static' and files will be served from the object store. The files will be served from the "
+            "object store at '/static/{file_name}'."))

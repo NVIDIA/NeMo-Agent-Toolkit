@@ -1,0 +1,27 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+root = "../../.."
+
+[project]
+name = "aiq_email_phishing_analyzer"
+dynamic = ["version"]
+dependencies = [
+  "aiqtoolkit[langchain]~=1.2",
+  "arize-phoenix==6.1.*",
+  "bs4==0.0.2",
+  "networkx~=3.4",
+  "openinference-instrumentation-langchain==0.1.29",
+]
+requires-python = ">=3.11,<3.13"
+description = "Simple Phishing Email Analyzer AIQ toolkit example"
+keywords = ["ai", "rag", "agents"]
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+aiqtoolkit = { path = "../../..", editable = true }
+
+[project.entry-points.'aiq.components']
+aiq_email_phishing_analyzer = "aiq_email_phishing_analyzer.register"

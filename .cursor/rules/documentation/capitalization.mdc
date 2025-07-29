@@ -1,0 +1,160 @@
+---
+description: 
+globs: **/*.md
+alwaysApply: false
+---
+# Capitalization Guidelines
+
+Capitalize proper names of products, features, pages, and tools. In step-by-step instructions, match the exact capitalization of UI elements. Don't capitalize words that are not proper nouns solely for emphasis.
+
+## Basic Capitalization Rules
+
+### Always Capitalize
+
+#### First Word of Sentences
+- Always capitalize the first word of every sentence
+- **Examples**: "The cat is sleeping." "Where did I put that book?"
+
+#### Proper Nouns
+- **People's names**: Jane Austen, Tom, Diane
+- **Places**: Southern California, San Diego, New York City
+- **Companies**: NVIDIA, Microsoft, Google
+- **Religions**: Catholic, Buddhist, Jewish
+- **Political parties**: Democratic Party, Republican Party
+- **Products**: CUDA, TensorRT, Agent toolkit
+
+#### Names Used as Forms of Address
+- **Correct**: "Just wait until Mom sees this!"
+- **Incorrect**: "My mom is not going to like this." (not a form of address)
+
+#### Days, Months, and Holidays
+- **Days**: Monday, Tuesday, Wednesday
+- **Months**: January, February, March
+- **Holidays**: Christmas, Valentine's Day, New Year's Day
+- **Don't capitalize seasons**: spring, summer, fall, winter
+
+#### Cities, Countries, Nationalities, and Languages
+- **Cities**: London, Tokyo, San Francisco
+- **Countries**: United States, Canada, Japan
+- **Nationalities**: American, Canadian, Japanese
+- **Languages**: English, Spanish, Mandarin
+
+#### Time Periods and Historical Events (with proper names)
+- **Historical events**: World War I, Middle Ages, Roaring Twenties
+- **Don't capitalize centuries**: sixteenth century, twenty-first century
+
+#### Time Zones
+- **Full names**: Eastern Time, Pacific Time, Coordinated Universal Time
+- **Abbreviations**: EST, EDT, PST, PDT, UTC, GMT
+- **Don't abbreviate** unless space is severely limited
+
+### Title Capitalization
+
+#### For Headings and Titles
+Capitalize:
+- **First word** (always)
+- **All nouns**: Requirements, Phase, Model
+- **All verbs** (including short ones like "is"): Configuring, Testing, Building
+- **All adjectives**: Quick, Advanced, Custom
+- **All proper nouns**: NVIDIA, vGPU, NGC
+
+Don't capitalize:
+- **Articles**: a, an, the (unless first word)
+- **Conjunctions**: and, but, or (unless >5 letters or first word)
+- **Prepositions**: of, in, to, for (unless >5 letters or first word)
+
+#### Examples
+- **Correct**: "Requirements for Configuring NVIDIA vGPU in a DRS Cluster"
+- **Correct**: "Deploying and Testing Your Text-based Bot"
+- **Correct**: "Uploading a Model to NGC"
+
+#### Action Titles
+- Use gerund form (-ing) for action-oriented titles
+- **Example**: "Installing the Toolkit" not "Install the Toolkit"
+
+### Don't Capitalize
+
+#### After Colons (Usually)
+- **Standard**: "I have one true passion: horse racing."
+- **Exception - Proper noun**: "There is only one place I want to visit: New York City."
+- **Exception - Complete sentence**: "Maggie wears a cap for two reasons: Strong light gives her headaches. She likes how it looks."
+
+#### Compound Words
+- **Don't capitalize** compound words unless they're proper names
+- **Examples**: long-term solution, up-to-date guides
+- **Exceptions**: In-App Advertising, In-App Messaging, In-App Purchases, In-Game Advertising
+
+#### Partial Quotes
+- **Capitalize complete quotes**: Mario asked, "What is everyone doing this weekend?"
+- **Don't capitalize partial quotes**: Gretchen said she was "way too busy" to join
+
+#### Domain-Specific Terms (Unless Proper Names)
+- **Use lowercase**: projects, applications, roles, workflows, functions
+- **Exception**: When referring to specific proper names of products or features
+
+## Technical Documentation Specific Rules
+
+### UI Elements
+- **Match exact capitalization** of interface elements
+- **Bold and italic formatting**: Select *Settings* > *Data Inputs*
+- **Button text**: Click **Save** or **Cancel**
+
+### Code and Technical Terms
+- **Follow language conventions**: JavaScript (capitalize), API (all caps), JSON (all caps)
+- **File extensions**: Use lowercase unless following specific conventions
+- **Commands**: Usually lowercase unless they're proper names
+
+### Product Names
+- **Use official capitalization**: 
+  - NVIDIA NeMo Agent toolkit (first use)
+  - Agent toolkit (subsequent uses)
+  - CUDA, TensorRT, PyTorch
+- **Don't capitalize** generic terms: database, server, application (unless part of proper name)
+
+### Feature Names
+- **Capitalize** official feature names: Smart Search, Auto-Save, Real-time Analytics
+- **Don't capitalize** generic features: search functionality, automatic saving, real-time updates
+
+## Common Capitalization Mistakes
+
+### Don't Do These
+- **Don't capitalize for emphasis**: Important becomes *important* (italic) not Important
+- **Don't capitalize common nouns**: "The Database" should be "the database"
+- **Don't capitalize job titles**: software engineer, project manager (unless in formal contexts)
+- **Don't capitalize directions**: north, south, east, west (unless part of proper name)
+
+### Special Cases
+
+#### Ordinal Numbers
+- **Always spell out**: first, second, third, twenty-first
+- **Don't use**: 1st, 2nd, 3rd, 21st in dates
+- **Correct**: "June 21" not "June 21st"
+
+#### Abbreviations and Acronyms
+- **Follow standard conventions**: API, REST, HTTP, URL
+- **Don't capitalize** unless the spelled-out form would be capitalized
+- **Example**: "application programming interface" → "API"
+
+#### Version Numbers
+- **Follow product conventions**: 
+  - "version 2.1" (lowercase version)
+  - "Python 3.9" (capitalize language name)
+  - "CUDA 11.8" (follow product style)
+
+## Best Practices
+
+### Consistency
+- **Use the same capitalization** for the same term throughout a document
+- **Create a style sheet** for product-specific terms
+- **Follow established conventions** within your organization
+
+### When in Doubt
+- **Check official documentation** for proper names
+- **Use sentence case** rather than title case for most content
+- **Err on the side of lowercase** for common nouns
+- **Be consistent** with your choices throughout the document
+
+### Accessibility
+- **Consistent capitalization** helps screen readers
+- **Proper capitalization** improves searchability
+- **Clear conventions** reduce cognitive load for readers

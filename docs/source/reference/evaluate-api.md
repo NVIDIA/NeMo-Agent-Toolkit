@@ -17,10 +17,10 @@ limitations under the License.
 
 # Evaluate API Endpoints
 :::{note}
-It is recommended that the [Evaluating AIQ toolkit Workflows](./evaluate.md) guide be read before proceeding with this detailed documentation.
+It is recommended that the [Evaluating NeMo Agent toolkit Workflows](./evaluate.md) guide be read before proceeding with this detailed documentation.
 :::
 
-The evaluation endpoint can be used to start evaluation jobs on a remote AIQ toolkit server.
+The evaluation endpoint can be used to start evaluation jobs on a remote NeMo Agent toolkit server.
 
 ## Evaluation Endpoint Overview
 ```{mermaid}
@@ -31,11 +31,11 @@ graph TD
   B --> E["GET /evaluate/jobs"]
 ```
 
-## Start AIQ Toolkit API Server
-See AIQ toolkit [UI and Server](./../quick-start/launching-ui.md) guide for instructions on starting the AIQ toolkit server.
+## Start NeMo Agent Toolkit API Server
+See NeMo Agent toolkit [UI and Server](./../quick-start/launching-ui.md) guide for instructions on starting the NeMo Agent toolkit server.
 Sample Usage:
 ```bash
-aiq serve --config_file=examples/simple/configs/config.yml
+aiq serve --config_file=examples/getting_started/simple_web_query/configs/config.yml
 ```
 
 ## Evaluate Request and Response
@@ -53,7 +53,7 @@ curl --request POST \
    --url http://localhost:8000/evaluate \
    --header 'Content-Type: application/json' \
    --data '{
-    "config_file": "examples/simple/configs/eval_only_config.yml",
+    "config_file": "examples/getting_started/simple_web_query/configs/eval_only_config.yml",
     "expiry_seconds": 600
 }' | jq
 ```
@@ -106,9 +106,9 @@ The response contains the status of the job, including the job ID, status, and a
 {
   "job_id": "882317f0-6149-4b29-872b-9c8018d64784",
   "status": "success",
-  "config_file": "examples/simple/configs/eval_only_config.yml",
+  "config_file": "examples/getting_started/simple_web_query/configs/eval_only_config.yml",
   "error": null,
-  "output_path": ".tmp/aiq/examples/simple/jobs/882317f0-6149-4b29-872b-9c8018d64784",
+  "output_path": ".tmp/aiq/examples/getting_started/simple_web_query/jobs/882317f0-6149-4b29-872b-9c8018d64784",
   "created_at": "2025-04-11T17:33:38.018904Z",
   "updated_at": "2025-04-11T17:34:40.359080Z",
   "expires_at": "2025-04-11T17:44:40.359080Z"
@@ -143,9 +143,9 @@ curl --request GET \
   {
     "job_id": "df6fddd7-2adf-45dd-a105-8559a7569ec9",
     "status": "success",
-    "config_file": "examples/simple/configs/eval_only_config.yml",
+    "config_file": "examples/getting_started/simple_web_query/configs/eval_only_config.yml",
     "error": null,
-    "output_path": ".tmp/aiq/examples/simple/jobs/df6fddd7-2adf-45dd-a105-8559a7569ec9",
+    "output_path": ".tmp/aiq/examples/getting_started/simple_web_query/jobs/df6fddd7-2adf-45dd-a105-8559a7569ec9",
     "created_at": "2025-04-11T17:33:16.711636Z",
     "updated_at": "2025-04-11T17:34:24.753742Z",
     "expires_at": "2025-04-11T17:44:24.753742Z"

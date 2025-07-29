@@ -34,6 +34,9 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import create_model
 
+from aiq.tool.mcp.exceptions import MCPToolNotFoundError
+from aiq.utils.exception_handlers.mcp import mcp_exception_handler
+
 logger = logging.getLogger(__name__)
 
 
@@ -173,6 +176,7 @@ class MCPBaseClient(ABC):
             for tool in response.tools
         }
 
+    @mcp_exception_handler
     async def get_tool(self, tool_name: str) -> MCPToolClient:
         """
         Get an MCP Tool by name.
@@ -194,9 +198,10 @@ class MCPBaseClient(ABC):
 
         tool = self._tools.get(tool_name)
         if not tool:
-            raise ValueError(f"Tool {tool_name} not available")
+            raise MCPToolNotFoundError(tool_name, self.url)
         return tool
 
+    @mcp_exception_handler
     async def call_tool(self, tool_name: str, tool_args: dict | None):
         if not self._session:
             raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")

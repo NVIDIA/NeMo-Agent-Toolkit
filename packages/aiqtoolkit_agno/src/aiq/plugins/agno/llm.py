@@ -18,8 +18,10 @@ import os
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_llm_client
+from aiq.data_models.retry_mixin import RetryMixin
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
+from aiq.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
@@ -46,10 +48,20 @@ async def nim_agno(llm_config: NIMModelConfig, builder: Builder):
                 os.environ["NVIDIA_API_KEY"] = nvidai_api_key
 
     # Create Nvidia instance with conditional base_url
-    nvidia_args = {"id": config_obj.get("id")}
+    kwargs = {"id": config_obj.get("id")}
     if "base_url" in config_obj and config_obj.get("base_url") is not None:
-        nvidia_args["base_url"] = config_obj.get("base_url")
-    yield Nvidia(**nvidia_args)
+        kwargs["base_url"] = config_obj.get("base_url")
+
+    client = Nvidia(**kwargs)  # type: ignore[arg-type]
+
+    if isinstance(client, RetryMixin):
+
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
+
+    yield client
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
@@ -57,8 +69,19 @@ async def openai_agno(llm_config: OpenAIModelConfig, builder: Builder):
 
     from agno.models.openai import OpenAIChat
 
-    config_obj = {
-        **llm_config.model_dump(exclude={"type"}, by_alias=True),
-    }
+    # Use model_dump to get the proper field values with correct types
+    kwargs = llm_config.model_dump(exclude={"type"}, by_alias=True)
 
-    yield OpenAIChat(**config_obj)
+    # AGNO uses 'id' instead of 'model' for the model name
+    if "model" in kwargs:
+        kwargs["id"] = kwargs.pop("model")
+
+    client = OpenAIChat(**kwargs)
+
+    if isinstance(llm_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
+
+    yield client

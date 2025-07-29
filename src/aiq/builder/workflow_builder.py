@@ -21,8 +21,10 @@ from contextlib import AbstractAsyncContextManager
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 
+from aiq.authentication.interfaces import AuthProviderBase
 from aiq.builder.builder import Builder
 from aiq.builder.builder import UserManagerHolder
+from aiq.builder.component_utils import ComponentInstanceData
 from aiq.builder.component_utils import build_dependency_sequence
 from aiq.builder.context import AIQContext
 from aiq.builder.context import AIQContextState
@@ -36,43 +38,45 @@ from aiq.builder.retriever import RetrieverProviderInfo
 from aiq.builder.workflow import Workflow
 from aiq.cli.type_registry import GlobalTypeRegistry
 from aiq.cli.type_registry import TypeRegistry
+from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.data_models.component import ComponentGroup
+from aiq.data_models.component_ref import AuthenticationRef
 from aiq.data_models.component_ref import EmbedderRef
 from aiq.data_models.component_ref import FunctionRef
+from aiq.data_models.component_ref import ITSStrategyRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.component_ref import MemoryRef
+from aiq.data_models.component_ref import ObjectStoreRef
 from aiq.data_models.component_ref import RetrieverRef
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.function_dependencies import FunctionDependencies
+from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from aiq.experimental.decorators.experimental_warning_decorator import aiq_experimental
+from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
+from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
+from aiq.object_store.interfaces import ObjectStore
+from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
 from aiq.profiler.utils import detect_llm_frameworks_in_build_fn
-from aiq.utils.optional_imports import TelemetryOptionalImportError
-from aiq.utils.optional_imports import try_import_opentelemetry
 from aiq.utils.type_utils import override
-
-# SpanExporter is needed to define ConfiguredExporter. Handling when OpenTelemetry is not installed here.
-try:
-    opentelemetry = try_import_opentelemetry()
-    from opentelemetry.sdk.trace.export import SpanExporter
-except TelemetryOptionalImportError:
-    from aiq.utils.optional_imports import DummySpanExporter  # pylint: disable=ungrouped-imports
-    SpanExporter = DummySpanExporter
 
 logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass
-class ConfiguredExporter:
+class ConfiguredTelemetryExporter:
     config: TelemetryExporterBaseConfig
-    instance: SpanExporter
+    instance: BaseExporter
 
 
 @dataclasses.dataclass
@@ -100,9 +104,27 @@ class ConfiguredMemory:
 
 
 @dataclasses.dataclass
+class ConfiguredObjectStore:
+    config: ObjectStoreBaseConfig
+    instance: ObjectStore
+
+
+@dataclasses.dataclass
 class ConfiguredRetriever:
     config: RetrieverBaseConfig
     instance: RetrieverProviderInfo
+
+
+@dataclasses.dataclass
+class ConfiguredAuthProvider:
+    config: AuthProviderBaseConfig
+    instance: AuthProviderBase
+
+
+@dataclasses.dataclass
+class ConfiguredITSStrategy:
+    config: ITSStrategyBaseConfig
+    instance: StrategyBase
 
 
 # pylint: disable=too-many-public-methods
@@ -121,15 +143,18 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._registry = registry
 
         self._logging_handlers: dict[str, logging.Handler] = {}
-        self._exporters: dict[str, ConfiguredExporter] = {}
+        self._telemetry_exporters: dict[str, ConfiguredTelemetryExporter] = {}
 
         self._functions: dict[str, ConfiguredFunction] = {}
         self._workflow: ConfiguredFunction | None = None
 
         self._llms: dict[str, ConfiguredLLM] = {}
+        self._auth_providers: dict[str, ConfiguredAuthProvider] = {}
         self._embedders: dict[str, ConfiguredEmbedder] = {}
         self._memory_clients: dict[str, ConfiguredMemory] = {}
+        self._object_stores: dict[str, ConfiguredObjectStore] = {}
         self._retrievers: dict[str, ConfiguredRetriever] = {}
+        self._its_strategies: dict[str, ConfiguredITSStrategy] = {}
 
         self._context_state = AIQContextState.get()
 
@@ -143,7 +168,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         self._exit_stack = AsyncExitStack()
 
-        # Get the exporter info from the config
+        # Get the telemetry info from the config
         telemetry_config = self.general_config.telemetry
 
         for key, logging_config in telemetry_config.logging.items():
@@ -161,30 +186,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             # Now attach to AIQ Toolkit's root logger
             logging.getLogger().addHandler(handler)
 
-        # If tracing is configured, try to import telemetry dependencies and set up tracing
-        if telemetry_config.tracing:
-            # If the dependencies are not installed, a TelemetryOptionalImportError will be raised
-
-            # pylint: disable=unused-variable,redefined-outer-name
-            opentelemetry = try_import_opentelemetry()  # noqa: F841
-            from opentelemetry import trace
-            from opentelemetry.sdk.trace import TracerProvider
-            from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-            provider = TracerProvider()
-            trace.set_tracer_provider(provider)
-
-            for key, trace_exporter_config in telemetry_config.tracing.items():
-
-                exporter_info = self._registry.get_telemetry_exporter(type(trace_exporter_config))
-
-                instance = await self._exit_stack.enter_async_context(
-                    exporter_info.build_fn(trace_exporter_config, self))
-
-                span_processor_instance = BatchSpanProcessor(instance)
-                provider.add_span_processor(span_processor_instance)
-
-                self._exporters[key] = ConfiguredExporter(config=trace_exporter_config, instance=instance)
+        # Add the telemetry exporters
+        for key, telemetry_exporter_config in telemetry_config.tracing.items():
+            await self.add_telemetry_exporter(key, telemetry_exporter_config)
 
         return self
 
@@ -240,9 +244,17 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                                k: v.config
                                for k, v in self._memory_clients.items()
                            },
+                           object_stores={
+                               k: v.config
+                               for k, v in self._object_stores.items()
+                           },
                            retrievers={
                                k: v.config
                                for k, v in self._retrievers.items()
+                           },
+                           its_strategies={
+                               k: v.config
+                               for k, v in self._its_strategies.items()
                            })
 
         if (entry_function is None):
@@ -268,13 +280,21 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                                               k: v.instance
                                               for k, v in self._memory_clients.items()
                                           },
-                                          exporters={
+                                          object_stores={
                                               k: v.instance
-                                              for k, v in self._exporters.items()
+                                              for k, v in self._object_stores.items()
+                                          },
+                                          telemetry_exporters={
+                                              k: v.instance
+                                              for k, v in self._telemetry_exporters.items()
                                           },
                                           retrievers={
                                               k: v.instance
                                               for k, v in self._retrievers.items()
+                                          },
+                                          its_strategies={
+                                              k: v.instance
+                                              for k, v in self._its_strategies.items()
                                           },
                                           context_state=self._context_state)
 
@@ -320,7 +340,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         if (isinstance(build_result, FunctionInfo)):
             # Create the function object
-            build_result = LambdaFunction.from_info(config=config, info=build_result)
+            build_result = LambdaFunction.from_info(config=config, info=build_result, instance_name=name)
 
         if (not isinstance(build_result, Function)):
             raise ValueError("Expected a function, FunctionInfo object, or FunctionBase object to be "
@@ -450,6 +470,76 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Return the tool configuration object
         return self._llms[llm_name].config
 
+    @aiq_experimental(feature_name="Authentication")
+    @override
+    async def add_auth_provider(self, name: str | AuthenticationRef,
+                                config: AuthProviderBaseConfig) -> AuthProviderBase:
+        """
+        Add an authentication provider to the workflow by constructing it from a configuration object.
+
+        Note: The Authentication Provider API is experimental and the API may change in future releases.
+
+        Parameters
+        ----------
+        name : str | AuthenticationRef
+            The name of the authentication provider to add.
+        config : AuthProviderBaseConfig
+            The configuration for the authentication provider.
+
+        Returns
+        -------
+        AuthProviderBase
+            The authentication provider instance.
+
+        Raises
+        ------
+        ValueError
+            If the authentication provider is already in the list of authentication providers.
+        """
+
+        if (name in self._auth_providers):
+            raise ValueError(f"Authentication `{name}` already exists in the list of Authentication Providers")
+
+        try:
+            authentication_info = self._registry.get_auth_provider(type(config))
+
+            info_obj = await self._get_exit_stack().enter_async_context(authentication_info.build_fn(config, self))
+
+            self._auth_providers[name] = ConfiguredAuthProvider(config=config, instance=info_obj)
+
+            return info_obj
+        except Exception as e:
+            logger.error("Error adding authentication `%s` with config `%s`", name, config, exc_info=True)
+            raise e
+
+    @override
+    async def get_auth_provider(self, auth_provider_name: str) -> AuthProviderBase:
+        """
+        Get the authentication provider instance for the given name.
+
+        Note: The Authentication Provider API is experimental and the API may change in future releases.
+
+        Parameters
+        ----------
+        auth_provider_name : str
+            The name of the authentication provider to get.
+
+        Returns
+        -------
+        AuthProviderBase
+            The authentication provider instance.
+
+        Raises
+        ------
+        ValueError
+            If the authentication provider is not found.
+        """
+
+        if auth_provider_name not in self._auth_providers:
+            raise ValueError(f"Authentication `{auth_provider_name}` not found")
+
+        return self._auth_providers[auth_provider_name].instance
+
     @override
     async def add_embedder(self, name: str | EmbedderRef, config: EmbedderBaseConfig):
 
@@ -531,6 +621,33 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return self._memory_clients[memory_name].config
 
     @override
+    async def add_object_store(self, name: str | ObjectStoreRef, config: ObjectStoreBaseConfig) -> ObjectStore:
+        if name in self._object_stores:
+            raise ValueError(f"Object store `{name}` already exists in the list of object stores")
+
+        object_store_info = self._registry.get_object_store(type(config))
+
+        info_obj = await self._get_exit_stack().enter_async_context(object_store_info.build_fn(config, self))
+
+        self._object_stores[name] = ConfiguredObjectStore(config=config, instance=info_obj)
+
+        return info_obj
+
+    @override
+    async def get_object_store_client(self, object_store_name: str | ObjectStoreRef) -> ObjectStore:
+        if object_store_name not in self._object_stores:
+            raise ValueError(f"Object store `{object_store_name}` not found")
+
+        return self._object_stores[object_store_name].instance
+
+    @override
+    def get_object_store_config(self, object_store_name: str | ObjectStoreRef) -> ObjectStoreBaseConfig:
+        if object_store_name not in self._object_stores:
+            raise ValueError(f"Object store `{object_store_name}` not found")
+
+        return self._object_stores[object_store_name].config
+
+    @override
     async def add_retriever(self, name: str | RetrieverRef, config: RetrieverBaseConfig):
 
         if (name in self._retrievers):
@@ -582,9 +699,166 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return self._retrievers[retriever_name].config
 
+    @aiq_experimental(feature_name="ITS")
+    @override
+    async def add_its_strategy(self, name: str | str, config: ITSStrategyBaseConfig):
+        if (name in self._its_strategies):
+            raise ValueError(f"ITS strategy '{name}' already exists in the list of ITS strategies")
+
+        try:
+            its_strategy_info = self._registry.get_its_strategy(type(config))
+
+            info_obj = await self._get_exit_stack().enter_async_context(its_strategy_info.build_fn(config, self))
+
+            self._its_strategies[name] = ConfiguredITSStrategy(config=config, instance=info_obj)
+
+        except Exception as e:
+            logger.error("Error adding ITS strategy `%s` with config `%s`", name, config, exc_info=True)
+
+            raise e
+
+    @override
+    async def get_its_strategy(self,
+                               strategy_name: str | ITSStrategyRef,
+                               pipeline_type: PipelineTypeEnum,
+                               stage_type: StageTypeEnum) -> StrategyBase:
+
+        if strategy_name not in self._its_strategies:
+            raise ValueError(f"ITS strategy '{strategy_name}' not found")
+
+        try:
+            # Get strategy info
+            its_strategy_info = self._its_strategies[strategy_name]
+
+            instance = its_strategy_info.instance
+
+            if not stage_type == instance.stage_type():
+                raise ValueError(f"ITS strategy '{strategy_name}' is not compatible with stage type '{stage_type}'")
+
+            if pipeline_type not in instance.supported_pipeline_types():
+                raise ValueError(
+                    f"ITS strategy '{strategy_name}' is not compatible with pipeline type '{pipeline_type}'")
+
+            instance.set_pipeline_type(pipeline_type)
+
+            return instance
+        except Exception as e:
+            logger.error("Error getting ITS strategy `%s`", strategy_name, exc_info=True)
+            raise e
+
+    @override
+    async def get_its_strategy_config(self,
+                                      strategy_name: str | ITSStrategyRef,
+                                      pipeline_type: PipelineTypeEnum,
+                                      stage_type: StageTypeEnum) -> ITSStrategyBaseConfig:
+        if strategy_name not in self._its_strategies:
+            raise ValueError(f"ITS strategy '{strategy_name}' not found")
+
+        strategy_info = self._its_strategies[strategy_name]
+        instance = strategy_info.instance
+        config = strategy_info.config
+
+        if not stage_type == instance.stage_type():
+            raise ValueError(f"ITS strategy '{strategy_name}' is not compatible with stage type '{stage_type}'")
+
+        if pipeline_type not in instance.supported_pipeline_types():
+            raise ValueError(f"ITS strategy '{strategy_name}' is not compatible with pipeline type '{pipeline_type}'")
+
+        return config
+
     @override
     def get_user_manager(self):
         return UserManagerHolder(context=AIQContext(self._context_state))
+
+    async def add_telemetry_exporter(self, name: str, config: TelemetryExporterBaseConfig) -> None:
+        """Add an configured telemetry exporter to the builder.
+
+        Args:
+            name (str): The name of the telemetry exporter
+            config (TelemetryExporterBaseConfig): The configuration for the exporter
+        """
+        if (name in self._telemetry_exporters):
+            raise ValueError(f"Telemetry exporter '{name}' already exists in the list of telemetry exporters")
+
+        exporter_info = self._registry.get_telemetry_exporter(type(config))
+
+        # Build the exporter outside the lock (parallel)
+        exporter_context_manager = exporter_info.build_fn(config, self)
+
+        # Only protect the shared state modifications (serialized)
+        exporter = await self._get_exit_stack().enter_async_context(exporter_context_manager)
+        self._telemetry_exporters[name] = ConfiguredTelemetryExporter(config=config, instance=exporter)
+
+    def _log_build_failure(self,
+                           component_name: str,
+                           component_type: str,
+                           completed_components: list[tuple[str, str]],
+                           remaining_components: list[tuple[str, str]],
+                           original_error: Exception) -> None:
+        """
+        Common method to log comprehensive build failure information.
+
+        Args:
+            component_name (str): The name of the component that failed to build
+            component_type (str): The type of the component that failed to build
+            completed_components (list[tuple[str, str]]): List of (name, type) tuples for successfully built components
+            remaining_components (list[tuple[str, str]]): List of (name, type) tuples for components still to be built
+            original_error (Exception): The original exception that caused the failure
+        """
+        logger.error("Failed to initialize component %s (%s)", component_name, component_type)
+
+        if completed_components:
+            logger.error("Successfully built components:")
+            for name, comp_type in completed_components:
+                logger.error("- %s (%s)", name, comp_type)
+        else:
+            logger.error("No components were successfully built before this failure")
+
+        if remaining_components:
+            logger.error("Remaining components to build:")
+            for name, comp_type in remaining_components:
+                logger.error("- %s (%s)", name, comp_type)
+        else:
+            logger.error("No remaining components to build")
+
+        logger.error("Original error:", exc_info=original_error)
+
+    def _log_build_failure_component(self,
+                                     failing_component: ComponentInstanceData,
+                                     completed_components: list[tuple[str, str]],
+                                     remaining_components: list[tuple[str, str]],
+                                     original_error: Exception) -> None:
+        """
+        Log comprehensive component build failure information.
+
+        Args:
+            failing_component (ComponentInstanceData): The ComponentInstanceData that failed to build
+            completed_components (list[tuple[str, str]]): List of (name, type) tuples for successfully built components
+            remaining_components (list[tuple[str, str]]): List of (name, type) tuples for components still to be built
+            original_error (Exception): The original exception that caused the failure
+        """
+        component_name = failing_component.name
+        component_type = failing_component.component_group.value
+
+        self._log_build_failure(component_name,
+                                component_type,
+                                completed_components,
+                                remaining_components,
+                                original_error)
+
+    def _log_build_failure_workflow(self,
+                                    completed_components: list[tuple[str, str]],
+                                    remaining_components: list[tuple[str, str]],
+                                    original_error: Exception) -> None:
+        """
+        Log comprehensive workflow build failure information.
+
+        Args:
+            completed_components (list[tuple[str, str]]): List of (name, type) tuples for successfully built components
+            remaining_components (list[tuple[str, str]]): List of (name, type) tuples for components still to be built
+            original_error (Exception): The original exception that caused the failure
+        """
+        self._log_build_failure("<workflow>", "workflow", completed_components, remaining_components, original_error)
 
     async def populate_builder(self, config: AIQConfig, skip_workflow: bool = False):
         """
@@ -598,31 +872,68 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Generate the build sequence
         build_sequence = build_dependency_sequence(config)
 
+        # Initialize progress tracking
+        completed_components = []
+        remaining_components = [(str(comp.name), comp.component_group.value) for comp in build_sequence
+                                if not comp.is_root]
+        if not skip_workflow:
+            remaining_components.append(("<workflow>", "workflow"))
+
         # Loop over all objects and add to the workflow builder
         for component_instance in build_sequence:
-            # Instantiate a the llm
-            if component_instance.component_group == ComponentGroup.LLMS:
-                await self.add_llm(component_instance.name, component_instance.config)
-            # Instantiate a the embedder
-            elif component_instance.component_group == ComponentGroup.EMBEDDERS:
-                await self.add_embedder(component_instance.name, component_instance.config)
-            # Instantiate a memory client
-            elif component_instance.component_group == ComponentGroup.MEMORY:
-                await self.add_memory_client(component_instance.name, component_instance.config)
-            # Instantiate a retriever client
-            elif component_instance.component_group == ComponentGroup.RETRIEVERS:
-                await self.add_retriever(component_instance.name, component_instance.config)
-            # Instantiate a function
-            elif component_instance.component_group == ComponentGroup.FUNCTIONS:
-                # If the function is the root, set it as the workflow later
-                if (not component_instance.is_root):
-                    await self.add_function(component_instance.name, component_instance.config)
-            else:
-                raise ValueError(f"Unknown component group {component_instance.component_group}")
+            try:
+                # Remove from remaining as we start building (if not root)
+                if not component_instance.is_root:
+                    remaining_components.remove(
+                        (str(component_instance.name), component_instance.component_group.value))
+
+                # Instantiate a the llm
+                if component_instance.component_group == ComponentGroup.LLMS:
+                    await self.add_llm(component_instance.name, component_instance.config)
+                # Instantiate a the embedder
+                elif component_instance.component_group == ComponentGroup.EMBEDDERS:
+                    await self.add_embedder(component_instance.name, component_instance.config)
+                # Instantiate a memory client
+                elif component_instance.component_group == ComponentGroup.MEMORY:
+                    await self.add_memory_client(component_instance.name, component_instance.config)
+            # Instantiate a object store client
+                elif component_instance.component_group == ComponentGroup.OBJECT_STORES:
+                    await self.add_object_store(component_instance.name, component_instance.config)
+                # Instantiate a retriever client
+                elif component_instance.component_group == ComponentGroup.RETRIEVERS:
+                    await self.add_retriever(component_instance.name, component_instance.config)
+                # Instantiate a function
+                elif component_instance.component_group == ComponentGroup.FUNCTIONS:
+                    # If the function is the root, set it as the workflow later
+                    if (not component_instance.is_root):
+                        await self.add_function(component_instance.name, component_instance.config)
+                elif component_instance.component_group == ComponentGroup.ITS_STRATEGIES:
+                    await self.add_its_strategy(component_instance.name, component_instance.config)
+
+                elif component_instance.component_group == ComponentGroup.AUTHENTICATION:
+                    await self.add_auth_provider(component_instance.name, component_instance.config)
+                else:
+                    raise ValueError(f"Unknown component group {component_instance.component_group}")
+
+                # Add to completed after successful build (if not root)
+                if not component_instance.is_root:
+                    completed_components.append(
+                        (str(component_instance.name), component_instance.component_group.value))
+
+            except Exception as e:
+                self._log_build_failure_component(component_instance, completed_components, remaining_components, e)
+                raise
 
         # Instantiate the workflow
         if not skip_workflow:
-            await self.set_workflow(config.workflow)
+            try:
+                # Remove workflow from remaining as we start building
+                remaining_components.remove(("<workflow>", "workflow"))
+                await self.set_workflow(config.workflow)
+                completed_components.append(("<workflow>", "workflow"))
+            except Exception as e:
+                self._log_build_failure_workflow(completed_components, remaining_components, e)
+                raise
 
     @classmethod
     @asynccontextmanager
@@ -688,6 +999,14 @@ class ChildBuilder(Builder):
         return await self._workflow_builder.add_llm(name, config)
 
     @override
+    async def add_auth_provider(self, name: str, config: AuthProviderBaseConfig):
+        return await self._workflow_builder.add_auth_provider(name, config)
+
+    @override
+    async def get_auth_provider(self, auth_provider_name: str):
+        return await self._workflow_builder.get_auth_provider(auth_provider_name)
+
+    @override
     async def get_llm(self, llm_name: str, wrapper_type: LLMFrameworkEnum | str):
         llm = await self._workflow_builder.get_llm(llm_name, wrapper_type)
 
@@ -733,6 +1052,47 @@ class ChildBuilder(Builder):
     @override
     def get_memory_client_config(self, memory_name: str) -> MemoryBaseConfig:
         return self._workflow_builder.get_memory_client_config(memory_name=memory_name)
+
+    @override
+    async def add_object_store(self, name: str, config: ObjectStoreBaseConfig):
+        return await self._workflow_builder.add_object_store(name, config)
+
+    @override
+    async def get_object_store_client(self, object_store_name: str) -> ObjectStore:
+        """
+        Return the instantiated object store client for the given name.
+        """
+        object_store_client = await self._workflow_builder.get_object_store_client(object_store_name)
+
+        self._dependencies.add_object_store(object_store_name)
+
+        return object_store_client
+
+    @override
+    def get_object_store_config(self, object_store_name: str) -> ObjectStoreBaseConfig:
+        return self._workflow_builder.get_object_store_config(object_store_name)
+
+    @override
+    async def add_its_strategy(self, name: str, config: ITSStrategyBaseConfig):
+        return await self._workflow_builder.add_its_strategy(name, config)
+
+    @override
+    async def get_its_strategy(self,
+                               strategy_name: str | ITSStrategyRef,
+                               pipeline_type: PipelineTypeEnum,
+                               stage_type: StageTypeEnum) -> StrategyBase:
+        return await self._workflow_builder.get_its_strategy(strategy_name=strategy_name,
+                                                             pipeline_type=pipeline_type,
+                                                             stage_type=stage_type)
+
+    @override
+    async def get_its_strategy_config(self,
+                                      strategy_name: str | ITSStrategyRef,
+                                      pipeline_type: PipelineTypeEnum,
+                                      stage_type: StageTypeEnum) -> ITSStrategyBaseConfig:
+        return await self._workflow_builder.get_its_strategy_config(strategy_name=strategy_name,
+                                                                    pipeline_type=pipeline_type,
+                                                                    stage_type=stage_type)
 
     @override
     async def add_retriever(self, name: str, config: RetrieverBaseConfig):

@@ -10,7 +10,9 @@ Arize
 arXiv
 [Aa]sync
 [Aa]utoencoder
+[Au]thlib
 [Aa]nonymize(d?)
+[Bb]ackoff
 [Bb]ackpressure
 [Bb]atcher
 [Bb]oolean
@@ -39,6 +41,7 @@ CuPy
 Cython
 Dask
 Databricks
+Datadog
 DB(s?)
 [Dd]eserialize
 [Dd]ev
@@ -83,11 +86,15 @@ NIM(s?)
 npm
 NumPy
 NVIDIA
+OAuth
+URIs
+OTel
 onboarding
 [Oo]verfitting
 pandas
 [Pp]arallelization
 [Pp]arsable
+Patronus
 PCIe
 PDF(s?)
 [Pp]reprocess
@@ -96,6 +103,7 @@ PDF(s?)
 Pydantic
 PyPI
 pytest
+[Rr]edis
 [Rr]einstall(s?)
 [Rr]eplatform(ing)?
 [Rr]epo
@@ -117,10 +125,14 @@ Tavily
 triages
 [Uu]nencrypted
 [Uu]nittest(s?)
+[Uu]nprocessable
 [Uu]ploader
+[Uu]psert
 uv
 VectorDB
 [Ww]alkthrough
+[Ww]eb[Ss]ocket
+[We]ebSocket
 XGBoost
 zsh
 Zep

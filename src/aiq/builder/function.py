@@ -48,7 +48,8 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
                  input_schema: type[BaseModel] | None = None,
                  streaming_output_schema: type[BaseModel] | type[None] | None = None,
                  single_output_schema: type[BaseModel] | type[None] | None = None,
-                 converters: list[Callable[[typing.Any], typing.Any]] | None = None):
+                 converters: list[Callable[[typing.Any], typing.Any]] | None = None,
+                 instance_name: str | None = None):
 
         super().__init__(input_schema=input_schema,
                          streaming_output_schema=streaming_output_schema,
@@ -57,6 +58,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
 
         self.config = config
         self.description = description
+        self.instance_name = instance_name or config.type
         self._context = AIQContext.get()
 
     def convert(self, value: typing.Any, to_type: type[_T]) -> _T:
@@ -77,6 +79,25 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         """
 
         return self._converter.convert(value, to_type=to_type)
+
+    def try_convert(self, value: typing.Any, to_type: type[_T]) -> _T:
+        """
+        Converts the given value to the specified type using graceful error handling.
+        If conversion fails, returns the original value and continues processing.
+
+        Parameters
+        ----------
+        value : typing.Any
+            The value to convert.
+        to_type : type
+            The type to convert the value to.
+
+        Returns
+        -------
+        _T
+            The converted value, or original value if conversion fails.
+        """
+        return self._converter.try_convert(value, to_type=to_type)
 
     @abstractmethod
     async def _ainvoke(self, value: InputT) -> SingleOutputT:
@@ -110,7 +131,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
             The output of the function optionally converted to the specified type.
         """
 
-        with self._context.push_active_function(self.config.type,
+        with self._context.push_active_function(self.instance_name,
                                                 input_data=value) as manager:  # Set the current invocation context
             try:
                 converted_input: InputT = self._convert_input(value)  # type: ignore
@@ -118,7 +139,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
                 result = await self._ainvoke(converted_input)
 
                 if to_type is not None and not isinstance(result, to_type):
-                    result = self._converter.convert(result, to_type=to_type)
+                    result = self._converter.try_convert(result, to_type=to_type)
 
                 manager.set_output(result)
 
@@ -196,16 +217,25 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
             The output of the function optionally converted to the specified type.
         """
 
-        with self._context.push_active_function(self.config.type, input_data=value):
+        with self._context.push_active_function(self.instance_name, input_data=value) as manager:
             try:
                 converted_input: InputT = self._convert_input(value)  # type: ignore
 
-                async for data in self._astream(converted_input):
+                # Collect streaming outputs to capture the final result
+                final_output: list[typing.Any] = []
 
+                async for data in self._astream(converted_input):
                     if to_type is not None and not isinstance(data, to_type):
-                        yield self._converter.convert(data, to_type=to_type)
+                        converted_data = self._converter.try_convert(data, to_type=to_type)
+                        final_output.append(converted_data)
+                        yield converted_data
                     else:
+                        final_output.append(data)
                         yield data
+
+                # Set the final output for intermediate step tracking
+                manager.set_output(final_output)
+
             except Exception as e:
                 logger.error("Error with astream in function with input: %s.", value, exc_info=True)
                 raise e
@@ -254,17 +284,17 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
 
 class LambdaFunction(Function[InputT, StreamingOutputT, SingleOutputT]):
 
-    def __init__(self, *, config: FunctionBaseConfig, info: FunctionInfo):
+    def __init__(self, *, config: FunctionBaseConfig, info: FunctionInfo, instance_name: str | None = None):
 
         super().__init__(config=config,
                          description=info.description,
                          input_schema=info.input_schema,
                          streaming_output_schema=info.stream_output_schema,
                          single_output_schema=info.single_output_schema,
-                         converters=info.converters)
+                         converters=info.converters,
+                         instance_name=instance_name)
 
         self._info = info
-
         self._ainvoke_fn: _InvokeFnT = info.single_fn
         self._astream_fn: _StreamFnT = info.stream_fn
 
@@ -284,8 +314,10 @@ class LambdaFunction(Function[InputT, StreamingOutputT, SingleOutputT]):
             yield x
 
     @staticmethod
-    def from_info(*, config: FunctionBaseConfig,
-                  info: FunctionInfo) -> 'LambdaFunction[InputT, StreamingOutputT, SingleOutputT]':
+    def from_info(*,
+                  config: FunctionBaseConfig,
+                  info: FunctionInfo,
+                  instance_name: str | None = None) -> 'LambdaFunction[InputT, StreamingOutputT, SingleOutputT]':
 
         input_type: type = info.input_type
         streaming_output_type = info.stream_output_type
@@ -294,4 +326,4 @@ class LambdaFunction(Function[InputT, StreamingOutputT, SingleOutputT]):
         class FunctionImpl(LambdaFunction[input_type, streaming_output_type, single_output_type]):
             pass
 
-        return FunctionImpl(config=config, info=info)
+        return FunctionImpl(config=config, info=info, instance_name=instance_name)

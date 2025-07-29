@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+
 import pandas as pd
 import pytest
 
@@ -21,8 +23,11 @@ from aiq.data_models.dataset_handler import EvalDatasetStructureConfig
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
+from aiq.data_models.invocation_node import InvocationNode
 from aiq.eval.dataset_handler.dataset_handler import DatasetHandler
 from aiq.eval.evaluator.evaluator_model import EvalInput
+from aiq.eval.evaluator.evaluator_model import EvalInputItem
+from aiq.eval.evaluator.evaluator_model import EvalOutputItem
 
 # pylint: disable=redefined-outer-name
 
@@ -49,7 +54,7 @@ def dataset_handler(dataset_config):
     While setting this up we intentionally use default key names. They are compared with keys dataset_structure.
     This ensures that the defaults are not changed (easily or accidentally).
     """
-    return DatasetHandler(dataset_config, reps=1)
+    return DatasetHandler(dataset_config, reps=1, concurrency=1)
 
 
 @pytest.fixture
@@ -76,6 +81,32 @@ def input_entry_two(dataset_id_key, dataset_structure):
         dataset_structure.trajectory_key: [],
         dataset_structure.expected_trajectory_key: []
     }
+
+
+@pytest.fixture
+def input_entry_with_extras(dataset_id_key, dataset_structure):
+    """Mock input entry with additional fields."""
+    return {
+        dataset_id_key: "3",
+        dataset_structure.question_key: "What is NLP?",
+        dataset_structure.answer_key: "Natural Language Processing",
+        dataset_structure.generated_answer_key: "NLP",
+        dataset_structure.trajectory_key: [],
+        dataset_structure.expected_trajectory_key: [],
+        "additional_field": "additional_value",
+        "additional_field_2": 123,
+        "additional_field_3": True,
+        "additional_field_4": [1, 2, 3],
+        "additional_field_5": {
+            "key": "value"
+        }
+    }
+
+
+@pytest.fixture
+def mock_input_df_with_extras(input_entry_with_extras):
+    """Mock DataFrame with additional fields."""
+    return pd.DataFrame([input_entry_with_extras])
 
 
 @pytest.fixture
@@ -107,7 +138,7 @@ def dataset_swe_bench_config(dataset_swe_bench_id_key):
 
 @pytest.fixture
 def dataset_swe_bench_handler(dataset_swe_bench_config):
-    return DatasetHandler(dataset_swe_bench_config, reps=1)
+    return DatasetHandler(dataset_swe_bench_config, reps=1, concurrency=1)
 
 
 @pytest.fixture
@@ -118,6 +149,28 @@ def mock_swe_bench_input_df(dataset_swe_bench_id_key):
     }, {
         dataset_swe_bench_id_key: "bar_2", "problem": "Overflow", "repo": "bar"
     }])
+
+
+def test_get_eval_input_from_df_with_additional_fields(mock_input_df_with_extras,
+                                                       input_entry_with_extras,
+                                                       dataset_id_key,
+                                                       dataset_structure):
+    """
+    Test that additional fields are always passed to the evaluator as full_dataset_entry.
+    """
+    dataset_config = EvalDatasetJsonConfig()
+    dataset_handler = DatasetHandler(dataset_config, reps=1, concurrency=1)
+    eval_input = dataset_handler.get_eval_input_from_df(mock_input_df_with_extras)
+
+    # check core fields
+    assert eval_input.eval_input_items[0].id == input_entry_with_extras[dataset_id_key]
+    assert eval_input.eval_input_items[0].input_obj == input_entry_with_extras[dataset_structure.question_key]
+    assert eval_input.eval_input_items[0].expected_output_obj == input_entry_with_extras[dataset_structure.answer_key]
+    assert eval_input.eval_input_items[0].expected_trajectory == input_entry_with_extras[
+        dataset_structure.expected_trajectory_key]
+
+    # full_dataset_entry should always be provided
+    assert eval_input.eval_input_items[0].full_dataset_entry == input_entry_with_extras
 
 
 def test_get_eval_input_from_df(dataset_handler,
@@ -243,17 +296,25 @@ def mock_intermediate_steps():
     steps = []
     # Add LLM_START step
     steps.append(
-        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_START, name="llm_start")))
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="llm_start", function_id="test-llm-start"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_START, name="llm_start")))
     # Add LLM_END step
     steps.append(
-        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_END, name="llm_end")))
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="llm_end", function_id="test-llm-end"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.LLM_END, name="llm_end")))
     # Add TOOL_START step
     steps.append(
-        IntermediateStep(
-            payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START, name="tool_start")))
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="tool_start", function_id="test-tool-start"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_START,
+                                                         name="tool_start")))
     # Add TOOL_END step
     steps.append(
-        IntermediateStep(payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END, name="tool_end")))
+        IntermediateStep(parent_id="root",
+                         function_ancestry=InvocationNode(function_name="tool_end", function_id="test-tool-end"),
+                         payload=IntermediateStepPayload(event_type=IntermediateStepType.TOOL_END, name="tool_end")))
     return steps
 
 
@@ -278,3 +339,42 @@ def test_filter_intermediate_steps(dataset_handler, mock_intermediate_steps):
     assert filtered_steps[1]["payload"]["event_type"] == IntermediateStepType.TOOL_START, \
         "Second step should be TOOL_START"
     assert filtered_steps[2]["payload"]["event_type"] == IntermediateStepType.TOOL_END, "Third step should be TOOL_END"
+
+
+def make_eval_input_item(**overrides):
+    defaults = {
+        "id": "default_id",
+        "input_obj": None,
+        "expected_output_obj": None,
+        "output_obj": None,
+        "trajectory": [],
+        "expected_trajectory": [],
+        "full_dataset_entry": {},
+    }
+    defaults.update(overrides)
+    return EvalInputItem(**defaults)
+
+
+def test_publish_eval_input_unstructured_string_and_json():
+    """Test that unstructured input handles plain strings, JSON strings, and Python objects correctly."""
+
+    config = EvalDatasetJsonConfig(id_key="id", structure=EvalDatasetStructureConfig(disable=True))
+    handler = DatasetHandler(config, reps=1, concurrency=1)
+
+    items = [
+        make_eval_input_item(id="1", output_obj="plain string output"),
+        make_eval_input_item(id="2", output_obj='{"result": 42, "ok": true}'),
+        make_eval_input_item(id="3", output_obj=EvalOutputItem(id="3", score=42, reasoning="The answer is 42")),
+        make_eval_input_item(id="4", output_obj=42),
+    ]
+    eval_input = EvalInput(eval_input_items=items)
+    output_json = handler.publish_eval_input(eval_input)
+    output = json.loads(output_json)
+
+    assert isinstance(output, list)
+    assert output[0] == "plain string output"
+    assert isinstance(output[1], dict)
+    assert output[1] == {"result": 42, "ok": True}
+    assert isinstance(output[2], dict)
+    assert output[2] == {"id": "3", "score": 42, "reasoning": "The answer is 42"}
+    assert output[3] == 42

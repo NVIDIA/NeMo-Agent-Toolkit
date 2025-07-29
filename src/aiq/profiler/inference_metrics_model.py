@@ -23,3 +23,6 @@ class InferenceMetricsModel(BaseModel):
     ninetieth_interval: tuple[float, float] = Field(default=(0, 0), description="90% confidence interval")
     ninety_fifth_interval: tuple[float, float] = Field(default=(0, 0), description="95% confidence interval")
     ninety_ninth_interval: tuple[float, float] = Field(default=(0, 0), description="99% confidence interval")
+    p90: float = Field(default=0, description="90th percentile of the samples")
+    p95: float = Field(default=0, description="95th percentile of the samples")
+    p99: float = Field(default=0, description="99th percentile of the samples")

@@ -17,6 +17,7 @@
 # flake8: noqa
 
 # Import any tools which need to be automatically registered here
+from . import chat_completion
 from . import datetime_tools
 from . import document_search
 from . import github_tools
