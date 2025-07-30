@@ -70,7 +70,7 @@ export WANDB_API_KEY=your_api_key_here
 ## Example Files
 
 - `weave_redact_pii_config.yaml`: Workflow configuration that enables Weave telemetry with PII redaction
-- `examples/observability/redact_pii/src/redact_pii/register.py`: Contains the `pii_redaction_test` function that generates sample PII data
+- `examples/observability/redact_pii/src/aiq_redact_pii/register.py`: Contains the `pii_redaction_test` function that generates sample PII data
 
 ## Running the Example
 
