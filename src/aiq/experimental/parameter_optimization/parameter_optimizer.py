@@ -26,9 +26,9 @@ from aiq.data_models.optimizer import OptimizerConfig
 from aiq.data_models.optimizer import OptimizerRunConfig
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
-from aiq.profiler.parameter_optimization.parameter_selection import pick_trial
-from aiq.profiler.parameter_optimization.pareto_visualizer import create_pareto_visualization
-from aiq.profiler.parameter_optimization.update_helpers import apply_suggestions
+from aiq.experimental.parameter_optimization.parameter_selection import pick_trial
+from aiq.experimental.parameter_optimization.pareto_visualizer import create_pareto_visualization
+from aiq.experimental.parameter_optimization.update_helpers import apply_suggestions
 
 logger = logging.getLogger(__name__)
 
@@ -78,12 +78,13 @@ def optimize_parameters(
                 metric = next(r[1] for r in scores.evaluation_results if r[0] == metric_name)
                 values.append(metric.average_score)
 
-            with (out_dir / f"config_numeric_trial_{trial._trial_id}_run_{trial_idx}.yml").open("w") as fh:
-                yaml.dump(cfg_trial.model_dump(), fh)
-
             return values
 
         all_scores = asyncio.run(asyncio.gather(*(_single_eval(i) for i in range(reps))))
+
+        with (out_dir / f"config_numeric_trial_{trial._trial_id}.yml").open("w") as fh:
+            yaml.dump(cfg_trial.model_dump(), fh)
+
         return [sum(run[i] for run in all_scores) / reps for i in range(len(eval_metrics))]
 
     logger.info("Starting numeric / enum parameter optimization...")
