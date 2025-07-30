@@ -33,15 +33,21 @@ To keep the library lightweight, many of the first-party plugins supported by Ne
 
 To install these first-party plugin libraries, you can use the full distribution name (for example, `aiqtoolkit-langchain`) or use the `aiqtoolkit[langchain]` extra distribution. The following extras are supported:
 
-- `aiqtoolkit[agno]` or `aiqtoolkit-agno` - [Agno](https://agno.com/) specific plugins
-- `aiqtoolkit[crewai]` or `aiqtoolkit-crewai` - [CrewAI](https://www.crewai.com/) specific plugins
-- `aiqtoolkit[langchain]` or `aiqtoolkit-langchain` - [LangChain](https://www.langchain.com/) specific plugins
-- `aiqtoolkit[llama-index]` or `aiqtoolkit-llama-index` - [LlamaIndex](https://www.llamaindex.ai/) specific plugins
-- `aiqtoolkit[mem0ai]` or `aiqtoolkit-mem0ai` - [Mem0](https://mem0.ai/) specific plugins
-- `aiqtoolkit[semantic-kernel]` or `aiqtoolkit-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/) specific plugins
-- `aiqtoolkit[test]` or `aiqtoolkit-test` - NeMo Agent toolkit test specific plugins
-- `aiqtoolkit[weave]` or `aiqtoolkit-weave` - [Weights & Biases Weave](https://weave-docs.wandb.ai) specific plugins
-- `aiqtoolkit[zep-cloud]` or `aiqtoolkit-zep-cloud` - [Zep](https://www.getzep.com/) specific plugins
+- `aiqtoolkit[agno]` or `aiqtoolkit-agno` - [Agno](https://agno.com/)
+- `aiqtoolkit[crewai]` or `aiqtoolkit-crewai` - [CrewAI](https://www.crewai.com/)
+- `aiqtoolkit[langchain]` or `aiqtoolkit-langchain` - [LangChain](https://www.langchain.com/)
+- `aiqtoolkit[llama-index]` or `aiqtoolkit-llama-index` - [LlamaIndex](https://www.llamaindex.ai/)
+- `aiqtoolkit[mem0ai]` or `aiqtoolkit-mem0ai` - [Mem0](https://mem0.ai/)
+- `aiqtoolkit[mysql]` or `aiqtoolkit-mysql` - [MySQL](https://www.mysql.com/)
+- `aiqtoolkit[opentelemetry]` or `aiqtoolkit-opentelemetry` - [OpenTelemetry](https://opentelemetry.io/)
+- `aiqtoolkit[phoenix]` or `aiqtoolkit-phoenix` - [Arize Phoenix](https://arize.com/docs/phoenix)
+- `aiqtoolkit[ragaai]` or `aiqtoolkit-ragaai` - [RagaAI Catalyst](https://raga.ai/)
+- `aiqtoolkit[redis]` or `aiqtoolkit-redis` - [Redis](https://redis.io/)
+- `aiqtoolkit[s3]` or `aiqtoolkit-s3` - [Amazon S3](https://aws.amazon.com/s3/)
+- `aiqtoolkit[semantic-kernel]` or `aiqtoolkit-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/)
+- `aiqtoolkit[test]` or `aiqtoolkit-test` - NeMo Agent toolkit test
+- `aiqtoolkit[weave]` or `aiqtoolkit-weave` - [Weights & Biases Weave](https://weave-docs.wandb.ai)
+- `aiqtoolkit[zep-cloud]` or `aiqtoolkit-zep-cloud` - [Zep](https://www.getzep.com/)
 
 
 ## Prerequisites
