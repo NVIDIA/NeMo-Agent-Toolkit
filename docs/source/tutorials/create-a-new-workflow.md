@@ -174,7 +174,7 @@ async def text_file_ingest_tool(config: TextFileIngestToolConfig, builder: Build
 
 ## Creating the Workflow Configuration
 
-Starting from the `custom_config.yml` file you created in the previous section, replace the two `webpage_query` tools with the new `text_file_ingest` tool. For the data source, you can use a collection of text files located in the `examples/docs/workflows/text_file_ingest/data` directory that describes [DOCA GPUNetIO](https://docs.nvidia.com/doca/sdk/doca+gpunetio/index.html).
+Starting from the `custom_config.yml` file you created in the previous section, replace the two `webpage_query` tools with the new `text_file_ingest` tool. For the data source, you can use a collection of text files located in the `examples/documentation_guides/workflows/text_file_ingest/data` directory that describes [DOCA GPUNetIO](https://docs.nvidia.com/doca/sdk/doca+gpunetio/index.html).
 
 :::{note}
 If you are following this document and building this tool from scratch, you can either copy the contents of `examples/documentation_guides/workflows/text_file_ingest/data` into `examples/text_file_ingest/src/text_file_ingest/data` or populate it with your own text files.
@@ -212,7 +212,7 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
   aiq --version
   ```
 
- Use the first two digits of the version number. For example, if the version is `1.1.0`, then the dependency would be `aiqtoolkit[langchain]~=1.1`.
+  Use the first two digits of the version number. For example, if the version is `1.1.0`, then the dependency would be `aiqtoolkit[langchain]~=1.1`.
 
   ```toml
   dependencies = [
@@ -222,6 +222,30 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
   ```
 
   In this example, you have been using NeMo Agent toolkit with LangChain. This is why the dependency is declared on `aiqtoolkit[langchain]`, that is to say NeMo Agent toolkit with the LangChain integration plugin. If you want to use LlamaIndex, declare the dependency on `aiqtoolkit[llama-index]`. This is described in more detail in [Framework Integrations](../quick-start/installing.md#framework-integrations).
+
+- **Version**: In this example, and in NeMo Agent toolkit in general, we use [setuptools-scm](https://setuptools-scm.readthedocs.io/en/latest/) to automatically determine the version of the package based on the Git tags. We did this by setting `dynamic = ["version"]` and declaring a build dependency on both `setuptools` and `setuptools_scm` in the `build-system` section of `pyproject.toml`:
+  ```toml
+  [build-system]
+  requires = ["setuptools", "setuptools_scm"]
+  build-backend = "setuptools.build_meta"
+  ```
+
+  In addition to this, we also need to tell `setuptools_scm` where to find the root of git repository, this can be omitted if the `pyproject.toml` file is located at the root of the repository:
+  ```toml
+  [tool.setuptools_scm]
+  root = "../../../.."
+  ```
+
+  Alternately if we did not want to do this we would instead:
+  ```toml
+  [build-system]
+  build-backend = "setuptools.build_meta"
+  requires = ["setuptools >= 64"]
+
+  [project]
+  name = "text_file_ingest"
+  version = "0.1.0"
+  ```
 
 - **Entry Points**: This tells NeMo Agent toolkit where to find your workflow registration.
 
@@ -249,7 +273,7 @@ aiq workflow delete text_file_ingest
 ## Running the Workflow
 
 :::{note}
-The following commands reference the pre-built workflow located in `examples/docs/workflows/text_file_ingest`. If you are following this document and building this tool from the beginning, replace `examples/docs/workflows/text_file_ingest` with `examples/text_file_ingest`.
+The following commands reference the pre-built workflow located in `examples/documentation_guides/workflows/text_file_ingest`. If you are following this document and building this tool from the beginning, replace `examples/documentation_guides/workflows/text_file_ingest` with `examples/text_file_ingest`.
 :::
 
 After completed, install the tool into the environment:

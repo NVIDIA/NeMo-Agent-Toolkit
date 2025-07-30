@@ -58,9 +58,9 @@ async def plot_charts_function(config: PlotChartsWorkflowConfig, builder: Builde
     output_dir = Path(config.output_directory)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    async def _create_chart(user_request: str) -> str:
+    async def _create_chart(input_message: str) -> str:
         """Internal function to create charts based on user requests."""
-        logger.info("Processing chart request: %s", user_request)
+        logger.info("Processing chart request: %s", input_message)
 
         try:
             # Load data from configured file
@@ -77,7 +77,7 @@ async def plot_charts_function(config: PlotChartsWorkflowConfig, builder: Builde
                         f"{config.max_data_points}.")
 
             # Determine chart type from user request
-            chart_type = determine_chart_type(user_request, config.chart_types)
+            chart_type = determine_chart_type(input_message, config.chart_types)
             logger.info("Selected chart type: %s", chart_type)
 
             # Generate unique filename
