@@ -27,7 +27,7 @@ from aiq.data_models.optimizer import OptimizerRunConfig
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
 from aiq.profiler.parameter_optimization.parameter_selection import pick_trial
-
+from aiq.profiler.parameter_optimization.pareto_visualizer import create_pareto_visualization
 from aiq.profiler.parameter_optimization.update_helpers import apply_suggestions
 
 logger = logging.getLogger(__name__)
@@ -49,6 +49,10 @@ def optimize_parameters(
     weights = [v.weight for v in metric_cfg.values()]
 
     study = optuna.create_study(directions=directions)
+
+    # Create output directory for intermediate files
+    out_dir = optimizer_config.output_path
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     async def _run_eval(runner: EvaluationRun):
         return await runner.run_and_evaluate()
@@ -93,11 +97,25 @@ def optimize_parameters(
     ).params
     tuned_cfg = apply_suggestions(base_cfg, best_params)
 
-    out_dir = optimizer_config.output_path
-    out_dir.mkdir(parents=True, exist_ok=True)
+    # Save final results (out_dir already created and defined above)
     with (out_dir / "optimized_config.yml").open("w") as fh:
         yaml.dump(tuned_cfg.model_dump(), fh)
     with (out_dir / "trials_dataframe_params.csv").open("w") as fh:
-        study.trials_dataframe().to_csv(fh)
+        study.trials_dataframe().to_csv(fh, index=False)
+
+    # Generate Pareto front visualizations
+    try:
+        logger.info("Generating Pareto front visualizations...")
+        create_pareto_visualization(
+            data_source=study,
+            metric_names=eval_metrics,
+            directions=directions,
+            output_dir=out_dir / "plots",
+            title_prefix="Parameter Optimization",
+            show_plots=False  # Don't show plots in automated runs
+        )
+        logger.info("Pareto visualizations saved to: %s", out_dir / "plots")
+    except Exception as e:
+        logger.warning("Failed to generate visualizations: %s", e)
 
     return tuned_cfg

@@ -65,6 +65,7 @@ from aiq.data_models.memory import MemoryBaseConfig
 from aiq.data_models.memory import MemoryBaseConfigT
 from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.object_store import ObjectStoreBaseConfigT
+from aiq.data_models.optimizer import OptimizerConfig
 from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
 from aiq.data_models.registry_handler import RegistryHandlerBaseConfigT
 from aiq.data_models.retriever import RetrieverBaseConfig
@@ -968,6 +969,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         if issubclass(cls, ITSStrategyBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_its_strategies())
+
+        if issubclass(cls, OptimizerConfig):
+            return self._do_compute_annotation(cls, self.get_registered_optimizer())
 
         raise ValueError(f"Supplied an unsupported component type {cls}")
 

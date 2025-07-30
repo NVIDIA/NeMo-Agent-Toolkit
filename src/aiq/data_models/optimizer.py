@@ -14,6 +14,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import model_validator
 
 
 class OptimizerMetric(BaseModel):
@@ -58,10 +59,13 @@ class OptimizerConfig(BaseModel):
         default=True,
     )
 
-    prompt_optimization_function: str | None = Field(
+    prompt_evaluation_function: str | None = Field(
         default=None,
-        description="Name of the function to use for prompt optimization.",
+        description="Name of the function to use for prompt evaluation.",
     )
+
+    trajectory_eval_metric_name: str | None = Field(default=None,
+                                                    description="Name of the trajectory evaluation metric to use.")
 
     num_feedback: int = Field(default=3, description="Number of feedbacks to use for the optimization.")
 
@@ -69,6 +73,12 @@ class OptimizerConfig(BaseModel):
         description="Method to combine multiple objectives into a single score.",
         default="harmonic",
     )
+
+    @model_validator(mode="before")
+    def check_prompt_optimization(self, values):
+        if values.get("do_prompt_optimization") and not values.get("trajectory_eval_metric_name"):
+            raise ValueError("If do_prompt_optimization is True, trajectory_eval_metric_name must be set.")
+        return values
 
 
 class OptimizerRunConfig(BaseModel):
