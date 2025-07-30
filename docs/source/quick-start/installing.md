@@ -52,10 +52,7 @@ To install these first-party plugin libraries, you can use the full distribution
 
 ## Prerequisites
 
-NVIDIA NeMo Agent toolkit is a Python library that doesn't require a GPU to run the workflow by default. You can deploy the core workflows using one of the following:
-- Ubuntu or other Linux distributions, including WSL, in a Python virtual environment.
-
-Before you begin using NeMo Agent toolkit, ensure that you meet the following software prerequisites:
+NVIDIA NeMo Agent toolkit is a Python library that doesn't require a GPU to run by default. Before you begin using NeMo Agent toolkit, ensure that you meet the following software prerequisites:
 
 - Install [Git](https://git-scm.com/)
 - Install [Git Large File Storage](https://git-lfs.github.com/) (LFS)
@@ -65,7 +62,7 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
 
 1. Clone the NeMo Agent toolkit repository to your local machine.
     ```bash
-    git clone -b main git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit
+    git clone -b main git@github.com:NVIDIA/NeMo-Agent-Toolkit.git aiqtoolkit
     cd aiqtoolkit
     ```
 
@@ -83,9 +80,12 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
 
 1. Create a Python environment.
     ```bash
-    uv venv --seed .venv
+    uv venv --python 3.12 --seed .venv
     source .venv/bin/activate
     ```
+    :::{note}
+    Python 3.11 is also supported simply replace `3.12` with `3.11` in the `uv` command above.
+    :::
 
 1. Install the NeMo Agent toolkit library.
     To install the NeMo Agent toolkit library along with all of the optional dependencies. Including developer tools (`--all-groups`) and all of the dependencies needed for profiling and plugins (`--all-extras`) in the source repository, run the following:
@@ -93,7 +93,7 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
     uv sync --all-groups --all-extras
     ```
 
-    Alternatively to install just the core NeMo Agent toolkit without any plugins, run the following:
+    Alternatively to install just the core NeMo Agent toolkit without any optional plugins, run the following:
     ```bash
     uv sync
     ```
