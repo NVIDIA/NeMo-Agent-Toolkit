@@ -243,7 +243,7 @@ To estimate the GPU count required for the workflow, the calculator performs the
    - If the R² value is less than 0.7, the calculator will not use the linear fit to estimate the GPU count.
 
 4. **Outlier Removal**
-   - Outliers (data points that deviate significantly from the trend) are automatically detected and removed to ensure a robust fit using the Interquartile Range (IQR) method.
+   - Outliers (data points that deviate significantly from the trend) are automatically detected and removed to ensure a robust fit using the `Interquartile Range` (IQR) method.
    - For datasets with fewer than 8 data points, outliers are detected using raw time metric values. For larger datasets, outliers are detected using residuals from the linear fit.
 
 5. **Estimating Required Concurrency**
