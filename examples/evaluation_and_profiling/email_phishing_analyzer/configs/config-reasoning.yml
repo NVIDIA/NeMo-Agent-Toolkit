@@ -86,7 +86,7 @@ eval:
     verbose: true
     dataset:
         _type: csv
-        file_path: examples/evaluation_and_profiling/email_phishing_analyzer/data/small_test.csv
+        file_path: examples/evaluation_and_profiling/email_phishing_analyzer/data/smaller_test.csv
         id_key: "subject"
         structure:
           question_key: body

@@ -216,8 +216,8 @@ workflow:
     - telemetry_metrics_analysis_agent
   llm_name: ata_agent_llm
   offline_mode: true
-  offline_data_path: examples/advanced/alert_triage_agent/data/offline_data.csv
-  benign_fallback_data_path: examples/advanced/alert_triage_agent/data/benign_fallback_offline_data.json
+  offline_data_path: examples/advanced_agents/alert_triage_agent/data/offline_data.csv
+  benign_fallback_data_path: examples/advanced_agents/alert_triage_agent/data/benign_fallback_offline_data.json
 ```
 
 * `_type`: The name of the agent (matching the agent's name in `register.py`).
@@ -447,7 +447,7 @@ To run in offline mode:
    ```bash
    aiq run --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml --input "{your_alert_in_json_format}"
    ```
-   
+
    **Example:** To run the agent with a test question, use the following command:
 
    ```bash
@@ -465,7 +465,7 @@ To run in offline mode:
    ```
 
    **Expected Workflow Output**
-   
+
    ```console
    <snipped for brevity>
    ## Step 1: Analyze the Alert
@@ -516,7 +516,7 @@ To run in offline mode:
    ```
 
    To evaluate the agent, use the following command:
-   
+
    ```bash
    aiq eval --config_file=examples/advanced_agents/alert_triage_agent/configs/config_offline_mode.yml
    ```
