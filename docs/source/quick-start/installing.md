@@ -53,7 +53,7 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
 
 - Install [Git](https://git-scm.com/)
 - Install [Git Large File Storage](https://git-lfs.github.com/) (LFS)
-- Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- Install [uv](https://docs.astral.sh/uv/getting-started/installation/) (version 0.5.4 or later, latest version is recommended)
 
 ## Install From Source
 

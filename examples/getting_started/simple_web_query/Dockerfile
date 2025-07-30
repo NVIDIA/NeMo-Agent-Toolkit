@@ -27,9 +27,10 @@ ARG PYTHON_VERSION
 
 ENV PYTHONDONTWRITEBYTECODE=1
 
+# Install compiler [g++, gcc] (currently only needed for thinc indirect dependency)
 # Install certificates
 RUN apt-get update && \
-    apt-get install -y ca-certificates curl && \
+    apt-get install -y g++ gcc ca-certificates curl && \
     update-ca-certificates
 
 # Set SSL environment variables
@@ -56,7 +57,7 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
 # Set the config file environment variable
 ENV AIQ_CONFIG_FILE=/workspace/examples/getting_started/simple_web_query/configs/config.yml
 
-# Enivronment variables for the venv
+# Environment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"
 
 # Define the entry point to start the server
