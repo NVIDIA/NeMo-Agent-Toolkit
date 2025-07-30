@@ -24,7 +24,7 @@ limitations under the License.
 
 The automated description generation workflow, is a workflow that can be used to build on top of the RAG service and enhances the accuracy of the  multi-query collection workflow. The goal of the workflow is to automatically generate descriptions of collections within VectorDB's, which can be leveraged by the multi-query collection tool to empower retrieval of context, typically documents, across multiple collections within a given vector database. This document will cover the tooling and the process leveraged to execute the description generation workflow.
 
-The documentation will also cover configuration considerations and how to set up an NeMo Agent toolkit pipeline that leverages the workflow. The current implementation is Milvus focused, with a plans to extend functionality to other vector databases.
+The documentation will also cover configuration considerations and how to set up a NeMo Agent toolkit pipeline that leverages the workflow. The current implementation is Milvus focused, with a plans to extend functionality to other vector databases.
 
 ## Table of Contents
 
