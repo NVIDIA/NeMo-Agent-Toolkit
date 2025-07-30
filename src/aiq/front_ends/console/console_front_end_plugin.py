@@ -15,12 +15,10 @@
 
 import asyncio
 import logging
-from io import StringIO
 
 import click
 from colorama import Fore
 
-from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.interactive import HumanPromptModelType
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import HumanResponseText
