@@ -45,7 +45,9 @@ class SimpleFrontEndPluginBase(FrontEndBase[FrontEndConfigT], ABC):
 
                 click.echo(stream.getvalue())
 
-            await self.run_workflow(AIQSessionManager(builder.build()))
+            workflow = builder.build()
+            session_manager = AIQSessionManager(workflow)
+            await self.run_workflow(session_manager)
 
     @abstractmethod
     async def run_workflow(self, session_manager: AIQSessionManager):

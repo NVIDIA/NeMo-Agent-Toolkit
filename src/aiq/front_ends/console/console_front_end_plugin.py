@@ -61,21 +61,6 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         if (not self.front_end_config.input_query and not self.front_end_config.input_file):
             raise click.UsageError("Must specify either --input_query or --input_file")
 
-    async def run(self):
-
-        # Must yield the workflow function otherwise it cleans up
-        async with WorkflowBuilder.from_config(config=self.full_config) as builder:
-            if logger.isEnabledFor(logging.INFO):
-                stream = StringIO()
-                self.full_config.print_summary(stream=stream)
-
-                click.echo(stream.getvalue())
-
-            workflow = builder.build()
-            session_manager = AIQSessionManager(workflow)
-
-            await self.run_workflow(session_manager)
-
     async def run_workflow(self, session_manager: AIQSessionManager):
 
         assert session_manager is not None, "Session manager must be provided"
