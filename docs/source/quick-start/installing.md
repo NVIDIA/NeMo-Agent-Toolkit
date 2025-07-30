@@ -163,7 +163,7 @@ Replace `<YOUR_API_KEY>` with your actual NVIDIA API key.
 
     The `eval_config.yml` YAML is a super-set of the `config.yml` containing additional fields for evaluation. To evaluate the `aiq_simple_web_query` workflow, run the following command:
     ```bash
-    aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml
+    aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
     ```
 
 
