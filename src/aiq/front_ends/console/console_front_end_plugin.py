@@ -65,9 +65,6 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
 
         # Must yield the workflow function otherwise it cleans up
         async with WorkflowBuilder.from_config(config=self.full_config) as builder:
-
-            session_manager: AIQSessionManager = None
-
             if logger.isEnabledFor(logging.INFO):
                 stream = StringIO()
                 self.full_config.print_summary(stream=stream)
@@ -79,7 +76,7 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
 
             await self.run_workflow(session_manager)
 
-    async def run_workflow(self, session_manager: AIQSessionManager = None):
+    async def run_workflow(self, session_manager: AIQSessionManager):
 
         assert session_manager is not None, "Session manager must be provided"
         runner_outputs = None
