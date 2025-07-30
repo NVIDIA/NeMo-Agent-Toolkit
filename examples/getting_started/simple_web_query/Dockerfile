@@ -27,13 +27,11 @@ ARG PYTHON_VERSION
 
 ENV PYTHONDONTWRITEBYTECODE=1
 
+# Install compiler [g++, gcc] (currently only needed for thinc indirect dependency)
 # Install certificates
 RUN apt-get update && \
-    apt-get install -y ca-certificates curl && \
+    apt-get install -y g++ gcc ca-certificates curl && \
     update-ca-certificates
-
-# Install compiler (currently only needed for thinc indirect dependency)
-RUN apt-get install -y g++ gcc
 
 # Set SSL environment variables
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt

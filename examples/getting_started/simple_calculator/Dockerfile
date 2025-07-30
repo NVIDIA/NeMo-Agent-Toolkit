@@ -27,7 +27,7 @@ ARG PYTHON_VERSION
 
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# Install compiler (currently only needed for thinc indirect dependency)
+# Install compiler [g++, gcc] (currently only needed for thinc indirect dependency)
 RUN apt-get update && \
     apt-get install -y g++ gcc
 
