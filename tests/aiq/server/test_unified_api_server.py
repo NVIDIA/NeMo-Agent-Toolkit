@@ -27,6 +27,7 @@ from pydantic import BaseModel
 from pydantic import ValidationError
 
 from aiq.builder.context import AIQContext
+from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.api_server import AIQChatResponseChunk
 from aiq.data_models.api_server import AIQChoice
@@ -656,3 +657,66 @@ async def test_websocket_error_message():
             content=Error(code=ErrorTypes.UNKNOWN_ERROR, message="Test message", details=str(e)))
 
         assert isinstance(message, WebSocketSystemResponseTokenMessage)
+
+
+async def test_valid_openai_chat_request_fields():
+    """Test that AIQChatRequest accepts valid field structures"""
+    # Test with minimal required fields
+    minimal_request = {"messages": [{"role": "user", "content": "Hello"}]}
+
+    # Test with comprehensive valid fields
+    comprehensive_request = {
+        "messages": [{
+            "role": "user", "content": "Hello"
+        }],
+        "model": "gpt-4",
+        "temperature": 0.7,
+        "max_tokens": 100,
+        "top_p": 0.9,
+        "stream": False,
+        "stop": ["END"],
+        "frequency_penalty": 0.5,
+        "presence_penalty": 0.3,
+        "n": 1,
+        "user": "test_user",
+        "use_knowledge_base": True,  # Test extra fields are allowed
+        "custom_field": "should_be_allowed",
+        "another_custom": {
+            "nested": "value"
+        }
+    }
+
+    # Both should validate successfully
+    assert AIQChatRequest(**minimal_request)
+    assert AIQChatRequest(**comprehensive_request)
+
+
+async def test_invalid_openai_chat_request_fields():
+    """Test that AIQChatRequest raises ValidationError for improper payloads"""
+
+    with pytest.raises(ValidationError):
+        AIQChatRequest()
+
+    with pytest.raises(ValidationError):
+        AIQChatRequest(messages=[{"content": "Hello"}])
+
+    with pytest.raises(ValidationError):
+        AIQChatRequest(messages=[{"role": "user"}])
+
+    with pytest.raises(ValidationError):
+        AIQChatRequest(messages=[{"role": "user", "content": "Hello"}], temperature="not_a_number")
+
+    with pytest.raises(ValidationError):
+        AIQChatRequest(messages=[{"role": "user", "content": "Hello"}], max_tokens="not_an_integer")
+
+    with pytest.raises(ValidationError):
+        AIQChatRequest(messages=[{"role": "user", "content": "Hello"}], stream="not_a_boolean")
+
+    with pytest.raises(ValidationError):
+        AIQChatRequest(messages="not_a_list")
+
+    with pytest.raises(ValidationError):
+        AIQChatRequest(messages=["not_a_dict"])
+
+    with pytest.raises(ValidationError):
+        AIQChatRequest(messages=None)
