@@ -52,9 +52,9 @@ from aiq.data_models.optimizer import OptimizerConfig
 from aiq.data_models.optimizer import OptimizerRunConfig
 from aiq.eval.evaluate import EvaluationRun
 from aiq.eval.evaluate import EvaluationRunConfig
-from aiq.experimental.parameter_optimization.parameter_selection import pick_trial
-from aiq.experimental.parameter_optimization.pareto_visualizer import create_pareto_visualization
-from aiq.experimental.parameter_optimization.update_helpers import apply_suggestions
+from aiq.experimental.optimizer.parameter_selection import pick_trial
+from aiq.experimental.optimizer.pareto_visualizer import create_pareto_visualization
+from aiq.experimental.optimizer.update_helpers import apply_suggestions
 
 logger = logging.getLogger(__name__)
 
