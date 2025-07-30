@@ -43,6 +43,16 @@ def optimize_parameters(
     """Tune all *non-prompt* hyper-parameters and persist the best config."""
     space = {k: v for k, v in full_space.items() if not v.is_prompt}
 
+    # Ensure output_path is not None
+    if optimizer_config.output_path is None:
+        raise ValueError("optimizer_config.output_path cannot be None")
+    out_dir = optimizer_config.output_path
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Ensure eval_metrics is not None
+    if optimizer_config.eval_metrics is None:
+        raise ValueError("optimizer_config.eval_metrics cannot be None")
+
     metric_cfg = optimizer_config.eval_metrics
     directions = [v.direction for v in metric_cfg.values()]
     eval_metrics = [v.evaluator_name for v in metric_cfg.values()]
@@ -67,7 +77,7 @@ def optimize_parameters(
         async def _single_eval(trial_idx: int) -> list[float]:
             eval_cfg = EvaluationRunConfig(
                 config_file=cfg_trial,
-                dataset=opt_run_config.dataset,
+                dataset=str(opt_run_config.dataset) if opt_run_config.dataset else None,
                 result_json_path=opt_run_config.result_json_path,
                 endpoint=opt_run_config.endpoint,
                 endpoint_timeout=opt_run_config.endpoint_timeout,
@@ -80,7 +90,12 @@ def optimize_parameters(
 
             return values
 
-        all_scores = asyncio.run(asyncio.gather(*(_single_eval(i) for i in range(reps))))
+        # Create tasks for all evaluations
+        async def _run_all_evals():
+            tasks = [_single_eval(i) for i in range(reps)]
+            return await asyncio.gather(*tasks)
+
+        all_scores = asyncio.run(_run_all_evals())
 
         with (out_dir / f"config_numeric_trial_{trial._trial_id}.yml").open("w") as fh:
             yaml.dump(cfg_trial.model_dump(), fh)
