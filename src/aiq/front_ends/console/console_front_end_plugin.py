@@ -81,6 +81,7 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
 
     async def run_workflow(self, session_manager: AIQSessionManager = None):
 
+        assert session_manager is not None, "Session manager must be provided"
         runner_outputs = None
 
         if (self.front_end_config.input_query):
