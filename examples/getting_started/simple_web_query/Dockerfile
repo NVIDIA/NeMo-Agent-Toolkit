@@ -32,6 +32,9 @@ RUN apt-get update && \
     apt-get install -y ca-certificates curl && \
     update-ca-certificates
 
+# Install compiler (currently only needed for thinc indirect dependency)
+RUN apt-get install -y g++ gcc
+
 # Set SSL environment variables
 ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
@@ -56,7 +59,7 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
 # Set the config file environment variable
 ENV AIQ_CONFIG_FILE=/workspace/examples/getting_started/simple_web_query/configs/config.yml
 
-# Enivronment variables for the venv
+# Environment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"
 
 # Define the entry point to start the server
