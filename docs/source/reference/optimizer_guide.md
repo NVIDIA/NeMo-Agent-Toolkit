@@ -16,19 +16,56 @@ This guide will walk you through:
 
 The AIQ Optimizer uses a combination of techniques to find the best parameters for your workflow. At its core, it uses [Optuna](https://optuna.org/) for numerical hyperparameter optimization and can leverage large language models (LLMs) for prompt optimization.
 
-```mermaid
-graph TD
-    A[Start Optimization] --> B{Read Config};
-    B --> C{Initialize Optuna Study};
-    C --> D[Loop N Trials];
-    D --> E{Suggest Parameters};
-    E --> F[Run Workflow with Parameters];
-    F --> G[Evaluate Results];
-    G --> H{Record Trial};
-    H --> D;
-    D -- Done --> I[Analyze Results];
-    I --> J[Save Outputs];
-    J --> K[End];
+```
+┌─────────────────┐
+│ Start           │
+│ Optimization    │
+└─────────┬───────┘
+          │
+          ▼
+┌─────────────────┐
+│ Read Config     │
+└─────────┬───────┘
+          │
+          ▼
+┌─────────────────┐
+│ Initialize      │
+│ Optuna Study    │
+└─────────┬───────┘
+          │
+          ▼
+┌─────────────────┐     ┌─────────────────┐
+│ Loop N Trials   │────▶│ Suggest         │
+│                 │     │ Parameters      │
+└─────────┬───────┘     └─────────┬───────┘
+          ▲                       │
+          │                       ▼
+┌─────────┴───────┐     ┌─────────────────┐
+│ Record Trial    │◀────│ Run Workflow    │
+│                 │     │ with Parameters │
+└─────────┬───────┘     └─────────┬───────┘
+          │                       │
+          │                       ▼
+          │             ┌─────────────────┐
+          └─────────────│ Evaluate        │
+                        │ Results         │
+                        └─────────────────┘
+          │
+          ▼ (All trials done)
+┌─────────────────┐
+│ Analyze         │
+│ Results         │
+└─────────┬───────┘
+          │
+          ▼
+┌─────────────────┐
+│ Save Outputs    │
+└─────────┬───────┘
+          │
+          ▼
+┌─────────────────┐
+│ End             │
+└─────────────────┘
 ```
 
 The optimization process follows the steps outlined in the diagram above:
@@ -124,13 +161,18 @@ Here's how you can define optimizable fields in your workflow's data models:
 
 ```python
 from pydantic import BaseModel
+
+from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.optimizable import OptimizableField, SearchSpace
 
-class MyLLMConfig(BaseModel):
-    temperature: float = OptimizableField(
+class SomeImageAgentConfig(FunctionBaseConfig, name="some_image_agent_config"):
+    quality: int = OptimizableField(
+        default=90,
+        space=SearchSpace(low=75, high=100)
+    )
+    sharpening: float = OptimizableField(
         default=0.5,
-        space=SearchSpace(low=0.0, high=1.0),
-        description="The temperature for the LLM."
+        space=SearchSpace(low=0.0, high=1.0)
     )
     model_name: str = OptimizableField(
         default="gpt-3.5-turbo",
@@ -149,9 +191,25 @@ class MyLLMConfig(BaseModel):
 ```
 
 In this example:
-- `temperature` is a continuous float parameter that will be sampled between `0.0` and `1.0`.
+- `quality and sharpening` is a continuous float  and integer parameters.
 - `model_name` is a categorical parameter, and the optimizer will choose from the provided list of models.
 - `system_prompt` is a prompt parameter that can be optimized using an LLM if `do_prompt_optimization` is enabled.
+
+## Default Optimizable LLM Parameters
+
+Many of the LLM providers in the AIQ Toolkit come with pre-configured optimizable parameters. This means you can start tuning common hyperparameters like `temperature` and `top_p` without any extra configuration.
+
+Here is a matrix of the default optimizable parameters for some of the built-in LLM providers:
+
+| Parameter     | Provider | Default Value | Search Space                       |
+|:--------------|:---------|:--------------|:-----------------------------------|
+| `temperature` | `openai` | `0.0`         | `low=0.1`, `high=0.8`, `step=0.2`  |
+|               | `nim`    | `0.0`         | `low=0.1`, `high=0.8`, `step=0.2`  |
+| `top_p`       | `openai` | `1.0`         | `low=0.5`, `high=1.0`, `step=0.1`  |
+|               | `nim`    | `1.0`         | `low=0.5`, `high=1.0`, `step=0.1`  |
+| `max_tokens`  | `nim`    | `300`         | `low=128`, `high=2048`, `step=512` |
+
+To use these defaults, you just need to enable numeric optimization in your `config.yaml`. The optimizer will automatically find these `OptimizableField`s in the LLM configuration and start tuning them. You can always override these defaults by defining your own `OptimizableField` on the LLM configuration in your workflow.
 
 ## Running the Optimizer
 
@@ -160,7 +218,7 @@ Once you have your optimizer configuration and optimizable fields set up, you ca
 ### CLI Command
 
 ```bash
-aiq optimizer --config_file <path_to_config> --dataset <path_to_dataset>
+aiq optimizer --config_file <path_to_config>
 ```
 
 ### Options
@@ -173,7 +231,7 @@ aiq optimizer --config_file <path_to_config> --dataset <path_to_dataset>
 
 Example:
 ```bash
-aiq optimizer --config_file my_workflow/config.yaml --dataset my_workflow/eval_dataset.json
+aiq optimizer --config_file my_workflow/config.yaml
 ```
 
 This command will start the optimization process. You will see logs in your terminal showing the progress of the optimization, including the parameters being tested and the scores for each trial.
@@ -252,110 +310,4 @@ Then, you can launch the dashboard with your study file:
 optuna-dashboard sqlite:///path/to/your/optimizer_results/study.db
 ```
 
-This will open a web interface where you can explore the optimization history, parameter relationships, parallel coordinate plots, and more, giving you a much deeper understanding of the optimization process.
-
-## Full Example
-
-Let's walk through a full example of optimizing a simple insult generator workflow. The goal is to generate a creative insult, and we want to optimize for creativity and minimize latency.
-
-### 1. Project Structure
-
-```
-insult_workflow/
-├── main.py
-├── config.yaml
-└── eval_dataset.json
-```
-
-### 2. Workflow Code (`main.py`)
-
-Here, we define a simple workflow with an LLM. We make the `temperature` and `system_prompt` optimizable.
-
-```python
-from pydantic import BaseModel
-from aiq import step
-from aiq.data_models.optimizable import OptimizableField, SearchSpace
-from aiq.llm import LLM
-from aiq.llm.providers.openai import OpenAIConfig
-
-class InsultWorkflow(BaseModel):
-    llm_config: OpenAIConfig = OpenAIConfig(
-        temperature=OptimizableField(
-            default=0.7,
-            space=SearchSpace(low=0.2, high=1.0)
-        ),
-        prompt=OptimizableField(
-            default="You are an insult comic. Generate a creative insult for the given topic.",
-            space=SearchSpace(
-                is_prompt=True,
-                prompt="You are an insult comic. Generate a creative insult for the given topic.",
-                prompt_purpose="To make the insults as creative and funny as possible."
-            )
-        )
-    )
-
-    @step
-    async def run(self, topic: str) -> dict:
-        llm = LLM(self.llm_config)
-        response = await llm.run({"topic": topic})
-        return {"insult": response.output}
-```
-
-### 3. Configuration (`config.yaml`)
-
-In the config file, we set up the optimizer. We want to maximize "creativity" and minimize "latency".
-
-```yaml
-version: 1.0
-workflow:
-  main: insult_workflow.InsultWorkflow
-optimizer:
-  output_path: "insult_optimizer_results"
-  n_trials_numeric: 20
-  n_trials_prompt: 5
-  do_numeric_optimization: true
-  do_prompt_optimization: true
-  prompt_evaluation_function: "creativity_evaluator"
-  trajectory_eval_metric_name: "creativity"
-  eval_metrics:
-    creativity:
-      evaluator_name: "creativity_evaluator"
-      direction: "maximize"
-      weight: 0.9
-    latency:
-      evaluator_name: "latency"
-      direction: "minimize"
-      weight: 0.1
-evaluators:
-  - name: "creativity_evaluator"
-    type: "llm_based"
-    llm_config:
-      model: "gpt-4"
-      prompt: "On a scale of 1-10, how creative is this insult: {insult}"
-```
-
-### 4. Evaluation Dataset (`eval_dataset.json`)
-
-A simple dataset with topics for the insult generator.
-
-```json
-[
-    {"topic": "a politician"},
-    {"topic": "a social media influencer"},
-    {"topic": "a reality TV star"}
-]
-```
-
-### 5. Running the Optimizer
-
-Finally, we run the optimizer from the command line.
-
-```bash
-aiq optimizer --config_file insult_workflow/config.yaml --dataset insult_workflow/eval_dataset.json
-```
-
-After the optimizer runs, you can inspect the `insult_optimizer_results` directory to find the best parameters and prompts, along with the analysis plots.
-
-## Conclusion
-
-The AIQ Optimizer is a versatile tool to automate the tuning of your workflows. By defining optimizable fields and configuring your objectives, you can systematically find the best parameters for your specific use case, saving time and improving the performance of your AIQ applications. Happy optimizing! 
+Happy optimizing! 
