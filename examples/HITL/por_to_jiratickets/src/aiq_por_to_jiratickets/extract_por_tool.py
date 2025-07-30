@@ -123,7 +123,7 @@ class ExtractPORToolConfig(FunctionBaseConfig, name="extract_por_tool"):
     llm: LLMRef
 
 
-@register_function(config_type=ExtractPORToolConfig)
+@register_function(config_type=ExtractPORToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def extract_from_por_tool(config: ExtractPORToolConfig, builder: Builder):
     """
     Extract epics and issues from the given PRO/PRD text using the LLM chain
