@@ -486,8 +486,7 @@ Options:
 
 ## Configuration Commands
 
-a NeMo Agent toolkit developer may want to configure persistent settings for their development environment. These settings would
-be configured once to setup their development environment so they can focus on software development from that point
+A NeMo Agent toolkit developer may want to configure persistent settings for their development environment. These settings would be configured once to setup their development environment so they can focus on software development from that point
 forward. This section discusses the various configuration settings available for NeMo Agent toolkit developers.
 
 ### Remote Registry Configuration
