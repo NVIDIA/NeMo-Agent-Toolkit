@@ -57,7 +57,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the NeMo Agent toolkit library, run the following commands:
 
 ```bash
-uv pip install -e examples/por_to_jiratickets
+uv pip install -e examples/HITL/por_to_jiratickets
 ```
 
 ### Set Up API Keys
@@ -142,7 +142,7 @@ This can occur in any tool or function in the workflow, allowing for dynamic int
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
 
 ```bash
-aiq run --config_file examples/por_to_jiratickets/configs/config.yml  --input "Can you extract por file por_requirements.txt, assign story points and create jira tickets for epics first and then followed by tasks?"
+aiq run --config_file examples/HITL/por_to_jiratickets/configs/config.yml  --input "Can you extract por file por_requirements.txt, assign story points and create jira tickets for epics first and then followed by tasks?"
 ```
 
 **Expected Workflow Result When Giving Permission**

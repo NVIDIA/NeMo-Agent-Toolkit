@@ -2,6 +2,9 @@
 build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
+[tool.setuptools_scm]
+root = "../../../.."
+
 [project]
 name = "text_file_ingest"
 dynamic = ["version"]
@@ -12,7 +15,7 @@ keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+aiqtoolkit = { path = "../../../..", editable = true }
 
 [project.entry-points.'aiq.components']
 text_file_ingest = "text_file_ingest.register"
