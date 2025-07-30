@@ -21,13 +21,15 @@ This example demonstrates **human in the loop capabilities** of the NeMo Agent t
 
 ## Table of Contents
 
-- [Key Features](#key-features)
-- [Installation and Setup](#installation-and-setup)
-  - [Install this Workflow](#install-this-workflow)
-  - [Set Up API Keys](#set-up-api-keys)
-  - [Human in the Loop (HITL) Configuration](#human-in-the-loop-hitl-configuration)
-- [Example Usage](#example-usage)
-  - [Run the Workflow](#run-the-workflow)
+- [Simple Calculator - Human in the Loop](#simple-calculator---human-in-the-loop)
+  - [Table of Contents](#table-of-contents)
+  - [Key Features](#key-features)
+  - [Installation and Setup](#installation-and-setup)
+    - [Install this Workflow](#install-this-workflow)
+    - [Set Up API Keys](#set-up-api-keys)
+    - [Human in the Loop (HITL) Configuration](#human-in-the-loop-hitl-configuration)
+  - [Example Usage](#example-usage)
+    - [Run the Workflow](#run-the-workflow)
 
 ## Key Features
 
