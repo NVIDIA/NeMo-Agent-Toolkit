@@ -112,7 +112,7 @@ For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/er
 2025-07-03 17:04:54,696 - aiq_simple_calculator_hitl.register - INFO - Recursion error detected, prompting user to increase recursion limit
 You have reached the maximum number of iterations.
  Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: yes
-2025-07-30 11:29:45,953 - aiq_simple_calculator_hitl.retry_react_agent - INFO - Attempt 2: Increasing max_iterations to 2
+2025-07-03 17:04:56,267 - aiq_simple_calculator_hitl.retry_react_agent - INFO - Attempt 2: Increasing max_iterations to 2
 
 <snipped for brevity>
 
