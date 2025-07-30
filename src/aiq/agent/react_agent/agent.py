@@ -193,12 +193,11 @@ class ReActAgentGraph(DualNodeAgent):
                                  ex.observation,
                                  output_message.content)
                     if attempt == self.parse_agent_response_max_retries:
-                        logger.error(
+                        logger.warning(
                             "%s Failed to parse agent output after %d attempts, consider enabling or "
                             "increasing parse_agent_response_max_retries",
                             AGENT_LOG_PREFIX,
-                            attempt,
-                            exc_info=True)
+                            attempt)
                         # the final answer goes in the "messages" state channel
                         combined_content = str(ex.observation) + '\n' + str(output_message.content)
                         output_message.content = combined_content
