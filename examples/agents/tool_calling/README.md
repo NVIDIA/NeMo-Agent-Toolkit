@@ -103,6 +103,10 @@ aiq run --config_file=examples/agents/tool_calling/configs/config.yml --input "w
 ```
 
 **Expected Workflow Output**
+
+> [!NOTE]
+> The output from `wikipedia_search` tool may contain odd formatting (extra newlines, additional indentation), especially when a Wikipedia page contains formula or other complex content. This is expected due to the upstream behavior of the `wikipedia` python package.
+
 ```console
 <snipped for brevity>
 

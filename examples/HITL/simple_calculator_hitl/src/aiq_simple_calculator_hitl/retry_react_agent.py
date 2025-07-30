@@ -140,9 +140,9 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
         for attempt in range(config.max_retries):
             try:
                 # Increase max_iterations for this retry attempt
-                updated_max_iterations = temp_react_agent_config.max_iterations + config.max_iterations_increment
+                updated_max_iterations = temp_react_agent_config.max_tool_calls + config.max_iterations_increment
                 logger.info("Attempt %d: Increasing max_iterations to %d", attempt + 2, updated_max_iterations)
-                temp_react_agent_config.max_iterations += config.max_iterations_increment
+                temp_react_agent_config.max_tool_calls += config.max_iterations_increment
 
                 # Try to execute the agent with increased iterations
                 response = await temp_react_agent.acall_invoke(input_message)

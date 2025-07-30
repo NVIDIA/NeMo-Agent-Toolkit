@@ -77,7 +77,7 @@ eval:
     output_dir: .tmp/aiq/examples/getting_started/simple_web_query
     dataset:
       _type: json
-      file_path: examples/getting_started/simple_web_query/data/simple_calculator.json
+      file_path: examples/getting_started/simple_calculator/data/simple_calculator.json
   evaluators:
     tuneable_eval:
       _type: tunable_rag_evaluator

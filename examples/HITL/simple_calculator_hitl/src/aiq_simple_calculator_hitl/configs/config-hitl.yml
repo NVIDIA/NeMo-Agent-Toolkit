@@ -27,8 +27,23 @@ functions:
     _type: current_datetime
   calculator_subtract:
     _type: calculator_subtract
-  time_zone_prompt:
-    _type: time_zone_prompt
+  hitl_approval_tool:
+    _type: hitl_approval_tool
+    prompt: |
+      You have reached the maximum number of iterations.
+  react_agent:
+    _type: react_agent
+    tool_names:
+      - calculator_multiply
+      - calculator_inequality
+      - current_datetime
+      - calculator_divide
+      - calculator_subtract
+    llm_name: nim_llm
+    verbose: true
+    retry_parsing_errors: true
+    max_retries: 3
+    max_tool_calls: 1
 
 llms:
   nim_llm:
@@ -42,13 +57,8 @@ llms:
     max_tokens: 2000
 
 workflow:
-  _type: react_agent
-  tool_names:
-    - calculator_multiply
-    - calculator_inequality
-    - current_datetime
-    - calculator_divide
-    - calculator_subtract
-    - time_zone_prompt
-  llm_name: nim_llm
-  verbose: true
+  _type: retry_react_agent
+  hitl_approval_fn: hitl_approval_tool
+  react_agent_fn: react_agent
+  max_retries: 3
+  max_iterations_increment: 1

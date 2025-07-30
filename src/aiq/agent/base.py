@@ -148,7 +148,7 @@ class BaseAgent(ABC):
         """
         last_exception = None
 
-        for attempt in range(max_retries + 1):
+        for attempt in range(1, max_retries + 1):
             try:
                 response = await tool.ainvoke(tool_input, config=config)
 
@@ -162,16 +162,17 @@ class BaseAgent(ABC):
 
             except Exception as e:
                 last_exception = e
-                logger.warning("%s Tool call attempt %d/%d failed for tool %s: %s",
-                               AGENT_LOG_PREFIX,
-                               attempt + 1,
-                               max_retries + 1,
-                               tool.name,
-                               str(e))
 
                 # If this was the last attempt, don't sleep
                 if attempt == max_retries:
                     break
+
+                logger.warning("%s Tool call attempt %d/%d failed for tool %s: %s",
+                               AGENT_LOG_PREFIX,
+                               attempt,
+                               max_retries,
+                               tool.name,
+                               str(e))
 
                 # Exponential backoff: 2^attempt seconds
                 sleep_time = 2**attempt

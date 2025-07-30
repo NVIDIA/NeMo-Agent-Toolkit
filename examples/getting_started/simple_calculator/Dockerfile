@@ -27,6 +27,10 @@ ARG PYTHON_VERSION
 
 ENV PYTHONDONTWRITEBYTECODE=1
 
+# Install compiler [g++, gcc] (currently only needed for thinc indirect dependency)
+RUN apt-get update && \
+    apt-get install -y g++ gcc
+
 # Set working directory
 WORKDIR /workspace
 
@@ -45,7 +49,7 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     uv pip install -e '.[telemetry]' --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
     uv pip install --link-mode=copy ./examples/getting_started/simple_calculator
 
-# Enivronment variables for the venv
+# Environment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"
 
 # Set the config file environment variable

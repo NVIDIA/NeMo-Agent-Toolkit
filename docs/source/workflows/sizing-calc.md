@@ -69,7 +69,7 @@ eval:
     output_dir: .tmp/aiq/examples/simple_calculator/eval
     dataset:
       _type: json
-      file_path: examples/getting_started/simple_web_query/data/simple_calculator.json
+      file_path: examples/getting_started/simple_calculator/data/simple_calculator.json
 ```
 In addition to the dataset, you need to specify the `eval.general.output_dir` parameter for storing the evaluation results. Other parameters in the eval section are not used by the calculator. For more information, refer to the [Evaluate](./evaluate.md) documentation.
 
