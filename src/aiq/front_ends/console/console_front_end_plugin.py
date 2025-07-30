@@ -67,12 +67,12 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         async with WorkflowBuilder.from_config(config=self.full_config) as builder:
 
             session_manager: AIQSessionManager = None
-            stream = StringIO()
 
             if logger.isEnabledFor(logging.INFO):
+                stream = StringIO()
                 self.full_config.print_summary(stream=stream)
 
-            click.echo(stream.getvalue())
+                click.echo(stream.getvalue())
 
             workflow = builder.build()
             session_manager = AIQSessionManager(workflow)
