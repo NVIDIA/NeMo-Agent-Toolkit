@@ -26,20 +26,21 @@ functions:
   extract_por_tool:
     _type: extract_por_tool
     llm: extract_llm
-    root_path: "./examples/custom_functions/por_to_jiratickets/data/"
+    root_path: "./examples/HITL/por_to_jiratickets/data/"
   show_jira_tickets:
     _type: show_jira_tickets
-    root_path: "./examples/custom_functions/por_to_jiratickets/data/"
+    root_path: "./examples/HITL/por_to_jiratickets/data/"
   create_jira_tickets_tool:
     _type: create_jira_tickets_tool
-    root_path: "./examples/custom_functions/por_to_jiratickets/data/"
+    root_path: "./examples/HITL/por_to_jiratickets/data/"
     timeout: 20.0
     connect: 10.0
     jira_domain: ""
     jira_project_key: ""
+    hitl_approval_fn: "hitl_approval_tool"
   get_jira_tickets_tool:
     _type: get_jira_tickets_tool
-    root_path: "./examples/custom_functions/por_to_jiratickets/data/"
+    root_path: "./examples/HITL/por_to_jiratickets/data/"
     jira_domain: ""
     jira_project_key: ""
   hitl_approval_tool:

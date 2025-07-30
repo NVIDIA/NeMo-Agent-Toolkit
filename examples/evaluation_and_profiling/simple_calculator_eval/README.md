@@ -60,9 +60,9 @@ aiq eval --config_file examples/evaluation_and_profiling/simple_calculator_eval/
 The configuration file specified above contains configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/workflows/profiler.md).
 
 This command:
-- Uses the test dataset from `examples/getting_started/simple_web_query/data/simple_calculator.json`
+- Uses the test dataset from `examples/getting_started/simple_calculator/data/simple_calculator.json`
 - Applies the Tunable RAG Evaluator to measure response accuracy
-- Saves detailed results to `.tmp/aiq/examples/getting_started/simple_web_query/tuneable_eval_output.json`
+- Saves detailed results to `.tmp/aiq/examples/getting_started/simple_calculator/tuneable_eval_output.json`
 
 ### Understanding Results
 
