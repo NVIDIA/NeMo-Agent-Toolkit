@@ -135,7 +135,7 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 1. When done, [create your pull request](https://github.com/NVIDIA/NeMo-Agent-Toolkit/compare). Select `develop` as the `Target branch` of your pull request.
     - Ensure the body of the pull request references the issue you are working on in the form of `Closes #<issue number>`.
 1. Wait for other developers to review your code and update code as needed.
-1. Once reviewed and approved, an NeMo Agent toolkit developer will merge your pull request.
+1. Once reviewed and approved, a NeMo Agent toolkit developer will merge your pull request.
 
 Remember, if you are unsure about anything, don't hesitate to comment on issues and ask for clarifications!
 
