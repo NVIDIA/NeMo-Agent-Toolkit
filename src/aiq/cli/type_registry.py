@@ -970,9 +970,6 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         if issubclass(cls, ITSStrategyBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_its_strategies())
 
-        if issubclass(cls, OptimizerConfig):
-            return self._do_compute_annotation(cls, self.get_registered_optimizer())
-
         raise ValueError(f"Supplied an unsupported component type {cls}")
 
 

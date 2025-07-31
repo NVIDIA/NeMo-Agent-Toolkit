@@ -37,12 +37,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-try:
-    import optuna
-    OPTUNA_AVAILABLE = True
-except ImportError:
-    OPTUNA_AVAILABLE = False
-    warnings.warn("Optuna not available. Some functionality will be limited.")
+import optuna
 
 logger = logging.getLogger(__name__)
 
@@ -337,7 +332,7 @@ class ParetoVisualizer:
         return fig
 
 
-def load_trials_from_study(study: "optuna.Study") -> tuple[pd.DataFrame, pd.DataFrame]:
+def load_trials_from_study(study: optuna.Study) -> tuple[pd.DataFrame, pd.DataFrame]:
     """
     Load trial data from an Optuna study object.
     
@@ -347,9 +342,6 @@ def load_trials_from_study(study: "optuna.Study") -> tuple[pd.DataFrame, pd.Data
     Returns:
         tuple of (all_trials_df, pareto_trials_df)
     """
-    if not OPTUNA_AVAILABLE:
-        raise ImportError("Optuna is required for loading from study objects")
-    
     # Get all trials
     trials_df = study.trials_dataframe()
     
@@ -429,7 +421,7 @@ def compute_pareto_optimal_mask(
 
 
 def create_pareto_visualization(
-    data_source: "optuna.Study" | Path | pd.DataFrame,
+    data_source: optuna.Study | Path | pd.DataFrame,
     metric_names: list[str],
     directions: list[str],
     output_dir: Path | None = None,
@@ -451,7 +443,7 @@ def create_pareto_visualization(
         Dictionary mapping plot names to matplotlib Figure objects
     """
     # Load data based on source type
-    if OPTUNA_AVAILABLE and hasattr(data_source, 'trials_dataframe'):
+    if hasattr(data_source, 'trials_dataframe'):
         # Optuna study object
         trials_df, pareto_trials_df = load_trials_from_study(data_source)
     elif isinstance(data_source, (str, Path)):
