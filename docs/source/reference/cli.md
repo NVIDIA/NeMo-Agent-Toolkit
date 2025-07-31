@@ -295,7 +295,7 @@ illustrates is usage:
 $ aiq uninstall --help
 Usage: aiq uninstall [OPTIONS] PACKAGES COMMAND [ARGS]...
 
-  Uninstall a NeMo Agent toolkit plugin packages from the local environment.
+  Uninstall plugin packages from the local environment.
 
 Options:
   --help  Show this message and exit.
