@@ -211,10 +211,7 @@ async def optimize_prompts(
 
         # Run multiple evaluations in parallel for statistical robustness
         try:
-            async def _run_all_evals():
-                tasks = [_single_eval() for _ in range(reps)]
-                return await asyncio.gather(*tasks)
-            all_results = asyncio.run(_run_all_evals())
+            all_results = await asyncio.gather(*(_single_eval() for _ in range(reps)))
         except Exception as e:
             logger.error("Error during evaluation runs: %s", e)
             raise
