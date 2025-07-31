@@ -153,7 +153,7 @@ This will now display the custom evaluator `similarity` in the list of evaluator
 
 ### Evaluation configuration
 Add the evaluator to the workflow configuration file in the `eval.evaluators` section. The following is an example of the similarity evaluator configuration:
-`examples/getting_started/simple_web_query/configs/eval_config.yml`:
+`examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml`:
 ```yaml
 eval:
   evaluators:
@@ -166,12 +166,12 @@ The `_type` field specifies the evaluator name. The keyword `similarity_eval` ca
 ### Evaluating the workflow
 Run and evaluate the workflow using the following command:
 ```bash
-aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml
+aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 
 ### Evaluation results
 The evaluation results are stored in the output directory specified in the workflow configuration file.
-`examples/getting_started/simple_web_query/configs/eval_config.yml`:
+`examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml`:
 ```yaml
 eval:
   general:

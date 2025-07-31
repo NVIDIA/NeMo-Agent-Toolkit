@@ -114,7 +114,7 @@ The data file should be in JSON format with the following structure:
 Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow:
 
 ```bash
-aiq run --config_file examples/custom_functions/plot_charts/src/aiq_plot_charts/configs/config.yml --input "create a line chart"
+aiq run --config_file examples/custom_functions/plot_charts/configs/config.yml --input "create a line chart"
 ```
 
 **Expected Workflow Output**
@@ -141,10 +141,10 @@ You can request different chart types:
 
 ```bash
 # Bar chart
-aiq run --config_file examples/custom_functions/plot_charts/src/aiq_plot_charts/configs/config.yml --input "create a bar chart comparing the data"
+aiq run --config_file examples/custom_functions/plot_charts/configs/config.yml --input "create a bar chart comparing the data"
 
 # Scatter plot
-aiq run --config_file examples/custom_functions/plot_charts/src/aiq_plot_charts/configs/config.yml --input "show me a scatter plot"
+aiq run --config_file examples/custom_functions/plot_charts/configs/config.yml --input "show me a scatter plot"
 ```
 
 ### Launch the Workflow Server
@@ -152,7 +152,7 @@ aiq run --config_file examples/custom_functions/plot_charts/src/aiq_plot_charts/
 Run the following command from the root of the NeMo Agent toolkit repo to serve this workflow:
 
 ```bash
-aiq serve --config_file examples/custom_functions/plot_charts/src/aiq_plot_charts/configs/config.yml
+aiq serve --config_file examples/custom_functions/plot_charts/configs/config.yml
 ```
 
 **Triggering the Workflow Server**
