@@ -82,7 +82,6 @@ class MockProcessorWithShutdown(Processor[str, str]):
 
     def shutdown(self):
         """Mock shutdown method that returns an awaitable to avoid coroutine creation during type introspection."""
-        import asyncio
         self.shutdown_called = True
 
         # Create a completed future instead of a coroutine to avoid the warning
@@ -836,7 +835,7 @@ class TestCallbackProcessorIntegration:
         assert processing_exporter.export_processed_called
         assert 5 in processing_exporter.exported_items  # len("hello") = 5
 
-    async def test_continue_pipeline_after_with_remaining_processors(self, processing_exporter):
+    async def test_continue_pipeline_after_with_remaining_processors(self):
         """Test _continue_pipeline_after processes through remaining pipeline."""
 
         # Create a string-processing exporter to avoid type issues
