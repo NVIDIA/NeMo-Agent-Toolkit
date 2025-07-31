@@ -46,8 +46,8 @@ llms:
     max_tokens: 8
   nim_trajectory_eval_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
-    temperature: 0.0
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.1
     max_tokens: 1024
 
 embedders:
@@ -61,6 +61,8 @@ workflow:
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3
+  optimizable_params:
+    - additional_instructions
 
 eval:
   general:
@@ -90,6 +92,7 @@ eval:
 
 optimizer:
   output_path: ./.tmp/aiq/examples/evaluation_and_profiling/simple_web_query_eval/optimizer/
+  reps_per_param_set: 1
   eval_metrics:
     rag_accuracy:
       evaluator_name: rag_accuracy
@@ -102,5 +105,11 @@ optimizer:
         direction: maximize
 
   n_trials_numeric: 3
-  do_numeric_optimization: true
+  do_numeric_optimization: false
+
+  n_trials_prompt: 3
+  do_prompt_optimization: true
+  prompt_optimization_function: prompt_optimizer
+  trajectory_eval_metric_name: trajectory_accuracy
+
 

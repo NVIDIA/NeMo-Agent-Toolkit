@@ -59,7 +59,7 @@ class OptimizerConfig(BaseModel):
         default=True,
     )
 
-    prompt_evaluation_function: str | None = Field(
+    prompt_optimization_function: str | None = Field(
         default=None,
         description="Name of the function to use for prompt evaluation.",
     )
