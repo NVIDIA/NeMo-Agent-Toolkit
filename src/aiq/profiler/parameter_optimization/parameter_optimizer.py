@@ -43,6 +43,16 @@ def optimize_parameters(
     """Tune all *non-prompt* hyper-parameters and persist the best config."""
     space = {k: v for k, v in full_space.items() if not v.is_prompt}
 
+    # Ensure output_path is not None
+    if optimizer_config.output_path is None:
+        raise ValueError("optimizer_config.output_path cannot be None")
+    out_dir = optimizer_config.output_path
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Ensure eval_metrics is not None
+    if optimizer_config.eval_metrics is None:
+        raise ValueError("optimizer_config.eval_metrics cannot be None")
+
     metric_cfg = optimizer_config.eval_metrics
     directions = [v.direction for v in metric_cfg.values()]
     eval_metrics = [v.evaluator_name for v in metric_cfg.values()]
@@ -83,7 +93,12 @@ def optimize_parameters(
 
             return values
 
-        all_scores = asyncio.run(asyncio.gather(*(_single_eval(i) for i in range(reps))))
+        # Create tasks for all evaluations
+        async def _run_all_evals():
+            tasks = [_single_eval(i) for i in range(reps)]
+            return await asyncio.gather(*tasks)
+
+        all_scores = asyncio.run(_run_all_evals())
         return [sum(run[i] for run in all_scores) / reps for i in range(len(eval_metrics))]
 
     logger.info("Starting numeric / enum parameter optimization...")
