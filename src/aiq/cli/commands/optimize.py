@@ -20,7 +20,7 @@ from pathlib import Path
 import click
 
 from aiq.data_models.optimizer import OptimizerRunConfig
-from aiq.experimental.parameter_optimization.optimizer_runtime import optimize_config
+from aiq.profiler.parameter_optimization.optimizer_runtime import optimize_config
 
 logger = logging.getLogger(__name__)
 

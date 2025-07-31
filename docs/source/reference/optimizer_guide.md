@@ -12,9 +12,6 @@ This guide will walk you through:
 - Running the optimizer from the command line.
 - Understanding the output of the optimizer.
 
-
-**NOTE:  **To use the optimizer, you must have evaluation configured. Particularly, the optimizer uses the evalution dataset and output configurations, as well as any specified evaluators.
-
 ## How it Works
 
 The AIQ Optimizer uses a combination of techniques to find the best parameters for your workflow. At its core, it uses [Optuna](https://optuna.org/) for numerical hyperparameter optimization and can leverage large language models (LLMs) for prompt optimization.
