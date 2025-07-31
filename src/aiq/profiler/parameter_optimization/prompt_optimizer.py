@@ -144,8 +144,8 @@ async def optimize_prompts(
 
     logger.info("Prompt optimization workflow ready")
 
-    # Dictionary to store accumulated feedback for each parameter
-    # Key: parameter name, Value: list of feedback strings
+    # Dictionary to store accumulated feedback for each prompt parameter
+    # Key: prompt parameter name, Value: list of feedback strings
     feedback_lists: dict[str, list[str]] = {}
 
     # Main optimization loop
@@ -278,11 +278,12 @@ async def optimize_prompts(
 
                         trajectory_feedback = "\n".join(trajectory_feedback_parts)
 
-                        # Accumulate feedback
-                        if metric_name not in feedback_lists:
-                            feedback_lists[metric_name] = []
+                        # Associate feedback with all prompt parameters used in this trial
                         if trajectory_feedback:  # Only add non-empty feedback
-                            feedback_lists[metric_name].append(trajectory_feedback)
+                            for param_name in suggestions.keys():  # suggestions contains the prompt parameters used
+                                if param_name not in feedback_lists:
+                                    feedback_lists[param_name] = []
+                                feedback_lists[param_name].append(trajectory_feedback)
 
                     except Exception as e:
                         logger.warning("Error collecting feedback for metric %s: %s", metric_name, e)
