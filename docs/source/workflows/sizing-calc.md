@@ -62,7 +62,7 @@ aiq sizing calc --config $CONFIG_FILE --calc_output_dir $CALC_OUTPUT_DIR --concu
 To use the calculator, you need a representative dataset of inputs. The size of the dataset can be as small as one input. However, if your workflow's behavior varies significantly depending on the input, we recommend including representative dataset entries for each trajectory.
 
 The dataset is provided in the eval section of the workflow configuration file.
-`examples/simple_calculator/src/aiq_simple_calculator/configs/config-sizing-calc.yml`:
+`examples/evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml`:
 ```yaml
 eval:
   general:

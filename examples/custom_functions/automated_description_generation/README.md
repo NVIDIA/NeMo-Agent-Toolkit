@@ -24,7 +24,7 @@ limitations under the License.
 
 The automated description generation workflow, is a workflow that can be used to build on top of the RAG service and enhances the accuracy of the  multi-query collection workflow. The goal of the workflow is to automatically generate descriptions of collections within VectorDB's, which can be leveraged by the multi-query collection tool to empower retrieval of context, typically documents, across multiple collections within a given vector database. This document will cover the tooling and the process leveraged to execute the description generation workflow.
 
-The documentation will also cover configuration considerations and how to set up an NeMo Agent toolkit pipeline that leverages the workflow. The current implementation is Milvus focused, with a plans to extend functionality to other vector databases.
+The documentation will also cover configuration considerations and how to set up a NeMo Agent toolkit pipeline that leverages the workflow. The current implementation is Milvus focused, with a plans to extend functionality to other vector databases.
 
 ## Table of Contents
 
@@ -65,7 +65,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 This example uses a Milvus vector database to demonstrate how descriptions can be generated for collections. However, because this workflow uses the built-in NeMo Agent toolkit abstractions for retrievers, this example will work for any database that implements the required methods of the NeMo Agent toolkit `retriever` interface.
 
 The rest of this example assumes you have a running instance of Milvus at `localhost:19530`. If you would like a guide on setting up the database used in this example, please follow
-the instructions in the `simple_rag` example of NeMo Agent toolkit [here](../../RAG/simple_rag/README.md).
+the instructions in the `simple_rag` example of NeMo Agent toolkit [here](../../RAG/simple_rag/README.md#set-up-milvus).
 
 If you have a different Milvus database you would like to use, please modify the `./configs/config.yml` with the appropriate URLs to your database instance.
 

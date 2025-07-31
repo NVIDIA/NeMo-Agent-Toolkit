@@ -25,7 +25,7 @@ NeMo Agent toolkit provides a set of evaluators to run and evaluate the workflow
 
 Example:
 ```bash
-aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml
+aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 
 ## Using Datasets
@@ -43,7 +43,7 @@ eval:
   general:
     dataset:
       _type: json
-      file_path: examples/getting_started/simple_web_query/data/langsmith.json
+      file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
 ```
 
 ### Dataset Format
@@ -280,7 +280,7 @@ You can add custom evaluators to evaluate the workflow output. To add a custom e
 ## Running multiple repetitions
 You can run multiple repetitions of the evaluation by running a command line option `--reps`. For example, to run the evaluation 5 times, run the following command:
 ```bash
-aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml --reps=5
+aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --reps=5
 ```
 This will allow you to get an average score across multiple runs and analyze the variation in the generated outputs.
 
@@ -299,21 +299,21 @@ You can then re-run evaluation on that output file along with `--skip_completed_
 
 Pass-1:
 ```
-aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml
+aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 This pass results in workflow interrupted warning. You can then do another pass.
 
 Pass-2:
 ```bash
 cp .tmp/aiq/examples/getting_started/simple_web_query/workflow_output.json .tmp/simple_workflow_output.json
-aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml --skip_completed_entries --dataset=.tmp/simple_workflow_output.json
+aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --skip_completed_entries --dataset=.tmp/simple_workflow_output.json
 ```
 
 ## Running evaluation offline
 You can evaluate a dataset with previously generated answers via the `--skip_workflow` option. In this case the dataset has both the expected `answer` and the `generated_answer`.
 ```bash
 cp .tmp/aiq/examples/getting_started/simple_web_query/workflow_output.json .tmp/simple_workflow_output.json
-aiq eval --config_file=examples/getting_started/simple_web_query/configs/eval_config.yml --skip_workflow --dataset=.tmp/simple_workflow_output.json
+aiq eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml --skip_workflow --dataset=.tmp/simple_workflow_output.json
 ```
 This assumes that the workflow output was previously generated and stored in `.tmp/aiq/examples/getting_started/simple_web_query/workflow_output.json`
 
@@ -325,7 +325,7 @@ eval:
     output_dir: ./.tmp/aiq/examples/getting_started/simple_web_query/
     dataset:
       _type: json
-      file_path: examples/getting_started/simple_web_query/data/langsmith.json
+      file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
 ```
 
 ## Evaluation output
@@ -385,7 +385,7 @@ The output of the evaluators are stored in distinct files in the same `output_di
 The workflow_output.json file contains the intermediate steps for each entry in the dataset. The intermediate steps are filtered using the `eval.general.output.workflow_output_step_filter` parameter in the `config.yml` file. The default value for the filter is `[LLM_END, TOOL_END]`. You can customize the filter by providing a list of intermediate step types to include in the output file.
 
 **Example:**
-`examples/getting_started/simple_web_query/configs/eval_config.yml` can be modified to include the intermediate steps in the output by adding the following configuration:
+`examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml` can be modified to include the intermediate steps in the output by adding the following configuration:
 ```yaml
 eval:
   general:
@@ -408,7 +408,7 @@ eval:
       dir: ./.tmp/aiq/examples/simple_output/
       custom_scripts:
         convert_workflow_to_csv:
-          script: examples/getting_started/simple_web_query/src/aiq_simple_web_query/scripts/workflow_to_csv.py
+          script: examples/evaluation_and_profiling/simple_web_query_eval/scripts/workflow_to_csv.py
           kwargs:
             # The input and output are relative to the output directory
             input: workflow_output.json
