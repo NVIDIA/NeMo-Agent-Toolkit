@@ -39,7 +39,7 @@ Set the following environment variables in your terminal
 ```yaml
 export CATALYST_ACCESS_KEY=YOUR_ACCESS_KEY
 export CATALYST_SECRET_KEY=YOUR_SECRET_KEY
-export base_url=https://catalyst.raga.ai/api
+export CATALYST_ENDPOINT=https://catalyst.raga.ai/api
 ```
 
 ### Step 5: Modify Workflow Configuration
@@ -62,7 +62,7 @@ From the root directory of the NeMo Agent toolkit library, install dependencies 
 
 **Example:**
 ```bash
-uv pip install -e examples/simple_calculator
+uv pip install -e examples/observability/simple_calculator_observability/
 ```
 As the workflow runs, telemetry data will start showing up in Catalyst.
 
@@ -70,6 +70,8 @@ As the workflow runs, telemetry data will start showing up in Catalyst.
 - Open your browser and navigate to `https://catalyst.raga.ai/projects`.
 - Locate your workflow traces under the **your-dataset** section in projects.
 - Inspect function execution details, latency, total tokens, request timelines and other info under Info and Attributes tab of an individual trace.
+
+![Catalyst Trace View](../../_static/ragaai_catalyst_traceview.png)
 
 ### Debugging
 If you encounter issues while downloading the Catalyst package, try uninstalling and installing:

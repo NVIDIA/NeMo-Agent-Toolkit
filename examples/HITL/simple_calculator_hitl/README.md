@@ -62,7 +62,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 ### Human in the Loop (HITL) Configuration
 It is often helpful, or even required, to have human input during the execution of an agent workflow. For example, to ask about preferences, confirmations, or to provide additional information.
 The NeMo Agent toolkit library provides a way to add HITL interaction to any tool or function, allowing for the dynamic collection of information during the workflow execution, without the need for coding it
-into the agent itself. For instance, this example asks for user approval to increase the maximum iterations of the ReAct agent to allow additional tool calling. This is enabled by leveraging a reusable plugin developed in the `examples/custom_functions/por_to_jiratickets` example. We can view the implementation in the
+into the agent itself. For instance, this example asks for user approval to increase the maximum iterations of the ReAct agent to allow additional tool calling. This is enabled by leveraging a reusable plugin developed in the `examples/HITL/por_to_jiratickets` example. We can view the implementation in the
 `aiq_por_to_jiratickets.hitl_approval_tool.py` file. The implementation is shown below:
 
 ```python
