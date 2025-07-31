@@ -20,10 +20,10 @@ NVIDIA NeMo Agent toolkit provides a user interface for interacting with your ru
 
 ## User Interface Features
 - Chat history
-- Interact with Workflow via HTTP API
-- Interact with Workflow via WebSocket
-- Enable or disable Workflow intermediate steps
-- Expand all Workflow intermediate steps by default
+- Interact with a workflow via the HTTP API
+- Interact with a workflow via a WebSocket
+- Enable or disable a workflow's intermediate steps
+- Expand all workflow intermediate steps by default
 - Override intermediate steps with the same ID
 
 ## Walk-through
@@ -36,8 +36,7 @@ Before starting, ensure you have:
 - Node.js v18+ installed (required for the web interface)
 
 
-The NeMo Agent toolkit UI is located in a git submodule at `external/aiqtoolkit-opensource-ui`. Ensure you have checked out all of the
-git submodules by running the following:
+The NeMo Agent toolkit UI is located in a Git submodule at `external/aiqtoolkit-opensource-ui`. Ensure you have checked out all of the Git submodules by running the following:
 ```bash
 git submodule update --init --recursive
 ```
@@ -67,7 +66,7 @@ curl --request POST \
 ```
 
 Running this command will produce the following expected output:
-> **Note:** The response depends on the current time of day the command executes.
+> **Note:** The response depends on the current time of day that the command is run.
 ```bash
 {
   "value": "No, 8 is less than the current hour of the day (4)."
