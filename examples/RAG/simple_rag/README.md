@@ -169,18 +169,11 @@ Configure your Agent to use the Milvus collections for RAG. We have pre-configur
 ```bash
 aiq run --config_file examples/RAG/simple_rag/configs/milvus_rag_config.yml --input "How do I install CUDA"
 ```
-    The expected workflow result of running the above command is:
-    ```
-    To install CUDA, you need to follow these general steps:
-    
-    1. Verify that your system has a CUDA-capable GPU.
-    2. Choose an installation method: local repo or network repo.
-    3. Download the NVIDIA CUDA Toolkit from the official NVIDIA website.
-    4. Install the CUDA Toolkit using the chosen installation method.
-    5. Perform post-installation actions, such as updating the Apt repository cache and installing additional packages.
 
-    For specific instructions, please refer to the official NVIDIA documentation for your operating system: https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html or https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html.
-    ```
+The expected workflow result of running the above command is:
+```console
+['To install CUDA, you typically need to: \n1. Verify you have a CUDA-capable GPU and a supported version of your operating system.\n2. Download the NVIDIA CUDA Toolkit from the official NVIDIA website.\n3. Choose an installation method, such as a local repository installation or a network repository installation, depending on your system.\n4. Follow the specific instructions for your operating system, which may include installing local repository packages, enabling network repositories, or running installer scripts.\n5. Reboot your system and perform post-installation actions, such as setting up your environment and verifying the installation by running sample projects. \n\nPlease refer to the official NVIDIA CUDA documentation for detailed instructions tailored to your specific operating system and distribution.']
+```
 
 ## Adding Long-Term Agent Memory
 If you want to add long-term memory to your agent, you can do so by adding a `memory` section to your configuration file. The memory section is used to store information that the agent can use to provide more contextually relevant answers to the user's questions. The memory section can be used to store information such as user preferences, past interactions, or any other information that the agent needs to remember.
@@ -281,15 +274,8 @@ aiq run --config_file=examples/RAG/simple_rag/configs/milvus_memory_rag_config.y
 
 The expected workflow result of the above run is:
 
-```
-🎉 To install CUDA, follow these steps:
-1. Verify that your system has a CUDA-capable GPU 🖥️
-2. Download the NVIDIA CUDA Toolkit from the official website 📦
-3. Install the CUDA Software by executing the CUDA installer and following the on-screen prompts 💻
-4. Test that the installed software runs correctly and communicates with the hardware 📊
-For Linux, choose an installation method and install the CUDA Toolkit using the chosen method 📦
-Remember to perform the post-installation actions 📈
-👍
+```console
+['🎉 To install CUDA, you can follow these steps: \n1. Verify you have a CUDA-capable GPU 🖥️ and a supported version of Linux 🐧.\n2. Download the NVIDIA CUDA Toolkit from https://developer.nvidia.com/cuda-downloads 📦.\n3. Choose an installation method: distribution-specific packages (RPM and Deb packages) or a distribution-independent package (runfile packages) 📈.\n4. Install the CUDA SDK using the chosen method, such as `dnf install cuda-toolkit` for Fedora 📊.\n5. Reboot the system 🔄.\n6. Perform post-installation actions, such as setting up the environment and verifying the installation 🎊.\nRemember to check the CUDA Installation Guide for Linux for more detailed instructions and specific requirements for your system 📚. 🎉']
 ```
 
 We see from the above output that the agent was able to successfully retrieve our preference for emoji's in responses from long term memory and use it to format the response to our question about installing CUDA.
@@ -315,29 +301,8 @@ We can now run one of these workflows with a slightly more complex input.
 aiq run --config_file examples/RAG/simple_rag/configs/milvus_rag_tools_config.yml --input "How do I install CUDA and get started developing with it? Provide example python code"
 ```
 The expected workflow result of the above run is:
-```
-To install CUDA and get started with developing applications using it, you can follow the steps outlined in the CUDA documentation. This includes verifying that you have a CUDA-capable GPU, downloading the NVIDIA CUDA Toolkit, and installing the CUDA software. After installation, you can verify that the CUDA toolkit can find and communicate correctly with the CUDA-capable hardware by compiling and running sample programs.
-
-Here's an example Python code that demonstrates how to use CUDA:
-
-  import numpy as np
-  import cupy as cp
-
-  # Create a sample array
-  arr = np.array([1, 2, 3, 4, 5])
-
-  # Transfer the array to the GPU
-  arr_gpu = cp.asarray(arr)
-
-  # Perform some operations on the GPU
-  result_gpu = cp.square(arr_gpu)
-
-  # Transfer the result back to the CPU
-  result_cpu = cp.asnumpy(result_gpu)
-
-  print(result_cpu)
-
-This code creates a sample array, transfers it to the GPU, performs some operations on the GPU, and then transfers the result back to the CPU. The output of this code will be the squared values of the original array.
+```console
+["To install CUDA and get started with developing applications using it, you can follow the instructions provided in the CUDA Installation Guide for your specific operating system. The guide covers various installation methods, including package manager installation, runfile installation, Conda installation, and pip wheels. After installing CUDA, you can use it in your Python applications by importing the cupy library, which provides a similar interface to numpy but uses the GPU for computations. Here's an example Python code that demonstrates how to use CUDA:\n\n```python\nimport numpy as np\nimport cupy as cp\n\n# Create a sample array\narr = np.array([1, 2, 3, 4, 5])\n\n# Transfer the array to the GPU\narr_gpu = cp.asarray(arr)\n\n# Perform some operations on the GPU\nresult_gpu = cp.square(arr_gpu)\n\n# Transfer the result back to the CPU\nresult_cpu = cp.asnumpy(result_gpu)\n\nprint(result_cpu)\n```\n\nThis code creates a sample array, transfers it to the GPU, performs a square operation on the GPU, and then transfers the result back to the CPU for printing. Make sure to install the cupy library and have a CUDA-capable GPU to run this code."]
 ```
 
 ## Using Inference Time Scaling
@@ -354,9 +319,40 @@ To run this workflow, you can use the following command:
 aiq run --config_file examples/RAG/simple_rag/configs/milvus_rag_config_its.yml --input "What is the difference between CUDA and MCP?"
 ```
 
-You should see a workflow result that looks similar to the following:
-```
-CUDA and MCP are two distinct technologies with different purposes and cannot be directly compared. CUDA is a parallel computing platform and programming model, primarily used for compute-intensive tasks such as scientific simulations, data analytics, and machine learning, whereas MCP is an open protocol designed for providing context to Large Language Models (LLMs), particularly for natural language processing and other AI-related tasks. While they serve different purposes, CUDA and MCP share a common goal of enabling developers to create powerful and efficient applications. They are complementary technologies that can be utilized together in certain applications to achieve innovative outcomes, although their differences in design and functionality set them apart. In essence, CUDA focuses on parallel computing and is developed by NVIDIA, whereas MCP is focused on context provision for LLMs, making them unique in their respective fields but potentially synergistic in specific use cases.
+You should see several concurrent agent runs in the intermediate output which include output similar to:
+```console
+[AGENT]
+Agent input: What is the difference between CUDA and MCP?
+Agent's thoughts:
+Thought: I now know what MCP is. It is the Model Context Protocol, which is a protocol that allows Large Language Models (LLMs) to securely access tools and data sources.
+
+To answer the question, I will compare CUDA and MCP.
+
+CUDA is a parallel computing platform and programming model developed by NVIDIA, while MCP is a protocol for LLMs to access tools and data sources.
+
+The main difference between CUDA and MCP is their purpose and application. CUDA is primarily used for general-purpose parallel computing, while MCP is specifically designed for LLMs to access external tools and data sources.
+
+Final Answer: The main difference between CUDA and MCP is that CUDA is a parallel computing platform and programming model, while MCP is a protocol that allows Large Language Models (LLMs) to securely access tools and data sources.
 ```
 
-**Note**: In the full output, it can be seen that the workflow was executed three times, with three different `Final Answer` sections. The selector then combines them into a single, comprehensive response.
+You may also see that one of the workflow runs "fails" with the following error. You can ignore the error if present as it can happen due to the nature of LLMs.
+
+```console
+[AGENT]
+Agent input: What is the difference between CUDA and MCP?
+Agent's thoughts:
+Thought: I have found information about CUDA and MCP. CUDA is a general-purpose parallel computing platform and programming model developed by NVIDIA, while MCP stands for Model Context Protocol, which is a protocol that enables large language models (LLMs) to securely access tools and data sources.
+
+Action: None
+```
+
+Near the end of the output you should see the following lines indicating that the inference time scaling feature is working as expected.
+```console
+2025-07-31 15:01:06,939 - aiq.experimental.inference_time_scaling.functions.execute_score_select_function - INFO - Beginning selection
+2025-07-31 15:01:08,633 - aiq.experimental.inference_time_scaling.selection.llm_based_output_merging_selector - INFO - Merged output: The main difference between CUDA and MCP is their purpose and scope. CUDA is a general-purpose parallel computing platform and programming model developed by NVIDIA, while MCP stands for Model Context Protocol, which is a protocol that enables large language models (LLMs) to securely access tools and data sources. In essence, CUDA is designed for parallel computing and programming, whereas MCP is specifically designed to facilitate secure access to tools and data sources for Large Language Models. This distinction highlights the unique objectives and applications of each technology, with CUDA focusing on computation and MCP focusing on secure data access for AI models.
+```
+
+The final workflow result should look similar to the following:
+```console
+['CUDA and MCP are two distinct technologies with different purposes and cannot be directly compared. CUDA is a parallel computing platform and programming model, primarily used for compute-intensive tasks such as scientific simulations, data analytics, and machine learning, whereas MCP is an open protocol designed for providing context to Large Language Models (LLMs), particularly for natural language processing and other AI-related tasks. While they serve different purposes, CUDA and MCP share a common goal of enabling developers to create powerful and efficient applications. They are complementary technologies that can be utilized together in certain applications to achieve innovative outcomes, although their differences in design and functionality set them apart. In essence, CUDA focuses on parallel computing and is developed by NVIDIA, whereas MCP is focused on context provision for LLMs, making them unique in their respective fields but potentially synergistic in specific use cases.']
+```

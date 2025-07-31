@@ -60,7 +60,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 
 From the root directory of the NeMo Agent toolkit library, run the following commands:
 ```bash
-uv pip install -e examples/RAG/simple_rag
+uv pip install -e examples/advanced_agents/alert_triage_agent
 ```
 
 ### Set Up API Keys
