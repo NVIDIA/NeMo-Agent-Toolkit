@@ -53,13 +53,11 @@ async def uninstall_packages(packages: list[dict[str, str]]) -> None:
         await stack.enter_async_context(registry_handler.remove(packages=package_name_list))
 
 
-@click.group(name=__name__,
-             invoke_without_command=True,
-             help=("Uninstall an AIQ Toolkit plugin packages from the local environment."))
+@click.group(name=__name__, invoke_without_command=True, help=("Uninstall plugin packages from the local environment."))
 @click.argument("packages", type=str)
 def uninstall_command(packages: str) -> None:
     """
-    Uninstall AIQ Toolkit plugin packages from the local environment.
+    Uninstall plugin packages from the local environment.
     """
 
     packages = packages.split()
