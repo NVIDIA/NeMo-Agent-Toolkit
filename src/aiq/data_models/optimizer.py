@@ -74,6 +74,12 @@ class OptimizerConfig(BaseModel):
         default="harmonic",
     )
 
+    @model_validator(mode="before")
+    def check_prompt_optimization(self, values):
+        if values.get("do_prompt_optimization") and not values.get("trajectory_eval_metric_name"):
+            raise ValueError("If do_prompt_optimization is True, trajectory_eval_metric_name must be set.")
+        return values
+
 
 class OptimizerRunConfig(BaseModel):
     """
