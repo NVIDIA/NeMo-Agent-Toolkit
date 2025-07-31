@@ -84,19 +84,17 @@ And can be used to test the workflow by specifying the dataset in the configurat
 ```yaml
 eval:
   general:
-    datasets:
-      test_verified:
-        _type: json
-        file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
+    dataset:
+      _type: json
+      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
 ```
 
 Alternately you can read any remote dataset by specifying the pandas URL in the configuration file:
 ```yaml
 eval:
-  datasets:
-    test_verified:
-        _type: parquet
-        file_path: "hf://datasets/princeton-nlp/SWE-bench_Verified/data/test-00000-of-00001.parquet"
+  dataset:
+      _type: parquet
+      file_path: hf://datasets/princeton-nlp/SWE-bench_Lite/data/test-00000-of-00001.parquet
 ```
 
 
