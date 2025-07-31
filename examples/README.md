@@ -103,7 +103,7 @@ To run the examples, install the NeMo Agent toolkit from source, if you haven't 
 - **[`simple_rag`](RAG/simple_rag/README.md)**: Complete RAG system with Milvus vector database, document ingestion, and long-term memory using Mem0 platform
 
 ### UI
-Placeholder for UI examples.
+- **[`UI`](UI/README.md)**: Guide for integrating and using the web-based user interface of the NeMo Agent toolkit for interactive workflow management.
 
 ## Documentation Guide Files
 
