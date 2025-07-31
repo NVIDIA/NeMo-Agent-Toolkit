@@ -79,7 +79,7 @@ uv pip install -e examples/frameworks/agno_personal_finance
 ```
 
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. This example also makes use of [SerpApi](https://serpapi.com/) to perform web searches, obtain a SerpApi key go to: [`https://serpapi.com/users/sign_up`](https://serpapi.com/users/sign_up)
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>

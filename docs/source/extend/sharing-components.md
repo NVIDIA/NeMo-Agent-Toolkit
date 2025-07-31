@@ -17,7 +17,7 @@ limitations under the License.
 
 # Sharing NVIDIA NeMo Agent Toolkit Components
 
-Every NeMo Agent toolkit component is packaged inside of an NeMo Agent toolkit plugin and is designed to be sharable with the community of NeMo Agent toolkit  developers. Functions are by far the most common NeMo Agent toolkit component type. In fact, NeMo Agent components include all pieces that leverage an NeMo Agent toolkit registration decorator (e.g. `register_function`, `register_llm_client`, `register_evaluator`, etc.). This guide will discuss the requirements for developing registered components that can be shared, discovered, and integrated leveraged with any NeMo Agent toolkit application.
+Every NeMo Agent toolkit component is packaged inside of a NeMo Agent toolkit plugin and is designed to be sharable with the community of NeMo Agent toolkit  developers. Functions are by far the most common NeMo Agent toolkit component type. In fact, NeMo Agent components include all pieces that leverage a NeMo Agent toolkit registration decorator (e.g. `register_function`, `register_llm_client`, `register_evaluator`, etc.). This guide will discuss the requirements for developing registered components that can be shared, discovered, and integrated leveraged with any NeMo Agent toolkit application.
 
 ## Enabling Local and Remote Discovery
 To begin building a sharable component, do the following:
