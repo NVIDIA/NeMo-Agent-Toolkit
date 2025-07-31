@@ -350,7 +350,7 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
         # output because the ABC has it.
         return True
 
-    def _convert_input(self, value: typing.Any):
+    def _convert_input(self, value: typing.Any) -> InputT:
         if (isinstance(value, self.input_class)):
             return value
 
@@ -373,4 +373,8 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
             return value
 
         # Fallback to the converter
-        return self._converter.try_convert(value, to_type=self.input_class)
+        try:
+            return self._converter.convert(value, to_type=self.input_class)
+        except ValueError as e:
+            # Input parsing should yield a TypeError instead of a ValueError
+            raise TypeError from e

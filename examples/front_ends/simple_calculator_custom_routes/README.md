@@ -93,7 +93,7 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
         conversation_id: str | None = aiq_context.conversation_id
 
     yield FunctionInfo.from_fn(_get_request_attributes,
-                               description="Returns the acquired user defined request attriubutes.")
+                               description="Returns the acquired user defined request attributes.")
 ```
 
 ## Installation and Setup
@@ -128,8 +128,6 @@ The server starts with both standard and custom endpoints:
 - **Standard endpoint**: `POST /generate` - Default Agent toolkit workflow endpoint
 - **Custom endpoint**: `POST /get_request_metadata` - Demonstrates metadata access
 
-
-
 Access comprehensive request metadata:
 
 ```bash
@@ -139,4 +137,10 @@ curl -X 'POST' \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer token123' \
   -d '{"unused": "show me request details"}'
+```
+
+Expected Response:
+
+```console
+{"value":"Method: POST, URL Path: /get_request_metadata, URL Scheme: http, Headers: {'host': 'localhost:8000', 'user-agent': 'curl/8.7.1', 'accept': 'application/json', 'content-type': 'application/json', 'authorization': 'Bearer token123', 'content-length': '37'}, Query Params: {}, Path Params: {}, Client Host: ::1, Client Port: 56922, Cookies: {}, Conversation Id: None"}
 ```

@@ -113,7 +113,7 @@ The Swagger API docs will be available at: [http://localhost:8000/docs](http://l
 
 ### Console
 
-The `aiq start console` command will run an NeMo Agent toolkit workflow from a provided configuration file against inputs supplied
+The `aiq start console` command will run a NeMo Agent toolkit workflow from a provided configuration file against inputs supplied
 at the command line or from file using the `--inputs` and `--input_file` options, respectively. Additionally, fields in
 the configuration file can be overridden by command line using the `--override` flag and dot notation to traverse to the
 configuration hierarchy to the field being overridden. The run command can be useful running one off tests when
@@ -172,7 +172,7 @@ This will start an MCP server exposing the `mcp_retriever_tool` function from th
 
 ## Run
 
-The `aiq run` is an alias for the `aiq start console` command and will run an NeMo Agent toolkit workflow from a provided configuration file against inputs supplied at the
+The `aiq run` is an alias for the `aiq start console` command and will run a NeMo Agent toolkit workflow from a provided configuration file against inputs supplied at the
 command line or from file using the `--inputs` and `--input_file` options, respectively. Additionally, fields in the
 configuration file can be overridden by command line using the `--override` flag and dot notation to traverse to the
 configuration hierarchy to the field being overridden. The run command can be useful running one off tests when
@@ -295,7 +295,7 @@ illustrates is usage:
 $ aiq uninstall --help
 Usage: aiq uninstall [OPTIONS] PACKAGES COMMAND [ARGS]...
 
-  Uninstall an NeMo Agent toolkit plugin packages from the local environment.
+  Uninstall plugin packages from the local environment.
 
 Options:
   --help  Show this message and exit.
@@ -303,7 +303,7 @@ Options:
 
 ## Validate
 
-Running an NeMo Agent toolkit workflow from the CLI requires a valid workflow configuration file. Use the `aiq validate` command to
+Running a NeMo Agent toolkit workflow from the CLI requires a valid workflow configuration file. Use the `aiq validate` command to
 ensure a configuration files has been created with the right settings, components and parameters. It can be useful to
 each components valid configuration settings using the `aiq info components` command and corresponding filters.
 The `aiq validate` help utility illustrates its usage.
@@ -430,7 +430,7 @@ retrieval of information about the locally configured NeMo Agent toolkit environ
 
 ### Components Information
 
-When defining an NeMo Agent toolkit workflow's configuration file, it can be helpful to discover the locally registered components,
+When defining a NeMo Agent toolkit workflow's configuration file, it can be helpful to discover the locally registered components,
 possible configuration settings, and their default values. The `aiq info components` will provide this information in
 tabular format with the following columns.
 
@@ -486,8 +486,7 @@ Options:
 
 ## Configuration Commands
 
-An NeMo Agent toolkit developer may want to configure persistent settings for their development environment. These settings would
-be configured once to setup their development environment so they can focus on software development from that point
+A NeMo Agent toolkit developer may want to configure persistent settings for their development environment. These settings would be configured once to setup their development environment so they can focus on software development from that point
 forward. This section discusses the various configuration settings available for NeMo Agent toolkit developers.
 
 ### Remote Registry Configuration
@@ -596,7 +595,7 @@ Commands:
 #### Publishing NeMo Agent Toolkit Components
 
 NeMo Agent toolkit developers may want to distribute their components with the broader ecosystem. The NeMo Agent toolkit publish CLI utility
-provides a mechanism to publish an NeMo Agent toolkit plugin package to a remote registry channel so that other developers can
+provides a mechanism to publish a NeMo Agent toolkit plugin package to a remote registry channel so that other developers can
 benefit from it's implemented components. Invoking the `aiq registry publish` command will build a package wheel, gather
 all component metadata, and transmit to the specified remote registry by channel name. Note, a package must be first
 installed locally so the discovery hooks can pull in necessary NeMo Agent toolkit component metadata.
@@ -654,7 +653,7 @@ Options:
 #### Pulling in NeMo Agent Toolkit Components
 Once a useful NeMo Agent toolkit component has been discovered using the `aiq registry search` command, the containing package can be
 pulled in and installed from a configured remote registry, so that it can be used withing the local NeMo Agent toolkit environment.
-Once installed, all components in the package can be referenced by name in an NeMo Agent toolkit workflow YAML configuration file.
+Once installed, all components in the package can be referenced by name in a NeMo Agent toolkit workflow YAML configuration file.
 In many cases, components can be stitched together in YAML without having to write much integration code.
 
 The `aiq registry pull --help` command provides an overview of its usage:

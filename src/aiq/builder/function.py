@@ -76,11 +76,16 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         -------
         _T
             The converted value.
+
+        Raises
+        ------
+        ValueError
+            If the value cannot be converted to the specified type (when `to_type` is specified).
         """
 
         return self._converter.convert(value, to_type=to_type)
 
-    def try_convert(self, value: typing.Any, to_type: type[_T]) -> _T:
+    def try_convert(self, value: typing.Any, to_type: type[_T]) -> _T | typing.Any:
         """
         Converts the given value to the specified type using graceful error handling.
         If conversion fails, returns the original value and continues processing.
@@ -94,7 +99,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
 
         Returns
         -------
-        _T
+        _T | typing.Any
             The converted value, or original value if conversion fails.
         """
         return self._converter.try_convert(value, to_type=to_type)
@@ -129,17 +134,22 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         -------
         typing.Any
             The output of the function optionally converted to the specified type.
+
+        Raises
+        ------
+        ValueError
+            If the output of the function cannot be converted to the specified type.
         """
 
         with self._context.push_active_function(self.instance_name,
                                                 input_data=value) as manager:  # Set the current invocation context
             try:
-                converted_input: InputT = self._convert_input(value)  # type: ignore
+                converted_input: InputT = self._convert_input(value)
 
                 result = await self._ainvoke(converted_input)
 
                 if to_type is not None and not isinstance(result, to_type):
-                    result = self._converter.try_convert(result, to_type=to_type)
+                    result = self.convert(result, to_type)
 
                 manager.set_output(result)
 
@@ -215,18 +225,23 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         ------
         typing.Any
             The output of the function optionally converted to the specified type.
+
+        Raises
+        ------
+        ValueError
+            If the output of the function cannot be converted to the specified type (when `to_type` is specified).
         """
 
         with self._context.push_active_function(self.instance_name, input_data=value) as manager:
             try:
-                converted_input: InputT = self._convert_input(value)  # type: ignore
+                converted_input: InputT = self._convert_input(value)
 
                 # Collect streaming outputs to capture the final result
                 final_output: list[typing.Any] = []
 
                 async for data in self._astream(converted_input):
                     if to_type is not None and not isinstance(data, to_type):
-                        converted_data = self._converter.try_convert(data, to_type=to_type)
+                        converted_data = self.convert(data, to_type=to_type)
                         final_output.append(converted_data)
                         yield converted_data
                     else:

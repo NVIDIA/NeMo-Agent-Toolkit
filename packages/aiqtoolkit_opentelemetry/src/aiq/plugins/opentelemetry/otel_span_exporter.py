@@ -114,15 +114,13 @@ class OtelSpanExporter(SpanExporter[Span, OtelSpan]):  # pylint: disable=R0901
             resource_attributes = {}
         self._resource = Resource(attributes=resource_attributes)
 
-        self._batching_processor = OtelSpanBatchProcessor(batch_size=batch_size,
-                                                          flush_interval=flush_interval,
-                                                          max_queue_size=max_queue_size,
-                                                          drop_on_overflow=drop_on_overflow,
-                                                          shutdown_timeout=shutdown_timeout,
-                                                          done_callback=self.export_processed)
-
         self.add_processor(SpanToOtelProcessor())
-        self.add_processor(self._batching_processor)
+        self.add_processor(
+            OtelSpanBatchProcessor(batch_size=batch_size,
+                                   flush_interval=flush_interval,
+                                   max_queue_size=max_queue_size,
+                                   drop_on_overflow=drop_on_overflow,
+                                   shutdown_timeout=shutdown_timeout))
 
     async def export_processed(self, item: OtelSpan | list[OtelSpan]) -> None:
         """Export the processed span(s).

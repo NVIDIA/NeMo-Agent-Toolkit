@@ -117,7 +117,7 @@ export AIQ_OAUTH_CLIENT_SECRET=<your_client_secret>
 In a new terminal, serve the agent using the following command:
 
 ```bash
-aiq serve --config_file=examples/authentication/simple_auth/configs/config.yml
+aiq serve --config_file=examples/front_ends/simple_auth/configs/config.yml
 ```
 
 This will start a FastAPI server on `http://localhost:8000` that listens for requests from the UI and

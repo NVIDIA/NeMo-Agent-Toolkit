@@ -127,7 +127,7 @@ eval:
     output_dir: ./.tmp/aiq/examples/getting_started/simple_web_query/
     dataset:
       _type: json
-      file_path: examples/getting_started/simple_web_query/data/langsmith.json
+      file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
     profiler:
       # Compute inter query token uniqueness
       token_uniqueness_forecast: true
@@ -180,7 +180,7 @@ Please also note the `output_dir` parameter which specifies the directory where 
 To run the profiler, simply run the `aiq eval` command with the workflow configuration file. The profiler will collect usage statistics and store them in the output directory specified in the configuration file.
 
 ```bash
-aiq eval --config_file examples/getting_started/simple_web_query/configs/eval_config.yml
+aiq eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
 
 This will, based on the above configuration, produce the following files in the `output_dir` specified in the configuration file:
