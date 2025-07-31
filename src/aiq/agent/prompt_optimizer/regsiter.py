@@ -6,7 +6,7 @@ from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
-from aiq.experimental.optimizer.prompt_optimizer import PromptOptimizerInputSchema
+from aiq.experimental.parameter_optimization.prompt_optimizer import PromptOptimizerInputSchema
 
 
 class PromptOptimizerConfig(FunctionBaseConfig, name="prompt_optimizer"):

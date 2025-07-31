@@ -18,9 +18,9 @@ import logging
 from pydantic import BaseModel
 
 from aiq.data_models.optimizer import OptimizerRunConfig
-from aiq.experimental.optimizer.optimizable_utils import walk_optimizables
-from aiq.experimental.optimizer.parameter_optimizer import optimize_parameters
-from aiq.experimental.optimizer.prompt_optimizer import optimize_prompts
+from aiq.experimental.parameter_optimization.optimizable_utils import walk_optimizables
+from aiq.experimental.parameter_optimization.parameter_optimizer import optimize_parameters
+from aiq.experimental.parameter_optimization.prompt_optimizer import optimize_prompts
 from aiq.runtime.loader import load_config
 
 logger = logging.getLogger(__name__)
