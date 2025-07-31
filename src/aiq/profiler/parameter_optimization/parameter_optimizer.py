@@ -88,15 +88,15 @@ def optimize_parameters(
                 metric = next(r[1] for r in scores.evaluation_results if r[0] == metric_name)
                 values.append(metric.average_score)
 
-            with (out_dir / f"config_numeric_trial_{trial._trial_id}_run_{trial_idx}.yml").open("w") as fh:
-                yaml.dump(cfg_trial.model_dump(), fh)
-
             return values
 
         # Create tasks for all evaluations
         async def _run_all_evals():
             tasks = [_single_eval(i) for i in range(reps)]
             return await asyncio.gather(*tasks)
+
+        with (out_dir / f"config_numeric_trial_{trial._trial_id}.yml").open("w") as fh:
+            yaml.dump(cfg_trial.model_dump(), fh)
 
         all_scores = asyncio.run(_run_all_evals())
         return [sum(run[i] for run in all_scores) / reps for i in range(len(eval_metrics))]
