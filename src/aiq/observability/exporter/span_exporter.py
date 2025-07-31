@@ -262,3 +262,4 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
         self._outstanding_spans.clear()  # type: ignore
         self._span_stack.clear()  # type: ignore
         self._metadata_stack.clear()  # type: ignore
+        await super()._cleanup()

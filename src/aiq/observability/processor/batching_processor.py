@@ -23,17 +23,17 @@ from typing import Any
 from typing import Generic
 from typing import TypeVar
 
-from aiq.observability.processor.processor import Processor
+from aiq.observability.processor.callback_processor import CallbackProcessor
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
 
 
-class BatchingProcessor(Processor[T, list[T]], Generic[T]):
+class BatchingProcessor(CallbackProcessor[T, list[T]], Generic[T]):
     """Pass-through batching processor that accumulates items and outputs batched lists.
 
-    This processor fits properly into the generics design by implementing Processor[T, List[T]].
+    This processor extends CallbackProcessor[T, List[T]] to provide batching functionality.
     It accumulates individual items and outputs them as batches when size or time thresholds
     are met. The batched output continues through the processing pipeline.
 
@@ -43,25 +43,31 @@ class BatchingProcessor(Processor[T, list[T]], Generic[T]):
     Key Features:
     - Pass-through design: Processor[T, List[T]]
     - Size-based and time-based batching
-    - Fits into generics processing pipeline design
+    - Pipeline flow: batches continue through downstream processors
     - GUARANTEED: No items lost during cleanup
     - Comprehensive statistics and monitoring
     - Proper cleanup and shutdown handling
     - High-performance async implementation
     - Back-pressure handling with queue limits
 
+    Pipeline Flow:
+        Normal processing: Individual items → BatchingProcessor → List[items] → downstream processors → export
+        Time-based flush: Scheduled batches automatically continue through remaining pipeline
+        Shutdown: Final batch immediately routed through remaining pipeline
+
     Cleanup Guarantee:
-        When ProcessingExporter._cleanup() calls shutdown(), this processor:
+        When shutdown() is called, this processor:
         1. Stops accepting new items
-        2. Processes all queued items as final batch
-        3. Returns final batch to continue through pipeline
-        4. Ensures zero data loss during shutdown
+        2. Creates final batch from all queued items
+        3. Immediately routes final batch through remaining pipeline via callback
+        4. Ensures zero data loss with no external coordination needed
 
     Usage in Pipeline:
         ```python
-        # Individual spans → Batched spans → Continue processing
-        exporter.add_processor(BatchingProcessor[Span](batch_size=100))
-        exporter.add_processor(BatchedSpanProcessor())  # Processes List[Span]
+        # Individual spans → Batched spans → Continue through downstream processors
+        exporter.add_processor(BatchingProcessor[Span](batch_size=100))  # Auto-wired with pipeline callback
+        exporter.add_processor(FilterProcessor())  # Processes List[Span] from batching
+        exporter.add_processor(TransformProcessor())  # Further processing
         ```
 
     Args:
@@ -70,6 +76,10 @@ class BatchingProcessor(Processor[T, list[T]], Generic[T]):
         max_queue_size: Maximum items to queue before blocking (default: 1000)
         drop_on_overflow: If True, drop items when queue is full (default: False)
         shutdown_timeout: Max seconds to wait for final batch processing (default: 10.0)
+
+    Note:
+        The done_callback for pipeline integration is automatically set by ProcessingExporter
+        when the processor is added to a pipeline. For standalone usage, call set_done_callback().
     """
 
     def __init__(self,
@@ -77,14 +87,13 @@ class BatchingProcessor(Processor[T, list[T]], Generic[T]):
                  flush_interval: float = 5.0,
                  max_queue_size: int = 1000,
                  drop_on_overflow: bool = False,
-                 shutdown_timeout: float = 10.0,
-                 done_callback: Callable[[list[T]], Awaitable[None]] | None = None):
+                 shutdown_timeout: float = 10.0):
         self._batch_size = batch_size
         self._flush_interval = flush_interval
         self._max_queue_size = max_queue_size
         self._drop_on_overflow = drop_on_overflow
         self._shutdown_timeout = shutdown_timeout
-        self._done_callback = done_callback
+        self._done_callback: Callable[[list[T]], Awaitable[None]] | None = None
 
         # Batching state
         self._batch_queue: deque[T] = deque()
@@ -93,11 +102,7 @@ class BatchingProcessor(Processor[T, list[T]], Generic[T]):
         self._batch_lock = asyncio.Lock()
         self._shutdown_requested = False
         self._shutdown_complete = False
-        self._shutdown_complete_event: asyncio.Event | None = None
-
-        # Final batch handling for cleanup
-        self._final_batch: list[T] | None = None
-        self._final_batch_processed = False
+        self._shutdown_complete_event = asyncio.Event()
 
         # Callback for immediate export of scheduled batches
         self._done = None
@@ -167,7 +172,11 @@ class BatchingProcessor(Processor[T, list[T]], Generic[T]):
             return []
 
     def set_done_callback(self, callback: Callable[[list[T]], Awaitable[None]]):
-        """Set callback function for immediate export of scheduled batches."""
+        """Set callback function for routing batches through the remaining pipeline.
+
+        This is automatically set by ProcessingExporter.add_processor() to continue
+        batches through downstream processors before final export.
+        """
         self._done_callback = callback
 
     async def _schedule_flush(self):
@@ -178,15 +187,15 @@ class BatchingProcessor(Processor[T, list[T]], Generic[T]):
                 if not self._shutdown_requested and self._batch_queue:
                     batch = await self._create_batch()
                     if batch:
-                        # Immediately export scheduled batches via callback
+                        # Route scheduled batches through pipeline via callback
                         if self._done_callback is not None:
                             try:
                                 await self._done_callback(batch)
-                                logger.debug("Scheduled flush exported batch of %d items", len(batch))
+                                logger.debug("Scheduled flush routed batch of %d items through pipeline", len(batch))
                             except Exception as e:
-                                logger.error("Error exporting scheduled batch: %s", e, exc_info=True)
+                                logger.error("Error routing scheduled batch through pipeline: %s", e, exc_info=True)
                         else:
-                            logger.warning("Scheduled flush created batch of %d items but no export callback set",
+                            logger.warning("Scheduled flush created batch of %d items but no pipeline callback set",
                                            len(batch))
         except asyncio.CancelledError:
             pass
@@ -223,11 +232,8 @@ class BatchingProcessor(Processor[T, list[T]], Generic[T]):
         """Shutdown the processor and ensure all items are processed.
 
         CRITICAL: This method is called by ProcessingExporter._cleanup() to ensure
-        no items are lost during shutdown. It creates a final batch from any
-        remaining items and stores it for processing.
-
-        The final batch will be processed by the next process() call or can be
-        retrieved via get_final_batch().
+        no items are lost during shutdown. It immediately routes any remaining
+        items as a final batch through the rest of the processing pipeline.
         """
         if self._shutdown_requested:
             logger.debug("Shutdown already requested, waiting for completion")
@@ -251,13 +257,26 @@ class BatchingProcessor(Processor[T, list[T]], Generic[T]):
                 except asyncio.CancelledError:
                     pass
 
-            # Create final batch from remaining items
+            # Create and route final batch through pipeline
             async with self._batch_lock:
                 if self._batch_queue:
-                    self._final_batch = await self._create_batch()
-                    logger.info("Created final batch of %d items during shutdown", len(self._final_batch))
+                    final_batch = await self._create_batch()
+                    logger.info("Created final batch of %d items during shutdown", len(final_batch))
+
+                    # Route final batch through pipeline via callback
+                    if self._done_callback is not None:
+                        try:
+                            await self._done_callback(final_batch)
+                            logger.info("Successfully routed final batch of %d items through pipeline during shutdown",
+                                        len(final_batch))
+                        except Exception as e:
+                            logger.error("Error routing final batch through pipeline during shutdown: %s",
+                                         e,
+                                         exc_info=True)
+                    else:
+                        logger.warning("Final batch of %d items created during shutdown but no pipeline callback set",
+                                       len(final_batch))
                 else:
-                    self._final_batch = []
                     logger.info("No items remaining during shutdown")
 
             self._shutdown_complete = True
@@ -268,30 +287,6 @@ class BatchingProcessor(Processor[T, list[T]], Generic[T]):
             logger.error("Error during BatchingProcessor shutdown: %s", e, exc_info=True)
             self._shutdown_complete = True
             self._shutdown_complete_event.set()
-
-    def get_final_batch(self) -> list[T]:
-        """Get the final batch created during shutdown.
-
-        This method allows the exporter to retrieve and process any items
-        that were queued when shutdown was called.
-
-        Returns:
-            List[T]: Final batch of items, empty list if none
-        """
-        if self._final_batch is not None:
-            final_batch = self._final_batch
-            self._final_batch = None  # Clear to avoid double processing
-            self._final_batch_processed = True
-            return final_batch
-        return []
-
-    def has_final_batch(self) -> bool:
-        """Check if there's a final batch waiting to be processed.
-
-        Returns:
-            bool: True if final batch exists and hasn't been processed
-        """
-        return self._final_batch is not None and not self._final_batch_processed
 
     def get_stats(self) -> dict[str, Any]:
         """Get comprehensive batching statistics."""
@@ -309,8 +304,6 @@ class BatchingProcessor(Processor[T, list[T]], Generic[T]):
             "shutdown_batches": self._shutdown_batches,
             "shutdown_requested": self._shutdown_requested,
             "shutdown_complete": self._shutdown_complete,
-            "final_batch_size": len(self._final_batch) if self._final_batch else 0,
-            "final_batch_processed": self._final_batch_processed,
             "avg_items_per_batch": self._items_processed / max(1, self._batches_created),
             "drop_rate": self._items_dropped / max(1, self._items_processed) * 100 if self._items_processed > 0 else 0
         }

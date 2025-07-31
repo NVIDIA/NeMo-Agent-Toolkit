@@ -63,6 +63,9 @@ class Processor(Generic[InputT, OutputT], TypeIntrospectionMixin, ABC):
         """Process an item and return a potentially different type.
 
         Args:
-            item: The item to process
+            item (InputT): The item to process
+
+        Returns:
+            OutputT: The processed item
         """
         pass

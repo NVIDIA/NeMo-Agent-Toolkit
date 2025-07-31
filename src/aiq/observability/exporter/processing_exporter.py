@@ -17,6 +17,7 @@ import asyncio
 import logging
 from abc import abstractmethod
 from collections.abc import Coroutine
+from typing import Any
 from typing import Generic
 from typing import TypeVar
 
@@ -24,6 +25,7 @@ from aiq.builder.context import AIQContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.observability.mixin.type_introspection_mixin import TypeIntrospectionMixin
+from aiq.observability.processor.callback_processor import CallbackProcessor
 from aiq.observability.processor.processor import Processor
 from aiq.utils.type_utils import DecomposedType
 from aiq.utils.type_utils import override
@@ -89,6 +91,14 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
                     self._processors[-1].output_type)
         self._processors.append(processor)
 
+        # Set up pipeline continuation callback for processors that support it
+        if isinstance(processor, CallbackProcessor):
+            # Create a callback that continues processing through the rest of the pipeline
+            async def pipeline_callback(item):
+                await self._continue_pipeline_after(processor, item)
+
+            processor.set_done_callback(pipeline_callback)
+
     def remove_processor(self, processor: Processor) -> None:
         """Remove a processor from the processing pipeline.
 
@@ -143,20 +153,82 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         """Process item through all registered processors.
 
         Args:
-            item: The item to process (starts as PipelineInputT, can transform to PipelineOutputT)
+            item (PipelineInputT): The item to process (starts as PipelineInputT, can transform to PipelineOutputT)
+
+        Returns:
+            PipelineOutputT: The processed item after running through all processors
+        """
+        return await self._process_through_processors(self._processors, item)  # type: ignore
+
+    async def _process_through_processors(self, processors: list[Processor], item: Any) -> Any:
+        """Process an item through a list of processors.
+
+        Args:
+            processors (list[Processor]): List of processors to run the item through
+            item (Any): The item to process
 
         Returns:
             The processed item after running through all processors
         """
         processed_item = item
-        for processor in self._processors:
+        for processor in processors:
             try:
                 processed_item = await processor.process(processed_item)
             except Exception as e:
                 logger.error("Error in processor %s: %s", processor.__class__.__name__, e, exc_info=True)
-                # Continue with unprocessed item rather than failing the export
+                # Continue with unprocessed item rather than failing
+        return processed_item
 
-        return processed_item  # type: ignore
+    async def _export_final_item(self, processed_item: Any, raise_on_invalid: bool = False) -> None:
+        """Export a processed item with proper type handling.
+
+        Args:
+            processed_item (Any): The item to export
+            raise_on_invalid (bool): If True, raise ValueError for invalid types instead of logging warning
+        """
+        if isinstance(processed_item, list):
+            if len(processed_item) > 0:
+                await self.export_processed(processed_item)
+            else:
+                logger.debug("Skipping export of empty batch")
+        elif isinstance(processed_item, self.output_class):
+            await self.export_processed(processed_item)
+        else:
+            if raise_on_invalid:
+                raise ValueError(f"Processed item {processed_item} is not a valid output type. "
+                                 f"Expected {self.output_class} or list[{self.output_class}]")
+            logger.warning("Processed item %s is not a valid output type for export", processed_item)
+
+    async def _continue_pipeline_after(self, source_processor: Processor, item: Any) -> None:
+        """Continue processing an item through the pipeline after a specific processor.
+
+        This is used when processors (like BatchingProcessor) need to inject items
+        back into the pipeline flow to continue through downstream processors.
+
+        Args:
+            source_processor (Processor): The processor that generated the item
+            item (Any): The item to continue processing through the remaining pipeline
+        """
+        try:
+            # Find the source processor's position
+            try:
+                source_index = self._processors.index(source_processor)
+            except ValueError:
+                logger.error("Source processor %s not found in pipeline", source_processor.__class__.__name__)
+                return
+
+            # Process through remaining processors (skip the source processor)
+            remaining_processors = self._processors[source_index + 1:]
+            processed_item = await self._process_through_processors(remaining_processors, item)
+
+            # Export the final result
+            await self._export_final_item(processed_item)
+
+        except Exception as e:
+            logger.error("Failed to continue pipeline processing after %s: %s",
+                         source_processor.__class__.__name__,
+                         e,
+                         exc_info=True)
 
     async def _export_with_processing(self, item: PipelineInputT) -> None:
         """Export an item after processing it through the pipeline.
@@ -169,20 +241,11 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             final_item: PipelineOutputT = await self._process_pipeline(item)
 
             # Handle different output types from batch processors
-            if isinstance(final_item, list):
-                # Empty lists from batch processors should be skipped, not exported
-                if len(final_item) == 0:
-                    logger.debug("Skipping export of empty batch from processor pipeline")
-                    return
+            if isinstance(final_item, list) and len(final_item) == 0:
+                logger.debug("Skipping export of empty batch from processor pipeline")
+                return
 
-                # Non-empty lists should be exported (batch processors)
-                await self.export_processed(final_item)
-            elif isinstance(final_item, self.output_class):
-                # Single items should be exported normally
-                await self.export_processed(final_item)
-            else:
-                raise ValueError(f"Processed item {final_item} is not a valid output type. "
-                                 f"Expected {self.output_class} or list[{self.output_class}]")
+            await self._export_final_item(final_item, raise_on_invalid=True)
 
         except Exception as e:
             logger.error("Failed to export item '%s': %s", item, e, exc_info=True)
@@ -235,35 +298,25 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
 
     @override
     async def _cleanup(self):
-        """Enhanced cleanup that shuts down all shutdown-aware processors."""
+        """Enhanced cleanup that shuts down all shutdown-aware processors.
+
+        Each processor is responsible for its own cleanup, including routing
+        any final batches through the remaining pipeline via their done callbacks.
+        """
         # Shutdown all processors that support it
-        if hasattr(self, '_processors'):
-            shutdown_tasks = []
-            for processor in getattr(self, '_processors', []):
-                if hasattr(processor, 'shutdown'):
-                    logger.debug("Shutting down processor: %s", processor.__class__.__name__)
-                    shutdown_tasks.append(processor.shutdown())
+        shutdown_tasks = []
+        for processor in getattr(self, '_processors', []):
+            shutdown_method = getattr(processor, 'shutdown', None)
+            if shutdown_method:
+                logger.debug("Shutting down processor: %s", processor.__class__.__name__)
+                shutdown_tasks.append(shutdown_method())
 
-            if shutdown_tasks:
-                try:
-                    await asyncio.gather(*shutdown_tasks, return_exceptions=True)
-                    logger.info("Successfully shut down %d processors", len(shutdown_tasks))
-                except Exception as e:
-                    logger.error("Error shutting down processors: %s", e, exc_info=True)
-
-            # Process final batches from batch processors
-            for processor in getattr(self, '_processors', []):
-                if hasattr(processor, 'has_final_batch') and hasattr(processor, 'get_final_batch'):
-                    if processor.has_final_batch():
-                        final_batch = processor.get_final_batch()
-                        if final_batch:
-                            logger.info("Processing final batch of %d items from %s during cleanup",
-                                        len(final_batch),
-                                        processor.__class__.__name__)
-                            try:
-                                await self.export_processed(final_batch)
-                            except Exception as e:
-                                logger.error("Error processing final batch during cleanup: %s", e, exc_info=True)
+        if shutdown_tasks:
+            try:
+                await asyncio.gather(*shutdown_tasks, return_exceptions=True)
+                logger.info("Successfully shut down %d processors", len(shutdown_tasks))
+            except Exception as e:
+                logger.error("Error shutting down processors: %s", e, exc_info=True)
 
         # Call parent cleanup
         await super()._cleanup()
