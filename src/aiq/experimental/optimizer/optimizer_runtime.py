@@ -18,7 +18,6 @@ import logging
 from pydantic import BaseModel
 
 from aiq.data_models.optimizer import OptimizerRunConfig
-from aiq.experimental.decorators.experimental_warning_decorator import aiq_experimental
 from aiq.experimental.optimizer.optimizable_utils import walk_optimizables
 from aiq.experimental.optimizer.parameter_optimizer import optimize_parameters
 from aiq.experimental.optimizer.prompt_optimizer import optimize_prompts
@@ -26,7 +25,7 @@ from aiq.runtime.loader import load_config
 
 logger = logging.getLogger(__name__)
 
-@aiq_experimental(feature_name="Optimizer")
+
 async def optimize_config(opt_run_config: OptimizerRunConfig):
     """Entry-point called by the CLI or runtime."""
     # ---------------- 1. load / normalise ---------------- #
