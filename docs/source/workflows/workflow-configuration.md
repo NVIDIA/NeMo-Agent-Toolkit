@@ -109,7 +109,7 @@ This section configures integration of memory layers with tools such as the [Mem
 
 ### `retrievers`
 
-This section configures retrievers for vector stores. It follows the same format as the `llms` section. Refer to the `examples/rag_demo` example workflow for an example on how this is used.
+This section configures retrievers for vector stores. It follows the same format as the `llms` section. Refer to the `examples/RAG/simple_rag` example workflow for an example on how this is used.
 
 ### Environment Variable Interpolation
 

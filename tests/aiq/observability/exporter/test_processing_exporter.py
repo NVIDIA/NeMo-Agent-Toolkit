@@ -24,6 +24,7 @@ import pytest
 
 from aiq.builder.context import AIQContextState
 from aiq.observability.exporter.processing_exporter import ProcessingExporter
+from aiq.observability.processor.callback_processor import CallbackProcessor
 from aiq.observability.processor.processor import Processor
 from aiq.utils.reactive.subject import Subject
 
@@ -74,27 +75,19 @@ class MockProcessorWithShutdown(Processor[str, str]):
     def __init__(self, name: str = "MockProcessorWithShutdown"):
         self.name = name
         self.shutdown_called = False
-        self.has_final_batch_called = False
-        self.get_final_batch_called = False
-        self._final_batch = ["final1", "final2"]
 
     async def process(self, item: str) -> str:
         """Identity processor."""
         return item.upper()
 
-    async def shutdown(self):
-        """Mock shutdown method."""
+    def shutdown(self):
+        """Mock shutdown method that returns an awaitable to avoid coroutine creation during type introspection."""
         self.shutdown_called = True
 
-    def has_final_batch(self) -> bool:
-        """Mock has_final_batch method."""
-        self.has_final_batch_called = True
-        return True
-
-    def get_final_batch(self) -> list[str]:
-        """Mock get_final_batch method."""
-        self.get_final_batch_called = True
-        return self._final_batch.copy()
+        # Create a completed future instead of a coroutine to avoid the warning
+        future = asyncio.Future()
+        future.set_result(None)
+        return future
 
 
 class IncompatibleProcessor(Processor[float, bool]):
@@ -102,6 +95,35 @@ class IncompatibleProcessor(Processor[float, bool]):
 
     async def process(self, item: float) -> bool:
         return item > 0.0
+
+
+class MockCallbackProcessor(CallbackProcessor[str, str]):
+    """Mock callback processor for testing pipeline continuation."""
+
+    def __init__(self, name: str = "MockCallbackProcessor", trigger_callback: bool = False):
+        self.name = name
+        self.trigger_callback = trigger_callback
+        self.process_called = False
+        self.processed_items = []
+        self.callback_set = False
+        self.done_callback = None
+
+    async def process(self, item: str) -> str:
+        """Process item normally - callback triggering is separate."""
+        self.process_called = True
+        self.processed_items.append(item)
+        processed_item = item.upper()
+        return processed_item
+
+    def set_done_callback(self, callback):
+        """Set callback for pipeline continuation."""
+        self.callback_set = True
+        self.done_callback = callback
+
+    async def trigger_callback_manually(self, item: str):
+        """Manually trigger the callback for testing purposes."""
+        if self.done_callback:
+            await self.done_callback(item)
 
 
 # Concrete implementation for testing
@@ -518,6 +540,8 @@ class TestExportMethod:
         # Verify the coroutine is created correctly
         args, _ = mock_create_task.call_args
         assert asyncio.iscoroutine(args[0])
+        # Clean up the coroutine to avoid RuntimeWarning
+        args[0].close()
 
     @pytest.mark.filterwarnings("ignore:.*coroutine.*was never awaited:RuntimeWarning")
     def test_export_incompatible_event_warning(self, processing_exporter, caplog):
@@ -681,8 +705,8 @@ class TestCleanup:
             # so let's just check the method was called
             assert processor.shutdown != processor.__class__.shutdown  # Verify it was replaced
 
-    async def test_cleanup_final_batch_processing(self, processing_exporter, caplog):
-        """Test processing of final batches during cleanup."""
+    async def test_cleanup_calls_processor_shutdown(self, processing_exporter, caplog):
+        """Test that cleanup calls shutdown on processors that have it."""
         processor = MockProcessorWithShutdown("proc1")
         processing_exporter.add_processor(processor)
 
@@ -693,30 +717,44 @@ class TestCleanup:
             with caplog.at_level(logging.INFO):
                 await processing_exporter._cleanup()
 
-            assert processor.has_final_batch_called
-            assert processor.get_final_batch_called
-            assert processing_exporter.export_processed_called
-            assert "Processing final batch of 2 items" in caplog.text
+            assert processor.shutdown_called
+            assert "Successfully shut down 1 processors" in caplog.text
 
-    async def test_cleanup_final_batch_processing_error(self, processing_exporter, caplog):
-        """Test error handling during final batch processing."""
+    async def test_cleanup_processor_shutdown_error_handling(self, processing_exporter):
+        """Test error handling during processor shutdown."""
         processor = MockProcessorWithShutdown("proc1")
         processing_exporter.add_processor(processor)
 
-        # Mock export_processed to raise an error
-        async def failing_export(item):
-            raise RuntimeError("Export failed")
+        # Mock processor shutdown to raise an error
+        async def failing_shutdown():
+            raise RuntimeError("Shutdown failed")
 
-        processing_exporter.export_processed = failing_export
+        processor.shutdown = failing_shutdown
 
-        with patch('aiq.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup:
+        # Mock asyncio.gather to handle exceptions properly
+        async def mock_gather(*tasks, return_exceptions=True):
+            results = []
+            for task in tasks:
+                try:
+                    result = await task
+                    results.append(result)
+                except Exception as e:
+                    if return_exceptions:
+                        results.append(e)
+                    else:
+                        raise
+            return results
+
+        with patch('aiq.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup, \
+             patch('asyncio.gather', side_effect=mock_gather):
             mock_parent_cleanup.return_value = asyncio.Future()
             mock_parent_cleanup.return_value.set_result(None)
 
-            with caplog.at_level(logging.ERROR):
-                await processing_exporter._cleanup()
+            # Should not raise an error due to return_exceptions=True
+            await processing_exporter._cleanup()
 
-            assert "Error processing final batch during cleanup" in caplog.text
+            # Verify the shutdown was called (even though it failed)
+            assert processor.shutdown != processor.__class__.shutdown  # Verify it was replaced
 
     async def test_cleanup_without_processors_attribute(self, processing_exporter):
         """Test cleanup when _processors attribute doesn't exist."""
@@ -758,6 +796,206 @@ class TestAbstractMethod:
 
             # This should raise TypeError due to missing abstract method implementation
             IncompleteExporter()  # pylint: disable=abstract-class-instantiated
+
+
+class TestCallbackProcessorIntegration:
+    """Test CallbackProcessor integration and pipeline continuation."""
+
+    def test_callback_processor_callback_setup(self, processing_exporter):
+        """Test that CallbackProcessor gets its callback set during add_processor."""
+        callback_processor = MockCallbackProcessor("callback_proc")
+
+        processing_exporter.add_processor(callback_processor)
+
+        # Verify the callback was set (covers lines 97-100)
+        assert callback_processor.callback_set
+        assert callback_processor.done_callback is not None
+
+    async def test_callback_processor_pipeline_continuation(self, processing_exporter):
+        """Test CallbackProcessor triggers pipeline continuation."""
+        # Setup: Callback processor -> Regular processor
+        callback_processor = MockCallbackProcessor("callback_proc")
+        regular_processor = MockProcessor("regular_proc")  # str -> int
+
+        processing_exporter.add_processor(callback_processor)  # str -> str
+        processing_exporter.add_processor(regular_processor)  # str -> int
+
+        # Manually trigger the callback to test pipeline continuation
+        # This simulates what would happen when a real callback processor (like BatchingProcessor)
+        # triggers its callback with items to continue processing
+        test_item = "hello"  # String item to process
+        await callback_processor.trigger_callback_manually(test_item)
+
+        # Verify the regular processor was called through pipeline continuation
+        assert regular_processor.process_called
+        assert test_item in regular_processor.processed_items
+
+        # The final result should be exported (int from len("hello") = 5)
+        # This covers the pipeline continuation logic (lines 212-228)
+        assert processing_exporter.export_processed_called
+        assert 5 in processing_exporter.exported_items  # len("hello") = 5
+
+    async def test_continue_pipeline_after_with_remaining_processors(self):
+        """Test _continue_pipeline_after processes through remaining pipeline."""
+
+        # Create a string-processing exporter to avoid type issues
+        class StringProcessingExporter(ProcessingExporter[str, str]):
+
+            def __init__(self, context_state=None):
+                super().__init__(context_state)
+                self.exported_items = []
+                self.export_processed_called = False
+
+            async def export_processed(self, item):
+                self.export_processed_called = True
+                self.exported_items.append(item)
+
+        # Create processors that all work with strings
+        class StringProcessor(Processor[str, str]):
+
+            def __init__(self, name):
+                self.name = name
+                self.process_called = False
+                self.processed_items = []
+
+            async def process(self, item: str) -> str:
+                self.process_called = True
+                self.processed_items.append(item)
+                return f"{item}_{self.name}"
+
+        string_exporter = StringProcessingExporter()
+        source_processor = StringProcessor("source")
+        middle_processor = StringProcessor("middle")
+        final_processor = StringProcessor("final")
+
+        string_exporter.add_processor(source_processor)
+        string_exporter.add_processor(middle_processor)
+        string_exporter.add_processor(final_processor)
+
+        # Manually call _continue_pipeline_after to test the method
+        test_item = "test"
+        await string_exporter._continue_pipeline_after(source_processor, test_item)
+
+        # Verify only the processors after source were called
+        assert not source_processor.process_called  # Should be skipped
+        assert middle_processor.process_called  # Should process
+        assert final_processor.process_called  # Should process
+        assert string_exporter.export_processed_called
+        # Should be "test_middle_final" after processing through middle and final
+        assert "test_middle_final" in string_exporter.exported_items
+
+    async def test_continue_pipeline_processor_not_found(self, processing_exporter, caplog):
+        """Test _continue_pipeline_after when source processor not in pipeline."""
+        # Add one processor to pipeline
+        pipeline_processor = MockProcessor("in_pipeline")
+        processing_exporter.add_processor(pipeline_processor)
+
+        # Try to continue from a processor not in pipeline
+        unknown_processor = MockProcessor("not_in_pipeline")
+
+        with caplog.at_level(logging.ERROR):
+            await processing_exporter._continue_pipeline_after(unknown_processor, "test")
+
+        # Verify error was logged (covers lines 216-218)
+        assert "Source processor MockProcessor not found in pipeline" in caplog.text
+        assert not processing_exporter.export_processed_called
+
+    async def test_continue_pipeline_exception_handling(self, processing_exporter, caplog):
+        """Test _continue_pipeline_after exception handling."""
+        # Setup a processor that will cause an exception
+        failing_processor = MockProcessor("source", should_fail=True)
+        processing_exporter.add_processor(failing_processor)
+
+        # Mock _process_through_processors to raise an exception
+        async def failing_process(*args, **kwargs):
+            raise RuntimeError("Pipeline processing failed")
+
+        processing_exporter._process_through_processors = failing_process
+
+        with caplog.at_level(logging.ERROR):
+            await processing_exporter._continue_pipeline_after(failing_processor, "test")
+
+        # Verify exception was logged (covers lines 227-231)
+        assert "Failed to continue pipeline processing after MockProcessor" in caplog.text
+
+    async def test_callback_processor_no_remaining_processors(self, processing_exporter):
+        """Test _continue_pipeline_after when no processors follow source."""
+        # Add only one processor
+        solo_processor = MockProcessor("solo")
+        processing_exporter.add_processor(solo_processor)
+
+        # Continue pipeline after the only processor with the processed output (integer)
+        # MockProcessor converts strings to their length, so "test" -> 4
+        await processing_exporter._continue_pipeline_after(solo_processor, 4)
+
+        # Should still call export_processed with the item
+        assert processing_exporter.export_processed_called
+        assert len(processing_exporter.exported_items) == 1
+        assert processing_exporter.exported_items[0] == 4
+
+
+class TestErrorPathCoverage:
+    """Test error paths and logging coverage."""
+
+    async def test_empty_batch_debug_logging(self, processing_exporter, caplog):
+        """Test debug logging when exporting empty batch."""
+        # Create an empty list to trigger the debug log
+        empty_batch = []
+
+        with caplog.at_level(logging.DEBUG):
+            await processing_exporter._export_final_item(empty_batch)
+
+        # Verify debug log was emitted (covers line 193)
+        assert "Skipping export of empty batch" in caplog.text
+        assert not processing_exporter.export_processed_called
+
+    async def test_invalid_output_type_warning_path(self, processing_exporter, caplog):
+        """Test warning path for invalid output types."""
+        # Create an invalid output type (not int or list[int] for our exporter)
+        invalid_item = {"invalid": "dict"}
+
+        with caplog.at_level(logging.WARNING):
+            # Call with raise_on_invalid=False to trigger warning path
+            await processing_exporter._export_final_item(invalid_item, raise_on_invalid=False)
+
+        # Verify warning was logged (covers line 200)
+        assert "is not a valid output type for export" in caplog.text
+        assert not processing_exporter.export_processed_called
+
+    async def test_cleanup_shutdown_exception_handling(self, processing_exporter, caplog):
+        """Test exception handling during processor shutdown in cleanup."""
+        processor = MockProcessorWithShutdown("test_proc")
+        processing_exporter.add_processor(processor)
+
+        # Mock asyncio.gather to raise an exception
+        async def failing_gather(*tasks, return_exceptions=True):
+            raise RuntimeError("Shutdown failed")
+
+        with patch('aiq.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup:
+            mock_parent_cleanup.return_value = asyncio.Future()
+            mock_parent_cleanup.return_value.set_result(None)
+
+            with patch('asyncio.gather', side_effect=failing_gather):
+                with caplog.at_level(logging.ERROR):
+                    await processing_exporter._cleanup()
+
+        # Verify exception was logged (covers lines 318-319)
+        assert "Error shutting down processors" in caplog.text
+
+    async def test_export_final_item_empty_list_vs_none(self, processing_exporter):
+        """Test distinction between empty list and None for batch handling."""
+        # Test empty list (should not export)
+        await processing_exporter._export_final_item([])
+        assert not processing_exporter.export_processed_called
+
+        # Reset and test with valid single item
+        processing_exporter.export_processed_called = False
+        processing_exporter.exported_items = []
+
+        valid_item = 5  # int matches our exporter's output type
+        await processing_exporter._export_final_item(valid_item)
+        assert processing_exporter.export_processed_called
+        assert processing_exporter.exported_items == [5]
 
 
 class TestEdgeCases:

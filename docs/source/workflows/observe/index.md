@@ -70,7 +70,7 @@ The `logging` section contains one or more logging providers. Each provider has 
 To see the complete list of configuration fields for each provider, utilize the `aiq info components -t logging` command which will display the configuration fields for each provider. For example:
 
 ```bash
-$ aiq info -t logging
+$ aiq info components -t logging
                                                     AIQ Toolkit Search Results
 ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃ package    ┃ version              ┃ component_type ┃ component_name ┃ description                                               ┃
@@ -165,7 +165,7 @@ The `tracing` section contains one or more tracing providers. Each provider has 
   - See [Registering a New Telemetry Provider as a Plugin](#registering-a-new-telemetry-provider-as-a-plugin) for more information
 
 
-To see the complete list of configuration fields for each provider, utilize the `aiq info -t tracing` command which will display the configuration fields for each provider.
+To see the complete list of configuration fields for each provider, utilize the `aiq info components -t tracing` command which will display the configuration fields for each provider.
 
 
 ### NeMo Agent Toolkit Observability Components
