@@ -38,6 +38,10 @@ async def optimize_config(opt_run_config: OptimizerRunConfig):
 
     # ---------------- 2. discover search space ----------- #
     full_space = walk_optimizables(base_cfg)
+    if not full_space:
+        logger.warning("No optimizable parameters found in the configuration. "
+                       "Skipping optimization.")
+        return base_cfg
 
     # ---------------- 3. numeric / enum tuning ----------- #
     tuned_cfg = base_cfg
