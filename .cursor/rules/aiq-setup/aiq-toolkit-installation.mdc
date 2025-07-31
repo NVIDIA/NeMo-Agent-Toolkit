@@ -102,15 +102,21 @@ uv pip install -e '.[profiling]'
 ## Available Plugin Options
 
 When installing specific plugins, these are the available options:
-- `langchain` - LangChain integration
-- `llama-index` - LlamaIndex integration
-- `crewai` - CrewAI integration
-- `mem0ai` - Mem0 integration
-- `semantic-kernel` - Microsoft Semantic Kernel integration
 - `agno` - Agno integration
-- `zep-cloud` - Zep integration
-- `weave` - Weights & Biases Weave integration
+- `crewai` - CrewAI integration
+- `langchain` - LangChain integration
+- `llama_index` - LlamaIndex integration
+- `mem0ai` - Mem0 integration
+- `mysql` - MySQL database integration
+- `opentelemetry` - OpenTelemetry observability integration
+- `phoenix` - Phoenix observability integration
+- `ragaai` - RAGA AI evaluation integration
+- `redis` - Redis memory integration
+- `s3` - AWS S3 object storage integration
+- `semantic_kernel` - Microsoft Semantic Kernel integration
 - `test` - Testing utilities
+- `weave` - Weights & Biases Weave integration
+- `zep_cloud` - Zep Cloud integration
 - `profiling` - Profiling tools
 
 ## Verification Steps
