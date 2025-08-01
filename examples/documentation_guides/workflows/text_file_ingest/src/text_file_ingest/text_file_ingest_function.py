@@ -45,7 +45,7 @@ async def text_file_ingest_tool(config: TextFileIngestFunctionConfig, builder: B
 
     embeddings: Embeddings = await builder.get_embedder(config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
-    logger.info("Ingesting documents matching for the webpage: %s", config.ingest_glob)
+    logger.info("Ingesting documents from: %s", config.ingest_glob)
     (ingest_dir, ingest_glob) = os.path.split(config.ingest_glob)
     loader = DirectoryLoader(ingest_dir, glob=ingest_glob, loader_cls=TextLoader)
 
