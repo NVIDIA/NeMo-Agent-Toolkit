@@ -49,9 +49,6 @@ async def who_am_i_function(config: WhoAmIConfig, builder: Builder):
         """
         Look up information about the currently logged in user.
 
-        Args:
-            empty (str): Empty parameter (not used, but required by function signature)
-
         Returns:
             str: JSON string containing user information including name, email,
                  and other profile details from the OAuth provider
