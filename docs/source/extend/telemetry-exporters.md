@@ -207,7 +207,7 @@ The following table helps you choose the appropriate exporter type for your use 
 | **Advanced Custom Exporter** | Complex business logic<br/>Stateful data processing<br/>Multi-system integrations | Enterprise reliability patterns<br/>Custom analytics platforms<br/>High-volume production workloads | High | 1-2 days |
 
 **Quick Decision Guide:**
-- **Using standard observability tools?** → Use pre-built OpenTelemetry exporters (Langfuse, Langsmith, etc.)
+- **Using standard observability tools?** → Use pre-built OpenTelemetry exporters (Langfuse, LangSmith, etc.)
 - **Just getting started?** → Use Raw Exporter with console or file output
 - **Integrating with custom HTTP API?** → Use Span Exporter
 - **Need custom OTLP service?** → Create simple config wrapper around `OTLPSpanAdapterExporter`
@@ -236,7 +236,7 @@ Specialized for OpenTelemetry-compatible services with many pre-built options:
 - **Use case**: OTLP-compatible backends, standard observability tools
 - **Base class**: `OtelSpanExporter`
 - **Data flow**: `IntermediateStep` → `Span` → [Processing Pipeline] → `OtelSpan` → Export
-- **Pre-built integrations**: Langfuse, Langsmith, OpenTelemetry Collector, Patronus, Galileo, Phoenix, RagaAI, Weave
+- **Pre-built integrations**: Langfuse, LangSmith, OpenTelemetry Collector, Patronus, Galileo, Phoenix, RagaAI, Weave
 
 #### Advanced Custom Exporters
 
@@ -261,7 +261,7 @@ Before creating a custom exporter, check if your observability service is alread
 |---------|------|-------------|---------------|
 | **File** | `file` | `pip install aiqtoolkit` | local file or directory |
 | **Langfuse** | `langfuse` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API keys |
-| **Langsmith** | `langsmith` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
+| **LangSmith** | `LangSmith` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
 | **OpenTelemetry Collector** | `otelcollector` | `pip install aiqtoolkit[opentelemetry]` | endpoint + headers |
 | **Patronus** | `patronus` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
 | **Galileo** | `galileo` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
