@@ -36,7 +36,7 @@ class WhoAmIConfig(FunctionBaseConfig, name="who_am_i"):
     auth_provider: AuthenticationRef = Field(description=("Reference to the authentication provider to use for "
                                                           "authentication before making the who am i request."))
 
-    api_url: str = Field(default="http://localhost:5000/api/me", description="Base URL for the who am i API")
+    api_url: str = Field(default="http://localhost:5001/api/me", description="Base URL for the who am i API")
     timeout: int = Field(default=10, description="Request timeout in seconds")
 
 

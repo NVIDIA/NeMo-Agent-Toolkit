@@ -62,23 +62,26 @@ library. This will allow you to test the OAuth 2.0 Authorization Code Flow with 
 
 The easiest way to get started is using Docker, which works seamlessly across all systems (macOS, Windows, Linux):
 
-**Run the example**
+**Run the example (foreground mode)**
 
 ```bash
-# From the repository root directory
 docker compose -f examples/front_ends/simple_auth/docker-compose.yml --project-directory examples/front_ends/simple_auth up
+```
+**Run the example (background mode)**
+```bash
+docker compose -f examples/front_ends/simple_auth/docker-compose.yml --project-directory examples/front_ends/simple_auth up -d
 ```
 
 This will automatically:
 
 - Clone the OAuth2 server example
 - Install all dependencies
-- Start the server on `http://localhost:5000`
+- Start the server on `http://localhost:5001`
 - Set the necessary environment variables for local development
 
 **Note**: The `AUTHLIB_INSECURE_TRANSPORT=1` environment variable is set automatically for local development to allow `http://` callback URLs. This should never be used in production.
 
-Browse to **`http://localhost:5000/`** – you should see the demo home page. Sign up with any name.
+Browse to **`http://localhost:5001/`** – you should see the demo home page. Sign up with any name.
 
 **To stop the Docker services:**
 
@@ -125,7 +128,7 @@ export AUTHLIB_INSECURE_TRANSPORT=1
 flask run
 ```
 
-Browse to **`http://localhost:5000/`** – you should see the demo home page. Sign up with any name.
+Browse to **`http://localhost:5001/`** – you should see the demo home page. Sign up with any name.
 
 </details>
 
