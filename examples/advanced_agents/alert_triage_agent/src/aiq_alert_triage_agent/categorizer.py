@@ -15,9 +15,6 @@
 
 import re
 
-from langchain_core.messages import HumanMessage
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.prompts import MessagesPlaceholder
 from pydantic import Field
 
 from aiq.builder.builder import Builder
@@ -44,9 +41,13 @@ def _extract_markdown_heading_level(report: str) -> str:
     return pound_signs
 
 
-@register_function(config_type=CategorizerToolConfig)
+@register_function(config_type=CategorizerToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def categorizer_tool(config: CategorizerToolConfig, builder: Builder):
     # Set up LLM and chain
+    from langchain_core.messages import HumanMessage
+    from langchain_core.prompts import ChatPromptTemplate
+    from langchain_core.prompts import MessagesPlaceholder
+
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     prompt_template = ChatPromptTemplate([("system", config.prompt), MessagesPlaceholder("msgs")])
     categorization_chain = prompt_template | llm

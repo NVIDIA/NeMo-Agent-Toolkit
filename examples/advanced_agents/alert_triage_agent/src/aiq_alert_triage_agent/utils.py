@@ -20,9 +20,6 @@ import os
 
 import ansible_runner
 import pandas as pd
-from langchain_core.messages import HumanMessage
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.prompts import MessagesPlaceholder
 
 from aiq.builder.framework_enum import LLMFrameworkEnum
 
@@ -61,6 +58,9 @@ async def llm_ainvoke(config, builder, user_prompt, system_prompt=None):
     A helper function to invoke an LLM with a system prompt and user prompt.
     Uses a cached LLM instance if one exists for the given name and wrapper type.
     """
+    from langchain_core.messages import HumanMessage
+    from langchain_core.prompts import ChatPromptTemplate
+    from langchain_core.prompts import MessagesPlaceholder
     llm = await _get_llm(builder, config.llm_name, LLMFrameworkEnum.LANGCHAIN)
 
     if system_prompt:
