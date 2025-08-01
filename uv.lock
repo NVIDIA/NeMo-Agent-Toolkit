@@ -481,13 +481,13 @@ name = "aiq-simple-calculator-observability"
 source = { editable = "examples/observability/simple_calculator_observability" }
 dependencies = [
     { name = "aiq-simple-calculator" },
-    { name = "aiqtoolkit", extra = ["langchain"] },
+    { name = "aiqtoolkit", extra = ["langchain", "opentelemetry", "phoenix", "ragaai", "weave"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
+    { name = "aiqtoolkit", extras = ["langchain", "opentelemetry", "phoenix", "ragaai", "weave"], editable = "." },
 ]
 
 [[package]]

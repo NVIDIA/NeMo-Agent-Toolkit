@@ -17,11 +17,13 @@ limitations under the License.
 
 # Adding Telemetry Exporters to NVIDIA NeMo Agent Toolkit
 
+> **Note**: The code examples in this guide are pseudo code designed to illustrate the programming interface and key concepts. They focus on demonstrating the structure and flow rather than providing complete, runnable implementations. Use these examples to understand the interface patterns and adapt them to your specific use case.
+
 Telemetry exporters are plugins that send telemetry data (traces, spans, and intermediate steps) from NeMo Agent toolkit workflows to external observability services. This guide provides a comprehensive overview of how to create and register custom telemetry exporters.
 
 ## Why Use Telemetry Exporters?
 
-Telemetry exporters solve critical observability challenges in AI agent workflows:
+Telemetry exporters solve critical observability challenges in Agentic AI workflows:
 
 ### **Production Monitoring**
 - **Track workflow performance**: Monitor execution times, success rates, and resource usage across your AI agents
@@ -50,14 +52,14 @@ Telemetry exporters solve critical observability challenges in AI agent workflow
 | **Development debugging** | Quick local inspection of workflow behavior | RawExporter |
 | **Production monitoring** | Real-time performance tracking and alerting using a span-based data structure | SpanExporter |
 | **Enterprise integration** | Connect to existing OpenTelemetry based observability stack | OtelSpanExporter|
-| **Custom analytics** | Specialized data processing and visualization | Raw Exporter (custom format) |
-| **Compliance auditing** | Detailed audit trails and data retention | File Exporter (structured logs) |
+| **Custom analytics** | Specialized data processing and visualization | ProcessingExporter |
+| **Compliance auditing** | Detailed audit trails and data retention | FileExporter |
 
 **Without telemetry exporters**, you're operating blind - unable to understand performance, debug issues, or optimize your AI workflows. **With telemetry exporters**, you gain complete visibility into your agent operations, enabling confident production deployment and continuous improvement.
 
 ## Existing Telemetry Exporters
 
-To view the list of existing telemetry exporters, run the following command:
+To view the list of locally installed and registered telemetry exporters, run the following command:
 
 ```bash
 aiq info components -t tracing
@@ -67,7 +69,7 @@ Examples of existing telemetry exporters include:
 
 - **Phoenix**: Exports traces to Arize Phoenix for visualization
 - **Weave**: Exports traces to Weights & Biases Weave
-- **OpenTelemetry**: Exports traces to OpenTelemetry-compatible services
+- **OtelCollector**: Exports traces to OpenTelemetry-compatible services
 - **Catalyst**: Exports traces to RagaAI Catalyst
 - **File**: Exports traces to local files
 
@@ -77,6 +79,7 @@ Want to get started quickly? Here's a minimal working example that creates a con
 
 ```python
 from pydantic import Field
+
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
@@ -128,7 +131,7 @@ That's it! Your exporter will now print trace information to the console. Let's 
 
 Before diving into advanced features, here are the core concepts:
 
-1. **Configuration Class**: Defines the settings your exporter needs (endpoints, API keys, etc.)
+1. **Configuration Class**: Defines the settings your exporter needs (endpoints, API keys, etc.) and its registered name
 2. **Exporter Class**: Contains the logic to process and export trace data
 3. **Registration Function**: Connects your configuration to your exporter implementation
 4. **Processing Pipeline**: Optional transformations applied to data before export
@@ -182,8 +185,8 @@ graph LR
     A --> D["OpenTelemetry Exporter"]
 
     B --> E["Direct Processing<br/>File, Console, Custom"]
-    C --> F["Span Processing<br/>HTTP APIs, Databases"]
-    D --> G["OTLP Processing<br/>Jaeger, Tempo, Collectors"]
+    C --> F["Span Processing<br/>Weave, HTTP APIs, Databases"]
+    D --> G["OTLP Processing<br/>Datadog, Phoenix, Otel Collectors"]
 
     style A fill:#e3f2fd
     style B fill:#fff3e0
@@ -200,14 +203,17 @@ The following table helps you choose the appropriate exporter type for your use 
 
 | Exporter Type | Use When | Best For | Complexity | Development Time |
 |---------------|----------|----------|------------|------------------|
-| **Raw Exporter** | Simple file/console output<br/>Custom event processing<br/>Development and debugging | Local development<br/>File-based logging<br/>Custom data formats | Low | 30 minutes |
+| **Raw Exporter** | Simple file/console output<br/>Basic event processing<br/>Development and debugging | Local development<br/>File-based logging<br/>Custom data formats | Low | 30 minutes |
 | **Span Exporter** | HTTP API integration<br/>Custom observability services<br/>Non-OTLP backends | Production HTTP APIs<br/>Databases<br/>Custom dashboards | Medium | 2-4 hours |
-| **OpenTelemetry Exporter** | OTLP-compatible services<br/>Standard observability tools<br/>Enterprise monitoring | Jaeger, Tempo<br/>Observability platforms<br/>Standard compliance | High | 4-8 hours |
+| **OpenTelemetry Exporter** | OTLP-compatible services<br/>Standard observability tools<br/>Enterprise monitoring | Jaeger, Tempo<br/>Observability platforms<br/>Standard compliance | Low | 15-30 minutes |
+| **Advanced Custom Exporter** | Complex business logic<br/>Stateful data processing<br/>Multi-system integrations | Enterprise reliability patterns<br/>Custom analytics platforms<br/>High-volume production workloads | High | 1-2 days |
 
 **Quick Decision Guide:**
+- **Using standard observability tools?** → Use pre-built OpenTelemetry exporters (Langfuse, LangSmith, etc.)
 - **Just getting started?** → Use Raw Exporter with console or file output
-- **Integrating with HTTP API?** → Use Span Exporter
-- **Using standard observability tools?** → Use OpenTelemetry Exporter or the pre-built `OTLPSpanAdapterExporter`
+- **Integrating with custom HTTP API?** → Use Span Exporter
+- **Need custom OTLP service?** → Create simple config wrapper around `OTLPSpanAdapterExporter`
+- **Need complex business logic with state tracking?** → Advanced Custom Exporter with custom processors
 
 #### Raw Exporters
 
@@ -227,13 +233,59 @@ Convert events into spans with lifecycle management:
 
 #### OpenTelemetry Exporters
 
-Specialized for OpenTelemetry-compatible services:
+Specialized for OpenTelemetry-compatible services with many pre-built options:
 
 - **Use case**: OTLP-compatible backends, standard observability tools
 - **Base class**: `OtelSpanExporter`
 - **Data flow**: `IntermediateStep` → `Span` → [Processing Pipeline] → `OtelSpan` → Export
+- **Pre-built integrations**: Langfuse, LangSmith, OpenTelemetry Collector, Patronus, Galileo, Phoenix, RagaAI, Weave
+
+#### Advanced Custom Exporters
+
+Advanced exporters for complex analytics pipelines with state management:
+
+- **Use case**: Complex business logic, stateful data processing, multi-system integrations
+- **Base class**: `ProcessingExporter` with custom processors and advanced features
+- **Data flow**: `IntermediateStep` → `InputT` → [Enrichment Pipeline] → `OutputT` → Export
+- **Key features**: Circuit breakers, dead letter queues, state tracking, custom transformations, performance monitoring
+
+> **Note**: This is a high-complexity pattern. See the [Advanced Custom Exporters](#advanced-custom-exporters) section in Advanced Features for detailed implementation examples.
 
 **Note**: All exporters support optional processing pipelines that can transform, filter, batch, or aggregate data before export. Common processors include batching for efficient transmission, filtering for selective export, and format conversion for compatibility with different backends.
+
+## Pre-Built Telemetry Exporters
+
+Before creating a custom exporter, check if your observability service is already supported:
+
+### Available Integrations
+
+| Service | Type | Installation | Configuration |
+|---------|------|-------------|---------------|
+| **File** | `file` | `pip install aiqtoolkit` | local file or directory |
+| **Langfuse** | `langfuse` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API keys |
+| **LangSmith** | `LangSmith` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
+| **OpenTelemetry Collector** | `otelcollector` | `pip install aiqtoolkit[opentelemetry]` | endpoint + headers |
+| **Patronus** | `patronus` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
+| **Galileo** | `galileo` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
+| **Phoenix** | `phoenix` | `pip install aiqtoolkit[phoenix]` | endpoint |
+| **RagaAI/Catalyst** | `catalyst` | `pip install aiqtoolkit[ragaai]` | API key + project |
+| **Weave** | `weave` | `pip install aiqtoolkit[weave]` | project name |
+
+### Simple Configuration Example
+
+```yaml
+# workflow.yaml
+general:
+  telemetry:
+    tracing:
+      langfuse:
+        type: langfuse
+        endpoint: "https://cloud.langfuse.com/api/public/otel/v1/traces"
+        public_key: "${LANGFUSE_PUBLIC_KEY}"
+        secret_key: "${LANGFUSE_SECRET_KEY}"
+```
+
+> **Most services use OTLP**: If your service supports OpenTelemetry Protocol (OTLP), you can often subclass `OtelSpanExporter` or use the generic `otelcollector` type with appropriate headers.
 
 ## Creating a Custom Telemetry Exporter
 
@@ -245,24 +297,15 @@ Create a configuration class that inherits from `TelemetryExporterBaseConfig`:
 
 ```python
 from pydantic import Field
+
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 
 class CustomTelemetryExporter(TelemetryExporterBaseConfig, name="custom"):
-    """A custom telemetry exporter for sending traces to a custom service."""
+    """A simple custom telemetry exporter for sending traces to a custom service."""
 
     # Required fields
     endpoint: str = Field(description="The endpoint URL for the custom service")
     api_key: str = Field(description="API key for authentication")
-    project: str = Field(description="Project name to group traces")
-
-    # Optional fields with defaults
-    batch_size: int = Field(default=100, description="Number of traces to batch")
-    flush_interval: float = Field(default=5.0, description="Flush interval in seconds")
-    max_queue_size: int = Field(default=1000, description="Maximum queue size")
-    drop_on_overflow: bool = Field(default=False, description="Drop items on overflow")
-    shutdown_timeout: float = Field(default=10.0, description="Shutdown timeout in seconds")
-    timeout: float = Field(default=30.0, description="Request timeout in seconds")
-    retries: int = Field(default=3, description="Number of retry attempts")
 ```
 
 > **Tip**: Start with the fields you need and add more as your integration becomes more sophisticated. See the [Common Integration Patterns](#common-integration-patterns) section for practical examples.
@@ -271,7 +314,7 @@ class CustomTelemetryExporter(TelemetryExporterBaseConfig, name="custom"):
 
 Choose the appropriate base class based on your needs:
 
-#### Raw Exporter (for simple data processing)
+#### Raw Exporter (for simple trace exports)
 
 ```python
 from aiq.observability.exporter.raw_exporter import RawExporter
@@ -308,9 +351,9 @@ class CustomRawExporter(RawExporter[IntermediateStep, IntermediateStep]):
 #### Span Exporter (for span-based tracing)
 
 ```python
+from aiq.data_models.span import Span
 from aiq.observability.exporter.span_exporter import SpanExporter
 from aiq.observability.processor.processor import Processor
-from aiq.data_models.span import Span
 
 class SpanToDictProcessor(Processor[Span, dict]):
     """Processor that transforms Span objects to dictionaries."""
@@ -353,6 +396,11 @@ class CustomSpanExporter(SpanExporter[Span, dict]):
         }
         # Send to your service
         await self._send_to_service(payload)
+
+    async def _cleanup(self):
+        """Clean up resources when the exporter is stopped."""
+        # Clean up HTTP sessions, file handles, etc.
+        await super()._cleanup()
 ```
 
 #### OpenTelemetry Exporter (for OTLP compatibility)
@@ -380,6 +428,7 @@ Create a registration function using the `@register_telemetry_exporter` decorato
 
 ```python
 import logging
+
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_telemetry_exporter
 
@@ -417,8 +466,9 @@ In production code, structure your telemetry exporter as follows:
 ```python
 # my_plugin/exporters.py
 import aiohttp
-from aiq.observability.exporter.span_exporter import SpanExporter
+
 from aiq.data_models.span import Span
+from aiq.observability.exporter.span_exporter import SpanExporter
 
 class MyCustomExporter(SpanExporter[Span, dict]):
     """Custom exporter implementation."""
@@ -433,8 +483,14 @@ class MyCustomExporter(SpanExporter[Span, dict]):
         # Implementation here
         pass
 
+    async def _cleanup(self):
+        """Clean up resources when the exporter is stopped."""
+        # Clean up HTTP sessions, file handles, etc.
+        await super()._cleanup()
+
 # my_plugin/register.py
 from pydantic import Field
+
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.builder.builder import Builder
@@ -471,8 +527,8 @@ async def my_telemetry_exporter(config: MyTelemetryExporter, builder: Builder):
 If your exporter needs to transform data before export, add processors to the pipeline. This is especially important when using `SpanExporter[Span, dict]` to convert `Span` objects to dictionaries:
 
 ```python
-from aiq.observability.processor.processor import Processor
 from aiq.data_models.span import Span
+from aiq.observability.processor.processor import Processor
 
 class SpanToDictProcessor(Processor[Span, dict]):
     """Processor that transforms Span objects to dictionaries."""
@@ -542,10 +598,6 @@ general:
         type: custom
         endpoint: "https://api.custom-service.com/traces"
         api_key: "${CUSTOM_API_KEY}"
-        project: "my-project"
-        batch_size: 50
-        timeout: 15.0
-        retries: 5
 ```
 
 > **Next Steps**: You now have a complete custom telemetry exporter! For real-world implementation examples, see the [Common Integration Patterns](#common-integration-patterns) section. For advanced features like concurrent execution and performance optimization, see the [Advanced Features](#advanced-features) section.
@@ -560,9 +612,10 @@ Most observability services use HTTP APIs with token authentication:
 
 ```python
 import aiohttp
+
+from aiq.data_models.span import Span
 from aiq.observability.exporter.span_exporter import SpanExporter
 from aiq.observability.processor.processor import Processor
-from aiq.data_models.span import Span
 
 class SpanToDictProcessor(Processor[Span, dict]):
     """Processor that transforms Span objects to dictionaries."""
@@ -608,6 +661,9 @@ class HTTPServiceExporter(SpanExporter[Span, dict]):
 For local development and debugging:
 
 ```python
+import asyncio
+import aiofiles
+
 from aiq.observability.exporter.raw_exporter import RawExporter
 from aiq.observability.processor.intermediate_step_serializer import IntermediateStepSerializer
 
@@ -615,11 +671,13 @@ class FileExporter(RawExporter[IntermediateStep, str]):
     def __init__(self, filepath: str, **kwargs):
         super().__init__(**kwargs)
         self.filepath = filepath
+        self.lock = asyncio.Lock()
         self.add_processor(IntermediateStepSerializer())
 
     async def export_processed(self, item: str):
-        with open(self.filepath, 'a') as f:
-            f.write(item + '\n')
+        async with self._lock:
+            async with aiofiles.open(self._current_file_path, mode="a") as f:
+                f.write(item + '\n')
 ```
 
 ### Pattern 3: Quick OpenTelemetry Integration
@@ -655,6 +713,7 @@ This section covers advanced topics for production-ready telemetry exporters. Ch
 - **[Custom OpenTelemetry Protocols](#custom-opentelemetry-protocols)**: Advanced OpenTelemetry integration patterns
 - **[Performance Optimization](#performance-optimization)**: Batching, connection management, and efficiency
 - **[Reliability](#error-handling-and-retries)**: Error handling, retries, and resilience
+- **[Advanced Custom Exporters](#advanced-custom-exporters)**: State-aware processing, data warehouses, and complex pipelines
 
 ### Concurrent Execution
 
@@ -677,6 +736,7 @@ Without isolation, concurrent workflows would share the same exporter instance, 
 `IsolatedAttribute` creates separate state for each workflow while sharing expensive resources:
 
 ```python
+from aiq.data_models.span import Span
 from aiq.observability.exporter.base_exporter import IsolatedAttribute
 from aiq.observability.exporter.span_exporter import SpanExporter
 
@@ -707,6 +767,8 @@ This ensures that each isolated instance has its own task tracking and span life
 import uuid
 import aiohttp
 from collections import deque
+
+from aiq.data_models.span import Span
 from aiq.observability.exporter.base_exporter import IsolatedAttribute
 from aiq.observability.exporter.span_exporter import SpanExporter
 
@@ -757,8 +819,7 @@ class MyCustomExporter(SpanExporter[Span, dict]):
 
     async def _cleanup(self):
         """Clean up HTTP session."""
-        if self.session:
-            await self.session.close()
+        await self.session.close()
         await super()._cleanup()
 ```
 
@@ -812,23 +873,37 @@ assert exporter1.session is exporter2.session  # Same session
  **Example with Common Patterns:**
 
  ```python
- import asyncio
- from collections import deque
+from collections import deque
 
- class BatchingExporter(SpanExporter[Span, dict]):
-     """Exporter demonstrating common IsolatedAttribute patterns."""
+import aiohttp
+
+from aiq.data_models.span import Span
+from aiq.observability.exporter.base_exporter import IsolatedAttribute
+from aiq.observability.exporter.span_exporter import SpanExporter
+
+class BatchingExporter(SpanExporter[Span, dict]):
+    """Exporter demonstrating common IsolatedAttribute patterns."""
 
     # Isolated mutable state per workflow (safe)
-     _batch_queue: IsolatedAttribute[deque] = IsolatedAttribute(deque)
-     _batch_tasks: IsolatedAttribute[set] = IsolatedAttribute(set)
-     _flush_timer: IsolatedAttribute[dict] = IsolatedAttribute(dict)
-     _statistics: IsolatedAttribute[dict] = IsolatedAttribute(
-         lambda: {"batches_sent": 0, "items_processed": 0, "errors": 0}
-     )
+    _batch_queue: IsolatedAttribute[deque] = IsolatedAttribute(deque)
+    _flush_timer: IsolatedAttribute[dict] = IsolatedAttribute(dict)
+    _statistics: IsolatedAttribute[dict] = IsolatedAttribute(
+        lambda: {"batches_sent": 0, "items_processed": 0, "errors": 0}
+    )
 
-    def __init__(self, batch_size: int = 100, **kwargs):
+    def __init__(self, batch_size: int = 100, endpoint: str = "https://your-service.com/api/spans", **kwargs):
         super().__init__(**kwargs)
         self.batch_size = batch_size
+        self.endpoint = endpoint
+
+        # Define headers once during initialization
+        self.headers = {
+            "Content-Type": "application/json"
+        }
+
+        # Create HTTP session once and reuse it
+        import aiohttp
+        self.session = aiohttp.ClientSession()
 
     async def export_processed(self, item: dict):
         """Export with batching and isolated state."""
@@ -841,7 +916,7 @@ assert exporter1.session is exporter2.session  # Same session
             await self._flush_batch()
 
     async def _flush_batch(self):
-        """Flush batch with isolated task tracking."""
+        """Flush batch with isolated state management."""
         if not self._batch_queue:
             return
 
@@ -849,85 +924,100 @@ assert exporter1.session is exporter2.session  # Same session
         batch = list(self._batch_queue)
         self._batch_queue.clear()
 
-        # Track flush task in isolated set
-        task = asyncio.create_task(self._send_batch(batch))
-        self._batch_tasks.add(task)
+        try:
+            # Send batch directly with proper error handling
+            await self._send_batch(batch)
+            self._statistics['batches_sent'] += 1
+        except Exception as e:
+            self._statistics['errors'] += 1
+            # In production, you might want to retry or use a dead letter queue
+            raise
 
-        # Clean up completed tasks
-        self._batch_tasks = {t for t in self._batch_tasks if not t.done()}
+    async def _send_batch(self, batch: list[dict]):
+        """Send batch to the service."""
+        payload = {"spans": batch}
+
+        # Use the reusable session and headers
+        async with self.session.post(
+            self.endpoint,
+            json=payload,
+            headers=self.headers
+        ) as response:
+            response.raise_for_status()
+
+    async def _cleanup(self):
+        """Clean up HTTP session."""
+        if hasattr(self, 'session') and self.session:
+            await self.session.close()
+        await super()._cleanup()
 ```
 
 ### Custom OpenTelemetry Protocols
 
 **Use Case**: When you need to integrate with an OpenTelemetry-compatible service that requires custom authentication, headers, or data transformation.
 
-For OpenTelemetry exporters with custom protocols, create a custom mixin and combine it with the base exporter:
+For OpenTelemetry exporters with custom protocols, create a simple mixin that handles authentication and HTTP transport:
 
 ```python
 # In production, define these classes in a separate module (e.g., exporters.py)
-class CustomProtocolMixin:
-    """Custom mixin for a specific observability service protocol."""
+import aiohttp
 
-    def __init__(self, *args, endpoint: str, api_key: str, project: str, **kwargs):
+from aiq.plugins.opentelemetry.otel_span import OtelSpan
+
+class CustomProtocolMixin:
+    """Simple mixin for custom authentication and HTTP transport."""
+
+    def __init__(self, *args, endpoint: str, api_key: str, **kwargs):
         """Initialize the custom protocol mixin."""
         self.endpoint = endpoint
         self.api_key = api_key
-        self.project = project
 
-        # Import here to avoid loading aiohttp unless this exporter is used
-        import aiohttp
-        self.session = aiohttp.ClientSession()
-        super().__init__(*args, **kwargs)
-
-    async def export_otel_spans(self, spans):
-        """Export spans using the custom protocol."""
-        headers = {
+        # Define headers once during initialization
+        self.headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "X-Project": self.project,
             "Content-Type": "application/json"
         }
 
-        # Transform spans to custom format
-        payload = self._transform_spans_for_service(spans)
+        self.session = aiohttp.ClientSession()
+        super().__init__(*args, **kwargs)
 
-        # Send to service
-        async with self.session.post(
-            self.endpoint,
-            json=payload,
-            headers=headers
-        ) as response:
-            if response.status != 200:
-                raise Exception(f"Export failed: {response.status}")
+    async def export_otel_spans(self, spans: list[OtelSpan]):
+        """Export spans using the custom protocol."""
 
-    def _transform_spans_for_service(self, spans) -> dict:
-        """Transform OtelSpans to service-specific format."""
-        return {
-            "project": self.project,
+        # Simple payload - send spans with minimal wrapping
+        payload = {
             "spans": [
                 {
-                    "id": span.get_span_context().span_id,
-                    "trace_id": span.get_span_context().trace_id,
                     "name": span.name,
+                    "span_id": span.get_span_context().span_id,
+                    "trace_id": span.get_span_context().trace_id,
                     "start_time": span.start_time,
                     "end_time": span.end_time,
-                    "attributes": span.attributes
+                    "attributes": dict(span.attributes) if span.attributes else {}
                 }
                 for span in spans
             ]
         }
 
+        # Send to service with custom headers
+        async with self.session.post(
+            self.endpoint,
+            json=payload,
+            headers=self.headers
+        ) as response:
+            response.raise_for_status()
+
     async def _cleanup(self):
         """Clean up HTTP session."""
-        if self.session:
-            await self.session.close()
+        await self.session.close()
         await super()._cleanup()
 
 # In production, you would define this in a separate module and import OtelSpanExporter there
 # For example: from aiq.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 # class CustomServiceExporter(CustomProtocolMixin, OtelSpanExporter):
-#     """Complete exporter combining custom protocol with OpenTelemetry span processing."""
-#     def __init__(self, endpoint: str, api_key: str, project: str, **kwargs):
-#         super().__init__(endpoint=endpoint, api_key=api_key, project=project, **kwargs)
+#     """Simple exporter combining custom protocol with OpenTelemetry span processing."""
+#     def __init__(self, endpoint: str, api_key: str, **kwargs):
+#         super().__init__(endpoint=endpoint, api_key=api_key, **kwargs)
 
 @register_telemetry_exporter(config_type=CustomTelemetryExporter)
 async def custom_telemetry_exporter(config: CustomTelemetryExporter, builder: Builder):
@@ -940,18 +1030,17 @@ async def custom_telemetry_exporter(config: CustomTelemetryExporter, builder: Bu
     from aiq.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 
     class CustomServiceExporter(CustomProtocolMixin, OtelSpanExporter):
-        """Complete exporter combining custom protocol with OpenTelemetry span processing."""
-        def __init__(self, endpoint: str, api_key: str, project: str, **kwargs):
-            super().__init__(endpoint=endpoint, api_key=api_key, project=project, **kwargs)
+        """Simple exporter combining custom protocol with OpenTelemetry span processing."""
+        def __init__(self, endpoint: str, api_key: str, **kwargs):
+            super().__init__(endpoint=endpoint, api_key=api_key, **kwargs)
 
     yield CustomServiceExporter(
         endpoint=config.endpoint,
-        api_key=config.api_key,
-        project=config.project,
-        batch_size=config.batch_size,
-        flush_interval=config.flush_interval
+        api_key=config.api_key
     )
 ```
+
+> **For Complex Transformations**: This example shows basic field mapping. If you need complex data transformations, filtering, or enrichment, consider using dedicated [Processor classes](#step-4-add-processing-pipeline-optional) instead of inline transformations. Processors are reusable, testable, and can be chained for complex pipelines.
 
 ### Performance Optimization
 
@@ -959,87 +1048,50 @@ async def custom_telemetry_exporter(config: CustomTelemetryExporter, builder: Bu
 
 **Use Case**: High-throughput applications generating hundreds or thousands of traces per second.
 
-Use the built-in `BatchingProcessor` for efficient batching:
+**Conceptual Flow:**
+```
+1. Configure BatchingProcessor with size/time limits
+2. Add processor to exporter pipeline
+3. Handle both individual items and batches in export_processed()
+4. Transform data to target format
+5. Send HTTP request with batched payload
+```
 
+**Implementation Pattern:**
 ```python
-import aiohttp
-from aiq.observability.processor.batching_processor import BatchingProcessor
-from aiq.observability.exporter.raw_exporter import RawExporter
-from aiq.data_models.intermediate_step import IntermediateStep
-
 class BatchingExporter(RawExporter[IntermediateStep, IntermediateStep]):
-    def __init__(self, endpoint: str, api_key: str, project: str,
-                 batch_size: int = 100, flush_interval: float = 5.0,
-                 max_queue_size: int = 1000, drop_on_overflow: bool = False,
-                 shutdown_timeout: float = 10.0, **kwargs):
-        super().__init__(**kwargs)
-
+    def __init__(self, endpoint, api_key, batch_size=100, flush_interval=5.0):
+        super().__init__()
+        # Store connection details
         self.endpoint = endpoint
-        self.api_key = api_key
-        self.project = project
         self.session = aiohttp.ClientSession()
         self.headers = {"Authorization": f"Bearer {api_key}"}
 
-        # Add batching processor with callback to export_processed (same pattern as OtelSpanExporter)
-        self._batching_processor = BatchingProcessor[IntermediateStep](
+        # Add batching with size and time triggers
+        self.add_processor(BatchingProcessor[IntermediateStep](
             batch_size=batch_size,
-            flush_interval=flush_interval,
-            max_queue_size=max_queue_size,
-            drop_on_overflow=drop_on_overflow,
-            shutdown_timeout=shutdown_timeout,
-            done_callback=self.export_processed
-        )
-        self.add_processor(self._batching_processor)
+            flush_interval=flush_interval
+        ))
 
-    async def export_processed(self, item: IntermediateStep | list[IntermediateStep]) -> None:
-        """Export single items or batches from the BatchingProcessor.
-
-        This method handles both regular processing and time-based batch callbacks
-        from the BatchingProcessor, following the same pattern as OtelSpanExporter.
-        """
-        if isinstance(item, list):
-            # Handle batch from BatchingProcessor
-            items = item
-        else:
-            # Handle single item (fallback)
-            items = [item]
-
-        # Send batch to the service
+    async def export_processed(self, item: IntermediateStep | list[IntermediateStep]):
+        # Handle both single items and batches from processor
+        items = item if isinstance(item, list) else [item]
         await self._send_batch(items)
 
     async def _send_batch(self, items: list[IntermediateStep]):
-        """Send batch to the service."""
-        payload = {
-            "project": self.project,
-            "events": [
-                {
-                    "event_type": item.event_type,
-                    "name": item.payload.name if item.payload else None,
-                    "timestamp": item.event_timestamp,
-                    "metadata": item.metadata
-                }
-                for item in items
-            ]
-        }
+        # Transform to target format
+        payload = {"events": [self._transform_item(item) for item in items]}
 
-        async with self.session.post(
-            self.endpoint,
-            json=payload,
-            headers=self.headers
-        ) as response:
+        # Send to service
+        async with self.session.post(self.endpoint, json=payload, headers=self.headers) as response:
             response.raise_for_status()
-
-    async def _cleanup(self):
-        """Clean up HTTP session."""
-        await self.session.close()
-        await super()._cleanup()
 ```
 
 **Key Features of BatchingProcessor:**
 
 - **Size-based batching**: Flushes when `batch_size` items are accumulated
 - **Time-based batching**: Flushes after `flush_interval` seconds
-- **Immediate export callback**: Use `done_callback` for time-based batches
+- **Auto-wired callbacks**: Callbacks automatically set up when added to exporter
 - **Shutdown safety**: Processes all queued items during cleanup
 - **Overflow handling**: Configurable drop behavior when queue is full
 - **Statistics**: Built-in metrics for monitoring performance
@@ -1052,8 +1104,7 @@ BatchingProcessor[T](
     flush_interval=5.0,       # Seconds between flushes
     max_queue_size=1000,      # Maximum queue size
     drop_on_overflow=False,   # Drop items vs. force flush
-    shutdown_timeout=10.0,    # Shutdown timeout
-    done_callback=callback    # Immediate export function
+    shutdown_timeout=10.0     # Shutdown timeout
 )
 ```
 
@@ -1087,12 +1138,17 @@ class ResilientExporter(SpanExporter[Span, dict]):
 
 **Use Case**: Long-running services that need optimized connection pooling and lifecycle management.
 
-Manage connections efficiently:
+**Conceptual Flow:**
+```
+1. Override start() method with async context manager
+2. Configure connection pool settings (limits, timeouts, DNS cache)
+3. Create HTTP session with optimized settings
+4. Assign session to instance for use in export_processed()
+5. Automatically clean up session when exporter stops
+```
 
+**Implementation Pattern:**
 ```python
-import aiohttp
-from contextlib import asynccontextmanager
-
 class ConnectionManagedExporter(SpanExporter[Span, dict]):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -1100,22 +1156,26 @@ class ConnectionManagedExporter(SpanExporter[Span, dict]):
 
     @asynccontextmanager
     async def start(self):
-        """Start the exporter and manage connection lifecycle."""
+        # Configure connection pool
         connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300)
         timeout = aiohttp.ClientTimeout(total=30)
 
-        async with aiohttp.ClientSession(
-            connector=connector,
-            timeout=timeout
-        ) as session:
+        # Create managed session
+        async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
             self.session = session
             async with super().start():
-                yield
+                yield  # Session automatically closed when context exits
 ```
+
+### Advanced Custom Exporters
+
+Advanced Custom Exporters are for complex scenarios that require enterprise-grade patterns like circuit breakers, dead letter queues, stateful processing, and multi-backend coordination.
+
+> **For most use cases**, the simpler OpenTelemetry, Span, or Raw exporter patterns are sufficient and recommended. Consider this complexity level only when you have specific enterprise requirements that cannot be met with standard patterns.
 
 ## Testing Your Exporter
 
-Create comprehensive tests for your exporter:
+Create tests for your exporter:
 
 ```python
 import pytest
@@ -1142,17 +1202,6 @@ async def test_export_processed(custom_exporter):
         sent_data = mock_send.call_args[0][0]
         assert sent_data["project"] == "test-project"
         assert sent_data["span_id"] == "123"
-
-@pytest.mark.asyncio
-async def test_registration():
-    """Test that the exporter registers correctly."""
-    from aiq.cli.type_registry import GlobalTypeRegistry
-
-    registry = GlobalTypeRegistry.get()
-    exporter_info = registry.get_telemetry_exporter(CustomTelemetryExporter)
-
-    assert exporter_info is not None
-    assert exporter_info.config_type == CustomTelemetryExporter
 
 def test_isolated_attributes():
     """Test that isolated attributes work correctly across instances."""
@@ -1272,8 +1321,8 @@ logging.getLogger("aiq.observability").setLevel(logging.DEBUG)
 
 **Q: How do I handle authentication?**
 
-- Use environment variables for credentials: `api_key: str = Field(default="", description="API key from MYSERVICE_API_KEY")
-- Environment variable can be configured directly in the workflow YAML configuration file.
+- Use environment variables for credentials: `api_key: str = Field(default="", description="API key from MYSERVICE_API_KEY")`
+- Environment variables can be configured directly in the workflow YAML configuration file through [Environment Variable Interpolation](../workflows/workflow-configuration.md#environment-variable-interpolation)
 - Check environment variables in registration: `api_key = config.api_key or os.environ.get("MYSERVICE_API_KEY")`
 
 **Q: My exporter isn't receiving events. What's wrong?**
@@ -1290,6 +1339,24 @@ logging.getLogger("aiq.observability").setLevel(logging.DEBUG)
 - Test with a simple workflow before integrating with external services
 
 ## Complete Example
+
+**Implementation Overview:**
+```
+1. Define Configuration Schema (TelemetryExporterBaseConfig)
+   - Endpoint, API key, project settings
+   - Use pydantic Field() for validation and description
+
+2. Create Exporter Class (SpanExporter)
+   - Initialize HTTP session and headers in __init__
+   - Use IsolatedAttribute for concurrent state management
+   - Implement export_processed() with error handling
+   - Implement _cleanup() for resource management
+
+3. Register with AIQ (register_telemetry_exporter decorator)
+   - Create async factory function
+   - Instantiate exporter with config values
+   - Yield exporter instance
+```
 
 Here's a complete example of a custom telemetry exporter:
 
@@ -1368,23 +1435,13 @@ async def example_telemetry_exporter(config: ExampleTelemetryExporter, builder: 
     yield exporter
 ```
 
-This comprehensive guide covers all aspects of creating custom telemetry exporters for NeMo Agent toolkit. For more advanced use cases, refer to the existing exporter implementations in the toolkit source code.
+For additional reference examples, refer to the existing exporter implementations in the toolkit source code.
 
 ## Next Steps
 
-1. **Start Simple**: Begin with the Quick Start console exporter example
-2. **Explore Supported Telemetry Exporters**: Look at existing exporters in the `packages/` directory
-3. **Choose Your Pattern**: Select Raw, Span, or OpenTelemetry based on your needs
-4. **Test Locally**: Use file output first, then integrate with your service
-5. **Add Advanced Features**: Implement batching, retry logic, and error handling as needed
-
-**Useful Commands:**
-
-- `aiq info components -t tracing` - List available exporters
-- `aiq run --help` - See workflow execution options
-- `aiq serve --help` - See service deployment options
-
-**Community Resources:**
-- Check the `examples/` directory for workflow examples
-- Review existing exporter implementations in `packages/`
-- Enable debug logging for troubleshooting
+1. **Explore Examples**: Check the `examples/observability` directory for workflow examples with configured observability settings
+2. **Start Simple**: Begin with the Quick Start console exporter example
+3. **Explore Supported Telemetry Exporters**: Look at existing exporters in the `packages/` directory
+4. **Choose Your Pattern**: Select Raw, Span, or OpenTelemetry based on your needs
+5. **Test Locally**: Use file output first, then integrate with your service
+6. **Add Advanced Features**: Implement batching, retry logic, and error handling as needed

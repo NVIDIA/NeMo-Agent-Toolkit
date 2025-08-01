@@ -176,7 +176,7 @@ def discover_and_register_plugins(plugin_type: PluginTypes):
                 # The threshold is 300 ms if no plugins have been loaded yet, and 100 ms otherwise. Triple the threshold
                 # if a debugger is attached.
                 if (elapsed_time > (300.0 if count == 0 else 100.0) * (3 if is_debugger_attached() else 1)):
-                    logger.warning(
+                    logger.debug(
                         "Loading module '%s' from entry point '%s' took a long time (%f ms). "
                         "Ensure all imports are inside your registered functions.",
                         entry_point.module,
