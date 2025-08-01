@@ -45,7 +45,7 @@ async def who_am_i_function(config: WhoAmIConfig, builder: Builder):
 
     auth_provider = await builder.get_auth_provider(config.auth_provider)
 
-    async def _inner(empty: None) -> str:
+    async def _inner(empty: None) -> str:  # pylint: disable=unused-argument
         """
         Look up information about an IP address.
 
@@ -70,7 +70,7 @@ async def who_am_i_function(config: WhoAmIConfig, builder: Builder):
 
                 data = response.json()
 
-                logger.info(f"Successfully looked up user: {data.get('name', 'Unknown')}")
+                logger.info("Successfully looked up user: %s", data.get('name', 'Unknown'))
 
                 return json.dumps(data, indent=2)
 
