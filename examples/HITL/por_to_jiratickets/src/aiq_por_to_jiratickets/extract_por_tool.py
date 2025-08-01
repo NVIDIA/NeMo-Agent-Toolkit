@@ -123,33 +123,36 @@ class ExtractPORToolConfig(FunctionBaseConfig, name="extract_por_tool"):
     llm: LLMRef
 
 
-@register_function(config_type=ExtractPORToolConfig)
+@register_function(config_type=ExtractPORToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def extract_from_por_tool(config: ExtractPORToolConfig, builder: Builder):
     """
     Extract epics and issues from the given PRO/PRD text using the LLM chain
     and store the result in session state.
     """
 
-    from langchain.chains.llm import LLMChain
     from langchain.prompts import PromptTemplate
+    from langchain_core.output_parsers import StrOutputParser
 
     llm = await builder.get_llm(llm_name=config.llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     prompt = PromptTemplate(
         input_variables=["por_content"],
         template=(PROMPT_EXTRACT_EPICS),
     )
-    chain = LLMChain(llm=llm, prompt=prompt)
+
+    chain = prompt | llm | StrOutputParser()
 
     async def _arun(input_text: str) -> str:
 
-        # input_text = process_input_text(input_text)
-        if os.path.isfile(config.root_path + input_text):
-            logger.debug("Detected file: %s", config.root_path + input_text)
+        input_file = os.path.join(config.root_path, input_text)
+        if os.path.isfile(input_file):
+            logger.debug("Detected file: %s", input_file)
 
-            with open(config.root_path + input_text, 'r', encoding='utf-8') as file:
-                input_text = [line.strip() for line in file if line.strip()]
+            with open(input_file, 'r', encoding='utf-8') as file:
+                por_content = "\n".join(line.strip() for line in file if line.strip())
+        else:
+            por_content = input_text
 
-        response = await chain.arun(por_content=input_text)
+        response = await chain.ainvoke({"por_content": por_content})
         response = correct_json_format(response)
         # Attempt to parse the response as JSON. If it fails, just store the raw string.
         try:
@@ -158,7 +161,7 @@ async def extract_from_por_tool(config: ExtractPORToolConfig, builder: Builder):
             logger.debug("An error occurred while loading Json %s", e)
             return "An error occurred while loading Json so please re-run extraction step again"
 
-        filename = config.root_path + "epics_tasks.json"
+        filename = os.path.join(config.root_path, "epics_tasks.json")
         try:
             with open(filename, 'w', encoding='utf-8') as json_file:
                 json.dump(data, json_file)

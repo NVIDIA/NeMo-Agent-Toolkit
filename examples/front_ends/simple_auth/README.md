@@ -100,7 +100,7 @@ Browse to **`http://127.0.0.1:5000/`** – you should see the demo home page. Si
 
 
 ## Deploy the NeMo Agent Toolkit UI
-Follow the instructions at the GitHub repository to deploy the [NeMo Agent Toolkit UI](../../../external/aiqtoolkit-opensource-ui/)
+Follow the instructions at the GitHub repository to deploy the [NeMo Agent Toolkit UI](https://github.com/NVIDIA/NeMo-Agent-Toolkit-UI)
 to deploy the UI that works with the agent in this example. Configure it according to the instructions in the README.
 
 ## Update Your Environment Variables
