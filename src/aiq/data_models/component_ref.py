@@ -166,3 +166,14 @@ class ITSStrategyRef(ComponentRef):
     @override
     def component_group(self):
         return ComponentGroup.ITS_STRATEGIES
+
+
+class GuardrailsRef(ComponentRef):
+    """
+    A reference to a guardrails configuration in an AIQ Toolkit configuration object.
+    """
+
+    @property
+    @override
+    def component_group(self):
+        return ComponentGroup.GUARDRAILS

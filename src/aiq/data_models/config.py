@@ -29,6 +29,7 @@ from aiq.data_models.evaluate import EvalConfig
 from aiq.data_models.front_end import FrontEndBaseConfig
 from aiq.data_models.function import EmptyFunctionConfig
 from aiq.data_models.function import FunctionBaseConfig
+from aiq.data_models.guardrails import GuardrailsBaseConfig
 from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
@@ -260,6 +261,9 @@ class AIQConfig(HashableBaseModel):
     # ITS Strategies
     its_strategies: dict[str, ITSStrategyBaseConfig] = {}
 
+    # Guardrails Configuration
+    guardrails: dict[str, GuardrailsBaseConfig] = {}
+
     # Workflow Configuration
     workflow: FunctionBaseConfig = EmptyFunctionConfig()
 
@@ -347,6 +351,10 @@ class AIQConfig(HashableBaseModel):
         WorkflowAnnotation = typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig),
                                               Discriminator(TypedBaseModel.discriminator)]
 
+        GuardrailsAnnotation = dict[str,
+                                    typing.Annotated[type_registry.compute_annotation(GuardrailsBaseConfig),
+                                                     Discriminator(TypedBaseModel.discriminator)]]
+
         should_rebuild = False
 
         auth_providers_field = cls.model_fields.get("authentication")
@@ -392,6 +400,11 @@ class AIQConfig(HashableBaseModel):
         workflow_field = cls.model_fields.get("workflow")
         if workflow_field is not None and workflow_field.annotation != WorkflowAnnotation:
             workflow_field.annotation = WorkflowAnnotation
+            should_rebuild = True
+
+        guardrails_field = cls.model_fields.get("guardrails")
+        if guardrails_field is not None and guardrails_field.annotation != GuardrailsAnnotation:
+            guardrails_field.annotation = GuardrailsAnnotation
             should_rebuild = True
 
         if (GeneralConfig.rebuild_annotations()):
