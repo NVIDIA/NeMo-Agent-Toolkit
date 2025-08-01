@@ -79,7 +79,7 @@ examples/
 ```
 
 <!-- Remove this once #559 is completed -->
-For our puposes we will need a `data` directory, along with the above mentioned symlinks which can be created with the following commands:
+For our purposes we will need a `data` directory, along with the above mentioned symlinks which can be created with the following commands:
 ```bash
 mkdir examples/text_file_ingest/src/text_file_ingest/data
 pushd examples/text_file_ingest
