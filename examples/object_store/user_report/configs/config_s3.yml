@@ -29,9 +29,9 @@ object_stores:
     bucket_name: my-bucket
 
 llms:
-  gpt:
-    _type: openai
-    model_name : gpt-4o
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
 
 functions:
@@ -57,7 +57,7 @@ functions:
 workflow:
   _type: react_agent
   tool_names: [get_user_report, put_user_report]
-  llm_name: gpt
+  llm_name: nim_llm
   verbose: true
   handle_parsing_errors: true
   max_retries: 2
