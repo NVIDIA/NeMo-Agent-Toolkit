@@ -91,8 +91,8 @@ popd
 ## Customizing the Configuration Object
 Given that the purpose of this tool will be similar to that of the `webpage_query` tool, you can use it as a reference and starting point. Examining the `webpage_query` tool configuration object from `examples/getting_started/simple_web_query/src/aiq_simple_web_query/register.py`:
 ```python
-class TextFileIngestFunctionConfig(FunctionBaseConfig, name="text_file_ingest"):
-    ingest_glob: str
+class WebQueryToolConfig(FunctionBaseConfig, name="webpage_query"):
+    webpage_url: str
     description: str
     chunk_size: int = 1024
     embedder_name: EmbedderRef = "nvidia/nv-embedqa-e5-v5"
