@@ -25,7 +25,7 @@ object_stores:
     _type: mysql
     endpoint_url: localhost:3306
     access_key: root
-    secret_key: my_password
+    secret_key: ${MYSQL_ROOT_PASSWORD}
     bucket_name: my-bucket
 
 llms:

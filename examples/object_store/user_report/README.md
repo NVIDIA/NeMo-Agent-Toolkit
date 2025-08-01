@@ -24,15 +24,19 @@ And example tool in the NeMo Agent toolkit that makes use of an Object Store to 
 - [Key Features](#key-features)
 - [Installation and Setup](#installation-and-setup)
   - [Install this Workflow](#install-this-workflow)
-  - [Setting up MinIO (Optional)](#setting-up-minio-optional)
-  - [Setting up the MySQL Server (Optional)](#setting-up-the-mysql-server-optional)
+  - [Choose an Object Store](#choose-an-object-store)
+    - [Setting up MinIO](#setting-up-minio)
+    - [Setting up the MySQL Server](#setting-up-the-mysql-server)
+  - [Loading Mock Data](#loading-mock-data)
+    - [Load Mock Data to MiniIO](#load-mock-data-to-miniio)
+    - [Load Mock Data to MySQL Server](#load-mock-data-to-mysql-server)
 - [NeMo Agent Toolkit File Server](#nemo-agent-toolkit-file-server)
   - [Using the Object Store Backed File Server](#using-the-object-store-backed-file-server)
 - [Run the Workflow](#run-the-workflow)
   - [Example 1](#example-1)
   - [Example 2](#example-2)
   - [Example 3](#example-3)
-  - [Example 4 (Continued from Example 3)](#example-4-continued-from-example-3)
+  - [Example 4 ](#example-4)
 
 ## Key Features
 
@@ -53,7 +57,12 @@ From the root directory of the NeMo Agent toolkit repository, run the following 
 uv pip install -e examples/object_store/user_report
 ```
 
-### Setting up MinIO (Optional)
+### Choose an Object Store
+
+You must choose an object store to use for this example. It is recommended to use MinIO or MySQL.
+The in-memory object store is useful for transient use cases, but is not particularly useful for this example due to the lack of persistence.
+
+#### Setting up MinIO
 If you want to run this example in a local setup without creating a bucket in AWS, you can set up MinIO in your local machine. MinIO is an object storage system and acts as drop-in replacement for AWS S3.
 
 You can use the [docker-compose.minio.yml](../../deploy/docker-compose.minio.yml) file to start a MinIO server in a local docker container.
@@ -62,35 +71,50 @@ You can use the [docker-compose.minio.yml](../../deploy/docker-compose.minio.yml
 docker compose -f examples/deploy/docker-compose.minio.yml up -d
 ```
 
-### Load Mock Data to MiniIO
-To load mock data to minIO, use the `upload_to_minio.sh` script in this directory. For this example, we will load the mock user reports in the `data/object_store` directory.
+> [!NOTE]
+> This is not a secure configuration and should not to be used in production systems.
 
-```bash
-cd examples/object_store/user_report/
-./upload_to_minio.sh data/object_store myminio my-bucket
-```
-
-Note: This is not a secure configuration and should not to be used in production systems.
-
-### Setting up the MySQL Server (Optional)
+#### Setting up the MySQL Server
 
 If you want to use a MySQL server, you can use the [docker-compose.mysql.yml](../../deploy/docker-compose.mysql.yml) file to start a MySQL server in a local docker container.
 
-You should specify the `MYSQL_ROOT_PASSWORD` environment variable as part of your environment variables.
+You should first specify the `MYSQL_ROOT_PASSWORD` environment variable.
 
 ```bash
-MYSQL_ROOT_PASSWORD=<password> docker compose -f examples/deploy/docker-compose.mysql.yml up -d
+export MYSQL_ROOT_PASSWORD=<password>
 ```
 
-Note: This is not a secure configuration and should not to be used in production systems.
+Then start the MySQL server.
 
-### Load Mock Data to MySQL Server
-To load mock data to the MySQL server, use the `upload_to_mysql.sh` script in this directory. For this example, we will load the mock user reports in the `data/object_store` directory.
+```bash
+docker compose -f examples/deploy/docker-compose.mysql.yml up -d
+```
+
+> [!NOTE]
+> This is not a secure configuration and should not to be used in production systems.
+
+### Loading Mock Data
+
+This example uses mock data to demonstrate the functionality of the object store. You can load the mock data to the object store by running the following commands based on the object store you chose.
+
+#### Load Mock Data to MiniIO
+To load mock data to minIO, use the `upload_to_minio.py` script in this directory. For this example, we will load the mock user reports in the `data/object_store` directory.
 
 ```bash
 cd examples/object_store/user_report/
-MYSQL_ROOT_PASSWORD=<password> ./upload_to_mysql.sh data/object_store my-bucket
+./upload_to_minio.py data/object_store myminio my-bucket
+cd -
 ```
+
+#### Load Mock Data to MySQL Server
+To load mock data to the MySQL server, use the `upload_to_mysql.py` script in this directory. For this example, we will load the mock user reports in the `data/object_store` directory.
+
+```bash
+cd examples/object_store/user_report/
+./upload_to_mysql.py data/object_store my-bucket
+cd -
+```
+
 
 ## NeMo Agent Toolkit File Server
 
@@ -108,10 +132,15 @@ object_stores:
   ...
 ```
 
-You can start the server by running:
+You can start the server by running the following command.
+
 ```bash
 aiq serve --config_file examples/object_store/user_report/configs/config_s3.yml
 ```
+
+Other configuration files are available in the `configs` directory for the different object stores.
+
+The only way to populate the in-memory object store is through `aiq serve` followed by the appropriate `PUT` or `POST` request.
 
 ### Using the Object Store Backed File Server
 
@@ -128,10 +157,16 @@ If any of the loading scripts were run and the files are in the object store, ex
 
 ## Run the Workflow
 
-Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
+You have two options for running the workflow:
+1. Using the object store (`config_s3.yml`)
+2. Using the MySQL server (`config_mysql.yml`)
+
+The configuration file used in the examples below is `config_s3.yml` which uses an S3 object store.
+You can change the configuration file by changing the `--config_file` argument to `config_mysql.yml` for the MySQL server.
 
 ### Example 1
-```
+
+```bash
 aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 67890"
 ```
 
@@ -153,10 +188,9 @@ The latest report for user 67890 is as follows:
 ```
 
 ### Example 2
-```
+```bash
 aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 12345 on April 15th 2025"
 ```
-
 
 **Expected Workflow Output**
 ```console
@@ -202,7 +236,7 @@ aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --
 The latest report for user 6789 has been successfully created with the specified recommendations.
 ```
 
-### Example 4 (Continued from Example 3)
+### Example 4
 ```bash
 aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Get the latest report for user 6789'
 ```
