@@ -117,6 +117,11 @@ When installing specific plugins, these are the available options:
 - `weave` - Weights & Biases Weave integration
 - `zep_cloud` - Zep Cloud integration
 
+## Dependency Groups
+When installing dependencies, you can use the following groups:
+- `test` - Testing utilities
+- `profiling` - Profiling tools
+
 ## Verification Steps
 
 After installation, verify AIQ toolkit is properly installed:
