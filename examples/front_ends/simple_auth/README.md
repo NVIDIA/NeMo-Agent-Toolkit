@@ -58,15 +58,10 @@ which provides information about the authenticated user.
 In a separate terminal, you can run a demo OAuth 2.0 provider using the [`Authlib`](https://docs.authlib.org/en/latest/)
 library. This will allow you to test the OAuth 2.0 Authorization Code Flow with your agent.
 
-### Quick Start with Docker (Recommended)
+### Quick Start with Docker
 
 The easiest way to get started is using Docker, which works seamlessly across all systems (macOS, Windows, Linux):
 
-**Run the example (foreground mode)**
-
-```bash
-docker compose -f examples/front_ends/simple_auth/docker-compose.yml --project-directory examples/front_ends/simple_auth up
-```
 **Run the example (background mode)**
 ```bash
 docker compose -f examples/front_ends/simple_auth/docker-compose.yml --project-directory examples/front_ends/simple_auth up -d
@@ -93,39 +88,6 @@ docker compose -f examples/front_ends/simple_auth/docker-compose.yml --project-d
 
 ```bash
 docker compose -f examples/front_ends/simple_auth/docker-compose.yml --project-directory examples/front_ends/simple_auth down -v
-```
-
-### Manual Setup (Optional)
-
-If you prefer to set up the OAuth provider manually without Docker:
-
-<details>
-<summary>Click to expand manual setup instructions</summary>
-
-#### Clone & enter the repo
-
-```bash
-git clone https://github.com/authlib/example-oauth2-server.git
-cd example-oauth2-server
-```
-
-#### Create a Python virtual environment
-
-```bash
-# make an isolated env
-python3 -m venv .venv
-# activate it – prompt shows (.venv)
-source .venv/bin/activate
-# optional but recommended
-pip install --upgrade pip
-```
-
-#### Install dependencies & start the server
-
-```bash
-pip install -r requirements.txt
-export AUTHLIB_INSECURE_TRANSPORT=1
-flask run
 ```
 
 Browse to **`http://localhost:5001/`** – you should see the demo home page. Sign up with any name.
