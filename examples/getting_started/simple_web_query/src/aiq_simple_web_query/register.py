@@ -32,7 +32,7 @@ class WebQueryToolConfig(FunctionBaseConfig, name="webpage_query"):
     embedder_name: EmbedderRef = "nvidia/nv-embedqa-e5-v5"
 
 
-@register_function(config_type=WebQueryToolConfig)
+@register_function(config_type=WebQueryToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def webquery_tool(config: WebQueryToolConfig, builder: Builder):
 
     from langchain.tools.retriever import create_retriever_tool
