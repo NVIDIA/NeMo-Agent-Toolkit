@@ -114,10 +114,8 @@ When installing specific plugins, these are the available options:
 - `redis` - Redis memory integration
 - `s3` - AWS S3 object storage integration
 - `semantic_kernel` - Microsoft Semantic Kernel integration
-- `test` - Testing utilities
 - `weave` - Weights & Biases Weave integration
 - `zep_cloud` - Zep Cloud integration
-- `profiling` - Profiling tools
 
 ## Verification Steps
 
