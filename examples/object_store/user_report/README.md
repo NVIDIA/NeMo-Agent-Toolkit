@@ -24,6 +24,7 @@ And example tool in the NeMo Agent toolkit that makes use of an Object Store to 
 - [Key Features](#key-features)
 - [Installation and Setup](#installation-and-setup)
   - [Install this Workflow](#install-this-workflow)
+  - [Set Up API Keys](#set-up-api-keys)
   - [Setting up MinIO (Optional)](#setting-up-minio-optional)
   - [Setting up the MySQL Server (Optional)](#setting-up-the-mysql-server-optional)
 - [NeMo Agent Toolkit File Server](#nemo-agent-toolkit-file-server)
@@ -51,6 +52,13 @@ From the root directory of the NeMo Agent toolkit repository, run the following 
 
 ```bash
 uv pip install -e examples/object_store/user_report
+```
+
+### Set Up API Keys
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+
+```bash
+export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
 ### Setting up MinIO (Optional)
