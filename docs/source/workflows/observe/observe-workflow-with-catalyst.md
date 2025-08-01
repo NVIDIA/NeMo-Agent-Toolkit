@@ -53,8 +53,12 @@ general:
     tracing:
       catalyst:
         _type: catalyst
-        project: "catalyst-demo"
-        dataset: "catalyst-dataset"
+        project: aiqtoolkit-demo
+        dataset: aiqtoolkit-dataset
+        endpoint: ${CATALYST_ENDPOINT}
+        access_key: ${CATALYST_ACCESS_KEY}
+        secret_key: ${CATALYST_SECRET_KEY}
+        tracer_type: aiqtoolkit-tracer
 ```
 
 ### Step 6: Run Your Workflow
@@ -62,13 +66,18 @@ From the root directory of the NeMo Agent toolkit library, install dependencies 
 
 **Example:**
 ```bash
+# Install the workflow and dependencies
 uv pip install -e examples/observability/simple_calculator_observability/
+
+# Run the workflow with configured catalyst exporter
+aiq run --config_file examples/observability/simple_calculator_observability/configs/config-catalyst.yml --input "what is 1 * 1?"
 ```
+
 As the workflow runs, telemetry data will start showing up in Catalyst.
 
 ### Step 7: View Traces Data in Catalyst
 - Open your browser and navigate to `https://catalyst.raga.ai/projects`.
-- Locate your workflow traces under the **your-dataset** section in projects.
+- Idenfity your project and locate your workflow traces under the **your-dataset** section in projects.
 - Inspect function execution details, latency, total tokens, request timelines and other info under Info and Attributes tab of an individual trace.
 
 ![Catalyst Trace View](../../_static/ragaai_catalyst_traceview.png)
