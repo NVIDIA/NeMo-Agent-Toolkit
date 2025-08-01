@@ -19,7 +19,6 @@ from collections.abc import AsyncGenerator
 
 from pydantic import Field
 
-from aiq.agent.base import AGENT_LOG_PREFIX
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function_info import FunctionInfo
@@ -85,6 +84,8 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
     """
     from langchain_core.language_models import BaseChatModel
     from langchain_core.prompts import PromptTemplate
+
+    from aiq.agent.base import AGENT_LOG_PREFIX
 
     def remove_r1_think_tags(text: str):
         pattern = r'(<think>)?.*?</think>\s*(.*)'
