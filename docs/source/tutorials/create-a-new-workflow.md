@@ -18,7 +18,7 @@ limitations under the License.
 
 # Create a New Tool and Workflow
 
-In the [Customizing a Workflow](./customize-a-workflow.md) and [Adding Tools to a Workflow](./create-a-new-workflow.md) tutorials, we have been primarily utilizing tools that were included with the Agent toolkit. This tutorial demonstrates how to create a new tool that can ingest data from local files stored on disk.
+In the [Customizing a Workflow](./customize-a-workflow.md) and [Adding Tools to a Workflow](./create-a-new-workflow.md) tutorials, we have been primarily utilizing tools that were included with the NeMo Agent toolkit. This tutorial demonstrates how to create a new tool that can ingest data from local files stored on disk.
 
 For this purpose, create a new empty tool using the `aiq workflow create` command. This command automates the setup process by generating the necessary files and directory structure for your new workflow.
 ```bash
@@ -37,6 +37,7 @@ aiq workflow delete text_file_ingest
 ```
 :::
 
+<!-- This section needs to be updated once #559 is completed -->
 Each workflow created in this way also creates a Python project, and by default, this will also install the project into the environment. If you want to avoid installing it into the environment you can use the `--no-install` flag.
 
 This creates a new directory `examples/text_file_ingest` with the following layout:
@@ -59,10 +60,11 @@ The completed code for this example can be found in the `examples/documentation_
 
 By convention, tool implementations are defined within or imported into the `register.py` file. In this example, the tool implementation exists within the `text_file_ingest_function.py` file and is imported into the `register.py` file. The `pyproject.toml` file contains the package metadata and dependencies for the tool. The `text_file_ingest_function.py` that was created for us will contain a configuration object (`TextFileIngestFunctionConfig`) along with the tool function (`text_file_ingest_function`). The next two sections will walk through customizing these.
 
-Many of these tools contain an associated workflow configuration file stored in a `config` directory, along with example data stored in a `data` directory. Since these tools are installable Python packages and the workflow configuration file and data must be included in the package, they need to be located under the `examples/text_file_ingest/src/text_file_ingest` directory. For convenience, symlinks can be created at the root of the project directory pointing to the actual directories. Lastly, the `README.md` file is often included in the root of the project. Resulting in a directory structure similar to the following:
+Many of these tools contain an associated workflow configuration file stored in a `config` directory, along with example data stored in a `data` directory. Since these tools are installable Python packages and the workflow configuration file and data must be included in the package, they need to be located under the `examples/text_file_ingest/src/text_file_ingest` directory. For convenience, symlinks can be created at the root of the project directory pointing to the actual directories. Lastly, a `README.md` file is often included in the root of the project. Resulting in a directory structure similar to the following:
 ```
 examples/
 └── text_file_ingest/
+    ├── README.md
     ├── config -> src/text_file_ingest/configs
     |── data   -> src/text_file_ingest/data
     ├── pyproject.toml
@@ -76,6 +78,15 @@ examples/
             └── text_file_ingest_function.py
 ```
 
+<!-- Remove this once #559 is completed -->
+For our purposes we will need a `data` directory, along with the above mentioned symlinks which can be created with the following commands:
+```bash
+mkdir examples/text_file_ingest/src/text_file_ingest/data
+pushd examples/text_file_ingest
+ln -s src/text_file_ingest/data
+ln -s src/text_file_ingest/configs
+popd
+```
 
 ## Customizing the Configuration Object
 Given that the purpose of this tool will be similar to that of the `webpage_query` tool, you can use it as a reference and starting point. Examining the `webpage_query` tool configuration object from `examples/getting_started/simple_web_query/src/aiq_simple_web_query/register.py`:
@@ -89,7 +100,7 @@ class WebQueryToolConfig(FunctionBaseConfig, name="webpage_query"):
 
 Along with renaming the class and changing the `name`, the only other configuration attribute that needs to change is replacing `webpage_url` with a glob pattern. The resulting new tool configuration object will look like:
 ```python
-class TextFileIngestToolConfig(FunctionBaseConfig, name="text_file_ingest"):
+class TextFileIngestFunctionConfig(FunctionBaseConfig, name="text_file_ingest"):
     ingest_glob: str
     description: str
     chunk_size: int = 1024
@@ -103,11 +114,18 @@ For more details on NeMo Agent toolkit configuration objects, refer to the [Conf
 
 ## Customizing the Tool Function
 
-The `text_file_ingest_tool` function created is already correctly associated with the `TextFileIngestToolConfig` configuration object:
+The `text_file_ingest_tool` function created is already correctly associated with the `TextFileIngestFunctionConfig` configuration object:
 ```python
-@register_function(config_type=TextFileIngestToolConfig)
-async def text_file_ingest_tool(config: TextFileIngestToolConfig, builder: Builder):
+@register_function(config_type=TextFileIngestFunctionConfig)
+async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builder: Builder):
 ```
+
+However since we are going to make use of LangChain, we need to add the `framework_wrappers` parameter to the `register_function` decorator:
+```python
+@register_function(config_type=TextFileIngestFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
+async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builder: Builder):
+```
+
 
 Examining the `webquery_tool` function (`examples/getting_started/simple_web_query/src/aiq_simple_web_query/register.py`), you can observe that at the heart of the tool is the [`langchain_community.document_loaders.WebBaseLoader`](https://python.langchain.com/docs/integrations/document_loaders/web_base) class.
 
@@ -136,18 +154,19 @@ Next, update the retrieval tool definition changing the `name` parameter to `tex
 
 The rest of the code largely remains the same resulting in the following code, the full code of this example is located at `examples/documentation_guides/workflows/text_file_ingest/src/text_file_ingest/register.py` in the NeMo Agent toolkit repository:
 ```python
-@register_function(config_type=TextFileIngestToolConfig)
-async def text_file_ingest_tool(config: TextFileIngestToolConfig, builder: Builder):
+@register_function(config_type=TextFileIngestFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
+async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builder: Builder):
 
     from langchain.tools.retriever import create_retriever_tool
     from langchain_community.document_loaders import DirectoryLoader
     from langchain_community.document_loaders import TextLoader
     from langchain_community.vectorstores import FAISS
+    from langchain_core.embeddings import Embeddings
     from langchain_text_splitters import RecursiveCharacterTextSplitter
 
     embeddings: Embeddings = await builder.get_embedder(config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
-    logger.info("Ingesting documents matching for the webpage: %s", config.ingest_glob)
+    logger.info("Ingesting documents from: %s", config.ingest_glob)
     (ingest_dir, ingest_glob) = os.path.split(config.ingest_glob)
     loader = DirectoryLoader(ingest_dir, glob=ingest_glob, loader_cls=TextLoader)
 
@@ -185,7 +204,7 @@ The updated `functions` section will resemble the following:
 functions:
   doca_documents:
     _type: text_file_ingest
-    ingest_glob: examples/documentation_guides/workflows/text_file_ingest/data/*.txt
+    ingest_glob: examples/text_file_ingest/data/*.txt
     description: "Search for information about DOCA and GPUNetIO. For any questions about DOCA and GPUNetIO, you must use this tool!"
     embedder_name: nv-embedqa-e5-v5
     chunk_size: 512
@@ -255,8 +274,7 @@ The `pyproject.toml` file defines your package metadata and dependencies. In thi
   ```
 
 ## Rebuild with Changes
-By default, the `workflow create` command will install the template workflow for you to run and test.
-When you modify the newly created workflow and update dependencies or code, you need to reinstall the workflow package to ensure new dependencies are installed. To do so, enter the following command:
+By default, the `workflow create` command will install the template workflow for you to run and test. When you modify the newly created workflow and update dependencies or code, you need to reinstall the workflow package to ensure new dependencies are installed. To do so, enter the following command:
 
 Example:
 ```bash
