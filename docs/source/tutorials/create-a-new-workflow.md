@@ -181,6 +181,9 @@ Starting from the `custom_config.yml` file you created in the previous section, 
 If you are following this document and building this tool from scratch, you can either copy the contents of `examples/documentation_guides/workflows/text_file_ingest/data` into `examples/text_file_ingest/src/text_file_ingest/data` or populate it with your own text files.
 :::
 
+TODO:
+MAKE SYMLINKS TO DATA AND CONFIG DIRECTORIES
+
 The updated `functions` section will resemble the following:
 ```yaml
 functions:
