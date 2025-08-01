@@ -35,9 +35,12 @@ class TypeConverter:
 
     def __init__(self, converters: list[Callable[[typing.Any], typing.Any]], parent: "TypeConverter | None" = None):
         """
-        :param converters: A list of single-argument converter callables
-                           annotated with their input param and return type.
-        :param parent:     An optional parent TypeConverter for fallback.
+        Parameters
+        ----------
+        converters : list[Callable[[typing.Any], typing.Any]]
+            A list of single-argument converter callables annotated with their input param and return type.
+        parent : TypeConverter | None
+            An optional parent TypeConverter for fallback.
         """
         # dict[to_type, dict[from_type, converter]]
         self._converters: OrderedDict[type, OrderedDict[type, Callable]] = OrderedDict()
@@ -54,6 +57,16 @@ class TypeConverter:
         """
         Registers a converter. Must have exactly one parameter
         and an annotated return type.
+
+        Parameters
+        ----------
+        converter : Callable
+            A converter function. Must have exactly one parameter and an annotated return type.
+
+        Raises
+        ------
+        ValueError
+            If the converter does not have a return type or exactly one argument or the argument has no data type.
         """
         sig = typing.get_type_hints(converter)
         to_type = sig.pop("return", None)
@@ -70,7 +83,7 @@ class TypeConverter:
         self._converters.setdefault(to_type, OrderedDict())[from_type] = converter
         # to do(MDD): If needed, sort by specificity here.
 
-    def _convert(self, data, to_type: type[_T]) -> _T | None:
+    def _convert(self, data: typing.Any, to_type: type[_T]) -> _T | None:
         """
         Attempts to convert `data` into `to_type`. Returns None if no path is found.
         """
@@ -95,10 +108,27 @@ class TypeConverter:
         # 4) If we still haven't succeeded, return None
         return None
 
-    def convert(self, data, to_type: type[_T]) -> _T:
+    def convert(self, data: typing.Any, to_type: type[_T]) -> _T:
         """
-        Converts or raises ValueError if no path is found.
+        Converts or raises ValueError if no conversion path is found.
         We also give the parent a chance if self fails.
+
+        Parameters
+        ----------
+        data : typing.Any
+            The value to convert.
+        to_type : type
+            The type to convert the value to.
+
+        Returns
+        -------
+        _T
+            The converted value.
+
+        Raises
+        ------
+        ValueError
+            If the value cannot be converted to the specified type.
         """
         result = self._convert(data, to_type)
         if result is None and self._parent:
@@ -109,10 +139,22 @@ class TypeConverter:
             return result
         raise ValueError(f"Cannot convert type {type(data)} to {to_type}. No match found.")
 
-    def try_convert(self, data, to_type: type[_T]) -> _T:
+    def try_convert(self, data: typing.Any, to_type: type[_T]) -> _T | typing.Any:
         """
         Converts with graceful error handling. If conversion fails, returns the original data
         and continues processing.
+
+        Parameters
+        ----------
+        data : typing.Any
+            The value to convert.
+        to_type : type
+            The type to convert the value to.
+
+        Returns
+        -------
+        _T | typing.Any
+            The converted value, or original value if conversion fails.
         """
         try:
             return self.convert(data, to_type)
@@ -124,7 +166,7 @@ class TypeConverter:
     # -------------------------------------------------
     # INTERNAL DIRECT CONVERSION (with parent fallback)
     # -------------------------------------------------
-    def _try_direct_conversion(self, data, target_root_type: type) -> typing.Any | None:
+    def _try_direct_conversion(self, data: typing.Any, target_root_type: type) -> typing.Any | None:
         """
         Tries direct conversion in *this* converter's registry.
         If no match here, we forward to parent's direct conversion
@@ -149,7 +191,7 @@ class TypeConverter:
     # -------------------------------------------------
     # INTERNAL INDIRECT CONVERSION (with parent fallback)
     # -------------------------------------------------
-    def _try_indirect_convert(self, data, to_type: type[_T]) -> _T | None:
+    def _try_indirect_convert(self, data: typing.Any, to_type: type[_T]) -> _T | None:
         """
         Attempt indirect conversion (DFS) in *this* converter.
         If no success, fallback to parent's indirect attempt.
@@ -234,7 +276,7 @@ class GlobalTypeConverter:
         return GlobalTypeConverter._global_converter.convert(data, to_type)
 
     @staticmethod
-    def try_convert(data, to_type: type[_T]) -> _T:
+    def try_convert(data: typing.Any, to_type: type[_T]) -> _T | typing.Any:
         return GlobalTypeConverter._global_converter.try_convert(data, to_type)
 
 

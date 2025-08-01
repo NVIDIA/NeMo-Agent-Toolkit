@@ -82,7 +82,7 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~aiq.data_mod
            ...
    ```
 3. **Tell NeMo Agent toolkit how to build your MemoryEditor**. Typically, you do this by hooking into the builder system so that when `builder.get_memory_client("my_custom_memory")` is called, it returns an instance of `MyCustomMemoryEditor`.
-   - For example, you might define a `@register_memory` or do it manually with the global type registry. (The standard pattern is to see how `mem0_memory` or `zep` memory is integrated in the code under `aiq/memory/<provider>`.)
+   - For example, you might define a `@register_memory` or do it manually with the global type registry. The standard pattern is to see how `mem0`, `redis` or `zep` memory is integrated in the code. For instance, see `packages/aiqtoolkit_mem0ai/src/aiq/plugins/mem0ai/memory.py` to see how `mem0_memory` is integrated.
 
 4. **Use in config**: Now in your NeMo Agent toolkit config, you can do something like:
    ```yaml

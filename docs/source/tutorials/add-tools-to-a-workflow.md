@@ -24,7 +24,7 @@ NeMo Agent toolkit includes several built-in tools (functions) that can be used 
 aiq info components -t function
 ```
 
-The current workflow defines a tool to query the [LangSmith User Guide](https://docs.smith.langchain.com). This is defined in the `tools` section of the configuration file:
+The `examples/getting_started/simple_web_query/configs/config.yml` workflow defines a tool to query the [LangSmith User Guide](https://docs.smith.langchain.com). This is defined in the `functions` section of the configuration file:
 ```yaml
 functions:
   webpage_query:
@@ -35,15 +35,15 @@ functions:
     chunk_size: 512
 ```
 
-However, the workflow is unaware of some related technologies, such as LangGraph, if you run:
+However, the workflow is unaware of some related technologies, such as LangChain, if you run:
 ```bash
-aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "How does LangSmith interact with tools like LangGraph?"
+aiq run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "How do I trace only specific parts of my LangChain application?"
 ```
 
-The output will be similar to the following:
+The output may be similar to the following:
 ```
 Workflow Result:
-["Unfortunately, I couldn't find any information about LangSmith's interaction with LangGraph. The user guide does not mention LangGraph, and I couldn't find any relevant information through the webpage queries."]
+["Unfortunately, the provided webpages do not provide specific instructions on how to trace only specific parts of a LangChain application using LangSmith. However, they do provide information on how to set up LangSmith tracing with LangChain and how to use LangSmith's observability features to analyze traces and configure metrics, dashboards, and alerts. It is recommended to refer to the how-to guide for setting up LangSmith with LangChain or LangGraph for more information."]
 ```
 
 You can solve this by updating the workflow to also query the [LangGraph Quickstart](https://langchain-ai.github.io/langgraph/tutorials/introduction) guide.
@@ -68,10 +68,10 @@ functions:
     description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
     embedder_name: nv-embedqa-e5-v5
     chunk_size: 512
-  langgraph_query:
+  langchain_query:
     _type: webpage_query
-    webpage_url: https://langchain-ai.github.io/langgraph/tutorials/introduction
-    description: "Search for information about LangGraph. For any questions about LangGraph, you must use this tool!"
+    webpage_url: https://docs.smith.langchain.com/observability/how_to_guides/trace_with_langchain
+    description: "Search for information about LangChain. For any questions about LangChain, you must use this tool!"
     embedder_name: nv-embedqa-e5-v5
     chunk_size: 512
 ```
@@ -89,7 +89,7 @@ to:
 ```yaml
 workflow:
   _type: react_agent
-  tool_names: [langsmith_query, langgraph_query, current_datetime]
+  tool_names: [langsmith_query, langchain_query, current_datetime]
 ```
 
 :::{note}
@@ -99,13 +99,13 @@ The resulting YAML is located at `examples/documentation_guides/workflows/custom
 When you rerun the workflow with the updated configuration file:
 ```bash
 aiq run --config_file examples/documentation_guides/workflows/custom_workflow/custom_config.yml \
-  --input "How does LangSmith interact with tools like LangGraph?"
+  --input "How do I trace only specific parts of my LangChain application?"
 ```
 
 We should receive output similar to:
 ```
 Workflow Result:
-['LangSmith interacts with LangGraph as part of an out-of-the-box solution for building complex, production-ready features with LLMs. LangGraph works in conjunction with LangSmith to provide this solution, and they are both part of the LangChain ecosystem.']
+['To trace only specific parts of a LangChain application, you can either manually pass in a LangChainTracer instance as a callback or use the tracing_v2_enabled context manager. Additionally, you can configure a LangChainTracer instance to trace a specific invocation.']
 ```
 
 ## Alternate Method Using a Web Search Tool
@@ -143,11 +143,11 @@ The resulting configuration file is located at `examples/documentation_guides/wo
 When you re-run the workflow with the updated configuration file:
 ```bash
 aiq run --config_file examples/documentation_guides/workflows/custom_workflow/search_config.yml \
-  --input "How does LangSmith interact with tools like LangGraph?"
+  --input "How do I trace only specific parts of my LangChain application?"
 ```
 
 Which will then yield a slightly different result to the same question:
 ```
 Workflow Result:
-['LangSmith interacts with LangGraph through the LangChain ecosystem, which provides the foundation for building LLM applications. LangGraph provides real-time monitoring, tracing, and debugging capabilities, and it can be used in conjunction with LangSmith to build robust agentic applications.']
+['To trace only specific parts of a LangChain application, users can use the `@traceable` decorator to mark specific functions or methods as traceable. Additionally, users can configure the tracing functionality to log traces to a specific project, add metadata and tags to traces, and customize the run name and ID. Users can also use the `LangChainTracer` class to trace specific invocations or parts of their application. Furthermore, users can use the `tracing_v2_enabled` context manager to trace a specific block of code.']
 ```

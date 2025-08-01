@@ -9,7 +9,7 @@ root = "../../.."
 name = "aiq_simple_web_query_eval"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain]~=1.2",
+  "aiqtoolkit[langchain, profiling]~=1.2",
   "aiq_simple_web_query",
 ]
 requires-python = ">=3.11,<3.13"

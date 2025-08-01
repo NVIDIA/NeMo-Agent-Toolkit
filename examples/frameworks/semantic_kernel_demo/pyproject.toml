@@ -9,7 +9,7 @@ root = "../../.."
 name = "aiq_semantic_kernel_demo"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain,semantic-kernel]~=1.2",
+  "aiqtoolkit[langchain,semantic-kernel,mem0ai]~=1.2",
   "faiss-cpu==1.9.0",
 ]
 requires-python = ">=3.11,<3.13"

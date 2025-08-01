@@ -20,10 +20,10 @@ functions:
     description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
     embedder_name: nv-embedqa-e5-v5
     chunk_size: 512
-  langgraph_query:
+  langchain_query:
     _type: webpage_query
-    webpage_url: https://langchain-ai.github.io/langgraph/tutorials/introduction
-    description: "Search for information about LangGraph. For any questions about LangGraph, you must use this tool!"
+    webpage_url: https://docs.smith.langchain.com/observability/how_to_guides/trace_with_langchain
+    description: "Search for information about LangChain. For any questions about LangChain, you must use this tool!"
     embedder_name: nv-embedqa-e5-v5
     chunk_size: 512
   current_datetime:
@@ -42,7 +42,7 @@ embedders:
 
 workflow:
   _type: react_agent
-  tool_names: [langsmith_query, langgraph_query, current_datetime]
+  tool_names: [langsmith_query, langchain_query, current_datetime]
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3

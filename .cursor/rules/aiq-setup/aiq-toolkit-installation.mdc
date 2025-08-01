@@ -26,13 +26,6 @@ Before installing AIQ toolkit, verify all prerequisites are installed:
    uv --version
    ```
 
-4. **Check Python version (must be 3.11 or 3.12):**
-   ```bash
-   python --version
-   # or
-   python3 --version
-   ```
-
 If any prerequisite is missing, install them:
 - [Git](mdc:https:/git-scm.com)
 - [Git Large File Storage (LFS)](mdc:https:/git-lfs.github.com)
@@ -43,8 +36,7 @@ If any prerequisite is missing, install them:
 ### 1. Clone Repository and Setup
 
 ```bash
-# Clone the AIQ toolkit repository
-git clone git@github.com:NVIDIA/AIQToolkit.git aiqtoolkit
+# Assuming the repository is cloned in the current directory. If not, ask user to input the path to the repository.
 cd aiqtoolkit
 
 # Initialize, fetch, and update submodules
@@ -110,14 +102,23 @@ uv pip install -e '.[profiling]'
 ## Available Plugin Options
 
 When installing specific plugins, these are the available options:
-- `langchain` - LangChain integration
-- `llama-index` - LlamaIndex integration
-- `crewai` - CrewAI integration
-- `mem0ai` - Mem0 integration
-- `semantic-kernel` - Microsoft Semantic Kernel integration
 - `agno` - Agno integration
-- `zep-cloud` - Zep integration
+- `crewai` - CrewAI integration
+- `langchain` - LangChain integration
+- `llama_index` - LlamaIndex integration
+- `mem0ai` - Mem0 integration
+- `mysql` - MySQL database integration
+- `opentelemetry` - OpenTelemetry observability integration
+- `phoenix` - Phoenix observability integration
+- `ragaai` - RAGA AI evaluation integration
+- `redis` - Redis memory integration
+- `s3` - AWS S3 object storage integration
+- `semantic_kernel` - Microsoft Semantic Kernel integration
 - `weave` - Weights & Biases Weave integration
+- `zep_cloud` - Zep Cloud integration
+
+## Dependency Groups
+When installing dependencies, you can use the following groups:
 - `test` - Testing utilities
 - `profiling` - Profiling tools
 

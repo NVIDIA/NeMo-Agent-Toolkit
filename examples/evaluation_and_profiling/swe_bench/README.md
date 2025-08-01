@@ -29,7 +29,7 @@ This example provides a skeleton workflow which can be used to implement predict
 - [Predictors](#predictors)
   - [Adding a net new predictor](#adding-a-net-new-predictor)
 - [Evaluation](#evaluation)
-  - [Sample output](#sample-output)
+  - [Sample evaluation output](#sample-evaluation-output)
 
 ## Key Features
 
@@ -84,19 +84,17 @@ And can be used to test the workflow by specifying the dataset in the configurat
 ```yaml
 eval:
   general:
-    datasets:
-      test_verified:
-        _type: json
-        file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_verified.json
+    dataset:
+      _type: json
+      file_path: examples/evaluation_and_profiling/swe_bench/data/test_dataset_lite.json
 ```
 
 Alternately you can read any remote dataset by specifying the pandas URL in the configuration file:
 ```yaml
 eval:
-  datasets:
-    test_verified:
-        _type: parquet
-        file_path: "hf://datasets/princeton-nlp/SWE-bench_Verified/data/test-00000-of-00001.parquet"
+  dataset:
+      _type: parquet
+      file_path: hf://datasets/princeton-nlp/SWE-bench_Lite/data/test-00000-of-00001.parquet
 ```
 
 
@@ -179,37 +177,57 @@ The evaluation results, logs and reports, are stored in the output directory spe
 
 
 
-### Sample output
+### Sample evaluation output
 Run:
 ```bash
 aiq eval --config_file examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
 ```
-Logs snippet:
-```
-2025-01-20 12:07:45,202 - aiq.eval.evaluate - INFO - Starting swe_bench run aiq_0
-Running 1 unevaluated instances...
-Base image sweb.base.py.x86_64:latest already exists, skipping build.
+Expected output:
+```console
+2025-07-31 19:39:37,616 - aiq.eval.evaluate - INFO - Starting evaluation run with config file: examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
+2025-07-31 19:39:38,764 - aiq.runtime.loader - WARNING - Loading module 'aiq_profiler_agent.register' from entry point 'aiq_profiler_agent' took a long time (1084.733009 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:39,160 - aiq.runtime.loader - WARNING - Loading module 'aiq_multi_frameworks.register' from entry point 'aiq_multi_frameworks' took a long time (226.987600 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:40,652 - aiq.runtime.loader - WARNING - Loading module 'aiq.agent.register' from entry point 'aiq_agents' took a long time (1482.537985 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:41,135 - aiq.runtime.loader - WARNING - Loading module 'aiq.experimental.inference_time_scaling.register' from entry point 'aiq_inference_time_scaling' took a long time (266.962051 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:41,430 - aiq.runtime.loader - WARNING - Loading module 'aiq.tool.register' from entry point 'aiq_tools' took a long time (192.843914 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:41,515 - aiq.data_models.discovery_metadata - WARNING - Package metadata not found for simple_auth
+2025-07-31 19:39:42,001 - aiq.runtime.loader - WARNING - Loading module 'aiq_alert_triage_agent.register' from entry point 'aiq_alert_triage_agent' took a long time (457.817078 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:42,179 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (168.121815 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:42,386 - aiq.runtime.loader - WARNING - Loading module 'aiq.plugins.agno.register' from entry point 'aiq_agno' took a long time (206.707001 ms). Ensure all imports are inside your registered functions.
+2025-07-31 19:39:43,111 - aiq.runtime.loader - WARNING - Loading module 'aiq.plugins.redis.register' from entry point 'aiq_redis' took a long time (260.392904 ms). Ensure all imports are inside your registered functions.
+
+<snipped for brevity>
+
+Running workflow:   0%|                                                             | 0/2 [00:00<?, ?it/s]
+
+<snipped for brevity>
+
+2025-07-31 19:39:46,347 - aiq.eval.swe_bench_evaluator.evaluate - INFO - Workflow input written to .tmp/aiq/examples/evaluation_and_profiling/swe_bench/gold/aiq_workflow_input.json
+2025-07-31 19:39:46,352 - aiq.eval.swe_bench_evaluator.evaluate - INFO - Workflow output written to .tmp/aiq/examples/evaluation_and_profiling/swe_bench/gold/aiq_workflow_output.json
+2025-07-31 19:39:46,364 - aiq.eval.swe_bench_evaluator.evaluate - INFO - Starting swe_bench run aiq_1
+Running 2 unevaluated instances...
+Base image sweb.base.py.arm64:latest already exists, skipping build.
 Base images built successfully.
 No environment images need to be built.
-Running 1 instances...
-1 ran successfully, 0 failed: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [03:21<00:00, 201.41s/it]
+Running 2 instances...
+2 ran successfully, 0 failed: 100%|█████████████████████████████████████████████████| 2/2 [03:21<00:00, 201.41s/it]
 All instances run.
 Cleaning cached images...
 Removed 0 images.
-Total instances: 1
-Instances submitted: 1
-Instances completed: 1
+Total instances: 2
+Instances submitted: 2
+Instances completed: 2
 Instances incomplete: 0
-Instances resolved: 1
+Instances resolved: 2
 Instances unresolved: 0
 Instances with empty patches: 0
 Instances with errors: 0
 Unstopped containers: 0
 Unremoved images: 0
-Report written to nim_llm.aiq_0.json
-2025-01-20 12:11:07,202 - aiq.eval.evaluate - INFO - Completed swe_bench run aiq_0
-2025-01-20 12:11:07,206 - aiq.eval.evaluate - INFO - Evaluation results written to .tmp/aiq/examples/evaluation_and_profiling/swe_bench/eval_output.json
-2025-01-20 12:11:07,206 - aiq.eval.evaluate - INFO - SWE_bench report and logs written to .tmp/aiq/examples/evaluation_and_profiling/swe_bench/swe_bench_reports directory
-2025-01-20 12:11:07,206 - aiq.eval.evaluate - INFO - Ending evaluation run with config file: examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
-2025-01-20 12:11:07,208 - aiq.cli.entrypoint - INFO - Total time: 210.71 sec
+Report written to nv_predictor.aiq_1.json
+2025-07-31 19:40:44,591 - aiq.eval.swe_bench_evaluator.evaluate - INFO - Completed swe_bench run aiq_1
+2025-07-31 19:40:44,592 - aiq.eval.swe_bench_evaluator.evaluate - INFO - SWE_bench report and logs written to .tmp/aiq/examples/evaluation_and_profiling/swe_bench/gold/swe_bench_reports directory
+2025-07-31 19:40:44,596 - aiq.eval.evaluate - INFO - Profiler is not enabled. Skipping profiling.
+2025-07-31 19:40:44,600 - aiq.eval.evaluate - INFO - Workflow output written to .tmp/aiq/examples/evaluation_and_profiling/swe_bench/gold/workflow_output.json
+2025-07-31 19:40:44,602 - aiq.eval.evaluate - INFO - Evaluation results written to .tmp/aiq/examples/evaluation_and_profiling/swe_bench/gold/swe_bench_output.json
 ```

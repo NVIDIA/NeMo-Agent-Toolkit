@@ -17,7 +17,7 @@ limitations under the License.
 
 # A Simple Jira Agent that Extracts POR and creates tickets
 
-A minimal example demonstrating an end-to-end Jira ticket creating agentic workflow. This workflow leverages the NeMo Agent toolkit plugin system to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
+A minimal example demonstrating an end-to-end Jira ticket creating agentic workflow. This workflow leverages the NeMo Agent toolkit plugin system to integrate pre-built and custom tools into the workflow.
 
 ## Table of Contents
 
