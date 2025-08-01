@@ -17,6 +17,8 @@ limitations under the License.
 
 # Adding Telemetry Exporters to NVIDIA NeMo Agent Toolkit
 
+> **Note**: The code examples in this guide are pseudocode designed to illustrate the programming interface and key concepts. They focus on demonstrating the structure and flow rather than providing complete, runnable implementations. Use these examples to understand the interface patterns and adapt them to your specific use case.
+
 Telemetry exporters are plugins that send telemetry data (traces, spans, and intermediate steps) from NeMo Agent toolkit workflows to external observability services. This guide provides a comprehensive overview of how to create and register custom telemetry exporters.
 
 ## Why Use Telemetry Exporters?
