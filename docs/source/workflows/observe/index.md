@@ -26,15 +26,18 @@ These features enable NeMo Agent toolkit developers to test their workflows loca
 
 ## Installation
 
-The core observability features (console and file logging) are included by default. For advanced telemetry features like OpenTelemetry and Phoenix tracing, you need to install the optional telemetry dependencies:
+The core observability features (console and file logging) are included by default. For advanced telemetry features like OpenTelemetry and Phoenix tracing, you need to install the optional telemetry extras:
 
 ```bash
+# Install all optional telemetry extras
 uv pip install -e '.[telemetry]'
-```
 
-This will install:
-- OpenTelemetry API and SDK for distributed tracing
-- Arize Phoenix for visualization and analysis of LLM traces
+# Install specific telemetry extras
+uv pip install -e '.[opentelemetry]'
+uv pip install -e '.[phoenix]'
+uv pip install -e '.[weave]'
+uv pip install -e '.[ragaai]'
+```
 
 ## Configurable Components
 
@@ -151,7 +154,7 @@ The `tracing` section contains one or more tracing providers. Each provider has 
         dataset: "aiqtoolkit-dataset"
     ```
   - See [Observing with Catalyst](./observe-workflow-with-catalyst.md) for more information
-- [**Generic OTel Collector**]
+- [**Generic OTel Collector**](./observe-workflow-with-otel-collector.md)
   - Example configuration:
   ```yaml
   tracing:
@@ -160,49 +163,47 @@ The `tracing` section contains one or more tracing providers. Each provider has 
       project: "aiqtoolkit-demo"
       endpoint: "http://localhost:4318
   ```
-  - See [Observing with OTel Collector](./observe-workflow-with-otel-collector.md) for more information
+  - See [Observing with OTel Collector](https://opentelemetry.io/docs/collector/) for more information
 - **Custom providers**
   - See [Registering a New Telemetry Provider as a Plugin](#registering-a-new-telemetry-provider-as-a-plugin) for more information
 
-
 To see the complete list of configuration fields for each provider, utilize the `aiq info components -t tracing` command which will display the configuration fields for each provider.
-
 
 ### NeMo Agent Toolkit Observability Components
 
-The Observability components `AsyncOtelSpanListener`, leverage the Subject-Observer pattern to subscribe to the `IntermediateStep` event stream pushed by `IntermediateStepManager`. Acting as an asynchronous event listener, `AsyncOtelSpanListener` listens for NeMo Agent toolkit intermediate step events, collects and efficiently translates them into OpenTelemetry spans, enabling seamless tracing and monitoring.
+The NeMo Agent toolkit observability system uses a generic, plugin-based architecture built on the Subject-Observer pattern. The system consists of several key components working together to provide comprehensive workflow monitoring:
 
-- **Process events asynchronously** using a dedicated event loop.
-- **Transform function execution boundaries** (`FUNCTION_START`, `FUNCTION_END`) and intermediate operations (`LLM_END`, `TOOL_END`) into OpenTelemetry spans.
-- **Maintain function ancestry context** using `InvocationNode` objects, ensuring **distributed tracing across nested function calls**, while preserving execution hierarchy.
-- **{py:class}`aiq.profiler.decorators`**: Defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
-- **{py:class}`~aiq.profiler.callbacks`**: Directory that implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent toolkit usage stats queue. NeMo Agent toolkit profiling supports callback handlers for LangChain, LLama Index, CrewAI, and Semantic Kernel.
+#### Event Stream Architecture
 
+- **`IntermediateStepManager`**: Publishes workflow events (`IntermediateStep` objects) to a reactive event stream, tracking function execution boundaries, LLM calls, tool usage, and intermediate operations.
+- **Event Stream**: A reactive stream that broadcasts `IntermediateStep` events to all subscribed telemetry exporters, enabling real-time observability.
+- **Asynchronous Processing**: All telemetry exporters process events asynchronously in background tasks, keeping observability "off the hot path" for optimal performance.
+
+#### Telemetry Exporter Types
+
+The system supports multiple exporter types, each optimized for different use cases:
+
+- **Raw Exporters**: Process `IntermediateStep` events directly for simple logging, file output, or custom event processing.
+- **Span Exporters**: Convert events into spans with lifecycle management, ideal for distributed tracing and span-based observability services.
+- **OpenTelemetry Exporters**: Specialized exporters for OTLP-compatible services with pre-built integrations for popular observability platforms.
+- **Advanced Custom Exporters**: Support complex business logic, stateful processing, and enterprise reliability patterns with circuit breakers and dead letter queues.
+
+#### Processing Pipeline System
+
+Each exporter can optionally include a processing pipeline that transforms, filters, batches, or aggregates data before export:
+
+- **Processors**: Modular components for data transformation, filtering, batching, and format conversion.
+- **Pipeline Composition**: Chain multiple processors together for complex data processing workflows.
+- **Type Safety**: Generic type system ensures compile-time safety for data transformations through the pipeline.
+
+#### Integration Components
+
+- **{py:class}`aiq.profiler.decorators`**: Decorators that wrap workflow and LLM framework context managers to inject usage-collection callbacks.
+- **{py:class}`~aiq.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain, LLama Index, CrewAI, and Semantic Kernel frameworks.
 
 ### Registering a New Telemetry Provider as a Plugin
 
-NeMo Agent toolkit allows users to register custom telemetry providers using the `@register_telemetry_exporter` decorator in {py:class}`aiq.observability.register`.
-
-Example:
-```bash
-class PhoenixTelemetryExporter(TelemetryExporterBaseConfig, name="phoenix"):
-    endpoint: str
-    project: str
-
-
-@register_telemetry_exporter(config_type=PhoenixTelemetryExporter)
-async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: Builder):
-
-    from phoenix.otel import HTTPSpanExporter
-    try:
-        yield HTTPSpanExporter(endpoint=config.endpoint)
-    except ConnectionError as ex:
-        logger.warning("Unable to connect to Phoenix at port 6006. Are you sure Phoenix is running?\n %s",
-                       ex,
-                       exc_info=True)
-    except Exception as ex:
-        logger.error("Error in Phoenix telemetry Exporter\n %s", ex, exc_info=True)
-```
+For complete information about developing and integrating custom telemetry exporters, including detailed examples, best practices, and advanced configuration options, see [Adding Telemetry Exporters](../../extend/telemetry-exporters.md).
 
 ```{toctree}
 :hidden:
