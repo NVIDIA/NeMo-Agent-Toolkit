@@ -139,7 +139,7 @@ Generates the final answer using all gathered evidence.
 
 ### ReWOO Prompting and Output Format
 
-The ReWOO Agent uses two distinct prompts:
+The ReWOO agent uses two distinct prompts:
 
 * **Planner Prompt**: Generates a JSON array of planning steps, each containing:
    - A plan description

@@ -101,8 +101,8 @@ workflow:
 ---
 
 ## Limitations
-The following are the limitations of Reasoning Agents:
+The following are the limitations of reasoning agents:
 * Requires a thinking/reasoning LLM, such as DeepSeek R1. There should be thought tags within the LLM output:
   >&lt;think&gt;&lt;/think&gt;
 
-* Performs reasoning up front, and does not revisit the plan to revise strategy during execution like a ReAct Agent does. Revising the strategy is beneficial if a tool returns a non-useful response (let's say our retriever tool did not have any relevant search results to the user's original question).
+* Performs reasoning up front, and does not revisit the plan to revise strategy during execution like a ReAct agent does. Revising the strategy is beneficial if a tool returns a non-useful response (let's say our retriever tool did not have any relevant search results to the user's original question).
