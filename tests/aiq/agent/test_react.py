@@ -267,6 +267,90 @@ async def test_tool_node(mock_react_agent):
     assert response.content == 'hello, world!'
 
 
+async def test_tool_node_valid_json_input(mock_react_agent):
+    """Test tool_node with valid JSON input"""
+    json_input = '{"query": "test data"}'
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='Tool A', tool_input=json_input, log='mock')])
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # JSON should be parsed and passed as dict to tool
+    assert response.content == "test data"
+
+
+async def test_tool_node_json_with_single_quotes(mock_react_agent):
+    """Test tool_node with JSON that has single quotes (should be normalized)"""
+    json_input = "{'query': 'test data with single quotes'}"
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='Tool A', tool_input=json_input, log='mock')])
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # Single quotes should be normalized and JSON parsed successfully
+    assert response.content == "test data with single quotes"
+
+
+async def test_tool_node_json_with_mixed_quotes(mock_react_agent):
+    """Test tool_node with JSON containing both single and double quotes (reproduces original bug scenario)"""
+    # This reproduces the original bug case with mixed quote types
+    json_input = '{"query": "text with \'single quotes\' and \\"escaped doubles\\""}'
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='Tool A', tool_input=json_input, log='mock')])
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # Should successfully process without JSON parsing errors
+    assert "single quotes" in response.content
+    assert "escaped doubles" in response.content
+
+
+async def test_tool_node_invalid_json_fallback_to_string(mock_react_agent):
+    """Test tool_node with invalid JSON that falls back to raw string"""
+    invalid_json = "{'invalid': json, missing quotes}"
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='Tool A', tool_input=invalid_json, log='mock')])
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # Should fall back to raw string input
+    assert response.content == invalid_json
+
+
+async def test_tool_node_none_input(mock_react_agent):
+    """Test tool_node with 'None' string input"""
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='Tool A', tool_input='None', log='mock')])
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    assert response.content == 'None'
+
+
+async def test_tool_node_empty_json_object(mock_react_agent):
+    """Test tool_node with empty JSON object"""
+    json_input = '{}'
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='Tool A', tool_input=json_input, log='mock')])
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # Empty dict should be parsed correctly (tool uses default value since no 'query' key)
+    assert response.content == "test"
+
+
+async def test_tool_node_multiline_json_content(mock_react_agent):
+    """Test tool_node with JSON containing multiline content"""
+    json_input = '{"query": "line1\\nline2\\nline3"}'
+    mock_state = ReActGraphState(agent_scratchpad=[AgentAction(tool='Tool A', tool_input=json_input, log='mock')])
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    assert "line1" in response.content
+    assert "line2" in response.content
+
+
 @pytest.fixture(name='mock_react_graph', scope='module')
 async def mock_graph(mock_react_agent):
     return await mock_react_agent.build_graph()
