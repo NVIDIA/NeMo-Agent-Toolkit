@@ -32,7 +32,7 @@ The reasoning agent is an AI system that directly invokes an underlying function
 
 ## Configuration
 
-The reasoning agent may be utilized as a Workflow or a Function.
+The reasoning agent may be utilized as a workflow or a function.
 
 ### Example `config.yml`
 In your YAML file, to use the reasoning agent as a workflow:

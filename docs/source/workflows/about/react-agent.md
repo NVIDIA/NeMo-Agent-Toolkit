@@ -44,7 +44,7 @@ uv pip install -e '.[langchain]'
 
 ## Configuration
 
-The ReAct agent may be utilized as a Workflow or a Function.
+The ReAct agent may be utilized as a workflow or a function.
 
 ### Example `config.yml`
 In your YAML file, to use the ReAct agent as a workflow:
