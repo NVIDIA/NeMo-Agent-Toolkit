@@ -17,7 +17,7 @@ limitations under the License.
 
 # Tool Calling Agent
 
-A tool calling agent is an AI system that directly invokes external tools based on structured function definitions. Unlike ReAct agents, it does not reason between steps but instead relies on predefined tool schemas to decide which tool to call. To decide which tools to use to answer the question, the agent utilizes its tools' name, description, and input parameter schema. Not all LLMs support tool calling / function calling, and can be used with tool calling agents.
+A tool calling agent is an AI system that directly invokes external tools based on structured function definitions. Unlike ReAct agents, it does not reason between steps but instead relies on predefined tool schemas to decide which tool to call. To decide which tools to use to answer the question, agent uses the name, description, and input parameter schema of each tool to decide which tools to use to answer the question. Not all LLMs support tool calling / function calling, and can be used with tool calling agents.
 
 ---
 
