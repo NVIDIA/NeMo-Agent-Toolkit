@@ -16,9 +16,9 @@ limitations under the License.
 -->
 
 # ReWOO Agent
-The ReWOO (Reasoning WithOut Observation) Agent is an advanced AI system that decouples reasoning from observations to improve efficiency in augmented language models. Based on the [ReWOO paper](https://arxiv.org/abs/2305.18323), this agent separates the planning and execution phases to reduce token consumption and improve performance.
+The ReWOO (Reasoning WithOut Observation) agent is an advanced AI system that decouples reasoning from observations to improve efficiency in augmented language models. Based on the [ReWOO paper](https://arxiv.org/abs/2305.18323), this agent separates the planning and execution phases to reduce token consumption and improve performance.
 
-The ReWOO Agent's implementation follows the paper's methodology of decoupling reasoning from observations, which leads to more efficient tool usage and better performance in complex reasoning tasks.
+The ReWOO agent's implementation follows the paper's methodology of decoupling reasoning from observations, which leads to more efficient tool usage and better performance in complex reasoning tasks.
 
 
 ## Features
@@ -30,13 +30,20 @@ The ReWOO Agent's implementation follows the paper's methodology of decoupling r
 - **Agentic Workflows**: Fully configurable via YAML for flexibility and productivity
 - **Ease of Use**: Simplifies developer experience and deployment
 
+## Benefits
+
+* **Token Efficiency**: By planning all steps upfront and using placeholders (e.g., "#E1", "#E2") for intermediate results, ReWOO significantly reduces token consumption. These placeholders are replaced with actual values during execution, eliminating the need to include full tool outputs in each reasoning step.
+
+* **Cleaner Reasoning**: The separation of planning and execution allows the agent to focus purely on logical reasoning during the planning phase, without being distracted by intermediate results. The placeholder system makes data flow between steps explicit and manageable.
+
+* **Reduced Hallucination**: By having a clear plan before execution, the agent is less likely to make incorrect assumptions or get sidetracked by intermediate results.
 
 ## Configuration
 
-The ReWOO Agent may be utilized as a Workflow or a Function.
+The ReWOO agent may be utilized as a workflow or a function.
 
 ### Example `config.yml`
-In your YAML file, to use the ReWOO Agent as a workflow:
+In your YAML file, to use the ReWOO agent (`rewoo_agent`) as a workflow:
 ```yaml
 workflow:
   _type: rewoo_agent
@@ -46,7 +53,7 @@ workflow:
   use_tool_schema: true
 ```
 
-In your YAML file, to use the ReWOO Agent as a function:
+In your YAML file, to use the ReWOO agent as a function:
 ```yaml
 functions:
   calculator_multiply:
@@ -70,34 +77,24 @@ functions:
 
 * `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
 
-* `verbose`: Defaults to False (useful to prevent logging of sensitive data). If set to True, the Agent will log input, output, and intermediate steps.
+* `verbose`: Defaults to False (useful to prevent logging of sensitive data). If set to True, the agent will log input, output, and intermediate steps.
 
 * `include_tool_input_schema_in_tool_description`: Defaults to True. If set to True, the agent will include tool input schemas in tool descriptions.
 
-* `description`: Defaults to "ReWOO Agent Workflow". When the ReWOO Agent is configured as a function, this config option allows us to control the tool description (for example, when used as a tool within another agent).
+* `description`: Defaults to "ReWOO Agent Workflow". When the ReWOO agent is configured as a function, this config option allows us to control the tool description (for example, when used as a tool within another agent).
 
-* `planner_prompt`: Optional. Allows us to override the planner prompt for the ReWOO Agent. The prompt must have variables for tools and must instruct the LLM to output in the ReWOO planner format.
+* `planner_prompt`: Optional. Allows us to override the planner prompt for the ReWOO agent. The prompt must have variables for tools and must instruct the LLM to output in the ReWOO planner format.
 
-* `solver_prompt`: Optional. Allows us to override the solver prompt for the ReWOO Agent. The prompt must have variables for plan and task.
+* `solver_prompt`: Optional. Allows us to override the solver prompt for the ReWOO agent. The prompt must have variables for plan and task.
 
 * `max_history`:  Defaults to 15. Maximum number of messages to keep in the conversation history.
 
-* `use_openai_api`: Defaults to False.  If set to True, the ReWOO Agent will output in OpenAI API spec. If set to False, strings will be used.
+* `use_openai_api`: Defaults to False. If set to True, the ReWOO agent will output in OpenAI API spec. If set to False, strings will be used.
 
-* `additional_instructions`: Optional. Default to None. Additional instructions to provide to the agent in addition to the base prompt.
+* `additional_instructions`: Optional. Defaults to `None`. Additional instructions to provide to the agent in addition to the base prompt.
 
 
-## How the ReWOO Agent works
-
-A **ReWOO (Reasoning WithOut Observation) Agent** is an AI system that separates the reasoning process from external observations. Instead of interleaving reasoning and tool calls, it first creates a complete plan and then executes it. This decoupled architecture provides several key advantages:
-
-* **Token Efficiency**: By planning all steps upfront and using placeholders (e.g., "#E1", "#E2") for intermediate results, ReWOO significantly reduces token consumption. These placeholders are replaced with actual values during execution, eliminating the need to include full tool outputs in each reasoning step.
-
-* **Cleaner Reasoning**: The separation of planning and execution allows the agent to focus purely on logical reasoning during the planning phase, without being distracted by intermediate results. The placeholder system makes data flow between steps explicit and manageable.
-
-* **Reduced Hallucination**: By having a clear plan before execution, the agent is less likely to make incorrect assumptions or get sidetracked by intermediate results.
-
-### **Step-by-Step Breakdown of a ReWOO Agent**
+## **Step-by-Step Breakdown of a ReWOO Agent**
 
 1. **Planning Phase** – The agent receives a task and creates a complete plan with all necessary tool calls and evidence placeholders.
 2. **Execution Phase** – The agent executes each step of the plan sequentially, replacing placeholders with actual tool outputs.
@@ -142,7 +139,7 @@ Generates the final answer using all gathered evidence.
 
 ### ReWOO Prompting and Output Format
 
-The ReWOO Agent uses two distinct prompts:
+The ReWOO agent uses two distinct prompts:
 
 * **Planner Prompt**: Generates a JSON array of planning steps, each containing:
    - A plan description
@@ -164,5 +161,4 @@ ReWOO agents, while efficient, come with several limitations:
 
 * Memory Constraints: The agent needs to maintain the entire plan and all intermediate results in memory, which could be challenging for very long or complex tasks.
 
-
-In summary, ReWOO Agents are most effective for tasks that benefit from upfront planning and where token efficiency is important. They may not be the best choice for tasks requiring high adaptability or parallel execution.
+In summary, ReWOO agents are most effective for tasks that benefit from upfront planning and where token efficiency is important. They may not be the best choice for tasks requiring high adaptability or parallel execution.
