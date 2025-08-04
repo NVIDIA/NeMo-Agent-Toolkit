@@ -93,15 +93,27 @@ Refer to `aiq serve --help` for more information on how to customize the server.
 The toolkit offers a programmatic way to execute workflows through its Python API, allowing you to integrate workflow execution directly into your Python code. Here's how to use it:
 
 ```python
-from aiq.runtime.loader import load_workflow
+import asyncio
 
-async with load_workflow(config_file) as workflow:
-   async with workflow.run(input_str) as runner:
-      result = await runner.result(to_type=str)
+from aiq.runtime.loader import load_workflow
+from aiq.utils.type_utils import StrPath
+
+
+async def run_workflow(config_file: StrPath, input_str: str) -> str:
+    async with load_workflow(config_file) as workflow:
+        async with workflow.run(input_str) as runner:
+            return await runner.result(to_type=str)
+
+
+result = asyncio.run(
+    run_workflow(config_file='examples/getting_started/simple_web_query/configs/config.yml',
+                 input_str='What is LangSmith?'))
+
+print(result)
 ```
 
 In this example:
-- `config_file`: A string path pointing to your workflow YAML file
+- `config_file`: A string or pathlib Path pointing to your workflow YAML file
 - `input_str`: A string containing the input for your workflow
 - The `workflow.run(input_str)` method returns an instance of {py:class}`~aiq.runtime.runner.AIQRunner`
 
