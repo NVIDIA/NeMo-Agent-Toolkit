@@ -21,13 +21,15 @@ This example demonstrates **human in the loop capabilities** of the NeMo Agent t
 
 ## Table of Contents
 
-- [Key Features](#key-features)
-- [Installation and Setup](#installation-and-setup)
-  - [Install this Workflow](#install-this-workflow)
-  - [Set Up API Keys](#set-up-api-keys)
-  - [Human in the Loop (HITL) Configuration](#human-in-the-loop-hitl-configuration)
-- [Example Usage](#example-usage)
-  - [Run the Workflow](#run-the-workflow)
+- [Simple Calculator - Human in the Loop](#simple-calculator---human-in-the-loop)
+  - [Table of Contents](#table-of-contents)
+  - [Key Features](#key-features)
+  - [Installation and Setup](#installation-and-setup)
+    - [Install this Workflow](#install-this-workflow)
+    - [Set Up API Keys](#set-up-api-keys)
+    - [Human in the Loop (HITL) Configuration](#human-in-the-loop-hitl-configuration)
+  - [Example Usage](#example-usage)
+    - [Run the Workflow](#run-the-workflow)
 
 ## Key Features
 
@@ -60,7 +62,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 ### Human in the Loop (HITL) Configuration
 It is often helpful, or even required, to have human input during the execution of an agent workflow. For example, to ask about preferences, confirmations, or to provide additional information.
 The NeMo Agent toolkit library provides a way to add HITL interaction to any tool or function, allowing for the dynamic collection of information during the workflow execution, without the need for coding it
-into the agent itself. For instance, this example asks for user approval to increase the maximum iterations of the ReAct agent to allow additional tool calling. This is enabled by leveraging a reusable plugin developed in the `examples/custom_functions/por_to_jiratickets` example. We can view the implementation in the
+into the agent itself. For instance, this example asks for user approval to increase the maximum iterations of the ReAct agent to allow additional tool calling. This is enabled by leveraging a reusable plugin developed in the `examples/HITL/por_to_jiratickets` example. We can view the implementation in the
 `aiq_por_to_jiratickets.hitl_approval_tool.py` file. The implementation is shown below:
 
 ```python
@@ -109,9 +111,8 @@ langgraph.errors.GraphRecursionError: Recursion limit of 4 reached without hitti
 For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/GRAPH_RECURSION_LIMIT
 2025-07-03 17:04:54,696 - aiq_simple_calculator_hitl.register - INFO - Recursion error detected, prompting user to increase recursion limit
 You have reached the maximum number of iterations.
-Please confirm if you would like to proceed with more iterations.
  Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: yes
-2025-07-03 17:04:56,267 - aiq_simple_calculator_hitl.register - INFO - Attempt 2: Increasing max_iterations to 2
+2025-07-03 17:04:56,267 - aiq_simple_calculator_hitl.retry_react_agent - INFO - Attempt 2: Increasing max_iterations to 2
 
 <snipped for brevity>
 
@@ -129,7 +130,6 @@ langgraph.errors.GraphRecursionError: Recursion limit of 4 reached without hitti
 For troubleshooting, visit: https://python.langchain.com/docs/troubleshooting/errors/GRAPH_RECURSION_LIMIT
 2025-07-03 17:07:04,105 - aiq_simple_calculator_hitl.register - INFO - Recursion error detected, prompting user to increase recursion limit
 You have reached the maximum number of iterations.
-Please confirm if you would like to proceed with more iterations.
  Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: no
 
 <snipped for brevity>

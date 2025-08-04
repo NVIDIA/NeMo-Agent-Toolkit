@@ -67,6 +67,8 @@ Follow the steps below for a comprehensive example that demonstrates creating an
 
 ### Install NeMo Agent Toolkit
 
+Before you begin, make sure you have cloned the NeMo Agent toolkit repository and opened the project in Cursor, by selecting `File > Open Workspace from File... > select the aiq.code-workspace in the repository`.
+
 Prompt:
 ```
 Install AIQ Toolkit with all required dependencies and verify the installation

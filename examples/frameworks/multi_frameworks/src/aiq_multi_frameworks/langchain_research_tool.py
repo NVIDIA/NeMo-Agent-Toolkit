@@ -16,8 +16,6 @@
 import logging
 import re
 
-from bs4 import BeautifulSoup
-
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function_info import FunctionInfo
@@ -39,6 +37,7 @@ async def langchain_research(tool_config: LangChainResearchConfig, builder: Buil
 
     import os
 
+    from bs4 import BeautifulSoup
     from langchain_core.prompts import PromptTemplate
     from pydantic import BaseModel
     from pydantic import Field

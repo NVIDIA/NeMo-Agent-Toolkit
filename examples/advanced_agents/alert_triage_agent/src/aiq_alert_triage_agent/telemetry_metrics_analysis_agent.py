@@ -13,13 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from langchain_core.messages import HumanMessage
-from langchain_core.messages import SystemMessage
-from langgraph.graph import START
-from langgraph.graph import MessagesState
-from langgraph.graph import StateGraph
-from langgraph.prebuilt import ToolNode
-from langgraph.prebuilt import tools_condition
 from pydantic import Field
 
 from aiq.builder.builder import Builder
@@ -42,8 +35,15 @@ class TelemetryMetricsAnalysisAgentConfig(FunctionBaseConfig, name="telemetry_me
                         description="Main prompt for the telemetry metrics analysis agent.")
 
 
-@register_function(config_type=TelemetryMetricsAnalysisAgentConfig)
+@register_function(config_type=TelemetryMetricsAnalysisAgentConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def telemetry_metrics_analysis_agent_tool(config: TelemetryMetricsAnalysisAgentConfig, builder: Builder):
+    from langchain_core.messages import HumanMessage
+    from langchain_core.messages import SystemMessage
+    from langgraph.graph import START
+    from langgraph.graph import MessagesState
+    from langgraph.graph import StateGraph
+    from langgraph.prebuilt import ToolNode
+    from langgraph.prebuilt import tools_condition
 
     async def _arun(host_id: str, alert_type: str) -> str:
         """

@@ -63,4 +63,4 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
                 f"Conversation Id: {conversation_id}")
 
     yield FunctionInfo.from_fn(_get_request_attributes,
-                               description="Returns the acquired user defined request attriubutes.")
+                               description="Returns the acquired user defined request attributes.")

@@ -53,6 +53,7 @@ functions:
       The question should be about user preferences which will help you format your response.
       For example: "How does the user like responses formatted?".
       Use "redis" for the user_id
+
   memory_add:
     _type: add_memory
     memory: redis_memory
@@ -77,11 +78,33 @@ workflow:
     2. You MUST include ALL required parameters (query, top_k, user_id)
     3. The input MUST be a valid JSON object with no extra text or formatting
 
-    For memory_search tool, you MUST use this exact format:
+    For get_memory tool, you MUST use this exact format:
     {{
         "query": "your search query here",
         "top_k": 5,
-        "user_id": "user_1"
+        "user_id": "redis"
+    }}
+
+    For memory_add tool, you MUST use this exact format:
+    {{
+        "conversation": [
+            {{
+                "role": "user",
+                "content": "Hi, I'm Alex. I'm looking for a trip to New York"
+            }},
+            {{
+                "role": "assistant",
+                "content": "Hello Alex! I've noted you are looking for a trip to New York."
+            }}
+        ],
+        "user_id": "redis",
+        "metadata": {{
+            "key_value_pairs": {{
+                "type": "travel",
+                "relevance": "high"
+            }}
+        }},
+        "memory": "User is looking for a trip to New York."
     }}
 
     You may respond in one of two formats.

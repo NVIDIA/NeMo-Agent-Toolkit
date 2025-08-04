@@ -18,7 +18,6 @@ import logging
 from pydantic import AliasChoices
 from pydantic import Field
 
-from aiq.agent.base import AGENT_LOG_PREFIX
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function_info import FunctionInfo
@@ -79,6 +78,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     from langchain_core.messages import trim_messages
     from langgraph.graph.graph import CompiledGraph
 
+    from aiq.agent.base import AGENT_LOG_PREFIX
     from aiq.agent.react_agent.agent import ReActAgentGraph
     from aiq.agent.react_agent.agent import ReActGraphState
     from aiq.agent.react_agent.agent import create_react_agent_prompt

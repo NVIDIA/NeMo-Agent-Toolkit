@@ -20,10 +20,10 @@ NVIDIA NeMo Agent toolkit provides a user interface for interacting with your ru
 
 ## User Interface Features
 - Chat history
-- Interact with Workflow via HTTP API
-- Interact with Workflow via WebSocket
-- Enable or disable Workflow intermediate steps
-- Expand all Workflow intermediate steps by default
+- Interact with a workflow via the HTTP API
+- Interact with a workflow via a WebSocket
+- Enable or disable a workflow's intermediate steps
+- Expand all workflow intermediate steps by default
 - Override intermediate steps with the same ID
 
 ## Walk-through
@@ -32,12 +32,11 @@ This walk-through guides you through the steps to set up and configure the NeMo 
 ### Prerequisites
 Before starting, ensure you have:
 - NeMo Agent toolkit installed and configured
-- Set up the simple calculator workflow by following the instructions in `examples/getting_started/simple_web_query/README.md`
+- Set up the simple calculator workflow by following the instructions in `examples/getting_started/simple_calculator/README.md`
 - Node.js v18+ installed (required for the web interface)
 
 
-The NeMo Agent toolkit UI is located in a git submodule at `external/aiqtoolkit-opensource-ui`. Ensure you have checked out all of the
-git submodules by running the following:
+The NeMo Agent toolkit UI is located in a Git submodule at `external/aiqtoolkit-opensource-ui`. Ensure you have checked out all of the Git submodules by running the following:
 ```bash
 git submodule update --init --recursive
 ```
@@ -46,28 +45,10 @@ git submodule update --init --recursive
 You can start the NeMo Agent toolkit server using the `aiq serve` command with the appropriate configuration file.
 
 ```bash
-aiq serve --config_file=examples/getting_started/simple_web_query/configs/config.yml
+aiq serve --config_file=examples/getting_started/simple_calculator/configs/config.yml
 ```
-Running this command will produce the expected output as shown below:
+Running this command will produce the expected output as shown below (truncated for brevity):
 ```bash
-2025-03-07 12:54:20,394 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/getting_started/simple_web_query/configs/config.yml'
-WARNING:  Current configuration will not reload as not all conditions are met, please refer to documentation.
-INFO:     Started server process [47250]
-INFO:     Waiting for application startup.
-2025-03-07 12:54:20,730 - aiq.profiler.decorators - INFO - Langchain callback handler registered
-2025-03-07 12:54:21,313 - aiq.agent.react_agent.agent - INFO - Filling the prompt variables "tools" and "tool_names", using the tools provided in the config.
-2025-03-07 12:54:21,313 - aiq.agent.react_agent.agent - INFO - Initialized ReAct Agent Graph
-2025-03-07 12:54:21,316 - aiq.agent.react_agent.agent - INFO - ReAct Graph built and compiled successfully
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://localhost:8000 (Press CTRL+C to quit)
-  Current configuration will not reload as not all conditions are met, please refer to documentation.
-INFO:     Started server process [47250]
-INFO:     Waiting for application startup.
-2025-03-07 12:54:20,730 - aiq.profiler.decorators - INFO - Langchain callback handler registered
-2025-03-07 12:54:21,313 - aiq.agent.react_agent.agent - INFO - Filling the prompt variables "tools" and "tool_names", using the tools provided in the config.
-2025-03-07 12:54:21,313 - aiq.agent.react_agent.agent - INFO - Initialized ReAct Agent Graph
-2025-03-07 12:54:21,316 - aiq.agent.react_agent.agent - INFO - ReAct Graph built and compiled successfully
-INFO:     Application startup complete.
 INFO:     Uvicorn running on http://localhost:8000 (Press CTRL+C to quit)
 ```
 
@@ -85,7 +66,7 @@ curl --request POST \
 ```
 
 Running this command will produce the following expected output:
-> **Note:** The response depends on the current time of day the command executes.
+> **Note:** The response depends on the current time of day that the command is run.
 ```bash
 {
   "value": "No, 8 is less than the current hour of the day (4)."

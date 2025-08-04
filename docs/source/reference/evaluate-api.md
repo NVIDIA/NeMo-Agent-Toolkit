@@ -53,7 +53,7 @@ curl --request POST \
    --url http://localhost:8000/evaluate \
    --header 'Content-Type: application/json' \
    --data '{
-    "config_file": "examples/getting_started/simple_web_query/configs/eval_only_config.yml",
+    "config_file": "examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml",
     "expiry_seconds": 600
 }' | jq
 ```
@@ -106,7 +106,7 @@ The response contains the status of the job, including the job ID, status, and a
 {
   "job_id": "882317f0-6149-4b29-872b-9c8018d64784",
   "status": "success",
-  "config_file": "examples/getting_started/simple_web_query/configs/eval_only_config.yml",
+  "config_file": "examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml",
   "error": null,
   "output_path": ".tmp/aiq/examples/getting_started/simple_web_query/jobs/882317f0-6149-4b29-872b-9c8018d64784",
   "created_at": "2025-04-11T17:33:38.018904Z",
@@ -143,7 +143,7 @@ curl --request GET \
   {
     "job_id": "df6fddd7-2adf-45dd-a105-8559a7569ec9",
     "status": "success",
-    "config_file": "examples/getting_started/simple_web_query/configs/eval_only_config.yml",
+    "config_file": "examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_only_config.yml",
     "error": null,
     "output_path": ".tmp/aiq/examples/getting_started/simple_web_query/jobs/df6fddd7-2adf-45dd-a105-8559a7569ec9",
     "created_at": "2025-04-11T17:33:16.711636Z",

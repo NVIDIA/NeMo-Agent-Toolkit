@@ -100,8 +100,8 @@ LangSmith offers comprehensive monitoring within the LangChain ecosystem.
 1. Set your LangSmith credentials:
 
 ```bash
-export LANGCHAIN_API_KEY=<your_api_key>
-export LANGCHAIN_PROJECT=<your_project>
+export LANGSMITH_API_KEY=<your_api_key>
+export LANGSMITH_PROJECT=<your_project>
 ```
 
 2. Run the workflow:

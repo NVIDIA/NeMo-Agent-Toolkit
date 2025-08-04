@@ -21,4 +21,4 @@ classifiers = ["Programming Language :: Python"]
 aiqtoolkit = { path = "../../..", editable = true }
 
 [project.entry-points.'aiq.components']
-simple_auth = "simple_auth.register"
+simple_auth = "aiq_simple_auth.register"

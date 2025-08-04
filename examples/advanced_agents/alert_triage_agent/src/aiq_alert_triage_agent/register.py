@@ -13,20 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=unused-import
-# flake8: noqa
-
 import logging
-import os
+import typing
 
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import HumanMessage
-from langchain_core.messages import SystemMessage
-from langgraph.graph import START
-from langgraph.graph import MessagesState
-from langgraph.graph import StateGraph
-from langgraph.prebuilt import ToolNode
-from langgraph.prebuilt import tools_condition
 from pydantic.fields import Field
 
 from aiq.builder.builder import Builder
@@ -36,6 +25,8 @@ from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.profiler.decorators.function_tracking import track_function
 
+# flake8: noqa
+# pylint: disable=unused-import
 # Import any tools which need to be automatically registered here
 from . import categorizer
 from . import hardware_check_tool
@@ -50,6 +41,8 @@ from . import utils
 # Import custom evaluator
 from .classification_evaluator import register_classification_evaluator
 from .prompts import ALERT_TRIAGE_AGENT_PROMPT
+
+# pylint: enable=unused-import
 
 
 class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agent"):
@@ -75,7 +68,18 @@ class AlertTriageAgentWorkflowConfig(FunctionBaseConfig, name="alert_triage_agen
 @register_function(config_type=AlertTriageAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, builder: Builder):
 
-    llm: BaseChatModel = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    from langchain_core.messages import HumanMessage
+    from langchain_core.messages import SystemMessage
+    from langgraph.graph import START
+    from langgraph.graph import MessagesState
+    from langgraph.graph import StateGraph
+    from langgraph.prebuilt import ToolNode
+    from langgraph.prebuilt import tools_condition
+
+    if typing.TYPE_CHECKING:
+        from langchain_core.language_models.chat_models import BaseChatModel
+
+    llm: "BaseChatModel" = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
     # Get tools for alert triage
     tool_names = config.tool_names
