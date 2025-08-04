@@ -16,9 +16,7 @@ limitations under the License.
 -->
 
 # ReAct Agent
-Agents are a major use-case for language models. Agents are systems that use LLMs to reason and determine what actions
-to take and what inputs to use for those actions. After executing those actions, the agent uses the LLM to determine
-if more actions are required. This agent is a ReAct (Reasoning and Acting) agent, based on the [ReAct paper](https://react-lm.github.io/).
+Agents are a major use-case for language models. Agents are systems that use LLMs to reason and determine what actions to take and what inputs to use for those actions. After executing those actions, the agent uses the LLM to determine if more actions are required. This agent is a ReAct (Reasoning and Acting) agent, based on the [ReAct paper](https://react-lm.github.io/).
 
 The ReAct agent's prompt is directly inspired by the prompt examples in the appendix of the
 paper.
