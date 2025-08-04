@@ -29,6 +29,23 @@ A workflow is defined by a YAML configuration file that specifies the tools and 
 
 ![Running Workflows](../_static/running_workflows.png)
 
+## Prerequisites
+
+Ensure that you have followed the instructions in the [Install Guide](../quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+
+The examples in this document utilize the `examples/getting_started/simple_web_query` workflow, install it by running the following commands from the root directory of the NeMo Agent toolkit library:
+```bash
+uv pip install -e examples/getting_started/simple_web_query
+```
+
+### Set Up API Keys
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+
+```bash
+export NVIDIA_API_KEY=<YOUR_API_KEY>
+```
+
+
 ## Using the `aiq run` Command
 The `aiq run` command is the simplest way to run a workflow. `aiq run` receives a configuration file as specified by the `--config_file` flag, along with input that can be specified either directly with the `--input` flag or by providing a file path with the `--input_file` flag.
 
