@@ -883,21 +883,31 @@ dependencies = [
     { name = "aiqtoolkit" },
     { name = "llama-index" },
     { name = "llama-index-core" },
+    { name = "llama-index-embeddings-azure-openai" },
+    { name = "llama-index-embeddings-bedrock" },
     { name = "llama-index-embeddings-nvidia" },
+    { name = "llama-index-embeddings-openai" },
+    { name = "llama-index-llms-azure-openai" },
     { name = "llama-index-llms-bedrock" },
     { name = "llama-index-llms-nvidia" },
+    { name = "llama-index-llms-openai" },
     { name = "llama-index-readers-file" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "aiqtoolkit", editable = "." },
-    { name = "llama-index", specifier = "==0.12.21" },
-    { name = "llama-index-core", specifier = "==0.12.21" },
-    { name = "llama-index-embeddings-nvidia", specifier = "==0.3.1" },
-    { name = "llama-index-llms-bedrock", specifier = "==0.3.8" },
-    { name = "llama-index-llms-nvidia", specifier = "==0.3.1" },
-    { name = "llama-index-readers-file", specifier = "==0.4.4" },
+    { name = "llama-index", specifier = "~=0.12.21" },
+    { name = "llama-index-core", specifier = "~=0.12.21" },
+    { name = "llama-index-embeddings-azure-openai", specifier = "~=0.3.1" },
+    { name = "llama-index-embeddings-bedrock", specifier = "~=0.5.2" },
+    { name = "llama-index-embeddings-nvidia", specifier = "~=0.3.1" },
+    { name = "llama-index-embeddings-openai", specifier = "~=0.3.1" },
+    { name = "llama-index-llms-azure-openai", specifier = "~=0.3.1" },
+    { name = "llama-index-llms-bedrock", specifier = "~=0.3.8" },
+    { name = "llama-index-llms-nvidia", specifier = "~=0.3.1" },
+    { name = "llama-index-llms-openai", specifier = "~=0.3.38" },
+    { name = "llama-index-readers-file", specifier = "~=0.4.4" },
 ]
 
 [[package]]
@@ -3658,6 +3668,34 @@ wheels = [
 ]
 
 [[package]]
+name = "llama-index-embeddings-azure-openai"
+version = "0.3.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "llama-index-core" },
+    { name = "llama-index-embeddings-openai" },
+    { name = "llama-index-llms-azure-openai" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/44/3d/94fbcfe51d079db569bc7db0509fd908454b6b66f9b67ee6b84f7281f178/llama_index_embeddings_azure_openai-0.3.9.tar.gz", hash = "sha256:f5e0d143b6ff9c0a5e4f3b62dfaa5c9382934a3ef13fdd71a42ebbf5639de195", size = 4777 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a6/5b/db01863a69f7e9302dd282e7db93e816abd44ebc935cef603cd2f7fb7655/llama_index_embeddings_azure_openai-0.3.9-py3-none-any.whl", hash = "sha256:264702281d871471dd4e5e644536257f144cbdd1bcf85aa32618454911896113", size = 4414 },
+]
+
+[[package]]
+name = "llama-index-embeddings-bedrock"
+version = "0.5.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aioboto3" },
+    { name = "boto3" },
+    { name = "llama-index-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cb/85/26bfba1bb33831973af2e6b321a60f03f779fe233a4abd9ff2d36f516d51/llama_index_embeddings_bedrock-0.5.2.tar.gz", hash = "sha256:a7441985a464fc60dff2bf527e5ee840878225c9ec9ce33a874a40c751466f8e", size = 6801 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/22/a9/8212a30bb37ab3dd6abc8da291fa76019ab6ad3e8b75ab228b49478e03ef/llama_index_embeddings_bedrock-0.5.2-py3-none-any.whl", hash = "sha256:531190208ac47a44c60cbe42e858b20f3211444ae9b16d236faa3dc9d7a855a8", size = 6464 },
+]
+
+[[package]]
 name = "llama-index-embeddings-nvidia"
 version = "0.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3706,6 +3744,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a1/e7/4d0b17d799db78956e360037c8cba7f83330b412690b2864afb7d70421f0/llama_index_llms_anthropic-0.6.12.tar.gz", hash = "sha256:ddcc8cfef941bf371190d7c329f1b86e3b1ad663e7cbbb9f4edbc128de9c3f82", size = 11501 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6e/b0/81be98f4d83f3645b08f528523183c6ed40a18f2c2bf0c378840d69db020/llama_index_llms_anthropic-0.6.12-py3-none-any.whl", hash = "sha256:acbfb38dea7827467e585698888acdeb613b07427d584ea4ed1a3917225dba98", size = 11778 },
+]
+
+[[package]]
+name = "llama-index-llms-azure-openai"
+version = "0.3.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "azure-identity" },
+    { name = "httpx" },
+    { name = "llama-index-core" },
+    { name = "llama-index-llms-openai" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0c/cf/23c516c5a61c9b7a481c383862ebd99cc5e6a35f820dab871bb12b453b71/llama_index_llms_azure_openai-0.3.2.tar.gz", hash = "sha256:c6ae4e6d896abc784a1d60e02a537c91e019317de69d02256424eab80c988646", size = 6287 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/2f/efab9bd63f7f3dd9ec83c945c9516beffcff14ffd4a8187150b46e69124b/llama_index_llms_azure_openai-0.3.2-py3-none-any.whl", hash = "sha256:1a831035129042327f50d243a17918c481dfae39fd5a7ddaaaa0a712fb18ab8e", size = 7283 },
 ]
 
 [[package]]

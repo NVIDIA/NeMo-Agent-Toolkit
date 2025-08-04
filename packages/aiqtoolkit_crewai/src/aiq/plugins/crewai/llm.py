@@ -19,9 +19,55 @@ from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_llm_client
 from aiq.data_models.retry_mixin import RetryMixin
+from aiq.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from aiq.llm.azure_openai_llm import AzureOpenAIModelConfig
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
 from aiq.utils.exception_handlers.automatic_retries import patch_with_retry
+
+
+@register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
+async def aws_bedrock_crewai(llm_config: AWSBedrockModelConfig, builder: Builder):
+
+    from crewai import LLM
+
+    client = LLM(**llm_config.model_dump(exclude={"type"}, by_alias=True))
+
+    if isinstance(llm_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
+
+    yield client
+
+
+@register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
+async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, builder: Builder):
+
+    from crewai import LLM
+
+    config_obj = {
+        **llm_config.model_dump(exclude={"type"}, by_alias=True),
+    }
+
+    if llm_config.api_key is not None and "AZURE_API_KEY" not in os.environ:
+        os.environ["AZURE_API_KEY"] = llm_config.api_key
+    if llm_config.azure_endpoint is not None and "AZURE_API_BASE" not in os.environ:
+        os.environ["AZURE_API_BASE"] = llm_config.azure_endpoint
+    if llm_config.api_version is not None and "AZURE_API_VERSION" not in os.environ:
+        os.environ["AZURE_API_VERSION"] = llm_config.api_version
+
+    client = LLM(**config_obj)
+
+    if isinstance(llm_config, RetryMixin):
+
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
+
+    yield client
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)

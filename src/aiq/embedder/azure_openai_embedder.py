@@ -18,14 +18,14 @@ from pydantic import ConfigDict
 from pydantic import Field
 
 from aiq.builder.builder import Builder
-from aiq.builder.llm import LLMProviderInfo
-from aiq.cli.register_workflow import register_llm_provider
-from aiq.data_models.llm import LLMBaseConfig
+from aiq.builder.embedder import EmbedderProviderInfo
+from aiq.cli.register_workflow import register_embedder_provider
+from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.retry_mixin import RetryMixin
 
 
-class AzureOpenAIModelConfig(LLMBaseConfig, RetryMixin, name="azure_openai"):
-    """An Azure OpenAI LLM provider to be used with an LLM client."""
+class AzureOpenAIEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="azure_openai"):
+    """An Azure OpenAI embedder provider to be used with an embedder client."""
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
@@ -38,13 +38,9 @@ class AzureOpenAIModelConfig(LLMBaseConfig, RetryMixin, name="azure_openai"):
     azure_deployment: str = Field(validation_alias=AliasChoices("azure_deployment", "model_name", "model"),
                                   serialization_alias="azure_deployment",
                                   description="The Azure OpenAI hosted model/deployment name.")
-    temperature: float = Field(default=0.0, description="Sampling temperature in [0, 1].")
-    top_p: float = Field(default=1.0, description="Top-p for distribution sampling.")
-    seed: int | None = Field(default=None, description="Random seed to set for generation.")
-    max_retries: int = Field(default=10, description="The max number of retries for the request.")
 
 
-@register_llm_provider(config_type=AzureOpenAIModelConfig)
-async def azure_openai_llm(config: AzureOpenAIModelConfig, builder: Builder):
+@register_embedder_provider(config_type=AzureOpenAIEmbedderModelConfig)
+async def azure_openai_embedder(config: AzureOpenAIEmbedderModelConfig, builder: Builder):
 
-    yield LLMProviderInfo(config=config, description="An Azure OpenAI model for use with an LLM client.")
+    yield EmbedderProviderInfo(config=config, description="An Azure OpenAI model for use with an Embedder client.")

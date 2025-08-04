@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,19 +24,26 @@ from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.retry_mixin import RetryMixin
 
 
-class OpenAIEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="openai"):
-    """An OpenAI LLM provider to be used with an LLM client."""
+class AWSBedrockEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="aws_bedrock"):
+    """An AWS Bedrock embedder provider to be used with an embedder client."""
 
     model_config = ConfigDict(protected_namespaces=())
 
-    api_key: str | None = Field(default=None, description="OpenAI API key to interact with hosted model.")
-    base_url: str | None = Field(default=None, description="Base url to the hosted model.")
+    # Completion parameters
     model_name: str = Field(validation_alias=AliasChoices("model_name", "model"),
                             serialization_alias="model",
-                            description="The OpenAI hosted model name.")
+                            description="The model name for the hosted AWS Bedrock.")
+
+    # Client parameters
+    region_name: str | None = Field(default="None", description="AWS region to use.")
+    base_url: str | None = Field(
+        default=None, description="Bedrock endpoint to use. Needed if you don't want to default to us-east-1 endpoint.")
+    credentials_profile_name: str | None = Field(
+        default=None, description="The name of the profile in the ~/.aws/credentials or ~/.aws/config files.")
 
 
-@register_embedder_provider(config_type=OpenAIEmbedderModelConfig)
-async def openai_llm(config: OpenAIEmbedderModelConfig, builder: Builder):
+@register_embedder_provider(config_type=AWSBedrockEmbedderModelConfig)
+async def aws_bedrock_embedder(embedder_config: AWSBedrockEmbedderModelConfig, builder: Builder):
 
-    yield EmbedderProviderInfo(config=config, description="An OpenAI model for use with an Embedder client.")
+    yield EmbedderProviderInfo(config=embedder_config,
+                               description="An AWS Bedrock embedder for use with an embedder client.")

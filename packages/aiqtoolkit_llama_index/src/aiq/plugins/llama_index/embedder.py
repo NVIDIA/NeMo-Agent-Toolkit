@@ -24,28 +24,12 @@ from aiq.embedder.openai_embedder import OpenAIEmbedderModelConfig
 from aiq.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
-@register_embedder_client(config_type=AWSBedrockEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def aws_bedrock_langchain(embedder_config: AWSBedrockEmbedderModelConfig, builder: Builder):
+@register_embedder_client(config_type=AWSBedrockEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
+async def aws_bedrock_llama_index(embedder_config: AWSBedrockEmbedderModelConfig, builder: Builder):
 
-    from langchain_aws import BedrockEmbeddings
+    from llama_index.embeddings.bedrock import BedrockEmbedding
 
-    client = BedrockEmbeddings(**embedder_config.model_dump(exclude={"type"}, by_alias=True))
-
-    if isinstance(embedder_config, RetryMixin):
-        client = patch_with_retry(client,
-                                  retries=embedder_config.num_retries,
-                                  retry_codes=embedder_config.retry_on_status_codes,
-                                  retry_on_messages=embedder_config.retry_on_errors)
-
-    yield client
-
-
-@register_embedder_client(config_type=AzureOpenAIEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def azure_openai_langchain(embedder_config: AzureOpenAIEmbedderModelConfig, builder: Builder):
-
-    from langchain_openai import AzureOpenAIEmbeddings
-
-    client = AzureOpenAIEmbeddings(**embedder_config.model_dump(exclude={"type"}, by_alias=True))
+    client = BedrockEmbedding(**embedder_config.model_dump(exclude={"type"}, by_alias=True))
 
     if isinstance(embedder_config, RetryMixin):
         client = patch_with_retry(client,
@@ -56,12 +40,12 @@ async def azure_openai_langchain(embedder_config: AzureOpenAIEmbedderModelConfig
     yield client
 
 
-@register_embedder_client(config_type=NIMEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def nim_langchain(embedder_config: NIMEmbedderModelConfig, builder: Builder):
+@register_embedder_client(config_type=AzureOpenAIEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
+async def azure_openai_llama_index(embedder_config: AzureOpenAIEmbedderModelConfig, builder: Builder):
 
-    from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
+    from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding
 
-    client = NVIDIAEmbeddings(**embedder_config.model_dump(exclude={"type"}, by_alias=True))
+    client = AzureOpenAIEmbedding(**embedder_config.model_dump(exclude={"type"}, by_alias=True))
 
     if isinstance(embedder_config, RetryMixin):
         client = patch_with_retry(client,
@@ -72,12 +56,26 @@ async def nim_langchain(embedder_config: NIMEmbedderModelConfig, builder: Builde
     yield client
 
 
-@register_embedder_client(config_type=OpenAIEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def openai_langchain(embedder_config: OpenAIEmbedderModelConfig, builder: Builder):
+@register_embedder_client(config_type=NIMEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
+async def nim_llamaindex(embedder_config: NIMEmbedderModelConfig, builder: Builder):
 
-    from langchain_openai import OpenAIEmbeddings
+    from llama_index.embeddings.nvidia import NVIDIAEmbedding  # pylint: disable=no-name-in-module
 
-    client = OpenAIEmbeddings(**embedder_config.model_dump(exclude={"type"}, by_alias=True))
+    config_obj = {
+        **embedder_config.model_dump(exclude={"type", "model_name"}, by_alias=True),
+        "model":
+            embedder_config.model_name,
+    }
+
+    yield NVIDIAEmbedding(**config_obj)
+
+
+@register_embedder_client(config_type=OpenAIEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
+async def openai_llama_index(embedder_config: OpenAIEmbedderModelConfig, builder: Builder):
+
+    from llama_index.embeddings.openai import OpenAIEmbedding
+
+    client = OpenAIEmbedding(**embedder_config.model_dump(exclude={"type"}, by_alias=True))
 
     if isinstance(embedder_config, RetryMixin):
         client = patch_with_retry(client,

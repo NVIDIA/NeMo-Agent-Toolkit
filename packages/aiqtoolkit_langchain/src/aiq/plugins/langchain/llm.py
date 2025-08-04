@@ -18,10 +18,42 @@ from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.cli.register_workflow import register_llm_client
 from aiq.data_models.retry_mixin import RetryMixin
 from aiq.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from aiq.llm.azure_openai_llm import AzureOpenAIModelConfig
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
-from aiq.llm.azure_openai_llm import AzureOpenAIModelConfig
 from aiq.utils.exception_handlers.automatic_retries import patch_with_retry
+
+
+@register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+async def aws_bedrock_langchain(llm_config: AWSBedrockModelConfig, builder: Builder):
+
+    from langchain_aws import ChatBedrockConverse
+
+    client = ChatBedrockConverse(**llm_config.model_dump(exclude={"type", "context_size"}, by_alias=True))
+
+    if isinstance(llm_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
+
+    yield client
+
+
+@register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, builder: Builder):
+
+    from langchain_openai import AzureChatOpenAI
+
+    client = AzureChatOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
+
+    if isinstance(llm_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=llm_config.num_retries,
+                                  retry_codes=llm_config.retry_on_status_codes,
+                                  retry_on_messages=llm_config.retry_on_errors)
+
+    yield client
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
@@ -52,37 +84,6 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
     kwargs = {**default_kwargs, **llm_config.model_dump(exclude={"type"}, by_alias=True)}
 
     client = ChatOpenAI(**kwargs)
-
-    if isinstance(llm_config, RetryMixin):
-        client = patch_with_retry(client,
-                                  retries=llm_config.num_retries,
-                                  retry_codes=llm_config.retry_on_status_codes,
-                                  retry_on_messages=llm_config.retry_on_errors)
-
-    yield client
-
-
-@register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def aws_bedrock_langchain(llm_config: AWSBedrockModelConfig, builder: Builder):
-
-    from langchain_aws import ChatBedrockConverse
-
-    client = ChatBedrockConverse(**llm_config.model_dump(exclude={"type", "context_size"}, by_alias=True))
-
-    if isinstance(llm_config, RetryMixin):
-        client = patch_with_retry(client,
-                                  retries=llm_config.num_retries,
-                                  retry_codes=llm_config.retry_on_status_codes,
-                                  retry_on_messages=llm_config.retry_on_errors)
-
-    yield client
-
-@register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, builder: Builder):
-
-    from langchain_openai import AzureChatOpenAI
-
-    client = AzureChatOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,

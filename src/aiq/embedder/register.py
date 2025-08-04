@@ -18,7 +18,6 @@
 # isort:skip_file
 
 # Import any providers which need to be automatically registered here
+from . import azure_openai_embedder
 from . import nim_embedder
 from . import openai_embedder
-# Import any clients which need to be automatically registered here
-from . import langchain_client
