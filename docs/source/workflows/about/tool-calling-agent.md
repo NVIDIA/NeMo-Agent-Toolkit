@@ -17,7 +17,6 @@ limitations under the License.
 
 # Tool Calling Agent
 
-Agents are a major use-case for language models. Agents are systems that use LLMs to determine what actions to take and what inputs to use for those actions.
 Some LLMs support Tool Calling / Function Calling, and can be used for Tool Calling Agents.
 
 ---
