@@ -67,7 +67,7 @@ async def who_am_i_function(config: WhoAmIConfig, builder: Builder):
 
                 data = response.json()
 
-                logger.info(f"Successfully looked up user: {data.get('name', 'Unknown')}")
+                logger.info("Successfully looked up user: %s", data.get('name', 'Unknown'))
 
                 return json.dumps(data, indent=2)
 

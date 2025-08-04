@@ -15,11 +15,6 @@
 
 import logging
 
-from aiq_automated_description_generation.utils.description_generation import generate_description
-from aiq_automated_description_generation.utils.prompts import direct_summary_prompt
-from aiq_automated_description_generation.utils.prompts import map_prompt
-from aiq_automated_description_generation.utils.prompts import reduce_prompt
-from aiq_automated_description_generation.utils.workflow_utils import SummarizationWorkflow
 from pydantic import Field
 
 from aiq.builder.builder import Builder
@@ -57,6 +52,11 @@ class AutomatedDescriptionMilvusWorkflow(FunctionBaseConfig, name="automated_des
 
 @register_function(config_type=AutomatedDescriptionMilvusWorkflow, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def automated_description_milvus_workflow(workflow_config: AutomatedDescriptionMilvusWorkflow, builder: Builder):
+    from aiq_automated_description_generation.utils.description_generation import generate_description
+    from aiq_automated_description_generation.utils.prompts import direct_summary_prompt
+    from aiq_automated_description_generation.utils.prompts import map_prompt
+    from aiq_automated_description_generation.utils.prompts import reduce_prompt
+    from aiq_automated_description_generation.utils.workflow_utils import SummarizationWorkflow
 
     logger.info("Building necessary components for the Automated Description Generation Workflow")
     llm_n = await builder.get_llm(llm_name=workflow_config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

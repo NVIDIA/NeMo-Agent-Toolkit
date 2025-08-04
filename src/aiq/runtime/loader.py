@@ -175,7 +175,7 @@ def discover_and_register_plugins(plugin_type: PluginTypes):
                 # Log a warning if the plugin took a long time to load. This can be useful for debugging slow imports.
                 # The threshold is 300 ms if no plugins have been loaded yet, and 100 ms otherwise. Triple the threshold
                 # if a debugger is attached.
-                if (elapsed_time > (300.0 if count == 0 else 100.0) * (3 if is_debugger_attached() else 1)):
+                if (elapsed_time > (300.0 if count == 0 else 150.0) * (3 if is_debugger_attached() else 1)):
                     logger.debug(
                         "Loading module '%s' from entry point '%s' took a long time (%f ms). "
                         "Ensure all imports are inside your registered functions.",

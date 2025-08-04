@@ -18,9 +18,6 @@ import os
 from datetime import datetime
 
 import pandas as pd
-from langchain_core.messages import HumanMessage
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.prompts import MessagesPlaceholder
 from pydantic import Field
 
 from aiq.builder.builder import Builder
@@ -181,6 +178,10 @@ def _summarize_alert(llm, prompt_template, alert, maintenance_start_str, mainten
     Returns:
         str: A markdown-formatted report summarizing the alert and maintenance status
     """
+    from langchain_core.messages import HumanMessage
+    from langchain_core.prompts import ChatPromptTemplate
+    from langchain_core.prompts import MessagesPlaceholder
+
     sys_prompt = prompt_template.format(maintenance_start_str=maintenance_start_str,
                                         maintenance_end_str=maintenance_end_str)
     prompt_template = ChatPromptTemplate([("system", sys_prompt), MessagesPlaceholder("msgs")])
@@ -190,7 +191,7 @@ def _summarize_alert(llm, prompt_template, alert, maintenance_start_str, mainten
     return result
 
 
-@register_function(config_type=MaintenanceCheckToolConfig)
+@register_function(config_type=MaintenanceCheckToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def maintenance_check(config: MaintenanceCheckToolConfig, builder: Builder):
     # Set up LLM
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

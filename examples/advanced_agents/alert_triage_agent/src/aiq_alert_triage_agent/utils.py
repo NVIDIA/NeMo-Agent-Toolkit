@@ -20,9 +20,6 @@ import os
 
 import ansible_runner
 import pandas as pd
-from langchain_core.messages import HumanMessage
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.prompts import MessagesPlaceholder
 
 from aiq.builder.framework_enum import LLMFrameworkEnum
 
@@ -61,6 +58,9 @@ async def llm_ainvoke(config, builder, user_prompt, system_prompt=None):
     A helper function to invoke an LLM with a system prompt and user prompt.
     Uses a cached LLM instance if one exists for the given name and wrapper type.
     """
+    from langchain_core.messages import HumanMessage
+    from langchain_core.prompts import ChatPromptTemplate
+    from langchain_core.prompts import MessagesPlaceholder
     llm = await _get_llm(builder, config.llm_name, LLMFrameworkEnum.LANGCHAIN)
 
     if system_prompt:
@@ -101,11 +101,11 @@ def preload_offline_data(offline_data_path: str | None, benign_fallback_data_pat
         raise ValueError("benign_fallback_data_path must be provided")
 
     _DATA_CACHE['offline_data'] = pd.read_csv(offline_data_path)
-    logger.info(f"Preloaded test data from: {offline_data_path}")
+    logger.info("Preloaded test data from: %s", offline_data_path)
 
-    with open(benign_fallback_data_path, "r") as f:
+    with open(benign_fallback_data_path, "r", encoding="utf-8") as f:
         _DATA_CACHE['benign_fallback_offline_data'] = json.load(f)
-    logger.info(f"Preloaded benign fallback data from: {benign_fallback_data_path}")
+    logger.info("Preloaded benign fallback data from: %s", benign_fallback_data_path)
 
 
 def get_offline_data() -> pd.DataFrame:
@@ -145,7 +145,7 @@ def load_column_or_static(df, host_id, column):
         # Column missing from DataFrame, try loading from static JSON file
         static_data = _get_static_data()
         try:
-            return static_data[column]
+            return static_data[column]  # pylint: disable=unsubscriptable-object
         except KeyError as exc:
             raise KeyError(f"Column '{column}' not found in test and benign fallback data") from exc
     # Column exists in DataFrame, get value for this host
@@ -162,7 +162,7 @@ def load_column_or_static(df, host_id, column):
         # If data is None, empty, or NaN, try loading from static JSON file
         static_data = _get_static_data()
         try:
-            return static_data[column]
+            return static_data[column]  # pylint: disable=unsubscriptable-object
         except KeyError as exc:
             raise KeyError(f"Column '{column}' not found in static data") from exc
 
