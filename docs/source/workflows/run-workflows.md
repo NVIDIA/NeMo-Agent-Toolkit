@@ -113,7 +113,7 @@ print(result)
 ```
 
 In this example:
-- `config_file`: A string or pathlib Path pointing to your workflow YAML file
+- `config_file`: A string or {py:class}`~pathlib.Path` pointing to your workflow YAML file
 - `input_str`: A string containing the input for your workflow
 - The `workflow.run(input_str)` method returns an instance of {py:class}`~aiq.runtime.runner.AIQRunner`
 
