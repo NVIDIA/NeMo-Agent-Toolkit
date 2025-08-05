@@ -162,6 +162,27 @@ export CATALYST_ENDPOINT=<your_endpoint>
 aiq run --config_file examples/observability/simple_calculator_observability/configs/config-catalyst.yml --input "Divide 144 by 12"
 ```
 
+#### Galileo Integration
+
+Transmit traces to Galileo for workflow observability.
+
+1. Sign up for Galileo and create project
+- Visit [https://app.galileo.ai/](https://app.galileo.ai/) to create your account or sign in.
+- Create a project named `simple_calculator` and use default log stream
+- Create your API key
+
+2. Set your Galileo credentials:
+
+```bash
+export GALILEO_API_KEY=<your_api_key>
+```
+
+3. Run the workflow
+
+```bash
+aiq run --config_file examples/observability/simple_calculator_observability/configs/config-galileo.yml --input "Is 100 > 50?"
+```
+
 
 ## Configuration Files
 
