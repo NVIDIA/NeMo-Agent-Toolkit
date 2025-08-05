@@ -114,7 +114,7 @@ class DiscoveryMetadata(BaseModel):
                 with distinfo_path.open("r") as f:
                     data = json.load(f)
                     return data.get(root_package, None)
-        return
+        return None
 
     @staticmethod
     @lru_cache
