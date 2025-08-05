@@ -30,4 +30,10 @@ python ${SCRIPT_DIR}/path_checks.py \
 
 PATH_CHECKS_RETVAL=$?
 
+if [[ "${PATH_CHECKS_RETVAL}" != "0" ]]; then
+    echo ">>> FAILED: path checks"
+else
+    echo ">>> PASSED: path checks"
+fi
+
 exit ${PATH_CHECKS_RETVAL}

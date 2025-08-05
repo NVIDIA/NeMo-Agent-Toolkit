@@ -227,7 +227,7 @@ The default scoring can be overridden by setting the config boolean `default_sco
 Note: if you do choose to use the default scoring method, you are still able to tune the judge LLM prompt.
 
 **Example:**
-`example/simple_calculator/configs/config-tunable-rag-eval.yml`:
+`examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml`:
 ```yaml
 eval:
   evaluators:
@@ -259,7 +259,7 @@ eval:
 Note: In your evaluation dataset, make sure that the `answer` field is a description of the expected answer with details on what is expected from the generated answer.
 
 **Example:**
-`example/simple_calculator/configs/config-tunable-rag-eval.yml`:
+`examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml`:
 ```json
 {
   "id": 1,

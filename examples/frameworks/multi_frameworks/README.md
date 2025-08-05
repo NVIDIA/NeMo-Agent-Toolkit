@@ -54,7 +54,6 @@ Then, using LangChain and LangGraph, we unify these frameworks into a single wor
 - **Interoperability** – Combine tools seamlessly without vendor lock-in.
 - **Scalability** – Build flexible AI pipelines that adapt to different use cases.
 
-
 ## Key Features
 
 - **Multi-Framework Integration:** Demonstrates seamless integration of LangChain, LlamaIndex, and Haystack frameworks within a single NeMo Agent toolkit workflow.
@@ -63,8 +62,8 @@ Then, using LangChain and LangGraph, we unify these frameworks into a single wor
 - **Specialized Agent Workers:** Includes three distinct agents - a `rag_agent` using LlamaIndex for document Q&A, a `research_agent` using LangChain for arXiv research, and a chitchat agent using Haystack pipelines.
 - **Dynamic Framework Selection:** Shows how different AI frameworks can be selected automatically based on query type, leveraging each framework's specific strengths without vendor lock-in.
 
-There is a supervisor agent that will assign/route incoming user query to one of the worker agents.
-the 3 worker agents are :
+There is a supervisor agent that will assign and route incoming user queries to one of the worker agents.
+The 3 worker agents are:
 
 - (1) a `rag_agent` made out of `llama_index` via a custom `llama-index-rag` tool
 - (2) a `research_agent` made out of a LangChain runnable chain with tool calling capability, able to call arXiv as a tool and return summarized found research papers

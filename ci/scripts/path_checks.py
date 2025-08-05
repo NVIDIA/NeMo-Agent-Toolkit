@@ -24,54 +24,150 @@ from gitutils import all_files
 
 # File path pairs to ignore -- first is the file path, second is the path in the file
 IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
+
+    # allow references from tests to examples
+    (r"^tests/", r"^examples/"),
+
     # allow references to docs from examples
     (r"^examples/", r"^(\.\./)*docs/"),
+
     # allow references to examples from docs
     (r"^docs/", r"^(\.\./)*examples/"),
+
     # allow relative references within docs
     (r"^docs/", r"^(\.?\./)*[A-Za-z0-9_\-\.]+"),
+
     # allow references to subdirectories from examples
     (r"^examples/", r"^\./[A-Za-z0-9_\-\.]+/"),
 
+    # allow references to text_file_ingest from create-a-new-workflow
+    (
+        r"^docs/source/tutorials/create-a-new-workflow.md",
+        r"^src/text_file_ingest/data",
+    ),
+
     # allow references from some examples to other examples
     (
-        r"^examples/MCP/simple_calculator_mcp/README.md",
-        r"^\.\./\.\./getting_started/simple_calculator",
+        r"^examples/advanced_agents/alert_triage_agent/README.md",
+        r"^examples/advanced_agents/alert_triage_agent/.your_custom_env",
+    ),
+    (
+        r"^examples/advanced_agents/profiler_agent/README.md",
+        r"^examples/observability/simple_calculator_observability",
+    ),
+    (
+        r"^examples/advanced_agents/profiler_agent/README.md",
+        r"^examples/observability/simple_calculator_observability/configs/config-tracing.yml",
+    ),
+    (
+        r"^examples/advanced_agents/profiler_agent/README.md",
+        r"^examples/observability/simple_calculator_observability/configs/config-tracing.yml",
+    ),
+    (
+        r"^examples/advanced_agents/profiler_agent/README.md",
+        r"^examples/observability/simple_calculator_observability/configs/config-tracing.yml",
+    ),
+    (
+        r"^examples/advanced_agents/profiler_agent/README.md",
+        r"^examples/observability/simple_calculator_observability/configs/config-tracing.yml",
     ),
     (
         r"^examples/custom_functions/automated_description_generation/README.md",
         r"^\.\./\.\./RAG/simple_rag/README.md",
     ),
     (
+        r"^examples/documentation_guides/workflows/text_file_ingest/src/text_file_ingest/configs/config.yml",
+        r"^examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json",
+    ),
+    (
         r"^examples/evaluation_and_profiling/simple_calculator_eval/README.md",
         r"^\.\./\.\./getting_started/simple_calculator",
+    ),
+    (
+        r"^examples/evaluation_and_profiling/simple_calculator_eval/README.md",
+        r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
+    ),
+    (
+        r"^examples/evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml",
+        r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
+    ),
+    (
+        r"^examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml",
+        r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
     ),
     (
         r"^examples/evaluation_and_profiling/simple_web_query_eval/README.md",
         r"^\.\./\.\./getting_started/simple_web_query",
     ),
     (
+        r"^examples/memory/redis/README.md",
+        r"^examples/deploy/docker-compose\..*\.yml",
+    ),
+    (
+        r"^examples/MCP/simple_calculator_mcp/README.md",
+        r"^\.\./\.\./getting_started/simple_calculator",
+    ),
+    (
+        r"^examples/MCP/simple_calculator_mcp/README.md",
+        r"^examples/getting_started/simple_calculator/configs/config.yml",
+    ),
+    (
+        r"^examples/MCP/simple_calculator_mcp/README.md",
+        r"^examples/getting_started/simple_calculator/configs/config.yml",
+    ),
+    (
         r"^examples/observability/simple_calculator_observability/README.md",
         r"^\.\./\.\./getting_started/simple_calculator",
+    ),
+
+    # allow references to repo source code from examples
+    (
+        r"^examples/front_ends/simple_calculator_custom_routes/README.md",
+        r"^src/aiq/tool/server_tools.py",
+    ),
+    (
+        r"^examples/evaluation_and_profiling/swe_bench/README.md",
+        r"^src/aiq/data_models/swe_bench_model.py",
+    ),
+    # allow short names for references to files within the swe_bench example
+    (
+        r"^examples/evaluation_and_profiling/swe_bench/README.md",
+        r"^(predict_gold_stub\.py|predict_skeleton\.py|predictors/predict_skeleton|predictors/register\.py)$",
+    ),
+    # blacklist remote files
+    (
+        r"^examples/evaluation_and_profiling/simple_web_query_eval/.*configs/eval_upload.yml",
+        r"^input/langsmith.json",
     ),
 }
 
 # Paths to ignore -- regex pattern
 IGNORED_PATHS: set[str] = {
-    r"^(\./)?\.tmp/",
+    r"^(\./)?\.tmp/",  # files that are located in the directory of the file being checked
     r"^\./upload_to_minio\.sh$",
     r"^\./upload_to_mysql\.sh$",
-    r"^\./start_local_sandbox\.sh$",
+    r"^\./start_local_sandbox\.sh$",  # script files that exist in the root of the repo
+    r"^scripts/langchain_web_ingest\.py$",
+    r"^scripts/bootstrap_milvus\.sh$",  # generated files
     r"^\.venv/bin/activate$",
-    r"^\./run_service\.sh$"
+    r"^\./run_service\.sh$",
+    r"^outputs/line_chart_\d+\.png$"
+    # false positives
+    r"^N/A$",
+    r"^and/or$",
+    r"^input/output$",
 }
 
 # Files to ignore -- regex pattern
 IGNORED_FILES: set[str] = {
-    r"^\.github",
-    r"^\.gitlab-ci.yml",
-    r"aiq_swe_bench/data/.*\.json$",  # swe_bench dataset files
+    r"^\..*",
+    r"^ci/",
     r"pyproject\.toml$",
+    r"Dockerfile",
+    r"docker-compose([A-Za-z0-9_\-\.]+)?\.ya?ml$",
+    r"(CHANGELOG|CONTRIBUTING|LICENSE|SECURITY)\.md",
+    r"^manifest.yaml$",
+    r"data/.*$"
 }
 
 # Paths to consider referential -- string
@@ -117,10 +213,25 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
         A list of PathInfo objects.
     """
     # This is a regex to match URIs or file paths
-    path_regex = re.compile(r'((\w+://[^\s\'"<>]+)|(\.?\.?/?)(([A-Za-z0-9_\-\.]+/)*[A-Za-z0-9_\-\.]+)|)')
+    path_regex = re.compile(r'((\w+://[^\s\'"<>]+)|(\.?\.?/?)(([$A-Za-z0-9_\-\.]+/)*[$A-Za-z0-9_\-\.]+)|)')
     paths = []
     with open(filename, 'r', encoding='utf-8') as f:
+        in_skipped_section: int | bool = False
         for line_number, line in enumerate(f, start=1):
+            if filename.endswith(".md") and line.lstrip().startswith("```"):
+                in_skipped_section = not in_skipped_section
+            elif filename.endswith(".yml") or filename.endswith(".yaml"):
+                # YAML blocks are delimited by a line that ends with a pipe
+                if re.search(r":\s*\|\s*$", line):
+                    # keep track of the number of leading spaces
+                    in_skipped_section = len(line) - len(line.lstrip())
+                elif in_skipped_section:
+                    # if we are in a skipped section, and the number of leading spaces is the same as the number of
+                    # leading spaces in the skipped section, then we are done
+                    if len(line) - len(line.lstrip()) == in_skipped_section:
+                        in_skipped_section = False
+            if in_skipped_section:
+                continue
             for match in path_regex.finditer(line):
                 column, _ = match.span()
                 path = match.group(0)
@@ -129,9 +240,6 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
                     continue
                 # Exclude absolute paths
                 if path.startswith('/'):
-                    continue
-                # Exclude paths that don't start with "."
-                if not path.startswith('.'):
                     continue
                 # Exclude paths that don't contain a slash
                 if '/' not in path:
@@ -144,6 +252,10 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
                     continue
                 if any(re.search(r, path) for r in IGNORED_PATHS):
                     continue
+                if any(re.search(r[0], filename) and re.search(r[1], path) for r in IGNORED_FILE_PATH_PAIRS):
+                    continue
+                if "Thought" in path:
+                    print(f"Thought in {filename}:{line_number}:{column + 1} -> {path} {in_skipped_section}")
                 paths.append(PathInfo(line_number, column + 1, path))
     return paths
 
@@ -157,6 +269,8 @@ def check_files() -> list[tuple[str, PathInfo]]:
     """
     filenames_with_broken_paths = []
 
+    skipped_paths: set[str] = set()
+
     for f in all_files(path_filter=lambda x: x.endswith(EXTENSIONS)):
         if any(re.search(r, f) for r in IGNORED_FILES):
             continue
@@ -164,8 +278,20 @@ def check_files() -> list[tuple[str, PathInfo]]:
         for path_info in paths:
             # If the path does not exist, then it is broken
             if not os.path.exists(path_info.path):
-                filenames_with_broken_paths.append((f, path_info))
-                continue
+                if not path_info.path.startswith("."):
+                    # resolve the path first
+                    if not os.path.exists(os.path.join(os.path.dirname(f), path_info.path)):
+                        # if it still doesn't exist then assume that it isn't actually a path
+                        if any(p in path_info.path for p in REFERENTIAL_PATHS):
+                            # if it is a referential path, then it is likely broken
+                            filenames_with_broken_paths.append((f, path_info))
+                        else:
+                            skipped_paths.add(path_info.path)
+                            continue
+                else:
+                    # if it is a relative path, then it is broken
+                    filenames_with_broken_paths.append((f, path_info))
+                    continue
             path = os.path.commonpath([f, path_info.path])
             if path == "" or path == ".":
                 # try to resolve the path relative to the file
@@ -180,6 +306,12 @@ def check_files() -> list[tuple[str, PathInfo]]:
                         if len(path.split(os.path.sep)) == 1:
                             filenames_with_broken_paths.append((f, path_info))
                             break
+
+    if skipped_paths:
+        print("Warning: skipped the following paths:")
+        for path in sorted(skipped_paths):
+            print(f"- {path}")
+        print("")
 
     return filenames_with_broken_paths
 
@@ -207,20 +339,18 @@ def main():
     if args.check_paths_in_files:
         print("Checking for broken paths in files...")
 
-        def ignore_file_path_pairs(pair: tuple[str, PathInfo]) -> bool:
-            return not any(re.search(r[0], pair[0]) and re.search(r[1], pair[1].path) for r in IGNORED_FILE_PATH_PAIRS)
-
         broken_paths: list[tuple[str, PathInfo]] = check_files()
         if broken_paths:
-            broken_paths = list(filter(ignore_file_path_pairs, broken_paths))
-            if broken_paths:
-                return_code = 1
-                print("Found \"broken\" paths in files:")
-                for filename, path_info in broken_paths:
-                    print(f"- {filename}:{path_info.line_number}:{path_info.column} -> {path_info.path}")
+            return_code = 1
+            print("Found \"broken\" paths in files:")
+            for filename, path_info in broken_paths:
+                print(f"- {filename}:{path_info.line_number}:{path_info.column} -> {path_info.path}")
+        else:
+            print("No broken paths found!")
+
         print(
             textwrap.dedent(
-                """\n
+                """
                 Note: some paths may be ignored due to rules
                 - IGNORED_FILES: files that should be ignored
                 - IGNORED_PATHS: paths that should be ignored

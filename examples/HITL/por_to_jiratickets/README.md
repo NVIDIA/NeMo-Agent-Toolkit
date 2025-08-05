@@ -33,7 +33,7 @@ A minimal example demonstrating an end-to-end Jira ticket creating agentic workf
 
 ## Key Features
 
-- **Document-to-Jira Workflow:** Demonstrates extraction of epics, tasks, features, and bugs from PRD/POR documents using LLM processing and automatic conversion to structured Jira tickets.
+- **Document-to-Jira Workflow:** Demonstrates extraction of epics, tasks, features, and bugs from PRD and/or POR documents using LLM processing and automatic conversion to structured Jira tickets.
 - **Jira REST API Integration:** Shows comprehensive Jira integration with `create_jira_tickets_tool`, `extract_from_por_tool`, and `get_jira_tickets_tool` for complete ticket lifecycle management.
 - **Human-in-the-Loop Approval:** Implements `hitl_approval_tool` that requires explicit user confirmation before creating Jira tickets, demonstrating secure workflow gates and user control.
 - **Intelligent Story Point Assignment:** Automatically assigns story points based on complexity and effort estimation using LLM analysis of extracted requirements.
