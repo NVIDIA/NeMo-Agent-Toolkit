@@ -41,37 +41,41 @@ The first step in adding an authentication provider is to create a configuration
 authenticate with the target API resource.
 
 The following example shows how to define and register a custom evaluator and can be found here:
-{py:class}`~aiq.authentication.oauth2.OAuth2AuthorizationCodeFlowConfig` class:
+{py:class}`~aiq.authentication.oauth2.oauth2_auth_code_flow_provider_config.OAuth2AuthCodeFlowProviderConfig` class:
 ```python
-class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_auth_code_flow"):
-
-    model_config = ConfigDict(extra="forbid")
+class OAuth2AuthCodeFlowProviderConfig(AuthenticationBaseConfig, name="oauth2_auth_code_flow"):
 
     client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
     client_secret: str = Field(description="The secret associated with the client_id.")
     authorization_url: str = Field(description="The authorization URL for OAuth 2.0 authentication.")
     token_url: str = Field(description="The token URL for OAuth 2.0 authentication.")
-    token_endpoint_auth_method: str | None = Field(description="The authentication method for the token endpoint.",
-                                                   default=None)
-    scopes: list[str] = Field(description="The space-delimited scopes for OAuth 2.0 authentication.",
-                              default_factory=list)
+    token_endpoint_auth_method: str | None = Field(
+        description=("The authentication method for the token endpoint. "
+                     "Usually one of `client_secret_post` or `client_secret_basic`."),
+        default=None)
     redirect_uri: str = Field(description="The redirect URI for OAuth 2.0 authentication. Must match the registered "
                               "redirect URI with the OAuth provider.")
-
+    scopes: list[str] = Field(description="The scopes for OAuth 2.0 authentication.", default_factory=list)
     use_pkce: bool = Field(default=False,
                            description="Whether to use PKCE (Proof Key for Code Exchange) in the OAuth 2.0 flow.")
+
+    authorization_kwargs: dict[str, str] | None = Field(description=("Additional keyword arguments for the "
+                                                                     "authorization request."),
+                                                        default=None)
 ```
 
 ### Registering the Provider
-An asynchronous function decorated with {py:deco}`~aiq.cli.register_workflow.register_authentication_provider` is used to
+An asynchronous function decorated with {py:func}`~aiq.cli.register_workflow.register_auth_provider` is used to
 register the provider with NeMo Agent toolkit by yielding an instance of
 {py:class}`~aiq.builder.authentication.AuthenticationProviderInfo`.
 
-The `OAuth2AuthorizationCodeFlowConfig` from the previous section is registered as follows:
+The `OAuth2AuthCodeFlowProviderConfig` from the previous section is registered as follows:
 ```python
-@register_authentication_provider(config_type=OAuth2AuthorizationCodeFlowConfig)
-async def oauth2(authentication_provider: OAuth2AuthorizationCodeFlowConfig, builder: Builder):
-    yield AuthenticationProviderInfo(config=authentication_provider, description="OAuth 2.0 authentication provider.")
+@register_auth_provider(config_type=OAuth2AuthCodeFlowProviderConfig)
+async def oauth2_client(authentication_provider: OAuth2AuthCodeFlowProviderConfig, builder: Builder):
+    from aiq.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
+
+    yield OAuth2AuthCodeFlowProvider(authentication_provider)
 ```
 ## Extending the API Authentication Client
 As described earlier, each API authentication provider defines the credentials and parameters required to authenticate
@@ -85,18 +89,18 @@ to simplify the development of custom authentication clients for various authent
 
 To implement a custom client, extend the appropriate base class and override the required methods. For detailed
 documentation on the methods and expected behavior, refer to the docstrings provided in the
-{py:deco}`~aiq.authentication.interfaces` module.
+{py:mod}`~aiq.authentication.interfaces` module.
 
 ## Registering the API Authentication Client
 To register an authentication client, define an asynchronous function decorated
-with {py:deco}`~aiq.cli.register_workflow.register_authentication_client`. The `register_authentication_client`
+with {py:func}`~aiq.cli.register_workflow.register_authentication_client`. The `register_authentication_client`
 decorator requires a single argument: `config_type`, which specifies the authentication configuration class associated
 with the provider.
 
 `src/aiq/authentication/oauth2/register.py`:
 ```python
-@register_authentication_client(config_type=OAuth2AuthorizationCodeFlowConfig)
-async def oauth2_client(authentication_provider: OAuth2AuthorizationCodeFlowConfig, builder: Builder):
+@register_authentication_client(config_type=OAuth2AuthCodeFlowProviderConfig)
+async def oauth2_client(authentication_provider: OAuth2AuthCodeFlowProviderConfig, builder: Builder):
     yield OAuth2Client(authentication_provider)
 ```
 Similar to the registration function for the provider, the client registration function can perform any necessary setup
