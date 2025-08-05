@@ -103,7 +103,7 @@ The `tracing` section contains one or more tracing providers. Each provider has 
     tracing:
       weave:
         _type: weave
-        project: "aiqtoolkit-demo"
+        project: aiqtoolkit-demo
     ```
   - See [Observing with W&B Weave](./observe-workflow-with-weave.md) for more information
 - [**Phoenix**](https://phoenix.arize.com/)
@@ -113,7 +113,7 @@ The `tracing` section contains one or more tracing providers. Each provider has 
       phoenix:
         _type: phoenix
         endpoint: http://localhost:6006/v1/traces
-        project: "aiqtoolkit-demo"
+        project: aiqtoolkit-demo
     ```
   - See [Observing with Phoenix](./observe-workflow-with-phoenix.md) for more information
 - [**Galileo**](https://galileo.ai/)
@@ -123,9 +123,9 @@ The `tracing` section contains one or more tracing providers. Each provider has 
       galileo:
         _type: galileo
         endpoint: https://app.galileo.ai/api/galileo/otel/traces
-        project: "aiqtoolkit-demo"
-        logstream: "default"
-        api_key: "<YOUR-GALILEO-API-KEY>"
+        project: aiqtoolkit-demo
+        logstream: default
+        api_key: <YOUR-GALILEO-API-KEY>
     ```
   - See [Observing with Galileo](./observe-workflow-with-galileo.md) for more information
 - [**Langfuse**](https://langfuse.com/)
@@ -150,19 +150,19 @@ The `tracing` section contains one or more tracing providers. Each provider has 
     tracing:
       catalyst:
         _type: catalyst
-        project: "aiqtoolkit-demo"
-        dataset: "aiqtoolkit-dataset"
+        project: aiqtoolkit-demo
+        dataset: aiqtoolkit-dataset
     ```
   - See [Observing with Catalyst](./observe-workflow-with-catalyst.md) for more information
 - [**Generic OTel Collector**](./observe-workflow-with-otel-collector.md)
   - Example configuration:
-  ```yaml
-  tracing:
-    otelcollector:
-      _type: otelcollector
-      project: "aiqtoolkit-demo"
-      endpoint: "http://localhost:4318
-  ```
+    ```yaml
+    tracing:
+      otelcollector:
+        _type: otelcollector
+        project: aiqtoolkit-demo
+        endpoint: http://localhost:4318
+    ```
   - See [Observing with OTel Collector](https://opentelemetry.io/docs/collector/) for more information
 - **Custom providers**
   - See [Registering a New Telemetry Provider as a Plugin](#registering-a-new-telemetry-provider-as-a-plugin) for more information

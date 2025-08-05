@@ -52,7 +52,7 @@ general:
         endpoint: http://localhost:6006/v1/traces
         project: simple_calculator
 ```
-This setup enables tracing through Phoenix at `http://localhost:6006/v1/traces`, with traces grouped into the `simple_calculator` project
+This setup enables tracing through Phoenix at `http://localhost:6006/v1/traces`, with traces grouped into the `simple_calculator` project.
 
 ### Step 4: Run Your Workflow
 
@@ -71,7 +71,7 @@ As the workflow runs, telemetry data will start showing up in Phoenix.
 ### Step 5: View Traces Data in Phoenix
 
 - Open your browser and navigate to `http://0.0.0.0:6006`.
-- Locate your workflow traces under the your project name in projects.
+- Locate your workflow traces under your project name in projects.
 - Inspect function execution details, latency, total tokens, request timelines and other info under Info and Attributes tab of an individual trace.
 
 ### Debugging

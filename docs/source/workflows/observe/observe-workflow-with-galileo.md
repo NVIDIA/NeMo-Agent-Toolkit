@@ -46,11 +46,11 @@ You will need the following values:
 
 ### Step 4: Configure Your Environment
 Set the following environment variables in your terminal
-```yaml
+```bash
 export GALILEO_API_KEY=<your_api_key>
 ```
 
-### Step 5: Install the OpenTelemetry Subpackage
+## Step 5: Install the OpenTelemetry Subpackage
 
 ```bash
 uv pip install '.[opentelemetry]'
@@ -62,7 +62,7 @@ Update your workflow configuration file to include the telemetry settings.
 
 Example configuration:
 
-```bash
+```yaml
 general:
   telemetry:
     logging:

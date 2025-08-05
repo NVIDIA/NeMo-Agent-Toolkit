@@ -41,7 +41,7 @@ uv pip install -e examples/observability/simple_calculator_observability
 
 Update your workflow configuration file to include the weave telemetry settings. For example, `examples/observability/simple_calculator_observability/configs/config-weave.yml` has the following weave settings:
 
-```bash
+```yaml
 general:
   use_uvloop: true
   telemetry:
@@ -81,7 +81,7 @@ When tracing LLM workflows, you may be processing sensitive information like per
 **Prerequisites**: To enable PII redaction, you need `presidio-analyzer` and `presidio-anonymizer` installed. Installing the weave plugin will install these packages for you.
 
 ```bash
-pip install -e '.[weave]'
+uv pip install -e '.[weave]'
 ```
 
 **Enabling PII Redaction**: Update your workflow configuration to enable PII redaction:

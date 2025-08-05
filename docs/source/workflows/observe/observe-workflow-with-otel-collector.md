@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Observing a Workflow with Open Telemetry Collector
+# Observing a Workflow with OpenTelemetry Collector
 
 This guide shows how to stream OpenTelemetry (OTel) traces from your NeMo Agent toolkit workflows to the [generic OTel collector](https://opentelemetry.io/docs/collector/quick-start/), which in turn provides the ability to export those traces to many different places including file stores (like [S3](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/awss3exporter)), [Datadog](https://docs.datadoghq.com/opentelemetry/setup/collector_exporter/), and others.
 
@@ -29,7 +29,7 @@ In this guide, you will learn how to:
 
 ### Step 1. Configure and deploy the OTel Collector
 
-1. [Configure the OTel Collector](https://opentelemetry.io/docs/collector/configuration/) using a `otlp` receiver and the exporter of your choice. For this example, create a file names `otelcollectorconfig.yaml`:
+1. [Configure the OTel Collector](https://opentelemetry.io/docs/collector/configuration/) using a `otlp` receiver and the exporter of your choice. For this example, create a file named `otelcollectorconfig.yaml`:
 
     ```yaml
     receivers:
