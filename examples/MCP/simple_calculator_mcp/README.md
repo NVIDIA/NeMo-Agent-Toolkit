@@ -34,7 +34,7 @@ This example demonstrates how to integrate the NVIDIA NeMo Agent toolkit with Mo
 
 ## Key Features
 
-- **MCP Client Integration:** Demonstrates how to use NeMo Agent toolkit as an MCP client to connect to remote MCP servers and access distributed tools like datetime services and advanced mathematical operations.
+- **MCP Client Integration:** Demonstrates how to use NeMo Agent toolkit as an MCP client to connect to remote MCP servers and access distributed tools like advanced mathematical operations as well as date and time services.
 - **MCP Server Publishing:** Shows how to publish NeMo Agent toolkit functions as MCP services using the `aiq mcp` command, making calculator tools available to other AI systems through the standardized MCP protocol.
 - **Distributed AI Tool Networks:** Enables building networks of interconnected AI tools where different capabilities can be hosted on separate systems and accessed remotely through MCP.
 - **Cross-System Interoperability:** Demonstrates integration with the broader MCP ecosystem, allowing NeMo Agent toolkit workflows to both consume and provide tools in a standardized manner.
