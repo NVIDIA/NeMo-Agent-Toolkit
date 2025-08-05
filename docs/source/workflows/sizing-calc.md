@@ -59,7 +59,7 @@ aiq sizing calc --config_file $CONFIG_FILE --calc_output_dir $CALC_OUTPUT_DIR --
 ```
 
 :::{note}
-Depending on the number of concurrencies, the nubmber of passes, and the size of the cluster being tested this could take several minutes to run.
+Depending on the number of concurrencies, the number of passes, and the size of the cluster being tested this could take several minutes to run.
 :::
 
 ### Step 2: Estimate GPU Cluster Size
