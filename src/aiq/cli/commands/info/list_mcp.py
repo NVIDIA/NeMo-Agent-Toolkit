@@ -287,7 +287,7 @@ def ping(url: str, timeout: int, json_output: bool) -> None:
 
     Args:
         url (str): MCP server URL to ping (default: http://localhost:9901/sse)
-        timeout (float): Timeout in seconds for the ping request (default: 5.0)
+        timeout (int): Timeout in seconds for the ping request (default: 60)
         json_output (bool): Whether to output the result in JSON format
 
     Examples:
