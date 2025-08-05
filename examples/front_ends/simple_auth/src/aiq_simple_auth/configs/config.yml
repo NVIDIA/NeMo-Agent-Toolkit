@@ -20,17 +20,21 @@ general:
       _type: console
       level: WARN
   front_end:
-      _type: fastapi
-      cors:
-        allow_origins: ["http://localhost:3000", "http://localhost:5000"]
-        allow_headers: ["*"]
-        allow_methods: ["*"]
+    _type: fastapi
+    cors:
+      allow_origins:
+        [
+          "http://localhost:3000",
+          "http://localhost:5001",
+          "http://127.0.0.1:5001",
+        ]
+      allow_headers: ["*"]
+      allow_methods: ["*"]
 
 functions:
   who_am_i_function:
     _type: who_am_i
     auth_provider: test_auth_provider
-
 
 llms:
   nim_llm:
@@ -43,8 +47,8 @@ authentication:
   test_auth_provider:
     _type: oauth2_auth_code_flow
     redirect_uri: http://localhost:8000/auth/redirect
-    authorization_url: http://127.0.0.1:5000/oauth/authorize
-    token_url: http://127.0.0.1:5000/oauth/token
+    authorization_url: http://localhost:5001/oauth/authorize
+    token_url: http://localhost:5001/oauth/token
     token_endpoint_auth_method: client_secret_post
     scopes:
       - openid

@@ -190,11 +190,6 @@ class StartCommandGroup(click.Group):
         # Override default front end config with values from the config file for serverless execution modes.
         # Check that we have the right kind of front end
         if (not isinstance(config.general.front_end, front_end.config_type)):
-            logger.warning(
-                "The front end type in the config file (%s) does not match the command name (%s). "
-                "Overwriting the config file front end.",
-                config.general.front_end.type,
-                cmd_name)
 
             # Set the front end config
             config.general.front_end = front_end.config_type()

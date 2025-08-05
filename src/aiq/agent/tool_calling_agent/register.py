@@ -17,7 +17,6 @@ import logging
 
 from pydantic import Field
 
-from aiq.agent.base import AGENT_LOG_PREFIX
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function_info import FunctionInfo
@@ -48,6 +47,8 @@ class ToolCallAgentWorkflowConfig(FunctionBaseConfig, name="tool_calling_agent")
 async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, builder: Builder):
     from langchain_core.messages.human import HumanMessage
     from langgraph.graph.graph import CompiledGraph
+
+    from aiq.agent.base import AGENT_LOG_PREFIX
 
     from .agent import ToolCallAgentGraph
     from .agent import ToolCallAgentGraphState

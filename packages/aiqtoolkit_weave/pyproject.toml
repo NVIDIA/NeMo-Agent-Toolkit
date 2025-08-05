@@ -40,4 +40,4 @@ aiqtoolkit = { workspace = true }
 
 
 [project.entry-points.'aiq.components']
-aiqtoolkit_weave = "aiq.plugins.weave.register"
+aiq_weave = "aiq.plugins.weave.register"

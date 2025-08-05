@@ -43,5 +43,4 @@ This is the first general release of NeMo Agent toolkit.
 
 ## Known Issues
 - Faiss is currently broken on Arm64. This is a known issue [#72](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/72) caused by an upstream bug in the Faiss library [https://github.com/facebookresearch/faiss/issues/3936](https://github.com/facebookresearch/faiss/issues/3936).
-- NeMo Agent toolkit applications must use the same name for both the distribution and root package. This is a current implementation limitation and will be addressed in a future release.
 - Refer to [https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) for an up to date list of current issues.

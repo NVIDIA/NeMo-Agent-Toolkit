@@ -52,10 +52,7 @@ class MCPToolConfig(FunctionBaseConfig, name="mcp_tool_wrapper"):
         """)
 
 ```
-The configuration supports two client types:
-
-1. **SSE (Server-Sent Events)**: The default client type that connects to an MCP server over HTTP. This is the primary and recommended mode for most use cases.
-2. **STDIO**: A mode that launches the MCP server as a `subprocess` and communicates with it through standard input/output.
+In addition to the URL of the server, the configuration also takes as a parameter the name of the MCP tool you want to use as a NeMo Agent toolkit function. This is required because MCP servers can serve multiple tools, and for this wrapper we want to maintain a one-to-one relationship between NeMo Agent toolkit functions and MCP tools. This means that if you want to include multiple tools from an MCP server you will configure multiple `mcp_tool_wrappers`.
 
 ### SSE Mode Configuration
 For SSE mode, you only need to specify the server URL and the tool name:

@@ -16,8 +16,6 @@
 import logging
 import os
 
-from langchain_core.embeddings import Embeddings
-
 from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function_info import FunctionInfo
@@ -28,25 +26,26 @@ from aiq.data_models.function import FunctionBaseConfig
 logger = logging.getLogger(__name__)
 
 
-class TextFileIngestToolConfig(FunctionBaseConfig, name="text_file_ingest"):
+class TextFileIngestFunctionConfig(FunctionBaseConfig, name="text_file_ingest"):
     ingest_glob: str
     description: str
     chunk_size: int = 1024
     embedder_name: EmbedderRef = "nvidia/nv-embedqa-e5-v5"
 
 
-@register_function(config_type=TextFileIngestToolConfig)
-async def text_file_ingest_tool(config: TextFileIngestToolConfig, builder: Builder):
+@register_function(config_type=TextFileIngestFunctionConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
+async def text_file_ingest_tool(config: TextFileIngestFunctionConfig, builder: Builder):
 
     from langchain.tools.retriever import create_retriever_tool
     from langchain_community.document_loaders import DirectoryLoader
     from langchain_community.document_loaders import TextLoader
     from langchain_community.vectorstores import FAISS
+    from langchain_core.embeddings import Embeddings
     from langchain_text_splitters import RecursiveCharacterTextSplitter
 
     embeddings: Embeddings = await builder.get_embedder(config.embedder_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
-    logger.info("Ingesting documents matching for the webpage: %s", config.ingest_glob)
+    logger.info("Ingesting documents from: %s", config.ingest_glob)
     (ingest_dir, ingest_glob) = os.path.split(config.ingest_glob)
     loader = DirectoryLoader(ingest_dir, glob=ingest_glob, loader_cls=TextLoader)
 

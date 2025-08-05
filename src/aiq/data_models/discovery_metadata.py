@@ -21,6 +21,7 @@ import typing
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
+from types import ModuleType
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
@@ -117,12 +118,62 @@ class DiscoveryMetadata(BaseModel):
 
     @staticmethod
     @lru_cache
+    def get_distribution_name_from_module(module: ModuleType | None) -> str:
+        """Get the distribution name from the config type using the mapping of module names to distro names.
+
+        Args:
+            module (ModuleType): A registered component's module.
+
+        Returns:
+            str: The distribution name of the AIQ Toolkit component.
+        """
+        from aiq.runtime.loader import get_all_aiq_entrypoints_distro_mapping
+
+        if module is None:
+            return "aiqtoolkit"
+
+        # Get the mapping of module names to distro names
+        mapping = get_all_aiq_entrypoints_distro_mapping()
+        module_package = module.__package__
+
+        if module_package is None:
+            return "aiqtoolkit"
+
+        # Traverse the module package parts in reverse order to find the distro name
+        # This is because the module package is the root package for the AIQ Toolkit component
+        # and the distro name is the name of the package that contains the component
+        module_package_parts = module_package.split(".")
+        for part_idx in range(len(module_package_parts), 0, -1):
+            candidate_module_name = ".".join(module_package_parts[0:part_idx])
+            candidate_distro_name = mapping.get(candidate_module_name, None)
+            if candidate_distro_name is not None:
+                return candidate_distro_name
+
+        return "aiqtoolkit"
+
+    @staticmethod
+    @lru_cache
+    def get_distribution_name_from_config_type(config_type: type["TypedBaseModelT"]) -> str:
+        """Get the distribution name from the config type using the mapping of module names to distro names.
+
+        Args:
+            config_type (type[TypedBaseModelT]): A registered component's configuration object.
+
+        Returns:
+            str: The distribution name of the AIQ Toolkit component.
+        """
+        module = inspect.getmodule(config_type)
+        return DiscoveryMetadata.get_distribution_name_from_module(module)
+
+    @staticmethod
+    @lru_cache
     def get_distribution_name(root_package: str) -> str:
         """
         The aiq library packages use a distro name 'aiqtoolkit[]' and
         root package name 'aiq'. They provide mapping in a metadata file
         for optimized installation.
         """
+
         distro_name = DiscoveryMetadata.get_distribution_name_from_private_data(root_package)
         return distro_name if distro_name else root_package
 
@@ -142,8 +193,7 @@ class DiscoveryMetadata(BaseModel):
 
         try:
             module = inspect.getmodule(config_type)
-            root_package: str = module.__package__.split(".")[0]
-            distro_name = DiscoveryMetadata.get_distribution_name(root_package)
+            distro_name = DiscoveryMetadata.get_distribution_name_from_config_type(config_type)
 
             if not distro_name:
                 # raise an exception
@@ -187,12 +237,13 @@ class DiscoveryMetadata(BaseModel):
 
         try:
             module = inspect.getmodule(fn)
-            root_package: str = module.__package__.split(".")[0]
-            root_package = DiscoveryMetadata.get_distribution_name(root_package)
+            distro_name = DiscoveryMetadata.get_distribution_name_from_module(module)
+
             try:
-                version = importlib.metadata.version(root_package) if root_package != "" else ""
+                # version = importlib.metadata.version(root_package) if root_package != "" else ""
+                version = importlib.metadata.version(distro_name) if distro_name != "" else ""
             except importlib.metadata.PackageNotFoundError:
-                logger.warning("Package metadata not found for %s", root_package)
+                logger.warning("Package metadata not found for %s", distro_name)
                 version = ""
         except Exception as e:
             logger.exception("Encountered issue extracting module metadata for %s: %s", fn, e, exc_info=True)
@@ -201,7 +252,7 @@ class DiscoveryMetadata(BaseModel):
         if isinstance(wrapper_type, LLMFrameworkEnum):
             wrapper_type = wrapper_type.value
 
-        return DiscoveryMetadata(package=root_package,
+        return DiscoveryMetadata(package=distro_name,
                                  version=version,
                                  component_type=component_type,
                                  component_name=wrapper_type,
@@ -220,7 +271,6 @@ class DiscoveryMetadata(BaseModel):
         """
 
         try:
-            package_name = DiscoveryMetadata.get_distribution_name(package_name)
             try:
                 metadata = importlib.metadata.metadata(package_name)
                 description = metadata.get("Summary", "")
@@ -263,12 +313,11 @@ class DiscoveryMetadata(BaseModel):
 
         try:
             module = inspect.getmodule(config_type)
-            root_package: str = module.__package__.split(".")[0]
-            root_package = DiscoveryMetadata.get_distribution_name(root_package)
+            distro_name = DiscoveryMetadata.get_distribution_name_from_module(module)
             try:
-                version = importlib.metadata.version(root_package) if root_package != "" else ""
+                version = importlib.metadata.version(distro_name) if distro_name != "" else ""
             except importlib.metadata.PackageNotFoundError:
-                logger.warning("Package metadata not found for %s", root_package)
+                logger.warning("Package metadata not found for %s", distro_name)
                 version = ""
         except Exception as e:
             logger.exception("Encountered issue extracting module metadata for %s: %s", config_type, e, exc_info=True)
@@ -279,7 +328,7 @@ class DiscoveryMetadata(BaseModel):
 
         description = generate_config_type_docs(config_type=config_type)
 
-        return DiscoveryMetadata(package=root_package,
+        return DiscoveryMetadata(package=distro_name,
                                  version=version,
                                  component_type=component_type,
                                  component_name=component_name,

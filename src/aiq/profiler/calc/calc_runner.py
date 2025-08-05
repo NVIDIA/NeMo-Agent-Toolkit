@@ -34,6 +34,7 @@ from aiq.profiler.calc.data_models import CalcData
 from aiq.profiler.calc.data_models import CalcRunnerConfig
 from aiq.profiler.calc.data_models import CalcRunnerOutput
 from aiq.profiler.calc.data_models import FitConfig
+from aiq.profiler.calc.data_models import FitResults
 from aiq.profiler.calc.data_models import GPUEstimates
 from aiq.profiler.calc.data_models import SizingMetricPerItem
 from aiq.profiler.calc.data_models import SizingMetrics
@@ -408,7 +409,10 @@ class CalcRunner:
         if gpu_estimates.gpu_estimate_by_llm_latency is not None:
             logger.info("GPU estimate by LLM latency: %.2f", gpu_estimates.gpu_estimate_by_llm_latency)
 
-        return CalcRunnerOutput(gpu_estimates=gpu_estimates, calc_data=calc_data)
+        return CalcRunnerOutput(gpu_estimates=gpu_estimates,
+                                calc_data=calc_data,
+                                fit_results=FitResults(llm_latency_fit=self.linear_analyzer.llm_latency_fit,
+                                                       wf_runtime_fit=self.linear_analyzer.wf_runtime_fit))
 
     def plot_concurrency_vs_time_metrics(self, output_dir: Path):
         """Plots concurrency vs. time metrics using pre-computed fits."""
