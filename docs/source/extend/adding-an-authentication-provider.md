@@ -36,12 +36,12 @@ from the clients that facilitate the authentication process. Authentication prov
 `AuthCodeGrantClient` use those credentials to perform authentication.
 
 ## Extending an API Authentication Provider
-The first step in adding an authentication provider is to create a configuration model that inherits from
-{class}`aiq.data_models.authentication.AuthenticationBaseConfig` class and define the credentials required to
+The first step in adding an authentication provider is to create a configuration model that inherits from the
+{py:class}`~aiq.data_models.authentication.AuthenticationBaseConfig` class and define the credentials required to
 authenticate with the target API resource.
 
 The following example shows how to define and register a custom evaluator and can be found here:
-{class}`aiq.authentication.oauth2.OAuth2AuthorizationCodeFlowConfig` class:
+{py:class}`~aiq.authentication.oauth2.OAuth2AuthorizationCodeFlowConfig` class:
 ```python
 class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_auth_code_flow"):
 
@@ -63,9 +63,9 @@ class OAuth2AuthorizationCodeFlowConfig(AuthenticationBaseConfig, name="oauth2_a
 ```
 
 ### Registering the Provider
-An asynchronous function decorated with {py:deco}`aiq.cli.register_workflow.register_authentication_provider` is used to
+An asynchronous function decorated with {py:deco}`~aiq.cli.register_workflow.register_authentication_provider` is used to
 register the provider with NeMo Agent toolkit by yielding an instance of
-{class}`aiq.builder.authentication.AuthenticationProviderInfo`.
+{py:class}`~aiq.builder.authentication.AuthenticationProviderInfo`.
 
 The `OAuth2AuthorizationCodeFlowConfig` from the previous section is registered as follows:
 ```python
@@ -85,11 +85,11 @@ to simplify the development of custom authentication clients for various authent
 
 To implement a custom client, extend the appropriate base class and override the required methods. For detailed
 documentation on the methods and expected behavior, refer to the docstrings provided in the
-{py:deco}`aiq.authentication.interfaces` module.
+{py:deco}`~aiq.authentication.interfaces` module.
 
 ## Registering the API Authentication Client
 To register an authentication client, define an asynchronous function decorated
-with {py:deco}`aiq.cli.register_workflow.register_authentication_client`. The `register_authentication_client`
+with {py:deco}`~aiq.cli.register_workflow.register_authentication_client`. The `register_authentication_client`
 decorator requires a single argument: `config_type`, which specifies the authentication configuration class associated
 with the provider.
 
@@ -110,15 +110,13 @@ at `tests/aiq/authentication`.
 
 ## Packaging the Provider and Client
 
-The provider and client will need to be bundled into a Python package, which in turn will be registered with AIQ
-toolkit as a [plugin](../extend/plugins.md). In the `pyproject.toml` file of the package the
+The provider and client will need to be bundled into a Python package, which in turn will be registered with the toolkit as a [plugin](../extend/plugins.md). In the `pyproject.toml` file of the package the
 `project.entry-points.'aiq.components'` section, defines a Python module as the entry point of the plugin. Details on
 how this is defined are found in the [Entry Point](../extend/plugins.md#entry-point) section of the plugins document.
 By convention, the entry point module is named `register.py`, but this is not a requirement.
 
 In the entry point module, it is important that the provider is defined first followed by the client. This ensures that
-the provider is added to the NeMo Agent toolkit registry before the client is registered. A hypothetical `register.py` file
-could be defined as follows:
+the provider is added to the NeMo Agent toolkit registry before the client is registered. A hypothetical `register.py` file could be defined as follows:
 
 ```python
 # We need to ensure that the provider is registered prior to the client
