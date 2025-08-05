@@ -195,15 +195,16 @@ async def ping_mcp_server(url: str, timeout: float = 5.0) -> MCPPingResult:
     from mcp.client.session import ClientSession
     from mcp.client.sse import sse_client
 
+    session_initialized = False
     try:
         async with sse_client(url) as (read, write):
             async with ClientSession(read, write) as session:
                 # Initialize the session
                 await session.initialize()
 
+                session_initialized = True
                 # Record start time just before ping
                 start_time = time.time()
-
                 # Send ping request
                 await session.send_ping()
 
@@ -212,23 +213,12 @@ async def ping_mcp_server(url: str, timeout: float = 5.0) -> MCPPingResult:
 
                 return MCPPingResult(url=url, status="healthy", response_time_ms=response_time_ms, error=None)
 
-    except (ConnectionError, OSError, TimeoutError) as e:
-        # Connection-level failures - server unreachable
-        return MCPPingResult(url=url, status="unreachable", response_time_ms=None, error=str(e))
-
     except Exception as e:
-        # Other errors - determine status based on where failure occurred
-        if 'start_time' in locals():
-            # Error happened after we started timing ping - server is unhealthy
-            end_time = time.time()
-            response_time_ms = round((end_time - start_time) * 1000, 2)
-            status = "unhealthy"
-        else:
-            # Error happened before ping timing - server is unreachable
-            response_time_ms = None
-            status = "unreachable"
+        if not session_initialized:
+            return MCPPingResult(url=url, status="unreachable", response_time_ms=None, error=str(e))
 
-        return MCPPingResult(url=url, status=status, response_time_ms=response_time_ms, error=str(e))
+        response_time_ms = round((time.time() - start_time) * 1000, 2)
+        return MCPPingResult(url=url, status="unhealthy", response_time_ms=None, error=str(e))
 
 
 @click.group(invoke_without_command=True, help="List tool names (default), or show details with --detail or --tool.")
