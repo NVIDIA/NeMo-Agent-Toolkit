@@ -17,8 +17,7 @@ limitations under the License.
 
 # Adding an API Authentication Provider to NeMo Agent Toolkit
 :::{note}
-We recommend reading the [Streamlining API Authentication](../reference/api-authentication.md) guide before proceeding with
-this detailed documentation.
+We recommend reading the [Streamlining API Authentication](../reference/api-authentication.md) guide before proceeding with this detailed documentation.
 :::
 
 The NeMo Agent toolkit offers a set of built-in authentication providers for accessing API resources. Additionally, it includes
@@ -27,7 +26,7 @@ a plugin system that allows developers to define and integrate custom authentica
 ## Existing API Authentication Providers
 You can view the list of existing API Authentication Providers by running the following command:
 ```bash
-aiq info components -t authentication_provider
+aiq info components -t auth_provider
 ```
 
 ## Provider Types
