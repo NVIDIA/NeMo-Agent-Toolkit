@@ -192,8 +192,6 @@ async def ping_mcp_server(url: str, timeout: int) -> MCPPingResult:
     Returns:
         MCPPingResult: Structured result with status, response_time, and any error info
     """
-    import asyncio
-
     from mcp.client.session import ClientSession
     from mcp.client.sse import sse_client
 
