@@ -27,8 +27,11 @@ general:
     tracing:
       catalyst:
         _type: catalyst
-        project: "aiqtoolkit-demo"
-        dataset: "aiqtoolkit-dataset"
+        project: simple-calculator
+        dataset: simple-calculator-dataset
+        endpoint: ${CATALYST_ENDPOINT}
+        access_key: ${CATALYST_ACCESS_KEY}
+        secret_key: ${CATALYST_SECRET_KEY}
 
 functions:
   calculator_multiply:

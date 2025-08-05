@@ -70,10 +70,10 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
    Then, run the simple calculator example to generate traces:
    ```bash
-   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-tracing.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
-   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-tracing.yml --input "Is the product of 33 * 4 greater than the current hour of the day?"
-   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-tracing.yml --input "Is the sum of 44 and 55 greater than the current hour of the day?"
-   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-tracing.yml --input "Is the difference between 7 and 5 less than the current hour of the day?"
+   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "Is the product of 33 * 4 greater than the current hour of the day?"
+   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "Is the sum of 44 and 55 greater than the current hour of the day?"
+   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "Is the difference between 7 and 5 less than the current hour of the day?"
    ```
 
 3. Run the profiler agent:

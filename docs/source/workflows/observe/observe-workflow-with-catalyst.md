@@ -37,8 +37,8 @@ Go to your [profile](https://catalyst.raga.ai/settings/authenticate) settings to
 ### Step 4: Configure Your Environment
 Set the following environment variables in your terminal
 ```yaml
-export CATALYST_ACCESS_KEY=YOUR_ACCESS_KEY
-export CATALYST_SECRET_KEY=YOUR_SECRET_KEY
+export CATALYST_ACCESS_KEY=<your_access_key>
+export CATALYST_SECRET_KEY=<your_secret_key>
 export CATALYST_ENDPOINT=https://catalyst.raga.ai/api
 ```
 

@@ -66,7 +66,7 @@ phoenix serve
 2. Run the workflow with tracing enabled:
 
 ```bash
-aiq run --config_file examples/observability/simple_calculator_observability/configs/config-tracing.yml --input "What is 2 * 4?"
+aiq run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "What is 2 * 4?"
 ```
 
 3. Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI.
@@ -151,7 +151,7 @@ Transmit traces to RagAI Catalyst.
 1. Set your Patronus API key:
 
 ```bash
-export CATALYST_ACCESS_KEY=<your_api_key>
+export CATALYST_ACCESS_KEY=<your_access_key>
 export CATALYST_SECRET_KEY=<your_secret_key>
 export CATALYST_ENDPOINT=<your_endpoint>
 ```
@@ -190,12 +190,13 @@ The example includes multiple configuration files for different observability pl
 
 | Configuration File | Platform | Best For |
 |-------------------|----------|----------|
-| `config-tracing.yml` | Phoenix | Local development and testing |
+| `config-phoenix.yml` | Phoenix | Local development and testing |
 | `config-langfuse.yml` | Langfuse | Production monitoring and analytics |
 | `config-langsmith.yml` | LangSmith | LangChain ecosystem integration |
 | `config-weave.yml` | Weave | Workflow-focused tracking |
 | `config-patronus.yml` | Patronus | AI safety and compliance monitoring |
 | `config-catalyst.yml` | Catalyst | RagaAI Catalyst integration |
+| `config-galileo.yml` | Galileo | Galileo integration |
 
 ## What Gets Traced
 
