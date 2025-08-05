@@ -303,11 +303,5 @@ def ping(url: str, timeout: int, json_output: bool) -> None:
     else:
         if result.status == "healthy":
             click.echo(f"Server at {result.url} is healthy (response time: {result.response_time_ms}ms)")
-        elif result.status == "unreachable":
-            click.echo(f"Server at {result.url} is unreachable: {result.error}")
-        else:  # unhealthy
-            if result.response_time_ms:
-                click.echo(f"Server at {result.url} is unhealthy (response time: \
-                        {result.response_time_ms}ms): {result.error}")
-            else:
-                click.echo(f"Server at {result.url} is unhealthy: {result.error}")
+        else:
+            click.echo(f"Server at {result.url} {result.status}: {result.error}")
