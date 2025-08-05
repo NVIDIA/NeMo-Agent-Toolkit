@@ -265,8 +265,6 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
                     continue
                 if any(r[0].search(filename) and r[1].search(path) for r in IGNORED_FILE_PATH_PAIRS_REGEX):
                     continue
-                if "Thought" in path:
-                    print(f"Thought in {filename}:{line_number}:{column + 1} -> {path} {in_skipped_section}")
                 paths.append(PathInfo(line_number, column + 1, path))
     return paths
 
@@ -289,8 +287,8 @@ def check_files() -> list[tuple[str, PathInfo]]:
         for path_info in paths:
             # If the path does not exist, then it is broken
             if not os.path.exists(path_info.path):
-                if not path_info.path.startswith("."):
-                    # if it is not a relative path, then it is broken
+                if path_info.path.startswith("."):
+                    # if it is a relative path, then it is broken
                     filenames_with_broken_paths.append((f, path_info))
                     continue
                 else:
