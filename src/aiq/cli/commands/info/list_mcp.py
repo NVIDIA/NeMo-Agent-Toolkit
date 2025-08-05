@@ -182,27 +182,27 @@ async def list_tools_direct(url: str, tool_name: str | None = None) -> list[dict
         return []
 
 
-async def ping_mcp_server(url: str, timeout: float = 5.0) -> MCPPingResult:
+async def ping_mcp_server(url: str, timeout: int) -> MCPPingResult:
     """Ping an MCP server to check if it's responsive.
 
     Args:
         url (str): MCP server URL to ping
-        timeout (float): Timeout in seconds for the ping request
+        timeout (int): Timeout in seconds for the ping request
 
     Returns:
         MCPPingResult: Structured result with status, response_time, and any error info
     """
+    import asyncio
+
     from mcp.client.session import ClientSession
     from mcp.client.sse import sse_client
 
-    session_initialized = False
-    try:
+    async def _ping_operation():
         async with sse_client(url) as (read, write):
             async with ClientSession(read, write) as session:
                 # Initialize the session
                 await session.initialize()
 
-                session_initialized = True
                 # Record start time just before ping
                 start_time = time.time()
                 # Send ping request
@@ -213,11 +213,17 @@ async def ping_mcp_server(url: str, timeout: float = 5.0) -> MCPPingResult:
 
                 return MCPPingResult(url=url, status="healthy", response_time_ms=response_time_ms, error=None)
 
-    except Exception as e:
-        if not session_initialized:
-            return MCPPingResult(url=url, status="unreachable", response_time_ms=None, error=str(e))
+    try:
+        # Apply timeout to the entire ping operation
+        return await asyncio.wait_for(_ping_operation(), timeout=timeout)
 
-        response_time_ms = round((time.time() - start_time) * 1000, 2)
+    except asyncio.TimeoutError:
+        return MCPPingResult(url=url,
+                             status="unreachable",
+                             response_time_ms=None,
+                             error=f"Timeout after {timeout} seconds")
+
+    except Exception as e:
         return MCPPingResult(url=url, status="unhealthy", response_time_ms=None, error=str(e))
 
 
@@ -271,7 +277,7 @@ def list_mcp(ctx: click.Context, direct: bool, url: str, tool: str | None, detai
 
 @list_mcp.command()
 @click.option('--url', default='http://localhost:9901/sse', show_default=True, help='MCP server URL')
-@click.option('--timeout', default=5.0, show_default=True, help='Timeout in seconds for ping request')
+@click.option('--timeout', default=60, show_default=True, help='Timeout in seconds for ping request')
 @click.option('--json-output', is_flag=True, help='Output ping result in JSON format')
 def ping(url: str, timeout: float, json_output: bool) -> None:
     """Ping an MCP server to check if it's responsive.
