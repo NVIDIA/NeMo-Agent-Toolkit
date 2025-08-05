@@ -141,22 +141,29 @@ IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     ),
 }
 
+IGNORED_FILE_PATH_PAIRS_REGEX = list(map(lambda x: (re.compile(x[0]), re.compile(x[1])), IGNORED_FILE_PATH_PAIRS))
+
 # Paths to ignore -- regex pattern
 IGNORED_PATHS: set[str] = {
-    r"^(\./)?\.tmp/",  # files that are located in the directory of the file being checked
+    r"^(\./)?\.tmp/",  #
+    # files that are located in the directory of the file being checked
     r"^\./upload_to_minio\.sh$",
     r"^\./upload_to_mysql\.sh$",
-    r"^\./start_local_sandbox\.sh$",  # script files that exist in the root of the repo
+    r"^\./start_local_sandbox\.sh$",  #
+    # script files that exist in the root of the repo
     r"^scripts/langchain_web_ingest\.py$",
-    r"^scripts/bootstrap_milvus\.sh$",  # generated files
+    r"^scripts/bootstrap_milvus\.sh$",  #
+    # generated files
     r"^\.venv/bin/activate$",
     r"^\./run_service\.sh$",
-    r"^outputs/line_chart_\d+\.png$"
+    r"^outputs/line_chart_\d+\.png$",  #
     # false positives
     r"^N/A$",
     r"^and/or$",
     r"^input/output$",
 }
+
+IGNORED_PATHS_REGEX = list(map(re.compile, IGNORED_PATHS))
 
 # Files to ignore -- regex pattern
 IGNORED_FILES: set[str] = {
@@ -170,6 +177,8 @@ IGNORED_FILES: set[str] = {
     r"data/.*$"
 }
 
+IGNORED_FILES_REGEX = list(map(re.compile, IGNORED_FILES))
+
 # Paths to consider referential -- string
 # referential paths are ones that should not only be checked for existence, but also for referential integrity
 # (i.e. that the path exists in the same directory as the file)
@@ -180,6 +189,10 @@ REFERENTIAL_PATHS: set[str] = {
 
 # File extensions to check paths
 EXTENSIONS: tuple[str, ...] = ('.md', '.rst', '.yml', '.yaml', '.json', '.toml', '.ini', '.conf', '.cfg')
+
+PATH_REGEX = re.compile(r'((\w+://[^\s\'"<>]+)|(\.?\.?/?)(([$A-Za-z0-9_\-\.]+/)*[$A-Za-z0-9_\-\.]+)|)')
+
+YAML_BLOCK_REGEX = re.compile(r":\s*\|\s*$")
 
 
 def list_broken_symlinks() -> list[str]:
@@ -212,8 +225,6 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
     Returns:
         A list of PathInfo objects.
     """
-    # This is a regex to match URIs or file paths
-    path_regex = re.compile(r'((\w+://[^\s\'"<>]+)|(\.?\.?/?)(([$A-Za-z0-9_\-\.]+/)*[$A-Za-z0-9_\-\.]+)|)')
     paths = []
     with open(filename, 'r', encoding='utf-8') as f:
         in_skipped_section: int | bool = False
@@ -222,7 +233,7 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
                 in_skipped_section = not in_skipped_section
             elif filename.endswith(".yml") or filename.endswith(".yaml"):
                 # YAML blocks are delimited by a line that ends with a pipe
-                if re.search(r":\s*\|\s*$", line):
+                if YAML_BLOCK_REGEX.search(line):
                     # keep track of the number of leading spaces
                     in_skipped_section = len(line) - len(line.lstrip())
                 elif in_skipped_section:
@@ -232,7 +243,7 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
                         in_skipped_section = False
             if in_skipped_section:
                 continue
-            for match in path_regex.finditer(line):
+            for match in PATH_REGEX.finditer(line):
                 column, _ = match.span()
                 path = match.group(0)
                 # Exclude URIs
@@ -250,9 +261,9 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
                 # Exclude empty after stripping
                 if not path:
                     continue
-                if any(re.search(r, path) for r in IGNORED_PATHS):
+                if any(r.search(path) for r in IGNORED_PATHS_REGEX):
                     continue
-                if any(re.search(r[0], filename) and re.search(r[1], path) for r in IGNORED_FILE_PATH_PAIRS):
+                if any(r[0].search(filename) and r[1].search(path) for r in IGNORED_FILE_PATH_PAIRS_REGEX):
                     continue
                 if "Thought" in path:
                     print(f"Thought in {filename}:{line_number}:{column + 1} -> {path} {in_skipped_section}")
@@ -272,14 +283,18 @@ def check_files() -> list[tuple[str, PathInfo]]:
     skipped_paths: set[str] = set()
 
     for f in all_files(path_filter=lambda x: x.endswith(EXTENSIONS)):
-        if any(re.search(r, f) for r in IGNORED_FILES):
+        if any(r.search(f) for r in IGNORED_FILES_REGEX):
             continue
         paths = extract_paths_from_file(f)
         for path_info in paths:
             # If the path does not exist, then it is broken
             if not os.path.exists(path_info.path):
                 if not path_info.path.startswith("."):
-                    # resolve the path first
+                    # if it is not a relative path, then it is broken
+                    filenames_with_broken_paths.append((f, path_info))
+                    continue
+                else:
+                    # attempt to resolve the path first
                     if not os.path.exists(os.path.join(os.path.dirname(f), path_info.path)):
                         # if it still doesn't exist then assume that it isn't actually a path
                         if any(p in path_info.path for p in REFERENTIAL_PATHS):
@@ -288,10 +303,6 @@ def check_files() -> list[tuple[str, PathInfo]]:
                         else:
                             skipped_paths.add(path_info.path)
                             continue
-                else:
-                    # if it is a relative path, then it is broken
-                    filenames_with_broken_paths.append((f, path_info))
-                    continue
             path = os.path.commonpath([f, path_info.path])
             if path == "" or path == ".":
                 # try to resolve the path relative to the file
