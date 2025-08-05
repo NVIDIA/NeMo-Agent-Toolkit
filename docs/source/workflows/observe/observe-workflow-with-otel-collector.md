@@ -66,8 +66,14 @@ docker run -v $(pwd)/otelcollectorconfig.yaml:/etc/otelcol-contrib/config.yaml \
    otel/opentelemetry-collector-contrib:0.128.0
 ```
 
+### Step 2: Install the OpenTelemetry Subpackage
 
-### Step 2: Modify Workflow Configuration
+```bash
+uv pip install -e '.[opentelemetry]'
+```
+
+
+### Step 3: Modify Workflow Configuration
 
 Update your workflow configuration file to include the telemetry settings.
 
@@ -80,15 +86,15 @@ general:
         _type: otelcollector
         # The endpoint where you have deployed the otel collector
         endpoint: http://0.0.0.0:4318/v1/traces
-        project: simple_calculator
+        project: your_project_name
 ```
 
-### Step 3. Run the workflow
+### Step 4. Run the workflow
 
 ```bash
 # ensure you have installed aiqtoolkit with telemetry, eg uv pip install -e '.[telemetry]'
-uv pip install -e examples/basic/function/simple_calculator
-aiq run --config_file examples/basic/functions/simple_calculator/configs/config.yml --input "2 + 2"
+uv pip install -e path/to/your/workflow/root
+aiq run --config_file path/to/your/config/file.yml --input "your notional input"
 ```
 
 As the workflow runs, spans are sent to the OTel Collector which in turn exports them based on the exporter you configured. In this example, you can view the exported traces in the local file:
