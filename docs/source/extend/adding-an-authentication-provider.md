@@ -37,13 +37,13 @@ from the clients that facilitate the authentication process. Authentication prov
 
 ## Extending an API Authentication Provider
 The first step in adding an authentication provider is to create a configuration model that inherits from the
-{py:class}`~aiq.data_models.authentication.AuthenticationBaseConfig` class and define the credentials required to
+{py:class}`~aiq.data_models.authentication.AuthProviderBaseConfig` class and define the credentials required to
 authenticate with the target API resource.
 
 The following example shows how to define and register a custom evaluator and can be found here:
 {py:class}`~aiq.authentication.oauth2.oauth2_auth_code_flow_provider_config.OAuth2AuthCodeFlowProviderConfig` class:
 ```python
-class OAuth2AuthCodeFlowProviderConfig(AuthenticationBaseConfig, name="oauth2_auth_code_flow"):
+class OAuth2AuthCodeFlowProviderConfig(AuthProviderBaseConfig, name="oauth2_auth_code_flow"):
 
     client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
     client_secret: str = Field(description="The secret associated with the client_id.")
@@ -66,7 +66,7 @@ class OAuth2AuthCodeFlowProviderConfig(AuthenticationBaseConfig, name="oauth2_au
 
 ### Registering the Provider
 An asynchronous function decorated with {py:func}`~aiq.cli.register_workflow.register_auth_provider` is used to register the provider with NeMo Agent toolkit by yielding an instance of
-{py:class}`~aiq.authentication.interfaces.AuthenticationClientBase`.
+{py:class}`~aiq.authentication.interfaces.AuthProviderBase`.
 
 The `OAuth2AuthCodeFlowProviderConfig` from the previous section is registered as follows:
 ```python
@@ -78,7 +78,7 @@ async def oauth2_client(authentication_provider: OAuth2AuthCodeFlowProviderConfi
 ```
 
 ## Defining the Provider
-Each authentication provider should inherit from the {py:class}`~aiq.authentication.interfaces.AuthenticationClientBase` class.
+Each authentication provider should inherit from the {py:class}`~aiq.authentication.interfaces.AuthProviderBase` class, and implement the required methods.
 
 ## Testing the new Provider
 After implementing a new authentication provider, it’s important to verify that the required functionality works as expected. This can be done by writing integration tests. It is important to minimize the amount of mocking in the tests to ensure that the provider behaves as expected in a real-world scenario. You can find examples of existing tests in the repository at `tests/aiq/authentication`.
