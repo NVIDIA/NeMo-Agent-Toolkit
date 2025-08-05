@@ -279,7 +279,7 @@ def list_mcp(ctx: click.Context, direct: bool, url: str, tool: str | None, detai
 @click.option('--url', default='http://localhost:9901/sse', show_default=True, help='MCP server URL')
 @click.option('--timeout', default=60, show_default=True, help='Timeout in seconds for ping request')
 @click.option('--json-output', is_flag=True, help='Output ping result in JSON format')
-def ping(url: str, timeout: float, json_output: bool) -> None:
+def ping(url: str, timeout: int, json_output: bool) -> None:
     """Ping an MCP server to check if it's responsive.
 
     This command sends a ping request to the MCP server and measures the response time.
