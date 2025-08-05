@@ -36,7 +36,7 @@ class WhoAmIConfig(FunctionBaseConfig, name="who_am_i"):
     auth_provider: AuthenticationRef = Field(description=("Reference to the authentication provider to use for "
                                                           "authentication before making the who am i request."))
 
-    api_url: str = Field(default="http://127.0.0.1:5000/api/me", description="Base URL for the who am i API")
+    api_url: str = Field(default="http://localhost:5001/api/me", description="Base URL for the who am i API")
     timeout: int = Field(default=10, description="Request timeout in seconds")
 
 
@@ -45,16 +45,13 @@ async def who_am_i_function(config: WhoAmIConfig, builder: Builder):
 
     auth_provider = await builder.get_auth_provider(config.auth_provider)
 
-    async def _inner(empty: None) -> str:
+    async def _inner(empty: str = "") -> str:
         """
-        Look up information about an IP address.
-
-        Args:
-            ip_address (str): The IP address to look up (e.g., "8.8.8.8")
+        Look up information about the currently logged in user.
 
         Returns:
-            str: JSON string containing IP address information including country,
-                 region, city, ISP, timezone, and other details
+            str: JSON string containing user information including name, email,
+                 and other profile details from the OAuth provider
         """
         try:
 
@@ -70,7 +67,7 @@ async def who_am_i_function(config: WhoAmIConfig, builder: Builder):
 
                 data = response.json()
 
-                logger.info(f"Successfully looked up user: {data.get('name', 'Unknown')}")
+                logger.info("Successfully looked up user: %s", data.get('name', 'Unknown'))
 
                 return json.dumps(data, indent=2)
 

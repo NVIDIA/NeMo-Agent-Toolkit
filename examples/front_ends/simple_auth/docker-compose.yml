@@ -13,8 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# pylint: disable=unused-import
-# flake8: noqa
+version: '3.8'
 
-# Import any tools which need to be automatically registered here
-from . import ip_lookup
+services:
+  oauth2-server:
+    build: .
+    ports:
+      - "5001:5000"
+    environment:
+      - AUTHLIB_INSECURE_TRANSPORT=1
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+    volumes:
+      - oauth2_data:/app/oauth2-server/instance
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  oauth2_data:
