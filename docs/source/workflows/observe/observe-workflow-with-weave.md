@@ -34,7 +34,7 @@ uv pip install -e '.[weave]'
 Pick an example from the list of available workflows. In this guide, we will be using the `simple_calculator` example.
 
 ```bash
-uv pip install -e examples/getting_started/simple_web_query
+uv pip install -e examples/observability/simple_calculator_observability
 ```
 
 ### Step 3: Modify Workflow Configuration
@@ -59,7 +59,7 @@ This setup enables logging trace data to W&B weave. The weave integration requir
 | `entity` (optional) | Your W&B username or team name | `"your-wandb-username-or-teamname"` |
 
 ### Step 4: Run Your Workflow
-Install `simple_calculator` example using the instructions in the `examples/getting_started/simple_calculator/README.md` guide.
+Install `simple_calculator` example using the instructions in the `examples/observability/simple_calculator_observability/README.md` guide.
 Run the workflow using `config-weave.yml` configuration file:
 
 ```bash
