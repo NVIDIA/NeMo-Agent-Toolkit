@@ -15,10 +15,12 @@
 
 import json
 import logging
+import time
 from typing import Any
 
 import anyio
 import click
+from pydantic import BaseModel
 
 from aiq.tool.mcp.exceptions import MCPError
 from aiq.tool.mcp.mcp_client import MCPBuilder
@@ -29,6 +31,21 @@ logging.getLogger("mcp.client.sse").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
+
+
+class MCPPingResult(BaseModel):
+    """Result of an MCP server ping request.
+
+    Attributes:
+        url (str): The MCP server URL that was pinged
+        status (str): Health status - 'healthy', 'unhealthy', or 'unknown'
+        response_time_ms (float | None): Response time in milliseconds, None if request failed completely
+        error (str | None): Error message if the ping failed, None if successful
+    """
+    url: str
+    status: str
+    response_time_ms: float | None
+    error: str | None
 
 
 def format_tool(tool: Any) -> dict[str, str | None]:
@@ -165,6 +182,55 @@ async def list_tools_direct(url: str, tool_name: str | None = None) -> list[dict
         return []
 
 
+async def ping_mcp_server(url: str, timeout: float = 5.0) -> MCPPingResult:
+    """Ping an MCP server to check if it's responsive.
+
+    Args:
+        url (str): MCP server URL to ping
+        timeout (float): Timeout in seconds for the ping request
+
+    Returns:
+        MCPPingResult: Structured result with status, response_time, and any error info
+    """
+    from mcp.client.session import ClientSession
+    from mcp.client.sse import sse_client
+
+    try:
+        async with sse_client(url) as (read, write):
+            async with ClientSession(read, write) as session:
+                # Initialize the session
+                await session.initialize()
+
+                # Record start time just before ping
+                start_time = time.time()
+
+                # Send ping request
+                await session.send_ping()
+
+                end_time = time.time()
+                response_time_ms = round((end_time - start_time) * 1000, 2)
+
+                return MCPPingResult(url=url, status="healthy", response_time_ms=response_time_ms, error=None)
+
+    except (ConnectionError, OSError, TimeoutError) as e:
+        # Connection-level failures - server unreachable
+        return MCPPingResult(url=url, status="unreachable", response_time_ms=None, error=str(e))
+
+    except Exception as e:
+        # Other errors - determine status based on where failure occurred
+        if 'start_time' in locals():
+            # Error happened after we started timing ping - server is unhealthy
+            end_time = time.time()
+            response_time_ms = round((end_time - start_time) * 1000, 2)
+            status = "unhealthy"
+        else:
+            # Error happened before ping timing - server is unreachable
+            response_time_ms = None
+            status = "unreachable"
+
+        return MCPPingResult(url=url, status=status, response_time_ms=response_time_ms, error=str(e))
+
+
 @click.group(invoke_without_command=True, help="List tool names (default), or show details with --detail or --tool.")
 @click.option('--direct', is_flag=True, help='Bypass MCPBuilder and use direct MCP protocol')
 @click.option('--url', default='http://localhost:9901/sse', show_default=True, help='MCP server URL')
@@ -211,3 +277,41 @@ def list_mcp(ctx: click.Context, direct: bool, url: str, tool: str | None, detai
     else:
         for tool_dict in tools:
             click.echo(tool_dict.get('name', 'Unknown tool'))
+
+
+@list_mcp.command()
+@click.option('--url', default='http://localhost:9901/sse', show_default=True, help='MCP server URL')
+@click.option('--timeout', default=5.0, show_default=True, help='Timeout in seconds for ping request')
+@click.option('--json-output', is_flag=True, help='Output ping result in JSON format')
+def ping(url: str, timeout: float, json_output: bool) -> None:
+    """Ping an MCP server to check if it's responsive.
+
+    This command sends a ping request to the MCP server and measures the response time.
+    It's useful for health checks and monitoring server availability.
+
+    Args:
+        url (str): MCP server URL to ping (default: http://localhost:9901/sse)
+        timeout (float): Timeout in seconds for the ping request (default: 5.0)
+        json_output (bool): Whether to output the result in JSON format
+
+    Examples:
+        aiq info mcp ping                                    # Ping default server
+        aiq info mcp ping --url http://custom-server:9901/sse # Ping custom server
+        aiq info mcp ping --timeout 10                      # Use 10 second timeout
+        aiq info mcp ping --json-output                     # Get JSON format output
+    """
+    result = anyio.run(ping_mcp_server, url, timeout)
+
+    if json_output:
+        click.echo(result.model_dump_json(indent=2))
+    else:
+        if result.status == "healthy":
+            click.echo(f"Server at {result.url} is healthy (response time: {result.response_time_ms}ms)")
+        elif result.status == "unreachable":
+            click.echo(f"Server at {result.url} is unreachable: {result.error}")
+        else:  # unhealthy
+            if result.response_time_ms:
+                click.echo(f"Server at {result.url} is unhealthy (response time: \
+                        {result.response_time_ms}ms): {result.error}")
+            else:
+                click.echo(f"Server at {result.url} is unhealthy: {result.error}")
