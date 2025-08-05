@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import json
 import logging
 import time
 from typing import Any
 
-import anyio
 import click
 from pydantic import BaseModel
 
@@ -260,7 +260,7 @@ def list_mcp(ctx: click.Context, direct: bool, url: str, tool: str | None, detai
     if ctx.invoked_subcommand is not None:
         return
     fetcher = list_tools_direct if direct else list_tools_and_schemas
-    tools = anyio.run(fetcher, url, tool)
+    tools = asyncio.run(fetcher(url, tool))
 
     if json_output:
         click.echo(json.dumps(tools, indent=2))
@@ -296,7 +296,7 @@ def ping(url: str, timeout: int, json_output: bool) -> None:
         aiq info mcp ping --timeout 10                      # Use 10 second timeout
         aiq info mcp ping --json-output                     # Get JSON format output
     """
-    result = anyio.run(ping_mcp_server, url, timeout)
+    result = asyncio.run(ping_mcp_server(url, timeout))
 
     if json_output:
         click.echo(result.model_dump_json(indent=2))
