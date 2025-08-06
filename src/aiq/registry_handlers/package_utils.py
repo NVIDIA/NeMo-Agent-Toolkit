@@ -119,16 +119,15 @@ def build_wheel(package_root: str) -> WheelData:
 
     whl_version = Wheel(whl_path).version
 
-    return WheelData(
-        package_root=package_root,
-        package_name=module_name,  # should it be module name or distro name here
-        toml_project=toml_project,
-        toml_dependencies=toml_dependencies,
-        toml_aiq_packages=toml_packages,
-        union_dependencies=union_dependencies,
-        whl_path=whl_path,
-        whl_base64=whl_base64,
-        whl_version=whl_version)
+    return WheelData(package_root=package_root,
+                     package_name=toml_project_name,
+                     toml_project=toml_project,
+                     toml_dependencies=toml_dependencies,
+                     toml_aiq_packages=toml_packages,
+                     union_dependencies=union_dependencies,
+                     whl_path=whl_path,
+                     whl_base64=whl_base64,
+                     whl_version=whl_version)
 
 
 def build_package_metadata(wheel_data: WheelData | None) -> dict[AIQComponentEnum, list[dict | DiscoveryMetadata]]:
@@ -155,7 +154,7 @@ def build_package_metadata(wheel_data: WheelData | None) -> dict[AIQComponentEnu
     if (wheel_data is not None):
         registry.register_package(package_name=wheel_data.package_name, package_version=wheel_data.whl_version)
         for entry_point in aiq_plugins:
-            package_name = entry_point.module.split('.')[0]
+            package_name = entry_point.dist.name
             if (package_name == wheel_data.package_name):
                 continue
             if (package_name in wheel_data.union_dependencies):
@@ -163,8 +162,7 @@ def build_package_metadata(wheel_data: WheelData | None) -> dict[AIQComponentEnu
 
     else:
         for entry_point in aiq_plugins:
-            package_name = entry_point.module.split('.')[0]
-            registry.register_package(package_name=package_name)
+            registry.register_package(package_name=entry_point.dist.name)
 
     discovery_metadata = {}
     for component_type in AIQComponentEnum:

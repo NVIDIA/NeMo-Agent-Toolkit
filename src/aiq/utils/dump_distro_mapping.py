@@ -1,6 +1,4 @@
-#!/bin/bash
-
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,21 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-source ${SCRIPT_DIR}/common.sh
+import argparse
+import json
 
-set +e
-pre-commit run --all-files --show-diff-on-failure
-PRE_COMMIT_RETVAL=$?
+from aiq.runtime.loader import get_all_aiq_entrypoints_distro_mapping
 
-${SCRIPT_DIR}/python_checks.sh
-PY_CHECKS_RETVAL=$?
 
-${SCRIPT_DIR}/path_checks.sh
-PATH_CHECKS_RETVAL=$?
+def dump_distro_mapping(path: str):
+    mapping = get_all_aiq_entrypoints_distro_mapping()
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(mapping, f, indent=4)
 
-if [[ ${PRE_COMMIT_RETVAL} -ne 0 || ${PY_CHECKS_RETVAL} -ne 0 || ${PATH_CHECKS_RETVAL} -ne 0 ]]; then
-   echo ">>>> FAILED: checks"
-   exit 1
-fi
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--path", type=str, required=True)
+    args = parser.parse_args()
+    dump_distro_mapping(args.path)

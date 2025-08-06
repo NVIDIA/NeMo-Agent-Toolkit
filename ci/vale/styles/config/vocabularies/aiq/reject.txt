@@ -1,8 +1,9 @@
-# List of regular expressions matching words we want to reject. Even though we don't have any words listed this
-# file needs to exitst in order for vale to pick up our accept.txt file
+# List of regular expressions matching words we want to reject.
 # Regular expressions are parsed according to the Go syntax: https://golang.org/pkg/regexp/syntax/
 (?i)Agent-IQ
 (?i)AgentIQ
 (?i)A-IQ
 (?i)AI-Q
+(?i)[Bb]lacklist
 (?i)TODO
+(?i)[Ww]hitelist

@@ -20,6 +20,7 @@ limitations under the License.
 NeMo Agent toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the simple example (`examples/getting_started/simple_web_query`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/).
 
 ## Using NIM
+<!-- path-check-skip-next-line -->
 In the NeMo Agent toolkit simple example the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model was used. For the purposes of this guide we will be using a smaller model, the [`microsoft/phi-3-mini-4k-instruct`](https://build.nvidia.com/microsoft/phi-3-mini-4k) which is more likely to be runnable on a local workstation.
 
 Regardless of the model you choose, the process is the same for downloading the model's container from [`build.nvidia.com`](https://build.nvidia.com/). Navigate to the model you wish to run locally, if it is able to be downloaded it will be labeled with the `RUN ANYWHERE` tag, the exact commands will be specified on the `Deploy` tab for the model.
@@ -123,6 +124,7 @@ aiq run --config_file examples/documentation_guides/locally_hosted_llms/nim_conf
 
 ## Using vLLM
 
+<!-- path-check-skip-next-line -->
 vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getting_started/quickstart.html#openai-compatible-server) allowing us to re-use our existing OpenAI clients. If you have not already done so, install vLLM following the [Quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) guide. Similar to the previous example we will be using the same [`microsoft/Phi-3-mini-4k-instruct`](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct) LLM model. Along with the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base)embedding model.
 
 ### Serving the Models
@@ -138,7 +140,7 @@ In a second terminal also from within the vLLM environment, run the following co
 vllm serve --task embed --override-pooler-config '{"pooling_type": "MEAN"}' --port 8001 ssmits/Qwen2-7B-Instruct-embed-base
 ```
 
-> Note: The `--override-pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/latest/models/supported_models.html#text-embedding) documentation.
+> Note: The `--override-pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/latest/models/supported_models.html#embedding) documentation.
 
 
 ### NeMo Agent Toolkit Configuration

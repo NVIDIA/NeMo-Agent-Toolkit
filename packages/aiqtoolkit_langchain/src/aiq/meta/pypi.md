@@ -18,6 +18,6 @@ limitations under the License.
 ![NVIDIA Agent Intelligence Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image")
 
 # NVIDIA Agent Intelligence Toolkit Subpackage
-This is a subpackage for Langchain/Langgraph integration in AIQ toolkit.
+This is a subpackage for LangChain and LangGraph integration in AIQ toolkit.
 
 For more information about AIQ toolkit, please visit the [AIQ toolkit package](https://pypi.org/project/aiqtoolkit/).

@@ -38,7 +38,7 @@ And example tool in the NeMo Agent toolkit that makes use of an Object Store to 
 ## Key Features
 
 - **Object Store Integration:** Demonstrates comprehensive integration with object storage systems including AWS S3 and MinIO for storing and retrieving user report data.
-- **Multi-Database Support:** Shows support for both object stores (S3/MinIO) and relational databases (MySQL) for flexible data storage architectures.
+- **Multi-Database Support:** Shows support for both object stores (S3-compatible) and relational databases (MySQL) for flexible data storage architectures.
 - **File Server Backend:** Provides a complete file server implementation with object store backing, supporting REST API operations for upload, download, update, and delete.
 - **Real-Time Report Management:** Enables dynamic creation, retrieval, and management of user reports through natural language interfaces with automatic timestamp handling.
 - **Mock Data Pipeline:** Includes complete setup scripts and mock data for testing object store workflows without requiring production data sources.
