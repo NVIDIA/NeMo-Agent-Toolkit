@@ -32,8 +32,8 @@ aiq info components -t auth_provider
 ## Provider Types
 In the NeMo Agent toolkit, the providers (credentials) required to authenticate with an API resource are defined separately
 from the clients that facilitate the authentication process. Authentication providers, such as `APIKeyAuthProviderConfig` and
-`AuthCodeGrantConfig`, store the authentication credentials, while clients like `APIKeyClient` and
-`AuthCodeGrantClient` use those credentials to perform authentication.
+`OAuth2AuthCodeFlowProviderConfig`, store the authentication credentials, while clients like `APIKeyAuthProvider` and
+`OAuth2AuthCodeFlowProvider` use those credentials to perform authentication.
 
 ## Extending an API Authentication Provider
 The first step in adding an authentication provider is to create a configuration model that inherits from the

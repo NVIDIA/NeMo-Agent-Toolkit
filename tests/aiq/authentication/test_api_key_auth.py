@@ -28,7 +28,7 @@ HeaderAuthScheme = api_key_auth_provider_config.HeaderAuthScheme
 APIKeyFieldError = api_key_auth_provider_config.APIKeyFieldError
 HeaderNameFieldError = api_key_auth_provider_config.HeaderNameFieldError
 HeaderPrefixFieldError = api_key_auth_provider_config.HeaderPrefixFieldError
-APIKeyClient = api_key_auth_provider.APIKeyAuthProvider
+APIKeyAuthProvider = api_key_auth_provider.APIKeyAuthProvider
 BearerTokenCred = api_key_auth_provider.BearerTokenCred
 AuthResult = api_key_auth_provider.AuthResult
 
@@ -97,7 +97,7 @@ def test_config_invalid_header_prefix_nonascii():
 
 
 # --------------------------------------------------------------------------- #
-# APIKeyClient – _construct_authentication_header
+# APIKeyAuthProvider – _construct_authentication_header
 # --------------------------------------------------------------------------- #
 async def test_construct_header_bearer(monkeypatch: pytest.MonkeyPatch):
     cfg = make_config()
