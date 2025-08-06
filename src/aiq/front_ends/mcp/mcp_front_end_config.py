@@ -31,3 +31,5 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
     log_level: str = Field(default="INFO", description="Log level for the MCP server (default: INFO)")
     tool_names: list[str] = Field(default_factory=list,
                                   description="The list of tools MCP server will expose (default: all tools)")
+    runner_class: str | None = Field(
+        default=None, description="Custom worker class for handling MCP routes (default: built-in worker)")
