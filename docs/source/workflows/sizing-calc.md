@@ -26,7 +26,7 @@ The sizing calculator uses the [evaluation](evaluate.md) and [profiling](./profi
 This guide assumes that you have an LLM hosted by an isolated GPU cluster, for which you want to perform the sizing calculations for.
 
 :::{note}
-Although it is possible to run the sizing calculator against a publicly hosted LLM, the results may not be accurate due to the variability in the performance of public LLMs.
+Although you can run the sizing calculator against a publicly hosted LLM, the results may not be accurate due to the variability in the performance of public LLMs.
 :::
 
 ## Getting Started With Sizing a GPU Cluster
@@ -41,7 +41,7 @@ mkdir -p ${CALC_OUTPUT_DIR}
 cp examples/evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml $CONFIG_FILE
 ```
 
-Edit `.tmp/sizing_calc/config-sizing-calc.yml` file adding a `base_url` parameter for the `llms.nim_llm` section for your cluster, and changing the `llms.nim_llm.model_name` if needed.
+Edit `.tmp/sizing_calc/config-sizing-calc.yml` file by adding a `base_url` parameter for the `llms.nim_llm` section for your cluster. Then, if needed, change the `llms.nim_llm.model_name`.
 
 For a locally hosted NIM this might look like:
 ```yaml
@@ -59,7 +59,7 @@ aiq sizing calc --config_file $CONFIG_FILE --calc_output_dir $CALC_OUTPUT_DIR --
 ```
 
 :::{note}
-Depending on the number of concurrencies, the number of passes, and the size of the cluster being tested this could take several minutes to run.
+Depending on the number of concurrencies, the number of passes, and the size of the cluster being tested, this could take several minutes to run.
 :::
 
 ### Step 2: Estimate GPU Cluster Size
@@ -138,9 +138,9 @@ The results of each run are available in the following formats:
 **Summary Table**
 
 The summary table provides an overview of the per-concurrency metrics.
-- The `P95 LLM Latency` (95th percentile LLM latency) column contains the latency in seconds across all LLM invocations. If multiple models are used, the value will trend towards the latency of the model with the highest latency.
-- The `P95 WF Runtime` (95th percentile workflow runtime) column contains the response time in seconds of the workflow and is computed across all runs at the specified concurrency.
-- The `Total Runtime` columns contains the total time in seconds taken to process the entire dataset at a specified concurrency level.
+- The `P95 LLM Latency` (95th percentile LLM latency) column contains the latency, in seconds, across all LLM invocations. If multiple models are used, the value will trend towards the latency of the model with the highest latency.
+- The `P95 WF Runtime` (95th percentile workflow runtime) column contains the response time, in seconds, of the workflow and is computed across all runs at the specified concurrency.
+- The `Total Runtime` columns contains the total time, in seconds, taken to process the entire dataset at a specified concurrency level.
 
 ```
 Targets: LLM Latency ≤ 0.0s, Workflow Runtime ≤ 0.0s, Users = 0
