@@ -146,7 +146,7 @@ Full source code for the above example can be found in `examples/front_ends/simp
 Authentication methods not needing consent prompts, such as API Keys are supported uniformly across all deployment methods.
 In contrast, support for methods that require user interaction can vary depending on the application's deployment and available
 components. In some configurations, the system’s default browser handles the redirect directly, while in others, the
-front-end UI is responsible for rendering the consent prompt in the browser.
+front-end UI is responsible for rendering the consent prompt.
 
 Below is a table listing the current support for the various authentication methods based on the application
 
