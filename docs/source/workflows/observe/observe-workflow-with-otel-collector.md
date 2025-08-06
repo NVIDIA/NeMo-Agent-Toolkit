@@ -58,13 +58,13 @@ In this guide, you will learn how to:
 
 2. [Install and run your configured OTel Collector](https://opentelemetry.io/docs/collector/installation/) noting the endpoint URL such as `http://localhost:4318`. For this example, run the OTel Collector using Docker and the configuration file from step 1:
 
-```bash
-mkdir otellogs
-docker run -v $(pwd)/otelcollectorconfig.yaml:/etc/otelcol-contrib/config.yaml \
-   -p 4318:4318 \
-   -v $(pwd)/otellogs:/tmp/ \
-   otel/opentelemetry-collector-contrib:0.128.0
-```
+    ```bash
+    mkdir otellogs
+    docker run -v $(pwd)/otelcollectorconfig.yaml:/etc/otelcol-contrib/config.yaml \
+      -p 4318:4318 \
+      -v $(pwd)/otellogs:/tmp/ \
+      otel/opentelemetry-collector-contrib:0.128.0
+  ```
 
 ### Install the OpenTelemetry Subpackage
 
