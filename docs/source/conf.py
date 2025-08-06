@@ -126,13 +126,17 @@ numpydoc_class_members_toctree = False
 # Config linkcheck
 # Ignore localhost and url prefix fragments
 # Ignore openai.com links, as these always report a 403 when requested by the linkcheck agent
+# mysql.com  reports a 403 when requested by linkcheck
+# api.service.com is a placeholder for a service example
 linkcheck_ignore = [
     r'http://localhost:\d+/',
     r'https://localhost:\d+/',
     r'^http://$',
     r'^https://$',
     r'https://(platform\.)?openai.com',
-    r'https://code.visualstudio.com'
+    r'https://code.visualstudio.com',
+    r'https://www.mysql.com',
+    r'https://api.service.com'
 ]
 
 # The suffix(es) of source filenames.
