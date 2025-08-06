@@ -45,7 +45,7 @@ uv pip install -e '.[ragaai]'
 
 The flexible observability system is configured using the `general.telemetry` section in the workflow configuration file. This section contains two subsections: `logging` and `tracing`, and each subsection can contain multiple telemetry exporters running simultaneously.
 
-For a complete list of logging and tracing plugins and corrosponding configuration settings use the following CLI commands.
+For a complete list of logging and tracing plugins and corresponding configuration settings use the following CLI commands.
 
 ```bash
 # For all registered logging plugins
