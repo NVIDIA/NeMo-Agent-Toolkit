@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 class APIKeyAuthProvider(AuthProviderBase[APIKeyAuthProviderConfig]):
 
     def __init__(self, config: APIKeyAuthProviderConfig, config_name: str | None = None) -> None:
-        assert isinstance(config, APIKeyAuthProviderConfig), ("Config is not APIKeyConfig")
+        assert isinstance(config, APIKeyAuthProviderConfig), ("Config is not APIKeyAuthProviderConfig")
         super().__init__(config)
 
     async def _construct_authentication_header(self) -> BearerTokenCred:
