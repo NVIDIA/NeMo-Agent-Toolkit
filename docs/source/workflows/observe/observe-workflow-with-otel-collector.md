@@ -64,7 +64,7 @@ In this guide, you will learn how to:
       -p 4318:4318 \
       -v $(pwd)/otellogs:/tmp/ \
       otel/opentelemetry-collector-contrib:0.128.0
-  ```
+    ```
 
 ### Install the OpenTelemetry Subpackage
 
