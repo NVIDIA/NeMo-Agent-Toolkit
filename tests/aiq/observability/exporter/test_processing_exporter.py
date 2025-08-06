@@ -660,7 +660,7 @@ class TestCleanup:
             mock_parent_cleanup.return_value = asyncio.Future()
             mock_parent_cleanup.return_value.set_result(None)
 
-            with caplog.at_level(logging.INFO):
+            with caplog.at_level(logging.DEBUG):
                 await processing_exporter._cleanup()
 
             assert processor1.shutdown_called
@@ -714,7 +714,7 @@ class TestCleanup:
             mock_parent_cleanup.return_value = asyncio.Future()
             mock_parent_cleanup.return_value.set_result(None)
 
-            with caplog.at_level(logging.INFO):
+            with caplog.at_level(logging.DEBUG):
                 await processing_exporter._cleanup()
 
             assert processor.shutdown_called
