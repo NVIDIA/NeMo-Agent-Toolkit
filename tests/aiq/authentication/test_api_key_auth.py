@@ -15,20 +15,20 @@
 
 import pytest
 
-import aiq.authentication.api_key.api_key_auth_provider as api_key_auth_provider
 # --------------------------------------------------------------------------- #
 # Import the modules we are testing
 # --------------------------------------------------------------------------- #
-import aiq.authentication.api_key.api_key_auth_provider_config as api_key_auth_provider_config
+from aiq.authentication.api_key import api_key_auth_provider
+from aiq.authentication.api_key import api_key_auth_provider_config
 from aiq.builder.workflow_builder import WorkflowBuilder
 
 # Handy names
-APIKeyConfig = api_key_auth_provider_config.APIKeyAuthProviderConfig
+APIKeyAuthProviderConfig = api_key_auth_provider_config.APIKeyAuthProviderConfig
 HeaderAuthScheme = api_key_auth_provider_config.HeaderAuthScheme
 APIKeyFieldError = api_key_auth_provider_config.APIKeyFieldError
 HeaderNameFieldError = api_key_auth_provider_config.HeaderNameFieldError
 HeaderPrefixFieldError = api_key_auth_provider_config.HeaderPrefixFieldError
-APIKeyClient = api_key_auth_provider.APIKeyAuthProvider
+APIKeyAuthProvider = api_key_auth_provider.APIKeyAuthProvider
 BearerTokenCred = api_key_auth_provider.BearerTokenCred
 AuthResult = api_key_auth_provider.AuthResult
 
@@ -42,9 +42,9 @@ def make_config(
     scheme: HeaderAuthScheme = HeaderAuthScheme.BEARER,
     header_name: str | None = "Authorization",
     header_prefix: str | None = "Bearer",
-) -> APIKeyConfig:
-    """Factory producing a valid APIKeyConfig for the given scheme."""
-    return APIKeyConfig(
+) -> APIKeyAuthProviderConfig:
+    """Factory producing a valid APIKeyAuthProviderConfig for the given scheme."""
+    return APIKeyAuthProviderConfig(
         raw_key=raw_key,
         auth_scheme=scheme,
         custom_header_name=header_name,
@@ -53,7 +53,7 @@ def make_config(
 
 
 # --------------------------------------------------------------------------- #
-# APIKeyConfig – validation tests
+# APIKeyAuthProviderConfig – validation tests
 # --------------------------------------------------------------------------- #
 def test_config_valid_bearer():
     cfg = make_config()
@@ -97,9 +97,9 @@ def test_config_invalid_header_prefix_nonascii():
 
 
 # --------------------------------------------------------------------------- #
-# APIKeyClient – _construct_authentication_header
+# APIKeyAuthProvider – _construct_authentication_header
 # --------------------------------------------------------------------------- #
-async def test_construct_header_bearer(monkeypatch: pytest.MonkeyPatch):
+async def test_construct_header_bearer(monkeypatch: pytest.MonkeyPatch):  # pylint:disable=unused-argument
     cfg = make_config()
 
     async with WorkflowBuilder() as builder:
