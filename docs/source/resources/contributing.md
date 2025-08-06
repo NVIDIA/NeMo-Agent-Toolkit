@@ -64,11 +64,6 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
     ```
 
 
-1. Initialize, fetch, and update submodules in the Git repository.
-    ```bash
-    git submodule update --init --recursive
-    ```
-
 1. Fetch the data sets by downloading the LFS files.
     ```bash
     git lfs install

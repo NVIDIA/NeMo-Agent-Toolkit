@@ -81,12 +81,7 @@ Before you begin using NeMo Agent toolkit, ensure that you meet the following so
    cd aiqtoolkit
    ```
 
-2. Initialize, fetch, and update submodules in the Git repository.
-   ```bash
-   git submodule update --init --recursive
-   ```
-
-3. Fetch the data sets by downloading the LFS files.
+2. Fetch the data sets by downloading the LFS files.
    ```bash
    git lfs install
    git lfs fetch
