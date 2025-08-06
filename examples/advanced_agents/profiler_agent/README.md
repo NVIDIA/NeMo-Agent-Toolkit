@@ -57,7 +57,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ## Run the Workflow
 
-1. Start the Phoenix server if not already running. If you are using a remote Phoenix server, you can skip this step and modify the config/config.yml to point to the URL.
+1. Start the Phoenix server if not already running. If you are using a remote Phoenix server, you can skip this step and modify the configs/config.yml file to point to the URL.
    ```bash
    docker run -p 6006:6006 -p 4317:4317 -i -t arizephoenix/phoenix:latest
    ```
@@ -70,10 +70,10 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
    Then, run the simple calculator example to generate traces:
    ```bash
-   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-tracing.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
-   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-tracing.yml --input "Is the product of 33 * 4 greater than the current hour of the day?"
-   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-tracing.yml --input "Is the sum of 44 and 55 greater than the current hour of the day?"
-   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-tracing.yml --input "Is the difference between 7 and 5 less than the current hour of the day?"
+   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "Is the product of 33 * 4 greater than the current hour of the day?"
+   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "Is the sum of 44 and 55 greater than the current hour of the day?"
+   aiq run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "Is the difference between 7 and 5 less than the current hour of the day?"
    ```
 
 3. Run the profiler agent:

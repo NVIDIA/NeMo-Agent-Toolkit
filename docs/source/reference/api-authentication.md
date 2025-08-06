@@ -78,7 +78,7 @@ API configurations are
 
 ### Authentication YAML Configuration Example
 
-The following example shows how to configure the authentication credentials for the OAuth 2.0 Authorization Code Grant Flow and API Key authentication. More information about each field can be queried using the `aiq info components -t authentication_provider` command.
+The following example shows how to configure the authentication credentials for the OAuth 2.0 Authorization Code Grant Flow and API Key authentication. More information about each field can be queried using the `aiq info components -t auth_provider` command.
 
 ```yaml
 authentication:
