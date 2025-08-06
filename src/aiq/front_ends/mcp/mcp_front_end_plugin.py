@@ -60,7 +60,7 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
 
                 return JSONResponse({
                     "status": "healthy",
-                    "mcp_ping_result": "success",
+                    "error": None,
                     "server_name": mcp.name,
                 },
                                     headers={"Content-Type": "application/json"})
