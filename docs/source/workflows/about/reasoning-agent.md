@@ -102,7 +102,6 @@ workflow:
 
 ## Limitations
 The following are the limitations of reasoning agents:
-<!-- path-check-skip-next-line -->
 * Requires a thinking/reasoning LLM, such as DeepSeek R1. There should be thought tags within the LLM output:
   >&lt;think&gt;&lt;/think&gt;
 

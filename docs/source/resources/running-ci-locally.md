@@ -55,14 +55,12 @@ From this point you can manually copy/paste the commands which would normally be
 
 ## CI Artifacts and Cache
 
-<!-- path-check-skip-begin -->
 | Name | Description | Location |
 |--|--|--|
 | Artifacts | Test results, wheels, and documentation | `.tmp/local_ci_tmp/<arch>local_ci_workspace` |
 | Cache | `uv` and `pre-commit` package caches | `.tmp/local_ci_tmp/<arch>cache` |
 | Virtual Environment | Python virtual environment | `.tmp/local_ci_tmp/<arch>local_ci_workspace/.venv` |
 | Bootstrap Script | The script used to bootstrap the CI environment within the CI container | `.tmp/local_ci_tmp/<arch>bootstrap_local_ci.sh` |
-<!-- path-check-skip-end -->
 
 Where `<arch>` is the architecture of the host machine at time of writing this will be either `amd64` or `arm64`.
 

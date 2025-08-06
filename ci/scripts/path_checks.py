@@ -22,8 +22,9 @@ from dataclasses import dataclass
 
 from gitutils import all_files
 
-# File path pairs to whitelist -- first is the file path, second is the path in the file
-WHITELISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
+# File path pairs to allowlist -- first is the file path, second is the path in the file
+ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
+    # root README.md can reference examples and docs
     (r"^README.md", r"^(examples|docs)"),
 
     # allow references from tests to examples
@@ -35,15 +36,45 @@ WHITELISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     # allow references to examples from docs
     (r"^docs/", r"^examples/"),
 
+    # allow references to src from docs
+    (r"^docs/", r"^src/"),
+
     # allow relative references within docs
     (r"^docs/", r"^(\.?\./)*[A-Za-z0-9_\-\.]+"),
-
-    # allow references to subdirectories from examples
-    (r"^examples/", r"^\./[A-Za-z0-9_\-\.]+/"),
 }
 
-WHITELISTED_FILE_PATH_PAIRS_REGEX = list(
-    map(lambda x: (re.compile(x[0]), re.compile(x[1])), WHITELISTED_FILE_PATH_PAIRS))
+ALLOWLISTED_WORDS: set[str] = {
+    "and/or",
+    "application/json",
+    "CI/CD",
+    "commit/push",
+    "Continue/Cancel",
+    "conversation/chat",
+    "copy/paste",
+    "edit/score",
+    "file/console",
+    "I/O",
+    "input/output",
+    "inputs/outputs",
+    "JavaScript/TypeScript",
+    "output/jobs/job_",
+    "predictions/forecasts",
+    "provider/method.",
+    "RagaAI/Catalyst",
+    "read/write",
+    "search/edit/score/select",
+    "string/array",
+    "string/object",
+    "success/failure",
+    "thinking/reasoning",
+    "tool/workflow",
+    "tooling/vector",
+    "true/false",
+    "try/except",
+    "validate/sanitize",
+    "Workflows/tools",
+    "Yes/No",
+}
 
 IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     # allow references to text_file_ingest from create-a-new-workflow
@@ -138,68 +169,14 @@ IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     # allow short names for references to files within the swe_bench example
     (
         r"^examples/evaluation_and_profiling/swe_bench/README.md",
-        r"^(predict_gold_stub\.py|predict_skeleton\.py|predictors/predict_skeleton|predictors/register\.py)$",
+        r"^(predictors/predict_skeleton|predictors/register\.py)$",
     ),
-    # blacklist remote files
+    # ignore remote files
     (
         r"^examples/evaluation_and_profiling/simple_web_query_eval/.*configs/eval_upload.yml",
         r"^input/langsmith.json",
     ),
 }
-
-IGNORED_FILE_PATH_PAIRS_REGEX = list(map(lambda x: (re.compile(x[0]), re.compile(x[1])), IGNORED_FILE_PATH_PAIRS))
-
-# Paths to ignore -- regex pattern
-IGNORED_PATHS: set[str] = {
-    r"(\./)?\.tmp/",  #
-    # files that are located in the directory of the file being checked
-    r"^\./upload_to_minio\.sh$",
-    r"^\./upload_to_mysql\.sh$",
-    r"^\./start_local_sandbox\.sh$",  #
-    # script files that exist in the root of the repo
-    r"^scripts/langchain_web_ingest\.py$",
-    r"^scripts/bootstrap_milvus\.sh$",  #
-    # generated files
-    r"^\.venv/bin/activate$",
-    r"^\./run_service\.sh$",
-    r"^outputs/line_chart_\d+\.png$",
-}
-
-WHITELISTED_WORDS: set[str] = {
-    "and/or",
-    "application/json",
-    "CI/CD",
-    "commit/push",
-    "Continue/Cancel",
-    "conversation/chat",
-    "copy/paste",
-    "edit/score",
-    "file/console",
-    "I/O",
-    "input/output",
-    "inputs/outputs",
-    "JavaScript/TypeScript",
-    "output/jobs/job_",
-    "predictions/forecasts",
-    "provider/method.",
-    "RagaAI/Catalyst",
-    "read/write",
-    "search/edit/score/select",
-    "string/array",
-    "string/object",
-    "success/failure",
-    "tool/workflow",
-    "tooling/vector",
-    "true/false",
-    "try/except",
-    "validate/sanitize",
-    "Workflows/tools",
-    "Yes/No",
-}
-
-WHITELISTED_WORDS_REGEX = re.compile(r"^(" + "|".join(WHITELISTED_WORDS) + r")$")
-
-IGNORED_PATHS_REGEX = list(map(re.compile, IGNORED_PATHS))
 
 # Files to ignore -- regex pattern
 IGNORED_FILES: set[str] = {
@@ -213,7 +190,29 @@ IGNORED_FILES: set[str] = {
     r"data/.*$"
 }
 
+# Paths to ignore -- regex pattern
+IGNORED_PATHS: set[str] = {
+    r"\.tmp/",  #
+    r"/?\.?venv",  # files that are located in the directory of the file being checked
+    r"^\./upload_to_minio\.sh$",
+    r"^\./upload_to_mysql\.sh$",
+    r"^\./start_local_sandbox\.sh$",  #
+    # script files that exist in the root of the repo
+    r"^scripts/langchain_web_ingest\.py$",
+    r"^scripts/bootstrap_milvus\.sh$",  #
+    # generated files
+    r"^\.venv/bin/activate$",
+    r"^\./run_service\.sh$",
+    r"^outputs/line_chart_\d+\.png$",
+}
+
+ALLOWLISTED_FILE_PATH_PAIRS_REGEX = list(
+    map(lambda x: (re.compile(x[0]), re.compile(x[1])), ALLOWLISTED_FILE_PATH_PAIRS))
+ALLOWLISTED_WORDS_REGEX = re.compile(r"^(" + "|".join(ALLOWLISTED_WORDS) + r")$")
+
+IGNORED_FILE_PATH_PAIRS_REGEX = list(map(lambda x: (re.compile(x[0]), re.compile(x[1])), IGNORED_FILE_PATH_PAIRS))
 IGNORED_FILES_REGEX = list(map(re.compile, IGNORED_FILES))
+IGNORED_PATHS_REGEX = list(map(re.compile, IGNORED_PATHS))
 
 # Paths to consider referential -- string
 # referential paths are ones that should not only be checked for existence, but also for referential integrity
@@ -226,7 +225,10 @@ REFERENTIAL_PATHS: set[str] = {
 # File extensions to check paths
 EXTENSIONS: tuple[str, ...] = ('.md', '.rst', '.yml', '.yaml', '.json', '.toml', '.ini', '.conf', '.cfg')
 
-PATH_REGEX = re.compile(r'((\w+://[^\s\'"<>]+)|(\.?\.?/?)(([$A-Za-z0-9_\-\.]+/)*[$A-Za-z0-9_\-\.]+)|)')
+URI_OR_PATH_REGEX = re.compile(r'^((([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?'
+                               r'|(\.?\.?/?)(([$A-Za-z0-9_\-\.]+/)*[$A-Za-z0-9_\-\.]+))$')
+
+PATH_REGEX = re.compile(r'^(\.?\.?/?)(([$A-Za-z0-9_\-\.]+/)*[$A-Za-z0-9_\-\.]+)$')
 
 YAML_BLOCK_REGEX = re.compile(r":\s*\|\s*$")
 
@@ -297,11 +299,11 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
                         in_skipped_section = False
             if in_skipped_section:
                 continue
-            for match in PATH_REGEX.finditer(line):
+            for match in URI_OR_PATH_REGEX.finditer(line):
                 column, _ = match.span()
                 path = match.group(0)
-                # Exclude URIs
-                if "://" in path:
+                # Exclude URIs and other non-path-like strings
+                if not PATH_REGEX.search(path):
                     continue
                 # Exclude absolute paths
                 if path.startswith('/'):
@@ -315,7 +317,7 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
                 # Exclude empty after stripping
                 if not path:
                     continue
-                if WHITELISTED_WORDS_REGEX.search(path):
+                if ALLOWLISTED_WORDS_REGEX.search(path):
                     continue
                 if any(r.search(path) for r in IGNORED_PATHS_REGEX):
                     continue
@@ -370,8 +372,8 @@ def check_files() -> list[tuple[str, PathInfo]]:
                 True if we performed an action based on the path
             """
             if os.path.exists(path):
-                # if the path is whitelisted, then it is not broken
-                if any(r[0].search(f) and r[1].search(path) for r in WHITELISTED_FILE_PATH_PAIRS_REGEX):
+                # if the path is allowlisted, then it is not broken
+                if any(r[0].search(f) and r[1].search(path) for r in ALLOWLISTED_FILE_PATH_PAIRS_REGEX):
                     return True
                 for p in REFERENTIAL_PATHS:
                     if p in f and p in path:
@@ -433,13 +435,13 @@ def main():
                           are valid and that they exist in the same directory tree as the file being checked.
 
                           If you believe this is a false positive, please add the path to the
-                          WHITELISTED_FILE_PATH_PAIRS set in the path_checks.py file.
+                          ALLOWLISTED_FILE_PATH_PAIRS set in the path_checks.py file.
 
                     Note: Some paths may be ignored due to rules:
                         - IGNORED_FILES: files that should be ignored
                         - IGNORED_PATHS: paths that should be ignored
                         - IGNORED_FILE_PATH_PAIRS: file-path pairs that should be ignored
-                        - WHITELISTED_WORDS: common word groups that should be ignored (and/or, input/output)
+                        - ALLOWLISTED_WORDS: common word groups that should be ignored (and/or, input/output)
 
                     See ./docs/source/resources/contributing.md#path-checks for more information about path checks.
                     """))
