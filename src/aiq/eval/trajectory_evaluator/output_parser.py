@@ -64,7 +64,7 @@ class CustomTrajectoryOutputParser(TrajectoryOutputParser):
         _score = re.search(r"(\d+(\.\d+)?)", score_str)
         # If the score is not found or is a float, raise an exception.
         if _score is None or "." in _score.group(1):
-            score = "1"
+            score = 1
         else:
             score = int(_score.group(1))
         # If the score is not in the range 1-5, raise an exception.

@@ -217,6 +217,8 @@ async def optimize_prompts(
                 return await asyncio.gather(*tasks)
 
             all_results = asyncio.run(_run_all_evals())
+            # Persist raw per‑repetition scores so they appear in `trials_dataframe`.
+            trial.set_user_attr("rep_scores", all_results)
         except Exception as e:
             logger.error("Error during evaluation runs: %s", e)
             raise
@@ -352,7 +354,15 @@ async def optimize_prompts(
 
         trials_df_path = out_dir / "trials_dataframe_prompts.csv"
         with trials_df_path.open("w") as fh:
-            study.trials_dataframe().to_csv(fh, index=False)
+            # Include user attributes so the `rep_scores` metadata is exported.
+            df = study.trials_dataframe(attrs=("user_attrs",))
+            # Flatten user_attrs -> rep_scores into its own column for convenience.
+            if "rep_scores" not in df.columns and "user_attrs" in df.columns:
+                df["rep_scores"] = df["user_attrs"].apply(
+                    lambda d: d.get("rep_scores") if isinstance(d, dict) else None
+                )
+                df = df.drop(columns=["user_attrs"])
+            df.to_csv(fh, index=False)
 
         # Generate Pareto front visualizations
         try:

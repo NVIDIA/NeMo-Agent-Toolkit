@@ -99,6 +99,8 @@ def optimize_parameters(
             yaml.dump(cfg_trial.model_dump(), fh)
 
         all_scores = asyncio.run(_run_all_evals())
+        # Persist raw per‑repetition scores so they appear in `trials_dataframe`.
+        trial.set_user_attr("rep_scores", all_scores)
         return [sum(run[i] for run in all_scores) / reps for i in range(len(eval_metrics))]
 
     logger.info("Starting numeric / enum parameter optimization...")
@@ -116,7 +118,15 @@ def optimize_parameters(
     with (out_dir / "optimized_config.yml").open("w") as fh:
         yaml.dump(tuned_cfg.model_dump(), fh)
     with (out_dir / "trials_dataframe_params.csv").open("w") as fh:
-        study.trials_dataframe().to_csv(fh, index=False)
+        # Include user attributes so the `rep_scores` metadata is exported.
+        df = study.trials_dataframe(attrs=("user_attrs",))
+        # Flatten user_attrs -> rep_scores into its own column for convenience.
+        if "rep_scores" not in df.columns and "user_attrs" in df.columns:
+            df["rep_scores"] = df["user_attrs"].apply(
+                lambda d: d.get("rep_scores") if isinstance(d, dict) else None
+            )
+            df = df.drop(columns=["user_attrs"])
+        df.to_csv(fh, index=False)
 
     # Generate Pareto front visualizations
     try:
