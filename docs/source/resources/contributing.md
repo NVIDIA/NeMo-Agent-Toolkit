@@ -223,11 +223,11 @@ Path checks are used to ensure:
 * all paths within files are relative paths
 * all paths within files are valid (they exist)
 
-#### Allowlisting paths
+#### Adding to the path allowlist
 
-In the case of referential paths, the checker will fail if the path is outside of the outer-level directory. To allowlist a path, add the path to the `ALLOWLISTED_FILE_PATH_PAIRS` set in the `ci/scripts/path_checks.py` file. Allowlisted paths are always checked for existence.
+In the case of referential paths, the checker will fail if the path is outside of the outer-level directory. To allowlist a path, add the path to the `ALLOWLISTED_FILE_PATH_PAIRS` set in the `ci/scripts/path_checks.py` file. Paths in the allowlist are always checked for existence.
 
-#### Allowlisting words
+#### Adding to the word allowlist
 
 In the case of common word groups such as `input/output`, `and/or`, `N/A`, the checker will fail if the word group is not added to the allowlist. To allowlist a word group, add the word group to the `ALLOWLISTED_WORDS` set in the `ci/scripts/path_checks.py` file.
 

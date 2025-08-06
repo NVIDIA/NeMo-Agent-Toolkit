@@ -10,8 +10,9 @@ Arize
 arXiv
 [Aa]sync
 [Aa]utoencoder
-[Au]thlib
+[Aa]llowlist
 [Aa]nonymize(d?)
+Authlib
 [Bb]ackoff
 [Bb]ackpressure
 [Bb]atcher
