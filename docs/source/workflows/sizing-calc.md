@@ -74,7 +74,11 @@ aiq sizing calc --config_file $CONFIG_FILE --calc_output_dir $CALC_OUTPUT_DIR --
 ```
 This will run the workflow at the specified concurrency levels and estimate the GPU cluster size.
 
-## Gather Metrics
+---
+
+## Details
+
+### Gather Metrics
 To use the calculator, gather metrics from the workflow and then separately size the cluster in `offline_mode` using the previously gathered metrics.
 
 The following is a sample command for gathering metrics:
@@ -223,7 +227,7 @@ Alerts: !W = Workflow interrupted
 
 In this example, the workflow failed at concurrency level 4 (indicated by `!W` in the Alerts column). The time metrics for concurrency 4 are not included in the GPU estimate as they are not reliable and may skew the linear fit used to estimate the GPU count.
 
-## Estimate GPU Cluster Size
+### Estimate GPU Cluster Size
 Once the metrics are gathered, you can estimate the GPU cluster size using the `aiq sizing calc` command in `offline_mode`.
 Sample command:
 ```
@@ -326,7 +330,7 @@ Estimated GPU count (Workflow Runtime): 75.4
 
 In addition to the slope based estimation, the calculator also provides a rough estimate of the GPU count required for the target user based on the data from each concurrency level. You can use this information to get a quick estimate of the GPU count required for the workflow but is not as accurate as the slope based estimation and is not recommended for production use.
 
-## Programmatic Usage
+### Programmatic Usage
 In addition to the command line interface, the sizing calculator can be used programmatically.
 
 **Sample code:**
