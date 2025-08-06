@@ -214,6 +214,50 @@ All documentation is checked using [Vale](https://vale.sh/). In documentation th
 
 The spelling of a project name should use the casing of the project, for example [PyPI](https://pypi.org/) should always be spelled as `PyPI` and not `pypi` or `PYPI`. If needed new words can be added to the `ci/vale/styles/config/vocabularies/aiq/accept.txt` and `ci/vale/styles/config/vocabularies/aiq/reject.txt` files.
 
+### Path Checks
+
+All documentation and files which match certain criteria are checked using a custom path check script.
+
+Path checks are used to ensure:
+* all symbolic links are valid
+* all paths within files are relative paths
+* all paths within files are valid (they exist)
+
+#### Skipping regions of files
+
+The check can be quite aggressive and may detect false positives. If a path is detected as invalid, but is actually valid, you can add comment(s) to the file to skip the check.
+
+To skip the **entire file**, ensure `path-check-skip-file` is present near the top of the file. Use comments appropriate for the file type.
+
+To skip a **section of the file**, ensure `path-check-skip` is present on the line above the section and `path-check-skip-end` is present on the line below the section. Use comments appropriate for the file type.
+
+Instead, to only skip the **next line** in the file, ensure `path-check-skip-next-line` is present on the line. Use comments appropriate for the file type.
+
+#### File-type specific checks
+
+The path checker is designed to be file-type specific. For example, the checker will check for valid paths in YAML files, JSON files, or Markdown files.
+
+Additionally, there is logic within the checker to support per-line checks. For example, within a YAML file, the checker will automatically skip lines that contain `model_name` or `_type` since these are often used to indicate the model or tool name which is not a path.
+
+If you are expanding the checker to support a new file type or adding a new per-line check, you can add a new file-type specific checker by adding a new function to the `ci/scripts/path_checks.py` file.
+
+#### Whitelisting paths
+
+In the case of referential paths, the checker will fail if the path is outside of the outer-level directory. To whitelist a path, add the path to the `WHITELISTED_FILE_PATH_PAIRS` set in the `ci/scripts/path_checks.py` file. Whitelisted paths are always checked for existence.
+
+#### Whitelisting words
+
+In the case of common word groups such as `input/output`, `and/or`, `N/A`, the checker will fail if the word group is not in the `WHITELISTED_WORDS` set in the `ci/scripts/path_checks.py` file. To whitelist a word group, add the word group to the `WHITELISTED_WORDS` set.
+
+#### Ignoring paths
+
+Ignoring paths is not recommended and should be used as a last resort. If a path is ignored, it will not be checked for existence. It is intended to be used for paths that are not valid or do not exist under source control.
+
+If an exception is needed for a specific path, consider modifying the `ci/scripts/path_checks.py` file to add the path to one of the following sets:
+* `IGNORED_PATHS` - a list of paths to ignore (regular expressions)
+* `IGNORED_FILES` - a list of files to ignore (regular expressions).
+* `IGNORED_FILE_PATH_PAIRS` - a tuple of two regular expressions, the first is the file path and the second is the path to check.
+
 ### NVIDIA NeMo Agent toolkit Name Guidelines
 
 * Full Name: `NVIDIA NeMo Agent toolkit`  - Use for document titles, webpage headers, any public descriptions

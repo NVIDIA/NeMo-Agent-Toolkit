@@ -22,28 +22,34 @@ from dataclasses import dataclass
 
 from gitutils import all_files
 
-# File path pairs to ignore -- first is the file path, second is the path in the file
-IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
+# File path pairs to whitelist -- first is the file path, second is the path in the file
+WHITELISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
+    (r"^README.md", r"^(examples|docs)"),
 
     # allow references from tests to examples
     (r"^tests/", r"^examples/"),
 
     # allow references to docs from examples
-    (r"^examples/", r"^(\.\./)*docs/"),
+    (r"^examples/", r"^docs/"),
 
     # allow references to examples from docs
-    (r"^docs/", r"^(\.\./)*examples/"),
+    (r"^docs/", r"^examples/"),
 
     # allow relative references within docs
     (r"^docs/", r"^(\.?\./)*[A-Za-z0-9_\-\.]+"),
 
     # allow references to subdirectories from examples
     (r"^examples/", r"^\./[A-Za-z0-9_\-\.]+/"),
+}
 
+WHITELISTED_FILE_PATH_PAIRS_REGEX = list(
+    map(lambda x: (re.compile(x[0]), re.compile(x[1])), WHITELISTED_FILE_PATH_PAIRS))
+
+IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     # allow references to text_file_ingest from create-a-new-workflow
     (
         r"^docs/source/tutorials/create-a-new-workflow.md",
-        r"^src/text_file_ingest/data",
+        r"^src/text_file_ingest/data/",
     ),
 
     # allow references from some examples to other examples
@@ -145,7 +151,7 @@ IGNORED_FILE_PATH_PAIRS_REGEX = list(map(lambda x: (re.compile(x[0]), re.compile
 
 # Paths to ignore -- regex pattern
 IGNORED_PATHS: set[str] = {
-    r"^(\./)?\.tmp/",  #
+    r"(\./)?\.tmp/",  #
     # files that are located in the directory of the file being checked
     r"^\./upload_to_minio\.sh$",
     r"^\./upload_to_mysql\.sh$",
@@ -156,18 +162,48 @@ IGNORED_PATHS: set[str] = {
     # generated files
     r"^\.venv/bin/activate$",
     r"^\./run_service\.sh$",
-    r"^outputs/line_chart_\d+\.png$",  #
-    # false positives
-    r"^N/A$",
-    r"^and/or$",
-    r"^input/output$",
+    r"^outputs/line_chart_\d+\.png$",
 }
+
+WHITELISTED_WORDS: set[str] = {
+    "and/or",
+    "application/json",
+    "CI/CD",
+    "commit/push",
+    "Continue/Cancel",
+    "conversation/chat",
+    "copy/paste",
+    "edit/score",
+    "file/console",
+    "I/O",
+    "input/output",
+    "inputs/outputs",
+    "JavaScript/TypeScript",
+    "output/jobs/job_",
+    "predictions/forecasts",
+    "provider/method.",
+    "RagaAI/Catalyst",
+    "read/write",
+    "search/edit/score/select",
+    "string/array",
+    "string/object",
+    "success/failure",
+    "tool/workflow",
+    "tooling/vector",
+    "true/false",
+    "try/except",
+    "validate/sanitize",
+    "Workflows/tools",
+    "Yes/No",
+}
+
+WHITELISTED_WORDS_REGEX = re.compile(r"^(" + "|".join(WHITELISTED_WORDS) + r")$")
 
 IGNORED_PATHS_REGEX = list(map(re.compile, IGNORED_PATHS))
 
 # Files to ignore -- regex pattern
 IGNORED_FILES: set[str] = {
-    r"^\..*",
+    r"^\.",
     r"^ci/",
     r"pyproject\.toml$",
     r"Dockerfile",
@@ -226,19 +262,37 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
         A list of PathInfo objects.
     """
     paths = []
-    with open(filename, 'r', encoding='utf-8') as f:
+    with open(filename, "r", encoding="utf-8") as f:
         in_skipped_section: int | bool = False
+        skip_next_line: bool = False
         for line_number, line in enumerate(f, start=1):
-            if filename.endswith(".md") and line.lstrip().startswith("```"):
-                in_skipped_section = not in_skipped_section
+            if skip_next_line:
+                skip_next_line = False
+                continue
+            if "path-check-skip-file" in line:
+                break
+            elif "path-check-skip-next-line" in line:
+                skip_next_line = True
+                continue
+            elif "path-check-skip-end" in line:
+                in_skipped_section = False
+            elif "path-check-skip-begin" in line:
+                in_skipped_section = True
+            if filename.endswith(".md"):
+                if line.lstrip().startswith("```"):
+                    in_skipped_section = not in_skipped_section
             elif filename.endswith(".yml") or filename.endswith(".yaml"):
+                # skip lines that contain model_name or _type since they are often used to indicate
+                # the model, llm name, or tool name -- none of which are paths
+                if "model_name" in line or "_type" in line or "llm_name" in line:
+                    continue
                 # YAML blocks are delimited by a line that ends with a pipe
                 if YAML_BLOCK_REGEX.search(line):
                     # keep track of the number of leading spaces
                     in_skipped_section = len(line) - len(line.lstrip())
                 elif in_skipped_section:
-                    # if we are in a skipped section, and the number of leading spaces is the same as the number of
-                    # leading spaces in the skipped section, then we are done
+                    # if we are in a skipped section, and the number of leading spaces is the same as
+                    # the number of leading spaces in the skipped section, then we are done
                     if len(line) - len(line.lstrip()) == in_skipped_section:
                         in_skipped_section = False
             if in_skipped_section:
@@ -261,6 +315,8 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
                 # Exclude empty after stripping
                 if not path:
                     continue
+                if WHITELISTED_WORDS_REGEX.search(path):
+                    continue
                 if any(r.search(path) for r in IGNORED_PATHS_REGEX):
                     continue
                 if any(r[0].search(filename) and r[1].search(path) for r in IGNORED_FILE_PATH_PAIRS_REGEX):
@@ -271,7 +327,25 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
 
 def check_files() -> list[tuple[str, PathInfo]]:
     """
-    Checks files in the repo for paths that don't exist. Skips files that match any of the ignored files.
+    Checks files in the repo for paths that don't exist.
+
+    Skips files that:
+    - match any of the ignored files.
+
+    Skips paths that:
+    - are absolute paths
+    - are URIs
+    - are empty
+    - are "." or ".."
+    - match any of the ignored paths
+    - match any of the ignored file-path pairs
+
+    Skips sections of files that:
+    - all remaining lines of a file after marked with `path-check-skip-file`
+    - are marked with `path-check-skip-begin` / `path-check-skip-end` region
+    - are marked on a line after `path-check-skip-next-line`
+    - are within a code block
+    - are within a YAML block
 
     Returns:
         A list of tuples of (filename, path) that don't exist.
@@ -284,37 +358,35 @@ def check_files() -> list[tuple[str, PathInfo]]:
         if any(r.search(f) for r in IGNORED_FILES_REGEX):
             continue
         paths = extract_paths_from_file(f)
+
+        def check_path(path: str) -> bool:
+            """
+            Checks if a path is valid.
+
+            Args:
+                path: The path to check.
+
+            Returns:
+                True if we performed an action based on the path
+            """
+            if os.path.exists(path):
+                # if the path is whitelisted, then it is not broken
+                if any(r[0].search(f) and r[1].search(path) for r in WHITELISTED_FILE_PATH_PAIRS_REGEX):
+                    return True
+                for p in REFERENTIAL_PATHS:
+                    if p in f and p in path:
+                        return True
+            return False
+
         for path_info in paths:
-            # If the path does not exist, then it is broken
-            if not os.path.exists(path_info.path):
-                if path_info.path.startswith("."):
-                    # if it is a relative path, then it is broken
-                    filenames_with_broken_paths.append((f, path_info))
-                    continue
-                else:
-                    # attempt to resolve the path first
-                    if not os.path.exists(os.path.join(os.path.dirname(f), path_info.path)):
-                        # if it still doesn't exist then assume that it isn't actually a path
-                        if any(p in path_info.path for p in REFERENTIAL_PATHS):
-                            # if it is a referential path, then it is likely broken
-                            filenames_with_broken_paths.append((f, path_info))
-                        else:
-                            skipped_paths.add(path_info.path)
-                            continue
-            path = os.path.commonpath([f, path_info.path])
-            if path == "" or path == ".":
-                # try to resolve the path relative to the file
-                if not os.path.exists(os.path.join(os.path.dirname(f), path_info.path)):
-                    filenames_with_broken_paths.append((f, path_info))
-            else:
-                for r in REFERENTIAL_PATHS:
-                    if r in path:
-                        # If the path is a single directory (which would be a referential path),
-                        # then it is likely broken since it would be referring to outside the current
-                        # directory
-                        if len(path.split(os.path.sep)) == 1:
-                            filenames_with_broken_paths.append((f, path_info))
-                            break
+            if check_path(path_info.path):
+                continue
+            resolved_path = os.path.normpath(os.path.join(os.path.dirname(f), path_info.path))
+            if check_path(resolved_path):
+                continue
+
+            # if it still doesn't exist then it's broken
+            filenames_with_broken_paths.append((f, path_info))
 
     if skipped_paths:
         print("Warning: skipped the following paths:")
@@ -336,37 +408,45 @@ def main():
     return_code: int = 0
 
     if args.check_broken_symlinks:
-        print("Checking for broken symlinks...")
+        print("Checking for broken symbolic links...")
         broken_symlinks: list[str] = list_broken_symlinks()
         if broken_symlinks:
             return_code = 1
             print("Found broken symlinks:")
             for symlink in broken_symlinks:
                 print(f"  {symlink}")
-        print("Done checking for broken symlinks.")
+        print("Done checking for broken symbolic links.")
 
     if args.check_paths_in_files:
-        print("Checking for broken paths in files...")
+        print("Checking paths within files...")
 
         broken_paths: list[tuple[str, PathInfo]] = check_files()
         if broken_paths:
             return_code = 1
-            print("Found \"broken\" paths in files:")
+            print("Failed path checks:")
             for filename, path_info in broken_paths:
                 print(f"- {filename}:{path_info.line_number}:{path_info.column} -> {path_info.path}")
+            print(
+                textwrap.dedent("""
+                    Note: If a path exists but is identified here as broken, then it is likely due to the
+                          referential integrity check failing. This check is designed to ensure that paths
+                          are valid and that they exist in the same directory tree as the file being checked.
+
+                          If you believe this is a false positive, please add the path to the
+                          WHITELISTED_FILE_PATH_PAIRS set in the path_checks.py file.
+
+                    Note: Some paths may be ignored due to rules:
+                        - IGNORED_FILES: files that should be ignored
+                        - IGNORED_PATHS: paths that should be ignored
+                        - IGNORED_FILE_PATH_PAIRS: file-path pairs that should be ignored
+                        - WHITELISTED_WORDS: common word groups that should be ignored (and/or, input/output)
+
+                    See ./docs/source/resources/contributing.md#path-checks for more information about path checks.
+                    """))
         else:
-            print("No broken paths found!")
+            print("No failed path checks encountered!")
 
-        print(
-            textwrap.dedent(
-                """
-                Note: some paths may be ignored due to rules
-                - IGNORED_FILES: files that should be ignored
-                - IGNORED_PATHS: paths that should be ignored
-                - IGNORED_FILE_PATH_PAIRS: file-path pairs that should be ignored
-                """, ))
-
-        print("Done checking for broken paths in files.")
+        print("Done checking paths within files.")
 
     sys.exit(return_code)
 

@@ -26,6 +26,7 @@ aiq workflow create --workflow-dir examples text_file_ingest
 ```
 
 This command does the following:
+<!-- path-check-skip-next-line -->
 - Creates a new directory, `examples/text_file_ingest`.
 - Sets up the necessary files and folders.
 - Installs the new Python package for your workflow.
@@ -40,6 +41,7 @@ aiq workflow delete text_file_ingest
 <!-- This section needs to be updated once #559 is completed -->
 Each workflow created in this way also creates a Python project, and by default, this will also install the project into the environment. If you want to avoid installing it into the environment you can use the `--no-install` flag.
 
+<!-- path-check-skip-next-line -->
 This creates a new directory `examples/text_file_ingest` with the following layout:
 ```
 examples/
@@ -58,8 +60,10 @@ examples/
 The completed code for this example can be found in the `examples/documentation_guides/workflows/text_file_ingest` directory of the NeMo Agent toolkit repository.
 :::
 
+<!-- path-check-skip-next-line -->
 By convention, tool implementations are defined within or imported into the `register.py` file. In this example, the tool implementation exists within the `text_file_ingest_function.py` file and is imported into the `register.py` file. The `pyproject.toml` file contains the package metadata and dependencies for the tool. The `text_file_ingest_function.py` that was created for us will contain a configuration object (`TextFileIngestFunctionConfig`) along with the tool function (`text_file_ingest_function`). The next two sections will walk through customizing these.
 
+<!-- path-check-skip-next-line -->
 Many of these tools contain an associated workflow configuration file stored in a `config` directory, along with example data stored in a `data` directory. Since these tools are installable Python packages and the workflow configuration file and data must be included in the package, they need to be located under the `examples/text_file_ingest/src/text_file_ingest` directory. For convenience, symlinks can be created at the root of the project directory pointing to the actual directories. Lastly, a `README.md` file is often included in the root of the project. Resulting in a directory structure similar to the following:
 ```
 examples/
@@ -196,6 +200,7 @@ async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builde
 Starting from the `custom_config.yml` file you created in the previous section, replace the two `webpage_query` tools with the new `text_file_ingest` tool. For the data source, you can use a collection of text files located in the `examples/documentation_guides/workflows/text_file_ingest/data` directory that describes [DOCA GPUNetIO](https://docs.nvidia.com/doca/sdk/doca+gpunetio/index.html).
 
 :::{note}
+<!-- path-check-skip-next-line -->
 If you are following this document and building this tool from scratch, you can either copy the contents of `examples/documentation_guides/workflows/text_file_ingest/data` into `examples/text_file_ingest/src/text_file_ingest/data` or populate it with your own text files.
 :::
 
@@ -291,6 +296,7 @@ aiq workflow delete text_file_ingest
 ## Running the Workflow
 
 :::{note}
+<!-- path-check-skip-next-line -->
 The following commands reference the pre-built workflow located in `examples/documentation_guides/workflows/text_file_ingest`. If you are following this document and building this tool from the beginning, replace `examples/documentation_guides/workflows/text_file_ingest` with `examples/text_file_ingest`.
 :::
 

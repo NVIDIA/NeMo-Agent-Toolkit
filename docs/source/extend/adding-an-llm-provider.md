@@ -66,6 +66,7 @@ Registering an embedder or retriever provider is similar; however, the function 
 
 
 The `OpenAIModelConfig` from the previous section is registered as follows:
+<!-- path-check-skip-next-line -->
 `src/aiq/llm/openai_llm.py`:
 ```python
 @register_llm_provider(config_type=OpenAIModelConfig)
