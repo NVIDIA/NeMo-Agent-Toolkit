@@ -63,3 +63,43 @@ async def put_user_report(config: PutUserReportConfig, builder: Builder):
         return f"User report for {user_id} with date {date} added successfully"
 
     yield FunctionInfo.from_fn(_inner, description=config.description)
+
+
+class UpdateUserReportConfig(FunctionBaseConfig, name="update_user_report"):
+    object_store: ObjectStoreRef
+    description: str
+
+
+@register_function(config_type=UpdateUserReportConfig)
+async def update_user_report(config: UpdateUserReportConfig, builder: Builder):
+    object_store = await builder.get_object_store_client(object_store_name=config.object_store)
+
+    async def _inner(report: str, user_id: str, date: str | None = None) -> str:
+        date = date or "latest"
+        key = f"/reports/{user_id}/{date}.json"
+        logger.info("Update or insert report into %s for user %s with date %s", key, user_id, date)
+        await object_store.upsert_object(key=key,
+                                         item=ObjectStoreItem(data=report.encode("utf-8"),
+                                                              content_type="application/json"))
+        return f"User report for {user_id} with date {date} updated"
+
+    yield FunctionInfo.from_fn(_inner, description=config.description)
+
+
+class DeleteUserReportConfig(FunctionBaseConfig, name="delete_user_report"):
+    object_store: ObjectStoreRef
+    description: str
+
+
+@register_function(config_type=DeleteUserReportConfig)
+async def delete_user_report(config: DeleteUserReportConfig, builder: Builder):
+    object_store = await builder.get_object_store_client(object_store_name=config.object_store)
+
+    async def _inner(user_id: str, date: str | None = None) -> str:
+        date = date or "latest"
+        key = f"/reports/{user_id}/{date}.json"
+        logger.info("Delete report from %s for user %s with date %s", key, user_id, date)
+        await object_store.delete_object(key=key)
+        return f"User report for {user_id} with date {date} deleted"
+
+    yield FunctionInfo.from_fn(_inner, description=config.description)

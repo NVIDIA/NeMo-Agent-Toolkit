@@ -28,21 +28,28 @@ class MySQLObjectStoreClientConfig(ObjectStoreBaseConfig, name="mysql"):
     Object store that stores objects in a MySQL database.
     """
 
-    DEFAULT_ENDPOINT: ClassVar[str] = "127.0.0.1:3306"
+    DEFAULT_HOST: ClassVar[str] = "localhost"
+    DEFAULT_PORT: ClassVar[int] = 3306
 
-    ENDPOINT_ENV: ClassVar[str] = "AIQ_MYSQL_OBJECT_STORE_ENDPOINT"
-    USER_ENV: ClassVar[str] = "AIQ_MYSQL_OBJECT_STORE_USER"
+    HOST_ENV: ClassVar[str] = "AIQ_MYSQL_OBJECT_STORE_HOST"
+    PORT_ENV: ClassVar[str] = "AIQ_MYSQL_OBJECT_STORE_PORT"
+    USERNAME_ENV: ClassVar[str] = "AIQ_MYSQL_OBJECT_STORE_USERNAME"
     PASSWORD_ENV: ClassVar[str] = "AIQ_MYSQL_OBJECT_STORE_PASSWORD"
 
     bucket_name: str = Field(description="The name of the bucket to use for the object store")
-    endpoint_url: str = Field(
-        default=os.environ.get(ENDPOINT_ENV, DEFAULT_ENDPOINT),
-        description="The host and port of the MySQL server"
-        " (uses {ENDPOINT_ENV} if unspecified; falls back to {DEFAULT_ENDPOINT})",
+    host: str = Field(
+        default=os.environ.get(HOST_ENV, DEFAULT_HOST),
+        description="The host of the MySQL server"
+        " (uses {HOST_ENV} if unspecified; falls back to {DEFAULT_HOST})",
     )
-    user: str | None = Field(
-        default=os.environ.get(USER_ENV),
-        description=f"The user used to connect to the MySQL server (uses {USER_ENV} if unspecifed)",
+    port: int = Field(
+        default=int(os.environ.get(PORT_ENV, DEFAULT_PORT)),
+        description="The port of the MySQL server"
+        " (uses {PORT_ENV} if unspecified; falls back to {DEFAULT_PORT})",
+    )
+    username: str | None = Field(
+        default=os.environ.get(USERNAME_ENV),
+        description=f"The username used to connect to the MySQL server (uses {USERNAME_ENV} if unspecifed)",
     )
     password: str | None = Field(
         default=os.environ.get(PASSWORD_ENV),

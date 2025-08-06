@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+
 from aiq.builder.builder import Builder
 from aiq.cli.register_workflow import register_object_store
 from aiq.data_models.object_store import KeyAlreadyExistsError
@@ -37,29 +39,34 @@ class InMemoryObjectStore(ObjectStore):
     """
 
     def __init__(self) -> None:
+        self._lock = asyncio.Lock()
         self._store: dict[str, ObjectStoreItem] = {}
 
     @override
     async def put_object(self, key: str, item: ObjectStoreItem) -> None:
-        if key in self._store:
-            raise KeyAlreadyExistsError(key)
-        self._store[key] = item
+        async with self._lock:
+            if key in self._store:
+                raise KeyAlreadyExistsError(key)
+            self._store[key] = item
 
     @override
     async def upsert_object(self, key: str, item: ObjectStoreItem) -> None:
-        self._store[key] = item
+        async with self._lock:
+            self._store[key] = item
 
     @override
     async def get_object(self, key: str) -> ObjectStoreItem:
-        value = self._store.get(key)
-        if value is None:
-            raise NoSuchKeyError(key)
-        return value
+        async with self._lock:
+            value = self._store.get(key)
+            if value is None:
+                raise NoSuchKeyError(key)
+            return value
 
     @override
     async def delete_object(self, key: str) -> None:
         try:
-            self._store.pop(key)
+            async with self._lock:
+                self._store.pop(key)
         except KeyError:
             raise NoSuchKeyError(key)
 

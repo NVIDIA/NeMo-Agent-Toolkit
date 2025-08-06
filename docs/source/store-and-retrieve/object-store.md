@@ -70,7 +70,7 @@ The AIQ toolkit includes several object store providers:
 
 - **In-Memory Object Store**: In-memory storage for development and testing. See `src/aiq/object_store/in_memory_object_store.py`
 - **S3 Object Store**: Amazon S3 and S3-compatible storage (like MinIO). See `packages/aiqtoolkit_s3/src/aiq/plugins/s3/s3_object_store.py`
-- **MySQL Object Store**: MySQL database-backed storage. See `packages/aiqtoolkit_s3/src/aiq/plugins/mysql/mysql_object_store.py`
+- **MySQL Object Store**: MySQL database-backed storage. See `packages/aiqtoolkit_mysql/src/aiq/plugins/mysql/mysql_object_store.py`
 
 ## Usage
 
@@ -101,9 +101,10 @@ Example configuration for MySQL storage:
 object_stores:
   my_object_store:
     _type: mysql
-    endpoint_url: localhost:3306
-    access_key: root
-    secret_key: my_password
+    host: localhost
+    port: 3306
+    username: root
+    password: my_password
     bucket_name: my-bucket
 ```
 
@@ -128,11 +129,11 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
     retrieved_item = await object_store.get_object("greeting.txt")
     print(retrieved_item.data.decode("utf-8"))
 
-    # Update an object
+    # Update (or insert) an object
     await object_store.upsert_object("greeting.txt", ObjectStoreItem(
-      data=b"Goodbye, World!",
-      content_type="text/plain",
-      metadata={"author", "user123"}
+        data=b"Goodbye, World!",
+        content_type="text/plain",
+        metadata={"author", "user123"}
     ))
 
     # Retrieve an object

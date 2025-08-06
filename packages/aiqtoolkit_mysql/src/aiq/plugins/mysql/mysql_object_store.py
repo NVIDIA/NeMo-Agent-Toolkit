@@ -15,7 +15,6 @@
 
 import logging
 import pickle
-from urllib.parse import urlparse
 
 import aiomysql
 from aiomysql.pool import Pool
@@ -44,33 +43,22 @@ class MySQLObjectStore(ObjectStore):
 
         self._schema = f"`bucket_{self._config.bucket_name}`"
 
-    def _get_host_and_port(self):
-
-        endpoint_url = self._config.endpoint_url
-        if "//" not in endpoint_url:
-            endpoint_url = f"//{endpoint_url}"
-
-        url = urlparse(endpoint_url)
-        return url.hostname, int(url.port) if url.port else None
-
     async def __aenter__(self):
 
         if self._conn_pool is not None:
             raise RuntimeError("Connection already established")
 
-        # Split the endpoint url into host and port using URL parse
-        host, port = self._get_host_and_port()
-
         self._conn_pool = await aiomysql.create_pool(
-            host=host,
-            port=port,
-            user=self._config.user,
+            host=self._config.host,
+            port=self._config.port,
+            user=self._config.username,
             password=self._config.password,
             autocommit=False,  # disable autocommit for transactions
         )
         assert self._conn_pool is not None
 
-        logger.info(f"Created connection pool for {self._config.bucket_name} at {self._config.endpoint_url}")
+        logger.info(
+            f"Created connection pool for {self._config.bucket_name} at {self._config.host}:{self._config.port}")
 
         async with self._conn_pool.acquire() as conn:
             async with conn.cursor() as cur:
