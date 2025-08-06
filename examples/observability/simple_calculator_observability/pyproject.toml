@@ -12,7 +12,7 @@ root = "../../.."
 name = "aiq_simple_calculator_observability"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain,ragaai,opentelemetry,phoenix,weave]~=1.2",
+  "aiqtoolkit[langchain,telemetry]~=1.2",
   "aiq_simple_calculator",
 ]
 requires-python = ">=3.11,<3.13"
