@@ -57,7 +57,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ## Run the Workflow
 
-1. Start the Phoenix server if not already running. If you are using a remote Phoenix server, you can skip this step and modify the config/config.yml to point to the URL.
+1. Start the Phoenix server if not already running. If you are using a remote Phoenix server, you can skip this step and modify the configs/config.yml file to point to the URL.
    ```bash
    docker run -p 6006:6006 -p 4317:4317 -i -t arizephoenix/phoenix:latest
    ```

@@ -107,7 +107,7 @@ Each subdirectory focuses on a specific area of the toolkit:
 ### Fundamental Principles
 
 * **Documentation-First Approach**: After updating the codebase, always create or update documentation first, then create Cursor rules based on that documentation. This ensures Cursor rules stay aligned with the latest codebase changes and maintain consistency with the documentation.
-
+<!-- path-check-skip-next-line -->
 * **Use Cursor Agent to Create Rules**: Always use the Cursor Agent to create rules. This approach is faster and more importantly, it automatically follows `@cursor/rules/cursor-rules.mdc` to ensure rules are consistent with the rule creation guidelines and maintain the proper organization structure.
 
 ### Rule Creation Process

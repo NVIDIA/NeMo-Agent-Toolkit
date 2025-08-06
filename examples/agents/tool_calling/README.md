@@ -38,10 +38,10 @@ A configurable Tool Calling agent. This agent leverages the NeMo Agent toolkit p
 
 ## Key Features
 
-- **Tool Calling Agent Framework:** Demonstrates a `tool_calling_agent` that leverages tool/function input schemas to make precise tool selections and structured function calls.
+- **Tool Calling Agent Framework:** Demonstrates a `tool_calling_agent` that leverages tool or function input schemas to make precise tool selections and structured function calls.
 - **Wikipedia Search Integration:** Shows integration with the `wikipedia_search` tool for retrieving factual information from Wikipedia sources.
 - **Code Generation Capabilities:** Includes the `code_generation_tool` for generating code examples and technical content.
-- **Schema-Driven Tool Selection:** Uses structured input schemas to appropriately route to the correct tool, providing more deterministic tool calling compared to name/description-based routing.
+- **Schema-Driven Tool Selection:** Uses structured input schemas to appropriately route to the correct tool, providing more deterministic tool calling compared to name or description-based routing.
 - **Dual-Node Graph Architecture:** Implements the same operational pattern as other NeMo Agent toolkit agents, alternating between reasoning and tool execution while using schema-based tool selection.
 
 ## Graph Structure
@@ -54,7 +54,7 @@ The Tool Calling agent uses the same dual-node graph architecture as other agent
 
 **Workflow Overview:**
 - **Start**: The agent begins processing with user input
-- **Agent Node**: Leverages tool/function input schemas to decide which tool to call or provide a final answer
+- **Agent Node**: Leverages tool or function input schemas to decide which tool to call or provide a final answer
 - **Conditional Edge**: Routes the flow based on the agent's decision
 - **Tool Node**: Executes the selected tool using structured input schemas
 - **Cycle**: The agent can loop between reasoning and tool execution until it reaches a final answer

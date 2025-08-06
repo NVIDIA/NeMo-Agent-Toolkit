@@ -21,7 +21,6 @@ classifiers = ["Programming Language :: Python"]
 [tool.uv.sources]
 aiqtoolkit = { path = "../../..", editable = true }
 aiq_simple_calculator = { path = "../../getting_started/simple_calculator", editable = true }
-aiq_por_to_jiratickets = { path = "../../HITL/por_to_jiratickets", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_simple_calculator_hitl = "aiq_simple_calculator_hitl.register"

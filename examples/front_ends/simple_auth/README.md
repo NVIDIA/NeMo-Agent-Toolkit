@@ -19,7 +19,7 @@ limitations under the License.
 
 This example demonstrates how to use the library's native support for authentication to allow agents to use tools that require
 authentication to use. Particularly, this example highlights how to use the `OAuth 2.0 Authorization Code Flow` to authenticate
-with a demonstrative `OAuth 2.0` provider and then return information from the authorization server's demonstrative `api/me` endpoint
+with a demonstrative `OAuth 2.0` provider and then return information from the authorization server's demonstrative `/api/me` endpoint
 which provides information about the authenticated user.
 
 ## How the OAuth2.0 Authorization‑Code Flow Works

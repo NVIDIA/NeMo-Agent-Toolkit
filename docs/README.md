@@ -33,6 +33,7 @@ make
 # verify
 firefox build/html/index.html
 ```
+<!-- path-check-skip-next-line -->
 Outputs to `build/docs/html`
 
 ## Contributing
