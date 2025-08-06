@@ -23,7 +23,7 @@ import aiq.authentication.api_key.api_key_auth_provider_config as api_key_auth_p
 from aiq.builder.workflow_builder import WorkflowBuilder
 
 # Handy names
-APIKeyConfig = api_key_auth_provider_config.APIKeyAuthProviderConfig
+APIKeyAuthProviderConfig = api_key_auth_provider_config.APIKeyAuthProviderConfig
 HeaderAuthScheme = api_key_auth_provider_config.HeaderAuthScheme
 APIKeyFieldError = api_key_auth_provider_config.APIKeyFieldError
 HeaderNameFieldError = api_key_auth_provider_config.HeaderNameFieldError
@@ -42,9 +42,9 @@ def make_config(
     scheme: HeaderAuthScheme = HeaderAuthScheme.BEARER,
     header_name: str | None = "Authorization",
     header_prefix: str | None = "Bearer",
-) -> APIKeyConfig:
-    """Factory producing a valid APIKeyConfig for the given scheme."""
-    return APIKeyConfig(
+) -> APIKeyAuthProviderConfig:
+    """Factory producing a valid APIKeyAuthProviderConfig for the given scheme."""
+    return APIKeyAuthProviderConfig(
         raw_key=raw_key,
         auth_scheme=scheme,
         custom_header_name=header_name,
@@ -53,7 +53,7 @@ def make_config(
 
 
 # --------------------------------------------------------------------------- #
-# APIKeyConfig – validation tests
+# APIKeyAuthProviderConfig – validation tests
 # --------------------------------------------------------------------------- #
 def test_config_valid_bearer():
     cfg = make_config()
