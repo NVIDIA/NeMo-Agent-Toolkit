@@ -43,30 +43,25 @@ class InMemoryObjectStore(ObjectStore):
     async def put_object(self, key: str, item: ObjectStoreItem) -> None:
         if key in self._store:
             raise KeyAlreadyExistsError(key)
-
         self._store[key] = item
-        return
 
     @override
     async def upsert_object(self, key: str, item: ObjectStoreItem) -> None:
         self._store[key] = item
-        return
 
     @override
     async def get_object(self, key: str) -> ObjectStoreItem:
-
-        if key not in self._store:
+        value = self._store.get(key)
+        if value is None:
             raise NoSuchKeyError(key)
-
-        return self._store[key]
+        return value
 
     @override
     async def delete_object(self, key: str) -> None:
-        if key not in self._store:
+        try:
+            self._store.pop(key)
+        except KeyError:
             raise NoSuchKeyError(key)
-
-        self._store.pop(key)
-        return
 
 
 @register_object_store(config_type=InMemoryObjectStoreConfig)

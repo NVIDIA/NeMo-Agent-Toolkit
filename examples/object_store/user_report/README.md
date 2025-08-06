@@ -233,19 +233,16 @@ aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --
 
 **Expected Workflow Output**
 ```console
-The latest report for user 67890 is as follows:
-- Timestamp: 2025-04-21T15:40:00Z
-- System:
-  - OS: macOS 14.1
-  - CPU Usage: 43%
-  - Memory Usage: 8.1 GB / 16 GB
-  - Disk Space: 230 GB free of 512 GB
-- Network:
-  - Latency: 95 ms
-  - Packet Loss: 0%
-  - VPN Connected: True
-- Errors: None
-- Recommendations: System operating normally, No action required.
+<snipped for brevity>
+
+[AGENT]
+Calling tools: get_user_report
+Tool's input: {"user_id": "67890", "date": null}
+
+<snipped for brevity>
+
+Workflow Result:
+['The latest report of user 67890 is:\n\n{\n    "user_id": "67890",\n    "timestamp": "2025-04-21T15:40:00Z",\n    "system": {\n      "os": "macOS 14.1",\n      "cpu_usage": "43%",\n      "memory_usage": "8.1 GB / 16 GB",\n      "disk_space": "230 GB free of 512 GB"\n    },\n    "network": {\n      "latency_ms": 95,\n      "packet_loss": "0%",\n      "vpn_connected": true\n    },\n    "errors": [],\n    "recommendations": [\n      "System operating normally",\n      "No action required"\n    ]\n}']
 ```
 
 ### Example 2
@@ -256,28 +253,16 @@ aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --
 
 **Expected Workflow Output**
 ```console
-The latest report for user 12345 on April 15th, 2025, is as follows:
+<snipped for brevity>
 
-- **System Information:**
-  - OS: Windows 11
-  - CPU Usage: 82%
-  - Memory Usage: 6.3 GB / 8 GB
-  - Disk Space: 120 GB free of 500 GB
+[AGENT]
+Calling tools: get_user_report
+Tool's input: {"user_id": "12345", "date": "2025-04-15"}
 
-- **Network Information:**
-  - Latency: 240 ms
-  - Packet Loss: 0.5%
-  - VPN Connected: False
+<snipped for brevity>
 
-- **Errors:**
-  - Timestamp: 2025-04-15T10:21:59Z
-  - Message: "App crash detected: \'PhotoEditorPro.exe\' exited unexpectedly"
-  - Severity: High
-
-- **Recommendations:**
-  - Update graphics driver
-  - Check for overheating hardware
-  - Enable automatic crash reporting
+Workflow Result:
+['The latest report of user 12345 on April 15th 2025 is:\n\n{\n    "user_id": "12345",\n    "timestamp": "2025-04-15T10:22:30Z",\n    "system": {\n      "os": "Windows 11",\n      "cpu_usage": "82%",\n      "memory_usage": "6.3 GB / 8 GB",\n      "disk_space": "120 GB free of 500 GB"\n    },\n    "network": {\n      "latency_ms": 240,\n      "packet_loss": "0.5%",\n      "vpn_connected": false\n    },\n    "errors": [\n      {\n        "timestamp": "2025-04-15T10:21:59Z",\n        "message": "App crash detected: \'PhotoEditorPro.exe\' exited unexpectedly",\n        "severity": "high"\n      }\n    ],\n    "recommendations": [\n      "Update graphics driver",\n      "Check for overheating hardware",\n      "Enable automatic crash reporting"\n    ]\n  }']
 ```
 
 ### Example 3
@@ -295,7 +280,18 @@ aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --
 
 **Expected Workflow Output**
 ```console
-The latest report for user 6789 has been successfully created with the specified recommendations.
+<snipped for brevity>
+
+[AGENT]
+Calling tools: put_user_report
+Tool's input: {"report": "{\n    \"recommendations\": [\n        \"Update graphics driver\",\n        \"Check for overheating hardware\",\n        \"Enable automatic crash reporting\"\n    ]\n}", "user_id": "6789", "date": null}
+Tool's response:
+User report for 678901 with date latest added successfully
+
+<snipped for brevity>
+
+Workflow Result:
+['The latest report for user 6789 has been created with the provided JSON contents.']
 ```
 
 ### Example 4 (Continued from Example 3)
@@ -305,8 +301,22 @@ aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --
 
 **Expected Workflow Output**
 ```console
-The latest report for user 6789 includes the following recommendations:
-1. Update graphics driver
-2. Check for overheating hardware
-3. Enable automatic crash reporting
+<snipped for brevity>
+
+[AGENT]
+Calling tools: get_user_report
+Tool's input: {"user_id": "6789", "date": null}
+Tool's response:
+{
+    "recommendations": [
+        "Update graphics driver",
+        "Check for overheating hardware",
+        "Enable automatic crash reporting"
+    ]
+}
+
+<snipped for brevity>
+
+Workflow Result:
+['The latest report for user 6789 contains the following recommendations: "Update graphics driver", "Check for overheating hardware", and "Enable automatic crash reporting".']
 ```

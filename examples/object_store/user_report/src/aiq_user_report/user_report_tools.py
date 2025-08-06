@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import logging
 
 from aiq.builder.builder import Builder
@@ -36,13 +35,11 @@ async def get_user_report(config: GetUserReportConfig, builder: Builder):
     object_store = await builder.get_object_store_client(object_store_name=config.object_store)
 
     async def _inner(user_id: str, date: str | None = None) -> str:
-        key = f"/reports/{user_id}/{date}.json" if date else f"/reports/{user_id}/latest.json"
+        date = date or "latest"
+        key = f"/reports/{user_id}/{date}.json"
         logger.info("Fetching report from %s", key)
         item = await object_store.get_object(key=key)
-        if isinstance(item, str):
-            return item
-
-        return json.loads(item.data.decode("utf-8"))
+        return item.data.decode("utf-8")
 
     yield FunctionInfo.from_fn(_inner, description=config.description)
 
@@ -53,14 +50,16 @@ class PutUserReportConfig(FunctionBaseConfig, name="put_user_report"):
 
 
 @register_function(config_type=PutUserReportConfig)
-async def put_user_report(config: GetUserReportConfig, builder: Builder):
+async def put_user_report(config: PutUserReportConfig, builder: Builder):
     object_store = await builder.get_object_store_client(object_store_name=config.object_store)
 
     async def _inner(report: str, user_id: str, date: str | None = None) -> str:
-        key = f"/reports/{user_id}/{date}.json" if date else f"/reports/{user_id}/latest.json"
-        logger.info("Fetching report from %s", key)
-        return await object_store.put_object(key=key,
-                                             item=ObjectStoreItem(data=report.encode("utf-8"),
-                                                                  content_type="application/json"))
+        date = date or "latest"
+        key = f"/reports/{user_id}/{date}.json"
+        logger.info("Putting new report into %s for user %s with date %s", key, user_id, date)
+        await object_store.put_object(key=key,
+                                      item=ObjectStoreItem(data=report.encode("utf-8"),
+                                                           content_type="application/json"))
+        return f"User report for {user_id} with date {date} added successfully"
 
     yield FunctionInfo.from_fn(_inner, description=config.description)

@@ -68,6 +68,7 @@ class MySQLObjectStore(ObjectStore):
             password=self._config.password,
             autocommit=False,  # disable autocommit for transactions
         )
+        assert self._conn_pool is not None
 
         logger.info(f"Created connection pool for {self._config.bucket_name} at {self._config.endpoint_url}")
 
@@ -129,7 +130,8 @@ class MySQLObjectStore(ObjectStore):
                     await cur.execute("INSERT IGNORE INTO object_meta (path, size) VALUES (%s, %s)",
                                       (key, len(item.data)))
                     if cur.rowcount == 0:
-                        raise KeyAlreadyExistsError(key=key)
+                        raise KeyAlreadyExistsError(
+                            key=key, additional_message=f"MySQL table {self._config.bucket_name} already has key {key}")
                     await cur.execute("SELECT id FROM object_meta WHERE path=%s FOR UPDATE;", (key, ))
                     (obj_id, ) = await cur.fetchone()
 
@@ -185,7 +187,8 @@ class MySQLObjectStore(ObjectStore):
                 """, (key, ))
                 row = await cur.fetchone()
                 if not row:
-                    raise NoSuchKeyError(key=key)
+                    raise NoSuchKeyError(
+                        key=key, additional_message=f"MySQL table {self._config.bucket_name} does not have key {key}")
                 return pickle.loads(row[0])
 
     @override
@@ -207,7 +210,9 @@ class MySQLObjectStore(ObjectStore):
                     """, (key, ))
 
                     if cur.rowcount == 0:
-                        raise NoSuchKeyError(key=key)
+                        raise NoSuchKeyError(
+                            key=key,
+                            additional_message=f"MySQL table {self._config.bucket_name} does not have key {key}")
 
                     await conn.commit()
                 except Exception:

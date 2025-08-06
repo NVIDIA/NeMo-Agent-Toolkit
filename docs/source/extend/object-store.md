@@ -27,13 +27,32 @@ This documentation presumes familiarity with the NeMo Agent toolkit plugin archi
 
 * **Object Store Interfaces**
    - **{py:class}`~aiq.object_store.interfaces.ObjectStore`** (abstract interface): The core interface for object store operations, including put, upsert, get, and delete operations.
+     ```python
+     class ObjectStore(ABC):
+        @abstractmethod
+        async def put_object(self, key: str, item: ObjectStoreItem) -> None:
+            ...
+
+        @abstractmethod
+        async def upsert_object(self, key: str, item: ObjectStoreItem) -> None:
+            ...
+
+        @abstractmethod
+        async def get_object(self, key: str) -> ObjectStoreItem:
+            ...
+
+        @abstractmethod
+        async def delete_object(self, key: str) -> None:
+            ...
+     ```
 
 * **Object Store Models**
-   - **{py:class}`~aiq.object_store.models.ObjectStoreItem`**: The main object representing an item in the object store. It includes:
+   - **{py:class}`~aiq.object_store.models.ObjectStoreItem`**: The main object representing an item in the object store.
      ```python
-     data: bytes  # The binary data to store
-     content_type: str | None  # The MIME type of the data (optional)
-     metadata: dict[str, str] | None  # Custom key-value metadata (optional)
+     class ObjectStoreItem:
+        data: bytes  # The binary data to store
+        content_type: str | None  # The MIME type of the data (optional)
+        metadata: dict[str, str] | None  # Custom key-value metadata (optional)
      ```
 
 * **Object Store Exceptions**
@@ -63,6 +82,7 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~aiq.data_mod
    from aiq.object_store.interfaces import ObjectStore
    from aiq.object_store.models import ObjectStoreItem
    from aiq.data_models.object_store import KeyAlreadyExistsError, NoSuchKeyError
+   from aiq.utils.type_utils import override
 
    class MyCustomObjectStore(ObjectStore):
        def __init__(self, config: MyCustomObjectStoreConfig):
@@ -70,7 +90,8 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~aiq.data_mod
            self._conn_url = config.connection_url
            self._bucket_name = config.bucket_name
            # Set up connections to your backend here
-
+       
+       @override
        async def put_object(self, key: str, item: ObjectStoreItem) -> None:
            # Check if key already exists
            if await self._key_exists(key):
@@ -79,10 +100,12 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~aiq.data_mod
            # Store the object in your backend
            await self._store_object(key, item)
 
+       @override
        async def upsert_object(self, key: str, item: ObjectStoreItem) -> None:
            # Store or update the object in your backend
            await self._store_object(key, item)
 
+       @override
        async def get_object(self, key: str) -> ObjectStoreItem:
            # Retrieve the object from your backend
            item = await self._retrieve_object(key)
@@ -90,6 +113,7 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~aiq.data_mod
                raise NoSuchKeyError(key)
            return item
 
+       @override
        async def delete_object(self, key: str) -> None:
            # Delete the object from your backend
            if not await self._delete_object(key):
@@ -146,19 +170,21 @@ A typical pattern is:
 
 ### Example: Minimal Skeleton
 
+File Structure:
+```
+my_custom_object_store
+├── my_custom_object_store.py
+├── object_store.py
+└── register.py
+```
+
+`my_custom_object_store.py` contents:
 ```python
-# my_custom_object_store_config.py
-from aiq.data_models.object_store import ObjectStoreBaseConfig
-
-class MyCustomObjectStoreConfig(ObjectStoreBaseConfig, name="my_custom_object_store"):
-    url: str
-    token: str
-    bucket_name: str
-
-# my_custom_object_store.py
+from aiq.data_models.object_store import KeyAlreadyExistsError
+from aiq.data_models.object_store import NoSuchKeyError
 from aiq.object_store.interfaces import ObjectStore
 from aiq.object_store.models import ObjectStoreItem
-from aiq.data_models.object_store import KeyAlreadyExistsError, NoSuchKeyError
+from aiq.utils.type_utils import override
 
 class MyCustomObjectStore(ObjectStore):
     def __init__(self, cfg: MyCustomObjectStoreConfig):
@@ -166,30 +192,49 @@ class MyCustomObjectStore(ObjectStore):
         self._token = cfg.token
         self._bucket_name = cfg.bucket_name
 
+    @override
     async def put_object(self, key: str, item: ObjectStoreItem) -> None:
         # Check if key exists and raise KeyAlreadyExistsError if it does
         # Store the object
         pass
 
+    @override
     async def upsert_object(self, key: str, item: ObjectStoreItem) -> None:
         # Store or update the object
         pass
 
+    @override
     async def get_object(self, key: str) -> ObjectStoreItem:
         # Retrieve the object, raise NoSuchKeyError if not found
         pass
 
+    @override
     async def delete_object(self, key: str) -> None:
         # Delete the object, raise NoSuchKeyError if not found
         pass
+```
 
-# register.py
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_object_store
+`object_store.py` contents:
+```python
+from aiq.data_models.object_store import ObjectStoreBaseConfig
+
+class MyCustomObjectStoreConfig(ObjectStoreBaseConfig, name="my_custom_object_store"):
+    url: str
+    token: str
+    bucket_name: str
+
 
 @register_object_store(config_type=MyCustomObjectStoreConfig)
 async def my_custom_object_store(config: MyCustomObjectStoreConfig, builder: Builder):
+
+    from .my_custom_object_store import MyCustomObjectStore
     yield MyCustomObjectStore(config)
+```
+
+
+`register.py` contents:
+```python
+from . import object_store
 ```
 
 ---
