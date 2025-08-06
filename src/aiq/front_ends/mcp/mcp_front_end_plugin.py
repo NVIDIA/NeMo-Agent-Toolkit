@@ -43,6 +43,37 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
             log_level=self.front_end_config.log_level,
         )
 
+        # Add HTTP health endpoint that exercises MCP ping handler
+        @mcp.custom_route("/health", methods=["GET"])
+        async def health_check(request):
+            """HTTP health check using server's internal ping handler"""
+            from starlette.responses import JSONResponse
+
+            try:
+                from mcp.types import PingRequest
+
+                # Create a ping request
+                ping_request = PingRequest(method="ping")
+
+                # Call the ping handler directly (same one that responds to MCP pings)
+                await mcp._mcp_server.request_handlers[PingRequest](ping_request)
+
+                return JSONResponse({
+                    "status": "healthy",
+                    "mcp_ping_result": "success",
+                    "server_name": mcp.name,
+                },
+                                    headers={"Content-Type": "application/json"})
+
+            except Exception as e:
+                return JSONResponse({
+                    "status": "unhealthy",
+                    "error": str(e),
+                    "server_name": mcp.name,
+                },
+                                    status_code=503,
+                                    headers={"Content-Type": "application/json"})
+
         # Build the workflow and register all functions with MCP
         async with WorkflowBuilder.from_config(config=self.full_config) as builder:
             # Build the workflow
