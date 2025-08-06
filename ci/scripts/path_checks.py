@@ -24,23 +24,43 @@ from gitutils import all_files
 
 # File path pairs to allowlist -- first is the file path, second is the path in the file
 ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
-    # root README.md can reference examples and docs
-    (r"^README.md", r"^(examples|docs)"),
-
-    # allow references from tests to examples
-    (r"^tests/", r"^examples/"),
-
-    # allow references to docs from examples
-    (r"^examples/", r"^docs/"),
-
-    # allow references to examples from docs
-    (r"^docs/", r"^examples/"),
-
-    # allow references to src from docs
-    (r"^docs/", r"^src/"),
-
-    # allow relative references within docs
-    (r"^docs/", r"^(\.?\./)*[A-Za-z0-9_\-\.]+"),
+    # allow references to data from configs
+    (
+        r"^examples/agents/.*/configs/config.yml",
+        r"^examples/agents/data/",
+    ),
+    (
+        r"^examples/advanced_agents/alert_triage_agent/src/aiq_alert_triage_agent/configs/config.*\.yml",
+        r"^examples/advanced_agents/alert_triage_agent/data/",
+    ),
+    (
+        r"^examples/advanced_agents/profiler_agent/README.md",
+        r"^examples/observability/simple_calculator_observability",
+    ),
+    (
+        r"^examples/documentation_guides/workflows/text_file_ingest/.*/config.yml",
+        r"^examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json",
+    ),
+    (
+        r"^examples/evaluation_and_profiling/email_phishing_analyzer/configs",
+        r"^examples/evaluation_and_profiling/email_phishing_analyzer/data",
+    ),
+    (
+        r"^examples/evaluation_and_profiling/simple_web_query_eval/.*configs/",
+        r"^examples/evaluation_and_profiling/simple_web_query_eval/data/",
+    ),
+    (
+        r"^examples/evaluation_and_profiling/swe_bench/.*configs/",
+        r"^examples/evaluation_and_profiling/swe_bench/data/",
+    ),
+    (
+        r"^examples/evaluation_and_profiling/simple_calculator_eval/.*configs/",
+        r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
+    ),
+    (
+        r"^examples/evaluation_and_profiling/simple_web_query_eval/.*configs",
+        r"^examples/evaluation_and_profiling/simple_web_query_eval/.*/workflow_to_csv.py",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
@@ -77,100 +97,6 @@ ALLOWLISTED_WORDS: set[str] = {
 }
 
 IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
-    # allow references to text_file_ingest from create-a-new-workflow
-    (
-        r"^docs/source/tutorials/create-a-new-workflow.md",
-        r"^src/text_file_ingest/data/",
-    ),
-
-    # allow references from some examples to other examples
-    (
-        r"^examples/advanced_agents/alert_triage_agent/README.md",
-        r"^examples/advanced_agents/alert_triage_agent/.your_custom_env",
-    ),
-    (
-        r"^examples/advanced_agents/profiler_agent/README.md",
-        r"^examples/observability/simple_calculator_observability",
-    ),
-    (
-        r"^examples/advanced_agents/profiler_agent/README.md",
-        r"^examples/observability/simple_calculator_observability/configs/config-tracing.yml",
-    ),
-    (
-        r"^examples/advanced_agents/profiler_agent/README.md",
-        r"^examples/observability/simple_calculator_observability/configs/config-tracing.yml",
-    ),
-    (
-        r"^examples/advanced_agents/profiler_agent/README.md",
-        r"^examples/observability/simple_calculator_observability/configs/config-tracing.yml",
-    ),
-    (
-        r"^examples/advanced_agents/profiler_agent/README.md",
-        r"^examples/observability/simple_calculator_observability/configs/config-tracing.yml",
-    ),
-    (
-        r"^examples/custom_functions/automated_description_generation/README.md",
-        r"^\.\./\.\./RAG/simple_rag/README.md",
-    ),
-    (
-        r"^examples/documentation_guides/workflows/text_file_ingest/src/text_file_ingest/configs/config.yml",
-        r"^examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json",
-    ),
-    (
-        r"^examples/evaluation_and_profiling/simple_calculator_eval/README.md",
-        r"^\.\./\.\./getting_started/simple_calculator",
-    ),
-    (
-        r"^examples/evaluation_and_profiling/simple_calculator_eval/README.md",
-        r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
-    ),
-    (
-        r"^examples/evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml",
-        r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
-    ),
-    (
-        r"^examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml",
-        r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
-    ),
-    (
-        r"^examples/evaluation_and_profiling/simple_web_query_eval/README.md",
-        r"^\.\./\.\./getting_started/simple_web_query",
-    ),
-    (
-        r"^examples/memory/redis/README.md",
-        r"^examples/deploy/docker-compose\..*\.yml",
-    ),
-    (
-        r"^examples/MCP/simple_calculator_mcp/README.md",
-        r"^\.\./\.\./getting_started/simple_calculator",
-    ),
-    (
-        r"^examples/MCP/simple_calculator_mcp/README.md",
-        r"^examples/getting_started/simple_calculator/configs/config.yml",
-    ),
-    (
-        r"^examples/MCP/simple_calculator_mcp/README.md",
-        r"^examples/getting_started/simple_calculator/configs/config.yml",
-    ),
-    (
-        r"^examples/observability/simple_calculator_observability/README.md",
-        r"^\.\./\.\./getting_started/simple_calculator",
-    ),
-
-    # allow references to repo source code from examples
-    (
-        r"^examples/front_ends/simple_calculator_custom_routes/README.md",
-        r"^src/aiq/tool/server_tools.py",
-    ),
-    (
-        r"^examples/evaluation_and_profiling/swe_bench/README.md",
-        r"^src/aiq/data_models/swe_bench_model.py",
-    ),
-    # allow short names for references to files within the swe_bench example
-    (
-        r"^examples/evaluation_and_profiling/swe_bench/README.md",
-        r"^(predictors/predict_skeleton|predictors/register\.py)$",
-    ),
     # ignore remote files
     (
         r"^examples/evaluation_and_profiling/simple_web_query_eval/.*configs/eval_upload.yml",
@@ -225,8 +151,8 @@ REFERENTIAL_PATHS: set[str] = {
 # File extensions to check paths
 EXTENSIONS: tuple[str, ...] = ('.md', '.rst', '.yml', '.yaml', '.json', '.toml', '.ini', '.conf', '.cfg')
 
-URI_OR_PATH_REGEX = re.compile(r'^((([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?'
-                               r'|(\.?\.?/?)(([$A-Za-z0-9_\-\.]+/)*[$A-Za-z0-9_\-\.]+))$')
+URI_OR_PATH_REGEX = re.compile(r'((([^:/?# ]+):)?(//([^/?# ]*))?([^?# ]*)(\?([^# ]*))?(#([^ ]*))?'
+                               r'|(\.?\.?/?)(([$A-Za-z0-9_\-\.]+/)*[$A-Za-z0-9_\-\.]+))')
 
 PATH_REGEX = re.compile(r'^(\.?\.?/?)(([$A-Za-z0-9_\-\.]+/)*[$A-Za-z0-9_\-\.]+)$')
 
@@ -301,7 +227,7 @@ def extract_paths_from_file(filename: str) -> list[PathInfo]:
                 continue
             for match in URI_OR_PATH_REGEX.finditer(line):
                 column, _ = match.span()
-                path = match.group(0)
+                path = match.group(0).strip()
                 # Exclude URIs and other non-path-like strings
                 if not PATH_REGEX.search(path):
                     continue
@@ -361,7 +287,7 @@ def check_files() -> list[tuple[str, PathInfo]]:
             continue
         paths = extract_paths_from_file(f)
 
-        def check_path(path: str) -> bool:
+        def check_path(path: str, path_info: PathInfo) -> bool:
             """
             Checks if a path is valid.
 
@@ -371,20 +297,26 @@ def check_files() -> list[tuple[str, PathInfo]]:
             Returns:
                 True if we performed an action based on the path
             """
-            if os.path.exists(path):
-                # if the path is allowlisted, then it is not broken
-                if any(r[0].search(f) and r[1].search(path) for r in ALLOWLISTED_FILE_PATH_PAIRS_REGEX):
-                    return True
-                for p in REFERENTIAL_PATHS:
-                    if p in f and p in path:
-                        return True
-            return False
+            path = os.path.normpath(path)
+            if not os.path.exists(path):
+                return False
+            for p in REFERENTIAL_PATHS:
+                if p in f and p in path:
+                    common = os.path.commonprefix([f, path])[:-1]
+                    if (os.path.dirname(f) == common or os.path.dirname(path) == common or os.path.dirname(path) in f):
+                        break
+                    if not any(r[0].search(f) and r[1].search(path) for r in ALLOWLISTED_FILE_PATH_PAIRS_REGEX):
+                        filenames_with_broken_paths.append((f, path_info))
+                        break
+            return True
 
         for path_info in paths:
-            if check_path(path_info.path):
+            # attempt to resolve the path relative to the file
+            resolved_path = os.path.join(os.path.dirname(f), path_info.path)
+            if check_path(resolved_path, path_info):
                 continue
-            resolved_path = os.path.normpath(os.path.join(os.path.dirname(f), path_info.path))
-            if check_path(resolved_path):
+            # attempt to use the path as-is
+            if check_path(path_info.path, path_info):
                 continue
 
             # if it still doesn't exist then it's broken
