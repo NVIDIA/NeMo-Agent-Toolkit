@@ -86,8 +86,8 @@ authentication:
       - openid
       - profile
       - email
-    client_id: ${OAUTH_CLIENT_ID}
-    client_secret: ${OAUTH_CLIENT_SECRET}
+    client_id: ${AIQ_OAUTH_CLIENT_ID}
+    client_secret: ${AIQ_OAUTH_CLIENT_SECRET}
     use_pkce: false
 
   example_provider_name_api_key:
