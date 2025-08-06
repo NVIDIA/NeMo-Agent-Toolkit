@@ -24,7 +24,7 @@ The NeMo Agent toolkit uses a flexible, plugin-based observability system that p
 - Provides built-in exporters for popular observability platforms (Phoenix, Langfuse, Weave, etc.)
 - Enables custom telemetry exporter development for any observability service
 
-These features enable NeMo Agent toolkit developers to test their workflows locally and integrate observability seamlessly with their preferred monitoring stack.
+These features enable developers to test their workflows locally and integrate observability seamlessly with their preferred monitoring stack.
 
 ## Installation
 
@@ -90,7 +90,7 @@ The `logging` section contains one or more logging providers. Each provider has 
 
 ### **Tracing Configuration**
 
-The `tracing` section contains one or more tracing providers. Each provider has a `_type` and optional configuration fields. The observability system supports multiple concurrent exporters. The following tracing providers are available:
+The `tracing` section contains one or more tracing providers. Each provider has a `_type` and optional configuration fields. The observability system supports multiple concurrent exporters.
 
 ### Available Tracing Exporters
 
