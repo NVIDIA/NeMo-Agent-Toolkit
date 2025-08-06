@@ -108,7 +108,7 @@ examples = [
 profiling = [
   "matplotlib~=3.9",
   "prefixspan~=0.5.2",
-  "scikit-learn~=1.6",
+  "scikit-learn~=1.6"
 ]
 
 # Optional dependency needed when use_gunicorn is set to true
@@ -176,7 +176,11 @@ dev = [
   "flake8-pyproject~=1.2",
   "flake8~=7.1",
   "httpx-sse~=0.4",
+  "ipython~=8.31",
   "isort==5.12.0",
+  "myst-parser~=4.0",
+  "nbsphinx~=0.9",
+  "nvidia-sphinx-theme>=0.0.7",
   "pip>=24.3.1",
   "pre-commit>=4.0,<5.0",
   "pylint==3.3.*",
@@ -188,23 +192,15 @@ dev = [
   "python-docx~=1.1.0",
   "setuptools >= 64",
   "setuptools_scm>=8",
-  "tomlkit~=0.13.2",
-  "twine~=6.0",
-  "yapf==0.43.*",
-]
-
-docs = [
-  "ipython~=8.31",
-  "myst-parser~=4.0",
-  "nbsphinx~=0.9",
-  "nvidia-sphinx-theme>=0.0.7",
   "sphinx~=8.2",
   "sphinx-copybutton>=0.5",
   "sphinx-autoapi>=3.6",
   "sphinx-mermaid",
+  "tomlkit~=0.13.2",
+  "twine~=6.0",
   "vale==3.9.5",
+  "yapf==0.43.*",
 ]
-
 
 [project.entry-points.'aiq.components']
 aiq_agents = "aiq.agent.register"
