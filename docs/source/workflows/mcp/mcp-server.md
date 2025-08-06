@@ -140,3 +140,36 @@ functions:
     description: "Returns the difference of two numbers"
 ```
 In this example, the `calculator_multiply`, `calculator_inequality`, `calculator_divide`, and `calculator_subtract` tools are remote MCP tools. The `current_datetime` tool is a local NeMo Agent toolkit tool.
+
+
+## Verifying MCP Server Health
+You can verify the health of the MCP using the `/health` route or the `aiq info mcp ping` command.
+
+### Using the `/health` route
+The MCP server exposes a `/health` route that can be used to verify the health of the MCP server.
+
+```bash
+curl -s http://localhost:9901/health | jq
+```
+
+Sample output:
+```json
+{
+  "status": "healthy",
+  "error": null,
+  "server_name": "AIQ MCP"
+}
+```
+
+### Using the `aiq info mcp ping` command
+You can also test if an MCP server is responsive and healthy using the `aiq info mcp ping` command:
+```bash
+aiq info mcp ping --url http://localhost:9901/sse
+```
+This launches a MCP client that connects to the MCP server and verifies if the server is healthy.
+
+Sample output for a healthy server:
+```
+Server at http://localhost:9901/sse is healthy (response time: 4.35ms)
+```
+This is useful for health checks and monitoring.

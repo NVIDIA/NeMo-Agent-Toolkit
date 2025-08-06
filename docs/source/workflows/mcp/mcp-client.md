@@ -143,15 +143,3 @@ Input Schema:
 }
 ------------------------------------------------------------
 ```
-
-## Testing MCP Server Health
-You can test if an MCP server is responsive and healthy using the ping command:
-```bash
-aiq info mcp ping --url http://localhost:9901/sse
-```
-
-Sample output for a healthy server:
-```
-Server at http://localhost:9901/sse is healthy (response time: 4.35ms)
-```
-This is useful for health checks and monitoring.
