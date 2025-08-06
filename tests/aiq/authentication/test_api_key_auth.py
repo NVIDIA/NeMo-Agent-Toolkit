@@ -15,11 +15,11 @@
 
 import pytest
 
-import aiq.authentication.api_key.api_key_auth_provider as api_key_auth_provider
 # --------------------------------------------------------------------------- #
 # Import the modules we are testing
 # --------------------------------------------------------------------------- #
-import aiq.authentication.api_key.api_key_auth_provider_config as api_key_auth_provider_config
+from aiq.authentication.api_key import api_key_auth_provider
+from aiq.authentication.api_key import api_key_auth_provider_config
 from aiq.builder.workflow_builder import WorkflowBuilder
 
 # Handy names
@@ -99,7 +99,7 @@ def test_config_invalid_header_prefix_nonascii():
 # --------------------------------------------------------------------------- #
 # APIKeyAuthProvider – _construct_authentication_header
 # --------------------------------------------------------------------------- #
-async def test_construct_header_bearer(monkeypatch: pytest.MonkeyPatch):
+async def test_construct_header_bearer(monkeypatch: pytest.MonkeyPatch):  # pylint:disable=unused-argument
     cfg = make_config()
 
     async with WorkflowBuilder() as builder:
