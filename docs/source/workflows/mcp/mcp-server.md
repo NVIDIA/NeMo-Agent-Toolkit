@@ -33,7 +33,16 @@ aiq mcp --config_file examples/getting_started/simple_calculator/configs/config.
 
 This will load the workflow configuration from the specified file, start an MCP server on the default host (localhost) and port (9901), and publish all tools from the workflow as MCP tools.
 
-You can also specify a filter to only publish a subset of tools.
+You can optionally specify the server settings using the following flags:
+```bash
+aiq mcp --config_file examples/getting_started/simple_calculator/configs/config.yml \
+  --host 0.0.0.0 \
+  --port 9901 \
+  --name "My MCP Server"
+```
+
+### Filtering MCP Tools
+You can specify a filter to only publish a subset of tools from the workflow.
 
 ```bash
 aiq mcp --config_file examples/getting_started/simple_calculator/configs/config.yml \

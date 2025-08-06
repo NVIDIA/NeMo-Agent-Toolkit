@@ -27,23 +27,9 @@ logger = logging.getLogger(__name__)
 class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
     """MCP front end plugin implementation."""
 
-    async def run(self) -> None:
-        """Run the MCP server."""
-        # Import FastMCP
-        from mcp.server.fastmcp import FastMCP
+    def _setup_health_endpoint(self, mcp):
+        """Set up the HTTP health endpoint that exercises MCP ping handler."""
 
-        from aiq.front_ends.mcp.tool_converter import register_function_with_mcp
-
-        # Create an MCP server with the configured parameters
-        mcp = FastMCP(
-            self.front_end_config.name,
-            host=self.front_end_config.host,
-            port=self.front_end_config.port,
-            debug=self.front_end_config.debug,
-            log_level=self.front_end_config.log_level,
-        )
-
-        # Add HTTP health endpoint that exercises MCP ping handler
         @mcp.custom_route("/health", methods=["GET"])
         async def health_check(request):
             """HTTP health check using server's internal ping handler"""
@@ -62,8 +48,7 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
                     "status": "healthy",
                     "error": None,
                     "server_name": mcp.name,
-                },
-                                    headers={"Content-Type": "application/json"})
+                })
 
             except Exception as e:
                 return JSONResponse({
@@ -71,8 +56,26 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
                     "error": str(e),
                     "server_name": mcp.name,
                 },
-                                    status_code=503,
-                                    headers={"Content-Type": "application/json"})
+                                    status_code=503)
+
+    async def run(self) -> None:
+        """Run the MCP server."""
+        # Import FastMCP
+        from mcp.server.fastmcp import FastMCP
+
+        from aiq.front_ends.mcp.tool_converter import register_function_with_mcp
+
+        # Create an MCP server with the configured parameters
+        mcp = FastMCP(
+            self.front_end_config.name,
+            host=self.front_end_config.host,
+            port=self.front_end_config.port,
+            debug=self.front_end_config.debug,
+            log_level=self.front_end_config.log_level,
+        )
+
+        # Set up the health endpoint
+        self._setup_health_endpoint(mcp)
 
         # Build the workflow and register all functions with MCP
         async with WorkflowBuilder.from_config(config=self.full_config) as builder:
