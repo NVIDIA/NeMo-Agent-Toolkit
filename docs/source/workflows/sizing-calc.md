@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,27 +15,53 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Size a GPU Cluster With NeMo Agent Toolkit
+# Size a GPU Cluster With NVIDIA NeMo Agent Toolkit
 
 The NVIDIA NeMo Agent toolkit provides a sizing calculator to estimate the GPU cluster size required to accommodate a target number of users with a target response time. The estimation is based on the performance of the workflow at different concurrency levels.
 
 The sizing calculator uses the [evaluation](evaluate.md) and [profiling](./profiler.md) systems in the NeMo Agent toolkit.
 
 ## Overview
-This guide provides a step-by-step process to estimate the GPU cluster size required to accommodate a target number of users with a target response time. The estimation is based on the performance of the workflow at different concurrency levels.
+
+This guide assumes that you have an LLM hosted by an isolated GPU cluster, for which you want to perform the sizing calculations for.
+
+:::{note}
+Although you can run the sizing calculator against a publicly hosted LLM, the results may not be accurate due to the variability in the performance of public LLMs.
+:::
 
 ## Getting Started With Sizing a GPU Cluster
 
-To begin, set the configuration file and output directory:
+To begin, set the configuration file and output directory. For this example we will start with the simple calculator evaluation configuration file, however in a real-world scenario you would use the configuration file of your own workflow you want to size.
 ```
-export CONFIG_FILE=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml
 export CALC_OUTPUT_DIR=.tmp/sizing_calc/
+export CONFIG_FILE=${CALC_OUTPUT_DIR}config-sizing-calc.yml
+
+mkdir -p ${CALC_OUTPUT_DIR}
+
+cp examples/evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml $CONFIG_FILE
 ```
+
+Edit `.tmp/sizing_calc/config-sizing-calc.yml` file by adding a `base_url` parameter for the `llms.nim_llm` section for your cluster. Then, if needed, change the `llms.nim_llm.model_name`.
+
+For a locally hosted NIM this might look like:
+```yaml
+llms:
+  nim_llm:
+    _type: nim
+    base_url: "http://localhost:8000/v1"
+    model_name: meta/llama-3.3-70b-instruct
+```
+
 ### Step 1: Gather Metrics
 Collect performance data at different concurrency levels:
 ```
 aiq sizing calc --config_file $CONFIG_FILE --calc_output_dir $CALC_OUTPUT_DIR --concurrencies 1,2,4,8,16,32 --num_passes 2
 ```
+
+:::{note}
+Depending on the number of concurrencies, the number of passes, and the size of the cluster being tested, this could take several minutes to run.
+:::
+
 ### Step 2: Estimate GPU Cluster Size
 Use the previously collected metrics to estimate the GPU cluster size:
 ```
@@ -48,18 +74,22 @@ aiq sizing calc --config_file $CONFIG_FILE --calc_output_dir $CALC_OUTPUT_DIR --
 ```
 This will run the workflow at the specified concurrency levels and estimate the GPU cluster size.
 
-## Gather Metrics
+---
+
+## Details
+
+### Gather Metrics
 To use the calculator, gather metrics from the workflow and then separately size the cluster in `offline_mode` using the previously gathered metrics.
 
 The following is a sample command for gathering metrics:
 
 ```
-aiq sizing calc --config $CONFIG_FILE --calc_output_dir $CALC_OUTPUT_DIR --concurrencies 1,2,4,8,16,32 --num_passes 2
+aiq sizing calc --config_file $CONFIG_FILE --calc_output_dir $CALC_OUTPUT_DIR --concurrencies 1,2,4,8,16,32 --num_passes 2
 ```
 
 ### Dataset Requirements
 
-To use the calculator, you need a representative dataset of inputs. The size of the dataset can be as small as one input. However, if your workflow's behavior varies significantly depending on the input, we recommend including representative dataset entries for each trajectory.
+When using the sizing calculator, you need a representative dataset of inputs. The size of the dataset can be as small as one input. However, if your workflow's behavior varies significantly depending on the input, we recommend including representative dataset entries for each trajectory.
 
 The dataset is provided in the eval section of the workflow configuration file.
 `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-sizing-calc.yml`:
@@ -108,9 +138,10 @@ The results of each run are available in the following formats:
 **Summary Table**
 
 The summary table provides an overview of the per-concurrency metrics.
-- The P95 LLM latency computes across all LLM invocations. If multiple models are used, the value will trend towards the latency of the model with the highest latency.
-- The P95 workflow runtime is the response time of the workflow and is computed across all runs at the specified concurrency.
-- The total runtime is the total time taken to process the entire dataset at a specified concurrency level.
+- The `P95 LLM Latency` (95th percentile LLM latency) column contains the latency, in seconds, across all LLM invocations. If multiple models are used, the value will trend towards the latency of the model with the highest latency.
+- The `P95 WF Runtime` (95th percentile workflow runtime) column contains the response time, in seconds, of the workflow and is computed across all runs at the specified concurrency.
+- The `Total Runtime` columns contains the total time, in seconds, taken to process the entire dataset at a specified concurrency level.
+
 ```
 Targets: LLM Latency ≤ 0.0s, Workflow Runtime ≤ 0.0s, Users = 0
 Test parameters: GPUs = 0
@@ -158,18 +189,19 @@ Sample output:
   }
 }
 ```
-Output are truncated for brevity. For more information, refer to the [CalcRunnerOutput](../../../src/aiq/profiler/calc/data_models.py) Pydantic model.
+
+The output is truncated for brevity. For more information, refer to the [CalcRunnerOutput](../../../src/aiq/profiler/calc/data_models.py) Pydantic model.
 
 ### Using a Remote Workflow
 By default, the calculator runs the workflow locally to gather metrics. You can use the `--endpoint` and `--endpoint_timeout` command line parameters to use a remote workflow for gathering metrics.
 
 Start the remote workflow:
-```
-aiq start fastapi --config_file=examples/simple_calculator/src/aiq_simple_calculator/configs/config.yml
+```bash
+aiq start fastapi --config_file=$CONFIG_FILE
 ```
 
 Run the calculator using the remote endpoint:
-```
+```bash
 aiq sizing calc --config_file $CONFIG_FILE --calc_output_dir $CALC_OUTPUT_DIR --concurrencies 1,2,4,8,16,32 --num_passes 2 --endpoint http://localhost:8000
 ```
 The configuration file used for running the calculator only needs to specify the `eval` section. The `workflow` section is not used by the calculator when running with a remote endpoint.
@@ -195,7 +227,7 @@ Alerts: !W = Workflow interrupted
 
 In this example, the workflow failed at concurrency level 4 (indicated by `!W` in the Alerts column). The time metrics for concurrency 4 are not included in the GPU estimate as they are not reliable and may skew the linear fit used to estimate the GPU count.
 
-## Estimate GPU Cluster Size
+### Estimate GPU Cluster Size
 Once the metrics are gathered, you can estimate the GPU cluster size using the `aiq sizing calc` command in `offline_mode`.
 Sample command:
 ```
@@ -298,7 +330,7 @@ Estimated GPU count (Workflow Runtime): 75.4
 
 In addition to the slope based estimation, the calculator also provides a rough estimate of the GPU count required for the target user based on the data from each concurrency level. You can use this information to get a quick estimate of the GPU count required for the workflow but is not as accurate as the slope based estimation and is not recommended for production use.
 
-## Programmatic Usage
+### Programmatic Usage
 In addition to the command line interface, the sizing calculator can be used programmatically.
 
 **Sample code:**
@@ -327,6 +359,7 @@ async def run_calc():
 # Run the async calc function
 asyncio.run(run_calc())
 ```
-`CalcRunnerConfig` is a Pydantic model that contains the configuration for the calculator. It provides fine-grained control over the calculator's behavior.
-`CalcRunnerOutput` is a Pydantic model that contains the per-concurrency metrics and the GPU count estimates.
+
+{py:class}`~aiq.profiler.calc.data_models.CalcRunnerConfig` is a Pydantic model that contains the configuration for the calculator. It provides fine-grained control over the calculator's behavior.
+{py:class}`~aiq.profiler.calc.data_models.CalcRunnerOutput` is a Pydantic model that contains the per-concurrency metrics and the GPU count estimates.
 For more information, refer to the [calculator data models](../../../src/aiq/profiler/calc/data_models.py).
