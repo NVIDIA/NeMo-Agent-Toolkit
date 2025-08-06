@@ -148,7 +148,7 @@ aiq run --config_file examples/observability/simple_calculator_observability/con
 
 Transmit traces to RagAI Catalyst.
 
-1. Set your Patronus API key:
+1. Set your Catalyst API key:
 
 ```bash
 export CATALYST_ACCESS_KEY=<your_access_key>
