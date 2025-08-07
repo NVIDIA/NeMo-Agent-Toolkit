@@ -105,8 +105,11 @@ if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
 
             # Find all .whl files in the current subdirectory (no depth limit)
             find "${SUBDIR}" -type f -name "*.whl" | while read -r WHEEL_FILE; do
-                # Explicitly upload to the already established path
-                ARTIFACTORY_PATH="${AIQ_ARTIFACTORY_NAME}/aiqtoolkit"
+                # Extract relative path to preserve directory structure, but replacing the first dir with aiqtoolkit
+                # as this is an already established path in artifactory
+                RELATIVE_PATH="${WHEEL_FILE#${WHEELS_BASE_DIR}/}"
+                RELATIVE_PATH=$(echo ${RELATIVE_PATH} | sed -e 's|/nvidia-nat/|/aiqtoolkit/|')
+                ARTIFACTORY_PATH="${AIQ_ARTIFACTORY_NAME}/${RELATIVE_PATH}"
 
                 echo "Uploading ${WHEEL_FILE} to ${ARTIFACTORY_PATH}..."
 
