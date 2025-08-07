@@ -265,15 +265,15 @@ Before creating a custom exporter, check if your observability service is alread
 
 | Service | Type | Installation | Configuration |
 |---------|------|-------------|---------------|
-| **File** | `file` | `pip install aiqtoolkit` | local file or directory |
-| **Langfuse** | `langfuse` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API keys |
-| **LangSmith** | `langsmith` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
-| **OpenTelemetry Collector** | `otelcollector` | `pip install aiqtoolkit[opentelemetry]` | endpoint + headers |
-| **Patronus** | `patronus` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
-| **Galileo** | `galileo` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
-| **Phoenix** | `phoenix` | `pip install aiqtoolkit[phoenix]` | endpoint |
-| **RagaAI/Catalyst** | `catalyst` | `pip install aiqtoolkit[ragaai]` | API key + project |
-| **Weave** | `weave` | `pip install aiqtoolkit[weave]` | project name |
+| **File** | `file` | `pip install nvidia-nat` | local file or directory |
+| **Langfuse** | `langfuse` | `pip install nvidia-nat[opentelemetry]` | endpoint + API keys |
+| **LangSmith** | `langsmith` | `pip install nvidia-nat[opentelemetry]` | endpoint + API key |
+| **OpenTelemetry Collector** | `otelcollector` | `pip install nvidia-nat[opentelemetry]` | endpoint + headers |
+| **Patronus** | `patronus` | `pip install nvidia-nat[opentelemetry]` | endpoint + API key |
+| **Galileo** | `galileo` | `pip install nvidia-nat[opentelemetry]` | endpoint + API key |
+| **Phoenix** | `phoenix` | `pip install nvidia-nat[phoenix]` | endpoint |
+| **RagaAI/Catalyst** | `catalyst` | `pip install nvidia-nat[ragaai]` | API key + project |
+| **Weave** | `weave` | `pip install nvidia-nat[weave]` | project name |
 
 ### Simple Configuration Example
 
@@ -412,7 +412,7 @@ class CustomSpanExporter(SpanExporter[Span, dict]):
 > **Note**: OpenTelemetry exporters require the `aiqtoolkit-opentelemetry` subpackage. Install it with:
 
 > ```bash
-> pip install aiqtoolkit[opentelemetry]
+> pip install nvidia-nat[opentelemetry]
 > ```
 
 For most OTLP-compatible services, use the pre-built `OTLPSpanAdapterExporter`:
