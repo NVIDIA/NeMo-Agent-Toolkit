@@ -3475,6 +3475,28 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nat-my-agent-workflow"
+source = { editable = "examples/notebooks/examples/my_agent_workflow" }
+dependencies = [
+    { name = "ipykernel" },
+    { name = "ipywidgets" },
+    { name = "jupyter" },
+    { name = "jupyterlab" },
+    { name = "notebook" },
+    { name = "nvidia-nat", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ipykernel", specifier = "~=6.29" },
+    { name = "ipywidgets", specifier = "~=8.1" },
+    { name = "jupyter", specifier = "~=1.1" },
+    { name = "jupyterlab", specifier = "~=4.3" },
+    { name = "notebook", specifier = "~=7.3" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+]
+
+[[package]]
 name = "nat-plot-charts"
 source = { editable = "examples/custom_functions/plot_charts" }
 dependencies = [
@@ -3523,6 +3545,32 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "nvidia-nat", extras = ["weave"], editable = "." }]
+
+[[package]]
+name = "nat-retail-sales-agent"
+source = { editable = "examples/notebooks/examples/retail_sales_agent" }
+dependencies = [
+    { name = "ipykernel" },
+    { name = "ipywidgets" },
+    { name = "jupyter" },
+    { name = "jupyterlab" },
+    { name = "llama-index-vector-stores-milvus" },
+    { name = "notebook" },
+    { name = "nvidia-nat", extra = ["langchain"] },
+    { name = "pandas" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ipykernel", specifier = "~=6.29" },
+    { name = "ipywidgets", specifier = "~=8.1" },
+    { name = "jupyter", specifier = "~=1.1" },
+    { name = "jupyterlab", specifier = "~=4.3" },
+    { name = "llama-index-vector-stores-milvus" },
+    { name = "notebook", specifier = "~=7.3" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+    { name = "pandas", specifier = "==2.3.1" },
+]
 
 [[package]]
 name = "nat-semantic-kernel-demo"
@@ -3912,10 +3960,12 @@ examples = [
     { name = "nat-automated-description-generation" },
     { name = "nat-email-phishing-analyzer" },
     { name = "nat-multi-frameworks" },
+    { name = "nat-my-agent-workflow" },
     { name = "nat-plot-charts" },
     { name = "nat-por-to-jiratickets" },
     { name = "nat-profiler-agent" },
     { name = "nat-redact-pii" },
+    { name = "nat-retail-sales-agent" },
     { name = "nat-semantic-kernel-demo" },
     { name = "nat-simple-auth" },
     { name = "nat-simple-calculator" },
@@ -4040,10 +4090,12 @@ requires-dist = [
     { name = "nat-automated-description-generation", marker = "extra == 'examples'", editable = "examples/custom_functions/automated_description_generation" },
     { name = "nat-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/email_phishing_analyzer" },
     { name = "nat-multi-frameworks", marker = "extra == 'examples'", editable = "examples/frameworks/multi_frameworks" },
+    { name = "nat-my-agent-workflow",  marker = "extra == 'examples'", editable = "examples/notebooks/examples/my_agent_workflow" },
     { name = "nat-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },
     { name = "nat-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/HITL/por_to_jiratickets" },
     { name = "nat-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },
     { name = "nat-redact-pii", marker = "extra == 'examples'", editable = "examples/observability/redact_pii" },
+    { name = "nat-retail-sales-agent",  marker = "extra == 'examples'", editable = "examples/notebooks/examples/retail_sales_agent" },
     { name = "nat-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/frameworks/semantic_kernel_demo" },
     { name = "nat-simple-auth", marker = "extra == 'examples'", editable = "examples/front_ends/simple_auth" },
     { name = "nat-simple-calculator", marker = "extra == 'examples'", editable = "examples/getting_started/simple_calculator" },

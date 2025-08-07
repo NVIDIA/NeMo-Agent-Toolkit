@@ -1,0 +1,9 @@
+general:
+  use_uvloop: true
+  logging:
+    console:
+      _type: console
+      level: WARN
+
+workflow:
+  _type: my_first_aiq_agent

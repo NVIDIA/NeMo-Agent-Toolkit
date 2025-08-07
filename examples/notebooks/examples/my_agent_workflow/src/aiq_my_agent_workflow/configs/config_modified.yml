@@ -1,0 +1,29 @@
+general:
+  use_uvloop: true
+  logging:
+    console:
+      _type: console
+      level: WARN
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    max_tokens: 1024
+    api_key: $NVIDIA_API_KEY
+
+functions:
+  my_internet_search:
+    _type: tavily_internet_search
+    max_results: 2
+    api_key: $TAVILY_API_KEY
+
+workflow:
+  _type: my_agent_workflow
+  tool_names:
+    - my_internet_search
+  llm_name: nim_llm
+  max_history: 10
+  max_iterations: 15
+  description: "A helpful assistant that can search the internet for information"

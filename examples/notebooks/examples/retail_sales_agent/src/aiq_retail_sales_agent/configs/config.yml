@@ -1,0 +1,36 @@
+general:
+  use_uvloop: true
+  logging:
+    console:
+      _type: console
+      level: WARN
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    api_key: $NVIDIA_API_KEY
+
+functions:
+  get_total_product_sales_data:
+    _type: get_total_product_sales_data
+    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
+  get_sales_per_day:
+    _type: get_sales_per_day
+    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
+  detect_outliers_iqr:  
+    _type: detect_outliers_iqr
+    data_path: ./examples/retail_sales_agent/data/retail_sales_data.csv
+    
+workflow:
+  _type: react_agent
+  tool_names:
+    - get_total_product_sales_data
+    - get_sales_per_day
+    - detect_outliers_iqr
+  llm_name: nim_llm
+  verbose: true
+  handle_parsing_errors: true
+  max_retries: 2
+  description: "A helpful assistant that can answer questions about the retail sales CSV data"
