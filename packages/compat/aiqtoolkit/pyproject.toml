@@ -6,11 +6,9 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../.."
 
 [project]
-name = "agentiq-zep-cloud"
+name = "aiqtoolkit"
 dynamic = ["version"]
-dependencies = [
-  "nvidia-nat-zep-cloud"
-]
+dependencies = ["nvidia-nat~=1.2"]
 readme = "pypi.md"
-description = "Transitional package for nvidia-nat-zep-cloud, this package is deprecated and will be removed in the future."
+description = "Transitional package for nvidia-nat, this package is deprecated and will be removed in the future."
 classifiers = ["Programming Language :: Python"]

@@ -5,13 +5,10 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 [tool.setuptools_scm]
 root = "../../.."
 
-
 [project]
-name = "agentiq-agno"
+name = "aiqtoolkit-semantic-kernel"
 dynamic = ["version"]
-dependencies = [
-  "nvidia-nat[agno]~=1.2"
-]
+dependencies = ["nvidia-nat-semantic-kernel"]
 readme = "pypi.md"
-description = "Transitional package for nvidia-nat-agno, this package is deprecated and will be removed in the future."
+description = "Transitional package for nvidia-nat-semantic-kernel, this package is deprecated and will be removed in the future."
 classifiers = ["Programming Language :: Python"]

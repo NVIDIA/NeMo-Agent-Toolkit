@@ -6,11 +6,9 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../.."
 
 [project]
-name = "agentiq-semantic-kernel"
+name = "aiqtoolkit-test"
 dynamic = ["version"]
-dependencies = [
-  "nvidia-nat-semantic-kernel"
-]
+dependencies = ["nvidia-nat[test]~=1.2"]
 readme = "pypi.md"
-description = "Transitional package for nvidia-nat-semantic-kernel, this package is deprecated and will be removed in the future."
+description = "Transitional package for nvidia-nat-test, this package is deprecated and will be removed in the future."
 classifiers = ["Programming Language :: Python"]

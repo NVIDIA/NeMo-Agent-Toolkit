@@ -2,18 +2,13 @@
 build-backend = "setuptools.build_meta"
 requires = ["setuptools >= 64", "setuptools-scm>=8"]
 
-
 [tool.setuptools_scm]
 root = "../../.."
 
-
-
 [project]
-name = "agentiq-llama-index"
+name = "aiqtoolkit-zep-cloud"
 dynamic = ["version"]
-dependencies = [
-  "nvidia-nat-llama-index"
-]
+dependencies = ["nvidia-nat-zep-cloud"]
 readme = "pypi.md"
-description = "Transitional package for nvidia-nat-llama-index, this package is deprecated and will be removed in the future."
+description = "Transitional package for nvidia-nat-zep-cloud, this package is deprecated and will be removed in the future."
 classifiers = ["Programming Language :: Python"]

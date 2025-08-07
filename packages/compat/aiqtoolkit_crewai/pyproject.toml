@@ -6,11 +6,9 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../.."
 
 [project]
-name = "agentiq-crewai"
+name = "aiqtoolkit-crewai"
 dynamic = ["version"]
-dependencies = [
-  "nvidia-nat[crewai]~=1.2",
-]
+dependencies = ["nvidia-nat[crewai]~=1.2"]
 readme = "pypi.md"
 description = "Transitional package for nvidia-nat-crewai, this package is deprecated and will be removed in the future."
 classifiers = ["Programming Language :: Python"]
