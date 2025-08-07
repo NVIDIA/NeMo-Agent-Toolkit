@@ -18,6 +18,6 @@ limitations under the License.
 ![NVIDIA Agent Intelligence Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/aiqtoolkit_banner.png "AIQ toolkit banner image"
 
 # NVIDIA Agent Intelligence Toolkit Subpackage
-This is a subpackage for Weights and Biases Weave integration for observability.
+This is a subpackage for OpenTelemetry integration for observability.
 
 For more information about AIQ toolkit, please visit the [AIQ toolkit package](https://pypi.org/project/aiqtoolkit/).
