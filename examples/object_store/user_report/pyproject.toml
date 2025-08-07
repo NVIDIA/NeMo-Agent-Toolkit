@@ -8,11 +8,9 @@ root = "../../.."
 [project]
 name = "aiq_user_report"
 dynamic = ["version"]
-dependencies = [
-  "nvidia-nat[s3]", "nvidia-nat[mysql]"
-]
+dependencies = ["nvidia-nat[s3]", "nvidia-nat[mysql]"]
 requires-python = ">=3.12"
-description = "AIQ toolkit example that uses an Object Store"
+description = "NeMo Agent toolkit example that uses an Object Store"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 

@@ -18,7 +18,7 @@ dependencies = [
   "pydantic ~= 2.10.0, <2.11.0",
 ]
 requires-python = ">=3.11,<3.13"
-description = "AIQ toolkit Profiler Agent"
+description = "NeMo Agent toolkit Profiler Agent"
 license = { file = "LICENSE.md" }
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
