@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Transitional Package for `aiqtoolkit-mem0ai`
-This is a transitional package for `aiqtoolkit-mem0ai` to help ease the migration to `aiqtoolkit-mem0ai`, and will be removed in a future release. It is recommended to use `aiqtoolkit-mem0ai` directly for new projects.
+# Transitional Package for `nvidia-nat-mem0ai`
+This is a transitional package for `nvidia-nat-mem0ai` to help ease the migration to `nvidia-nat-mem0ai`, and will be removed in a future release. It is recommended to use `nvidia-nat-mem0ai` directly for new projects.
 
-For more information about AIQ toolkit, please visit the [AIQ toolkit package](https://pypi.org/project/aiqtoolkit-mem0ai/).
+For more information about the NVIDIA NeMo Agent toolkit, please visit the [NeMo Agent toolkit package](https://pypi.org/project/nvidia-nat-mem0ai/).

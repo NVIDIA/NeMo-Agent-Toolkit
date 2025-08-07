@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Transitional Package for `aiqtoolkit-llama-index`
-This is a transitional package for `aiqtoolkit-llama-index` to help ease the migration to `aiqtoolkit-llama-index`, and will be removed in a future release. It is recommended to use `aiqtoolkit-llama-index` directly for new projects.
+# Transitional Package for `nvidia-nat-llama-index`
+This is a transitional package for `nvidia-nat-llama-index` to help ease the migration to `nvidia-nat-llama-index`, and will be removed in a future release. It is recommended to use `nvidia-nat-llama-index` directly for new projects.
 
-For more information about AIQ toolkit, please visit the [AIQ toolkit package](https://pypi.org/project/aiqtoolkit-llama-index/).
+For more information about the NVIDIA NeMo Agent toolkit, please visit the [NeMo Agent toolkit package](https://pypi.org/project/nvidia-nat-llama-index/).

@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Transitional Package for `aiqtoolkit-test`
-This is a transitional package for `aiqtoolkit-test` to help ease the migration to `aiqtoolkit-test`, and will be removed in a future release. It is recommended to use `aiqtoolkit-test` directly for new projects.
+# Transitional Package for `nvidia-nat-test`
+This is a transitional package for `nvidia-nat-test` to help ease the migration to `nvidia-nat-test`, and will be removed in a future release. It is recommended to use `nvidia-nat-test` directly for new projects.
 
-For more information about AIQ toolkit, please visit the [AIQ toolkit package](https://pypi.org/project/aiqtoolkit-test/).
+For more information about the NVIDIA NeMo Agent toolkit, please visit the [NeMo Agent toolkit package](https://pypi.org/project/nvidia-nat-test/).

@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Transitional Package for `aiqtoolkit-zep-cloud`
-This is a transitional package for `aiqtoolkit-zep-cloud` to help ease the migration to `aiqtoolkit-zep-cloud`, and will be removed in a future release. It is recommended to use `aiqtoolkit-zep-cloud` directly for new projects.
+# Transitional Package for `nvidia-nat-zep-cloud`
+This is a transitional package for `nvidia-nat-zep-cloud` to help ease the migration to `nvidia-nat-zep-cloud`, and will be removed in a future release. It is recommended to use `nvidia-nat-zep-cloud` directly for new projects.
 
-For more information about AIQ toolkit, please visit the [AIQ toolkit package](https://pypi.org/project/aiqtoolkit-zep-cloud/).
+For more information about the NVIDIA NeMo Agent toolkit, please visit the [NeMo Agent toolkit package](https://pypi.org/project/nvidia-nat-zep-cloud/).

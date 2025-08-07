@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Transitional Package for `aiqtoolkit-langchain`
-This is a transitional package for `aiqtoolkit-langchain` to help ease the migration to `aiqtoolkit-langchain`, and will be removed in a future release. It is recommended to use `aiqtoolkit-langchain` directly for new projects.
+# Transitional Package for `nvidia-nat-langchain`
+This is a transitional package for `nvidia-nat-langchain` to help ease the migration to `nvidia-nat-langchain`, and will be removed in a future release. It is recommended to use `nvidia-nat-langchain` directly for new projects.
 
-For more information about AIQ toolkit, please visit the [AIQ toolkit package](https://pypi.org/project/aiqtoolkit-langchain/).
+For more information about the NVIDIA NeMo Agent toolkit, please visit the [NeMo Agent toolkit package](https://pypi.org/project/nvidia-nat-langchain/).
