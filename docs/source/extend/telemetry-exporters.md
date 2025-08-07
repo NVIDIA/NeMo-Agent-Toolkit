@@ -961,7 +961,7 @@ class BatchingExporter(SpanExporter[Span, dict]):
         if hasattr(self, 'session') and self.session:
             await self.session.close()
         await super()._cleanup()
-```
+    ```
 
 ### Custom OpenTelemetry Protocols
 
