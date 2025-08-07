@@ -49,7 +49,7 @@ for AIQ_PACKAGE in "${AIQ_PACKAGES[@]}"; do
 done
 
 if [[ "${BUILD_AIQ_COMPAT}" == "true" ]]; then
-    WHEELS_DIR="${WHEELS_BASE_DIR}/agentiq"
+    WHEELS_DIR="${WHEELS_BASE_DIR}/aiqtoolkit"
     for AIQ_COMPAT_PACKAGE in "${AIQ_COMPAT_PACKAGES[@]}"; do
         build_package_wheel ${AIQ_COMPAT_PACKAGE}
     done

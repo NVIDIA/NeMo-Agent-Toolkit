@@ -37,7 +37,7 @@ fi
 AIQ_ARCH="any"
 AIQ_OS="any"
 
-AIQ_COMPONENTS=("aiqtoolkit" "agentiq")
+AIQ_COMPONENTS=("nvidia-nat" "aiqtoolkit")
 
 WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
 
@@ -90,7 +90,7 @@ install_jfrog_cli
 if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
     for AIQ_COMPONENT_NAME  in ${AIQ_COMPONENTS[@]}; do
         WHEELS_DIR="${WHEELS_BASE_DIR}/${AIQ_COMPONENT_NAME}"
-        rapids-logger "AIQ Component : ${AIQ_COMPONENT_NAME} Dir : ${WHEELS_DIR}"
+        rapids-logger "NAT Component : ${AIQ_COMPONENT_NAME} Dir : ${WHEELS_DIR}"
 
         for SUBDIR in $(find "${WHEELS_DIR}" -mindepth 1 -maxdepth 1 -type d); do
             SUBDIR_NAME=$(basename "${SUBDIR}")
