@@ -28,6 +28,7 @@ from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.data_models.component_ref import AuthenticationRef
 from aiq.data_models.component_ref import EmbedderRef
 from aiq.data_models.component_ref import FunctionRef
+from aiq.data_models.component_ref import GuardrailsRef
 from aiq.data_models.component_ref import ITSStrategyRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.component_ref import MemoryRef
@@ -37,6 +38,7 @@ from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.evaluator import EvaluatorBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.function_dependencies import FunctionDependencies
+from aiq.data_models.guardrails import GuardrailsBaseConfig
 from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
@@ -44,6 +46,7 @@ from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
 from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
+from aiq.guardrails.manager import GuardrailsManager
 from aiq.memory.interfaces import MemoryEditor
 from aiq.object_store.interfaces import ObjectStore
 from aiq.retriever.interface import AIQRetriever
@@ -175,6 +178,18 @@ class Builder(ABC):  # pylint: disable=too-many-public-methods
 
     @abstractmethod
     async def add_memory_client(self, name: str | MemoryRef, config: MemoryBaseConfig):
+        pass
+
+    @abstractmethod
+    async def add_guardrails(self, name: str | GuardrailsRef, config: GuardrailsBaseConfig):
+        pass
+
+    @abstractmethod
+    async def get_guardrails(self, guardrails_name: str | GuardrailsRef) -> GuardrailsManager:
+        pass
+
+    @abstractmethod
+    def get_guardrails_config(self, guardrails_name: str | GuardrailsRef) -> GuardrailsBaseConfig:
         pass
 
     def get_memory_clients(self, memory_names: Sequence[str | MemoryRef]) -> list[MemoryEditor]:

@@ -1,0 +1,40 @@
+functions:
+   # Add a tool to search wikipedia
+   wikipedia_search:
+      _type: wiki_search
+      max_results: 2
+
+llms:
+   # Tell NeMo Agent toolkit which LLM to use for the agent
+   nim_llm:
+      _type: nim
+      model_name: meta/llama-3.1-70b-instruct
+      temperature: 0.0
+
+guardrails:
+  basic_rails:
+    _type: nemo_guardrails
+    enabled: true
+    input_rails_enabled: true
+    output_rails_enabled: false
+    llm_name: nim_llm
+    fallback_on_error: true
+    rails:
+      input:
+         flows:
+            - self check input
+
+workflow:
+   # Use an agent that 'reasons' and 'acts'
+   _type: react_agent
+   # Give it access to our wikipedia search tool
+   tool_names: [wikipedia_search]
+   # Tell it which LLM to use
+   llm_name: nim_llm
+   # Make it verbose
+   verbose: true
+   # Retry parsing errors because LLMs are non-deterministic
+   retry_parsing_errors: true
+   # Retry up to 3 times
+   max_retries: 3
+   guardrails: basic_rails

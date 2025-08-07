@@ -1,0 +1,21 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64"]
+
+[project]
+name = "aiq_simple_guardrails"
+version = "0.1.0"
+dependencies = [
+  "aiqtoolkit[langchain]~=1.2",
+  "langgraph>=0.2.0"
+]
+requires-python = ">=3.11,<3.13"
+description = "Simple guardrails example with manual integration"
+keywords = ["ai", "guardrails", "agents", "langraph"]
+classifiers = ["Programming Language :: Python"]
+
+[tool.uv.sources]
+aiqtoolkit = { path = "../..", editable = true }
+
+[project.entry-points.'aiq.components']
+aiq_simple_guardrails = "aiq_simple_guardrails.register"

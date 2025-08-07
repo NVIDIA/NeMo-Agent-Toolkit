@@ -55,6 +55,8 @@ from aiq.data_models.front_end import FrontEndBaseConfig
 from aiq.data_models.front_end import FrontEndConfigT
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.function import FunctionConfigT
+from aiq.data_models.guardrails import GuardrailsBaseConfig
+from aiq.data_models.guardrails import GuardrailsBaseConfigT
 from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.its_strategy import ITSStrategyBaseConfigT
 from aiq.data_models.llm import LLMBaseConfig
@@ -72,6 +74,7 @@ from aiq.data_models.retriever import RetrieverBaseConfigT
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterConfigT
 from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
+from aiq.guardrails.interface import GuardrailsProvider
 from aiq.memory.interfaces import MemoryEditor
 from aiq.object_store.interfaces import ObjectStore
 from aiq.observability.exporter.base_exporter import BaseExporter
@@ -118,6 +121,10 @@ RetrieverClientRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder], A
 RetrieverProviderRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder],
                                                 AbstractAsyncContextManager[RetrieverProviderInfo]]
 TeleExporterRegisteredCallableT = Callable[[TelemetryExporterConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
+
+GuardrailsBuildCallableT = Callable[[GuardrailsBaseConfigT, Builder], AsyncIterator[GuardrailsProvider]]
+GuardrailsRegisteredCallableT = Callable[[GuardrailsBaseConfigT, Builder],
+                                         AbstractAsyncContextManager[GuardrailsProvider]]
 
 
 class RegisteredInfo(BaseModel, typing.Generic[TypedBaseModelT]):
@@ -222,6 +229,11 @@ class RegisteredEmbedderClientInfo(RegisteredInfo[EmbedderBaseConfig]):
 
     llm_framework: str
     build_fn: EmbedderClientRegisteredCallableT = Field(repr=False)
+
+
+class RegisteredGuardrailsInfo(RegisteredInfo[GuardrailsBaseConfig]):
+    """Represents a registered guardrails configuration."""
+    build_fn: GuardrailsRegisteredCallableT = Field(repr=False)
 
 
 class RegisteredEvaluatorInfo(RegisteredInfo[EvaluatorBaseConfig]):
@@ -355,6 +367,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         # ITS Strategies
         self._registered_its_strategies: dict[type[ITSStrategyBaseConfig], RegisteredITSStrategyInfo] = {}
+
+        # Guardrails
+        self._registered_guardrails_infos: dict[type[GuardrailsBaseConfig], RegisteredGuardrailsInfo] = {}
 
         # Packages
         self._registered_packages: dict[str, RegisteredPackage] = {}
@@ -747,6 +762,27 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
     def get_registered_its_strategies(self) -> list[RegisteredInfo[ITSStrategyBaseConfig]]:
         return list(self._registered_its_strategies.values())
 
+    def register_guardrails(self, info: RegisteredGuardrailsInfo):
+        """Register a guardrails configuration type."""
+        if info.config_type in self._registered_guardrails_infos:
+            raise ValueError(
+                f"A guardrails config with the same type `{info.config_type}` has already been registered.")
+
+        self._registered_guardrails_infos[info.config_type] = info
+        self._registration_changed()
+
+    def get_guardrails(self, config_type: type[GuardrailsBaseConfig]) -> RegisteredGuardrailsInfo:
+        """Get a specific registered guardrails configuration."""
+        try:
+            return self._registered_guardrails_infos[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered guardrails config for `{config_type}`. "
+                           f"Registered configs: {set(self._registered_guardrails_infos.keys())}") from err
+
+    def get_registered_guardrails(self) -> list[RegisteredInfo[GuardrailsBaseConfig]]:
+        """Get all registered guardrails configurations."""
+        return list(self._registered_guardrails_infos.values())
+
     def register_registry_handler(self, info: RegisteredRegistryHandlerInfo):
 
         if (info.config_type in self._registered_memory_infos):
@@ -847,6 +883,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         if component_type == AIQComponentEnum.ITS_STRATEGY:
             return self._registered_its_strategies
 
+        if component_type == AIQComponentEnum.GUARDRAILS:
+            return self._registered_guardrails_infos
+
         raise ValueError(f"Supplied an unsupported component type {component_type}")
 
     def get_registered_types_by_component_type(  # pylint: disable=R0911
@@ -898,6 +937,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         if component_type == AIQComponentEnum.ITS_STRATEGY:
             return [i.static_type() for i in self._registered_its_strategies]
+
+        if component_type == AIQComponentEnum.GUARDRAILS:
+            return [i.config_type.static_type() for i in self._registered_guardrails_infos.values()]
 
         raise ValueError(f"Supplied an unsupported component type {component_type}")
 
@@ -968,6 +1010,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         if issubclass(cls, ITSStrategyBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_its_strategies())
+
+        if issubclass(cls, GuardrailsBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_guardrails())
 
         raise ValueError(f"Supplied an unsupported component type {cls}")
 

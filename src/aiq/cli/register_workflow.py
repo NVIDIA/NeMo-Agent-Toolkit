@@ -28,6 +28,8 @@ from aiq.cli.type_registry import FrontEndBuildCallableT
 from aiq.cli.type_registry import FrontEndRegisteredCallableT
 from aiq.cli.type_registry import FunctionBuildCallableT
 from aiq.cli.type_registry import FunctionRegisteredCallableT
+from aiq.cli.type_registry import GuardrailsBuildCallableT
+from aiq.cli.type_registry import GuardrailsRegisteredCallableT
 from aiq.cli.type_registry import ITSStrategyBuildCallableT
 from aiq.cli.type_registry import ITSStrategyRegisterCallableT
 from aiq.cli.type_registry import LLMClientBuildCallableT
@@ -60,6 +62,7 @@ from aiq.data_models.embedder import EmbedderBaseConfigT
 from aiq.data_models.evaluator import EvaluatorBaseConfigT
 from aiq.data_models.front_end import FrontEndConfigT
 from aiq.data_models.function import FunctionConfigT
+from aiq.data_models.guardrails import GuardrailsBaseConfigT
 from aiq.data_models.llm import LLMBaseConfigT
 from aiq.data_models.memory import MemoryBaseConfigT
 from aiq.data_models.object_store import ObjectStoreBaseConfigT
@@ -486,3 +489,27 @@ def register_registry_handler(config_type: type[RegistryHandlerBaseConfigT]):
         return context_manager_fn
 
     return register_registry_handler_inner
+
+
+def register_guardrails(config_type: type[GuardrailsBaseConfigT]):
+
+    def register_guardrails_inner(
+            fn: GuardrailsBuildCallableT[GuardrailsBaseConfigT]
+    ) -> GuardrailsRegisteredCallableT[GuardrailsBaseConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredGuardrailsInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=AIQComponentEnum.GUARDRAILS)
+
+        GlobalTypeRegistry.get().register_guardrails(
+            RegisteredGuardrailsInfo(full_type=config_type.full_type,
+                                     config_type=config_type,
+                                     build_fn=context_manager_fn,
+                                     discovery_metadata=discovery_metadata))
+
+        return context_manager_fn
+
+    return register_guardrails_inner

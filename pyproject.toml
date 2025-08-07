@@ -79,6 +79,7 @@ telemetry = [
 ]
 weave = ["aiqtoolkit-weave"]
 zep-cloud = ["aiqtoolkit-zep-cloud"]
+nemoguardrails = ["nemoguardrails~=0.14.0"]
 
 examples = [
   "aiq_agno_personal_finance",
@@ -217,7 +218,7 @@ aiq_object_stores = "aiq.object_store.register"
 aiq_observability = "aiq.observability.register"
 aiq_retrievers = "aiq.retriever.register"
 aiq_tools = "aiq.tool.register"
-
+aiq_guardrails = "aiq.guardrails.register"
 
 [project.entry-points.'aiq.front_ends']
 aiq_front_ends = "aiq.front_ends.register"

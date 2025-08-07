@@ -38,6 +38,16 @@ class TelemetryOptionalImportError(OptionalImportError):
         )
 
 
+class GuardrailsOptionalImportError(OptionalImportError):
+    """Raised when optional guardrails dependencies are not installed."""
+
+    def __init__(self, module_name: str):
+        super().__init__(
+            module_name,
+            "But the configuration file contains guardrails. "
+            "If you want to use this feature, please install it with: uv pip install -e '.[guardrails]'")
+
+
 def optional_import(module_name: str) -> ModuleType:
     """Attempt to import a module, raising OptionalImportError if it fails."""
     try:
@@ -54,6 +64,14 @@ def telemetry_optional_import(module_name: str) -> ModuleType:
         raise TelemetryOptionalImportError(module_name) from e
 
 
+def guardrails_optional_import(module_name: str) -> ModuleType:
+    """Attempt to import a module, raising GuardrailsOptionalImportError if it fails."""
+    try:
+        return importlib.import_module(module_name)
+    except ImportError as e:
+        raise GuardrailsOptionalImportError(module_name) from e
+
+
 def try_import_opentelemetry() -> ModuleType:
     """Get the opentelemetry module if available."""
     return telemetry_optional_import("opentelemetry")
@@ -62,6 +80,11 @@ def try_import_opentelemetry() -> ModuleType:
 def try_import_phoenix() -> ModuleType:
     """Get the phoenix module if available."""
     return telemetry_optional_import("phoenix")
+
+
+def try_import_nemoguardrails() -> ModuleType:
+    """Get the nemoguardrails module if available."""
+    return guardrails_optional_import("nemoguardrails")
 
 
 # Dummy OpenTelemetry classes for when the package is not available

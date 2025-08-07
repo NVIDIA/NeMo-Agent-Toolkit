@@ -25,6 +25,7 @@ from aiq.cli.register_workflow import register_function
 from aiq.data_models.api_server import AIQChatRequest
 from aiq.data_models.api_server import AIQChatResponse
 from aiq.data_models.component_ref import FunctionRef
+from aiq.data_models.component_ref import GuardrailsRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.utils.type_converter import GlobalTypeConverter
@@ -70,6 +71,8 @@ class ReActAgentWorkflowConfig(FunctionBaseConfig, name="react_agent"):
                                               "If False, strings will be used."))
     additional_instructions: str | None = Field(
         default=None, description="Additional instructions to provide to the agent in addition to the base prompt.")
+    guardrails: GuardrailsRef | None = Field(
+        default=None, description="Name of the guardrails configuration to apply to this workflow")
 
 
 @register_function(config_type=ReActAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -92,6 +95,13 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     tools = builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     if not tools:
         raise ValueError(f"No tools specified for ReAct Agent '{config.llm_name}'")
+
+    # Get guardrails provider if configured
+    guardrails_provider = None
+    if config.guardrails:
+        guardrails_provider = await builder.get_guardrails(config.guardrails)
+        logger.debug("Loaded guardrails provider for React agent: %s", config.guardrails)
+
     # configure callbacks, for sending intermediate steps
     # construct the ReAct Agent Graph from the configured llm, prompt, and tools
     graph: CompiledGraph = await ReActAgentGraph(
@@ -107,8 +117,17 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
 
     async def _response_fn(input_message: AIQChatRequest) -> AIQChatResponse:
         try:
+            # Apply input guardrails if configured
+            processed_input = input_message
+            if guardrails_provider:
+                processed_input, should_continue = await guardrails_provider.apply_input_guardrails(input_message)
+                if not should_continue:
+                    logger.warning("ReAct Agent input blocked by guardrails")
+                    return guardrails_provider.create_fallback_response(input_message)
+                logger.debug("ReAct Agent input passed guardrails check")
+
             # initialize the starting state with the user query
-            messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in input_message.messages],
+            messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in processed_input.messages],
                                                         max_tokens=config.max_history,
                                                         strategy="last",
                                                         token_counter=len,
@@ -126,7 +145,14 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             # get and return the output from the state
             state = ReActGraphState(**state)
             output_message = state.messages[-1]  # pylint: disable=E1136
-            return AIQChatResponse.from_string(str(output_message.content))
+            response = AIQChatResponse.from_string(str(output_message.content))
+
+            # Apply output guardrails if configured
+            if guardrails_provider:
+                response = await guardrails_provider.apply_output_guardrails(response, processed_input)
+                logger.debug("ReAct Agent output passed guardrails check")
+
+            return response
 
         except Exception as ex:
             logger.exception("%s ReAct Agent failed with exception: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)

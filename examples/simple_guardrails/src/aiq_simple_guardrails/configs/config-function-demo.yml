@@ -1,0 +1,33 @@
+functions:
+   # Add a tool to search wikipedia
+   wikipedia_search:
+      _type: wiki_search
+      max_results: 2
+
+llms:
+   # Tell NeMo Agent toolkit which LLM to use for the agent
+   nim_llm:
+      _type: nim
+      model_name: meta/llama-3.1-70b-instruct
+      temperature: 0.0
+
+guardrails:
+  safety_rails:
+    _type: nemo_guardrails
+    enabled: true
+    input_rails_enabled: true
+    output_rails_enabled: false
+    llm_name: nim_llm
+    fallback_on_error: true
+    fallback_response: "I cannot provide a response to that request due to safety concerns."
+    rails:
+      input:
+         flows:
+            - self check input
+
+workflow:
+   _type: agent_with_rails
+   tool_names: [wikipedia_search]
+   llm_name: nim_llm
+   guardrails_name: safety_rails
+   description: "Custom function with manual guardrails integration"

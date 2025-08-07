@@ -53,6 +53,7 @@ from aiq.data_models.config import GeneralConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.function_dependencies import FunctionDependencies
+from aiq.data_models.guardrails import GuardrailsBaseConfig
 from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
@@ -63,6 +64,7 @@ from aiq.experimental.decorators.experimental_warning_decorator import aiq_exper
 from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
 from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
 from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
+from aiq.guardrails.manager import GuardrailsManager
 from aiq.memory.interfaces import MemoryEditor
 from aiq.object_store.interfaces import ObjectStore
 from aiq.observability.exporter.base_exporter import BaseExporter
@@ -127,6 +129,12 @@ class ConfiguredITSStrategy:
     instance: StrategyBase
 
 
+@dataclasses.dataclass
+class ConfiguredGuardrails:
+    config: GuardrailsBaseConfig
+    instance: GuardrailsManager
+
+
 # pylint: disable=too-many-public-methods
 class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
@@ -163,6 +171,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Create a mapping to track function name -> other function names it depends on
         self.function_dependencies: dict[str, FunctionDependencies] = {}
         self.current_function_building: str | None = None
+
+        self._guardrails: dict[str, ConfiguredGuardrails] = {}
 
     async def __aenter__(self):
 
@@ -767,6 +777,40 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         return config
 
     @override
+    async def add_guardrails(self, name: str, config: GuardrailsBaseConfig):
+        """Add guardrails configuration to the builder."""
+        if name in self._guardrails:
+            raise ValueError(f"Guardrails `{name}` already exists")
+
+        try:
+            llm_config = None
+            if hasattr(config, 'llm_name') and getattr(config, 'llm_name', None):
+                llm_config = self.get_llm_config(getattr(config, 'llm_name'))
+
+            # Create guardrails manager
+            guardrails_manager = GuardrailsManager(config, llm_config)
+            await guardrails_manager.initialize()
+
+            self._guardrails[name] = ConfiguredGuardrails(config=config, instance=guardrails_manager)
+        except Exception as e:
+            logger.error("Error adding guardrails `%s` with config `%s`", name, config, exc_info=True)
+            raise e
+
+    @override
+    async def get_guardrails(self, guardrails_name: str) -> GuardrailsManager:
+        """Get a guardrails manager."""
+        if guardrails_name not in self._guardrails:
+            raise ValueError(f"Guardrails `{guardrails_name}` not found")
+        return self._guardrails[guardrails_name].instance
+
+    @override
+    def get_guardrails_config(self, guardrails_name: str) -> GuardrailsBaseConfig:
+        """Get guardrails configuration."""
+        if guardrails_name not in self._guardrails:
+            raise ValueError(f"Guardrails `{guardrails_name}` not found")
+        return self._guardrails[guardrails_name].config
+
+    @override
     def get_user_manager(self):
         return UserManagerHolder(context=AIQContext(self._context_state))
 
@@ -902,6 +946,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 # Instantiate a retriever client
                 elif component_instance.component_group == ComponentGroup.RETRIEVERS:
                     await self.add_retriever(component_instance.name, component_instance.config)
+                # instantiate guardrails
+                elif component_instance.component_group == ComponentGroup.GUARDRAILS:
+                    await self.add_guardrails(component_instance.name, component_instance.config)
                 # Instantiate a function
                 elif component_instance.component_group == ComponentGroup.FUNCTIONS:
                     # If the function is the root, set it as the workflow later
@@ -1115,3 +1162,18 @@ class ChildBuilder(Builder):
     @override
     def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
         return self._workflow_builder.get_function_dependencies(fn_name)
+
+    @override
+    async def add_guardrails(self, name: str, config: GuardrailsBaseConfig):
+        """Add guardrails configuration via the parent builder."""
+        return await self._workflow_builder.add_guardrails(name, config)
+
+    @override
+    async def get_guardrails(self, guardrails_name: str) -> GuardrailsManager:
+        """Get a guardrails manager for manual integration in functions."""
+        return await self._workflow_builder.get_guardrails(guardrails_name)
+
+    @override
+    def get_guardrails_config(self, guardrails_name: str) -> GuardrailsBaseConfig:
+        """Get guardrails configuration."""
+        return self._workflow_builder.get_guardrails_config(guardrails_name)
