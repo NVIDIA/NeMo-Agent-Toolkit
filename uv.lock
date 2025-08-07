@@ -1,5 +1,4 @@
 version = 1
-revision = 1
 requires-python = "==3.12.*"
 resolution-markers = [
     "sys_platform == 'linux'",
@@ -8,22 +7,22 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "aiqtoolkit",
-    "aiqtoolkit-agno",
-    "aiqtoolkit-crewai",
-    "aiqtoolkit-langchain",
-    "aiqtoolkit-llama-index",
-    "aiqtoolkit-mem0ai",
-    "aiqtoolkit-mysql",
-    "aiqtoolkit-opentelemetry",
-    "aiqtoolkit-phoenix",
-    "aiqtoolkit-ragaai",
-    "aiqtoolkit-redis",
-    "aiqtoolkit-s3",
-    "aiqtoolkit-semantic-kernel",
-    "aiqtoolkit-test",
-    "aiqtoolkit-weave",
-    "aiqtoolkit-zep-cloud",
+    "nvidia-nat",
+    "nvidia-nat-agno",
+    "nvidia-nat-crewai",
+    "nvidia-nat-langchain",
+    "nvidia-nat-llama-index",
+    "nvidia-nat-mem0ai",
+    "nvidia-nat-mysql",
+    "nvidia-nat-opentelemetry",
+    "nvidia-nat-phoenix",
+    "nvidia-nat-ragaai",
+    "nvidia-nat-redis",
+    "nvidia-nat-s3",
+    "nvidia-nat-semantic-kernel",
+    "nvidia-nat-test",
+    "nvidia-nat-weave",
+    "nvidia-nat-zep-cloud",
 ]
 
 [[package]]
@@ -243,15 +242,15 @@ wheels = [
 name = "aiq-agno-personal-finance"
 source = { editable = "examples/frameworks/agno_personal_finance" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["agno"] },
     { name = "litellm" },
+    { name = "nvidia-nat", extra = ["agno"] },
     { name = "openai" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aiqtoolkit", extras = ["agno"], editable = "." },
     { name = "litellm", specifier = "~=1.63.14" },
+    { name = "nvidia-nat", extras = ["agno"], editable = "." },
     { name = "openai", specifier = "~=1.66" },
 ]
 
@@ -259,21 +258,21 @@ requires-dist = [
 name = "aiq-alert-triage-agent"
 source = { editable = "examples/advanced_agents/alert_triage_agent" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain"] },
     { name = "ansible-runner" },
     { name = "flask" },
     { name = "langchain-core" },
     { name = "langgraph" },
+    { name = "nvidia-nat", extra = ["langchain"] },
     { name = "pandas" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
     { name = "ansible-runner", specifier = ">=2.3.0" },
     { name = "flask", specifier = ">=3.0.0" },
     { name = "langchain-core" },
     { name = "langgraph", specifier = ">=0.0.10" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
     { name = "pandas", specifier = ">=2.0.0" },
 ]
 
@@ -281,29 +280,29 @@ requires-dist = [
 name = "aiq-automated-description-generation"
 source = { editable = "examples/custom_functions/automated_description_generation" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["ingestion", "langchain"] },
+    { name = "nvidia-nat", extra = ["ingestion", "langchain"] },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "aiqtoolkit", extras = ["ingestion", "langchain"], editable = "." }]
+requires-dist = [{ name = "nvidia-nat", extras = ["ingestion", "langchain"], editable = "." }]
 
 [[package]]
 name = "aiq-email-phishing-analyzer"
 source = { editable = "examples/evaluation_and_profiling/email_phishing_analyzer" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain"] },
     { name = "arize-phoenix" },
     { name = "bs4" },
     { name = "networkx" },
+    { name = "nvidia-nat", extra = ["langchain"] },
     { name = "openinference-instrumentation-langchain" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
     { name = "arize-phoenix", specifier = "==6.1.*" },
     { name = "bs4", specifier = "==0.0.2" },
     { name = "networkx", specifier = "~=3.4" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
     { name = "openinference-instrumentation-langchain", specifier = "==0.1.29" },
 ]
 
@@ -311,21 +310,21 @@ requires-dist = [
 name = "aiq-multi-frameworks"
 source = { editable = "examples/frameworks/multi_frameworks" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain", "llama-index"] },
     { name = "arxiv" },
     { name = "bs4" },
     { name = "markdown-it-py" },
     { name = "nvidia-haystack" },
+    { name = "nvidia-nat", extra = ["langchain", "llama-index"] },
     { name = "openai" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aiqtoolkit", extras = ["langchain", "llama-index"], editable = "." },
     { name = "arxiv", specifier = "~=2.1.3" },
     { name = "bs4", specifier = "==0.0.2" },
     { name = "markdown-it-py", specifier = "~=3.0" },
     { name = "nvidia-haystack", specifier = "==0.1.2" },
+    { name = "nvidia-nat", extras = ["langchain", "llama-index"], editable = "." },
     { name = "openai", specifier = "~=1.78.0" },
 ]
 
@@ -333,15 +332,15 @@ requires-dist = [
 name = "aiq-plot-charts"
 source = { editable = "examples/custom_functions/plot_charts" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain"] },
     { name = "matplotlib" },
+    { name = "nvidia-nat", extra = ["langchain"] },
     { name = "seaborn" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
     { name = "matplotlib", specifier = "==3.9.*" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
     { name = "seaborn", specifier = "==0.13.*" },
 ]
 
@@ -349,23 +348,23 @@ requires-dist = [
 name = "aiq-por-to-jiratickets"
 source = { editable = "examples/HITL/por_to_jiratickets" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain"] },
+    { name = "nvidia-nat", extra = ["langchain"] },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "aiqtoolkit", extras = ["langchain"], editable = "." }]
+requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
 
 [[package]]
 name = "aiq-profiler-agent"
 source = { editable = "examples/advanced_agents/profiler_agent" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain", "profiling", "telemetry"] },
+    { name = "nvidia-nat", extra = ["langchain", "profiling", "telemetry"] },
     { name = "pydantic" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aiqtoolkit", extras = ["langchain", "profiling", "telemetry"], editable = "." },
+    { name = "nvidia-nat", extras = ["langchain", "profiling", "telemetry"], editable = "." },
     { name = "pydantic", specifier = "~=2.10.0,<2.11.0" },
 ]
 
@@ -373,63 +372,63 @@ requires-dist = [
 name = "aiq-redact-pii"
 source = { editable = "examples/observability/redact_pii" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["weave"] },
+    { name = "nvidia-nat", extra = ["weave"] },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "aiqtoolkit", extras = ["weave"], editable = "." }]
+requires-dist = [{ name = "nvidia-nat", extras = ["weave"], editable = "." }]
 
 [[package]]
 name = "aiq-semantic-kernel-demo"
 source = { editable = "examples/frameworks/semantic_kernel_demo" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain", "mem0ai", "semantic-kernel"] },
     { name = "faiss-cpu" },
+    { name = "nvidia-nat", extra = ["langchain", "mem0ai", "semantic-kernel"] },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aiqtoolkit", extras = ["langchain", "mem0ai", "semantic-kernel"], editable = "." },
     { name = "faiss-cpu", specifier = "==1.9.0" },
+    { name = "nvidia-nat", extras = ["langchain", "mem0ai", "semantic-kernel"], editable = "." },
 ]
 
 [[package]]
 name = "aiq-simple-auth"
 source = { editable = "examples/front_ends/simple_auth" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain"] },
     { name = "httpx" },
+    { name = "nvidia-nat", extra = ["langchain"] },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aiqtoolkit", editable = "." },
-    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
     { name = "httpx" },
+    { name = "nvidia-nat", editable = "." },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
 ]
 
 [[package]]
 name = "aiq-simple-calculator"
 source = { editable = "examples/getting_started/simple_calculator" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain"] },
+    { name = "nvidia-nat", extra = ["langchain"] },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "aiqtoolkit", extras = ["langchain"], editable = "." }]
+requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
 
 [[package]]
 name = "aiq-simple-calculator-custom-routes"
 source = { editable = "examples/front_ends/simple_calculator_custom_routes" }
 dependencies = [
     { name = "aiq-simple-calculator" },
-    { name = "aiqtoolkit", extra = ["langchain"] },
+    { name = "nvidia-nat", extra = ["langchain"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
 ]
 
 [[package]]
@@ -437,13 +436,13 @@ name = "aiq-simple-calculator-eval"
 source = { editable = "examples/evaluation_and_profiling/simple_calculator_eval" }
 dependencies = [
     { name = "aiq-simple-calculator" },
-    { name = "aiqtoolkit", extra = ["langchain"] },
+    { name = "nvidia-nat", extra = ["langchain"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
 ]
 
 [[package]]
@@ -452,14 +451,14 @@ source = { editable = "examples/HITL/simple_calculator_hitl" }
 dependencies = [
     { name = "aiq-por-to-jiratickets" },
     { name = "aiq-simple-calculator" },
-    { name = "aiqtoolkit", extra = ["langchain"] },
+    { name = "nvidia-nat", extra = ["langchain"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "aiq-por-to-jiratickets" },
     { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
 ]
 
 [[package]]
@@ -467,13 +466,13 @@ name = "aiq-simple-calculator-mcp"
 source = { editable = "examples/MCP/simple_calculator_mcp" }
 dependencies = [
     { name = "aiq-simple-calculator" },
-    { name = "aiqtoolkit", extra = ["langchain"] },
+    { name = "nvidia-nat", extra = ["langchain"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
 ]
 
 [[package]]
@@ -481,38 +480,38 @@ name = "aiq-simple-calculator-observability"
 source = { editable = "examples/observability/simple_calculator_observability" }
 dependencies = [
     { name = "aiq-simple-calculator" },
-    { name = "aiqtoolkit", extra = ["langchain", "telemetry"] },
+    { name = "nvidia-nat", extra = ["langchain", "telemetry"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "aiq-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "aiqtoolkit", extras = ["langchain", "telemetry"], editable = "." },
+    { name = "nvidia-nat", extras = ["langchain", "telemetry"], editable = "." },
 ]
 
 [[package]]
 name = "aiq-simple-rag"
 source = { editable = "examples/RAG/simple_rag" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["ingestion", "langchain", "mem0ai"] },
+    { name = "nvidia-nat", extra = ["ingestion", "langchain", "mem0ai"] },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "aiqtoolkit", extras = ["ingestion", "langchain", "mem0ai"], editable = "." }]
+requires-dist = [{ name = "nvidia-nat", extras = ["ingestion", "langchain", "mem0ai"], editable = "." }]
 
 [[package]]
 name = "aiq-simple-web-query"
 source = { editable = "examples/getting_started/simple_web_query" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain", "telemetry"] },
     { name = "faiss-cpu" },
+    { name = "nvidia-nat", extra = ["langchain", "telemetry"] },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
-    { name = "aiqtoolkit", extras = ["telemetry"], editable = "." },
     { name = "faiss-cpu", specifier = "==1.9.0" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+    { name = "nvidia-nat", extras = ["telemetry"], editable = "." },
 ]
 
 [[package]]
@@ -520,26 +519,26 @@ name = "aiq-simple-web-query-eval"
 source = { editable = "examples/evaluation_and_profiling/simple_web_query_eval" }
 dependencies = [
     { name = "aiq-simple-web-query" },
-    { name = "aiqtoolkit", extra = ["langchain", "profiling"] },
+    { name = "nvidia-nat", extra = ["langchain", "profiling"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "aiq-simple-web-query", editable = "examples/getting_started/simple_web_query" },
-    { name = "aiqtoolkit", extras = ["langchain", "profiling"], editable = "." },
+    { name = "nvidia-nat", extras = ["langchain", "profiling"], editable = "." },
 ]
 
 [[package]]
 name = "aiq-swe-bench"
 source = { editable = "examples/evaluation_and_profiling/swe_bench" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["langchain"] },
+    { name = "nvidia-nat", extra = ["langchain"] },
     { name = "swebench" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aiqtoolkit", extras = ["langchain"], editable = "." },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
     { name = "swebench", specifier = "==3.0.3" },
 ]
 
@@ -547,521 +546,13 @@ requires-dist = [
 name = "aiq-user-report"
 source = { editable = "examples/object_store/user_report" }
 dependencies = [
-    { name = "aiqtoolkit", extra = ["mysql", "s3"] },
+    { name = "nvidia-nat", extra = ["mysql", "s3"] },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aiqtoolkit", extras = ["mysql"], editable = "." },
-    { name = "aiqtoolkit", extras = ["s3"], editable = "." },
-]
-
-[[package]]
-name = "aiqtoolkit"
-source = { editable = "." }
-dependencies = [
-    { name = "aioboto3" },
-    { name = "authlib" },
-    { name = "click" },
-    { name = "colorama" },
-    { name = "datasets" },
-    { name = "expandvars" },
-    { name = "fastapi" },
-    { name = "httpx" },
-    { name = "jinja2" },
-    { name = "jsonpath-ng" },
-    { name = "mcp" },
-    { name = "networkx" },
-    { name = "numpy" },
-    { name = "openinference-semantic-conventions" },
-    { name = "openpyxl" },
-    { name = "pkce" },
-    { name = "pkginfo" },
-    { name = "platformdirs" },
-    { name = "pydantic" },
-    { name = "pymilvus" },
-    { name = "pyyaml" },
-    { name = "ragas" },
-    { name = "rich" },
-    { name = "tabulate" },
-    { name = "uvicorn", extra = ["standard"] },
-    { name = "wikipedia" },
-]
-
-[package.optional-dependencies]
-agno = [
-    { name = "aiqtoolkit-agno" },
-]
-crewai = [
-    { name = "aiqtoolkit-crewai" },
-]
-examples = [
-    { name = "aiq-agno-personal-finance" },
-    { name = "aiq-alert-triage-agent" },
-    { name = "aiq-automated-description-generation" },
-    { name = "aiq-email-phishing-analyzer" },
-    { name = "aiq-multi-frameworks" },
-    { name = "aiq-plot-charts" },
-    { name = "aiq-por-to-jiratickets" },
-    { name = "aiq-profiler-agent" },
-    { name = "aiq-redact-pii" },
-    { name = "aiq-semantic-kernel-demo" },
-    { name = "aiq-simple-auth" },
-    { name = "aiq-simple-calculator" },
-    { name = "aiq-simple-calculator-custom-routes" },
-    { name = "aiq-simple-calculator-eval" },
-    { name = "aiq-simple-calculator-hitl" },
-    { name = "aiq-simple-calculator-mcp" },
-    { name = "aiq-simple-calculator-observability" },
-    { name = "aiq-simple-rag" },
-    { name = "aiq-simple-web-query" },
-    { name = "aiq-simple-web-query-eval" },
-    { name = "aiq-swe-bench" },
-    { name = "aiq-user-report" },
-]
-gunicorn = [
-    { name = "gunicorn" },
-]
-ingestion = [
-    { name = "lxml" },
-]
-langchain = [
-    { name = "aiqtoolkit-langchain" },
-]
-llama-index = [
-    { name = "aiqtoolkit-llama-index" },
-]
-mem0ai = [
-    { name = "aiqtoolkit-mem0ai" },
-]
-mysql = [
-    { name = "aiqtoolkit-mysql" },
-]
-opentelemetry = [
-    { name = "aiqtoolkit-opentelemetry" },
-]
-phoenix = [
-    { name = "aiqtoolkit-phoenix" },
-]
-profiling = [
-    { name = "matplotlib" },
-    { name = "prefixspan" },
-    { name = "scikit-learn" },
-]
-ragaai = [
-    { name = "aiqtoolkit-ragaai" },
-]
-redis = [
-    { name = "aiqtoolkit-redis" },
-]
-s3 = [
-    { name = "aiqtoolkit-s3" },
-]
-semantic-kernel = [
-    { name = "aiqtoolkit-semantic-kernel" },
-]
-telemetry = [
-    { name = "aiqtoolkit-opentelemetry" },
-    { name = "aiqtoolkit-phoenix" },
-    { name = "aiqtoolkit-ragaai" },
-    { name = "aiqtoolkit-weave" },
-]
-weave = [
-    { name = "aiqtoolkit-weave" },
-]
-zep-cloud = [
-    { name = "aiqtoolkit-zep-cloud" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "aiqtoolkit-test" },
-    { name = "asgi-lifespan" },
-    { name = "flake8" },
-    { name = "flake8-pyproject" },
-    { name = "httpx-sse" },
-    { name = "isort" },
-    { name = "pip" },
-    { name = "pre-commit" },
-    { name = "pylint" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "pytest-httpserver" },
-    { name = "pytest-pretty" },
-    { name = "python-docx" },
-    { name = "setuptools" },
-    { name = "setuptools-scm" },
-    { name = "tomlkit" },
-    { name = "twine" },
-    { name = "yapf" },
-]
-docs = [
-    { name = "ipython" },
-    { name = "myst-parser" },
-    { name = "nbsphinx" },
-    { name = "nvidia-sphinx-theme" },
-    { name = "sphinx" },
-    { name = "sphinx-autoapi" },
-    { name = "sphinx-copybutton" },
-    { name = "sphinx-mermaid" },
-    { name = "vale" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aioboto3", specifier = ">=11.0.0" },
-    { name = "aiq-agno-personal-finance", marker = "extra == 'examples'", editable = "examples/frameworks/agno_personal_finance" },
-    { name = "aiq-alert-triage-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/alert_triage_agent" },
-    { name = "aiq-automated-description-generation", marker = "extra == 'examples'", editable = "examples/custom_functions/automated_description_generation" },
-    { name = "aiq-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/email_phishing_analyzer" },
-    { name = "aiq-multi-frameworks", marker = "extra == 'examples'", editable = "examples/frameworks/multi_frameworks" },
-    { name = "aiq-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },
-    { name = "aiq-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/HITL/por_to_jiratickets" },
-    { name = "aiq-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },
-    { name = "aiq-redact-pii", marker = "extra == 'examples'", editable = "examples/observability/redact_pii" },
-    { name = "aiq-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/frameworks/semantic_kernel_demo" },
-    { name = "aiq-simple-auth", marker = "extra == 'examples'", editable = "examples/front_ends/simple_auth" },
-    { name = "aiq-simple-calculator", marker = "extra == 'examples'", editable = "examples/getting_started/simple_calculator" },
-    { name = "aiq-simple-calculator-custom-routes", marker = "extra == 'examples'", editable = "examples/front_ends/simple_calculator_custom_routes" },
-    { name = "aiq-simple-calculator-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_calculator_eval" },
-    { name = "aiq-simple-calculator-hitl", marker = "extra == 'examples'", editable = "examples/HITL/simple_calculator_hitl" },
-    { name = "aiq-simple-calculator-mcp", marker = "extra == 'examples'", editable = "examples/MCP/simple_calculator_mcp" },
-    { name = "aiq-simple-calculator-observability", marker = "extra == 'examples'", editable = "examples/observability/simple_calculator_observability" },
-    { name = "aiq-simple-rag", marker = "extra == 'examples'", editable = "examples/RAG/simple_rag" },
-    { name = "aiq-simple-web-query", marker = "extra == 'examples'", editable = "examples/getting_started/simple_web_query" },
-    { name = "aiq-simple-web-query-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_web_query_eval" },
-    { name = "aiq-swe-bench", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/swe_bench" },
-    { name = "aiq-user-report", marker = "extra == 'examples'", editable = "examples/object_store/user_report" },
-    { name = "aiqtoolkit-agno", marker = "extra == 'agno'", editable = "packages/aiqtoolkit_agno" },
-    { name = "aiqtoolkit-crewai", marker = "extra == 'crewai'", editable = "packages/aiqtoolkit_crewai" },
-    { name = "aiqtoolkit-langchain", marker = "extra == 'langchain'", editable = "packages/aiqtoolkit_langchain" },
-    { name = "aiqtoolkit-llama-index", marker = "extra == 'llama-index'", editable = "packages/aiqtoolkit_llama_index" },
-    { name = "aiqtoolkit-mem0ai", marker = "extra == 'mem0ai'", editable = "packages/aiqtoolkit_mem0ai" },
-    { name = "aiqtoolkit-mysql", marker = "extra == 'mysql'", editable = "packages/aiqtoolkit_mysql" },
-    { name = "aiqtoolkit-opentelemetry", marker = "extra == 'opentelemetry'", editable = "packages/aiqtoolkit_opentelemetry" },
-    { name = "aiqtoolkit-opentelemetry", marker = "extra == 'telemetry'", editable = "packages/aiqtoolkit_opentelemetry" },
-    { name = "aiqtoolkit-phoenix", marker = "extra == 'phoenix'", editable = "packages/aiqtoolkit_phoenix" },
-    { name = "aiqtoolkit-phoenix", marker = "extra == 'telemetry'", editable = "packages/aiqtoolkit_phoenix" },
-    { name = "aiqtoolkit-ragaai", marker = "extra == 'ragaai'", editable = "packages/aiqtoolkit_ragaai" },
-    { name = "aiqtoolkit-ragaai", marker = "extra == 'telemetry'", editable = "packages/aiqtoolkit_ragaai" },
-    { name = "aiqtoolkit-redis", marker = "extra == 'redis'", editable = "packages/aiqtoolkit_redis" },
-    { name = "aiqtoolkit-s3", marker = "extra == 's3'", editable = "packages/aiqtoolkit_s3" },
-    { name = "aiqtoolkit-semantic-kernel", marker = "extra == 'semantic-kernel'", editable = "packages/aiqtoolkit_semantic_kernel" },
-    { name = "aiqtoolkit-weave", marker = "extra == 'telemetry'", editable = "packages/aiqtoolkit_weave" },
-    { name = "aiqtoolkit-weave", marker = "extra == 'weave'", editable = "packages/aiqtoolkit_weave" },
-    { name = "aiqtoolkit-zep-cloud", marker = "extra == 'zep-cloud'", editable = "packages/aiqtoolkit_zep_cloud" },
-    { name = "authlib", specifier = "~=1.3.1" },
-    { name = "click", specifier = "~=8.1" },
-    { name = "colorama", specifier = "~=0.4.6" },
-    { name = "datasets", specifier = "~=4.0" },
-    { name = "expandvars", specifier = "~=1.0" },
-    { name = "fastapi", specifier = "~=0.115.5" },
-    { name = "gunicorn", marker = "extra == 'gunicorn'", specifier = "~=23.0" },
-    { name = "httpx", specifier = "~=0.27" },
-    { name = "jinja2", specifier = "~=3.1" },
-    { name = "jsonpath-ng", specifier = "~=1.7" },
-    { name = "lxml", marker = "extra == 'ingestion'", specifier = "~=5.4" },
-    { name = "matplotlib", marker = "extra == 'profiling'", specifier = "~=3.9" },
-    { name = "mcp", specifier = "~=1.10" },
-    { name = "networkx", specifier = "~=3.4" },
-    { name = "numpy", specifier = "~=1.26" },
-    { name = "openinference-semantic-conventions", specifier = "~=0.1.14" },
-    { name = "openpyxl", specifier = "~=3.1" },
-    { name = "pkce", specifier = "==1.0.3" },
-    { name = "pkginfo", specifier = "~=1.12" },
-    { name = "platformdirs", specifier = "~=4.3" },
-    { name = "prefixspan", marker = "extra == 'profiling'", specifier = "~=0.5.2" },
-    { name = "pydantic", specifier = "==2.10.*" },
-    { name = "pymilvus", specifier = "~=2.4" },
-    { name = "pyyaml", specifier = "~=6.0" },
-    { name = "ragas", specifier = "~=0.2.14" },
-    { name = "rich", specifier = "~=13.9" },
-    { name = "scikit-learn", marker = "extra == 'profiling'", specifier = "~=1.6" },
-    { name = "tabulate", specifier = "~=0.9" },
-    { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
-    { name = "wikipedia", specifier = "~=1.4" },
-]
-provides-extras = ["agno", "crewai", "ingestion", "langchain", "llama-index", "mem0ai", "opentelemetry", "phoenix", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "telemetry", "weave", "zep-cloud", "examples", "profiling", "gunicorn"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "aiqtoolkit-test", editable = "packages/aiqtoolkit_test" },
-    { name = "asgi-lifespan", specifier = "~=2.1" },
-    { name = "flake8", specifier = "~=7.1" },
-    { name = "flake8-pyproject", specifier = "~=1.2" },
-    { name = "httpx-sse", specifier = "~=0.4" },
-    { name = "isort", specifier = "==5.12.0" },
-    { name = "pip", specifier = ">=24.3.1" },
-    { name = "pre-commit", specifier = ">=4.0,<5.0" },
-    { name = "pylint", specifier = "==3.3.*" },
-    { name = "pytest", specifier = "~=8.3" },
-    { name = "pytest-asyncio", specifier = "==0.24.*" },
-    { name = "pytest-cov", specifier = "~=6.1" },
-    { name = "pytest-httpserver", specifier = "==1.1.*" },
-    { name = "pytest-pretty", specifier = "~=1.2.0" },
-    { name = "python-docx", specifier = "~=1.1.0" },
-    { name = "setuptools", specifier = ">=64" },
-    { name = "setuptools-scm", specifier = ">=8" },
-    { name = "tomlkit", specifier = "~=0.13.2" },
-    { name = "twine", specifier = "~=6.0" },
-    { name = "yapf", specifier = "==0.43.*" },
-]
-docs = [
-    { name = "ipython", specifier = "~=8.31" },
-    { name = "myst-parser", specifier = "~=4.0" },
-    { name = "nbsphinx", specifier = "~=0.9" },
-    { name = "nvidia-sphinx-theme", specifier = ">=0.0.7" },
-    { name = "sphinx", specifier = "~=8.2" },
-    { name = "sphinx-autoapi", specifier = ">=3.6" },
-    { name = "sphinx-copybutton", specifier = ">=0.5" },
-    { name = "sphinx-mermaid" },
-    { name = "vale", specifier = "==3.9.5" },
-]
-
-[[package]]
-name = "aiqtoolkit-agno"
-source = { editable = "packages/aiqtoolkit_agno" }
-dependencies = [
-    { name = "agno" },
-    { name = "aiqtoolkit" },
-    { name = "google-search-results" },
-    { name = "openai" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "agno", specifier = "~=1.2.3" },
-    { name = "aiqtoolkit", editable = "." },
-    { name = "google-search-results", specifier = "~=2.4.2" },
-    { name = "openai", specifier = "~=1.66" },
-]
-
-[[package]]
-name = "aiqtoolkit-crewai"
-source = { editable = "packages/aiqtoolkit_crewai" }
-dependencies = [
-    { name = "aiqtoolkit" },
-    { name = "crewai" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiqtoolkit", editable = "." },
-    { name = "crewai", specifier = "~=0.95.0" },
-]
-
-[[package]]
-name = "aiqtoolkit-langchain"
-source = { editable = "packages/aiqtoolkit_langchain" }
-dependencies = [
-    { name = "aiqtoolkit" },
-    { name = "langchain-aws" },
-    { name = "langchain-core" },
-    { name = "langchain-milvus" },
-    { name = "langchain-nvidia-ai-endpoints" },
-    { name = "langchain-openai" },
-    { name = "langgraph" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiqtoolkit", editable = "." },
-    { name = "langchain-aws", specifier = "~=0.2.1" },
-    { name = "langchain-core", specifier = "~=0.3.7" },
-    { name = "langchain-milvus", specifier = "~=0.1.5" },
-    { name = "langchain-milvus", specifier = "~=0.1.8" },
-    { name = "langchain-nvidia-ai-endpoints", specifier = "~=0.3.5" },
-    { name = "langchain-openai", specifier = "~=0.3.5" },
-    { name = "langgraph", specifier = "~=0.2.50" },
-]
-
-[[package]]
-name = "aiqtoolkit-llama-index"
-source = { editable = "packages/aiqtoolkit_llama_index" }
-dependencies = [
-    { name = "aiqtoolkit" },
-    { name = "llama-index" },
-    { name = "llama-index-core" },
-    { name = "llama-index-embeddings-nvidia" },
-    { name = "llama-index-llms-bedrock" },
-    { name = "llama-index-llms-nvidia" },
-    { name = "llama-index-readers-file" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiqtoolkit", editable = "." },
-    { name = "llama-index", specifier = "==0.12.21" },
-    { name = "llama-index-core", specifier = "==0.12.21" },
-    { name = "llama-index-embeddings-nvidia", specifier = "==0.3.1" },
-    { name = "llama-index-llms-bedrock", specifier = "==0.3.8" },
-    { name = "llama-index-llms-nvidia", specifier = "==0.3.1" },
-    { name = "llama-index-readers-file", specifier = "==0.4.4" },
-]
-
-[[package]]
-name = "aiqtoolkit-mem0ai"
-source = { editable = "packages/aiqtoolkit_mem0ai" }
-dependencies = [
-    { name = "aiqtoolkit" },
-    { name = "mem0ai" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiqtoolkit", editable = "." },
-    { name = "mem0ai", specifier = "~=0.1.30" },
-]
-
-[[package]]
-name = "aiqtoolkit-mysql"
-source = { editable = "packages/aiqtoolkit_mysql" }
-dependencies = [
-    { name = "aiomysql" },
-    { name = "aiqtoolkit" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiomysql", specifier = ">=0.2.0" },
-    { name = "aiqtoolkit", editable = "." },
-]
-
-[[package]]
-name = "aiqtoolkit-opentelemetry"
-source = { editable = "packages/aiqtoolkit_opentelemetry" }
-dependencies = [
-    { name = "aiqtoolkit" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-otlp" },
-    { name = "opentelemetry-sdk" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiqtoolkit", editable = "." },
-    { name = "opentelemetry-api", specifier = "~=1.2" },
-    { name = "opentelemetry-exporter-otlp", specifier = "~=1.3" },
-    { name = "opentelemetry-sdk", specifier = "~=1.3" },
-]
-
-[[package]]
-name = "aiqtoolkit-phoenix"
-source = { editable = "packages/aiqtoolkit_phoenix" }
-dependencies = [
-    { name = "aiqtoolkit", extra = ["opentelemetry"] },
-    { name = "arize-phoenix" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiqtoolkit", extras = ["opentelemetry"], editable = "." },
-    { name = "arize-phoenix", specifier = "~=6.1" },
-]
-
-[[package]]
-name = "aiqtoolkit-ragaai"
-source = { editable = "packages/aiqtoolkit_ragaai" }
-dependencies = [
-    { name = "aiqtoolkit", extra = ["opentelemetry"] },
-    { name = "ragaai-catalyst" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiqtoolkit", extras = ["opentelemetry"], editable = "." },
-    { name = "ragaai-catalyst", specifier = ">=2.2.0,<2.3" },
-]
-
-[[package]]
-name = "aiqtoolkit-redis"
-source = { editable = "packages/aiqtoolkit_redis" }
-dependencies = [
-    { name = "aiqtoolkit" },
-    { name = "redis" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiqtoolkit", editable = "." },
-    { name = "redis", specifier = "~=4.3.4" },
-]
-
-[[package]]
-name = "aiqtoolkit-s3"
-source = { editable = "packages/aiqtoolkit_s3" }
-dependencies = [
-    { name = "aioboto3" },
-    { name = "aiqtoolkit" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aioboto3", specifier = ">=11.0.0" },
-    { name = "aiqtoolkit", editable = "." },
-]
-
-[[package]]
-name = "aiqtoolkit-semantic-kernel"
-source = { editable = "packages/aiqtoolkit_semantic_kernel" }
-dependencies = [
-    { name = "aiqtoolkit" },
-    { name = "semantic-kernel" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiqtoolkit", editable = "." },
-    { name = "semantic-kernel", specifier = "~=1.24.0" },
-]
-
-[[package]]
-name = "aiqtoolkit-test"
-source = { editable = "packages/aiqtoolkit_test" }
-dependencies = [
-    { name = "aiqtoolkit" },
-    { name = "langchain-community" },
-    { name = "pytest" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiqtoolkit", editable = "." },
-    { name = "langchain-community", specifier = "~=0.3" },
-    { name = "pytest", specifier = "~=8.3" },
-]
-
-[[package]]
-name = "aiqtoolkit-weave"
-source = { editable = "packages/aiqtoolkit_weave" }
-dependencies = [
-    { name = "aiqtoolkit" },
-    { name = "presidio-analyzer" },
-    { name = "presidio-anonymizer" },
-    { name = "weave" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiqtoolkit", editable = "." },
-    { name = "presidio-analyzer", specifier = "~=2.2" },
-    { name = "presidio-anonymizer", specifier = "~=2.2" },
-    { name = "weave", specifier = "~=0.51" },
-]
-
-[[package]]
-name = "aiqtoolkit-zep-cloud"
-source = { editable = "packages/aiqtoolkit_zep_cloud" }
-dependencies = [
-    { name = "aiqtoolkit" },
-    { name = "zep-cloud" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiqtoolkit", editable = "." },
-    { name = "zep-cloud", specifier = "~=2.2.0" },
+    { name = "nvidia-nat", extras = ["mysql"], editable = "." },
+    { name = "nvidia-nat", extras = ["s3"], editable = "." },
 ]
 
 [[package]]
@@ -4434,6 +3925,513 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/62/ed/f60e0458c8c0598855ab8a9157fc7fe62e1099cdf83ce27210ca33c52085/nvidia_haystack-0.1.2.tar.gz", hash = "sha256:434fb8bac585fec119d45f317dc4b7562538f2fccc20e58b4bca180036e907e5", size = 24191 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/98/b5/a78daa81d4f8857757213fcd9878c894af3be0f1389476b4b454fc5f4407/nvidia_haystack-0.1.2-py3-none-any.whl", hash = "sha256:f3a3fd8ba7a5fc729c076c43cf8ddec48b23a42f98ee97890a49ad8011bde4fd", size = 25365 },
+]
+
+[[package]]
+name = "nvidia-nat"
+source = { editable = "." }
+dependencies = [
+    { name = "aioboto3" },
+    { name = "authlib" },
+    { name = "click" },
+    { name = "colorama" },
+    { name = "datasets" },
+    { name = "expandvars" },
+    { name = "fastapi" },
+    { name = "httpx" },
+    { name = "jinja2" },
+    { name = "jsonpath-ng" },
+    { name = "mcp" },
+    { name = "networkx" },
+    { name = "numpy" },
+    { name = "openinference-semantic-conventions" },
+    { name = "openpyxl" },
+    { name = "pkce" },
+    { name = "pkginfo" },
+    { name = "platformdirs" },
+    { name = "pydantic" },
+    { name = "pymilvus" },
+    { name = "pyyaml" },
+    { name = "ragas" },
+    { name = "rich" },
+    { name = "tabulate" },
+    { name = "uvicorn", extra = ["standard"] },
+    { name = "wikipedia" },
+]
+
+[package.optional-dependencies]
+agno = [
+    { name = "nvidia-nat-agno" },
+]
+crewai = [
+    { name = "nvidia-nat-crewai" },
+]
+examples = [
+    { name = "aiq-agno-personal-finance" },
+    { name = "aiq-alert-triage-agent" },
+    { name = "aiq-automated-description-generation" },
+    { name = "aiq-email-phishing-analyzer" },
+    { name = "aiq-multi-frameworks" },
+    { name = "aiq-plot-charts" },
+    { name = "aiq-por-to-jiratickets" },
+    { name = "aiq-profiler-agent" },
+    { name = "aiq-redact-pii" },
+    { name = "aiq-semantic-kernel-demo" },
+    { name = "aiq-simple-auth" },
+    { name = "aiq-simple-calculator" },
+    { name = "aiq-simple-calculator-custom-routes" },
+    { name = "aiq-simple-calculator-eval" },
+    { name = "aiq-simple-calculator-hitl" },
+    { name = "aiq-simple-calculator-mcp" },
+    { name = "aiq-simple-calculator-observability" },
+    { name = "aiq-simple-rag" },
+    { name = "aiq-simple-web-query" },
+    { name = "aiq-simple-web-query-eval" },
+    { name = "aiq-swe-bench" },
+    { name = "aiq-user-report" },
+]
+gunicorn = [
+    { name = "gunicorn" },
+]
+ingestion = [
+    { name = "lxml" },
+]
+langchain = [
+    { name = "nvidia-nat-langchain" },
+]
+llama-index = [
+    { name = "nvidia-nat-llama-index" },
+]
+mem0ai = [
+    { name = "nvidia-nat-mem0ai" },
+]
+mysql = [
+    { name = "nvidia-nat-mysql" },
+]
+opentelemetry = [
+    { name = "nvidia-nat-opentelemetry" },
+]
+phoenix = [
+    { name = "nvidia-nat-phoenix" },
+]
+profiling = [
+    { name = "matplotlib" },
+    { name = "prefixspan" },
+    { name = "scikit-learn" },
+]
+ragaai = [
+    { name = "nvidia-nat-ragaai" },
+]
+redis = [
+    { name = "nvidia-nat-redis" },
+]
+s3 = [
+    { name = "nvidia-nat-s3" },
+]
+semantic-kernel = [
+    { name = "nvidia-nat-semantic-kernel" },
+]
+telemetry = [
+    { name = "nvidia-nat-opentelemetry" },
+    { name = "nvidia-nat-phoenix" },
+    { name = "nvidia-nat-ragaai" },
+    { name = "nvidia-nat-weave" },
+]
+weave = [
+    { name = "nvidia-nat-weave" },
+]
+zep-cloud = [
+    { name = "nvidia-nat-zep-cloud" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "asgi-lifespan" },
+    { name = "flake8" },
+    { name = "flake8-pyproject" },
+    { name = "httpx-sse" },
+    { name = "isort" },
+    { name = "nvidia-nat-test" },
+    { name = "pip" },
+    { name = "pre-commit" },
+    { name = "pylint" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "pytest-httpserver" },
+    { name = "pytest-pretty" },
+    { name = "python-docx" },
+    { name = "setuptools" },
+    { name = "setuptools-scm" },
+    { name = "tomlkit" },
+    { name = "twine" },
+    { name = "yapf" },
+]
+docs = [
+    { name = "ipython" },
+    { name = "myst-parser" },
+    { name = "nbsphinx" },
+    { name = "nvidia-sphinx-theme" },
+    { name = "sphinx" },
+    { name = "sphinx-autoapi" },
+    { name = "sphinx-copybutton" },
+    { name = "sphinx-mermaid" },
+    { name = "vale" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aioboto3", specifier = ">=11.0.0" },
+    { name = "aiq-agno-personal-finance", marker = "extra == 'examples'", editable = "examples/frameworks/agno_personal_finance" },
+    { name = "aiq-alert-triage-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/alert_triage_agent" },
+    { name = "aiq-automated-description-generation", marker = "extra == 'examples'", editable = "examples/custom_functions/automated_description_generation" },
+    { name = "aiq-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/email_phishing_analyzer" },
+    { name = "aiq-multi-frameworks", marker = "extra == 'examples'", editable = "examples/frameworks/multi_frameworks" },
+    { name = "aiq-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },
+    { name = "aiq-por-to-jiratickets", marker = "extra == 'examples'", editable = "examples/HITL/por_to_jiratickets" },
+    { name = "aiq-profiler-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/profiler_agent" },
+    { name = "aiq-redact-pii", marker = "extra == 'examples'", editable = "examples/observability/redact_pii" },
+    { name = "aiq-semantic-kernel-demo", marker = "extra == 'examples'", editable = "examples/frameworks/semantic_kernel_demo" },
+    { name = "aiq-simple-auth", marker = "extra == 'examples'", editable = "examples/front_ends/simple_auth" },
+    { name = "aiq-simple-calculator", marker = "extra == 'examples'", editable = "examples/getting_started/simple_calculator" },
+    { name = "aiq-simple-calculator-custom-routes", marker = "extra == 'examples'", editable = "examples/front_ends/simple_calculator_custom_routes" },
+    { name = "aiq-simple-calculator-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_calculator_eval" },
+    { name = "aiq-simple-calculator-hitl", marker = "extra == 'examples'", editable = "examples/HITL/simple_calculator_hitl" },
+    { name = "aiq-simple-calculator-mcp", marker = "extra == 'examples'", editable = "examples/MCP/simple_calculator_mcp" },
+    { name = "aiq-simple-calculator-observability", marker = "extra == 'examples'", editable = "examples/observability/simple_calculator_observability" },
+    { name = "aiq-simple-rag", marker = "extra == 'examples'", editable = "examples/RAG/simple_rag" },
+    { name = "aiq-simple-web-query", marker = "extra == 'examples'", editable = "examples/getting_started/simple_web_query" },
+    { name = "aiq-simple-web-query-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_web_query_eval" },
+    { name = "aiq-swe-bench", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/swe_bench" },
+    { name = "aiq-user-report", marker = "extra == 'examples'", editable = "examples/object_store/user_report" },
+    { name = "authlib", specifier = "~=1.3.1" },
+    { name = "click", specifier = "~=8.1" },
+    { name = "colorama", specifier = "~=0.4.6" },
+    { name = "datasets", specifier = "~=4.0" },
+    { name = "expandvars", specifier = "~=1.0" },
+    { name = "fastapi", specifier = "~=0.115.5" },
+    { name = "gunicorn", marker = "extra == 'gunicorn'", specifier = "~=23.0" },
+    { name = "httpx", specifier = "~=0.27" },
+    { name = "jinja2", specifier = "~=3.1" },
+    { name = "jsonpath-ng", specifier = "~=1.7" },
+    { name = "lxml", marker = "extra == 'ingestion'", specifier = "~=5.4" },
+    { name = "matplotlib", marker = "extra == 'profiling'", specifier = "~=3.9" },
+    { name = "mcp", specifier = "~=1.10" },
+    { name = "networkx", specifier = "~=3.4" },
+    { name = "numpy", specifier = "~=1.26" },
+    { name = "nvidia-nat-agno", marker = "extra == 'agno'", editable = "packages/nvidia_nat_agno" },
+    { name = "nvidia-nat-crewai", marker = "extra == 'crewai'", editable = "packages/nvidia_nat_crewai" },
+    { name = "nvidia-nat-langchain", marker = "extra == 'langchain'", editable = "packages/nvidia_nat_langchain" },
+    { name = "nvidia-nat-llama-index", marker = "extra == 'llama-index'", editable = "packages/nvidia_nat_llama_index" },
+    { name = "nvidia-nat-mem0ai", marker = "extra == 'mem0ai'", editable = "packages/nvidia_nat_mem0ai" },
+    { name = "nvidia-nat-mysql", marker = "extra == 'mysql'", editable = "packages/nvidia_nat_mysql" },
+    { name = "nvidia-nat-opentelemetry", marker = "extra == 'opentelemetry'", editable = "packages/nvidia_nat_opentelemetry" },
+    { name = "nvidia-nat-opentelemetry", marker = "extra == 'telemetry'", editable = "packages/nvidia_nat_opentelemetry" },
+    { name = "nvidia-nat-phoenix", marker = "extra == 'phoenix'", editable = "packages/nvidia_nat_phoenix" },
+    { name = "nvidia-nat-phoenix", marker = "extra == 'telemetry'", editable = "packages/nvidia_nat_phoenix" },
+    { name = "nvidia-nat-ragaai", marker = "extra == 'ragaai'", editable = "packages/nvidia_nat_ragaai" },
+    { name = "nvidia-nat-ragaai", marker = "extra == 'telemetry'", editable = "packages/nvidia_nat_ragaai" },
+    { name = "nvidia-nat-redis", marker = "extra == 'redis'", editable = "packages/nvidia_nat_redis" },
+    { name = "nvidia-nat-s3", marker = "extra == 's3'", editable = "packages/nvidia_nat_s3" },
+    { name = "nvidia-nat-semantic-kernel", marker = "extra == 'semantic-kernel'", editable = "packages/nvidia_nat_semantic_kernel" },
+    { name = "nvidia-nat-weave", marker = "extra == 'telemetry'", editable = "packages/nvidia_nat_weave" },
+    { name = "nvidia-nat-weave", marker = "extra == 'weave'", editable = "packages/nvidia_nat_weave" },
+    { name = "nvidia-nat-zep-cloud", marker = "extra == 'zep-cloud'", editable = "packages/nvidia_nat_zep_cloud" },
+    { name = "openinference-semantic-conventions", specifier = "~=0.1.14" },
+    { name = "openpyxl", specifier = "~=3.1" },
+    { name = "pkce", specifier = "==1.0.3" },
+    { name = "pkginfo", specifier = "~=1.12" },
+    { name = "platformdirs", specifier = "~=4.3" },
+    { name = "prefixspan", marker = "extra == 'profiling'", specifier = "~=0.5.2" },
+    { name = "pydantic", specifier = "==2.10.*" },
+    { name = "pymilvus", specifier = "~=2.4" },
+    { name = "pyyaml", specifier = "~=6.0" },
+    { name = "ragas", specifier = "~=0.2.14" },
+    { name = "rich", specifier = "~=13.9" },
+    { name = "scikit-learn", marker = "extra == 'profiling'", specifier = "~=1.6" },
+    { name = "tabulate", specifier = "~=0.9" },
+    { name = "uvicorn", extras = ["standard"], specifier = "~=0.32.0" },
+    { name = "wikipedia", specifier = "~=1.4" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "asgi-lifespan", specifier = "~=2.1" },
+    { name = "flake8", specifier = "~=7.1" },
+    { name = "flake8-pyproject", specifier = "~=1.2" },
+    { name = "httpx-sse", specifier = "~=0.4" },
+    { name = "isort", specifier = "==5.12.0" },
+    { name = "nvidia-nat-test", editable = "packages/nvidia_nat_test" },
+    { name = "pip", specifier = ">=24.3.1" },
+    { name = "pre-commit", specifier = ">=4.0,<5.0" },
+    { name = "pylint", specifier = "==3.3.*" },
+    { name = "pytest", specifier = "~=8.3" },
+    { name = "pytest-asyncio", specifier = "==0.24.*" },
+    { name = "pytest-cov", specifier = "~=6.1" },
+    { name = "pytest-httpserver", specifier = "==1.1.*" },
+    { name = "pytest-pretty", specifier = "~=1.2.0" },
+    { name = "python-docx", specifier = "~=1.1.0" },
+    { name = "setuptools", specifier = ">=64" },
+    { name = "setuptools-scm", specifier = ">=8" },
+    { name = "tomlkit", specifier = "~=0.13.2" },
+    { name = "twine", specifier = "~=6.0" },
+    { name = "yapf", specifier = "==0.43.*" },
+]
+docs = [
+    { name = "ipython", specifier = "~=8.31" },
+    { name = "myst-parser", specifier = "~=4.0" },
+    { name = "nbsphinx", specifier = "~=0.9" },
+    { name = "nvidia-sphinx-theme", specifier = ">=0.0.7" },
+    { name = "sphinx", specifier = "~=8.2" },
+    { name = "sphinx-autoapi", specifier = ">=3.6" },
+    { name = "sphinx-copybutton", specifier = ">=0.5" },
+    { name = "sphinx-mermaid" },
+    { name = "vale", specifier = "==3.9.5" },
+]
+
+[[package]]
+name = "nvidia-nat-agno"
+source = { editable = "packages/nvidia_nat_agno" }
+dependencies = [
+    { name = "agno" },
+    { name = "google-search-results" },
+    { name = "nvidia-nat" },
+    { name = "openai" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "agno", specifier = "~=1.2.3" },
+    { name = "google-search-results", specifier = "~=2.4.2" },
+    { name = "nvidia-nat", editable = "." },
+    { name = "openai", specifier = "~=1.66" },
+]
+
+[[package]]
+name = "nvidia-nat-crewai"
+source = { editable = "packages/nvidia_nat_crewai" }
+dependencies = [
+    { name = "crewai" },
+    { name = "nvidia-nat" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "crewai", specifier = "~=0.95.0" },
+    { name = "nvidia-nat", editable = "." },
+]
+
+[[package]]
+name = "nvidia-nat-langchain"
+source = { editable = "packages/nvidia_nat_langchain" }
+dependencies = [
+    { name = "langchain-aws" },
+    { name = "langchain-core" },
+    { name = "langchain-milvus" },
+    { name = "langchain-nvidia-ai-endpoints" },
+    { name = "langchain-openai" },
+    { name = "langgraph" },
+    { name = "nvidia-nat" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-aws", specifier = "~=0.2.1" },
+    { name = "langchain-core", specifier = "~=0.3.7" },
+    { name = "langchain-milvus", specifier = "~=0.1.5" },
+    { name = "langchain-milvus", specifier = "~=0.1.8" },
+    { name = "langchain-nvidia-ai-endpoints", specifier = "~=0.3.5" },
+    { name = "langchain-openai", specifier = "~=0.3.5" },
+    { name = "langgraph", specifier = "~=0.2.50" },
+    { name = "nvidia-nat", editable = "." },
+]
+
+[[package]]
+name = "nvidia-nat-llama-index"
+source = { editable = "packages/nvidia_nat_llama_index" }
+dependencies = [
+    { name = "llama-index" },
+    { name = "llama-index-core" },
+    { name = "llama-index-embeddings-nvidia" },
+    { name = "llama-index-llms-bedrock" },
+    { name = "llama-index-llms-nvidia" },
+    { name = "llama-index-readers-file" },
+    { name = "nvidia-nat" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "llama-index", specifier = "==0.12.21" },
+    { name = "llama-index-core", specifier = "==0.12.21" },
+    { name = "llama-index-embeddings-nvidia", specifier = "==0.3.1" },
+    { name = "llama-index-llms-bedrock", specifier = "==0.3.8" },
+    { name = "llama-index-llms-nvidia", specifier = "==0.3.1" },
+    { name = "llama-index-readers-file", specifier = "==0.4.4" },
+    { name = "nvidia-nat", editable = "." },
+]
+
+[[package]]
+name = "nvidia-nat-mem0ai"
+source = { editable = "packages/nvidia_nat_mem0ai" }
+dependencies = [
+    { name = "mem0ai" },
+    { name = "nvidia-nat" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "mem0ai", specifier = "~=0.1.30" },
+    { name = "nvidia-nat", editable = "." },
+]
+
+[[package]]
+name = "nvidia-nat-mysql"
+source = { editable = "packages/nvidia_nat_mysql" }
+dependencies = [
+    { name = "aiomysql" },
+    { name = "nvidia-nat" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiomysql", specifier = ">=0.2.0" },
+    { name = "nvidia-nat", editable = "." },
+]
+
+[[package]]
+name = "nvidia-nat-opentelemetry"
+source = { editable = "packages/nvidia_nat_opentelemetry" }
+dependencies = [
+    { name = "nvidia-nat" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-exporter-otlp" },
+    { name = "opentelemetry-sdk" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat", editable = "." },
+    { name = "opentelemetry-api", specifier = "~=1.2" },
+    { name = "opentelemetry-exporter-otlp", specifier = "~=1.3" },
+    { name = "opentelemetry-sdk", specifier = "~=1.3" },
+]
+
+[[package]]
+name = "nvidia-nat-phoenix"
+source = { editable = "packages/nvidia_nat_phoenix" }
+dependencies = [
+    { name = "arize-phoenix" },
+    { name = "nvidia-nat", extra = ["opentelemetry"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "arize-phoenix", specifier = "~=6.1" },
+    { name = "nvidia-nat", extras = ["opentelemetry"], editable = "." },
+]
+
+[[package]]
+name = "nvidia-nat-ragaai"
+source = { editable = "packages/nvidia_nat_ragaai" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["opentelemetry"] },
+    { name = "ragaai-catalyst" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat", extras = ["opentelemetry"], editable = "." },
+    { name = "ragaai-catalyst", specifier = ">=2.2.0,<2.3" },
+]
+
+[[package]]
+name = "nvidia-nat-redis"
+source = { editable = "packages/nvidia_nat_redis" }
+dependencies = [
+    { name = "nvidia-nat" },
+    { name = "redis" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat", editable = "." },
+    { name = "redis", specifier = "~=4.3.4" },
+]
+
+[[package]]
+name = "nvidia-nat-s3"
+source = { editable = "packages/nvidia_nat_s3" }
+dependencies = [
+    { name = "aioboto3" },
+    { name = "nvidia-nat" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aioboto3", specifier = ">=11.0.0" },
+    { name = "nvidia-nat", editable = "." },
+]
+
+[[package]]
+name = "nvidia-nat-semantic-kernel"
+source = { editable = "packages/nvidia_nat_semantic_kernel" }
+dependencies = [
+    { name = "nvidia-nat" },
+    { name = "semantic-kernel" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat", editable = "." },
+    { name = "semantic-kernel", specifier = "~=1.24.0" },
+]
+
+[[package]]
+name = "nvidia-nat-test"
+source = { editable = "packages/nvidia_nat_test" }
+dependencies = [
+    { name = "langchain-community" },
+    { name = "nvidia-nat" },
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-community", specifier = "~=0.3" },
+    { name = "nvidia-nat", editable = "." },
+    { name = "pytest", specifier = "~=8.3" },
+]
+
+[[package]]
+name = "nvidia-nat-weave"
+source = { editable = "packages/nvidia_nat_weave" }
+dependencies = [
+    { name = "nvidia-nat" },
+    { name = "presidio-analyzer" },
+    { name = "presidio-anonymizer" },
+    { name = "weave" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat", editable = "." },
+    { name = "presidio-analyzer", specifier = "~=2.2" },
+    { name = "presidio-anonymizer", specifier = "~=2.2" },
+    { name = "weave", specifier = "~=0.51" },
+]
+
+[[package]]
+name = "nvidia-nat-zep-cloud"
+source = { editable = "packages/nvidia_nat_zep_cloud" }
+dependencies = [
+    { name = "nvidia-nat" },
+    { name = "zep-cloud" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat", editable = "." },
+    { name = "zep-cloud", specifier = "~=2.2.0" },
 ]
 
 [[package]]
