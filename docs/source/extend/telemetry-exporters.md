@@ -881,87 +881,87 @@ assert exporter1.session is exporter2.session  # Same session
 - Database connections
 - Logger instances
 
- **Example with Common Patterns:**
+**Example with Common Patterns:**
 
-    ```python
-    from collections import deque
+```python
+from collections import deque
 
-    import aiohttp
+import aiohttp
 
-    from aiq.data_models.span import Span
-    from aiq.observability.exporter.base_exporter import IsolatedAttribute
-    from aiq.observability.exporter.span_exporter import SpanExporter
+from aiq.data_models.span import Span
+from aiq.observability.exporter.base_exporter import IsolatedAttribute
+from aiq.observability.exporter.span_exporter import SpanExporter
 
-    class BatchingExporter(SpanExporter[Span, dict]):
-        """Exporter demonstrating common IsolatedAttribute patterns."""
+class BatchingExporter(SpanExporter[Span, dict]):
+    """Exporter demonstrating common IsolatedAttribute patterns."""
 
-        # Isolated mutable state per workflow (safe)
-        _batch_queue: IsolatedAttribute[deque] = IsolatedAttribute(deque)
-        _flush_timer: IsolatedAttribute[dict] = IsolatedAttribute(dict)
-        _statistics: IsolatedAttribute[dict] = IsolatedAttribute(
-            lambda: {"batches_sent": 0, "items_processed": 0, "errors": 0}
-        )
+    # Isolated mutable state per workflow (safe)
+    _batch_queue: IsolatedAttribute[deque] = IsolatedAttribute(deque)
+    _flush_timer: IsolatedAttribute[dict] = IsolatedAttribute(dict)
+    _statistics: IsolatedAttribute[dict] = IsolatedAttribute(
+        lambda: {"batches_sent": 0, "items_processed": 0, "errors": 0}
+    )
 
-        def __init__(self, batch_size: int = 100, endpoint: str = "https://your-service.com/api/spans", **kwargs):
-            super().__init__(**kwargs)
-            self.batch_size = batch_size
-            self.endpoint = endpoint
+    def __init__(self, batch_size: int = 100, endpoint: str = "https://your-service.com/api/spans", **kwargs):
+        super().__init__(**kwargs)
+        self.batch_size = batch_size
+        self.endpoint = endpoint
 
-            # Define headers once during initialization
-            self.headers = {
-                "Content-Type": "application/json"
-            }
+        # Define headers once during initialization
+        self.headers = {
+            "Content-Type": "application/json"
+        }
 
-            # Create HTTP session once and reuse it
-            import aiohttp
-            self.session = aiohttp.ClientSession()
+        # Create HTTP session once and reuse it
+        import aiohttp
+        self.session = aiohttp.ClientSession()
 
-        async def export_processed(self, item: dict):
-            """Export with batching and isolated state."""
-            # Add to isolated batch queue
-            self._batch_queue.append(item)
-            self._statistics['items_processed'] += 1
+    async def export_processed(self, item: dict):
+        """Export with batching and isolated state."""
+        # Add to isolated batch queue
+        self._batch_queue.append(item)
+        self._statistics['items_processed'] += 1
 
-            # Flush if batch is full
-            if len(self._batch_queue) >= self.batch_size:
-                await self._flush_batch()
+        # Flush if batch is full
+        if len(self._batch_queue) >= self.batch_size:
+            await self._flush_batch()
 
-        async def _flush_batch(self):
-            """Flush batch with isolated state management."""
-            if not self._batch_queue:
-                return
+    async def _flush_batch(self):
+        """Flush batch with isolated state management."""
+        if not self._batch_queue:
+            return
 
-            # Create batch from isolated queue
-            batch = list(self._batch_queue)
-            self._batch_queue.clear()
+        # Create batch from isolated queue
+        batch = list(self._batch_queue)
+        self._batch_queue.clear()
 
-            try:
-                # Send batch directly with proper error handling
-                await self._send_batch(batch)
-                self._statistics['batches_sent'] += 1
-            except Exception as e:
-                self._statistics['errors'] += 1
-                # In production, you might want to retry or use a dead letter queue
-                raise
+        try:
+            # Send batch directly with proper error handling
+            await self._send_batch(batch)
+            self._statistics['batches_sent'] += 1
+        except Exception as e:
+            self._statistics['errors'] += 1
+            # In production, you might want to retry or use a dead letter queue
+            raise
 
-        async def _send_batch(self, batch: list[dict]):
-            """Send batch to the service."""
-            payload = {"spans": batch}
+    async def _send_batch(self, batch: list[dict]):
+        """Send batch to the service."""
+        payload = {"spans": batch}
 
-            # Use the reusable session and headers
-            async with self.session.post(
-                self.endpoint,
-                json=payload,
-                headers=self.headers
-            ) as response:
-                response.raise_for_status()
+        # Use the reusable session and headers
+        async with self.session.post(
+            self.endpoint,
+            json=payload,
+            headers=self.headers
+        ) as response:
+            response.raise_for_status()
 
-        async def _cleanup(self):
-            """Clean up HTTP session."""
-            if hasattr(self, 'session') and self.session:
-                await self.session.close()
-            await super()._cleanup()
-    ```
+    async def _cleanup(self):
+        """Clean up HTTP session."""
+        if hasattr(self, 'session') and self.session:
+            await self.session.close()
+        await super()._cleanup()
+```
 
 ### Custom OpenTelemetry Protocols
 
