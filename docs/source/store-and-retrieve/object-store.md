@@ -30,33 +30,54 @@ The object store module is extensible, which allows developers to create custom 
 ## Core Components
 
 ### ObjectStoreItem
-The `ObjectStoreItem` model represents an object in the store with the following attributes:
-
-- **`data`**: The binary data to store
-- **`content_type`**: The MIME type of the data (optional)
-- **`metadata`**: Custom key-value metadata for the object (optional)
+The `ObjectStoreItem` model represents an object in the store.
+```python
+class ObjectStoreItem:
+    data: bytes  # The binary data to store
+    content_type: str | None  # The MIME type of the data (optional)
+    metadata: dict[str, str] | None  # Custom key-value metadata (optional)
+```
 
 ### ObjectStore Interface
-The `ObjectStore` abstract interface defines the standard operations:
+The `ObjectStore` abstract interface defines the four standard operations:
 
-- **put_object(key, item)**: Store a new object with a unique key
-- **upsert_object(key, item)**: Store or update an object with the given key
-- **get_object(key)**: Retrieve an object by its key
-- **delete_object(key)**: Remove an object from the store
+- **put_object(key, item)**: Store a new object with a unique key. Raises if the key already exists.
+- **upsert_object(key, item)**: Update (or inserts) an object with the given key.
+- **get_object(key)**: Retrieve an object by its key. Raises if the key doesn't exist.
+- **delete_object(key)**: Remove an object from the store. Raises if the key doesn't exist.
+
+```python
+class ObjectStore(ABC):
+    @abstractmethod
+    async def put_object(self, key: str, item: ObjectStoreItem) -> None:
+        ...
+
+    @abstractmethod
+    async def upsert_object(self, key: str, item: ObjectStoreItem) -> None:
+        ...
+
+    @abstractmethod
+    async def get_object(self, key: str) -> ObjectStoreItem:
+        ...
+
+    @abstractmethod
+    async def delete_object(self, key: str) -> None:
+        ...
+```
 
 ## Included Object Stores
 The AIQ toolkit includes several object store providers:
 
-- **In-Memory Object Store**: In-memory storage for development and testing
-- **S3 Object Store**: Amazon S3 and S3-compatible storage (like MinIO)
-- **MySQL Object Store**: MySQL database-backed storage
+- **In-Memory Object Store**: In-memory storage for development and testing. See `src/aiq/object_store/in_memory_object_store.py`
+- **S3 Object Store**: Amazon S3 and S3-compatible storage (like MinIO). See `packages/aiqtoolkit_s3/src/aiq/plugins/s3/s3_object_store.py`
+- **MySQL Object Store**: MySQL database-backed storage. See `packages/aiqtoolkit_mysql/src/aiq/plugins/mysql/mysql_object_store.py`
 
 ## Usage
 
 ### Configuration
 Object stores are configured similarly to other NeMo Agent toolkit components. Each object store provider has a Pydantic config object that defines its configurable parameters. These parameters can then be configured in the config file under the `object_stores` section.
 
-Below is an example configuration for the in-memory object store:
+Example configuration for the in-memory object store:
 ```yaml
 object_stores:
   my_object_store:
@@ -64,7 +85,7 @@ object_stores:
     bucket_name: my-bucket
 ```
 
-For S3-compatible storage (like MinIO):
+Example configuration for S3-compatible storage (like MinIO):
 ```yaml
 object_stores:
   my_object_store:
@@ -72,6 +93,18 @@ object_stores:
     endpoint_url: http://localhost:9000
     access_key: minioadmin
     secret_key: minioadmin
+    bucket_name: my-bucket
+```
+
+Example configuration for MySQL storage:
+```yaml
+object_stores:
+  my_object_store:
+    _type: mysql
+    host: localhost
+    port: 3306
+    username: root
+    password: my_password
     bucket_name: my-bucket
 ```
 
@@ -95,6 +128,20 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
     # Retrieve an object
     retrieved_item = await object_store.get_object("greeting.txt")
     print(retrieved_item.data.decode("utf-8"))
+
+    # Update (or insert) an object
+    await object_store.upsert_object("greeting.txt", ObjectStoreItem(
+        data=b"Goodbye, World!",
+        content_type="text/plain",
+        metadata={"author", "user123"}
+    ))
+
+    # Retrieve an object
+    retrieved_item = await object_store.get_object("greeting.txt")
+    print(retrieved_item.data.decode("utf-8"))
+
+    # Delete an object
+    await object_store.delete_object("greeting.txt")
 ```
 
 ### File Server Integration
@@ -118,10 +165,22 @@ object_stores:
 ```
 
 This enables HTTP endpoints for object store operations:
-- **GET** `/static/{file_path}` - Download an object
-- **POST** `/static/{file_path}` - Upload a new object
 - **PUT** `/static/{file_path}` - Update an existing object
+  ```console
+  $ curl -X PUT --upload-file data.txt http://localhost:9000/static/folder/data.txt
+  ```
+- **GET** `/static/{file_path}` - Download an object
+  ```console
+  $ curl -X GET http://localhost:9000/static/folder/data.txt
+  ```
+- **POST** `/static/{file_path}` - Upload a new object
+  ```console
+  $ curl -X POST --upload-file data_new.txt http://localhost:9000/static/folder/data.txt
+  ```
 - **DELETE** `/static/{file_path}` - Delete an object
+  ```console
+  $ curl -X DELETE http://localhost:9000/static/folder/data.txt
+  ```
 
 ## Examples
 The following examples demonstrate how to use the object store module in the AIQ toolkit:

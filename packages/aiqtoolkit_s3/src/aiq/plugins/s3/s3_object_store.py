@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+import logging
 
 import aioboto3
 from botocore.client import BaseClient
@@ -24,6 +24,8 @@ from aiq.data_models.object_store import NoSuchKeyError
 from aiq.object_store.interfaces import ObjectStore
 from aiq.object_store.models import ObjectStoreItem
 from aiq.plugins.s3.object_store import S3ObjectStoreClientConfig
+
+logger = logging.getLogger(__name__)
 
 
 class S3ObjectStore(ObjectStore):
@@ -40,19 +42,17 @@ class S3ObjectStore(ObjectStore):
         self._client: BaseClient | None = None
         self._client_context = None
 
-        access_key = config.access_key or os.environ.get("AIQ_S3_OBJECT_STORE_ACCESS_KEY")
-        if not access_key:
-            raise ValueError("Access key is not set. "
-                             "Please specify it in the environment variable 'AIQ_S3_OBJECT_STORE_ACCESS_KEY_ID'.")
+        if not config.access_key:
+            raise ValueError("Access key is not set. Please specify it in the environment variable "
+                             "'{S3ObjectStoreClientConfig.ACCESS_KEY_ENV}'.")
 
-        secret_key = config.secret_key or os.environ.get("AIQ_OBJECT_STORE_SECRET_KEY")
-        if not secret_key:
+        if not config.secret_key:
             raise ValueError("Secret key is not set. Please specify it in the environment variable "
-                             "'AIQ_OBJECT_STORE_SECRET_ACCESS_KEY'.")
+                             "'{S3ObjectStoreClientConfig.SECRET_KEY_ENV}'.")
 
         self._client_args = {
-            "aws_access_key_id": access_key,
-            "aws_secret_access_key": secret_key,
+            "aws_access_key_id": config.access_key,
+            "aws_secret_access_key": config.secret_key,
             "region_name": config.region,
             "endpoint_url": config.endpoint_url
         }
@@ -63,7 +63,11 @@ class S3ObjectStore(ObjectStore):
             raise RuntimeError("Connection already established")
 
         self._client_context = self.session.client("s3", **self._client_args)
+        if self._client_context is None:
+            raise RuntimeError("Connection unable to be established")
         self._client = await self._client_context.__aenter__()
+        if self._client is None:
+            raise RuntimeError("Connection unable to be established")
 
         # Ensure the bucket exists
         try:
@@ -71,6 +75,7 @@ class S3ObjectStore(ObjectStore):
         except ClientError as e:
             if e.response['Error']['Code'] == '404':
                 await self._client.create_bucket(Bucket=self.bucket_name)
+                logger.info("Created bucket %s", self.bucket_name)
 
         return self
 
@@ -107,9 +112,8 @@ class S3ObjectStore(ObjectStore):
         except ClientError as e:
             http_status_code = e.response.get("ResponseMetadata", {}).get("HTTPStatusCode", None)
             if http_status_code == 412:
-                # Object already exists — decide what to do (log, raise, etc.)
-                raise KeyAlreadyExistsError(
-                    key=key, additional_message=f"S3 object {put_args['Bucket']}/{put_args['Key']} already exists")
+                raise KeyAlreadyExistsError(key=key,
+                                            additional_message=f"S3 object {self.bucket_name}/{key} already exists")
             else:
                 # Other errors — rethrow or handle accordingly
                 raise
@@ -142,7 +146,7 @@ class S3ObjectStore(ObjectStore):
             return ObjectStoreItem(data=data, content_type=response['ContentType'], metadata=response['Metadata'])
         except ClientError as e:
             if e.response['Error']['Code'] == 'NoSuchKey':
-                raise NoSuchKeyError(key, str(e))
+                raise NoSuchKeyError(key=key, additional_message=str(e))
             else:
                 raise
 
@@ -154,11 +158,11 @@ class S3ObjectStore(ObjectStore):
             await self._client.get_object(Bucket=self.bucket_name, Key=key)
         except ClientError as e:
             if e.response['Error']['Code'] == 'NoSuchKey':
-                raise NoSuchKeyError(key, str(e))
+                raise NoSuchKeyError(key=key, additional_message=str(e))
             else:
                 raise
 
         results = await self._client.delete_object(Bucket=self.bucket_name, Key=key)
 
         if results.get('DeleteMarker', False):
-            raise NoSuchKeyError(key, "Object was a delete marker")
+            raise NoSuchKeyError(key=key, additional_message="Object was a delete marker")
