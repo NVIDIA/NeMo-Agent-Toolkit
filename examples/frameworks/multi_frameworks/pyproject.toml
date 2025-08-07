@@ -9,7 +9,7 @@ root = "../../.."
 name = "aiq_multi_frameworks"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain,llama-index]~=1.2",
+  "nvidia-nat[langchain,llama-index]~=1.2",
   "arxiv~=2.1.3",
   "bs4==0.0.2",
   "markdown-it-py~=3.0",
@@ -21,7 +21,7 @@ description = "Custom AIQ toolkit Workflow"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_multi_frameworks = "aiq_multi_frameworks.register"

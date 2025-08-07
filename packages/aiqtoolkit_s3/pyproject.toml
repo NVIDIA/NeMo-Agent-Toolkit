@@ -13,13 +13,13 @@ root = "../.."
 
 
 [project]
-name = "aiqtoolkit-s3"
+name = "nvidia-nat-s3"
 dynamic = ["version"]
 dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
   # Keep sorted!!!
-  "aiqtoolkit",
+  "nvidia-nat",
   "aioboto3>=11.0.0",
 ]
 requires-python = ">=3.12"
@@ -34,7 +34,7 @@ config-settings = { editable_mode = "compat" }
 
 
 [tool.uv.sources]
-aiqtoolkit = { workspace = true }
+nvidia-nat = { workspace = true }
 
 
 [project.entry-points.'aiq.components']

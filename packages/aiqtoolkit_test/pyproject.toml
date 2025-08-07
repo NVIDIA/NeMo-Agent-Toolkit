@@ -13,13 +13,13 @@ root = "../.."
 
 
 [project]
-name = "aiqtoolkit-test"
+name = "nvidia-nat-test"
 dynamic = ["version"]
 dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
   # Keep sorted!!!
-  "aiqtoolkit~=1.2",
+  "nvidia-nat~=1.2",
   "langchain-community~=0.3",
   "pytest~=8.3",
 ]
@@ -35,12 +35,12 @@ config-settings = { editable_mode = "compat" }
 
 
 [tool.uv.sources]
-aiqtoolkit = { workspace = true }
+nvidia-nat = { workspace = true }
 
 
 [project.entry-points.pytest11]
-aiqtoolkit-test = "aiq.test.plugin"
+nvidia-nat-test = "aiq.test.plugin"
 
 
 [project.entry-points.'aiq.components']
-aiqtoolkit-test = "aiq.test.register"
+nvidia-nat-test = "aiq.test.register"

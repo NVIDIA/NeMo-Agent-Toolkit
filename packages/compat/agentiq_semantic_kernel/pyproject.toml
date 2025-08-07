@@ -9,8 +9,8 @@ root = "../../.."
 name = "agentiq-semantic-kernel"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit-semantic-kernel"
+  "nvidia-nat-semantic-kernel"
 ]
 readme = "pypi.md"
-description = "Transitional package for aiqtoolkit-semantic-kernel, this package is deprecated and will be removed in the future."
+description = "Transitional package for nvidia-nat-semantic-kernel, this package is deprecated and will be removed in the future."
 classifiers = ["Programming Language :: Python"]

@@ -9,7 +9,7 @@ root = "../../.."
 name = "aiq_simple_calculator_hitl"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain]~=1.2",
+  "nvidia-nat[langchain]~=1.2",
   "aiq_simple_calculator",
   "aiq_por_to_jiratickets",
 ]
@@ -19,7 +19,7 @@ keywords = ["ai", "hitl", "human in the loop", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 aiq_simple_calculator = { path = "../../getting_started/simple_calculator", editable = true }
 
 [project.entry-points.'aiq.components']

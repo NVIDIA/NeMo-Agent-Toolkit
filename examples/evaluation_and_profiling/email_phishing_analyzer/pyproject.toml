@@ -9,7 +9,7 @@ root = "../../.."
 name = "aiq_email_phishing_analyzer"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain]~=1.2",
+  "nvidia-nat[langchain]~=1.2",
   "arize-phoenix==6.1.*",
   "bs4==0.0.2",
   "networkx~=3.4",
@@ -21,7 +21,7 @@ keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_email_phishing_analyzer = "aiq_email_phishing_analyzer.register"

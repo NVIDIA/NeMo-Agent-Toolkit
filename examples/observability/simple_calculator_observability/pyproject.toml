@@ -12,7 +12,7 @@ root = "../../.."
 name = "aiq_simple_calculator_observability"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain,telemetry]~=1.2",
+  "nvidia-nat[langchain,telemetry]~=1.2",
   "aiq_simple_calculator",
 ]
 requires-python = ">=3.11,<3.13"
@@ -21,5 +21,5 @@ keywords = ["ai", "observability", "tracing", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 aiq_simple_calculator = { path = "../../getting_started/simple_calculator", editable = true }

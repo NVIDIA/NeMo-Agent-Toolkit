@@ -13,13 +13,13 @@ root = "../.."
 
 
 [project]
-name = "aiqtoolkit-mysql"
+name = "nvidia-nat-mysql"
 dynamic = ["version"]
 dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to aiq packages.
   # Keep sorted!!!
-  "aiqtoolkit",
+  "nvidia-nat",
   "aiomysql>=0.2.0",
 ]
 requires-python = ">=3.12"
@@ -34,7 +34,7 @@ config-settings = { editable_mode = "compat" }
 
 
 [tool.uv.sources]
-aiqtoolkit = { workspace = true }
+nvidia-nat = { workspace = true }
 
 
 [project.entry-points.'aiq.components']

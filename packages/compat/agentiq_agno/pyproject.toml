@@ -10,8 +10,8 @@ root = "../../.."
 name = "agentiq-agno"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[agno]~=1.2"
+  "nvidia-nat[agno]~=1.2"
 ]
 readme = "pypi.md"
-description = "Transitional package for aiqtoolkit-agno, this package is deprecated and will be removed in the future."
+description = "Transitional package for nvidia-nat-agno, this package is deprecated and will be removed in the future."
 classifiers = ["Programming Language :: Python"]
