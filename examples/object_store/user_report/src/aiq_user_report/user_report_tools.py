@@ -20,6 +20,7 @@ from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
 from aiq.data_models.component_ref import ObjectStoreRef
 from aiq.data_models.function import FunctionBaseConfig
+from aiq.data_models.object_store import KeyAlreadyExistsError
 from aiq.object_store.models import ObjectStoreItem
 
 logger = logging.getLogger(__name__)
@@ -57,10 +58,13 @@ async def put_user_report(config: PutUserReportConfig, builder: Builder):
         date = date or "latest"
         key = f"/reports/{user_id}/{date}.json"
         logger.info("Putting new report into %s for user %s with date %s", key, user_id, date)
-        await object_store.put_object(key=key,
-                                      item=ObjectStoreItem(data=report.encode("utf-8"),
-                                                           content_type="application/json"))
-        return f"User report for {user_id} with date {date} added successfully"
+        try:
+            await object_store.put_object(key=key,
+                                          item=ObjectStoreItem(data=report.encode("utf-8"),
+                                                               content_type="application/json"))
+            return f"User report for {user_id} with date {date} added successfully"
+        except KeyAlreadyExistsError:
+            return f"User report for {user_id} with date {date} already exists"
 
     yield FunctionInfo.from_fn(_inner, description=config.description)
 

@@ -50,7 +50,7 @@ functions:
     object_store: report_object_store
     description: >
       Inserts a new user diagnostic report into S3 bucket given a user ID and date. If the report already exists, it will fail.
-      You can use the `update_user_report` tool to update an existing report.
+      If it does fail, never delete the existing report to replace it. Just let the user know that the report already exists.
       Args:
         report: str: The report to put into the S3 bucket.
         user_id: str: The user ID to put the report for.
@@ -60,7 +60,8 @@ functions:
     _type: update_user_report
     object_store: report_object_store
     description: >
-      Updates user diagnostic report in S3 bucket given a user ID and date. If the report does not exist, it will insert a new report.
+      Updates a user diagnostic report in S3 bucket given a user ID and date. If the report does not exist, it will behave as
+      if the report was created. Do not delete the existing report to replace it.
       Args:
         report: str: The report to update in the S3 bucket.
         user_id: str: The user ID to update the report for.
@@ -71,6 +72,8 @@ functions:
     object_store: report_object_store
     description: >
       Deletes user diagnostic report from S3 bucket given a user ID and date. If the report does not exist, it will fail.
+      Do not run `delete_user_report` without the explicit intention to delete an existing report, even in the case of an attempt
+      to insert a new report which already exists.
       Args:
         user_id: str: The user ID to delete the report for.
         date: str | null: The date to delete the report for. Format: YYYY-MM-DD. If not provided, the report will be named "latest".

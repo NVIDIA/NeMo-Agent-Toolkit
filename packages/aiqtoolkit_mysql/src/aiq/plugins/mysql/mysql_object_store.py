@@ -88,7 +88,8 @@ class MySQLObjectStore(ObjectStore):
 
             await conn.commit()
 
-        logger.info(f"Created schema and tables for {self._config.bucket_name} at {self._config.endpoint_url}")
+        logger.info(
+            f"Created schema and tables for {self._config.bucket_name} at {self._config.host}:{self._config.port}")
 
         return self
 
