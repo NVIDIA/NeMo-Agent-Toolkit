@@ -19,7 +19,7 @@ limitations under the License.
 
 This guide provides a step-by-step process to enable observability in a NeMo Agent toolkit workflow using Catalyst for tracing. By the end of this guide, you will have:
 - Configured telemetry in your workflow.
-- Able to view traces in the Catalyst platform.
+- Ability to view traces in the Catalyst platform.
 
 ### Step 1: Sign up for Catalyst
 - Visit [https://catalyst.raga.ai/signup](https://catalyst.raga.ai/signup) to create your account.
@@ -35,19 +35,25 @@ Go to your [profile](https://catalyst.raga.ai/settings/authenticate) settings to
 - Secret Key
 
 ### Step 4: Configure Your Environment
-Set the following environment variables in your terminal
-```yaml
-export CATALYST_ACCESS_KEY=YOUR_ACCESS_KEY
-export CATALYST_SECRET_KEY=YOUR_SECRET_KEY
+Set the following environment variables in your terminal:
+```bash
+export CATALYST_ACCESS_KEY=<your_access_key>
+export CATALYST_SECRET_KEY=<your_secret_key>
 export CATALYST_ENDPOINT=https://catalyst.raga.ai/api
 ```
 
-### Step 5: Modify Workflow Configuration
+### Step 5: Install the RagAI Subpackage
+
+```bash
+uv pip install -e '.[ragaai]'
+```
+
+### Step 6: Modify Workflow Configuration
 
 Update your workflow configuration file to include the telemetry settings.
 
 Example configuration:
-```bash
+```yaml
 general:
   telemetry:
     tracing:
@@ -59,10 +65,9 @@ general:
         endpoint: ${CATALYST_ENDPOINT}
         access_key: ${CATALYST_ACCESS_KEY}
         secret_key: ${CATALYST_SECRET_KEY}
-
 ```
 
-### Step 6: Run Your Workflow
+### Step 7: Run Your Workflow
 From the root directory of the NeMo Agent toolkit library, install dependencies and run the pre-configured `simple_calculator_observability` example.
 
 **Example:**
@@ -76,9 +81,9 @@ aiq run --config_file examples/observability/simple_calculator_observability/con
 ```
 As the workflow runs, telemetry data will start showing up in Catalyst.
 
-### Step 7: View Traces Data in Catalyst
+### Step 8: View Traces Data in Catalyst
 - Open your browser and navigate to [https://catalyst.raga.ai/projects](https://catalyst.raga.ai/projects).
-- Locate your workflow traces under the your configured project name and dataset.
+- Locate your workflow traces under your configured project name and dataset.
 - Inspect function execution details, latency, total tokens, request timelines and other info under Info and Attributes tabs of an individual trace.
 
 ![Catalyst Trace View](../../_static/ragaai_catalyst_traceview.png)

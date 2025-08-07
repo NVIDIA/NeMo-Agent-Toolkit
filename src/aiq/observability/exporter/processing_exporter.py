@@ -314,7 +314,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         if shutdown_tasks:
             try:
                 await asyncio.gather(*shutdown_tasks, return_exceptions=True)
-                logger.info("Successfully shut down %d processors", len(shutdown_tasks))
+                logger.debug("Successfully shut down %d processors", len(shutdown_tasks))
             except Exception as e:
                 logger.error("Error shutting down processors: %s", e, exc_info=True)
 

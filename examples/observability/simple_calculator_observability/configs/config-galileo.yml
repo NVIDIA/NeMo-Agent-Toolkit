@@ -13,25 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 general:
   use_uvloop: true
   telemetry:
     logging:
       console:
         _type: console
-        level: INFO
+        level: WARN
       file:
         _type: file
         path: /tmp/aiq_simple_calculator.log
-        level: INFO
+        level: DEBUG
     tracing:
-      catalyst:
-        _type: catalyst
-        project: simple-calculator
-        dataset: simple-calculator-dataset
-        endpoint: ${CATALYST_ENDPOINT}
-        access_key: ${CATALYST_ACCESS_KEY}
-        secret_key: ${CATALYST_SECRET_KEY}
+      galileo:
+        _type: galileo
+        endpoint: https://app.galileo.ai/api/galileo/otel/traces
+        project: simple_calculator
+        logstream: default
+        api_key: ${GALILEO_API_KEY}
 
 functions:
   calculator_multiply:

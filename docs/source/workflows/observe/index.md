@@ -17,12 +17,14 @@ limitations under the License.
 
 # Observe Workflows
 
-The NeMo Agent toolkit Observability Module provides support for configuring logging, tracing, and metrics for NeMo Agent toolkit workflows. Users can configure telemetry options from a predefined list based on their preferences. The logging and tracing exporters:
+The NeMo Agent toolkit uses a flexible, plugin-based observability system that provides comprehensive support for configuring logging, tracing, and metrics for workflows. Users can configure multiple telemetry exporters simultaneously from the available options or create custom integrations. The observability system:
 
-- Listen for usage statistics pushed by `IntermediateStepManager`.
-- Translate the usage statistics to OpenTelemetry format and push to the configured provider/method. (e.g., phoenix, OTelCollector, console, file)
+- Uses an event-driven architecture with `IntermediateStepManager` publishing workflow events to a reactive stream
+- Supports multiple concurrent telemetry exporters processing events asynchronously
+- Provides built-in exporters for popular observability platforms (Phoenix, Langfuse, Weave, etc.)
+- Enables custom telemetry exporter development for any observability service
 
-These features enable NeMo Agent toolkit developers to test their workflows locally and integrate observability seamlessly.
+These features enable developers to test their workflows locally and integrate observability seamlessly with their preferred monitoring stack.
 
 ## Installation
 
@@ -41,9 +43,19 @@ uv pip install -e '.[ragaai]'
 
 ## Configurable Components
 
-The observability module is configured using the `general.telemetry` section in the workflow configuration file. This section contains two subsections: `logging` and `tracing` and each subsection can contain one or more telemetry providers.
+The flexible observability system is configured using the `general.telemetry` section in the workflow configuration file. This section contains two subsections: `logging` and `tracing`, and each subsection can contain multiple telemetry exporters running simultaneously.
 
-Illustrated below is a sample configuration file with all configurable components.
+For a complete list of logging and tracing plugins and corresponding configuration settings use the following CLI commands.
+
+```bash
+# For all registered logging plugins
+aiq info components -t logging
+
+# For all registered tracing plugins
+aiq info components -t tracing
+```
+
+Illustrated below is a sample configuration file demonstrating multiple exporters configured to run concurrently.
 
 ```yaml
 general:
@@ -54,13 +66,19 @@ general:
         level: WARN
       file:
         _type: file
-        path: /tmp/aiq_simple_calculator.log
+        path: /tmp/workflow.log
         level: DEBUG
     tracing:
+      # Multiple exporters can run simultaneously
       phoenix:
         _type: phoenix
-        endpoint: http://localhost:6006/v1/traces
-        project: simple_calculator
+        # ... configuration fields
+      weave:
+        _type: weave
+        # ... configuration fields
+      file_backup:
+        _type: file
+        # ... configuration fields
 ```
 
 ### **Logging Configuration**
@@ -70,104 +88,26 @@ The `logging` section contains one or more logging providers. Each provider has 
 - `console`: Writes logs to the console.
 - `file`: Writes logs to a file.
 
-To see the complete list of configuration fields for each provider, utilize the `aiq info components -t logging` command which will display the configuration fields for each provider. For example:
-
-```bash
-$ aiq info components -t logging
-                                                    AIQ Toolkit Search Results
-┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ package    ┃ version              ┃ component_type ┃ component_name ┃ description                                               ┃
-┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│ aiqtoolkit │ 1.2.0.dev15+g2322037 │ logging        │ console        │ A logger to write runtime logs to the console.            │
-│            │                      │                │                │                                                           │
-│            │                      │                │                │   Args:                                                   │
-│            │                      │                │                │     _type (str): The type of the object.                  │
-│            │                      │                │                │     level (str): The logging level of console logger.     │
-├────────────┼──────────────────────┼────────────────┼────────────────┼───────────────────────────────────────────────────────────┤
-│ aiqtoolkit │ 1.2.0.dev15+g2322037 │ logging        │ file           │ A logger to write runtime logs to a file.                 │
-│            │                      │                │                │                                                           │
-│            │                      │                │                │   Args:                                                   │
-│            │                      │                │                │     _type (str): The type of the object.                  │
-│            │                      │                │                │     path (str): The file path to save the logging output. │
-│            │                      │                │                │     level (str): The logging level of file logger.        │
-└────────────┴──────────────────────┴────────────────┴────────────────┴───────────────────────────────────────────────────────────┘
-```
-
 ### **Tracing Configuration**
 
-The `tracing` section contains one or more tracing providers. Each provider has a `_type` and optional configuration fields. The following tracing providers are supported by default:
+The `tracing` section contains one or more tracing providers. Each provider has a `_type` and optional configuration fields. The observability system supports multiple concurrent exporters.
 
-- [**W&B Weave**](https://wandb.ai/site/weave/)
-  - Example configuration:
-    ```yaml
-    tracing:
-      weave:
-        _type: weave
-        project: "aiqtoolkit-demo"
-    ```
-  - See [Observing with W&B Weave](./observe-workflow-with-weave.md) for more information
-- [**Phoenix**](https://phoenix.arize.com/)
-  - Example configuration:
-    ```yaml
-    tracing:
-      phoenix:
-        _type: phoenix
-        endpoint: http://localhost:6006/v1/traces
-        project: "aiqtoolkit-demo"
-    ```
-  - See [Observing with Phoenix](./observe-workflow-with-phoenix.md) for more information
-- [**Galileo**](https://galileo.ai/)
-  - Example configuration:
-    ```yaml
-    tracing:
-      galileo:
-        _type: galileo
-        endpoint: https://app.galileo.ai/api/galileo/otel/traces
-        project: "aiqtoolkit-demo"
-        logstream: "default"
-        api_key: "<YOUR-GALILEO-API-KEY>"
-    ```
-  - See [Observing with Galileo](./observe-workflow-with-galileo.md) for more information
-- [**Langfuse**](https://langfuse.com/)
-  - Example configuration:
-    ```yaml
-    tracing:
-      langfuse:
-        _type: langfuse
-        endpoint: http://localhost:3000/api/public/otel/v1/traces
-    ```
-- [**LangSmith**](https://www.langchain.com/langsmith)
-  - Example configuration:
-    ```yaml
-    tracing:
-      langsmith:
-        _type: langsmith
-        project: default
-    ```
-- [**Catalyst**](https://catalyst.raga.ai/)
-  - Example configuration:
-    ```yaml
-    tracing:
-      catalyst:
-        _type: catalyst
-        project: "aiqtoolkit-demo"
-        dataset: "aiqtoolkit-dataset"
-    ```
-  - See [Observing with Catalyst](./observe-workflow-with-catalyst.md) for more information
-- [**Generic OTel Collector**](./observe-workflow-with-otel-collector.md)
-  - Example configuration:
-  ```yaml
-  tracing:
-    otelcollector:
-      _type: otelcollector
-      project: "aiqtoolkit-demo"
-      endpoint: "http://localhost:4318
-  ```
-  - See [Observing with OTel Collector](https://opentelemetry.io/docs/collector/) for more information
-- **Custom providers**
-  - See [Registering a New Telemetry Provider as a Plugin](#registering-a-new-telemetry-provider-as-a-plugin) for more information
+### Available Tracing Exporters
 
-To see the complete list of configuration fields for each provider, utilize the `aiq info components -t tracing` command which will display the configuration fields for each provider.
+Each exporter has its own detailed configuration guide with complete setup instructions and examples:
+
+- **[W&B Weave](https://wandb.ai/site/weave/)** - See [Observing with W&B Weave](./observe-workflow-with-weave.md)
+- **[Phoenix](https://phoenix.arize.com/)** - See [Observing with Phoenix](./observe-workflow-with-phoenix.md)
+- **[Galileo](https://galileo.ai/)** - See [Observing with Galileo](./observe-workflow-with-galileo.md)
+- **[Langfuse](https://langfuse.com/)** - OTLP-compatible observability platform
+- **[LangSmith](https://www.langchain.com/langsmith)** - LangChain's observability platform
+- **[Patronus](https://patronus.ai/)** - AI evaluation and monitoring platform
+- **[Catalyst](https://catalyst.raga.ai/)** - See [Observing with Catalyst](./observe-workflow-with-catalyst.md)
+- **[OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)** - See [Observing with OTel Collector](./observe-workflow-with-otel-collector.md)
+- **File Export** - Built-in file-based tracing for local development and debugging
+- **Custom Exporters** - See [Adding Telemetry Exporters](../../extend/telemetry-exporters.md) for creating custom integrations
+
+For complete configuration examples and setup instructions, refer to the individual guides linked above or check the `examples/observability/` directory.
 
 ### NeMo Agent Toolkit Observability Components
 

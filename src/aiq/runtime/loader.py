@@ -21,6 +21,7 @@ import time
 from contextlib import asynccontextmanager
 from enum import IntFlag
 from enum import auto
+from functools import lru_cache
 from functools import reduce
 
 from aiq.builder.workflow_builder import WorkflowBuilder
@@ -116,6 +117,7 @@ async def load_workflow(config_file: StrPath, max_concurrency: int = -1):
         yield AIQSessionManager(workflow.build(), max_concurrency=max_concurrency)
 
 
+@lru_cache
 def discover_entrypoints(plugin_type: PluginTypes):
     """
     Discover all the requested plugin types which were registered via an entry point group and return them.
@@ -141,6 +143,25 @@ def discover_entrypoints(plugin_type: PluginTypes):
     aiq_plugins = reduce(lambda x, y: list(x) + list(y), [entry_points.select(group=y) for y in plugin_groups])
 
     return aiq_plugins
+
+
+@lru_cache
+def get_all_aiq_entrypoints_distro_mapping() -> dict[str, str]:
+    """
+    Get the mapping of all AIQ entry points to their distribution names.
+    """
+
+    mapping = {}
+    aiq_entrypoints = discover_entrypoints(PluginTypes.ALL)
+    for ep in aiq_entrypoints:
+        ep_module_parts = ep.module.split(".")
+        current_parts = []
+        for part in ep_module_parts:
+            current_parts.append(part)
+            module_prefix = ".".join(current_parts)
+            mapping[module_prefix] = ep.dist.name
+
+    return mapping
 
 
 def discover_and_register_plugins(plugin_type: PluginTypes):

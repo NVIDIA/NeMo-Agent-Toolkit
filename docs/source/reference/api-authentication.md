@@ -21,13 +21,8 @@ The NeMo Agent toolkit simplifies API authentication by streamlining credential 
 access to API providers across a variety of runtime environments. This functionality allows users to authenticate with
 protected API resources directly from workflow tools, abstracting away low-level authentication logic and enabling
 greater focus on data retrieval and processing. Users can define multiple authentication providers in their workflow
-configuration file, each uniquely identified by a provider name. The toolkit provides utility functions such as
-`authenticate_oauth_client` to complete the authentication process, particularly for flows that require user consent,
-like the OAuth 2.0 Authorization Code Flow. Authentication is supported in headless and server modes. Credentials are
-securely loaded into memory at runtime,
-accessed by provider name, and are never logged or persisted. They are available only during workflow execution to
-ensure secure and centralized handling. Currently supported authentication configurations include OAuth 2.0
-Authorization Code Grant Flow and API keys, each managed by dedicated authentication clients. The system is designed
+configuration file, each uniquely identified by a provider name. Authentication is supported in headless and server modes. Credentials are
+securely loaded into memory at runtime, accessed by provider name, and are never logged or persisted. They are available only during workflow execution to ensure secure and centralized handling. Currently supported authentication configurations include OAuth 2.0 Authorization Code Grant Flow and API keys, each managed by dedicated authentication clients. The system is designed
 for extensibility, allowing developers to introduce new credential types and clients to support additional
 authentication methods and protected API access patterns.
 
@@ -35,7 +30,7 @@ authentication methods and protected API access patterns.
 This guide provides a step-by-step walkthrough for configuring authentication credentials and using authentication
 clients to securely authenticate and send requests to external API providers.
 
-## 1. Register NeMo Agent toolkit API Server as OAuth2.0 Client
+## 1. Register NeMo Agent Toolkit API Server as an OAuth2.0 Client
 To authenticate with a third-party API using OAuth 2.0, you must first register the application as a client with that
 API provider. The NeMo Agent toolkit API server functions as both an API server and an OAuth 2.0
 client. In addition to serving application specific endpoints, it can be registered with external API providers to
@@ -52,8 +47,8 @@ application. During registration, you typically provide the following:
 | **Field**           | **Description**                                                                 |
 |---------------------|----------------------------------------------------------------------------------|
 | **Application Name**  | A human-readable name for your application. This is shown to users during consent.|
-| **Redirect URI(s)**   | The URL(s) where the API will redirect users after authorization.               |
-| **Grant Type(s)**     | The OAuth 2.0 flows the toolkit supports (for example, Authorization Code or Client Credential).         |
+| **Redirect URIs**   | The URIs where the API will redirect users after authorization.               |
+| **Grant Types**     | The OAuth 2.0 flows the toolkit supports (for example, Authorization Code or Client Credential).         |
 | **Scopes**            | The permissions your app is requesting (for example, `read:user` or `write:data`).       |
 
 ### Registering Redirect URIs for Development vs. Production Environments
@@ -62,14 +57,14 @@ application. During registration, you typically provide the following:
 | **Environment** | **Redirect URI Format**               |  **Notes**                         |
 |-----------------|---------------------------------------|------------------------------------|
 | Development     | `http://localhost:8000/auth/redirect` | Often used when testing locally.   |
-| Production      | `https://yourdomain.com/auth/redirect`| Should use HTTPS and match exactly.|
+| Production      | `https://<yourdomain>/auth/redirect`  | Should use HTTPS and match exactly.|
 
 ### Configuring Registered App Credentials in Workflow Configuration YAML
 After registering your application note the any credentials you need to use in the workflow configuration YAML file such as the client ID and client secret. These will be used in the next section when configuring the authentication provider.
 
 
 ## 2. Configuring Authentication Credentials
-In the Workflow Configuration YAML file, user credentials required for API authentication are configured under the
+In the workflow configuration YAML file, user credentials required for API authentication are configured under the
 `authentication` key. Users should provide all required and valid credentials for each authentication method to ensure
 the library can authenticate requests without encountering credential related errors. Examples of currently supported
 API configurations are
@@ -78,13 +73,12 @@ API configurations are
 
 ### Authentication YAML Configuration Example
 
-The following example shows how to configure the authentication credentials for the OAuth 2.0 Authorization Code Grant Flow and API Key authentication. More information about each field can be queried using the `aiq info components -t authentication_provider` command.
+The following example shows how to configure the authentication credentials for the OAuth 2.0 Authorization Code Grant Flow and API Key authentication. More information about each field can be queried using the `aiq info components -t auth_provider` command.
 
 ```yaml
 authentication:
   test_auth_provider:
     _type: oauth2_auth_code_flow
-    client_url: http://localhost:8000
     authorization_url: http://127.0.0.1:5000/oauth/authorize
     token_url: http://127.0.0.1:5000/oauth/token
     token_endpoint_auth_method: client_secret_post
@@ -99,31 +93,35 @@ authentication:
   example_provider_name_api_key:
     _type: api_key
     raw_key: user_api_key
-    header_name: accepted_api_header_name
-    header_prefix: accepted_api_header_prefix
+    custom_header_name: accepted_api_header_name
+    custom_header_prefix: accepted_api_header_prefix
 ```
 
 ### OAuth2.0 Authorization Code Grant Configuration Reference
-| Field Name                    | Description                                                                                                                        |
+| Field Name | Description |
 |-------------------------------|------------------------------------------------------------------------------------------------------------------------------------|
-| `example_provider_name_oauth` | A unique name used to identify the client credentials required to access the API provider.                                         |
-| `_type`                       | Specifies the authentication type. For OAuth 2.0 Authorization Code Grant authentication, set this to `oauth2_auth_code_flow`. |
-| `client_url`                  | URL of the OAuth 2.0 client server.                                                                                                |
-| `authorization_url`           | URL used to initiate the authorization flow, where an authorization code is obtained to be later exchanged for an access token.    |
-| `token_url`                   | URL used to exchange an authorization code for an access token and optional refresh token.                                         |
-| `client_id`                   | The Identifier provided when registering the OAuth 2.0 client server with an API provider.                                         |
-| `client_secret`               | A confidential string provided when registering the OAuth 2.0 client server with an API provider.                                  |
-| `token_endpoint_auth_method`  | Some token provider endpoints require specific types of authentication. For example `client_secret_post`.                          |
-| `scope`                       | List of permissions to the API provider (e.g., `read`, `write`).                                                                   |
+| `test_auth_provider` | A unique name used to identify the client credentials required to access the API provider. |
+| `_type` | Specifies the authentication type. For OAuth 2.0 Authorization Code Grant authentication, set this to `oauth2_auth_code_flow`. |
+| `client_id` | The Identifier provided when registering the OAuth 2.0 client server with an API provider. |
+| `client_secret` | A confidential string provided when registering the OAuth 2.0 client server with an API provider. |
+| `authorization_url` | URL used to initiate the authorization flow, where an authorization code is obtained to be later exchanged for an access token. |
+| `token_url` | URL used to exchange an authorization code for an access token and optional refresh token. |
+| `token_endpoint_auth_method` | Some token provider endpoints require specific types of authentication. For example `client_secret_post`. |
+| `redirect_uri` | The redirect URI for OAuth 2.0 authentication. Must match the registered redirect URI with the OAuth provider.|
+| `scopes` | List of permissions to the API provider (e.g., `read`, `write`). |
+| `use_pkce` | Whether to use PKCE (Proof Key for Code Exchange) in the OAuth 2.0 flow, defaults to `False` |
+| `authorization_kwargs` | Additional keyword arguments to include in the authorization request. |
+
 
 ### API Key Configuration Reference
-| Field Name                      | Description                                                                                                |
+| Field Name | Description |
 |---------------------------------|------------------------------------------------------------------------------------------------------------|
-| `example_provider_name_api_key` | A unique name used to identify the client credentials required to access the API provider.                 |
-| `_type`                         | Specifies the authentication type. For API Key authentication, set this to `api_key`.                      |
-| `raw_key`                       | API key value for authenticating requests to the API provider.                                             |
-| `header_name`                   | The HTTP header used to transmit the API key for authenticating requests.                                  |
-| `header_prefix`                 | Optional prefix for the HTTP header used to transmit the API key in authenticated requests (e.g., Bearer). |
+| `example_provider_name_api_key` | A unique name used to identify the client credentials required to access the API provider. |
+| `_type` | Specifies the authentication type. For API Key authentication, set this to `api_key`. |
+| `raw_key` | API key value for authenticating requests to the API provider. |
+| `auth_scheme` | The HTTP authentication scheme to use. Supported schemes: `BEARER`, `X_API_KEY`, `BASIC`, and `CUSTOM`, default is `BEARER` |
+| `custom_header_name` | The HTTP header used to transmit the API key for authenticating requests. |
+| `custom_header_prefix` | Optional prefix for the HTTP header used to transmit the API key in authenticated requests (e.g., Bearer). |
 
 
 ## 3. Using the Authentication Provider
@@ -132,39 +130,23 @@ To use the authentication provider in your workflow, you can use the `Authentica
 ### Sample Authentication Tool and Authentication Usage
 ```python
 class WhoAmIConfig(FunctionBaseConfig, name="who_am_i"):
-    """Find out who the currently logged in user is."""
-    auth_provider: AuthenticationRef = Field(description="Reference to the authentication provider to use for authentication.")
-
-
-@register_function(config_type=WhoAmIConfig)
-async def auth_tool(config: WhoAmIConfig, builder: Builder):
     """
-    Uses authentication to authenticate to any registered API provider.
+    Function that looks up the user's identity.
     """
-    auth_provider: AuthProviderBase = await builder.get_authentication(config.auth_provider)
+    auth_provider: AuthenticationRef = Field(description=("Reference to the authentication provider to use for "
+                                                          "authentication before making the who am i request."))
 
-    async def _arun(user_id: str) -> str:
-        try:
-            # Perform authentication (this will invoke the user authentication callback)
-            auth_context: AuthResult = await auth_provider.authenticate(user_id=user_id)
-
-            # With the auth context, we can make a request to the protected API resource
-            async with httpx.AsyncClient(auth=auth_context) as client:
-                response = await client.get("https://api.example.com/user")
-                return response.json()
-
-        except Exception as e:
-            logger.exception("HTTP Basic authentication failed", exc_info=True)
-            return f"HTTP Basic authentication for '{user_id}' failed: {str(e)}"
-
-    yield FunctionInfo.from_fn(_arun, description="Find out who the currently logged in user is.")
+    api_url: str = Field(default="http://localhost:5001/api/me", description="Base URL for the who am i API")
+    timeout: int = Field(default=10, description="Request timeout in seconds")
 ```
+
+Full source code for the above example can be found in `examples/front_ends/simple_auth/src/aiq_simple_auth/ip_lookup.py`.
 
 ## 4. Authentication by Application Configuration
 Authentication methods not needing consent prompts, such as API Keys are supported uniformly across all deployment methods.
 In contrast, support for methods that require user interaction can vary depending on the application's deployment and available
 components. In some configurations, the system’s default browser handles the redirect directly, while in others, the
-front-end UI is responsible for rendering the consent prompt in the browser.
+front-end UI is responsible for rendering the consent prompt.
 
 Below is a table listing the current support for the various authentication methods based on the application
 

@@ -19,7 +19,7 @@ limitations under the License.
 
 > **Note**: The code examples in this guide are pseudo code designed to illustrate the programming interface and key concepts. They focus on demonstrating the structure and flow rather than providing complete, runnable implementations. Use these examples to understand the interface patterns and adapt them to your specific use case.
 
-Telemetry exporters are plugins that send telemetry data (traces, spans, and intermediate steps) from NeMo Agent toolkit workflows to external observability services. This guide provides a comprehensive overview of how to create and register custom telemetry exporters.
+Telemetry exporters are plugins that send telemetry data (e.g., traces, spans, and intermediate steps, etc.) from NeMo Agent toolkit workflows to external observability services. The NeMo Agent toolkit uses a flexible, plugin-based observability system that allows you to configure multiple exporters simultaneously and create custom integrations for any observability platform. This guide provides a comprehensive overview of how to create and register custom telemetry exporters.
 
 ## Why Use Telemetry Exporters?
 
@@ -67,11 +67,15 @@ aiq info components -t tracing
 
 Examples of existing telemetry exporters include:
 
+- **File**: Exports traces to local files
 - **Phoenix**: Exports traces to Arize Phoenix for visualization
 - **Weave**: Exports traces to Weights & Biases Weave
-- **OtelCollector**: Exports traces to OpenTelemetry-compatible services
-- **Catalyst**: Exports traces to RagaAI Catalyst
-- **File**: Exports traces to local files
+- **Langfuse**: Exports traces to Langfuse via OTLP
+- **LangSmith**: Exports traces to LangSmith via OTLP
+- **OpenTelemetry Collector**: Exports traces to OpenTelemetry-compatible services
+- **Patronus**: Exports traces to Patronus via OTLP
+- **Galileo**: Exports traces to Galileo via OTLP
+- **RagaAI Catalyst**: Exports traces to RagaAI Catalyst
 
 ## Quick Start: Your First Telemetry Exporter
 
@@ -121,7 +125,7 @@ general:
   telemetry:
     tracing:
       console_exporter:
-        type: console
+        _type: console
         prefix: "[MY_APP]"
 ```
 
@@ -154,7 +158,7 @@ Telemetry exporters in NeMo Agent toolkit are responsible for:
 
 ### Telemetry Data Flow
 
-The telemetry export system routes workflow events through different exporter types to various destinations:
+The flexible telemetry export system routes workflow events through different exporter types to various destinations:
 
 ```{mermaid}
 graph TD
@@ -263,7 +267,7 @@ Before creating a custom exporter, check if your observability service is alread
 |---------|------|-------------|---------------|
 | **File** | `file` | `pip install aiqtoolkit` | local file or directory |
 | **Langfuse** | `langfuse` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API keys |
-| **LangSmith** | `LangSmith` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
+| **LangSmith** | `langsmith` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
 | **OpenTelemetry Collector** | `otelcollector` | `pip install aiqtoolkit[opentelemetry]` | endpoint + headers |
 | **Patronus** | `patronus` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
 | **Galileo** | `galileo` | `pip install aiqtoolkit[opentelemetry]` | endpoint + API key |
@@ -279,10 +283,10 @@ general:
   telemetry:
     tracing:
       langfuse:
-        type: langfuse
-        endpoint: "https://cloud.langfuse.com/api/public/otel/v1/traces"
-        public_key: "${LANGFUSE_PUBLIC_KEY}"
-        secret_key: "${LANGFUSE_SECRET_KEY}"
+        _type: langfuse
+        endpoint: https://cloud.langfuse.com/api/public/otel/v1/traces
+        public_key: ${LANGFUSE_PUBLIC_KEY}
+        secret_key: ${LANGFUSE_SECRET_KEY}
 ```
 
 > **Most services use OTLP**: If your service supports OpenTelemetry Protocol (OTLP), you can often subclass `OtelSpanExporter` or use the generic `otelcollector` type with appropriate headers.
@@ -587,17 +591,24 @@ class CustomSpanExporter(SpanExporter[Span, dict]):
 
 ### Step 5: Configure in Workflow
 
-Once registered, configure your telemetry exporter in your workflow configuration:
+Once registered, configure your telemetry exporter in your workflow configuration. The flexible observability system allows you to configure multiple exporters simultaneously by adding them to the `tracing` section:
 
 ```yaml
 # workflow.yaml
 general:
   telemetry:
     tracing:
+      # Your custom exporter
       custom_exporter:
-        type: custom
-        endpoint: "https://api.custom-service.com/traces"
-        api_key: "${CUSTOM_API_KEY}"
+        _type: custom
+        endpoint: https://api.custom-service.com/traces
+        api_key: ${CUSTOM_API_KEY}
+
+      # Multiple exporters can be configured simultaneously
+      phoenix_local:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: my-project
 ```
 
 > **Next Steps**: You now have a complete custom telemetry exporter! For real-world implementation examples, see the [Common Integration Patterns](#common-integration-patterns) section. For advanced features like concurrent execution and performance optimization, see the [Advanced Features](#advanced-features) section.
