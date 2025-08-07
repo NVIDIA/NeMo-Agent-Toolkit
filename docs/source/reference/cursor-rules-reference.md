@@ -250,6 +250,7 @@ Integrate ReAct agent to the workflow
 
 ## Quick Reference
 
+<!-- path-check-skip-begin -->
 | Rule Category | Cursor Rule file | Primary Use Case |
 |---------------|---------|------------------|
 | Foundation | `general` | Code quality and standards |
@@ -265,6 +266,7 @@ Integrate ReAct agent to the workflow
 | Workflow | `aiq-workflows/add-functions` | Function development |
 | Workflow | `aiq-workflows/add-tools` | Tool integration |
 | Agents | `aiq-agents/general` | Agent selection & integration |
+<!-- path-check-skip-end -->
 
 ## Usage Tips
 
@@ -274,4 +276,4 @@ Integrate ReAct agent to the workflow
 * **Reference Documentation**: Follow the "Related Documentation" links for deeper understanding
 * **Test Incrementally**: Apply one rule at a time and test the results
 
-For tutorials and examples on using these rules, see [Build a Demo Agent Workflow Using Cursor Rules for NeMo Agent Toolkit](../tutorials/build-a-demo-agent-workflow-using-cursor-rules.md). 
+For tutorials and examples on using these rules, see [Build a Demo Agent Workflow Using Cursor Rules for NeMo Agent Toolkit](../tutorials/build-a-demo-agent-workflow-using-cursor-rules.md).

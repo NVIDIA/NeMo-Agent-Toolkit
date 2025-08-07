@@ -10,8 +10,9 @@ Arize
 arXiv
 [Aa]sync
 [Aa]utoencoder
-[Au]thlib
+[Aa]llowlist
 [Aa]nonymize(d?)
+Authlib
 [Bb]ackoff
 [Bb]ackpressure
 [Bb]atcher
@@ -65,6 +66,8 @@ isort
 Jira
 jsonlines
 Langfuse
+LangChain
+LangGraph
 LangSmith
 # libcudf isn't styled in the way that cuDF is https://docs.rapids.ai/api/libcudf/stable/
 libcudf

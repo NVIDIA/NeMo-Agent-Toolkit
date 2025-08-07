@@ -34,6 +34,6 @@ class TestMySQLObjectStore(ObjectStoreTests):
         async with WorkflowBuilder() as builder:
             await builder.add_object_store(
                 "object_store_name",
-                MySQLObjectStoreClientConfig(bucket_name="test", user="root", password="my-secret-pw"))
+                MySQLObjectStoreClientConfig(bucket_name="test", username="root", password="my-secret-pw"))
 
             yield await builder.get_object_store_client("object_store_name")

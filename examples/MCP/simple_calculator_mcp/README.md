@@ -34,7 +34,7 @@ This example demonstrates how to integrate the NVIDIA NeMo Agent toolkit with Mo
 
 ## Key Features
 
-- **MCP Client Integration:** Demonstrates how to use NeMo Agent toolkit as an MCP client to connect to remote MCP servers and access distributed tools like date/time services and advanced mathematical operations.
+- **MCP Client Integration:** Demonstrates how to use NeMo Agent toolkit as an MCP client to connect to remote MCP servers and access distributed tools like advanced mathematical operations as well as date and time services.
 - **MCP Server Publishing:** Shows how to publish NeMo Agent toolkit functions as MCP services using the `aiq mcp` command, making calculator tools available to other AI systems through the standardized MCP protocol.
 - **Distributed AI Tool Networks:** Enables building networks of interconnected AI tools where different capabilities can be hosted on separate systems and accessed remotely through MCP.
 - **Cross-System Interoperability:** Demonstrates integration with the broader MCP ecosystem, allowing NeMo Agent toolkit workflows to both consume and provide tools in a standardized manner.
@@ -99,7 +99,7 @@ You can publish the simple calculator tools via MCP using the `aiq mcp` command.
    ```
 
 **Math Server Example:**
-1. **Start the MCP server**: Use `aiq mcp --config_file examples/getting_started/simple_calculator/configs/config.yml` to serve calculator tools on port 9901
+1. **Start the MCP server**: Use `aiq mcp --config_file ./examples/getting_started/simple_calculator/configs/config.yml` to serve calculator tools on port 9901
 2. **Run the workflow**:
    ```bash
    aiq run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-math.yml --input "What is the product of 2 * 4?"

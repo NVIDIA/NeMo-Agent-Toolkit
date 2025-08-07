@@ -19,54 +19,63 @@ limitations under the License.
 
 This guide provides a step-by-step process to enable observability in a NeMo Agent toolkit workflow using Phoenix for tracing and logging. By the end of this guide, you will have:
 - Configured telemetry in your workflow.
-- Run the Phoenix server.
-- Able to view traces in the Phoenix UI.
+- Started the Phoenix server locally.
+- Ability to view traces in the Phoenix UI.
 
+### Step 1: Install the Phoenix Subpackage
 
-### Step 1: Modify Workflow Configuration
+Install the phoenix dependencies to enable tracing capabilities:
 
-Update your workflow configuration file to include the telemetry settings.
-
-Example configuration:
 ```bash
-general:
-  telemetry:
-    logging:
-      console:
-        _type: console
-        level: WARN
-    tracing:
-      phoenix:
-        _type: phoenix
-        endpoint: http://localhost:6006/v1/traces
-        project: simple_calculator
+uv pip install -e '.[phoenix]'
 ```
-This setup enables:
-- Console logging with WARN level messages.
-- Tracing through Phoenix at `http://localhost:6006/v1/traces`.
 
 ### Step 2: Start the Phoenix Server
+
 Run the following command to start Phoenix server locally:
 ```bash
 phoenix serve
 ```
 Phoenix should now be accessible at `http://0.0.0.0:6006`.
 
-### Step 3: Run Your Workflow
-From the root directory of the NeMo Agent toolkit library, install dependencies and execute your workflow.
+### Step 3: Modify Workflow Configuration
+
+Update your workflow configuration file to include the telemetry settings.
+
+Example configuration:
+```yaml
+general:
+  telemetry:
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: simple_calculator
+```
+This setup enables tracing through Phoenix at `http://localhost:6006/v1/traces`, with traces grouped into the `simple_calculator` project.
+
+### Step 4: Run Your Workflow
+
+From the root directory of the NeMo Agent toolkit library, install dependencies and run the pre-configured `simple_calculator_observability` example.
 
 **Example:**
 ```bash
-uv pip install -e examples/getting_started/simple_web_query
-```
-As the workflow runs, telemetry data will start showing up in Phoenix and the console.
+# Install the workflow and plugins
+uv pip install -e examples/observability/simple_calculator_observability/
 
-### Step 4: View Traces Data in Phoenix
+# Run the workflow with Phoenix telemetry settings
+aiq run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "What is 1*2?"
+```
+As the workflow runs, telemetry data will start showing up in Phoenix.
+
+### Step 5: View Traces Data in Phoenix
+
 - Open your browser and navigate to `http://0.0.0.0:6006`.
-- Locate your workflow traces under the **Traces** section in projects.
+- Locate your workflow traces under your project name in projects.
 - Inspect function execution details, latency, total tokens, request timelines and other info under Info and Attributes tab of an individual trace.
 
 ### Debugging
+
 If you encounter issues while downloading the Phoenix package, try uninstalling and installing:
 ```bash
 uv pip uninstall arize-phoenix
@@ -79,4 +88,4 @@ After reinstalling, restart the Phoenix server:
 phoenix serve
 ```
 
-For more Arize-Phoenix details view doc [here](https://docs.arize.com/phoenix)
+For more Arize-Phoenix details, view the documentation [here](https://docs.arize.com/phoenix).

@@ -130,7 +130,7 @@ class ObjectStoreRef(ComponentRef):
     """
 
     @property
-    @typing.override
+    @override
     def component_group(self):
         return ComponentGroup.OBJECT_STORES
 

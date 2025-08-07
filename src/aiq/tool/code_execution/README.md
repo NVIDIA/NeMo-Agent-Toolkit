@@ -23,7 +23,6 @@ A secure, containerized Python code execution environment that allows safe execu
 
 The Code Execution Sandbox provides:
 - **Secure code execution** in isolated Docker containers
-- **Comprehensive error handling** with detailed stdout/stderr capture
 - **Multiple input formats** including raw code, dictionary format, and markdown
 - **Dependency management** with pre-installed libraries
 - **Flexible configuration** with customizable timeouts and output limits

@@ -48,17 +48,39 @@ functions:
     _type: put_user_report
     object_store: report_object_store
     description: >
-      Puts user diagnostic report into S3 bucket given a user ID and date.
+      Inserts a new user diagnostic report into S3 bucket given a user ID and date. If the report already exists, it will fail.
+      If it does fail, never delete the existing report to replace it. Just let the user know that the report already exists.
       Args:
         report: str: The report to put into the S3 bucket.
         user_id: str: The user ID to put the report for.
         date: str | null: The date to put the report for. Format: YYYY-MM-DD. If not provided, the report will be named "latest".
 
+  update_user_report:
+    _type: update_user_report
+    object_store: report_object_store
+    description: >
+      Updates a user diagnostic report in S3 bucket given a user ID and date. If the report does not exist, it will behave as
+      if the report was created. Do not delete the existing report to replace it.
+      Args:
+        report: str: The report to update in the S3 bucket.
+        user_id: str: The user ID to update the report for.
+        date: str | null: The date to update the report for. Format: YYYY-MM-DD. If not provided, the report will be named "latest".
+
+  delete_user_report:
+    _type: delete_user_report
+    object_store: report_object_store
+    description: >
+      Deletes user diagnostic report from S3 bucket given a user ID and date. If the report does not exist, it will fail.
+      Do not run `delete_user_report` without the explicit intention to delete an existing report, even in the case of an attempt
+      to insert a new report which already exists.
+      Args:
+        user_id: str: The user ID to delete the report for.
+        date: str | null: The date to delete the report for. Format: YYYY-MM-DD. If not provided, the report will be named "latest".
+
 workflow:
   _type: react_agent
-  tool_names: [get_user_report, put_user_report]
+  tool_names: [get_user_report, put_user_report, update_user_report, delete_user_report]
   llm_name: nim_llm
   verbose: true
   handle_parsing_errors: true
   max_retries: 2
-
