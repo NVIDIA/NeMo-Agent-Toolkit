@@ -469,7 +469,7 @@ def build_wheel(package_root: str) -> WheelData:
 
     toml_dependencies_transitive = get_all_transitive_dependencies(list(toml_dependencies))
     union_dependencies = toml_dependencies.union(toml_packages)
-    union_dependencies.add(toml_dependencies_transitive)
+    union_dependencies.update(toml_dependencies_transitive)
 
     working_dir = os.getcwd()
     os.chdir(package_root)
