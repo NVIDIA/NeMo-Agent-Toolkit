@@ -105,9 +105,8 @@ if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
 
             # Find all .whl files in the current subdirectory (no depth limit)
             find "${SUBDIR}" -type f -name "*.whl" | while read -r WHEEL_FILE; do
-                # Extract relative path to preserve directory structure
-                RELATIVE_PATH="${WHEEL_FILE#${WHEELS_BASE_DIR}/}"
-                ARTIFACTORY_PATH="${AIQ_ARTIFACTORY_NAME}/${RELATIVE_PATH}"
+                # Explicitly upload to the already established path
+                ARTIFACTORY_PATH="${AIQ_ARTIFACTORY_NAME}/aiqtoolkit"
 
                 echo "Uploading ${WHEEL_FILE} to ${ARTIFACTORY_PATH}..."
 
