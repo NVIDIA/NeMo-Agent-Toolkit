@@ -449,15 +449,6 @@ def build_wheel(package_root: str) -> WheelData:
 
     toml_project: dict = data.get("project", {})
     toml_project_name = toml_project.get("name", None)
-
-    # assert toml_project_name is not None, f"Package name '{toml_project_name}' not found in pyproject.toml"
-    # # replace "aiqtoolkit" substring with "aiq" to get the import name
-    # module_name = get_module_name_from_distribution(toml_project_name)
-    # assert module_name is not None, f"No modules found for package name '{toml_project_name}'"
-
-    # assert importlib.util.find_spec(module_name) is not None, (f"Package {module_name} not "
-    #                                                            "installed, cannot discover components.")
-
     toml_packages = set(i for i in data.get("project", {}).get("entry-points", {}).get("aiq.plugins", {}))
 
     # Extract dependencies using the robust requirement parser with extras resolution
@@ -477,13 +468,8 @@ def build_wheel(package_root: str) -> WheelData:
                 logger.warning("Failed to parse dependency '%s': %s", dep_spec, e)
 
     toml_dependencies_transitive = get_all_transitive_dependencies(list(toml_dependencies))
-    print("My transitive toml_dependencies", toml_dependencies_transitive)
-    print()
-    print("My toml_dependencies", toml_dependencies)
-    print()
-
     union_dependencies = toml_dependencies.union(toml_packages)
-    union_dependencies.add(toml_project_name)
+    union_dependencies.add(toml_dependencies_transitive)
 
     working_dir = os.getcwd()
     os.chdir(package_root)
