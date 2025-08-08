@@ -176,7 +176,7 @@ class TestProcessingExporterInitialization:
         assert not exporter._processors
         assert hasattr(exporter, '_running')  # Inherited from BaseExporter
 
-    @patch('aiq.observability.exporter.processing_exporter.AIQContextState.get')
+    @patch('aiq.observability.exporter.processing_exporter.ContextState.get')
     def test_init_without_context_state(self, mock_get_context):
         """Test initialization without context state (uses default)."""
         mock_context = Mock(spec=ContextState)

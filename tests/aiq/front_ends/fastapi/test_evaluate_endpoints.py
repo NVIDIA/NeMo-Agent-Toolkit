@@ -53,7 +53,7 @@ def test_client_fixture(test_config: Config) -> TestClient:
     app = FastAPI()
     worker.set_cors_config(app)
 
-    with patch("aiq.front_ends.fastapi.fastapi_front_end_plugin_worker.AIQSessionManager") as MockSessionManager:
+    with patch("aiq.front_ends.fastapi.fastapi_front_end_plugin_worker.SessionManager") as MockSessionManager:
 
         # Mock session manager
         mock_session = MagicMock()

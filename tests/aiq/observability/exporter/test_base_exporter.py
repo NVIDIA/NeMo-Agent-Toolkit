@@ -160,7 +160,7 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
         assert exporter._loop is None
         assert exporter._is_isolated_instance is False
 
-    @patch('aiq.observability.exporter.base_exporter.AIQContextState.get')
+    @patch('aiq.observability.exporter.base_exporter.ContextState.get')
     def test_init_without_context_state(self, mock_get_context):
         """Test initialization without context state (uses default)."""
         mock_context = Mock(spec=ContextState)
