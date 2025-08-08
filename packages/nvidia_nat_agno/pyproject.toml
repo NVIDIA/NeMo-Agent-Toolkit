@@ -22,6 +22,7 @@ dependencies = [
   "nvidia-nat~=1.2",
   "agno~=1.2.3",
   "openai~=1.66",
+  "google-search-results~=2.3.0",
 ]
 requires-python = ">=3.11,<3.13"
 readme = "src/aiq/meta/pypi.md"
