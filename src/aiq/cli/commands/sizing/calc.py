@@ -274,9 +274,12 @@ def calc_command(ctx,
 
         click.echo(tabulate(table, headers=headers, tablefmt="github"))
 
-        # Display slope-based GPU estimates at the end
-        click.echo("")  # Add blank line for separation
-        click.echo(click.style("=== GPU ESTIMATES ===", fg="bright_blue", bold=True))
+        # Display slope-based GPU estimates if they are available
+        if results.gpu_estimates.gpu_estimate_by_llm_latency is not None or \
+                results.gpu_estimates.gpu_estimate_by_wf_runtime is not None:
+            click.echo("")
+            click.echo(click.style("=== GPU ESTIMATES ===", fg="bright_blue", bold=True))
+
         if results.gpu_estimates.gpu_estimate_by_wf_runtime is not None:
             click.echo(
                 click.style(

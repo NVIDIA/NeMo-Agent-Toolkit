@@ -16,6 +16,8 @@
 from contextlib import asynccontextmanager
 
 from aiq.builder.framework_enum import LLMFrameworkEnum
+from aiq.cli.type_registry import AuthProviderBuildCallableT
+from aiq.cli.type_registry import AuthProviderRegisteredCallableT
 from aiq.cli.type_registry import EmbedderClientBuildCallableT
 from aiq.cli.type_registry import EmbedderClientRegisteredCallableT
 from aiq.cli.type_registry import EmbedderProviderBuildCallableT
@@ -34,6 +36,8 @@ from aiq.cli.type_registry import LoggingMethodConfigT
 from aiq.cli.type_registry import LoggingMethodRegisteredCallableT
 from aiq.cli.type_registry import MemoryBuildCallableT
 from aiq.cli.type_registry import MemoryRegisteredCallableT
+from aiq.cli.type_registry import ObjectStoreBuildCallableT
+from aiq.cli.type_registry import ObjectStoreRegisteredCallableT
 from aiq.cli.type_registry import RegisteredLoggingMethod
 from aiq.cli.type_registry import RegisteredTelemetryExporter
 from aiq.cli.type_registry import RegisteredToolWrapper
@@ -47,6 +51,9 @@ from aiq.cli.type_registry import TeleExporterRegisteredCallableT
 from aiq.cli.type_registry import TelemetryExporterBuildCallableT
 from aiq.cli.type_registry import TelemetryExporterConfigT
 from aiq.cli.type_registry import ToolWrapperBuildCallableT
+from aiq.cli.type_registry import TTCStrategyBuildCallableT
+from aiq.cli.type_registry import TTCStrategyRegisterCallableT
+from aiq.data_models.authentication import AuthProviderBaseConfigT
 from aiq.data_models.component import AIQComponentEnum
 from aiq.data_models.discovery_metadata import DiscoveryMetadata
 from aiq.data_models.embedder import EmbedderBaseConfigT
@@ -55,6 +62,7 @@ from aiq.data_models.front_end import FrontEndConfigT
 from aiq.data_models.function import FunctionConfigT
 from aiq.data_models.llm import LLMBaseConfigT
 from aiq.data_models.memory import MemoryBaseConfigT
+from aiq.data_models.object_store import ObjectStoreBaseConfigT
 from aiq.data_models.registry_handler import RegistryHandlerBaseConfigT
 from aiq.data_models.retriever import RetrieverBaseConfigT
 
@@ -192,6 +200,30 @@ def register_llm_provider(config_type: type[LLMBaseConfigT]):
     return register_llm_provider_inner
 
 
+def register_auth_provider(config_type: type[AuthProviderBaseConfigT]):
+
+    def register_auth_provider_inner(
+        fn: AuthProviderBuildCallableT[AuthProviderBaseConfigT]
+    ) -> AuthProviderRegisteredCallableT[AuthProviderBaseConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredAuthProviderInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=AIQComponentEnum.AUTHENTICATION_PROVIDER)
+
+        GlobalTypeRegistry.get().register_auth_provider(
+            RegisteredAuthProviderInfo(full_type=config_type.full_type,
+                                       config_type=config_type,
+                                       build_fn=context_manager_fn,
+                                       discovery_metadata=discovery_metadata))
+
+        return context_manager_fn
+
+    return register_auth_provider_inner
+
+
 def register_llm_client(config_type: type[LLMBaseConfigT], wrapper_type: LLMFrameworkEnum | str):
 
     def register_llm_client_inner(
@@ -313,6 +345,54 @@ def register_memory(config_type: type[MemoryBaseConfigT]):
         return context_manager_fn
 
     return register_memory_inner
+
+
+def register_object_store(config_type: type[ObjectStoreBaseConfigT]):
+
+    def register_kv_store_inner(
+        fn: ObjectStoreBuildCallableT[ObjectStoreBaseConfigT]
+    ) -> ObjectStoreRegisteredCallableT[ObjectStoreBaseConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredObjectStoreInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=AIQComponentEnum.OBJECT_STORE)
+
+        GlobalTypeRegistry.get().register_object_store(
+            RegisteredObjectStoreInfo(full_type=config_type.full_type,
+                                      config_type=config_type,
+                                      build_fn=context_manager_fn,
+                                      discovery_metadata=discovery_metadata))
+
+        return context_manager_fn
+
+    return register_kv_store_inner
+
+
+def register_ttc_strategy(config_type: type[TTCStrategyRegisterCallableT]):
+
+    def register_ttc_strategy_inner(
+        fn: TTCStrategyBuildCallableT[TTCStrategyRegisterCallableT]
+    ) -> TTCStrategyRegisterCallableT[TTCStrategyRegisterCallableT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredTTCStrategyInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=AIQComponentEnum.TTC_STRATEGY)
+
+        GlobalTypeRegistry.get().register_ttc_strategy(
+            RegisteredTTCStrategyInfo(full_type=config_type.full_type,
+                                      config_type=config_type,
+                                      build_fn=context_manager_fn,
+                                      discovery_metadata=discovery_metadata))
+
+        return context_manager_fn
+
+    return register_ttc_strategy_inner
 
 
 def register_retriever_provider(config_type: type[RetrieverBaseConfigT]):

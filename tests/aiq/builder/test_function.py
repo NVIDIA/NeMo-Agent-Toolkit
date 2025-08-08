@@ -168,7 +168,7 @@ async def test_functions_single_pod_input_pod_output():
         assert await fn_obj.ainvoke(4, to_type=str) == "4!"
 
         # Invoke with input which is not convertible
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             await fn_obj.ainvoke([4.5], to_type=str)
 
 
@@ -286,13 +286,13 @@ async def test_stream_functions_single_pod_input_pod_output():
 
         # Stream output with input which is not convertible
         result: None | BaseModel = None
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             async for output in fn_obj.astream([4.5], to_type=str):
                 result = output
 
         # Stream output with input which is not convertible and to_type set to None
         result: None | BaseModel = None
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             async for output in fn_obj.astream([4.5], to_type=None):
                 result = output
 
@@ -566,3 +566,119 @@ async def test_manual_stream_to_single_conversion():
         assert "".join(stream_results) == "test!"
 
         assert (await fn_obj.ainvoke("test", to_type=TestOutput)).output == "test!"
+
+
+async def test_ainvoke_output_type_conversion_failure():
+    """Test that ainvoke raises an exception when output cannot be converted to the specified to_type."""
+
+    class UnconvertibleOutput(BaseModel):
+        value: str
+
+    class IncompatibleType(BaseModel):
+        different_field: int
+
+    @register_function(config_type=DummyConfig)
+    async def _register(config: DummyConfig, b: Builder):
+
+        async def _inner(message: str) -> UnconvertibleOutput:
+            return UnconvertibleOutput(value=message + "!")
+
+        yield _inner
+
+    async with WorkflowBuilder() as builder:
+
+        fn_obj = await builder.add_function(name="test_function", config=DummyConfig())
+
+        # Verify normal operation works
+        result = await fn_obj.ainvoke("test", to_type=UnconvertibleOutput)
+        assert result.value == "test!"
+
+        # Test that conversion to incompatible type raises ValueError
+        with pytest.raises(ValueError, match="Cannot convert type .* to .* No match found"):
+            await fn_obj.ainvoke("test", to_type=IncompatibleType)
+
+
+async def test_astream_output_type_conversion_failure():
+    """Test that astream raises an exception when output cannot be converted to the specified to_type."""
+
+    class UnconvertibleOutput(BaseModel):
+        value: str
+
+    class IncompatibleType(BaseModel):
+        different_field: int
+
+    @register_function(config_type=DummyConfig)
+    async def _register(config: DummyConfig, b: Builder):
+
+        async def _stream_inner(message: str) -> AsyncGenerator[UnconvertibleOutput]:
+            yield UnconvertibleOutput(value=message + "!")
+
+        yield _stream_inner
+
+    async with WorkflowBuilder() as builder:
+
+        fn_obj = await builder.add_function(name="test_function", config=DummyConfig())
+
+        # Verify normal operation works
+        result = None
+        async for output in fn_obj.astream("test", to_type=UnconvertibleOutput):
+            result = output
+        assert result.value == "test!"
+
+        # Test that conversion to incompatible type raises ValueError during streaming
+        with pytest.raises(ValueError, match="Cannot convert type .* to .* No match found"):
+            async for output in fn_obj.astream("test", to_type=IncompatibleType):
+                pass  # The exception should be raised during the first iteration
+
+
+async def test_ainvoke_primitive_type_conversion_failure():
+    """Test that ainvoke raises an exception when a primitive output cannot be converted to an incompatible type."""
+
+    @register_function(config_type=DummyConfig)
+    async def _register(config: DummyConfig, b: Builder):
+
+        async def _inner(message: str) -> str:
+            return message + "!"
+
+        yield _inner
+
+    async with WorkflowBuilder() as builder:
+
+        fn_obj = await builder.add_function(name="test_function", config=DummyConfig())
+
+        # Verify normal operation works
+        result = await fn_obj.ainvoke("test", to_type=str)
+        assert result == "test!"
+
+        # Test that conversion to incompatible type raises ValueError
+        # Try to convert string output to a complex type that has no converter
+        with pytest.raises(ValueError, match="Cannot convert type .* to .* No match found"):
+            await fn_obj.ainvoke("test", to_type=dict)
+
+
+async def test_astream_primitive_type_conversion_failure():
+    """Test that astream raises an exception when a primitive output cannot be converted to an incompatible type."""
+
+    @register_function(config_type=DummyConfig)
+    async def _register(config: DummyConfig, b: Builder):
+
+        async def _stream_inner(message: str) -> AsyncGenerator[str]:
+            yield message + "!"
+
+        yield _stream_inner
+
+    async with WorkflowBuilder() as builder:
+
+        fn_obj = await builder.add_function(name="test_function", config=DummyConfig())
+
+        # Verify normal operation works
+        result = None
+        async for output in fn_obj.astream("test", to_type=str):
+            result = output
+        assert result == "test!"
+
+        # Test that conversion to incompatible type raises ValueError during streaming
+        # Try to convert string output to a complex type that has no converter
+        with pytest.raises(ValueError, match="Cannot convert type .* to .* No match found"):
+            async for output in fn_obj.astream("test", to_type=dict):
+                pass  # The exception should be raised during the first iteration

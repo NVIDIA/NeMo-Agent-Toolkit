@@ -15,16 +15,15 @@
 
 import asyncio
 import logging
-from io import StringIO
 
 import click
 from colorama import Fore
 
-from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.interactive import HumanPromptModelType
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import HumanResponseText
 from aiq.data_models.interactive import InteractionPrompt
+from aiq.front_ends.console.authentication_flow_handler import ConsoleAuthenticationFlowHandler
 from aiq.front_ends.console.console_front_end_config import ConsoleFrontEndConfig
 from aiq.front_ends.simple_base.simple_front_end_plugin_base import SimpleFrontEndPluginBase
 from aiq.runtime.session import AIQSessionManager
@@ -43,45 +42,35 @@ async def prompt_for_input_cli(question: InteractionPrompt) -> HumanResponse:
 
         return HumanResponseText(text=user_response)
 
-    raise ValueError("Unsupported human propmt input type. The run command only supports the 'HumanPromptText' "
+    raise ValueError("Unsupported human prompt input type. The run command only supports the 'HumanPromptText' "
                      "input type. Please use the 'serve' command to ensure full support for all input types.")
 
 
 class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
+
+    def __init__(self, full_config):
+        super().__init__(full_config=full_config)
+
+        # Set the authentication flow handler
+        self.auth_flow_handler = ConsoleAuthenticationFlowHandler()
 
     async def pre_run(self):
 
         if (not self.front_end_config.input_query and not self.front_end_config.input_file):
             raise click.UsageError("Must specify either --input_query or --input_file")
 
-    async def run(self):
+    async def run_workflow(self, session_manager: AIQSessionManager):
 
-        # Must yield the workflow function otherwise it cleans up
-        async with WorkflowBuilder.from_config(config=self.full_config) as builder:
-
-            session_manager: AIQSessionManager = None
-
-            if logger.isEnabledFor(logging.INFO):
-                stream = StringIO()
-
-                self.full_config.print_summary(stream=stream)
-
-                click.echo(stream.getvalue())
-
-                workflow = builder.build()
-                session_manager = AIQSessionManager(workflow)
-
-            await self.run_workflow(session_manager)
-
-    async def run_workflow(self, session_manager: AIQSessionManager = None):
-
+        assert session_manager is not None, "Session manager must be provided"
         runner_outputs = None
 
         if (self.front_end_config.input_query):
 
             async def run_single_query(query):
 
-                async with session_manager.session(user_input_callback=prompt_for_input_cli) as session:
+                async with session_manager.session(
+                        user_input_callback=prompt_for_input_cli,
+                        user_authentication_callback=self.auth_flow_handler.authenticate) as session:
                     async with session.run(query) as runner:
                         base_output = await runner.result(to_type=str)
 

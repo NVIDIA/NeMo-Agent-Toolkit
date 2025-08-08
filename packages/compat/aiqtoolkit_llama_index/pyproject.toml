@@ -1,0 +1,16 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 64", "setuptools-scm>=8"]
+
+
+[tool.setuptools_scm]
+root = "../../.."
+
+
+[project]
+name = "aiqtoolkit-llama-index"
+dynamic = ["version"]
+dependencies = ["nvidia-nat-llama-index"]
+readme = "pypi.md"
+description = "Transitional package for nvidia-nat-llama-index, this package is deprecated and will be removed in the future."
+classifiers = ["Programming Language :: Python"]

@@ -112,8 +112,8 @@ function build_package_wheel()
     local pkg=$1
     pkg_dir_name="${pkg#packages/}"
     pkg_dir_name="${pkg#./packages/}"
-    # Replace "aiq_" with "aiqtoolkit_"
-    pkg_dir_name="${pkg_dir_name//aiq_/aiqtoolkit_}"
+    # Replace "aiq_" with "nvidia_nat_"
+    pkg_dir_name="${pkg_dir_name//aiq_/nvidia_nat_}"
 
     # Remove compat/
     pkg_dir_name="${pkg_dir_name/compat\/}"

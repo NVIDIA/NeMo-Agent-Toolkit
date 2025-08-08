@@ -30,6 +30,7 @@ from pydantic import Tag
 from pydantic import computed_field
 from pydantic import field_validator
 
+from aiq.authentication.interfaces import AuthProviderBase
 from aiq.builder.builder import Builder
 from aiq.builder.builder import EvalBuilder
 from aiq.builder.embedder import EmbedderProviderInfo
@@ -40,6 +41,8 @@ from aiq.builder.function_base import FunctionBase
 from aiq.builder.function_info import FunctionInfo
 from aiq.builder.llm import LLMProviderInfo
 from aiq.builder.retriever import RetrieverProviderInfo
+from aiq.data_models.authentication import AuthProviderBaseConfig
+from aiq.data_models.authentication import AuthProviderBaseConfigT
 from aiq.data_models.common import TypedBaseModelT
 from aiq.data_models.component import AIQComponentEnum
 from aiq.data_models.config import AIQConfig
@@ -58,60 +61,63 @@ from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.logging import LoggingMethodConfigT
 from aiq.data_models.memory import MemoryBaseConfig
 from aiq.data_models.memory import MemoryBaseConfigT
+from aiq.data_models.object_store import ObjectStoreBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfigT
 from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
 from aiq.data_models.registry_handler import RegistryHandlerBaseConfigT
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfigT
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterConfigT
+from aiq.data_models.ttc_strategy import TTCStrategyBaseConfig
+from aiq.data_models.ttc_strategy import TTCStrategyBaseConfigT
+from aiq.experimental.test_time_compute.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
+from aiq.object_store.interfaces import ObjectStore
+from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.registry_handlers.registry_handler_base import AbstractRegistryHandler
-from aiq.utils.optional_imports import TelemetryOptionalImportError
-from aiq.utils.optional_imports import try_import_opentelemetry
-
-# Try to import OpenTelemetry modules
-# If the dependencies are not installed, use a dummy span exporter here
-try:
-    opentelemetry = try_import_opentelemetry()
-    from opentelemetry.sdk.trace.export import SpanExporter
-except TelemetryOptionalImportError:
-    from aiq.utils.optional_imports import DummySpanExporter  # pylint: disable=ungrouped-imports
-    SpanExporter = DummySpanExporter
 
 logger = logging.getLogger(__name__)
 
-FrontEndBuildCallableT = Callable[[FrontEndConfigT, AIQConfig], AsyncIterator[FrontEndBase]]
-TelemetryExporterBuildCallableT = Callable[[TelemetryExporterConfigT, Builder], AsyncIterator[SpanExporter]]
-LoggingMethodBuildCallableT = Callable[[LoggingMethodConfigT, Builder], AsyncIterator[Handler]]
-FunctionBuildCallableT = Callable[[FunctionConfigT, Builder], AsyncIterator[FunctionInfo | Callable | FunctionBase]]
-LLMProviderBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[LLMProviderInfo]]
-LLMClientBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[typing.Any]]
-EmbedderProviderBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncIterator[EmbedderProviderInfo]]
+AuthProviderBuildCallableT = Callable[[AuthProviderBaseConfigT, Builder], AsyncIterator[AuthProviderBase]]
 EmbedderClientBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncIterator[typing.Any]]
+EmbedderProviderBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncIterator[EmbedderProviderInfo]]
 EvaluatorBuildCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AsyncIterator[EvaluatorInfo]]
+FrontEndBuildCallableT = Callable[[FrontEndConfigT, AIQConfig], AsyncIterator[FrontEndBase]]
+FunctionBuildCallableT = Callable[[FunctionConfigT, Builder], AsyncIterator[FunctionInfo | Callable | FunctionBase]]
+TTCStrategyBuildCallableT = Callable[[TTCStrategyBaseConfigT, Builder], AsyncIterator[StrategyBase]]
+LLMClientBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[typing.Any]]
+LLMProviderBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[LLMProviderInfo]]
+LoggingMethodBuildCallableT = Callable[[LoggingMethodConfigT, Builder], AsyncIterator[Handler]]
 MemoryBuildCallableT = Callable[[MemoryBaseConfigT, Builder], AsyncIterator[MemoryEditor]]
-RetrieverProviderBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], AsyncIterator[RetrieverProviderInfo]]
-RetrieverClientBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], AsyncIterator[typing.Any]]
+ObjectStoreBuildCallableT = Callable[[ObjectStoreBaseConfigT, Builder], AsyncIterator[ObjectStore]]
 RegistryHandlerBuildCallableT = Callable[[RegistryHandlerBaseConfigT], AsyncIterator[AbstractRegistryHandler]]
+RetrieverClientBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], AsyncIterator[typing.Any]]
+RetrieverProviderBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], AsyncIterator[RetrieverProviderInfo]]
+TelemetryExporterBuildCallableT = Callable[[TelemetryExporterConfigT, Builder], AsyncIterator[BaseExporter]]
 ToolWrapperBuildCallableT = Callable[[str, Function, Builder], typing.Any]
 
-TeleExporterRegisteredCallableT = Callable[[TelemetryExporterConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
-LoggingMethodRegisteredCallableT = Callable[[LoggingMethodConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
+AuthProviderRegisteredCallableT = Callable[[AuthProviderBaseConfigT, Builder],
+                                           AbstractAsyncContextManager[AuthProviderBase]]
+EmbedderClientRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
+EmbedderProviderRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder],
+                                               AbstractAsyncContextManager[EmbedderProviderInfo]]
+EvaluatorRegisteredCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AbstractAsyncContextManager[EvaluatorInfo]]
 FrontEndRegisteredCallableT = Callable[[FrontEndConfigT, AIQConfig], AbstractAsyncContextManager[FrontEndBase]]
 FunctionRegisteredCallableT = Callable[[FunctionConfigT, Builder],
                                        AbstractAsyncContextManager[FunctionInfo | Callable | FunctionBase]]
-LLMProviderRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[LLMProviderInfo]]
+TTCStrategyRegisterCallableT = Callable[[TTCStrategyBaseConfigT, Builder], AbstractAsyncContextManager[StrategyBase]]
 LLMClientRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
-EmbedderProviderRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder],
-                                               AbstractAsyncContextManager[EmbedderProviderInfo]]
-EmbedderClientRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
-EvaluatorRegisteredCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AbstractAsyncContextManager[EvaluatorInfo]]
+LLMProviderRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[LLMProviderInfo]]
+LoggingMethodRegisteredCallableT = Callable[[LoggingMethodConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 MemoryRegisteredCallableT = Callable[[MemoryBaseConfigT, Builder], AbstractAsyncContextManager[MemoryEditor]]
-RetrieverProviderRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder],
-                                                AbstractAsyncContextManager[RetrieverProviderInfo]]
-RetrieverClientRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
+ObjectStoreRegisteredCallableT = Callable[[ObjectStoreBaseConfigT, Builder], AbstractAsyncContextManager[ObjectStore]]
 RegistryHandlerRegisteredCallableT = Callable[[RegistryHandlerBaseConfigT],
                                               AbstractAsyncContextManager[AbstractRegistryHandler]]
+RetrieverClientRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
+RetrieverProviderRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder],
+                                                AbstractAsyncContextManager[RetrieverProviderInfo]]
+TeleExporterRegisteredCallableT = Callable[[TelemetryExporterConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 
 
 class RegisteredInfo(BaseModel, typing.Generic[TypedBaseModelT]):
@@ -181,6 +187,14 @@ class RegisteredLLMProviderInfo(RegisteredInfo[LLMBaseConfig]):
     build_fn: LLMProviderRegisteredCallableT = Field(repr=False)
 
 
+class RegisteredAuthProviderInfo(RegisteredInfo[AuthProviderBaseConfig]):
+    """
+    Represents a registered Authentication provider. Authentication providers facilitate the authentication process.
+    """
+
+    build_fn: AuthProviderRegisteredCallableT = Field(repr=False)
+
+
 class RegisteredLLMClientInfo(RegisteredInfo[LLMBaseConfig]):
     """
     Represents a registered LLM client. LLM Clients are the clients that interact with the LLM providers and are
@@ -224,6 +238,22 @@ class RegisteredMemoryInfo(RegisteredInfo[MemoryBaseConfig]):
     """
 
     build_fn: MemoryRegisteredCallableT = Field(repr=False)
+
+
+class RegisteredObjectStoreInfo(RegisteredInfo[ObjectStoreBaseConfig]):
+    """
+    Represents a registered Object Store object which adheres to the object store interface.
+    """
+
+    build_fn: ObjectStoreRegisteredCallableT = Field(repr=False)
+
+
+class RegisteredTTCStrategyInfo(RegisteredInfo[TTCStrategyBaseConfig]):
+    """
+    Represents a registered TTC strategy.
+    """
+
+    build_fn: TTCStrategyRegisterCallableT = Field(repr=False)
 
 
 class RegisteredToolWrapper(BaseModel):
@@ -288,6 +318,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         self._llm_client_provider_to_framework: dict[type[LLMBaseConfig], dict[str, RegisteredLLMClientInfo]] = {}
         self._llm_client_framework_to_provider: dict[str, dict[type[LLMBaseConfig], RegisteredLLMClientInfo]] = {}
 
+        # Authentication
+        self._registered_auth_provider_infos: dict[type[AuthProviderBaseConfig], RegisteredAuthProviderInfo] = {}
+
         # Embedders
         self._registered_embedder_provider_infos: dict[type[EmbedderBaseConfig], RegisteredEmbedderProviderInfo] = {}
         self._embedder_client_provider_to_framework: dict[type[EmbedderBaseConfig],
@@ -301,6 +334,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         # Memory
         self._registered_memory_infos: dict[type[MemoryBaseConfig], RegisteredMemoryInfo] = {}
+
+        # Object Stores
+        self._registered_object_store_infos: dict[type[ObjectStoreBaseConfig], RegisteredObjectStoreInfo] = {}
 
         # Retrievers
         self._registered_retriever_provider_infos: dict[type[RetrieverBaseConfig], RegisteredRetrieverProviderInfo] = {}
@@ -316,6 +352,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         # Tool Wrappers
         self._registered_tool_wrappers: dict[str, RegisteredToolWrapper] = {}
+
+        # TTC Strategies
+        self._registered_ttc_strategies: dict[type[TTCStrategyBaseConfig], RegisteredTTCStrategyInfo] = {}
 
         # Packages
         self._registered_packages: dict[str, RegisteredPackage] = {}
@@ -458,8 +497,28 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
                            f"Registered configs: {set(self._registered_llm_provider_infos.keys())}") from err
 
     def get_registered_llm_providers(self) -> list[RegisteredInfo[LLMBaseConfig]]:
-
         return list(self._registered_llm_provider_infos.values())
+
+    def register_auth_provider(self, info: RegisteredAuthProviderInfo):
+
+        if (info.config_type in self._registered_auth_provider_infos):
+            raise ValueError(
+                f"An Authentication Provider with the same config type `{info.config_type}` has already been "
+                "registered.")
+
+        self._registered_auth_provider_infos[info.config_type] = info
+
+        self._registration_changed()
+
+    def get_auth_provider(self, config_type: type[AuthProviderBaseConfig]) -> RegisteredAuthProviderInfo:
+        try:
+            return self._registered_auth_provider_infos[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered Authentication Provider for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_auth_provider_infos.keys())}") from err
+
+    def get_registered_auth_providers(self) -> list[RegisteredInfo[AuthProviderBaseConfig]]:
+        return list(self._registered_auth_provider_infos.values())
 
     def register_llm_client(self, info: RegisteredLLMClientInfo):
 
@@ -580,6 +639,28 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         return list(self._registered_memory_infos.values())
 
+    def register_object_store(self, info: RegisteredObjectStoreInfo):
+
+        if (info.config_type in self._registered_object_store_infos):
+            raise ValueError(f"An Object Store with the same config type `{info.config_type}` has already been "
+                             "registered.")
+
+        self._registered_object_store_infos[info.config_type] = info
+
+        self._registration_changed()
+
+    def get_object_store(self, config_type: type[ObjectStoreBaseConfig]) -> RegisteredObjectStoreInfo:
+
+        try:
+            return self._registered_object_store_infos[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered Object Store for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_object_store_infos.keys())}") from err
+
+    def get_registered_object_stores(self) -> list[RegisteredInfo[ObjectStoreBaseConfig]]:
+
+        return list(self._registered_object_store_infos.values())
+
     def register_retriever_provider(self, info: RegisteredRetrieverProviderInfo):
 
         if (info.config_type in self._registered_retriever_provider_infos):
@@ -647,6 +728,25 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
             raise KeyError(f"Could not find a registered tool wrapper for LLM framework `{llm_framework}`. "
                            f"Registered LLM frameworks: {set(self._registered_tool_wrappers.keys())}") from err
 
+    def register_ttc_strategy(self, info: RegisteredTTCStrategyInfo):
+        if (info.config_type in self._registered_ttc_strategies):
+            raise ValueError(
+                f"An TTC strategy with the same config type `{info.config_type}` has already been registered.")
+
+        self._registered_ttc_strategies[info.config_type] = info
+
+        self._registration_changed()
+
+    def get_ttc_strategy(self, config_type: type[TTCStrategyBaseConfig]) -> RegisteredTTCStrategyInfo:
+        try:
+            strategy = self._registered_ttc_strategies[config_type]
+        except Exception as e:
+            raise KeyError(f"Could not find a registered TTC strategy for config `{config_type}`. ") from e
+        return strategy
+
+    def get_registered_ttc_strategies(self) -> list[RegisteredInfo[TTCStrategyBaseConfig]]:
+        return list(self._registered_ttc_strategies.values())
+
     def register_registry_handler(self, info: RegisteredRegistryHandlerInfo):
 
         if (info.config_type in self._registered_memory_infos):
@@ -683,6 +783,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         if component_type == AIQComponentEnum.FRONT_END:
             return self._registered_front_end_infos
+
+        if component_type == AIQComponentEnum.AUTHENTICATION_PROVIDER:
+            return self._registered_auth_provider_infos
 
         if component_type == AIQComponentEnum.FUNCTION:
             return self._registered_functions
@@ -726,6 +829,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         if component_type == AIQComponentEnum.MEMORY:
             return self._registered_memory_infos
 
+        if component_type == AIQComponentEnum.OBJECT_STORE:
+            return self._registered_object_store_infos
+
         if component_type == AIQComponentEnum.REGISTRY_HANDLER:
             return self._registered_registry_handler_infos
 
@@ -737,6 +843,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         if component_type == AIQComponentEnum.PACKAGE:
             return self._registered_packages
+
+        if component_type == AIQComponentEnum.TTC_STRATEGY:
+            return self._registered_ttc_strategies
 
         raise ValueError(f"Supplied an unsupported component type {component_type}")
 
@@ -787,6 +896,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         if component_type == AIQComponentEnum.PACKAGE:
             return list(self._registered_packages)
 
+        if component_type == AIQComponentEnum.TTC_STRATEGY:
+            return [i.static_type() for i in self._registered_ttc_strategies]
+
         raise ValueError(f"Supplied an unsupported component type {component_type}")
 
     def get_registered_channel_info_by_channel_type(self, channel_type: str) -> RegisteredRegistryHandlerInfo:
@@ -818,6 +930,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
     def compute_annotation(self, cls: type[TypedBaseModelT]):
 
+        if issubclass(cls, AuthProviderBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_auth_providers())
+
         if issubclass(cls, EmbedderBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_embedder_providers())
 
@@ -836,6 +951,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         if issubclass(cls, MemoryBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_memorys())
 
+        if issubclass(cls, ObjectStoreBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_object_stores())
+
         if issubclass(cls, RegistryHandlerBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_registry_handlers())
 
@@ -847,6 +965,9 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
 
         if issubclass(cls, LoggingBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_logging_method())
+
+        if issubclass(cls, TTCStrategyBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_ttc_strategies())
 
         raise ValueError(f"Supplied an unsupported component type {cls}")
 

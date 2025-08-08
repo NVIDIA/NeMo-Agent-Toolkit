@@ -10,7 +10,10 @@ Arize
 arXiv
 [Aa]sync
 [Aa]utoencoder
+[Aa]llowlist
 [Aa]nonymize(d?)
+Authlib
+[Bb]ackoff
 [Bb]ackpressure
 [Bb]atcher
 [Bb]oolean
@@ -39,6 +42,7 @@ CuPy
 Cython
 Dask
 Databricks
+Datadog
 DB(s?)
 [Dd]eserialize
 [Dd]ev
@@ -62,6 +66,8 @@ isort
 Jira
 jsonlines
 Langfuse
+LangChain
+LangGraph
 LangSmith
 # libcudf isn't styled in the way that cuDF is https://docs.rapids.ai/api/libcudf/stable/
 libcudf
@@ -83,6 +89,8 @@ NIM(s?)
 npm
 NumPy
 NVIDIA
+OAuth
+URIs
 OTel
 onboarding
 [Oo]verfitting
@@ -98,6 +106,7 @@ PDF(s?)
 Pydantic
 PyPI
 pytest
+[Rr]edis
 [Rr]einstall(s?)
 [Rr]eplatform(ing)?
 [Rr]epo
@@ -119,10 +128,14 @@ Tavily
 triages
 [Uu]nencrypted
 [Uu]nittest(s?)
+[Uu]nprocessable
 [Uu]ploader
+[Uu]psert
 uv
 VectorDB
 [Ww]alkthrough
+[Ww]eb[Ss]ocket
+[We]ebSocket
 XGBoost
 zsh
 Zep

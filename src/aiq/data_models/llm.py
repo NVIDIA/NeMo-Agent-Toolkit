@@ -37,6 +37,7 @@ class LLMBaseConfig(TypedBaseModel, BaseModelRegistryTag):
             "enum": [e.value for e in APITypeEnum],
             "examples": [e.value for e in APITypeEnum],
         },
+        exclude=True
     )
 
 

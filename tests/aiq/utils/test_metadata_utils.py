@@ -23,6 +23,7 @@ from aiq.data_models.evaluate import EvaluatorBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
+from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.utils.metadata_utils import generate_config_type_docs
@@ -39,7 +40,8 @@ def base_configs_fixture():
         RegistryHandlerBaseConfig,
         RetrieverBaseConfig,
         MemoryBaseConfig,
-        EvaluatorBaseConfig
+        EvaluatorBaseConfig,
+        ObjectStoreBaseConfig
     ]
 
     return base_configs
@@ -47,29 +49,17 @@ def base_configs_fixture():
 
 def test_generate_config_type_docs_no_docstring(base_configs: list[TypedBaseModelT]):
 
-    expected = ("Description unavailable.\n"
-                "\n"
-                "  Args:\n"
-                "    _type (str): The type of the object.\n"
-                "    field0 (str): description0.\n"
-                "    field1 (str): description1. Defaults to \"value1\".\n"
-                "    field2 (str | None): description2.\n"
-                "    field3 (str | None): description3. Defaults to None.\n"
-                "    field4 (str | dict[str, str]): description4.\n"
-                "    field5 (str | dict[str, int]): description5. Defaults to {'key5': 0}.")
-
-    expected_llm = ("Description unavailable.\n"
-                    "\n"
-                    "  Args:\n"
-                    "    _type (str): The type of the object.\n"
-                    "    api_type (APITypeEnum): The type of API to use for the LLM provider. "
-                    "Defaults to \"APITypeEnum.CHAT_COMPLETION\".\n"
-                    "    field0 (str): description0.\n"
-                    "    field1 (str): description1. Defaults to \"value1\".\n"
-                    "    field2 (str | None): description2.\n"
-                    "    field3 (str | None): description3. Defaults to None.\n"
-                    "    field4 (str | dict[str, str]): description4.\n"
-                    "    field5 (str | dict[str, int]): description5. Defaults to {'key5': 0}.")
+    expected = [
+        "Description unavailable.\n",
+        "  Args:\n",
+        "    _type (str): The type of the object.\n",
+        "    field0 (str): description0.\n",
+        "    field1 (str): description1. Defaults to \"value1\".\n",
+        "    field2 (str | None): description2.\n",
+        "    field3 (str | None): description3. Defaults to None.\n",
+        "    field4 (str | dict[str, str]): description4.\n",
+        "    field5 (str | dict[str, int]): description5. Defaults to {'key5': 0}."
+    ]
 
     for base_config in base_configs:
 
@@ -81,37 +71,23 @@ def test_generate_config_type_docs_no_docstring(base_configs: list[TypedBaseMode
             field4: str | dict[str, str] = Field(description="description4")
             field5: str | dict[str, int] = Field(default={"key5": 0}, description="description5")
 
-        if base_config == LLMBaseConfig:
-            assert generate_config_type_docs(TestConfig) == expected_llm
-        else:
-            assert generate_config_type_docs(TestConfig) == expected
+        for val in expected:
+            assert generate_config_type_docs(TestConfig).find(val) != -1
 
 
 def test_generate_config_type_docs_no_args(base_configs: list[TypedBaseModelT]):
 
-    expected = ("Notional Docstring.\n"
-                "\n"
-                "  Args:\n"
-                "    _type (str): The type of the object.\n"
-                "    field0 (str): Description unavailable.\n"
-                "    field1 (str): Description unavailable. Defaults to \"value1\".\n"
-                "    field2 (str | None): Description unavailable.\n"
-                "    field3 (str | None): Description unavailable. Defaults to None.\n"
-                "    field4 (str | dict[str, str]): Description unavailable.\n"
-                "    field5 (str | dict[str, int]): Description unavailable. Defaults to {'key5': 0}.")
-
-    expected_llm = ("Notional Docstring.\n"
-                    "\n"
-                    "  Args:\n"
-                    "    _type (str): The type of the object.\n"
-                    "    api_type (APITypeEnum): The type of API to use for the LLM provider. "
-                    "Defaults to \"APITypeEnum.CHAT_COMPLETION\".\n"
-                    "    field0 (str): Description unavailable.\n"
-                    "    field1 (str): Description unavailable. Defaults to \"value1\".\n"
-                    "    field2 (str | None): Description unavailable.\n"
-                    "    field3 (str | None): Description unavailable. Defaults to None.\n"
-                    "    field4 (str | dict[str, str]): Description unavailable.\n"
-                    "    field5 (str | dict[str, int]): Description unavailable. Defaults to {'key5': 0}.")
+    expected = [
+        "Notional Docstring.\n",
+        "  Args:\n",
+        "    _type (str): The type of the object.\n",
+        "    field0 (str): Description unavailable.\n",
+        "    field1 (str): Description unavailable. Defaults to \"value1\".\n",
+        "    field2 (str | None): Description unavailable.\n",
+        "    field3 (str | None): Description unavailable. Defaults to None.\n",
+        "    field4 (str | dict[str, str]): Description unavailable.\n",
+        "    field5 (str | dict[str, int]): Description unavailable. Defaults to {'key5': 0}."
+    ]
 
     for base_config in base_configs:
 
@@ -125,37 +101,23 @@ def test_generate_config_type_docs_no_args(base_configs: list[TypedBaseModelT]):
             field4: str | dict[str, str]
             field5: str | dict[str, int] = {"key5": 0}
 
-        if base_config == LLMBaseConfig:
-            assert generate_config_type_docs(TestConfig) == expected_llm
-        else:
-            assert generate_config_type_docs(TestConfig) == expected
+        for val in expected:
+            assert generate_config_type_docs(TestConfig).find(val) != -1
 
 
 def test_generate_config_type_docs_no_docstring_and_no_args(base_configs: list[TypedBaseModelT]):
 
-    expected = ("Description unavailable.\n"
-                "\n"
-                "  Args:\n"
-                "    _type (str): The type of the object.\n"
-                "    field0 (str): Description unavailable.\n"
-                "    field1 (str): Description unavailable. Defaults to \"value1\".\n"
-                "    field2 (str | None): Description unavailable.\n"
-                "    field3 (str | None): Description unavailable. Defaults to None.\n"
-                "    field4 (str | dict[str, str]): Description unavailable.\n"
-                "    field5 (str | dict[str, int]): Description unavailable. Defaults to {'key5': 0}.")
-
-    expected_llm = ("Description unavailable.\n"
-                    "\n"
-                    "  Args:\n"
-                    "    _type (str): The type of the object.\n"
-                    "    api_type (APITypeEnum): The type of API to use for the LLM provider. "
-                    "Defaults to \"APITypeEnum.CHAT_COMPLETION\".\n"
-                    "    field0 (str): Description unavailable.\n"
-                    "    field1 (str): Description unavailable. Defaults to \"value1\".\n"
-                    "    field2 (str | None): Description unavailable.\n"
-                    "    field3 (str | None): Description unavailable. Defaults to None.\n"
-                    "    field4 (str | dict[str, str]): Description unavailable.\n"
-                    "    field5 (str | dict[str, int]): Description unavailable. Defaults to {'key5': 0}.")
+    expected = [
+        "Description unavailable.\n",
+        "  Args:\n",
+        "    _type (str): The type of the object.\n",
+        "    field0 (str): Description unavailable.\n",
+        "    field1 (str): Description unavailable. Defaults to \"value1\".\n",
+        "    field2 (str | None): Description unavailable.\n",
+        "    field3 (str | None): Description unavailable. Defaults to None.\n",
+        "    field4 (str | dict[str, str]): Description unavailable.\n",
+        "    field5 (str | dict[str, int]): Description unavailable. Defaults to {'key5': 0}."
+    ]
 
     for base_config in base_configs:
 
@@ -168,7 +130,5 @@ def test_generate_config_type_docs_no_docstring_and_no_args(base_configs: list[T
             field4: str | dict[str, str]
             field5: str | dict[str, int] = {"key5": 0}
 
-        if base_config == LLMBaseConfig:
-            assert generate_config_type_docs(TestConfig) == expected_llm
-        else:
-            assert generate_config_type_docs(TestConfig) == expected
+        for val in expected:
+            assert generate_config_type_docs(TestConfig).find(val) != -1

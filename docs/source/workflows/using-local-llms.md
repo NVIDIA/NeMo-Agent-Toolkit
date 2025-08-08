@@ -17,10 +17,11 @@ limitations under the License.
 
 # Using Local LLMs
 
-AIQ toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the AIQ toolkit simple example (`examples/basic/functions/simple`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/).
+NeMo Agent toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the simple example (`examples/getting_started/simple_web_query`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/).
 
 ## Using NIM
-In the AIQ toolkit simple example the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model was used. For the purposes of this guide we will be using a smaller model, the [`microsoft/phi-3-mini-4k-instruct`](https://build.nvidia.com/microsoft/phi-3-mini-4k) which is more likely to be runnable on a local workstation.
+<!-- path-check-skip-next-line -->
+In the NeMo Agent toolkit simple example the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model was used. For the purposes of this guide we will be using a smaller model, the [`microsoft/phi-3-mini-4k-instruct`](https://build.nvidia.com/microsoft/phi-3-mini-4k) which is more likely to be runnable on a local workstation.
 
 Regardless of the model you choose, the process is the same for downloading the model's container from [`build.nvidia.com`](https://build.nvidia.com/). Navigate to the model you wish to run locally, if it is able to be downloaded it will be labeled with the `RUN ANYWHERE` tag, the exact commands will be specified on the `Deploy` tab for the model.
 
@@ -79,8 +80,8 @@ docker run -it --rm \
     nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest
 ```
 
-### AIQ Toolkit Configuration
-To define the pipeline configuration, we will start with the `examples/basic/functions/simple/configs/config.yml` file and modify it to use the locally hosted LLMs, the only changes needed are to define the `base_url` for the LLM and embedding models, along with the names of the models to use.
+### NeMo Agent Toolkit Configuration
+To define the pipeline configuration, we will start with the `examples/getting_started/simple_web_query/configs/config.yml` file and modify it to use the locally hosted LLMs, the only changes needed are to define the `base_url` for the LLM and embedding models, along with the names of the models to use.
 
 `examples/documentation_guides/locally_hosted_llms/nim_config.yml`:
 ```yaml
@@ -111,12 +112,11 @@ workflow:
   tool_names: [webpage_query, current_datetime]
   llm_name: nim_llm
   verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  parse_agent_response_max_retries: 3
 ```
 
-### Running the AIQ Toolkit Workflow
-To run the AIQ toolkit workflow using the locally hosted LLMs, run the following command:
+### Running the NeMo Agent Toolkit Workflow
+To run the workflow using the locally hosted LLMs, run the following command:
 ```bash
 aiq run --config_file examples/documentation_guides/locally_hosted_llms/nim_config.yml --input "What is LangSmith?"
 ```
@@ -124,7 +124,8 @@ aiq run --config_file examples/documentation_guides/locally_hosted_llms/nim_conf
 
 ## Using vLLM
 
-vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getting_started/quickstart.html#openai-compatible-server) allowing us to re-use our existing OpenAI clients. If you have not already done so, install vLLM following the [Quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) guide. Similar to the previous example we will be using the same [`microsoft/Phi-3-mini-4k-instruct`](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct) LLM model. Along with the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base)embedding model.
+<!-- path-check-skip-next-line -->
+vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getting_started/quickstart.html#openai-compatible-server) allowing us to re-use our existing OpenAI clients. If you have not already done so, install vLLM following the [Quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) guide. Similar to the previous example we will be using the same [`microsoft/Phi-3-mini-4k-instruct`](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct) LLM model. Along with the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base) embedding model.
 
 ### Serving the Models
 Similar to the NIM approach we will be running the LLM on the default port of 8000 and the embedding model on port 8001.
@@ -139,10 +140,10 @@ In a second terminal also from within the vLLM environment, run the following co
 vllm serve --task embed --override-pooler-config '{"pooling_type": "MEAN"}' --port 8001 ssmits/Qwen2-7B-Instruct-embed-base
 ```
 
-> Note: The `--override-pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/latest/models/supported_models.html#text-embedding) documentation.
+> Note: The `--override-pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/latest/models/supported_models.html#embedding) documentation.
 
 
-### AIQ Toolkit Configuration
+### NeMo Agent Toolkit Configuration
 The pipeline configuration will be similar to the NIM example, with the key differences being the selection of `openai` as the `_type` for the LLM and embedding models. The OpenAI clients we are using to communicate with the vLLM server expect an API key, we simply need to provide a value key, as the vLLM server does not require authentication.
 `examples/documentation_guides/locally_hosted_llms/vllm_config.yml`:
 ```yaml
@@ -176,12 +177,11 @@ workflow:
   tool_names: [webpage_query, current_datetime]
   llm_name: vllm_llm
   verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  parse_agent_response_max_retries: 3
 ```
 
-### Running the AIQ Toolkit Workflow
-To run the AIQ toolkit workflow using the locally hosted LLMs, run the following command:
+### Running the NeMo Agent Toolkit Workflow
+To run the workflow using the locally hosted LLMs, run the following command:
 ```bash
 aiq run --config_file examples/documentation_guides/locally_hosted_llms/vllm_config.yml --input "What is LangSmith?"
 ```

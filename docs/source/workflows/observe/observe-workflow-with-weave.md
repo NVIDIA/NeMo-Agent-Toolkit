@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observing a Workflow with W&B Weave
 
-This guide provides a step-by-step process to enable observability in an AIQ toolkit workflow using Weights and Biases (W&B) Weave for tracing using just a few lines of code in your workflow configuration file.
+This guide provides a step-by-step process to enable observability in a NeMo Agent toolkit workflow using Weights and Biases (W&B) Weave for tracing using just a few lines of code in your workflow configuration file.
 
 ![Weave Tracing Dashboard](../../_static/weave_tracing.png)
 
@@ -34,14 +34,14 @@ uv pip install -e '.[weave]'
 Pick an example from the list of available workflows. In this guide, we will be using the `simple_calculator` example.
 
 ```bash
-uv pip install -e examples/basic/functions/simple_calculator
+uv pip install -e examples/observability/simple_calculator_observability
 ```
 
 ### Step 3: Modify Workflow Configuration
 
-Update your workflow configuration file to include the weave telemetry settings. For example, `examples/basic/functions/simple_calculator/configs/config-weave.yml` has the following weave settings:
+Update your workflow configuration file to include the weave telemetry settings. For example, `examples/observability/simple_calculator_observability/configs/config-weave.yml` has the following weave settings:
 
-```bash
+```yaml
 general:
   use_uvloop: true
   telemetry:
@@ -59,11 +59,11 @@ This setup enables logging trace data to W&B weave. The weave integration requir
 | `entity` (optional) | Your W&B username or team name | `"your-wandb-username-or-teamname"` |
 
 ### Step 4: Run Your Workflow
-Install `simple_calculator` example using the instructions in the `examples/basic/functions/simple_calculator/README.md` guide.
+Install `simple_calculator` example using the instructions in the `examples/observability/simple_calculator_observability/README.md` guide.
 Run the workflow using `config-weave.yml` configuration file:
 
 ```bash
-aiq run --config_file examples/basic/functions/simple_calculator/configs/config-weave.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+aiq run --config_file examples/observability/simple_calculator_observability/configs/config-weave.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
 If it is your first time running the workflow, you will be prompted to login to W&B Weave.
@@ -81,7 +81,7 @@ When tracing LLM workflows, you may be processing sensitive information like per
 **Prerequisites**: To enable PII redaction, you need `presidio-analyzer` and `presidio-anonymizer` installed. Installing the weave plugin will install these packages for you.
 
 ```bash
-pip install -e '.[weave]'
+uv pip install -e '.[weave]'
 ```
 
 **Enabling PII Redaction**: Update your workflow configuration to enable PII redaction:

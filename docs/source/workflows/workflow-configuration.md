@@ -17,12 +17,12 @@ limitations under the License.
 
 # Workflow Configuration
 
-AIQ toolkit workflows are defined by a [YAML configuration file](#workflow-configuration-file), which specifies which entities (functions, LLMs, embedders, etc.) to use in the workflow, along with general configuration settings.
+NeMo Agent toolkit workflows are defined by a [YAML configuration file](#workflow-configuration-file), which specifies which entities (functions, LLMs, embedders, etc.) to use in the workflow, along with general configuration settings.
 
-The configuration attributes of each entity in AIQ toolkit is defined by a [Configuration Object](#configuration-object). This object defines both the type and optionally the default value of each attribute. Any attribute without a default value is required to be specified in the configuration file.
+The configuration attributes of each entity in NeMo Agent toolkit is defined by a [Configuration Object](#configuration-object). This object defines both the type and optionally the default value of each attribute. Any attribute without a default value is required to be specified in the configuration file.
 
 ## Configuration Object
-Each AIQ toolkit tool requires a configuration object which inherits from {py:class}`~aiq.data_models.function.FunctionBaseConfig`. The `FunctionBaseConfig` class and ultimately all AIQ toolkit configuration objects are subclasses of the [`pydantic.BaseModel `](https://docs.pydantic.dev/2.9/api/base_model/#pydantic.BaseModel) class from the [Pydantic Library](https://docs.pydantic.dev/2.9/), which provides a way to define and validate configuration objects. Each configuration object defines the parameters used to create runtime instances of functions (or other component type), each with different functionality based on configuration settings. It is possible to define nested functions that access other component runtime instances by name. These could be other `functions`, `llms`, `embedders`, `retrievers`, or `memory`. To facilitate nested runtime instance discovery, each component must be initialized in order based on the dependency tree. Enabling this feature requires configuration object parameters that refer to other component instances by name use a `ComponentRef` `dtype` that matches referred component type. The supported `ComponentRef` types are enumerated below:
+Each NeMo Agent toolkit tool requires a configuration object which inherits from {py:class}`~aiq.data_models.function.FunctionBaseConfig`. The `FunctionBaseConfig` class and ultimately all NeMo Agent toolkit configuration objects are subclasses of the [`pydantic.BaseModel `](https://docs.pydantic.dev/2.9/api/base_model/#pydantic.BaseModel) class from the [Pydantic Library](https://docs.pydantic.dev/2.9/), which provides a way to define and validate configuration objects. Each configuration object defines the parameters used to create runtime instances of functions (or other component type), each with different functionality based on configuration settings. It is possible to define nested functions that access other component runtime instances by name. These could be other `functions`, `llms`, `embedders`, `retrievers`, or `memory`. To facilitate nested runtime instance discovery, each component must be initialized in order based on the dependency tree. Enabling this feature requires configuration object parameters that refer to other component instances by name use a `ComponentRef` `dtype` that matches referred component type. The supported `ComponentRef` types are enumerated below:
 
 - `FunctionRef`: Refers to a registered function by its instance name in the `functions` section configuration object.
 - `LLMRef`: Refers to a registered LLM by its instance name in the `llms` section of the configuration object.
@@ -35,7 +35,7 @@ Each AIQ toolkit tool requires a configuration object which inherits from {py:cl
 
 The workflow configuration file is a YAML file that specifies the tools and models to use in the workflow, along with general configuration settings. To illustrate how these are organized, we will examine the configuration of the simple workflow.
 
-`examples/basic/functions/simple/configs/config.yml`:
+`examples/getting_started/simple_web_query/configs/config.yml`:
 ```yaml
 functions:
   webpage_query:
@@ -63,8 +63,7 @@ workflow:
   tool_names: [webpage_query, current_datetime]
   llm_name: nim_llm
   verbose: true
-  retry_parsing_errors: true
-  max_retries: 3
+  parse_agent_response_max_retries: 3
 ```
 
 From the above we see that it is divided into four sections: `functions`, `llms`, `embedders`, and `workflow`. There are additional optional sections not used in the above example they are: `general`, `memory`, `retrievers`, and `eval`.
@@ -76,11 +75,13 @@ The `functions` section contains the tools used in the workflow, in our example 
 ### `llms`
 This section contains the models used in the workflow. The `_type` value refers to the API hosting the model, in this case `nim` refers to an NIM model hosted on [`build.nvidia.com`](https://build.nvidia.com). The supported API types are `nim`, and `openai`.
 
+<!-- path-check-skip-next-line -->
 The `model_name` value then needs to match a model hosted by the API, in our example we are using the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model.
 
 Both the `nim` and `openai` APIs support API specific attributes. For `nim` these are defined in the {py:class}`~aiq.llm.nim_llm.NIMModelConfig` class, and for `openai` these are defined in the {py:class}`~aiq.llm.openai_llm.OpenAIModelConfig` class.
 
 ### `embedders`
+<!-- path-check-skip-next-line -->
 This section follows a the same structure as the `llms` section and serves as a way to separate the embedding models from the LLM models. In our example, we are using the [`nvidia/nv-embedqa-e5-v5`](https://build.nvidia.com/nvidia/nv-embedqa-e5-v5) model.
 
 ### `workflow`
@@ -102,7 +103,7 @@ general:
 :::
 
 ### `eval`
-This section contains the evaluation settings for the workflow. Refer to [Evaluating AIQ toolkit Workflows](../workflows/evaluate.md) for more information.
+This section contains the evaluation settings for the workflow. Refer to [Evaluating NeMo Agent toolkit Workflows](../workflows/evaluate.md) for more information.
 
 ### `memory`
 
@@ -110,11 +111,11 @@ This section configures integration of memory layers with tools such as the [Mem
 
 ### `retrievers`
 
-This section configures retrievers for vector stores. It follows the same format as the `llms` section. Refer to the `examples/rag_demo` example workflow for an example on how this is used.
+This section configures retrievers for vector stores. It follows the same format as the `llms` section. Refer to the `examples/RAG/simple_rag` example workflow for an example on how this is used.
 
 ### Environment Variable Interpolation
 
-AIQ toolkit supports environment variable interpolation in YAML configuration files using the format `${VAR:-default_value}`. This allows you to:
+NeMo Agent toolkit supports environment variable interpolation in YAML configuration files using the format `${VAR:-default_value}`. This allows you to:
 
 1. Reference environment variables in your configuration
 2. Provide default values if the environment variable is not set

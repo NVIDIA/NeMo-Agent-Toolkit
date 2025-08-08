@@ -124,6 +124,17 @@ class MemoryRef(ComponentRef):
         return ComponentGroup.MEMORY
 
 
+class ObjectStoreRef(ComponentRef):
+    """
+    A reference to an object store in an AIQ toolkit configuration object.
+    """
+
+    @property
+    @override
+    def component_group(self):
+        return ComponentGroup.OBJECT_STORES
+
+
 class RetrieverRef(ComponentRef):
     """
     A reference to a retriever in an AIQ Toolkit configuration object.
@@ -133,3 +144,25 @@ class RetrieverRef(ComponentRef):
     @override
     def component_group(self):
         return ComponentGroup.RETRIEVERS
+
+
+class AuthenticationRef(ComponentRef):
+    """
+    A reference to an API Authentication Provider in an AIQ Toolkit configuration object.
+    """
+
+    @property
+    @override
+    def component_group(self):
+        return ComponentGroup.AUTHENTICATION
+
+
+class TTCStrategyRef(ComponentRef):
+    """
+    A reference to an TTC strategy in an NeMo Agent Toolkit configuration object.
+    """
+
+    @property
+    @override
+    def component_group(self):
+        return ComponentGroup.TTC_STRATEGIES

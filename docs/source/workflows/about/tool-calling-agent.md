@@ -17,8 +17,7 @@ limitations under the License.
 
 # Tool Calling Agent
 
-Agents are a major use-case for language models. Agents are systems that use LLMs to determine what actions to take and what inputs to use for those actions.
-Some LLMs support Tool Calling / Function Calling, and can be used for Tool Calling Agents.
+A tool calling agent is an AI system that directly invokes external tools based on structured function definitions. Unlike ReAct agents, it does not reason between steps but instead relies on predefined tool schemas to decide which tool to call. To decide which tools to use to answer the question, agent uses the name, description, and input parameter schema of each tool to decide which tools to use to answer the question. Not all LLMs support tool calling / function calling, and can be used with tool calling agents.
 
 ---
 
@@ -32,7 +31,7 @@ Some LLMs support Tool Calling / Function Calling, and can be used for Tool Call
 ---
 
 ## Requirements
-The Tool Calling Agent requires the `aiqtoolkit[langchain]` plugin to be installed.
+The tool calling agent requires the `aiqtoolkit[langchain]` plugin to be installed.
 
 After you've performed a source code checkout, install this with the following command:
 
@@ -41,10 +40,10 @@ uv pip install -e '.[langchain]'
 ```
 
 ## Configuration
-The Tool Calling Agent may be utilized as a Workflow or a Function.
+The tool calling agent may be utilized as a workflow or a function.
 
 ### Example `config.yml`
-In your YAML file, to use the Tool Calling Agent as a workflow:
+In your YAML file, to use the tool calling agent (`tool_calling_agent`) as a workflow:
 ```yaml
 workflow:
   _type: tool_calling_agent
@@ -53,7 +52,8 @@ workflow:
   verbose: true
   handle_tool_errors: true
 ```
-In your YAML file, to use the Tool Calling Agent as a function:
+
+In your YAML file, to use the tool calling agent as a function:
 ```yaml
 functions:
   calculator_multiply:
@@ -75,35 +75,22 @@ functions:
 ```
 
 ### Configurable Options
-<ul> <li>
 
-`tool_names`: A list of tools that the agent can call.  The tools must be functions configured in the YAML file
-</li><li>
+* `tool_names`: A list of tools that the agent can call. The tools must be functions configured in the YAML file
 
-`llm_name`: The LLM the agent should use.  The LLM must be configured in the YAML file
-</li><li>
+* `llm_name`: The LLM the agent should use. The LLM must be configured in the YAML file
 
-`verbose`: Defaults to False (useful to prevent logging of sensitive data).  If set to True, the Agent will log input, output, and intermediate steps.
-</li><li>
+* `verbose`: Defaults to False (useful to prevent logging of sensitive data). If set to True, the agent will log input, output, and intermediate steps.
 
-`handle_tool_errors`: Defaults to True.  All tool errors will be caught and a ToolMessage with an error message will be returned, so the Tool Calling Agent can try again.
-</li><li>
+* `handle_tool_errors`: Defaults to True. All tool errors will be caught and a `ToolMessage` with an error message will be returned, allowing the agent to retry.
 
-`max_iterations`: Defaults to 15.  The maximum number of tool calls the Agent may perform.
-</li><li>
+* `max_iterations`: Defaults to 15. The maximum number of tool calls the agent may perform.
 
-`description`:  Defaults to "Tool Calling Agent Workflow".  When the Tool Calling Agent is configured as a function, this config option allows us to control
-the tool description (for example, when used as a tool within another agent).
-</li></ul>
+* `description`:  Defaults to "Tool Calling Agent Workflow". When the agent is configured as a function, this config option allows us to control the tool description (for example, when used as a tool within another agent).
 
 ---
 
-## How a Tool-Calling Agent Works
-
-A **Tool-Calling Agent** is an AI system that directly invokes external tools based on structured function definitions.
-Unlike ReAct agents, it does not reason between steps but instead relies on predefined tool schemas to decide which tool to call.  To decide which tool(s) to use to answer the question, the Tool Calling Agent utilizes its tools' name, description, and input parameter schema.
-
-### Step-by-Step Breakdown of a Tool-Calling Agent
+## Step-by-Step Breakdown of a Tool-Calling Agent
 
 1. **User Query** – The agent receives an input or problem to solve.
 2. **Function Matching** – The agent determines the best tool to call based on the input.
@@ -122,12 +109,12 @@ Imagine a tool-calling agent needs to answer:
 3. **Tool Execution:** Calls `get_weather("New York")`.
 4. **Response Handling:** The tool returns `72°F, clear skies`, and the agent directly provides the answer.
 
-Since tool-calling agents execute function calls directly, they are more efficient for structured tasks that don’t require intermediate reasoning.
+Since tool calling agents execute function calls directly, they are more efficient for structured tasks that don’t require intermediate reasoning.
 
 ---
 
 ## Limitations
-The following are the limitations of Tool Calling Agents:
+The following are the limitations of tool calling agents:
 
 * Requires an LLM that supports tool calling or function calling.
 

@@ -31,13 +31,16 @@ from aiq.data_models.function import EmptyFunctionConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.logging import LoggingBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from aiq.data_models.ttc_strategy import TTCStrategyBaseConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 
+from .authentication import AuthProviderBaseConfig
 from .common import HashableBaseModel
 from .common import TypedBaseModel
 from .embedder import EmbedderBaseConfig
 from .llm import LLMBaseConfig
 from .memory import MemoryBaseConfig
+from .object_store import ObjectStoreBaseConfig
 from .retriever import RetrieverBaseConfig
 
 logger = logging.getLogger(__name__)
@@ -57,12 +60,16 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
 
             if (info.field_name in ('workflow', 'functions')):
                 registered_keys = GlobalTypeRegistry.get().get_registered_functions()
+            elif (info.field_name == "authentication"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_auth_providers()
             elif (info.field_name == "llms"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_llm_providers()
             elif (info.field_name == "embedders"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_embedder_providers()
             elif (info.field_name == "memory"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_memorys()
+            elif (info.field_name == "object_stores"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_object_stores()
             elif (info.field_name == "retrievers"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_retriever_providers()
             elif (info.field_name == "tracing"):
@@ -73,6 +80,8 @@ def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWr
                 registered_keys = GlobalTypeRegistry.get().get_registered_evaluators()
             elif (info.field_name == "front_ends"):
                 registered_keys = GlobalTypeRegistry.get().get_registered_front_ends()
+            elif (info.field_name == "ttc_strategies"):
+                registered_keys = GlobalTypeRegistry.get().get_registered_ttc_strategies()
 
             else:
                 assert False, f"Unknown field name {info.field_name} in validator"
@@ -242,11 +251,20 @@ class AIQConfig(HashableBaseModel):
     # Memory Configuration
     memory: dict[str, MemoryBaseConfig] = {}
 
+    # Object Stores Configuration
+    object_stores: dict[str, ObjectStoreBaseConfig] = {}
+
     # Retriever Configuration
     retrievers: dict[str, RetrieverBaseConfig] = {}
 
+    # TTC Strategies
+    ttc_strategies: dict[str, TTCStrategyBaseConfig] = {}
+
     # Workflow Configuration
     workflow: FunctionBaseConfig = EmptyFunctionConfig()
+
+    # Authentication Configuration
+    authentication: dict[str, AuthProviderBaseConfig] = {}
 
     # Evaluation Options
     eval: EvalConfig = EvalConfig()
@@ -263,9 +281,20 @@ class AIQConfig(HashableBaseModel):
         stream.write(f"Number of LLMs: {len(self.llms)}\n")
         stream.write(f"Number of Embedders: {len(self.embedders)}\n")
         stream.write(f"Number of Memory: {len(self.memory)}\n")
+        stream.write(f"Number of Object Stores: {len(self.object_stores)}\n")
         stream.write(f"Number of Retrievers: {len(self.retrievers)}\n")
+        stream.write(f"Number of TTC Strategies: {len(self.ttc_strategies)}\n")
+        stream.write(f"Number of Authentication Providers: {len(self.authentication)}\n")
 
-    @field_validator("functions", "llms", "embedders", "memory", "retrievers", "workflow", mode="wrap")
+    @field_validator("functions",
+                     "llms",
+                     "embedders",
+                     "memory",
+                     "retrievers",
+                     "workflow",
+                     "ttc_strategies",
+                     "authentication",
+                     mode="wrap")
     @classmethod
     def validate_components(cls, value: typing.Any, handler: ValidatorFunctionWrapHandler, info: ValidationInfo):
 
@@ -286,26 +315,44 @@ class AIQConfig(HashableBaseModel):
                               typing.Annotated[type_registry.compute_annotation(LLMBaseConfig),
                                                Discriminator(TypedBaseModel.discriminator)]]
 
+        AuthenticationProviderAnnotation = dict[str,
+                                                typing.Annotated[
+                                                    type_registry.compute_annotation(AuthProviderBaseConfig),
+                                                    Discriminator(TypedBaseModel.discriminator)]]
+
         EmbeddersAnnotation = dict[str,
                                    typing.Annotated[type_registry.compute_annotation(EmbedderBaseConfig),
                                                     Discriminator(TypedBaseModel.discriminator)]]
 
         FunctionsAnnotation = dict[str,
-                                   typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig, ),
+                                   typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig),
                                                     Discriminator(TypedBaseModel.discriminator)]]
 
         MemoryAnnotation = dict[str,
                                 typing.Annotated[type_registry.compute_annotation(MemoryBaseConfig),
                                                  Discriminator(TypedBaseModel.discriminator)]]
 
+        ObjectStoreAnnotation = dict[str,
+                                     typing.Annotated[type_registry.compute_annotation(ObjectStoreBaseConfig),
+                                                      Discriminator(TypedBaseModel.discriminator)]]
+
         RetrieverAnnotation = dict[str,
                                    typing.Annotated[type_registry.compute_annotation(RetrieverBaseConfig),
                                                     Discriminator(TypedBaseModel.discriminator)]]
+
+        TTCStrategyAnnotation = dict[str,
+                                     typing.Annotated[type_registry.compute_annotation(TTCStrategyBaseConfig),
+                                                      Discriminator(TypedBaseModel.discriminator)]]
 
         WorkflowAnnotation = typing.Annotated[type_registry.compute_annotation(FunctionBaseConfig),
                                               Discriminator(TypedBaseModel.discriminator)]
 
         should_rebuild = False
+
+        auth_providers_field = cls.model_fields.get("authentication")
+        if auth_providers_field is not None and auth_providers_field.annotation != AuthenticationProviderAnnotation:
+            auth_providers_field.annotation = AuthenticationProviderAnnotation
+            should_rebuild = True
 
         llms_field = cls.model_fields.get("llms")
         if llms_field is not None and llms_field.annotation != LLMsAnnotation:
@@ -327,9 +374,19 @@ class AIQConfig(HashableBaseModel):
             memory_field.annotation = MemoryAnnotation
             should_rebuild = True
 
+        object_stores_field = cls.model_fields.get("object_stores")
+        if object_stores_field is not None and object_stores_field.annotation != ObjectStoreAnnotation:
+            object_stores_field.annotation = ObjectStoreAnnotation
+            should_rebuild = True
+
         retrievers_field = cls.model_fields.get("retrievers")
         if retrievers_field is not None and retrievers_field.annotation != RetrieverAnnotation:
             retrievers_field.annotation = RetrieverAnnotation
+            should_rebuild = True
+
+        ttc_strategies_field = cls.model_fields.get("ttc_strategies")
+        if ttc_strategies_field is not None and ttc_strategies_field.annotation != TTCStrategyAnnotation:
+            ttc_strategies_field.annotation = TTCStrategyAnnotation
             should_rebuild = True
 
         workflow_field = cls.model_fields.get("workflow")
