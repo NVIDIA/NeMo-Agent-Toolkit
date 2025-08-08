@@ -27,7 +27,7 @@ from aiq.data_models.component import ComponentGroup
 from aiq.data_models.component_ref import ComponentRef
 from aiq.data_models.component_ref import ComponentRefNode
 from aiq.data_models.component_ref import generate_instance_id
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
@@ -161,7 +161,7 @@ def recursive_componentref_discovery(cls: TypedBaseModel, value: typing.Any,
             yield from recursive_componentref_discovery(cls, value, arg)
 
 
-def update_dependency_graph(config: "AIQConfig", instance_config: TypedBaseModel,
+def update_dependency_graph(config: "Config", instance_config: TypedBaseModel,
                             dependency_graph: nx.DiGraph) -> nx.DiGraph:
     """Updates the hierarchical component instance dependency graph from a configuration runtime instance.
 
@@ -192,7 +192,7 @@ def update_dependency_graph(config: "AIQConfig", instance_config: TypedBaseModel
     return dependency_graph
 
 
-def config_to_dependency_objects(config: "AIQConfig") -> tuple[dict[str, ComponentInstanceData], nx.DiGraph]:
+def config_to_dependency_objects(config: "Config") -> tuple[dict[str, ComponentInstanceData], nx.DiGraph]:
     """Generates a map of component runtime instance IDs to use when generating a build sequence.
 
     Args:
@@ -243,7 +243,7 @@ def config_to_dependency_objects(config: "AIQConfig") -> tuple[dict[str, Compone
     return dependency_map, dependency_graph
 
 
-def build_dependency_sequence(config: "AIQConfig") -> list[ComponentInstanceData]:
+def build_dependency_sequence(config: "Config") -> list[ComponentInstanceData]:
     """Generates the depencency sequence from an AIQ Toolkit configuration object
 
     Args:

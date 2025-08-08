@@ -19,7 +19,7 @@ from abc import abstractmethod
 from aiq.retriever.models import RetrieverOutput
 
 
-class AIQRetriever(ABC):
+class Retriever(ABC):
     """
     Abstract interface for interacting with data stores.
 
@@ -35,3 +35,7 @@ class AIQRetriever(ABC):
 
         """
         raise NotImplementedError
+
+
+# Compatibility aliases with previous releases
+AIQRetriever = Retriever

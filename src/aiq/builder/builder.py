@@ -46,7 +46,7 @@ from aiq.experimental.test_time_compute.models.stage_enums import PipelineTypeEn
 from aiq.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from aiq.memory.interfaces import MemoryEditor
 from aiq.object_store.interfaces import ObjectStore
-from aiq.retriever.interface import AIQRetriever
+from aiq.retriever.interface import Retriever
 
 
 class UserManagerHolder():
@@ -214,11 +214,11 @@ class Builder(ABC):  # pylint: disable=too-many-public-methods
         ...
 
     @typing.overload
-    async def get_retriever(self, retriever_name: str | RetrieverRef, wrapper_type: None) -> AIQRetriever:
+    async def get_retriever(self, retriever_name: str | RetrieverRef, wrapper_type: None) -> Retriever:
         ...
 
     @typing.overload
-    async def get_retriever(self, retriever_name: str | RetrieverRef) -> AIQRetriever:
+    async def get_retriever(self, retriever_name: str | RetrieverRef) -> Retriever:
         ...
 
     @abstractmethod

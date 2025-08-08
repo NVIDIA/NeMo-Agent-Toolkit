@@ -232,7 +232,7 @@ class GeneralConfig(BaseModel):
         return False
 
 
-class AIQConfig(HashableBaseModel):
+class Config(HashableBaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
@@ -404,3 +404,7 @@ class AIQConfig(HashableBaseModel):
             return cls.model_rebuild(force=True)
 
         return False
+
+
+# Compatibility aliases with previous releases
+AIQConfig = Config

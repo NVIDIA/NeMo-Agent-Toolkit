@@ -26,7 +26,7 @@ from aiq.data_models.api_server import ChatResponse
 from aiq.data_models.api_server import ChatResponseChunk
 from aiq.data_models.api_server import ChoiceDelta
 from aiq.data_models.api_server import Message
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.data_models.config import GeneralConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -35,8 +35,7 @@ from aiq.test.functions import StreamingEchoFunctionConfig
 
 
 @asynccontextmanager
-async def _build_client(config: AIQConfig,
-                        worker_class: type[FastApiFrontEndPluginWorker] = FastApiFrontEndPluginWorker):
+async def _build_client(config: Config, worker_class: type[FastApiFrontEndPluginWorker] = FastApiFrontEndPluginWorker):
     """Helper to build test client with proper lifecycle management"""
     worker = worker_class(config)
     app = worker.build_app()
@@ -191,7 +190,7 @@ async def test_legacy_vs_openai_v1_mode_endpoints(openai_api_v1_path: str | None
     front_end_config.workflow.openai_api_v1_path = openai_api_v1_path
     front_end_config.workflow.openai_api_path = "/v1/chat/completions"
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=front_end_config),
         workflow=EchoFunctionConfig(use_openai_api=True),
     )
@@ -275,7 +274,7 @@ async def test_openai_compatible_mode_stream_parameter():
     front_end_config.workflow.openai_api_path = "/v1/chat/completions"
 
     # Use streaming config since that's what's available
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=front_end_config),
         workflow=StreamingEchoFunctionConfig(use_openai_api=True),
     )
@@ -313,7 +312,7 @@ async def test_legacy_mode_backward_compatibility():
     front_end_config.workflow.openai_api_v1_path = None  # Legacy mode
     front_end_config.workflow.openai_api_path = "/v1/chat/completions"
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=front_end_config),
         workflow=EchoFunctionConfig(use_openai_api=True),
     )

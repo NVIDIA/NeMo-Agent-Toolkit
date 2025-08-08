@@ -46,16 +46,16 @@ from aiq.data_models.interactive import InteractionPrompt
 from aiq.front_ends.fastapi.message_validator import MessageValidator
 from aiq.front_ends.fastapi.response_helpers import generate_streaming_response
 from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
-from aiq.runtime.session import AIQSessionManager
+from aiq.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
 
 
 class WebSocketMessageHandler:
 
-    def __init__(self, socket: WebSocket, session_manager: AIQSessionManager, step_adaptor: StepAdaptor):
+    def __init__(self, socket: WebSocket, session_manager: SessionManager, step_adaptor: StepAdaptor):
         self._socket: WebSocket = socket
-        self._session_manager: AIQSessionManager = session_manager
+        self._session_manager: SessionManager = session_manager
         self._step_adaptor: StepAdaptor = step_adaptor
 
         self._message_validator: MessageValidator = MessageValidator()

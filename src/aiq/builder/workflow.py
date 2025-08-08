@@ -26,13 +26,13 @@ from aiq.builder.function_base import SingleOutputT
 from aiq.builder.function_base import StreamingOutputT
 from aiq.builder.llm import LLMProviderInfo
 from aiq.builder.retriever import RetrieverProviderInfo
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.experimental.test_time_compute.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
 from aiq.object_store.interfaces import ObjectStore
 from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.observability.exporter_manager import ExporterManager
-from aiq.runtime.runner import AIQRunner
+from aiq.runtime.runner import Runner
 
 callback_handler_var: ContextVar[Any | None] = ContextVar("callback_handler_var", default=None)
 
@@ -41,7 +41,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
 
     def __init__(self,
                  *,
-                 config: AIQConfig,
+                 config: Config,
                  entry_fn: Function[InputT, StreamingOutputT, SingleOutputT],
                  functions: dict[str, Function] | None = None,
                  llms: dict[str, LLMProviderInfo] | None = None,
@@ -90,10 +90,10 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         a new top-level workflow span here.
         """
 
-        async with AIQRunner(input_message=message,
-                             entry_fn=self._entry_fn,
-                             context_state=self._context_state,
-                             exporter_manager=self._exporter_manager.get()) as runner:
+        async with Runner(input_message=message,
+                          entry_fn=self._entry_fn,
+                          context_state=self._context_state,
+                          exporter_manager=self._exporter_manager.get()) as runner:
 
             # The caller can `yield runner` so they can do `runner.result()` or `runner.result_stream()`
             yield runner
@@ -116,7 +116,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
 
     @staticmethod
     def from_entry_fn(*,
-                      config: AIQConfig,
+                      config: Config,
                       entry_fn: Function[InputT, StreamingOutputT, SingleOutputT],
                       functions: dict[str, Function] | None = None,
                       llms: dict[str, LLMProviderInfo] | None = None,

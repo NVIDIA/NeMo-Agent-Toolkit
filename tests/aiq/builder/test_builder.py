@@ -40,7 +40,7 @@ from aiq.cli.register_workflow import register_retriever_provider
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.cli.register_workflow import register_tool_wrapper
 from aiq.cli.register_workflow import register_ttc_strategy
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
@@ -58,8 +58,8 @@ from aiq.memory.interfaces import MemoryEditor
 from aiq.memory.models import MemoryItem
 from aiq.object_store.in_memory_object_store import InMemoryObjectStore
 from aiq.observability.exporter.base_exporter import BaseExporter
-from aiq.retriever.interface import AIQRetriever
-from aiq.retriever.models import AIQDocument
+from aiq.retriever.interface import Retriever
+from aiq.retriever.models import Document
 from aiq.retriever.models import RetrieverOutput
 
 
@@ -623,13 +623,13 @@ async def get_retriever():
     @register_retriever_client(config_type=TRetrieverProviderConfig, wrapper_type=None)
     async def register_no_framework(config: TRetrieverProviderConfig, builder: Builder):
 
-        class TestRetriever(AIQRetriever):
+        class TestRetriever(Retriever):
 
             def __init__(self, **kwargs):
                 self.__dict__.update(kwargs)
 
             async def search(self, query: str, **kwargs):
-                return RetrieverOutput(results=[AIQDocument(page_content="page content", metadata={})])
+                return RetrieverOutput(results=[Document(page_content="page content", metadata={})])
 
             async def add_items(self, items):
                 return await super().add_items(items)
@@ -654,7 +654,7 @@ async def get_retriever():
 
         retriever = await builder.get_retriever("retriever_name", wrapper_type=None)
 
-        assert isinstance(retriever, AIQRetriever)
+        assert isinstance(retriever, Retriever)
 
 
 async def get_retriever_config():
@@ -999,7 +999,7 @@ async def test_integration_error_logging_with_failing_function(caplog_fixture):
         "workflow": FunctionReturningFunctionConfig()
     }
 
-    config = AIQConfig.model_validate(config_dict)
+    config = Config.model_validate(config_dict)
 
     async with WorkflowBuilder() as builder:
         with pytest.raises(ValueError, match="Function initialization failed"):
@@ -1042,7 +1042,7 @@ async def test_integration_error_logging_with_workflow_failure(caplog_fixture):
             FailingFunctionConfig()  # This will fail during workflow setup
     }
 
-    config = AIQConfig.model_validate(config_dict)
+    config = Config.model_validate(config_dict)
 
     async with WorkflowBuilder() as builder:
         with pytest.raises(ValueError, match="Function initialization failed"):

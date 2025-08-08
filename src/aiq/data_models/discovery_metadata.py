@@ -28,7 +28,7 @@ from pydantic import BaseModel
 from pydantic import field_validator
 
 from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.component import AIQComponentEnum
+from aiq.data_models.component import ComponentEnum
 from aiq.utils.metadata_utils import generate_config_type_docs
 
 if TYPE_CHECKING:
@@ -67,7 +67,7 @@ class DiscoveryMetadata(BaseModel):
 
     package: str = ""
     version: str = ""
-    component_type: AIQComponentEnum = AIQComponentEnum.UNDEFINED
+    component_type: ComponentEnum = ComponentEnum.UNDEFINED
     component_name: str = ""
     description: str = ""
     developer_notes: str = ""
@@ -179,7 +179,7 @@ class DiscoveryMetadata(BaseModel):
 
     @staticmethod
     def from_config_type(config_type: type["TypedBaseModelT"],
-                         component_type: AIQComponentEnum = AIQComponentEnum.UNDEFINED) -> "DiscoveryMetadata":
+                         component_type: ComponentEnum = ComponentEnum.UNDEFINED) -> "DiscoveryMetadata":
         """Generates discovery metadata from an AIQ Toolkit config object.
 
         Args:
@@ -220,7 +220,7 @@ class DiscoveryMetadata(BaseModel):
     @staticmethod
     def from_fn_wrapper(fn: "ToolWrapperBuildCallableT",
                         wrapper_type: LLMFrameworkEnum | str,
-                        component_type: AIQComponentEnum = AIQComponentEnum.TOOL_WRAPPER) -> "DiscoveryMetadata":
+                        component_type: ComponentEnum = ComponentEnum.TOOL_WRAPPER) -> "DiscoveryMetadata":
         """Generates discovery metadata from function with specified wrapper type.
 
         Args:
@@ -286,16 +286,15 @@ class DiscoveryMetadata(BaseModel):
 
         return DiscoveryMetadata(package=package_name,
                                  version=package_version,
-                                 component_type=AIQComponentEnum.PACKAGE,
+                                 component_type=ComponentEnum.PACKAGE,
                                  component_name=package_name,
                                  description=description)
 
     @staticmethod
-    def from_provider_framework_map(
-            config_type: type["TypedBaseModelT"],
-            wrapper_type: LLMFrameworkEnum | str | None,
-            provider_type: AIQComponentEnum,
-            component_type: AIQComponentEnum = AIQComponentEnum.UNDEFINED) -> "DiscoveryMetadata":
+    def from_provider_framework_map(config_type: type["TypedBaseModelT"],
+                                    wrapper_type: LLMFrameworkEnum | str | None,
+                                    provider_type: ComponentEnum,
+                                    component_type: ComponentEnum = ComponentEnum.UNDEFINED) -> "DiscoveryMetadata":
         """Generates discovery metadata from provider and framework mapping information.
 
         Args:

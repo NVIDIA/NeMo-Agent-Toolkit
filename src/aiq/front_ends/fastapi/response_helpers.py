@@ -23,13 +23,13 @@ from aiq.data_models.api_server import ResponseSerializable
 from aiq.data_models.step_adaptor import StepAdaptorConfig
 from aiq.front_ends.fastapi.intermediate_steps_subscriber import pull_intermediate
 from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
-from aiq.runtime.session import AIQSessionManager
+from aiq.runtime.session import SessionManager
 from aiq.utils.producer_consumer_queue import AsyncIOProducerConsumerQueue
 
 
 async def generate_streaming_response_as_str(payload: typing.Any,
                                              *,
-                                             session_manager: AIQSessionManager,
+                                             session_manager: SessionManager,
                                              streaming: bool,
                                              step_adaptor: StepAdaptor = StepAdaptor(StepAdaptorConfig()),
                                              result_type: type | None = None,
@@ -51,7 +51,7 @@ async def generate_streaming_response_as_str(payload: typing.Any,
 
 async def generate_streaming_response(payload: typing.Any,
                                       *,
-                                      session_manager: AIQSessionManager,
+                                      session_manager: SessionManager,
                                       streaming: bool,
                                       step_adaptor: StepAdaptor = StepAdaptor(StepAdaptorConfig()),
                                       result_type: type | None = None,
@@ -107,7 +107,7 @@ async def generate_streaming_response(payload: typing.Any,
 
 async def generate_single_response(
     payload: typing.Any,
-    session_manager: AIQSessionManager,
+    session_manager: SessionManager,
     result_type: type | None = None,
 ) -> typing.Any:
     if (not session_manager.workflow.has_single_output):
@@ -119,7 +119,7 @@ async def generate_single_response(
 
 async def generate_streaming_response_full(payload: typing.Any,
                                            *,
-                                           session_manager: AIQSessionManager,
+                                           session_manager: SessionManager,
                                            streaming: bool,
                                            result_type: type | None = None,
                                            output_type: type | None = None,
@@ -174,7 +174,7 @@ async def generate_streaming_response_full(payload: typing.Any,
 
 async def generate_streaming_response_full_as_str(payload: typing.Any,
                                                   *,
-                                                  session_manager: AIQSessionManager,
+                                                  session_manager: SessionManager,
                                                   streaming: bool,
                                                   result_type: type | None = None,
                                                   output_type: type | None = None,

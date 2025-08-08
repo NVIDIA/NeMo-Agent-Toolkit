@@ -30,7 +30,7 @@ from aiq.data_models.api_server import ChatRequest
 from aiq.data_models.api_server import ChatResponse
 from aiq.data_models.api_server import ChatResponseChunk
 from aiq.data_models.api_server import Message
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.data_models.config import GeneralConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -54,8 +54,7 @@ class CustomWorker(FastApiFrontEndPluginWorker):
 
 
 @asynccontextmanager
-async def _build_client(config: AIQConfig,
-                        worker_class: type[FastApiFrontEndPluginWorker] = FastApiFrontEndPluginWorker):
+async def _build_client(config: Config, worker_class: type[FastApiFrontEndPluginWorker] = FastApiFrontEndPluginWorker):
 
     worker = worker_class(config)
 
@@ -71,7 +70,7 @@ async def test_generate_and_openai_single(fn_use_openai_api: bool):
 
     front_end_config = FastApiFrontEndConfig()
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=front_end_config),
         workflow=EchoFunctionConfig(use_openai_api=fn_use_openai_api),
     )
@@ -116,7 +115,7 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
 
     front_end_config = FastApiFrontEndConfig()
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=front_end_config),
         workflow=StreamingEchoFunctionConfig(use_openai_api=fn_use_openai_api),
     )
@@ -168,7 +167,7 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
 
 async def test_custom_endpoint():
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=FastApiFrontEndConfig()),
         workflow=EchoFunctionConfig(),
     )
@@ -182,7 +181,7 @@ async def test_custom_endpoint():
 
 async def test_specified_endpoints():
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=FastApiFrontEndConfig(endpoints=[
             # TODO(MDD): Uncomment this when the constant function is implemented
             # FastApiFrontEndConfig.Endpoint(
@@ -215,7 +214,7 @@ async def test_generate_async(fn_use_openai_api: bool):
 
     front_end_config = FastApiFrontEndConfig()
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=front_end_config),
         workflow=EchoFunctionConfig(use_openai_api=fn_use_openai_api),
     )
@@ -260,7 +259,7 @@ async def test_generate_async(fn_use_openai_api: bool):
 async def test_async_job_status_not_found():
     front_end_config = FastApiFrontEndConfig()
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=front_end_config),
         workflow=EchoFunctionConfig(use_openai_api=False),
     )
@@ -283,7 +282,7 @@ async def test_static_file_endpoints():
     updated_content = b"Updated content!"
     content_type = "text/plain"
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=FastApiFrontEndConfig(object_store=object_store_name)),
         object_stores={object_store_name: InMemoryObjectStoreConfig()},
         workflow=EchoFunctionConfig(),  # Dummy workflow, not used here

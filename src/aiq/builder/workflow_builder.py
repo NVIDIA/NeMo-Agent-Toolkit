@@ -48,7 +48,7 @@ from aiq.data_models.component_ref import MemoryRef
 from aiq.data_models.component_ref import ObjectStoreRef
 from aiq.data_models.component_ref import RetrieverRef
 from aiq.data_models.component_ref import TTCStrategyRef
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
@@ -226,36 +226,36 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise ValueError("Must set a workflow before building")
 
         # Build the config from the added objects
-        config = AIQConfig(general=self.general_config,
-                           functions={
-                               k: v.config
-                               for k, v in self._functions.items()
-                           },
-                           workflow=self._workflow.config,
-                           llms={
-                               k: v.config
-                               for k, v in self._llms.items()
-                           },
-                           embedders={
-                               k: v.config
-                               for k, v in self._embedders.items()
-                           },
-                           memory={
-                               k: v.config
-                               for k, v in self._memory_clients.items()
-                           },
-                           object_stores={
-                               k: v.config
-                               for k, v in self._object_stores.items()
-                           },
-                           retrievers={
-                               k: v.config
-                               for k, v in self._retrievers.items()
-                           },
-                           ttc_strategies={
-                               k: v.config
-                               for k, v in self._ttc_strategies.items()
-                           })
+        config = Config(general=self.general_config,
+                        functions={
+                            k: v.config
+                            for k, v in self._functions.items()
+                        },
+                        workflow=self._workflow.config,
+                        llms={
+                            k: v.config
+                            for k, v in self._llms.items()
+                        },
+                        embedders={
+                            k: v.config
+                            for k, v in self._embedders.items()
+                        },
+                        memory={
+                            k: v.config
+                            for k, v in self._memory_clients.items()
+                        },
+                        object_stores={
+                            k: v.config
+                            for k, v in self._object_stores.items()
+                        },
+                        retrievers={
+                            k: v.config
+                            for k, v in self._retrievers.items()
+                        },
+                        ttc_strategies={
+                            k: v.config
+                            for k, v in self._ttc_strategies.items()
+                        })
 
         if (entry_function is None):
             entry_fn_obj = self.get_workflow()
@@ -860,7 +860,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         """
         self._log_build_failure("<workflow>", "workflow", completed_components, remaining_components, original_error)
 
-    async def populate_builder(self, config: AIQConfig, skip_workflow: bool = False):
+    async def populate_builder(self, config: Config, skip_workflow: bool = False):
         """
         Populate the builder with components and optionally set up the workflow.
 
@@ -937,7 +937,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     @classmethod
     @asynccontextmanager
-    async def from_config(cls, config: AIQConfig):
+    async def from_config(cls, config: Config):
 
         async with cls(general_config=config.general) as builder:
             await builder.populate_builder(config)

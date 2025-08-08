@@ -29,7 +29,7 @@ from aiq.builder.workflow import Workflow
 from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.authentication import AuthProviderBaseConfig
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.data_models.interactive import HumanResponse
 from aiq.data_models.interactive import InteractionPrompt
 
@@ -40,7 +40,7 @@ class UserManagerBase:
     pass
 
 
-class AIQSessionManager:
+class SessionManager:
 
     def __init__(self, workflow: Workflow, max_concurrency: int = 8):
         """
@@ -75,7 +75,7 @@ class AIQSessionManager:
             self._semaphore = nullcontext()
 
     @property
-    def config(self) -> AIQConfig:
+    def config(self) -> Config:
         return self._workflow.config
 
     @property
@@ -156,3 +156,7 @@ class AIQSessionManager:
 
         if request.headers.get("conversation-id"):
             self._context_state.conversation_id.set(request.headers["conversation-id"])
+
+
+# Compatibility aliases with previous releases
+AIQSessionManager = SessionManager

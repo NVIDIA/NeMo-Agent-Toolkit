@@ -22,7 +22,7 @@ import pytest
 from aiq.builder.builder import Builder
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.data_models.config import HashableBaseModel
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.utils.io.yaml_tools import _interpolate_variables
@@ -199,7 +199,7 @@ def test_yaml_loads_with_function(env_vars: dict):
     # Test loading with function
     config_data: dict = yaml_loads(yaml_str)
     # Convert the YAML data to an AIQConfig object
-    workflow_config: HashableBaseModel = AIQConfig(**config_data)
+    workflow_config: HashableBaseModel = Config(**config_data)
 
     assert workflow_config.workflow.type == "my_test_fn"
     assert workflow_config.workflow.string_input == env_vars["TEST_VAR"]  # type: ignore
@@ -238,7 +238,7 @@ def test_yaml_load_with_function(env_vars: dict):
         # Test loading with function
         config_data: dict = yaml_load(temp_file_path)
         # Convert the YAML data to an AIQConfig object
-        workflow_config: HashableBaseModel = AIQConfig(**config_data)
+        workflow_config: HashableBaseModel = Config(**config_data)
 
         workflow_config.workflow.type = "my_test_fn"
         assert workflow_config.workflow.type == "my_test_fn"

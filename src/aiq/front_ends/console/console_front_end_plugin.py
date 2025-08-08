@@ -26,7 +26,7 @@ from aiq.data_models.interactive import InteractionPrompt
 from aiq.front_ends.console.authentication_flow_handler import ConsoleAuthenticationFlowHandler
 from aiq.front_ends.console.console_front_end_config import ConsoleFrontEndConfig
 from aiq.front_ends.simple_base.simple_front_end_plugin_base import SimpleFrontEndPluginBase
-from aiq.runtime.session import AIQSessionManager
+from aiq.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         if (not self.front_end_config.input_query and not self.front_end_config.input_file):
             raise click.UsageError("Must specify either --input_query or --input_file")
 
-    async def run_workflow(self, session_manager: AIQSessionManager):
+    async def run_workflow(self, session_manager: SessionManager):
 
         assert session_manager is not None, "Session manager must be provided"
         runner_outputs = None
