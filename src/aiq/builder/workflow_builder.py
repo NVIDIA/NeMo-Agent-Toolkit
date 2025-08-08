@@ -43,26 +43,26 @@ from aiq.data_models.component import ComponentGroup
 from aiq.data_models.component_ref import AuthenticationRef
 from aiq.data_models.component_ref import EmbedderRef
 from aiq.data_models.component_ref import FunctionRef
-from aiq.data_models.component_ref import ITSStrategyRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.component_ref import MemoryRef
 from aiq.data_models.component_ref import ObjectStoreRef
 from aiq.data_models.component_ref import RetrieverRef
+from aiq.data_models.component_ref import TTCStrategyRef
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.function_dependencies import FunctionDependencies
-from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
 from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from aiq.data_models.ttc_strategy import TTCStrategyBaseConfig
 from aiq.experimental.decorators.experimental_warning_decorator import aiq_experimental
-from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
-from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
-from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
+from aiq.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.test_time_compute.models.stage_enums import StageTypeEnum
+from aiq.experimental.test_time_compute.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
 from aiq.object_store.interfaces import ObjectStore
 from aiq.observability.exporter.base_exporter import BaseExporter
@@ -122,8 +122,8 @@ class ConfiguredAuthProvider:
 
 
 @dataclasses.dataclass
-class ConfiguredITSStrategy:
-    config: ITSStrategyBaseConfig
+class ConfiguredTTCStrategy:
+    config: TTCStrategyBaseConfig
     instance: StrategyBase
 
 
@@ -154,7 +154,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._memory_clients: dict[str, ConfiguredMemory] = {}
         self._object_stores: dict[str, ConfiguredObjectStore] = {}
         self._retrievers: dict[str, ConfiguredRetriever] = {}
-        self._its_strategies: dict[str, ConfiguredITSStrategy] = {}
+        self._ttc_strategies: dict[str, ConfiguredTTCStrategy] = {}
 
         self._context_state = AIQContextState.get()
 
@@ -252,9 +252,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                                k: v.config
                                for k, v in self._retrievers.items()
                            },
-                           its_strategies={
+                           ttc_strategies={
                                k: v.config
-                               for k, v in self._its_strategies.items()
+                               for k, v in self._ttc_strategies.items()
                            })
 
         if (entry_function is None):
@@ -292,9 +292,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                                               k: v.instance
                                               for k, v in self._retrievers.items()
                                           },
-                                          its_strategies={
+                                          ttc_strategies={
                                               k: v.instance
-                                              for k, v in self._its_strategies.items()
+                                              for k, v in self._ttc_strategies.items()
                                           },
                                           context_state=self._context_state)
 
@@ -699,70 +699,70 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return self._retrievers[retriever_name].config
 
-    @aiq_experimental(feature_name="ITS")
+    @aiq_experimental(feature_name="TTC")
     @override
-    async def add_its_strategy(self, name: str | str, config: ITSStrategyBaseConfig):
-        if (name in self._its_strategies):
-            raise ValueError(f"ITS strategy '{name}' already exists in the list of ITS strategies")
+    async def add_ttc_strategy(self, name: str | str, config: TTCStrategyBaseConfig):
+        if (name in self._ttc_strategies):
+            raise ValueError(f"TTC strategy '{name}' already exists in the list of TTC strategies")
 
         try:
-            its_strategy_info = self._registry.get_its_strategy(type(config))
+            ttc_strategy_info = self._registry.get_ttc_strategy(type(config))
 
-            info_obj = await self._get_exit_stack().enter_async_context(its_strategy_info.build_fn(config, self))
+            info_obj = await self._get_exit_stack().enter_async_context(ttc_strategy_info.build_fn(config, self))
 
-            self._its_strategies[name] = ConfiguredITSStrategy(config=config, instance=info_obj)
+            self._ttc_strategies[name] = ConfiguredTTCStrategy(config=config, instance=info_obj)
 
         except Exception as e:
-            logger.error("Error adding ITS strategy `%s` with config `%s`", name, config, exc_info=True)
+            logger.error("Error adding TTC strategy `%s` with config `%s`", name, config, exc_info=True)
 
             raise e
 
     @override
-    async def get_its_strategy(self,
-                               strategy_name: str | ITSStrategyRef,
+    async def get_ttc_strategy(self,
+                               strategy_name: str | TTCStrategyRef,
                                pipeline_type: PipelineTypeEnum,
                                stage_type: StageTypeEnum) -> StrategyBase:
 
-        if strategy_name not in self._its_strategies:
-            raise ValueError(f"ITS strategy '{strategy_name}' not found")
+        if strategy_name not in self._ttc_strategies:
+            raise ValueError(f"TTC strategy '{strategy_name}' not found")
 
         try:
             # Get strategy info
-            its_strategy_info = self._its_strategies[strategy_name]
+            ttc_strategy_info = self._ttc_strategies[strategy_name]
 
-            instance = its_strategy_info.instance
+            instance = ttc_strategy_info.instance
 
             if not stage_type == instance.stage_type():
-                raise ValueError(f"ITS strategy '{strategy_name}' is not compatible with stage type '{stage_type}'")
+                raise ValueError(f"TTC strategy '{strategy_name}' is not compatible with stage type '{stage_type}'")
 
             if pipeline_type not in instance.supported_pipeline_types():
                 raise ValueError(
-                    f"ITS strategy '{strategy_name}' is not compatible with pipeline type '{pipeline_type}'")
+                    f"TTC strategy '{strategy_name}' is not compatible with pipeline type '{pipeline_type}'")
 
             instance.set_pipeline_type(pipeline_type)
 
             return instance
         except Exception as e:
-            logger.error("Error getting ITS strategy `%s`", strategy_name, exc_info=True)
+            logger.error("Error getting TTC strategy `%s`", strategy_name, exc_info=True)
             raise e
 
     @override
-    async def get_its_strategy_config(self,
-                                      strategy_name: str | ITSStrategyRef,
+    async def get_ttc_strategy_config(self,
+                                      strategy_name: str | TTCStrategyRef,
                                       pipeline_type: PipelineTypeEnum,
-                                      stage_type: StageTypeEnum) -> ITSStrategyBaseConfig:
-        if strategy_name not in self._its_strategies:
-            raise ValueError(f"ITS strategy '{strategy_name}' not found")
+                                      stage_type: StageTypeEnum) -> TTCStrategyBaseConfig:
+        if strategy_name not in self._ttc_strategies:
+            raise ValueError(f"TTC strategy '{strategy_name}' not found")
 
-        strategy_info = self._its_strategies[strategy_name]
+        strategy_info = self._ttc_strategies[strategy_name]
         instance = strategy_info.instance
         config = strategy_info.config
 
         if not stage_type == instance.stage_type():
-            raise ValueError(f"ITS strategy '{strategy_name}' is not compatible with stage type '{stage_type}'")
+            raise ValueError(f"TTC strategy '{strategy_name}' is not compatible with stage type '{stage_type}'")
 
         if pipeline_type not in instance.supported_pipeline_types():
-            raise ValueError(f"ITS strategy '{strategy_name}' is not compatible with pipeline type '{pipeline_type}'")
+            raise ValueError(f"TTC strategy '{strategy_name}' is not compatible with pipeline type '{pipeline_type}'")
 
         return config
 
@@ -907,8 +907,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                     # If the function is the root, set it as the workflow later
                     if (not component_instance.is_root):
                         await self.add_function(component_instance.name, component_instance.config)
-                elif component_instance.component_group == ComponentGroup.ITS_STRATEGIES:
-                    await self.add_its_strategy(component_instance.name, component_instance.config)
+                elif component_instance.component_group == ComponentGroup.TTC_STRATEGIES:
+                    await self.add_ttc_strategy(component_instance.name, component_instance.config)
 
                 elif component_instance.component_group == ComponentGroup.AUTHENTICATION:
                     await self.add_auth_provider(component_instance.name, component_instance.config)
@@ -1073,24 +1073,24 @@ class ChildBuilder(Builder):
         return self._workflow_builder.get_object_store_config(object_store_name)
 
     @override
-    async def add_its_strategy(self, name: str, config: ITSStrategyBaseConfig):
-        return await self._workflow_builder.add_its_strategy(name, config)
+    async def add_ttc_strategy(self, name: str, config: TTCStrategyBaseConfig):
+        return await self._workflow_builder.add_ttc_strategy(name, config)
 
     @override
-    async def get_its_strategy(self,
-                               strategy_name: str | ITSStrategyRef,
+    async def get_ttc_strategy(self,
+                               strategy_name: str | TTCStrategyRef,
                                pipeline_type: PipelineTypeEnum,
                                stage_type: StageTypeEnum) -> StrategyBase:
-        return await self._workflow_builder.get_its_strategy(strategy_name=strategy_name,
+        return await self._workflow_builder.get_ttc_strategy(strategy_name=strategy_name,
                                                              pipeline_type=pipeline_type,
                                                              stage_type=stage_type)
 
     @override
-    async def get_its_strategy_config(self,
-                                      strategy_name: str | ITSStrategyRef,
+    async def get_ttc_strategy_config(self,
+                                      strategy_name: str | TTCStrategyRef,
                                       pipeline_type: PipelineTypeEnum,
-                                      stage_type: StageTypeEnum) -> ITSStrategyBaseConfig:
-        return await self._workflow_builder.get_its_strategy_config(strategy_name=strategy_name,
+                                      stage_type: StageTypeEnum) -> TTCStrategyBaseConfig:
+        return await self._workflow_builder.get_ttc_strategy_config(strategy_name=strategy_name,
                                                                     pipeline_type=pipeline_type,
                                                                     stage_type=stage_type)
 

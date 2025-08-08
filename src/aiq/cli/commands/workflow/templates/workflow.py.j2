@@ -31,6 +31,6 @@ async def {{ python_safe_workflow_name }}_function(
     try:
         yield FunctionInfo.create(single_fn=_response_fn)
     except GeneratorExit:
-        print("Function exited early!")
+        logger.warning("Function exited early!")
     finally:
-        print("Cleaning up {{ workflow_name }} workflow.")
+        logger.info("Cleaning up {{ workflow_name }} workflow.")

@@ -11,15 +11,12 @@ root = "../../.."
 [project]
 name = "aiq_simple_calculator_eval"
 dynamic = ["version"]
-dependencies = [
-  "aiqtoolkit[langchain]~=1.2",
-  "aiq_simple_calculator",
-]
+dependencies = ["nvidia-nat[langchain]~=1.2", "aiq_simple_calculator"]
 requires-python = ">=3.11,<3.13"
-description = "Simple Calculator Evaluation and Profiling - demonstrates AIQ toolkit evaluation capabilities"
+description = "Simple Calculator Evaluation and Profiling - demonstrates NeMo Agent toolkit evaluation capabilities"
 keywords = ["ai", "evaluation", "profiling", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 aiq_simple_calculator = { path = "../../getting_started/simple_calculator", editable = true }

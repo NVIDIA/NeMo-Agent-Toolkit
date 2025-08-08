@@ -55,8 +55,6 @@ from aiq.data_models.front_end import FrontEndBaseConfig
 from aiq.data_models.front_end import FrontEndConfigT
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.function import FunctionConfigT
-from aiq.data_models.its_strategy import ITSStrategyBaseConfig
-from aiq.data_models.its_strategy import ITSStrategyBaseConfigT
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.llm import LLMBaseConfigT
 from aiq.data_models.logging import LoggingBaseConfig
@@ -71,7 +69,9 @@ from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfigT
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterConfigT
-from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
+from aiq.data_models.ttc_strategy import TTCStrategyBaseConfig
+from aiq.data_models.ttc_strategy import TTCStrategyBaseConfigT
+from aiq.experimental.test_time_compute.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
 from aiq.object_store.interfaces import ObjectStore
 from aiq.observability.exporter.base_exporter import BaseExporter
@@ -85,7 +85,7 @@ EmbedderProviderBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncI
 EvaluatorBuildCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AsyncIterator[EvaluatorInfo]]
 FrontEndBuildCallableT = Callable[[FrontEndConfigT, AIQConfig], AsyncIterator[FrontEndBase]]
 FunctionBuildCallableT = Callable[[FunctionConfigT, Builder], AsyncIterator[FunctionInfo | Callable | FunctionBase]]
-ITSStrategyBuildCallableT = Callable[[ITSStrategyBaseConfigT, Builder], AsyncIterator[StrategyBase]]
+TTCStrategyBuildCallableT = Callable[[TTCStrategyBaseConfigT, Builder], AsyncIterator[StrategyBase]]
 LLMClientBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[typing.Any]]
 LLMProviderBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[LLMProviderInfo]]
 LoggingMethodBuildCallableT = Callable[[LoggingMethodConfigT, Builder], AsyncIterator[Handler]]
@@ -106,7 +106,7 @@ EvaluatorRegisteredCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], Abs
 FrontEndRegisteredCallableT = Callable[[FrontEndConfigT, AIQConfig], AbstractAsyncContextManager[FrontEndBase]]
 FunctionRegisteredCallableT = Callable[[FunctionConfigT, Builder],
                                        AbstractAsyncContextManager[FunctionInfo | Callable | FunctionBase]]
-ITSStrategyRegisterCallableT = Callable[[ITSStrategyBaseConfigT, Builder], AbstractAsyncContextManager[StrategyBase]]
+TTCStrategyRegisterCallableT = Callable[[TTCStrategyBaseConfigT, Builder], AbstractAsyncContextManager[StrategyBase]]
 LLMClientRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 LLMProviderRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsyncContextManager[LLMProviderInfo]]
 LoggingMethodRegisteredCallableT = Callable[[LoggingMethodConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
@@ -248,12 +248,12 @@ class RegisteredObjectStoreInfo(RegisteredInfo[ObjectStoreBaseConfig]):
     build_fn: ObjectStoreRegisteredCallableT = Field(repr=False)
 
 
-class RegisteredITSStrategyInfo(RegisteredInfo[ITSStrategyBaseConfig]):
+class RegisteredTTCStrategyInfo(RegisteredInfo[TTCStrategyBaseConfig]):
     """
-    Represents a registered Inference Time Scaling (ITS) strategy.
+    Represents a registered TTC strategy.
     """
 
-    build_fn: ITSStrategyRegisterCallableT = Field(repr=False)
+    build_fn: TTCStrategyRegisterCallableT = Field(repr=False)
 
 
 class RegisteredToolWrapper(BaseModel):
@@ -353,8 +353,8 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         # Tool Wrappers
         self._registered_tool_wrappers: dict[str, RegisteredToolWrapper] = {}
 
-        # ITS Strategies
-        self._registered_its_strategies: dict[type[ITSStrategyBaseConfig], RegisteredITSStrategyInfo] = {}
+        # TTC Strategies
+        self._registered_ttc_strategies: dict[type[TTCStrategyBaseConfig], RegisteredTTCStrategyInfo] = {}
 
         # Packages
         self._registered_packages: dict[str, RegisteredPackage] = {}
@@ -728,24 +728,24 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
             raise KeyError(f"Could not find a registered tool wrapper for LLM framework `{llm_framework}`. "
                            f"Registered LLM frameworks: {set(self._registered_tool_wrappers.keys())}") from err
 
-    def register_its_strategy(self, info: RegisteredITSStrategyInfo):
-        if (info.config_type in self._registered_its_strategies):
+    def register_ttc_strategy(self, info: RegisteredTTCStrategyInfo):
+        if (info.config_type in self._registered_ttc_strategies):
             raise ValueError(
-                f"An ITS strategy with the same config type `{info.config_type}` has already been registered.")
+                f"An TTC strategy with the same config type `{info.config_type}` has already been registered.")
 
-        self._registered_its_strategies[info.config_type] = info
+        self._registered_ttc_strategies[info.config_type] = info
 
         self._registration_changed()
 
-    def get_its_strategy(self, config_type: type[ITSStrategyBaseConfig]) -> RegisteredITSStrategyInfo:
+    def get_ttc_strategy(self, config_type: type[TTCStrategyBaseConfig]) -> RegisteredTTCStrategyInfo:
         try:
-            strategy = self._registered_its_strategies[config_type]
+            strategy = self._registered_ttc_strategies[config_type]
         except Exception as e:
-            raise KeyError(f"Could not find a registered ITS strategy for config `{config_type}`. ") from e
+            raise KeyError(f"Could not find a registered TTC strategy for config `{config_type}`. ") from e
         return strategy
 
-    def get_registered_its_strategies(self) -> list[RegisteredInfo[ITSStrategyBaseConfig]]:
-        return list(self._registered_its_strategies.values())
+    def get_registered_ttc_strategies(self) -> list[RegisteredInfo[TTCStrategyBaseConfig]]:
+        return list(self._registered_ttc_strategies.values())
 
     def register_registry_handler(self, info: RegisteredRegistryHandlerInfo):
 
@@ -844,8 +844,8 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         if component_type == AIQComponentEnum.PACKAGE:
             return self._registered_packages
 
-        if component_type == AIQComponentEnum.ITS_STRATEGY:
-            return self._registered_its_strategies
+        if component_type == AIQComponentEnum.TTC_STRATEGY:
+            return self._registered_ttc_strategies
 
         raise ValueError(f"Supplied an unsupported component type {component_type}")
 
@@ -896,8 +896,8 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         if component_type == AIQComponentEnum.PACKAGE:
             return list(self._registered_packages)
 
-        if component_type == AIQComponentEnum.ITS_STRATEGY:
-            return [i.static_type() for i in self._registered_its_strategies]
+        if component_type == AIQComponentEnum.TTC_STRATEGY:
+            return [i.static_type() for i in self._registered_ttc_strategies]
 
         raise ValueError(f"Supplied an unsupported component type {component_type}")
 
@@ -966,8 +966,8 @@ class TypeRegistry:  # pylint: disable=too-many-public-methods
         if issubclass(cls, LoggingBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_logging_method())
 
-        if issubclass(cls, ITSStrategyBaseConfig):
-            return self._do_compute_annotation(cls, self.get_registered_its_strategies())
+        if issubclass(cls, TTCStrategyBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_ttc_strategies())
 
         raise ValueError(f"Supplied an unsupported component type {cls}")
 

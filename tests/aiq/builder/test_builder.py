@@ -31,7 +31,6 @@ from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.cli.register_workflow import register_embedder_client
 from aiq.cli.register_workflow import register_embedder_provider
 from aiq.cli.register_workflow import register_function
-from aiq.cli.register_workflow import register_its_strategy
 from aiq.cli.register_workflow import register_llm_client
 from aiq.cli.register_workflow import register_llm_provider
 from aiq.cli.register_workflow import register_memory
@@ -40,20 +39,21 @@ from aiq.cli.register_workflow import register_retriever_client
 from aiq.cli.register_workflow import register_retriever_provider
 from aiq.cli.register_workflow import register_telemetry_exporter
 from aiq.cli.register_workflow import register_tool_wrapper
+from aiq.cli.register_workflow import register_ttc_strategy
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
 from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
-from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
-from aiq.experimental.inference_time_scaling.models.strategy_base import StrategyBase
+from aiq.data_models.ttc_strategy import TTCStrategyBaseConfig
+from aiq.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.test_time_compute.models.stage_enums import StageTypeEnum
+from aiq.experimental.test_time_compute.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
 from aiq.memory.models import MemoryItem
 from aiq.object_store.in_memory_object_store import InMemoryObjectStore
@@ -99,7 +99,7 @@ class TObjectStoreConfig(ObjectStoreBaseConfig, name="test_object_store"):
     raise_error: bool = False
 
 
-class TestITSStrategyConfig(ITSStrategyBaseConfig, name="test_its_strategy"):
+class TestTTCStrategyConfig(TTCStrategyBaseConfig, name="test_ttc_strategy"):
     raise_error: bool = False
 
 
@@ -219,13 +219,13 @@ async def _register():
 
         yield TestTelemetryExporter()
 
-    @register_its_strategy(config_type=TestITSStrategyConfig)
-    async def register_its(config: TestITSStrategyConfig, builder: Builder):
+    @register_ttc_strategy(config_type=TestTTCStrategyConfig)
+    async def register_ttc(config: TestTTCStrategyConfig, builder: Builder):
 
         if config.raise_error:
             raise ValueError("Error")
 
-        class DummyITSStrategy(StrategyBase):
+        class DummyTTCStrategy(StrategyBase):
             """Very small pass-through strategy used only for testing."""
 
             async def ainvoke(self, items=None, **kwargs):
@@ -241,7 +241,7 @@ async def _register():
             def stage_type(self) -> StageTypeEnum:
                 return StageTypeEnum.SCORING
 
-        yield DummyITSStrategy(config)
+        yield DummyTTCStrategy(config)
 
 
 async def test_build():
@@ -671,49 +671,49 @@ async def get_retriever_config():
             builder.get_retriever_config("retriever_name_not_exist")
 
 
-async def test_add_its_strategy():
+async def test_add_ttc_strategy():
 
     async with WorkflowBuilder() as builder:
         # Normal case
-        await builder.add_its_strategy("its_strategy", TestITSStrategyConfig())
+        await builder.add_ttc_strategy("ttc_strategy", TestTTCStrategyConfig())
 
         # Provider raises
         with pytest.raises(ValueError):
-            await builder.add_its_strategy("its_strategy_err", TestITSStrategyConfig(raise_error=True))
+            await builder.add_ttc_strategy("ttc_strategy_err", TestTTCStrategyConfig(raise_error=True))
 
         # Duplicate name
         with pytest.raises(ValueError):
-            await builder.add_its_strategy("its_strategy", TestITSStrategyConfig())
+            await builder.add_ttc_strategy("ttc_strategy", TestTTCStrategyConfig())
 
 
-async def test_get_its_strategy_and_config():
+async def test_get_ttc_strategy_and_config():
 
     async with WorkflowBuilder() as builder:
-        cfg = TestITSStrategyConfig()
-        await builder.add_its_strategy("its_strategy", cfg)
+        cfg = TestTTCStrategyConfig()
+        await builder.add_ttc_strategy("ttc_strategy", cfg)
 
-        strat = await builder.get_its_strategy(
-            "its_strategy",
+        strat = await builder.get_ttc_strategy(
+            "ttc_strategy",
             pipeline_type=PipelineTypeEnum.AGENT_EXECUTION,
             stage_type=StageTypeEnum.SCORING,
         )
 
         with pytest.raises(ValueError):
-            await builder.get_its_strategy(
-                "its_strategy",
+            await builder.get_ttc_strategy(
+                "ttc_strategy",
                 pipeline_type=PipelineTypeEnum.PLANNING,  # Wrong pipeline type
                 stage_type=StageTypeEnum.SCORING,
             )
 
-        assert strat.config == await builder.get_its_strategy_config(
-            "its_strategy",
+        assert strat.config == await builder.get_ttc_strategy_config(
+            "ttc_strategy",
             pipeline_type=PipelineTypeEnum.AGENT_EXECUTION,
             stage_type=StageTypeEnum.SCORING,
         )
 
         # Non-existent name
         with pytest.raises(ValueError):
-            await builder.get_its_strategy(
+            await builder.get_ttc_strategy(
                 "does_not_exist",
                 pipeline_type=PipelineTypeEnum.AGENT_EXECUTION,
                 stage_type=StageTypeEnum.SCORING,
@@ -730,7 +730,7 @@ async def test_built_config():
     memory_config = TMemoryConfig()
     retriever_config = TRetrieverProviderConfig()
     object_store_config = TObjectStoreConfig()
-    its_config = TestITSStrategyConfig()
+    ttc_config = TestTTCStrategyConfig()
 
     async with WorkflowBuilder(general_config=general_config) as builder:
 
@@ -748,7 +748,7 @@ async def test_built_config():
 
         await builder.add_object_store("object_store1", object_store_config)
 
-        await builder.add_its_strategy("its_strategy", its_config)
+        await builder.add_ttc_strategy("ttc_strategy", ttc_config)
 
         workflow = builder.build()
 
@@ -762,7 +762,7 @@ async def test_built_config():
         assert workflow_config.memory == {"memory1": memory_config}
         assert workflow_config.retrievers == {"retriever1": retriever_config}
         assert workflow_config.object_stores == {"object_store1": object_store_config}
-        assert workflow_config.its_strategies == {"its_strategy": its_config}
+        assert workflow_config.ttc_strategies == {"ttc_strategy": ttc_config}
 
 
 async def test_add_telemetry_exporter():

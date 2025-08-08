@@ -245,7 +245,7 @@ class BatchingProcessor(CallbackProcessor[T, list[T]], Generic[T]):
                 logger.warning("Shutdown completion timeout exceeded (%s seconds)", self._shutdown_timeout)
             return
 
-        logger.info("Starting shutdown of BatchingProcessor (queue size: %d)", len(self._batch_queue))
+        logger.debug("Starting shutdown of BatchingProcessor (queue size: %d)", len(self._batch_queue))
         self._shutdown_requested = True
 
         try:
@@ -261,14 +261,15 @@ class BatchingProcessor(CallbackProcessor[T, list[T]], Generic[T]):
             async with self._batch_lock:
                 if self._batch_queue:
                     final_batch = await self._create_batch()
-                    logger.info("Created final batch of %d items during shutdown", len(final_batch))
+                    logger.debug("Created final batch of %d items during shutdown", len(final_batch))
 
                     # Route final batch through pipeline via callback
                     if self._done_callback is not None:
                         try:
                             await self._done_callback(final_batch)
-                            logger.info("Successfully routed final batch of %d items through pipeline during shutdown",
-                                        len(final_batch))
+                            logger.debug(
+                                "Successfully flushed final batch of %d items through pipeline during shutdown",
+                                len(final_batch))
                         except Exception as e:
                             logger.error("Error routing final batch through pipeline during shutdown: %s",
                                          e,
@@ -277,11 +278,11 @@ class BatchingProcessor(CallbackProcessor[T, list[T]], Generic[T]):
                         logger.warning("Final batch of %d items created during shutdown but no pipeline callback set",
                                        len(final_batch))
                 else:
-                    logger.info("No items remaining during shutdown")
+                    logger.debug("No items remaining during shutdown")
 
             self._shutdown_complete = True
             self._shutdown_complete_event.set()
-            logger.info("BatchingProcessor shutdown completed successfully")
+            logger.debug("BatchingProcessor shutdown completed successfully")
 
         except Exception as e:
             logger.error("Error during BatchingProcessor shutdown: %s", e, exc_info=True)

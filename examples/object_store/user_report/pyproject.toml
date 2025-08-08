@@ -8,16 +8,14 @@ root = "../../.."
 [project]
 name = "aiq_user_report"
 dynamic = ["version"]
-dependencies = [
-  "aiqtoolkit[s3]", "aiqtoolkit[mysql]"
-]
+dependencies = ["nvidia-nat[s3]", "nvidia-nat[mysql]"]
 requires-python = ">=3.12"
-description = "AIQ toolkit example that uses an Object Store"
+description = "NeMo Agent toolkit example that uses an Object Store"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_user_report = "aiq_user_report.register"

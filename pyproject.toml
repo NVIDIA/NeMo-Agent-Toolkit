@@ -10,7 +10,7 @@ include = ["aiq.*"]
 # intentionally empty, the section is required for setuptools_scm to work but we don't need to set anything
 
 [project]
-name = "aiqtoolkit"
+name = "nvidia-nat"
 dynamic = ["version"]
 dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
@@ -46,7 +46,7 @@ dependencies = [
   "wikipedia~=1.4",
 ]
 requires-python = ">=3.11,<3.13"
-description = "NVIDIA Agent Intelligence toolkit"
+description = "NVIDIA NeMo Agent toolkit"
 readme = "src/aiq/meta/pypi.md"
 license = { file = "LICENSE.md" }
 keywords = ["ai", "rag", "agents"]
@@ -58,27 +58,27 @@ maintainers = [{ name = "NVIDIA Corporation" }]
 [project.optional-dependencies]
 # Optional dependencies are things that users would want to install with AIQtoolkit. i.e. `uv pip install aiq[langchain]`
 # Keep sorted!!!
-agno = ["aiqtoolkit-agno"]
-crewai = ["aiqtoolkit-crewai"]
+agno = ["nvidia-nat-agno"]
+crewai = ["nvidia-nat-crewai"]
 ingestion = ["lxml~=5.4"]
-langchain = ["aiqtoolkit-langchain"]
-llama-index = ["aiqtoolkit-llama-index"]
-mem0ai = ["aiqtoolkit-mem0ai"]
-opentelemetry = ["aiqtoolkit-opentelemetry"]
-phoenix = ["aiqtoolkit-phoenix"]
-ragaai = ["aiqtoolkit-ragaai"]
-mysql = ["aiqtoolkit-mysql"]
-redis = ["aiqtoolkit-redis"]
-s3 = ["aiqtoolkit-s3"]
-semantic-kernel = ["aiqtoolkit-semantic-kernel"]
+langchain = ["nvidia-nat-langchain"]
+llama-index = ["nvidia-nat-llama-index"]
+mem0ai = ["nvidia-nat-mem0ai"]
+opentelemetry = ["nvidia-nat-opentelemetry"]
+phoenix = ["nvidia-nat-phoenix"]
+ragaai = ["nvidia-nat-ragaai"]
+mysql = ["nvidia-nat-mysql"]
+redis = ["nvidia-nat-redis"]
+s3 = ["nvidia-nat-s3"]
+semantic-kernel = ["nvidia-nat-semantic-kernel"]
 telemetry = [
-  "aiqtoolkit-opentelemetry",
-  "aiqtoolkit-phoenix",
-  "aiqtoolkit-weave",
-  "aiqtoolkit-ragaai",
+  "nvidia-nat-opentelemetry",
+  "nvidia-nat-phoenix",
+  "nvidia-nat-weave",
+  "nvidia-nat-ragaai",
 ]
-weave = ["aiqtoolkit-weave"]
-zep-cloud = ["aiqtoolkit-zep-cloud"]
+weave = ["nvidia-nat-weave"]
+zep-cloud = ["nvidia-nat-zep-cloud"]
 
 examples = [
   "aiq_agno_personal_finance",
@@ -123,21 +123,21 @@ config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
 # Workspace members
-aiqtoolkit-crewai = { workspace = true }
-aiqtoolkit-langchain = { workspace = true }
-aiqtoolkit-llama-index = { workspace = true }
-aiqtoolkit-mem0ai = { workspace = true }
-aiqtoolkit-mysql = { workspace = true }
-aiqtoolkit-redis = { workspace = true }
-aiqtoolkit-s3 = { workspace = true }
-aiqtoolkit-semantic-kernel = { workspace = true }
-aiqtoolkit-test = { workspace = true }
-aiqtoolkit-zep-cloud = { workspace = true }
-aiqtoolkit-agno = { workspace = true }
-aiqtoolkit-weave = { workspace = true }
-aiqtoolkit-opentelemetry = { workspace = true }
-aiqtoolkit-phoenix = { workspace = true }
-aiqtoolkit-ragaai = { workspace = true }
+nvidia-nat-crewai = { workspace = true }
+nvidia-nat-langchain = { workspace = true }
+nvidia-nat-llama-index = { workspace = true }
+nvidia-nat-mem0ai = { workspace = true }
+nvidia-nat-mysql = { workspace = true }
+nvidia-nat-redis = { workspace = true }
+nvidia-nat-s3 = { workspace = true }
+nvidia-nat-semantic-kernel = { workspace = true }
+nvidia-nat-test = { workspace = true }
+nvidia-nat-zep-cloud = { workspace = true }
+nvidia-nat-agno = { workspace = true }
+nvidia-nat-weave = { workspace = true }
+nvidia-nat-opentelemetry = { workspace = true }
+nvidia-nat-phoenix = { workspace = true }
+nvidia-nat-ragaai = { workspace = true }
 
 # All examples here
 aiq_agno_personal_finance = { path = "examples/frameworks/agno_personal_finance", editable = true }
@@ -171,7 +171,7 @@ exclude = ["packages/compat"]
 [dependency-groups]
 # Dependency groups are only for developers to aid in managing dependencies local to a dev machine.
 dev = [
-  "aiqtoolkit_test",
+  "nvidia-nat_test",
   "asgi-lifespan~=2.1",
   "flake8-pyproject~=1.2",
   "flake8~=7.1",
@@ -211,7 +211,7 @@ aiq_agents = "aiq.agent.register"
 aiq_authentication = "aiq.authentication.register"
 aiq_embedders = "aiq.embedder.register"
 aiq_evaluators = "aiq.eval.register"
-aiq_inference_time_scaling = "aiq.experimental.inference_time_scaling.register"
+aiq_test_time_compute = "aiq.experimental.test_time_compute.register"
 aiq_llms = "aiq.llm.register"
 aiq_object_stores = "aiq.object_store.register"
 aiq_observability = "aiq.observability.register"
