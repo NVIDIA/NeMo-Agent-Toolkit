@@ -9,7 +9,7 @@ root = "../../../.."
 name = "aiq_retail_sales_agent"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain]~=1.2",
+  "nvidia-nat[langchain]~=1.2",
   "pandas==2.3.1",
   "llama-index-vector-stores-milvus",
   "jupyter~=1.1",
@@ -23,7 +23,7 @@ description = "Custom AIQ Toolkit Workflow"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../../..", editable = true }
+nvidia-nat = { path = "../../../..", editable = true }
 
 [project.entry-points.'aiq.components']
 retail_sales_agent = "aiq_retail_sales_agent.register"

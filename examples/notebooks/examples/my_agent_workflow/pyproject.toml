@@ -9,7 +9,7 @@ root = "../../../.."
 name = "aiq_my_agent_workflow"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain]~=1.2",
+  "nvidia-nat[langchain]~=1.2",
   "jupyter~=1.1",
   "jupyterlab~=4.3",
   "notebook~=7.3",
@@ -21,7 +21,7 @@ description = "Custom AIQ Toolkit Workflow"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../../..", editable = true }
+nvidia-nat = { path = "../../../..", editable = true }
 
 [project.entry-points.'aiq.components']
 my_agent_workflow = "aiq_my_agent_workflow.register"
