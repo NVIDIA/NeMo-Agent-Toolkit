@@ -15,8 +15,8 @@
 
 import logging
 
-from aiq.cli.register_workflow import register_registry_handler
-from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
+from nat.cli.register_workflow import register_registry_handler
+from nat.data_models.registry_handler import RegistryHandlerBaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class LocalRegistryHandlerConfig(RegistryHandlerBaseConfig, name="local"):
 @register_registry_handler(config_type=LocalRegistryHandlerConfig)
 async def local_registry_handler(config: LocalRegistryHandlerConfig):
 
-    from aiq.registry_handlers.local.local_handler import LocalRegistryHandler
+    from nat.registry_handlers.local.local_handler import LocalRegistryHandler
 
     registry_handler = LocalRegistryHandler()
 

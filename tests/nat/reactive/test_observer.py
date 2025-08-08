@@ -15,7 +15,7 @@
 
 import logging
 
-from aiq.utils.reactive.observer import Observer
+from nat.utils.reactive.observer import Observer
 
 logger = logging.getLogger(__name__)
 

@@ -17,8 +17,8 @@ import importlib
 import logging
 import os
 
-from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
-from aiq.runtime.loader import load_config
+from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
+from nat.runtime.loader import load_config
 
 logger = logging.getLogger(__name__)
 

@@ -15,9 +15,10 @@
 
 import logging
 
-from aiq.builder.context import ContextState
-from aiq.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
-from aiq.plugins.phoenix.mixin.phoenix_mixin import PhoenixMixin
+from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
+from nat.plugins.phoenix.mixin.phoenix_mixin import PhoenixMixin
+
+from nat.builder.context import ContextState
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class PhoenixOtelExporter(PhoenixMixin, OtelSpanExporter):  # pylint: disable=R0
     and analysis of AI agent behavior and performance.
 
     Features:
-    - Automatic span conversion from AIQ events
+    - Automatic span conversion from nat events
     - Phoenix-specific resource tagging
     - Project-based trace organization
 

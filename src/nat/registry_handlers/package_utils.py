@@ -22,12 +22,12 @@ from functools import lru_cache
 
 from packaging.requirements import Requirement
 
-from aiq.data_models.component import ComponentEnum
-from aiq.data_models.discovery_metadata import DiscoveryMetadata
-from aiq.registry_handlers.schemas.package import WheelData
-from aiq.registry_handlers.schemas.publish import Artifact
-from aiq.runtime.loader import PluginTypes
-from aiq.runtime.loader import discover_entrypoints
+from nat.data_models.component import ComponentEnum
+from nat.data_models.discovery_metadata import DiscoveryMetadata
+from nat.registry_handlers.schemas.package import WheelData
+from nat.registry_handlers.schemas.publish import Artifact
+from nat.runtime.loader import PluginTypes
+from nat.runtime.loader import discover_entrypoints
 
 # pylint: disable=redefined-outer-name
 logger = logging.getLogger(__name__)
@@ -512,9 +512,9 @@ def build_package_metadata(wheel_data: WheelData | None) -> dict[ComponentEnum, 
         metadata.
     """
 
-    from aiq.cli.type_registry import GlobalTypeRegistry
-    from aiq.registry_handlers.metadata_factory import ComponentDiscoveryMetadata
-    from aiq.runtime.loader import discover_and_register_plugins
+    from nat.cli.type_registry import GlobalTypeRegistry
+    from nat.registry_handlers.metadata_factory import ComponentDiscoveryMetadata
+    from nat.runtime.loader import discover_and_register_plugins
 
     discover_and_register_plugins(PluginTypes.ALL)
 
@@ -558,7 +558,7 @@ def build_aiq_artifact(package_root: str) -> Artifact:
         AIQArtifact: An publishabla AIQArtifact containing package wheel and discovery metadata.
     """
 
-    from aiq.registry_handlers.schemas.publish import BuiltArtifact
+    from nat.registry_handlers.schemas.publish import BuiltArtifact
 
     wheel_data = build_wheel(package_root=package_root)
     metadata = build_package_metadata(wheel_data=wheel_data)

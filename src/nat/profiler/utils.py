@@ -21,10 +21,10 @@ from typing import Any
 
 import pandas as pd
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.cli.type_registry import RegisteredFunctionInfo
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.profiler.data_frame_row import DataFrameRow
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.cli.type_registry import RegisteredFunctionInfo
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.profiler.data_frame_row import DataFrameRow
 
 # A simple set of regex patterns to scan for direct references to LLMFrameworkEnum
 _FRAMEWORK_REGEX_MAP = {t: fr'\b{t._name_}\b' for t in LLMFrameworkEnum}

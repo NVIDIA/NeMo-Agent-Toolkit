@@ -24,8 +24,8 @@ from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import SecretStr
 
-from aiq.data_models.common import BaseModelRegistryTag
-from aiq.data_models.common import TypedBaseModel
+from nat.data_models.common import BaseModelRegistryTag
+from nat.data_models.common import TypedBaseModel
 
 
 class AuthProviderBaseConfig(TypedBaseModel, BaseModelRegistryTag):

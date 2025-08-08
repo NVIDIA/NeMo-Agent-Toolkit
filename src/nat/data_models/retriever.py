@@ -15,8 +15,8 @@
 
 import typing
 
-from aiq.data_models.common import BaseModelRegistryTag
-from aiq.data_models.common import TypedBaseModel
+from nat.data_models.common import BaseModelRegistryTag
+from nat.data_models.common import TypedBaseModel
 
 
 class RetrieverBaseConfig(TypedBaseModel, BaseModelRegistryTag):

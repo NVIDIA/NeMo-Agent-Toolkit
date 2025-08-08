@@ -15,13 +15,13 @@
 
 from collections.abc import AsyncIterator
 
-from aiq.cli.register_workflow import register_front_end
-from aiq.data_models.config import Config
-from aiq.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
+from nat.cli.register_workflow import register_front_end
+from nat.data_models.config import Config
+from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 
 
 @register_front_end(config_type=MCPFrontEndConfig)
 async def register_mcp_front_end(config: MCPFrontEndConfig, full_config: Config) -> AsyncIterator:
-    from aiq.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
+    from nat.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
 
     yield MCPFrontEndPlugin(full_config=full_config)

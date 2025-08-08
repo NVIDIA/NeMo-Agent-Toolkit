@@ -18,8 +18,8 @@ import typing
 import pytest
 
 if typing.TYPE_CHECKING:
-    from aiq.eval.evaluator.evaluator_model import EvalInput
-    from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
+    from nat.eval.evaluator.evaluator_model import EvalInput
+    from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
 
 
 @pytest.fixture(name="rag_expected_outputs")
@@ -30,7 +30,7 @@ def rag_expected_outputs_fixture() -> list[str]:
 
 @pytest.fixture(name="intermediate_step_adapter")
 def intermediate_step_adapter_fixture() -> "IntermediateStepAdapter":
-    from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
+    from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
     return IntermediateStepAdapter()
 
 
@@ -38,8 +38,8 @@ def intermediate_step_adapter_fixture() -> "IntermediateStepAdapter":
 def rag_eval_input(rag_user_inputs, rag_expected_outputs, rag_generated_outputs, rag_intermediate_steps) -> "EvalInput":
     """Fixture to create a mock EvalInput with multiple items."""
 
-    from aiq.eval.evaluator.evaluator_model import EvalInput
-    from aiq.eval.evaluator.evaluator_model import EvalInputItem
+    from nat.eval.evaluator.evaluator_model import EvalInput
+    from nat.eval.evaluator.evaluator_model import EvalInputItem
 
     # Unpack intermediate steps
     steps_1, steps_2 = rag_intermediate_steps

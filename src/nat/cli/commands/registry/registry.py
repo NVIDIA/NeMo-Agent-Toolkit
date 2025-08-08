@@ -17,10 +17,10 @@ import logging
 
 import click
 
-from aiq.cli.commands.registry.publish import publish
-from aiq.cli.commands.registry.pull import pull
-from aiq.cli.commands.registry.remove import remove
-from aiq.cli.commands.registry.search import search
+from nat.cli.commands.registry.publish import publish
+from nat.cli.commands.registry.pull import pull
+from nat.cli.commands.registry.remove import remove
+from nat.cli.commands.registry.search import search
 
 logger = logging.getLogger(__name__)
 

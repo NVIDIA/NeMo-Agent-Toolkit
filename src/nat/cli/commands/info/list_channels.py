@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 @click.group(name=__name__, invoke_without_command=True, help="List the configured remote registry channels.")
 @click.option("-t", "--type", "channel_type", type=str, required=False, help=("Filter the results by channel type."))
 def list_channels(channel_type: str):
-    from aiq.settings.global_settings import GlobalSettings
+    from nat.settings.global_settings import GlobalSettings
 
     settings = GlobalSettings().get()
     try:

@@ -25,6 +25,6 @@ logger = logging.getLogger(__name__)
              help="Utility to update an AIQ Toolkit remote registry channel's settings.")
 @click.argument("channel", type=str)
 def update(channel):
-    from aiq.utils.settings.global_settings import update_channel_interactive
+    from nat.utils.settings.global_settings import update_channel_interactive
 
     update_channel_interactive(channel_name=channel)

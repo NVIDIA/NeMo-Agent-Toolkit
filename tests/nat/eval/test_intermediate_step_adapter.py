@@ -15,13 +15,13 @@
 
 import pytest
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.intermediate_step import StreamEventData
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.invocation_node import InvocationNode
+from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
 
 # pylint: disable=redefined-outer-name
 

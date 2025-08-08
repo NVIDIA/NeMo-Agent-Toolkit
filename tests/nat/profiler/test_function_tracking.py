@@ -16,10 +16,10 @@ import asyncio
 
 from pydantic import BaseModel
 
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.profiler.decorators.function_tracking import track_function
-from aiq.utils.reactive.subject import Subject
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.profiler.decorators.function_tracking import track_function
+from nat.utils.reactive.subject import Subject
 
 
 async def test_sync_function_no_metadata(reactive_stream: Subject):

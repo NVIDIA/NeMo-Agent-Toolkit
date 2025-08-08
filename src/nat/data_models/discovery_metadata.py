@@ -27,13 +27,13 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel
 from pydantic import field_validator
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.component import ComponentEnum
-from aiq.utils.metadata_utils import generate_config_type_docs
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.component import ComponentEnum
+from nat.utils.metadata_utils import generate_config_type_docs
 
 if TYPE_CHECKING:
-    from aiq.cli.type_registry import ToolWrapperBuildCallableT
-    from aiq.data_models.common import TypedBaseModelT
+    from nat.cli.type_registry import ToolWrapperBuildCallableT
+    from nat.data_models.common import TypedBaseModelT
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +127,7 @@ class DiscoveryMetadata(BaseModel):
         Returns:
             str: The distribution name of the AIQ Toolkit component.
         """
-        from aiq.runtime.loader import get_all_aiq_entrypoints_distro_mapping
+        from nat.runtime.loader import get_all_aiq_entrypoints_distro_mapping
 
         if module is None:
             return "aiqtoolkit"

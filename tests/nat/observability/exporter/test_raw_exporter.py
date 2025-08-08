@@ -22,14 +22,14 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.builder.context import ContextState
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.observability.exporter.raw_exporter import RawExporter
-from aiq.observability.processor.processor import Processor
-from aiq.utils.reactive.subject import Subject
+from nat.builder.context import ContextState
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.invocation_node import InvocationNode
+from nat.observability.exporter.raw_exporter import RawExporter
+from nat.observability.processor.processor import Processor
+from nat.utils.reactive.subject import Subject
 
 
 class MockProcessor(Processor[IntermediateStep, str]):

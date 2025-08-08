@@ -25,10 +25,10 @@ from typing import List
 
 from agno.tools import tool
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.function import Function
-from aiq.cli.register_workflow import register_tool_wrapper
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function import Function
+from nat.cli.register_workflow import register_tool_wrapper
 
 logger = logging.getLogger(__name__)
 

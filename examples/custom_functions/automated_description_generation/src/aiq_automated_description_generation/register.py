@@ -17,16 +17,16 @@ import logging
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.function import Function
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.component_ref import FunctionRef
-from aiq.data_models.component_ref import LLMRef
-from aiq.data_models.component_ref import RetrieverRef
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.retriever.models import RetrieverOutput
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function import Function
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import FunctionRef
+from nat.data_models.component_ref import LLMRef
+from nat.data_models.component_ref import RetrieverRef
+from nat.data_models.function import FunctionBaseConfig
+from nat.retriever.models import RetrieverOutput
 
 logger = logging.getLogger(__name__)
 
@@ -52,11 +52,11 @@ class AutomatedDescriptionMilvusWorkflow(FunctionBaseConfig, name="automated_des
 
 @register_function(config_type=AutomatedDescriptionMilvusWorkflow, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def automated_description_milvus_workflow(workflow_config: AutomatedDescriptionMilvusWorkflow, builder: Builder):
-    from aiq_automated_description_generation.utils.description_generation import generate_description
-    from aiq_automated_description_generation.utils.prompts import direct_summary_prompt
-    from aiq_automated_description_generation.utils.prompts import map_prompt
-    from aiq_automated_description_generation.utils.prompts import reduce_prompt
-    from aiq_automated_description_generation.utils.workflow_utils import SummarizationWorkflow
+    from nat_automated_description_generation.utils.description_generation import generate_description
+    from nat_automated_description_generation.utils.prompts import direct_summary_prompt
+    from nat_automated_description_generation.utils.prompts import map_prompt
+    from nat_automated_description_generation.utils.prompts import reduce_prompt
+    from nat_automated_description_generation.utils.workflow_utils import SummarizationWorkflow
 
     logger.info("Building necessary components for the Automated Description Generation Workflow")
     llm_n = await builder.get_llm(llm_name=workflow_config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

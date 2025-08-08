@@ -17,11 +17,11 @@ from pydantic import AliasChoices
 from pydantic import ConfigDict
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.builder.llm import LLMProviderInfo
-from aiq.cli.register_workflow import register_llm_provider
-from aiq.data_models.llm import LLMBaseConfig
-from aiq.data_models.retry_mixin import RetryMixin
+from nat.builder.builder import Builder
+from nat.builder.llm import LLMProviderInfo
+from nat.cli.register_workflow import register_llm_provider
+from nat.data_models.llm import LLMBaseConfig
+from nat.data_models.retry_mixin import RetryMixin
 
 
 class AWSBedrockModelConfig(LLMBaseConfig, RetryMixin, name="aws_bedrock"):

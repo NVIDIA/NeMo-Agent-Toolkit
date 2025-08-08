@@ -19,7 +19,7 @@ import asyncio
 import logging
 import time
 
-from aiq.observability.processor.batching_processor import BatchingProcessor
+from nat.observability.processor.batching_processor import BatchingProcessor
 
 
 class TestBatchingProcessorInitialization:

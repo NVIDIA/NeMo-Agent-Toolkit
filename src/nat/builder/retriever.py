@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.data_models.retriever import RetrieverBaseConfig
+from nat.data_models.retriever import RetrieverBaseConfig
 
 
 class RetrieverProviderInfo:

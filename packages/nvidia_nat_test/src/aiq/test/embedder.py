@@ -15,12 +15,12 @@
 
 from pydantic import ConfigDict
 
-from aiq.builder.builder import Builder
-from aiq.builder.embedder import EmbedderProviderInfo
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.cli.register_workflow import register_embedder_client
-from aiq.cli.register_workflow import register_embedder_provider
-from aiq.data_models.embedder import EmbedderBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.embedder import EmbedderProviderInfo
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.cli.register_workflow import register_embedder_client
+from nat.cli.register_workflow import register_embedder_provider
+from nat.data_models.embedder import EmbedderBaseConfig
 
 
 class EmbedderTestConfig(EmbedderBaseConfig, name="test_embedder"):

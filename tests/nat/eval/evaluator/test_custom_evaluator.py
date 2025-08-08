@@ -15,10 +15,10 @@
 
 import pytest
 
-from aiq.eval.evaluator.base_evaluator import BaseEvaluator
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
-from aiq.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.eval.evaluator.base_evaluator import BaseEvaluator
+from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.eval.evaluator.evaluator_model import EvalOutputItem
 
 
 class MockSimilarityEvaluator(BaseEvaluator):

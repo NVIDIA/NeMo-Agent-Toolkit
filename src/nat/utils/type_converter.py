@@ -19,7 +19,7 @@ from collections import OrderedDict
 from collections.abc import Callable
 from io import TextIOWrapper
 
-from aiq.utils.type_utils import DecomposedType
+from nat.utils.type_utils import DecomposedType
 
 logger = logging.getLogger(__name__)
 

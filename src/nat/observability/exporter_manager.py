@@ -17,8 +17,8 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from aiq.builder.context import ContextState
-from aiq.observability.exporter.base_exporter import BaseExporter
+from nat.builder.context import ContextState
+from nat.observability.exporter.base_exporter import BaseExporter
 
 logger = logging.getLogger(__name__)
 

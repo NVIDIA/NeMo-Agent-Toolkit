@@ -20,11 +20,11 @@ from pathlib import Path
 
 import click
 
-from aiq.data_models.component import ComponentEnum
-from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
-from aiq.registry_handlers.schemas.search import SearchFields
-from aiq.registry_handlers.schemas.status import StatusEnum
-from aiq.utils.data_models.schema_validator import validate_yaml
+from nat.data_models.component import ComponentEnum
+from nat.data_models.registry_handler import RegistryHandlerBaseConfig
+from nat.registry_handlers.schemas.search import SearchFields
+from nat.registry_handlers.schemas.status import StatusEnum
+from nat.utils.data_models.schema_validator import validate_yaml
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,8 @@ async def search_artifacts(  # pylint: disable=R0917
         save_path: str | None = None,
         n_results: int = 10) -> None:
 
-    from aiq.cli.type_registry import GlobalTypeRegistry
-    from aiq.registry_handlers.schemas.search import SearchQuery
+    from nat.cli.type_registry import GlobalTypeRegistry
+    from nat.registry_handlers.schemas.search import SearchQuery
 
     registry = GlobalTypeRegistry.get()
 
@@ -128,7 +128,7 @@ def search(  # pylint: disable=R0917
     Search for AIQ Toolkit artifacts with the specified configuration.
     """
 
-    from aiq.settings.global_settings import GlobalSettings
+    from nat.settings.global_settings import GlobalSettings
 
     settings = GlobalSettings().get()
 

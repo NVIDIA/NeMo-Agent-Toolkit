@@ -17,7 +17,7 @@ import logging
 from collections.abc import Callable
 from typing import TypeVar
 
-from aiq.utils.reactive.base.observer_base import ObserverBase
+from nat.utils.reactive.base.observer_base import ObserverBase
 
 logger = logging.getLogger(__name__)
 

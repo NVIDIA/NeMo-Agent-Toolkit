@@ -15,12 +15,12 @@
 
 import logging
 
-from aiq_swe_bench.config import SweBenchWorkflowConfig
-from aiq_swe_bench.predictors.predict_abc import SweBenchPredictorBase
-from aiq_swe_bench.predictors.predictor_registry import register_predictor
+from nat_swe_bench.config import SweBenchWorkflowConfig
+from nat_swe_bench.predictors.predict_abc import SweBenchPredictorBase
+from nat_swe_bench.predictors.predictor_registry import register_predictor
 
-from aiq.builder.builder import Builder
-from aiq.data_models.swe_bench_model import SWEBenchInput
+from nat.builder.builder import Builder
+from nat.data_models.swe_bench_model import SWEBenchInput
 
 logger = logging.getLogger(__name__)
 

@@ -15,10 +15,10 @@
 
 from pydantic import Field
 
-from aiq.builder.builder import EvalBuilder
-from aiq.builder.evaluator import EvaluatorInfo
-from aiq.cli.register_workflow import register_evaluator
-from aiq.data_models.evaluator import EvaluatorBaseConfig
+from nat.builder.builder import EvalBuilder
+from nat.builder.evaluator import EvaluatorInfo
+from nat.cli.register_workflow import register_evaluator
+from nat.data_models.evaluator import EvaluatorBaseConfig
 
 
 class TrajectoryEvaluatorConfig(EvaluatorBaseConfig, name="trajectory"):
@@ -29,7 +29,7 @@ class TrajectoryEvaluatorConfig(EvaluatorBaseConfig, name="trajectory"):
 
 @register_evaluator(config_type=TrajectoryEvaluatorConfig)
 async def register_trajectory_evaluator(config: TrajectoryEvaluatorConfig, builder: EvalBuilder):
-    from aiq.builder.framework_enum import LLMFrameworkEnum
+    from nat.builder.framework_enum import LLMFrameworkEnum
 
     from .evaluate import TrajectoryEvaluator
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

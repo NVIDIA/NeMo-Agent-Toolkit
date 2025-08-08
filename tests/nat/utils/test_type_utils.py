@@ -20,7 +20,7 @@ from typing import TypeVar
 
 import pytest
 
-from aiq.utils.type_utils import DecomposedType
+from nat.utils.type_utils import DecomposedType
 
 T = TypeVar('T')
 U = TypeVar('U')

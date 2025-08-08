@@ -17,16 +17,16 @@ import logging
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.api_server import ChatRequest
-from aiq.data_models.api_server import ChatResponse
-from aiq.data_models.component_ref import FunctionRef
-from aiq.data_models.component_ref import LLMRef
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.utils.type_converter import GlobalTypeConverter
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import ChatResponse
+from nat.data_models.component_ref import FunctionRef
+from nat.data_models.component_ref import LLMRef
+from nat.data_models.function import FunctionBaseConfig
+from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +66,8 @@ async def ReWOO_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
     from langchain_core.prompts import ChatPromptTemplate
     from langgraph.graph.graph import CompiledGraph
 
-    from aiq.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
-    from aiq.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
+    from nat.agent.rewoo_agent.prompt import PLANNER_USER_PROMPT
+    from nat.agent.rewoo_agent.prompt import SOLVER_USER_PROMPT
 
     from .agent import ReWOOAgentGraph
     from .agent import ReWOOGraphState

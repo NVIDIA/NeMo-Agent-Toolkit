@@ -17,10 +17,10 @@ import re
 
 import numpy as np
 
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.profiler.inference_optimization.data_models import LLMUniquenessMetrics
-from aiq.profiler.inference_optimization.data_models import LLMUniquenessMetricsByLLM
-from aiq.profiler.utils import create_standardized_dataframe
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.profiler.inference_optimization.data_models import LLMUniquenessMetrics
+from nat.profiler.inference_optimization.data_models import LLMUniquenessMetricsByLLM
+from nat.profiler.utils import create_standardized_dataframe
 
 
 # ----------------------------------------------------------------

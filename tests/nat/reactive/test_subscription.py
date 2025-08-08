@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.utils.reactive.observer import Observer
-from aiq.utils.reactive.subscription import Subscription
+from nat.utils.reactive.observer import Observer
+from nat.utils.reactive.subscription import Subscription
 
 
 class MockSubjectBase:

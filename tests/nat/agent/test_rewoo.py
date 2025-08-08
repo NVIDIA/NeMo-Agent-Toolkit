@@ -21,14 +21,14 @@ from langchain_core.messages.human import HumanMessage
 from langchain_core.messages.tool import ToolMessage
 from langgraph.graph.graph import CompiledGraph
 
-from aiq.agent.base import AgentDecision
-from aiq.agent.rewoo_agent.agent import NO_INPUT_ERROR_MESSAGE
-from aiq.agent.rewoo_agent.agent import TOOL_NOT_FOUND_ERROR_MESSAGE
-from aiq.agent.rewoo_agent.agent import ReWOOAgentGraph
-from aiq.agent.rewoo_agent.agent import ReWOOGraphState
-from aiq.agent.rewoo_agent.prompt import rewoo_planner_prompt
-from aiq.agent.rewoo_agent.prompt import rewoo_solver_prompt
-from aiq.agent.rewoo_agent.register import ReWOOAgentWorkflowConfig
+from nat.agent.base import AgentDecision
+from nat.agent.rewoo_agent.agent import NO_INPUT_ERROR_MESSAGE
+from nat.agent.rewoo_agent.agent import TOOL_NOT_FOUND_ERROR_MESSAGE
+from nat.agent.rewoo_agent.agent import ReWOOAgentGraph
+from nat.agent.rewoo_agent.agent import ReWOOGraphState
+from nat.agent.rewoo_agent.prompt import rewoo_planner_prompt
+from nat.agent.rewoo_agent.prompt import rewoo_solver_prompt
+from nat.agent.rewoo_agent.register import ReWOOAgentWorkflowConfig
 
 
 async def test_state_schema():
@@ -145,7 +145,7 @@ async def test_executor_node_with_not_configured_tool(mock_rewoo_agent):
 
 
 async def test_executor_node_parse_input(mock_rewoo_agent):
-    from aiq.agent.base import AGENT_LOG_PREFIX
+    from nat.agent.base import AGENT_LOG_PREFIX
     with patch('aiq.agent.rewoo_agent.agent.logger.debug') as mock_logger_debug:
         # Test with dict as tool input
         mock_state = ReWOOGraphState(

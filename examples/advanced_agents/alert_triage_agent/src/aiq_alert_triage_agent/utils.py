@@ -21,7 +21,7 @@ import os
 import ansible_runner
 import pandas as pd
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.framework_enum import LLMFrameworkEnum
 
 logger = logging.getLogger("aiq_alert_triage_agent")
 

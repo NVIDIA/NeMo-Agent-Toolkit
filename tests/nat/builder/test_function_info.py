@@ -23,8 +23,8 @@ import pytest
 from pydantic import BaseModel
 from pydantic import Field
 
-from aiq.builder.function_info import FunctionDescriptor
-from aiq.builder.function_info import FunctionInfo
+from nat.builder.function_info import FunctionDescriptor
+from nat.builder.function_info import FunctionInfo
 
 
 def _compare_dicts_partial(test_dict: dict, valid_dict: dict):

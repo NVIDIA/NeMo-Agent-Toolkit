@@ -17,12 +17,12 @@ import pytest
 from langchain_core.embeddings import Embeddings
 from pytest_httpserver import HTTPServer
 
-from aiq.retriever.milvus.retriever import CollectionNotFoundError
-from aiq.retriever.milvus.retriever import MilvusRetriever
-from aiq.retriever.models import Document
-from aiq.retriever.models import RetrieverOutput
-from aiq.retriever.nemo_retriever.retriever import CollectionUnavailableError
-from aiq.retriever.nemo_retriever.retriever import NemoRetriever
+from nat.retriever.milvus.retriever import CollectionNotFoundError
+from nat.retriever.milvus.retriever import MilvusRetriever
+from nat.retriever.models import Document
+from nat.retriever.models import RetrieverOutput
+from nat.retriever.nemo_retriever.retriever import CollectionUnavailableError
+from nat.retriever.nemo_retriever.retriever import NemoRetriever
 
 
 class CustomMilvusClient:

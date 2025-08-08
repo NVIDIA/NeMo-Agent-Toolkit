@@ -23,38 +23,38 @@ from typing import Literal
 from pydantic import BaseModel
 from pydantic import ValidationError
 
-from aiq.data_models.api_server import ChatResponse
-from aiq.data_models.api_server import ChatResponseChunk
-from aiq.data_models.api_server import Error
-from aiq.data_models.api_server import ErrorTypes
-from aiq.data_models.api_server import ResponseIntermediateStep
-from aiq.data_models.api_server import ResponsePayloadOutput
-from aiq.data_models.api_server import SystemIntermediateStepContent
-from aiq.data_models.api_server import SystemResponseContent
-from aiq.data_models.api_server import TextContent
-from aiq.data_models.api_server import WebSocketMessageStatus
-from aiq.data_models.api_server import WebSocketMessageType
-from aiq.data_models.api_server import WebSocketSystemInteractionMessage
-from aiq.data_models.api_server import WebSocketSystemIntermediateStepMessage
-from aiq.data_models.api_server import WebSocketSystemResponseTokenMessage
-from aiq.data_models.api_server import WebSocketUserInteractionResponseMessage
-from aiq.data_models.api_server import WebSocketUserMessage
-from aiq.data_models.api_server import WorkflowSchemaType
-from aiq.data_models.interactive import BinaryHumanPromptOption
-from aiq.data_models.interactive import HumanPrompt
-from aiq.data_models.interactive import HumanPromptBase
-from aiq.data_models.interactive import HumanPromptBinary
-from aiq.data_models.interactive import HumanPromptCheckbox
-from aiq.data_models.interactive import HumanPromptDropdown
-from aiq.data_models.interactive import HumanPromptRadio
-from aiq.data_models.interactive import HumanPromptText
-from aiq.data_models.interactive import HumanResponse
-from aiq.data_models.interactive import HumanResponseBinary
-from aiq.data_models.interactive import HumanResponseCheckbox
-from aiq.data_models.interactive import HumanResponseDropdown
-from aiq.data_models.interactive import HumanResponseRadio
-from aiq.data_models.interactive import HumanResponseText
-from aiq.data_models.interactive import MultipleChoiceOption
+from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import ChatResponseChunk
+from nat.data_models.api_server import Error
+from nat.data_models.api_server import ErrorTypes
+from nat.data_models.api_server import ResponseIntermediateStep
+from nat.data_models.api_server import ResponsePayloadOutput
+from nat.data_models.api_server import SystemIntermediateStepContent
+from nat.data_models.api_server import SystemResponseContent
+from nat.data_models.api_server import TextContent
+from nat.data_models.api_server import WebSocketMessageStatus
+from nat.data_models.api_server import WebSocketMessageType
+from nat.data_models.api_server import WebSocketSystemInteractionMessage
+from nat.data_models.api_server import WebSocketSystemIntermediateStepMessage
+from nat.data_models.api_server import WebSocketSystemResponseTokenMessage
+from nat.data_models.api_server import WebSocketUserInteractionResponseMessage
+from nat.data_models.api_server import WebSocketUserMessage
+from nat.data_models.api_server import WorkflowSchemaType
+from nat.data_models.interactive import BinaryHumanPromptOption
+from nat.data_models.interactive import HumanPrompt
+from nat.data_models.interactive import HumanPromptBase
+from nat.data_models.interactive import HumanPromptBinary
+from nat.data_models.interactive import HumanPromptCheckbox
+from nat.data_models.interactive import HumanPromptDropdown
+from nat.data_models.interactive import HumanPromptRadio
+from nat.data_models.interactive import HumanPromptText
+from nat.data_models.interactive import HumanResponse
+from nat.data_models.interactive import HumanResponseBinary
+from nat.data_models.interactive import HumanResponseCheckbox
+from nat.data_models.interactive import HumanResponseDropdown
+from nat.data_models.interactive import HumanResponseRadio
+from nat.data_models.interactive import HumanResponseText
+from nat.data_models.interactive import MultipleChoiceOption
 
 logger = logging.getLogger(__name__)
 
@@ -227,7 +227,7 @@ class MessageValidator:
 
     async def get_intermediate_step_parent_id(self, data_model: ResponseIntermediateStep) -> str:
         """
-        Retrieves intermediate step parent_id from AIQResponseIntermediateStep instance.
+        Retrieves intermediate step parent_id from natResponseIntermediateStep instance.
 
         :param data_model: AIQResponseIntermediateStep Data Model instance.
         :return: Intermediate step parent_id or "default".

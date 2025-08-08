@@ -17,8 +17,8 @@ import asyncio
 
 from mem0 import AsyncMemoryClient
 
-from aiq.memory.interfaces import MemoryEditor
-from aiq.memory.models import MemoryItem
+from nat.memory.interfaces import MemoryEditor
+from nat.memory.models import MemoryItem
 
 
 class Mem0Editor(MemoryEditor):

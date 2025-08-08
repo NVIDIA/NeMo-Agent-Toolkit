@@ -15,10 +15,10 @@
 
 from pydantic import Field
 
-from aiq.builder.builder import EvalBuilder
-from aiq.builder.evaluator import EvaluatorInfo
-from aiq.cli.register_workflow import register_evaluator
-from aiq.data_models.evaluator import EvaluatorBaseConfig
+from nat.builder.builder import EvalBuilder
+from nat.builder.evaluator import EvaluatorInfo
+from nat.cli.register_workflow import register_evaluator
+from nat.data_models.evaluator import EvaluatorBaseConfig
 
 
 class SweBenchEvaluatorConfig(EvaluatorBaseConfig, name="swe_bench"):

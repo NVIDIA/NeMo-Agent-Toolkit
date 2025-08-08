@@ -17,11 +17,11 @@
 
 import logging
 
-from aiq.profiler.forecasting.config import DEFAULT_MODEL_TYPE
-from aiq.profiler.forecasting.models import ForecastingBaseModel
-from aiq.profiler.forecasting.models import LinearModel
-from aiq.profiler.forecasting.models import RandomForestModel
-from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+from nat.profiler.forecasting.config import DEFAULT_MODEL_TYPE
+from nat.profiler.forecasting.models import ForecastingBaseModel
+from nat.profiler.forecasting.models import LinearModel
+from nat.profiler.forecasting.models import RandomForestModel
+from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 logger = logging.getLogger(__name__)
 

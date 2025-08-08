@@ -26,10 +26,10 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
 
-from aiq.retriever.interface import Retriever
-from aiq.retriever.models import Document
-from aiq.retriever.models import RetrieverError
-from aiq.retriever.models import RetrieverOutput
+from nat.retriever.interface import Retriever
+from nat.retriever.models import Document
+from nat.retriever.models import RetrieverError
+from nat.retriever.models import RetrieverOutput
 
 logger = logging.getLogger(__name__)
 

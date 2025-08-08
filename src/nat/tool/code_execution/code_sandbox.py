@@ -23,7 +23,7 @@ import requests
 import requests.adapters
 from pydantic import HttpUrl
 
-from aiq.utils.type_utils import override
+from nat.utils.type_utils import override
 
 logger = logging.getLogger(__file__)
 

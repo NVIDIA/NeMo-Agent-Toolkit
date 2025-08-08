@@ -17,7 +17,7 @@ import json
 from unittest.mock import patch
 
 import pytest
-from aiq_alert_triage_agent import run
+from nat_alert_triage_agent import run
 
 
 @pytest.fixture

@@ -17,16 +17,16 @@ import asyncio
 import logging
 import re
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.cli.register_workflow import register_ttc_strategy
-from aiq.data_models.ttc_strategy import TTCStrategyBaseConfig
-from aiq.experimental.test_time_compute.models.editor_config import IterativePlanRefinementConfig
-from aiq.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
-from aiq.experimental.test_time_compute.models.stage_enums import StageTypeEnum
-from aiq.experimental.test_time_compute.models.strategy_base import StrategyBase
-from aiq.experimental.test_time_compute.models.ttc_item import TTCItem
-from aiq.utils.io.model_processing import remove_r1_think_tags
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.cli.register_workflow import register_ttc_strategy
+from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.experimental.test_time_compute.models.editor_config import IterativePlanRefinementConfig
+from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
+from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
+from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+from nat.experimental.test_time_compute.models.ttc_item import TTCItem
+from nat.utils.io.model_processing import remove_r1_think_tags
 
 logger = logging.getLogger(__name__)
 

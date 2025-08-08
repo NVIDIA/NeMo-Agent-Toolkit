@@ -15,12 +15,12 @@
 
 import asyncio
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_object_store
-from aiq.data_models.object_store import KeyAlreadyExistsError
-from aiq.data_models.object_store import NoSuchKeyError
-from aiq.data_models.object_store import ObjectStoreBaseConfig
-from aiq.utils.type_utils import override
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_object_store
+from nat.data_models.object_store import KeyAlreadyExistsError
+from nat.data_models.object_store import NoSuchKeyError
+from nat.data_models.object_store import ObjectStoreBaseConfig
+from nat.utils.type_utils import override
 
 from .interfaces import ObjectStore
 from .models import ObjectStoreItem

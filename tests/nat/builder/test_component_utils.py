@@ -24,42 +24,42 @@ else:
 
 import networkx as nx
 import pytest
+from nat.test.memory import DummyMemoryConfig
 from pydantic import BaseModel
 
-from aiq.builder.builder import Builder
-from aiq.builder.component_utils import ComponentInstanceData
-from aiq.builder.component_utils import _component_group_order
-from aiq.builder.component_utils import build_dependency_sequence
-from aiq.builder.component_utils import config_to_dependency_objects
-from aiq.builder.component_utils import group_from_component
-from aiq.builder.component_utils import iterate_leaf_to_root
-from aiq.builder.component_utils import recursive_componentref_discovery
-from aiq.builder.component_utils import update_dependency_graph
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.component import ComponentGroup
-from aiq.data_models.component_ref import ComponentRefNode
-from aiq.data_models.component_ref import EmbedderRef
-from aiq.data_models.component_ref import FunctionRef
-from aiq.data_models.component_ref import LLMRef
-from aiq.data_models.component_ref import MemoryRef
-from aiq.data_models.component_ref import ObjectStoreRef
-from aiq.data_models.component_ref import RetrieverRef
-from aiq.data_models.component_ref import generate_instance_id
-from aiq.data_models.config import Config
-from aiq.data_models.embedder import EmbedderBaseConfig
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.data_models.llm import LLMBaseConfig
-from aiq.data_models.memory import MemoryBaseConfig
-from aiq.data_models.object_store import ObjectStoreBaseConfig
-from aiq.data_models.retriever import RetrieverBaseConfig
-from aiq.embedder.nim_embedder import NIMEmbedderModelConfig
-from aiq.llm.nim_llm import NIMModelConfig
-from aiq.object_store.in_memory_object_store import InMemoryObjectStoreConfig
-from aiq.retriever.nemo_retriever.register import NemoRetrieverConfig
-from aiq.runtime.session import SessionManager
-from aiq.test.memory import DummyMemoryConfig
+from nat.builder.builder import Builder
+from nat.builder.component_utils import ComponentInstanceData
+from nat.builder.component_utils import _component_group_order
+from nat.builder.component_utils import build_dependency_sequence
+from nat.builder.component_utils import config_to_dependency_objects
+from nat.builder.component_utils import group_from_component
+from nat.builder.component_utils import iterate_leaf_to_root
+from nat.builder.component_utils import recursive_componentref_discovery
+from nat.builder.component_utils import update_dependency_graph
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.cli.register_workflow import register_function
+from nat.data_models.component import ComponentGroup
+from nat.data_models.component_ref import ComponentRefNode
+from nat.data_models.component_ref import EmbedderRef
+from nat.data_models.component_ref import FunctionRef
+from nat.data_models.component_ref import LLMRef
+from nat.data_models.component_ref import MemoryRef
+from nat.data_models.component_ref import ObjectStoreRef
+from nat.data_models.component_ref import RetrieverRef
+from nat.data_models.component_ref import generate_instance_id
+from nat.data_models.config import Config
+from nat.data_models.embedder import EmbedderBaseConfig
+from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.llm import LLMBaseConfig
+from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.object_store import ObjectStoreBaseConfig
+from nat.data_models.retriever import RetrieverBaseConfig
+from nat.embedder.nim_embedder import NIMEmbedderModelConfig
+from nat.llm.nim_llm import NIMModelConfig
+from nat.object_store.in_memory_object_store import InMemoryObjectStoreConfig
+from nat.retriever.nemo_retriever.register import NemoRetrieverConfig
+from nat.runtime.session import SessionManager
 
 
 @pytest.fixture(name="nested_aiq_config", scope="function")

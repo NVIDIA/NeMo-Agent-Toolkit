@@ -15,15 +15,15 @@
 
 import pytest
 
-from aiq.builder.context import ContextState
-from aiq.builder.user_interaction_manager import UserInteractionManager
-from aiq.data_models.api_server import TextContent
-from aiq.data_models.interactive import BinaryHumanPromptOption
-from aiq.data_models.interactive import HumanPromptBinary
-from aiq.data_models.interactive import HumanPromptModelType
-from aiq.data_models.interactive import HumanPromptText
-from aiq.data_models.interactive import HumanResponseText
-from aiq.data_models.interactive import InteractionPrompt
+from nat.builder.context import ContextState
+from nat.builder.user_interaction_manager import UserInteractionManager
+from nat.data_models.api_server import TextContent
+from nat.data_models.interactive import BinaryHumanPromptOption
+from nat.data_models.interactive import HumanPromptBinary
+from nat.data_models.interactive import HumanPromptModelType
+from nat.data_models.interactive import HumanPromptText
+from nat.data_models.interactive import HumanResponseText
+from nat.data_models.interactive import InteractionPrompt
 
 # ------------------------------------------------------------------------------
 # Tests for Interactive Data Models

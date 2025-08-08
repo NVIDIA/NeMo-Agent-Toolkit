@@ -22,23 +22,23 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from aiq.eval.config import EvaluationRunConfig
-from aiq.eval.runners.config import MultiEvaluationRunConfig
-from aiq.eval.runners.multi_eval_runner import MultiEvaluationRunner
-from aiq.profiler.calc.calculations import LinearFitResult
-from aiq.profiler.calc.calculations import calc_gpu_estimate_based_on_slope
-from aiq.profiler.calc.calculations import calc_gpu_estimate_for_single_concurrency
-from aiq.profiler.calc.calculations import compute_slope
-from aiq.profiler.calc.data_models import CalcAlerts
-from aiq.profiler.calc.data_models import CalcData
-from aiq.profiler.calc.data_models import CalcRunnerConfig
-from aiq.profiler.calc.data_models import CalcRunnerOutput
-from aiq.profiler.calc.data_models import FitConfig
-from aiq.profiler.calc.data_models import FitResults
-from aiq.profiler.calc.data_models import GPUEstimates
-from aiq.profiler.calc.data_models import SizingMetricPerItem
-from aiq.profiler.calc.data_models import SizingMetrics
-from aiq.profiler.calc.data_models import SizingMetricsAlerts
+from nat.eval.config import EvaluationRunConfig
+from nat.eval.runners.config import MultiEvaluationRunConfig
+from nat.eval.runners.multi_eval_runner import MultiEvaluationRunner
+from nat.profiler.calc.calculations import LinearFitResult
+from nat.profiler.calc.calculations import calc_gpu_estimate_based_on_slope
+from nat.profiler.calc.calculations import calc_gpu_estimate_for_single_concurrency
+from nat.profiler.calc.calculations import compute_slope
+from nat.profiler.calc.data_models import CalcAlerts
+from nat.profiler.calc.data_models import CalcData
+from nat.profiler.calc.data_models import CalcRunnerConfig
+from nat.profiler.calc.data_models import CalcRunnerOutput
+from nat.profiler.calc.data_models import FitConfig
+from nat.profiler.calc.data_models import FitResults
+from nat.profiler.calc.data_models import GPUEstimates
+from nat.profiler.calc.data_models import SizingMetricPerItem
+from nat.profiler.calc.data_models import SizingMetrics
+from nat.profiler.calc.data_models import SizingMetricsAlerts
 
 logger = logging.getLogger(__name__)
 
@@ -416,7 +416,7 @@ class CalcRunner:
 
     def plot_concurrency_vs_time_metrics(self, output_dir: Path):
         """Plots concurrency vs. time metrics using pre-computed fits."""
-        from aiq.profiler.calc.plot import plot_concurrency_vs_time_metrics as plot_metrics
+        from nat.profiler.calc.plot import plot_concurrency_vs_time_metrics as plot_metrics
 
         # Only plot if we have valid metrics and at least one fit
         if not self.metrics_per_concurrency:

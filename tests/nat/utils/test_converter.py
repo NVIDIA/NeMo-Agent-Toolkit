@@ -19,9 +19,9 @@ from io import TextIOWrapper
 
 import pytest
 
-from aiq.utils.type_converter import ConvertException
-from aiq.utils.type_converter import GlobalTypeConverter
-from aiq.utils.type_converter import TypeConverter
+from nat.utils.type_converter import ConvertException
+from nat.utils.type_converter import GlobalTypeConverter
+from nat.utils.type_converter import TypeConverter
 
 
 # --------------------------------------------------------------------

@@ -17,11 +17,11 @@ import logging
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_telemetry_exporter
-from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.observability.mixin.batch_config_mixin import BatchConfigMixin
-from aiq.observability.mixin.collector_config_mixin import CollectorConfigMixin
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_telemetry_exporter
+from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
+from nat.observability.mixin.collector_config_mixin import CollectorConfigMixin
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ async def catalyst_telemetry_exporter(config: CatalystTelemetryExporter, builder
     try:
         import os
 
-        from aiq.plugins.ragaai.ragaai_catalyst_exporter import RagaAICatalystExporter
+        from nat.plugins.ragaai.ragaai_catalyst_exporter import RagaAICatalystExporter
 
         access_key = config.access_key or os.environ.get("CATALYST_ACCESS_KEY")
         secret_key = config.secret_key or os.environ.get("CATALYST_SECRET_KEY")

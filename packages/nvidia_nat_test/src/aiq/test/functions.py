@@ -15,13 +15,13 @@
 
 from collections.abc import AsyncGenerator
 
-from aiq.builder.builder import Builder
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.api_server import ChatRequest
-from aiq.data_models.api_server import ChatResponse
-from aiq.data_models.api_server import ChatResponseChunk
-from aiq.data_models.function import FunctionBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import ChatResponseChunk
+from nat.data_models.function import FunctionBaseConfig
 
 
 class EchoFunctionConfig(FunctionBaseConfig, name="test_echo"):

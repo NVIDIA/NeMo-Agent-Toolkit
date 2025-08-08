@@ -17,12 +17,12 @@ import asyncio
 import logging
 from typing import Any
 
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
-from aiq.eval.evaluator.evaluator_model import EvalOutput
-from aiq.eval.usage_stats import UsageStats
-from aiq.eval.usage_stats import UsageStatsItem
-from aiq.profiler.data_models import ProfilerResults
+from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.eval.evaluator.evaluator_model import EvalOutput
+from nat.eval.usage_stats import UsageStats
+from nat.eval.usage_stats import UsageStatsItem
+from nat.profiler.data_models import ProfilerResults
 
 logger = logging.getLogger(__name__)
 

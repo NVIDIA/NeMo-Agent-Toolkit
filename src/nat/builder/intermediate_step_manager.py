@@ -17,16 +17,16 @@ import dataclasses
 import logging
 import typing
 
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepState
-from aiq.utils.reactive.observable import OnComplete
-from aiq.utils.reactive.observable import OnError
-from aiq.utils.reactive.observable import OnNext
-from aiq.utils.reactive.subscription import Subscription
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepState
+from nat.utils.reactive.observable import OnComplete
+from nat.utils.reactive.observable import OnError
+from nat.utils.reactive.observable import OnNext
+from nat.utils.reactive.subscription import Subscription
 
 if typing.TYPE_CHECKING:
-    from aiq.builder.context import ContextState
+    from nat.builder.context import ContextState
 
 logger = logging.getLogger(__name__)
 

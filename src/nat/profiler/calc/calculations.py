@@ -17,9 +17,9 @@ import logging
 
 import numpy as np
 
-from aiq.profiler.calc.data_models import FitConfig
-from aiq.profiler.calc.data_models import GPUEstimates
-from aiq.profiler.calc.data_models import LinearFitResult
+from nat.profiler.calc.data_models import FitConfig
+from nat.profiler.calc.data_models import GPUEstimates
+from nat.profiler.calc.data_models import LinearFitResult
 
 logger = logging.getLogger(__name__)
 

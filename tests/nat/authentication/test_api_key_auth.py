@@ -18,9 +18,9 @@ import pytest
 # --------------------------------------------------------------------------- #
 # Import the modules we are testing
 # --------------------------------------------------------------------------- #
-from aiq.authentication.api_key import api_key_auth_provider
-from aiq.authentication.api_key import api_key_auth_provider_config
-from aiq.builder.workflow_builder import WorkflowBuilder
+from nat.authentication.api_key import api_key_auth_provider
+from nat.authentication.api_key import api_key_auth_provider_config
+from nat.builder.workflow_builder import WorkflowBuilder
 
 # Handy names
 APIKeyAuthProviderConfig = api_key_auth_provider_config.APIKeyAuthProviderConfig

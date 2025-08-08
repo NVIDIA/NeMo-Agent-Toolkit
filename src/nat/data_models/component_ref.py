@@ -20,9 +20,9 @@ from abc import abstractmethod
 from pydantic_core import CoreSchema
 from pydantic_core import core_schema
 
-from aiq.data_models.common import HashableBaseModel
-from aiq.data_models.component import ComponentGroup
-from aiq.utils.type_utils import override
+from nat.data_models.common import HashableBaseModel
+from nat.data_models.component import ComponentGroup
+from nat.utils.type_utils import override
 
 
 def generate_instance_id(input_object: typing.Any) -> str:

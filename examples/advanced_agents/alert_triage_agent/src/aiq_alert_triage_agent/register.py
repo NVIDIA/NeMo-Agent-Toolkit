@@ -18,12 +18,12 @@ import typing
 
 from pydantic.fields import Field
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.component_ref import LLMRef
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.profiler.decorators.function_tracking import track_function
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import LLMRef
+from nat.data_models.function import FunctionBaseConfig
+from nat.profiler.decorators.function_tracking import track_function
 
 # flake8: noqa
 # pylint: disable=unused-import

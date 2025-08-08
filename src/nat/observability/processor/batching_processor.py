@@ -23,7 +23,7 @@ from typing import Any
 from typing import Generic
 from typing import TypeVar
 
-from aiq.observability.processor.callback_processor import CallbackProcessor
+from nat.observability.processor.callback_processor import CallbackProcessor
 
 logger = logging.getLogger(__name__)
 

@@ -19,9 +19,9 @@ from contextlib import AsyncExitStack
 
 import click
 
-from aiq.data_models.component import ComponentEnum
-from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
-from aiq.registry_handlers.schemas.search import SearchFields
+from nat.data_models.component import ComponentEnum
+from nat.data_models.registry_handler import RegistryHandlerBaseConfig
+from nat.registry_handlers.schemas.search import SearchFields
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +35,8 @@ async def search_artifacts(  # pylint: disable=R0917
         query_fields: list[SearchFields],
         save_path: str | None) -> None:
 
-    from aiq.cli.type_registry import GlobalTypeRegistry
-    from aiq.registry_handlers.schemas.search import SearchQuery
+    from nat.cli.type_registry import GlobalTypeRegistry
+    from nat.registry_handlers.schemas.search import SearchQuery
 
     registry = GlobalTypeRegistry.get()
 
@@ -107,9 +107,9 @@ def list_components(fields: list[SearchFields],
                     component_types: list[ComponentEnum],
                     output_path: str | None = None) -> None:
 
-    from aiq.runtime.loader import PluginTypes
-    from aiq.runtime.loader import discover_and_register_plugins
-    from aiq.settings.global_settings import GlobalSettings
+    from nat.runtime.loader import PluginTypes
+    from nat.runtime.loader import discover_and_register_plugins
+    from nat.settings.global_settings import GlobalSettings
 
     discover_and_register_plugins(PluginTypes.ALL)
 

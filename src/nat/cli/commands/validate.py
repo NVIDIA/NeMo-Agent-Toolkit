@@ -28,7 +28,7 @@ def validate_command(config_file: Path):
     # load function level dependencies
     from io import StringIO
 
-    from aiq.runtime.loader import load_config
+    from nat.runtime.loader import load_config
 
     try:
         click.echo(f"Validating configuration file: {config_file}")

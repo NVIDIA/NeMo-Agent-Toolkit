@@ -17,7 +17,7 @@ from typing import Any
 
 import pytest
 
-from aiq.observability.processor.processor import Processor
+from nat.observability.processor.processor import Processor
 
 
 class TestProcessorAbstractBehavior:
@@ -85,7 +85,7 @@ class TestProcessorTypeIntrospection:
 
     def test_type_introspection_error_handling(self):
         """Test error handling when type introspection fails."""
-        from aiq.observability.mixin.type_introspection_mixin import TypeIntrospectionMixin
+        from nat.observability.mixin.type_introspection_mixin import TypeIntrospectionMixin
 
         # Create a class with TypeIntrospectionMixin but no generic type parameters
         class BadProcessor(TypeIntrospectionMixin):
@@ -406,7 +406,7 @@ class TestProcessorEdgeCases:
 
     def test_processor_class_name_in_error_messages(self):
         """Test that processor class names appear correctly in error messages."""
-        from aiq.observability.mixin.type_introspection_mixin import TypeIntrospectionMixin
+        from nat.observability.mixin.type_introspection_mixin import TypeIntrospectionMixin
 
         class ProcessorWithoutGenerics(TypeIntrospectionMixin):
             pass

@@ -30,8 +30,8 @@ from pydantic import field_serializer
 from pydantic import field_validator
 from pydantic_core.core_schema import ValidationInfo
 
-from aiq.data_models.interactive import HumanPrompt
-from aiq.utils.type_converter import GlobalTypeConverter
+from nat.data_models.interactive import HumanPrompt
+from nat.utils.type_converter import GlobalTypeConverter
 
 
 class Request(BaseModel):

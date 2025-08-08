@@ -20,20 +20,20 @@ from collections.abc import Callable
 from contextlib import contextmanager
 from contextvars import ContextVar
 
-from aiq.builder.intermediate_step_manager import IntermediateStepManager
-from aiq.builder.user_interaction_manager import UserInteractionManager
-from aiq.data_models.authentication import AuthenticatedContext
-from aiq.data_models.authentication import AuthFlowType
-from aiq.data_models.authentication import AuthProviderBaseConfig
-from aiq.data_models.interactive import HumanResponse
-from aiq.data_models.interactive import InteractionPrompt
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.intermediate_step import StreamEventData
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.runtime.user_metadata import RequestAttributes
-from aiq.utils.reactive.subject import Subject
+from nat.builder.intermediate_step_manager import IntermediateStepManager
+from nat.builder.user_interaction_manager import UserInteractionManager
+from nat.data_models.authentication import AuthenticatedContext
+from nat.data_models.authentication import AuthFlowType
+from nat.data_models.authentication import AuthProviderBaseConfig
+from nat.data_models.interactive import HumanResponse
+from nat.data_models.interactive import InteractionPrompt
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.invocation_node import InvocationNode
+from nat.runtime.user_metadata import RequestAttributes
+from nat.utils.reactive.subject import Subject
 
 
 class Singleton(type):

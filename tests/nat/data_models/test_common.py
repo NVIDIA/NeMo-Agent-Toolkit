@@ -20,7 +20,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from aiq.data_models import common
+from nat.data_models import common
 
 
 class ԊashableTĕstModel(common.HashableBaseModel):  # pylint: disable=non-ascii-name

@@ -15,7 +15,7 @@
 
 from pydantic import Field
 
-from aiq.data_models.front_end import FrontEndBaseConfig
+from nat.data_models.front_end import FrontEndBaseConfig
 
 
 class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):

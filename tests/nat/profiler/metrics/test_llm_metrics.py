@@ -16,16 +16,16 @@
 import pandas as pd
 import pytest
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.intermediate_step import StreamEventData
-from aiq.data_models.intermediate_step import UsageInfo
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
-from aiq.profiler.inference_optimization.llm_metrics import LLMMetrics
-from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.intermediate_step import UsageInfo
+from nat.data_models.invocation_node import InvocationNode
+from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
+from nat.profiler.inference_optimization.llm_metrics import LLMMetrics
+from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 
 @pytest.fixture(name="sample_dataframe")

@@ -16,12 +16,12 @@
 from pydantic import Field
 from pydantic import HttpUrl
 
-from aiq.builder.builder import Builder
-from aiq.builder.builder import LLMFrameworkEnum
-from aiq.builder.retriever import RetrieverProviderInfo
-from aiq.cli.register_workflow import register_retriever_client
-from aiq.cli.register_workflow import register_retriever_provider
-from aiq.data_models.retriever import RetrieverBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.builder import LLMFrameworkEnum
+from nat.builder.retriever import RetrieverProviderInfo
+from nat.cli.register_workflow import register_retriever_client
+from nat.cli.register_workflow import register_retriever_provider
+from nat.data_models.retriever import RetrieverBaseConfig
 
 
 class MilvusRetrieverConfig(RetrieverBaseConfig, name="milvus_retriever"):
@@ -60,7 +60,7 @@ async def milvus_retriever(retriever_config: MilvusRetrieverConfig, builder: Bui
 async def milvus_retriever_client(config: MilvusRetrieverConfig, builder: Builder):
     from pymilvus import MilvusClient
 
-    from aiq.retriever.milvus.retriever import MilvusRetriever
+    from nat.retriever.milvus.retriever import MilvusRetriever
 
     embedder = await builder.get_embedder(embedder_name=config.embedding_model, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 

@@ -16,7 +16,7 @@
 import pytest
 from pydantic import ValidationError
 
-from aiq.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
+from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 
 
 def test_mcp_front_end_config_default_values():

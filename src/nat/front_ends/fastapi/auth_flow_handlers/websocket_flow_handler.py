@@ -24,12 +24,12 @@ from dataclasses import field
 import pkce
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 
-from aiq.authentication.interfaces import FlowHandlerBase
-from aiq.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
-from aiq.data_models.authentication import AuthenticatedContext
-from aiq.data_models.authentication import AuthFlowType
-from aiq.data_models.interactive import _HumanPromptOAuthConsent
-from aiq.front_ends.fastapi.message_handler import WebSocketMessageHandler
+from nat.authentication.interfaces import FlowHandlerBase
+from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
+from nat.data_models.authentication import AuthenticatedContext
+from nat.data_models.authentication import AuthFlowType
+from nat.data_models.interactive import _HumanPromptOAuthConsent
+from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
 
 logger = logging.getLogger(__name__)
 

@@ -50,7 +50,7 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~aiq.data_mod
 
 1. **Create a config Class** that extends {py:class}`~aiq.data_models.memory.MemoryBaseConfig`:
    ```python
-   from aiq.data_models.memory import MemoryBaseConfig
+   from nat.data_models.memory import MemoryBaseConfig
 
    class MyCustomMemoryConfig(MemoryBaseConfig, name="my_custom_memory"):
        # You can define any fields you want. For example:
@@ -61,7 +61,7 @@ In the NeMo Agent toolkit system, anything that extends {py:class}`~aiq.data_mod
 
 2. **Implement a {py:class}`~aiq.memory.interfaces.MemoryEditor`** that uses your backend**:
    ```python
-   from aiq.memory.interfaces import MemoryEditor, MemoryItem
+   from nat.memory.interfaces import MemoryEditor, MemoryItem
 
    class MyCustomMemoryEditor(MemoryEditor):
        def __init__(self, config: MyCustomMemoryConfig):
@@ -109,14 +109,14 @@ A typical pattern is:
 
 ```python
 # my_custom_memory_config.py
-from aiq.data_models.memory import MemoryBaseConfig
+from nat.data_models.memory import MemoryBaseConfig
 
 class MyCustomMemoryConfig(MemoryBaseConfig, name="my_custom_memory"):
     url: str
     token: str
 
 # my_custom_memory_editor.py
-from aiq.memory.interfaces import MemoryEditor, MemoryItem
+from nat.memory.interfaces import MemoryEditor, MemoryItem
 
 class MyCustomMemoryEditor(MemoryEditor):
     def __init__(self, cfg: MyCustomMemoryConfig):
@@ -160,7 +160,7 @@ memories = await memory_client.search(query="What did user prefer last time?", t
 **Inside Tools**: Tools that read or write memory simply call the memory client. For example:
 
 ```python
-from aiq.memory.models import MemoryItem
+from nat.memory.models import MemoryItem
 from langchain_core.tools import ToolException
 
 async def add_memory_tool_action(item: MemoryItem, memory_name: str):

@@ -26,11 +26,11 @@ from typing import Generic
 from typing import TypeVar
 from typing import overload
 
-from aiq.builder.context import ContextState
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.observability.exporter.exporter import Exporter
-from aiq.utils.reactive.subject import Subject
-from aiq.utils.type_utils import override
+from nat.builder.context import ContextState
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.observability.exporter.exporter import Exporter
+from nat.utils.reactive.subject import Subject
+from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
 

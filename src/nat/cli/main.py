@@ -35,7 +35,7 @@ def run_cli():
     if (parent_dir not in sys.path):
         sys.path.append(parent_dir)
 
-    from aiq.cli.entrypoint import cli
+    from nat.cli.entrypoint import cli
 
     cli(obj={}, auto_envvar_prefix='AIQ', show_default=True, prog_name="aiq")
 

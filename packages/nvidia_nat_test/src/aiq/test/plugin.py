@@ -59,8 +59,8 @@ def pytest_runtest_setup(item):
 
 @pytest.fixture(name="register_components", scope="session", autouse=True)
 def register_components_fixture():
-    from aiq.runtime.loader import PluginTypes
-    from aiq.runtime.loader import discover_and_register_plugins
+    from nat.runtime.loader import PluginTypes
+    from nat.runtime.loader import discover_and_register_plugins
 
     # Ensure that all components which need to be registered as part of an import are done so. This is necessary
     # because imports will not be reloaded between tests, so we need to ensure that all components are registered
@@ -68,7 +68,7 @@ def register_components_fixture():
     discover_and_register_plugins(PluginTypes.ALL)
 
     # Also import the aiq.test.register module to register test-only components
-    import aiq.test.register  # pylint: disable=unused-import # noqa: F401
+    import nat.test.register  # pylint: disable=unused-import # noqa: F401
 
 
 @pytest.fixture(name="module_registry", scope="module", autouse=True)
@@ -78,7 +78,7 @@ def module_registry_fixture():
 
     This gets automatically used at the module level to ensure no state is leaked between modules
     """
-    from aiq.cli.type_registry import GlobalTypeRegistry
+    from nat.cli.type_registry import GlobalTypeRegistry
 
     with GlobalTypeRegistry.push() as registry:
         yield registry
@@ -91,7 +91,7 @@ def function_registry_fixture():
 
     This gets automatically used at the function level to ensure no state is leaked between functions
     """
-    from aiq.cli.type_registry import GlobalTypeRegistry
+    from nat.cli.type_registry import GlobalTypeRegistry
 
     with GlobalTypeRegistry.push() as registry:
         yield registry

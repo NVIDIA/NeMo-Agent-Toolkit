@@ -25,6 +25,6 @@ logger = logging.getLogger(__name__)
              help="Utility to remove a configured AIQ Toolkit remote registry channel.")
 @click.argument("channel", type=str)
 def remove(channel: str):
-    from aiq.utils.settings.global_settings import remove_channel_interactive
+    from nat.utils.settings.global_settings import remove_channel_interactive
 
     remove_channel_interactive(channel_name=channel)

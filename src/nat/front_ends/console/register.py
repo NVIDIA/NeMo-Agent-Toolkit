@@ -13,13 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.cli.register_workflow import register_front_end
-from aiq.data_models.config import Config
-from aiq.front_ends.console.console_front_end_config import ConsoleFrontEndConfig
+from nat.cli.register_workflow import register_front_end
+from nat.data_models.config import Config
+from nat.front_ends.console.console_front_end_config import ConsoleFrontEndConfig
 
 
 @register_front_end(config_type=ConsoleFrontEndConfig)
 async def register_fastapi_front_end(config: ConsoleFrontEndConfig, full_config: Config):
-    from aiq.front_ends.console.console_front_end_plugin import ConsoleFrontEndPlugin
+    from nat.front_ends.console.console_front_end_plugin import ConsoleFrontEndPlugin
 
     yield ConsoleFrontEndPlugin(full_config=full_config)

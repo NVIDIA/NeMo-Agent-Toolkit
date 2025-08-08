@@ -15,9 +15,10 @@
 
 import logging
 
-from aiq.builder.context import ContextState
-from aiq.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
-from aiq.plugins.ragaai.mixin.ragaai_catalyst_mixin import RagaAICatalystMixin
+from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
+from nat.plugins.ragaai.mixin.ragaai_catalyst_mixin import RagaAICatalystMixin
+
+from nat.builder.context import ContextState
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class RagaAICatalystExporter(RagaAICatalystMixin, OtelSpanExporter):  # pylint: 
     and analysis of AI agent behavior and performance.
 
     Features:
-    - Automatic span conversion from AIQ events
+    - Automatic span conversion from nat events
     - RagaAI Catalyst-specific authentication
     - Project and dataset-based trace organization
     - Integration with custom DynamicTraceExporter for optimal local file control

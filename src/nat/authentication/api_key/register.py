@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.authentication.api_key.api_key_auth_provider_config import APIKeyAuthProviderConfig
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_auth_provider
+from nat.authentication.api_key.api_key_auth_provider_config import APIKeyAuthProviderConfig
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_auth_provider
 
 
 @register_auth_provider(config_type=APIKeyAuthProviderConfig)
 async def api_key_client(config: APIKeyAuthProviderConfig, builder: Builder):
 
-    from aiq.authentication.api_key.api_key_auth_provider import APIKeyAuthProvider
+    from nat.authentication.api_key.api_key_auth_provider import APIKeyAuthProvider
 
     yield APIKeyAuthProvider(config=config)

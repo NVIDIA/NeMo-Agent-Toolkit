@@ -28,10 +28,10 @@ then analyze concurrency and produce a summary report.
 import numpy as np
 import pandas as pd
 
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.profiler.inference_optimization.data_models import SimpleBottleneckReport
-from aiq.profiler.inference_optimization.data_models import SimpleOperationStats
-from aiq.profiler.utils import create_standardized_dataframe
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.profiler.inference_optimization.data_models import SimpleBottleneckReport
+from nat.profiler.inference_optimization.data_models import SimpleOperationStats
+from nat.profiler.utils import create_standardized_dataframe
 
 
 # ----------------------------------------------------------------------

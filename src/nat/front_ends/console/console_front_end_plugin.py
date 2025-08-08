@@ -19,14 +19,14 @@ import logging
 import click
 from colorama import Fore
 
-from aiq.data_models.interactive import HumanPromptModelType
-from aiq.data_models.interactive import HumanResponse
-from aiq.data_models.interactive import HumanResponseText
-from aiq.data_models.interactive import InteractionPrompt
-from aiq.front_ends.console.authentication_flow_handler import ConsoleAuthenticationFlowHandler
-from aiq.front_ends.console.console_front_end_config import ConsoleFrontEndConfig
-from aiq.front_ends.simple_base.simple_front_end_plugin_base import SimpleFrontEndPluginBase
-from aiq.runtime.session import SessionManager
+from nat.data_models.interactive import HumanPromptModelType
+from nat.data_models.interactive import HumanResponse
+from nat.data_models.interactive import HumanResponseText
+from nat.data_models.interactive import InteractionPrompt
+from nat.front_ends.console.authentication_flow_handler import ConsoleAuthenticationFlowHandler
+from nat.front_ends.console.console_front_end_config import ConsoleFrontEndConfig
+from nat.front_ends.simple_base.simple_front_end_plugin_base import SimpleFrontEndPluginBase
+from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
 

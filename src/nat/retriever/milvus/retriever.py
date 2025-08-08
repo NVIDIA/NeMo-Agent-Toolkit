@@ -20,10 +20,10 @@ from langchain_core.embeddings import Embeddings
 from pymilvus import MilvusClient
 from pymilvus.client.abstract import Hit
 
-from aiq.retriever.interface import Retriever
-from aiq.retriever.models import Document
-from aiq.retriever.models import RetrieverError
-from aiq.retriever.models import RetrieverOutput
+from nat.retriever.interface import Retriever
+from nat.retriever.models import Document
+from nat.retriever.models import RetrieverError
+from nat.retriever.models import RetrieverOutput
 
 logger = logging.getLogger(__name__)
 

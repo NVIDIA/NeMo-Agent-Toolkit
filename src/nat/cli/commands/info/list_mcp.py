@@ -20,9 +20,9 @@ from typing import Any
 import anyio
 import click
 
-from aiq.tool.mcp.exceptions import MCPError
-from aiq.tool.mcp.mcp_client import MCPBuilder
-from aiq.utils.exception_handlers.mcp import format_mcp_error
+from nat.tool.mcp.exceptions import MCPError
+from nat.tool.mcp.mcp_client import MCPBuilder
+from nat.utils.exception_handlers.mcp import format_mcp_error
 
 # Suppress verbose logs from mcp.client.sse and httpx
 logging.getLogger("mcp.client.sse").setLevel(logging.WARNING)
@@ -152,8 +152,8 @@ async def list_tools_direct(url: str, tool_name: str | None = None) -> list[dict
                 return tools
     except Exception as e:
         # Convert raw exceptions to structured MCPError for consistency
-        from aiq.utils.exception_handlers.mcp import convert_to_mcp_error
-        from aiq.utils.exception_handlers.mcp import extract_primary_exception
+        from nat.utils.exception_handlers.mcp import convert_to_mcp_error
+        from nat.utils.exception_handlers.mcp import extract_primary_exception
 
         if isinstance(e, ExceptionGroup):  # noqa: F821
             primary_exception = extract_primary_exception(list(e.exceptions))

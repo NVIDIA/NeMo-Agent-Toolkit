@@ -22,8 +22,8 @@ import redis.exceptions as redis_exceptions
 from langchain_core.embeddings import Embeddings
 from redis.commands.search.query import Query
 
-from aiq.memory.interfaces import MemoryEditor
-from aiq.memory.models import MemoryItem
+from nat.memory.interfaces import MemoryEditor
+from nat.memory.models import MemoryItem
 
 logger = logging.getLogger(__name__)
 

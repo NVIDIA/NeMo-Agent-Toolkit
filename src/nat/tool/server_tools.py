@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.builder.builder import Builder
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.function import FunctionBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.function import FunctionBaseConfig
 
 
 class RequestAttributesTool(FunctionBaseConfig, name="current_request_attributes"):
@@ -37,7 +37,7 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
 
     async def _get_request_attributes(unused: str) -> str:
 
-        from aiq.builder.context import Context
+        from nat.builder.context import Context
         aiq_context = Context.get()
 
         method: str | None = aiq_context.metadata.method

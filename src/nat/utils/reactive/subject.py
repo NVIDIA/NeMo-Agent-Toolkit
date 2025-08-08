@@ -17,10 +17,10 @@ import threading
 from collections.abc import Callable
 from typing import TypeVar
 
-from aiq.utils.reactive.base.subject_base import SubjectBase
-from aiq.utils.reactive.observable import Observable
-from aiq.utils.reactive.observer import Observer
-from aiq.utils.reactive.subscription import Subscription
+from nat.utils.reactive.base.subject_base import SubjectBase
+from nat.utils.reactive.observable import Observable
+from nat.utils.reactive.observer import Observer
+from nat.utils.reactive.subscription import Subscription
 
 T = TypeVar("T")
 

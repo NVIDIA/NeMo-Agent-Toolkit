@@ -17,7 +17,7 @@ import logging
 
 import click
 
-from aiq.cli.commands.configure.channel.channel import channel
+from nat.cli.commands.configure.channel.channel import channel
 
 logger = logging.getLogger(__name__)
 

@@ -15,7 +15,7 @@
 
 import pandas as pd
 
-from aiq.data_models.dataset_handler import EvalFilterConfig
+from nat.data_models.dataset_handler import EvalFilterConfig
 
 
 class DatasetFilter:

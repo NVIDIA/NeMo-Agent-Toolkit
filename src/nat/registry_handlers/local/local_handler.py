@@ -18,19 +18,19 @@ import subprocess
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from aiq.registry_handlers.package_utils import build_package_metadata
-from aiq.registry_handlers.registry_handler_base import AbstractRegistryHandler
-from aiq.registry_handlers.schemas.package import PackageNameVersionList
-from aiq.registry_handlers.schemas.publish import Artifact
-from aiq.registry_handlers.schemas.publish import PublishResponse
-from aiq.registry_handlers.schemas.pull import PullRequestPackages
-from aiq.registry_handlers.schemas.pull import PullResponse
-from aiq.registry_handlers.schemas.remove import RemoveResponse
-from aiq.registry_handlers.schemas.search import SearchFields
-from aiq.registry_handlers.schemas.search import SearchQuery
-from aiq.registry_handlers.schemas.search import SearchResponse
-from aiq.registry_handlers.schemas.status import ActionEnum
-from aiq.registry_handlers.schemas.status import StatusEnum
+from nat.registry_handlers.package_utils import build_package_metadata
+from nat.registry_handlers.registry_handler_base import AbstractRegistryHandler
+from nat.registry_handlers.schemas.package import PackageNameVersionList
+from nat.registry_handlers.schemas.publish import Artifact
+from nat.registry_handlers.schemas.publish import PublishResponse
+from nat.registry_handlers.schemas.pull import PullRequestPackages
+from nat.registry_handlers.schemas.pull import PullResponse
+from nat.registry_handlers.schemas.remove import RemoveResponse
+from nat.registry_handlers.schemas.search import SearchFields
+from nat.registry_handlers.schemas.search import SearchQuery
+from nat.registry_handlers.schemas.search import SearchResponse
+from nat.registry_handlers.schemas.status import ActionEnum
+from nat.registry_handlers.schemas.status import StatusEnum
 
 logger = logging.getLogger(__name__)
 

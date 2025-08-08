@@ -19,10 +19,10 @@ import os
 import shutil
 from pathlib import Path
 
-from aiq.data_models.swe_bench_model import SWEBenchInput
-from aiq.data_models.swe_bench_model import SWEBenchOutput
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalOutput
+from nat.data_models.swe_bench_model import SWEBenchInput
+from nat.data_models.swe_bench_model import SWEBenchOutput
+from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.eval.evaluator.evaluator_model import EvalOutput
 
 try:
     import swebench.harness.run_evaluation as swebench_eval

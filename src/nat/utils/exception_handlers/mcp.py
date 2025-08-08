@@ -22,14 +22,14 @@ from typing import Any
 
 import httpx
 
-from aiq.tool.mcp.exceptions import MCPAuthenticationError
-from aiq.tool.mcp.exceptions import MCPConnectionError
-from aiq.tool.mcp.exceptions import MCPError
-from aiq.tool.mcp.exceptions import MCPProtocolError
-from aiq.tool.mcp.exceptions import MCPRequestError
-from aiq.tool.mcp.exceptions import MCPSSLError
-from aiq.tool.mcp.exceptions import MCPTimeoutError
-from aiq.tool.mcp.exceptions import MCPToolNotFoundError
+from nat.tool.mcp.exceptions import MCPAuthenticationError
+from nat.tool.mcp.exceptions import MCPConnectionError
+from nat.tool.mcp.exceptions import MCPError
+from nat.tool.mcp.exceptions import MCPProtocolError
+from nat.tool.mcp.exceptions import MCPRequestError
+from nat.tool.mcp.exceptions import MCPSSLError
+from nat.tool.mcp.exceptions import MCPTimeoutError
+from nat.tool.mcp.exceptions import MCPToolNotFoundError
 
 logger = logging.getLogger(__name__)
 

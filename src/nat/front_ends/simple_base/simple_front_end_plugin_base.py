@@ -20,10 +20,10 @@ from io import StringIO
 
 import click
 
-from aiq.builder.front_end import FrontEndBase
-from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.data_models.front_end import FrontEndConfigT
-from aiq.runtime.session import SessionManager
+from nat.builder.front_end import FrontEndBase
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.data_models.front_end import FrontEndConfigT
+from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
 

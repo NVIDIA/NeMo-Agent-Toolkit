@@ -22,10 +22,10 @@ from weave.trace.context.call_context import get_current_call
 from weave.trace.context.call_context import set_call_stack
 from weave.trace.weave_client import Call
 
-from aiq.data_models.span import Span
-from aiq.data_models.span import SpanAttributes
-from aiq.observability.exporter.base_exporter import IsolatedAttribute
-from aiq.utils.log_utils import LogFilter
+from nat.data_models.span import Span
+from nat.data_models.span import SpanAttributes
+from nat.observability.exporter.base_exporter import IsolatedAttribute
+from nat.utils.log_utils import LogFilter
 
 logger = logging.getLogger(__name__)
 

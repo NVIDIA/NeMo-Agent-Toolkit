@@ -18,13 +18,13 @@ from collections.abc import AsyncGenerator
 import pytest
 from pydantic import BaseModel
 
-from aiq.builder.builder import Builder
-from aiq.builder.context import ContextState
-from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.observability.exporter_manager import ExporterManager
-from aiq.runtime.runner import Runner
+from nat.builder.builder import Builder
+from nat.builder.context import ContextState
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.cli.register_workflow import register_function
+from nat.data_models.function import FunctionBaseConfig
+from nat.observability.exporter_manager import ExporterManager
+from nat.runtime.runner import Runner
 
 
 class DummyConfig(FunctionBaseConfig, name="dummy_runner"):

@@ -28,8 +28,8 @@ from types import NoneType
 
 from pydantic import BaseModel
 
-from aiq.utils.type_converter import TypeConverter
-from aiq.utils.type_utils import DecomposedType
+from nat.utils.type_converter import TypeConverter
+from nat.utils.type_utils import DecomposedType
 
 InputT = typing.TypeVar("InputT")
 StreamingOutputT = typing.TypeVar("StreamingOutputT")

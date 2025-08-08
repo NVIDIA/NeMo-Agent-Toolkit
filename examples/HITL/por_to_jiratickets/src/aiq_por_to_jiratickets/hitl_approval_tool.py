@@ -17,13 +17,13 @@ import logging
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.builder.context import Context
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.data_models.interactive import HumanPromptText
-from aiq.data_models.interactive import InteractionResponse
+from nat.builder.builder import Builder
+from nat.builder.context import Context
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.interactive import HumanPromptText
+from nat.data_models.interactive import InteractionResponse
 
 logger = logging.getLogger(__name__)
 

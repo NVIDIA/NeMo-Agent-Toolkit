@@ -19,8 +19,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from aiq.observability.mixin.file_mode import FileMode
-from aiq.observability.mixin.resource_conflict_mixin import ResourceConflictMixin
+from nat.observability.mixin.file_mode import FileMode
+from nat.observability.mixin.resource_conflict_mixin import ResourceConflictMixin
 
 logger = logging.getLogger(__name__)
 

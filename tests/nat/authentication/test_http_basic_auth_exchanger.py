@@ -15,13 +15,13 @@
 
 import pytest
 
-from aiq.authentication.http_basic_auth.http_basic_auth_provider import HTTPBasicAuthProvider
-from aiq.authentication.http_basic_auth.register import HTTPBasicAuthProviderConfig
-from aiq.builder.context import Context
-from aiq.data_models.authentication import AuthenticatedContext
-from aiq.data_models.authentication import AuthFlowType
-from aiq.data_models.authentication import BasicAuthCred
-from aiq.data_models.authentication import BearerTokenCred
+from nat.authentication.http_basic_auth.http_basic_auth_provider import HTTPBasicAuthProvider
+from nat.authentication.http_basic_auth.register import HTTPBasicAuthProviderConfig
+from nat.builder.context import Context
+from nat.data_models.authentication import AuthenticatedContext
+from nat.data_models.authentication import AuthFlowType
+from nat.data_models.authentication import BasicAuthCred
+from nat.data_models.authentication import BearerTokenCred
 
 # --------------------------------------------------------------------------- #
 # helpers

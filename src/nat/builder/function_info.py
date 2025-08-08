@@ -29,8 +29,8 @@ from pydantic import Field
 from pydantic import create_model
 from pydantic_core import PydanticUndefined
 
-from aiq.data_models.streaming import Streaming
-from aiq.utils.type_utils import DecomposedType
+from nat.data_models.streaming import Streaming
+from nat.utils.type_utils import DecomposedType
 
 logger = logging.getLogger(__name__)
 

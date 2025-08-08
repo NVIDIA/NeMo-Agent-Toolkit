@@ -16,7 +16,7 @@
 from abc import ABC
 from abc import abstractmethod
 
-from aiq.retriever.models import RetrieverOutput
+from nat.retriever.models import RetrieverOutput
 
 
 class Retriever(ABC):

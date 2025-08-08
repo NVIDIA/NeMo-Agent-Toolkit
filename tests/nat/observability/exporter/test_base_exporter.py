@@ -22,11 +22,11 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.builder.context import ContextState
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.observability.exporter.base_exporter import BaseExporter
-from aiq.observability.exporter.base_exporter import IsolatedAttribute
-from aiq.utils.reactive.subject import Subject
+from nat.builder.context import ContextState
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.observability.exporter.base_exporter import BaseExporter
+from nat.observability.exporter.base_exporter import IsolatedAttribute
+from nat.utils.reactive.subject import Subject
 
 
 class ConcreteExporter(BaseExporter):

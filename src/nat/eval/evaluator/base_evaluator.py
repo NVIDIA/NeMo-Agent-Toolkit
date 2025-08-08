@@ -19,11 +19,11 @@ from abc import abstractmethod
 
 from tqdm import tqdm
 
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
-from aiq.eval.evaluator.evaluator_model import EvalOutput
-from aiq.eval.evaluator.evaluator_model import EvalOutputItem
-from aiq.eval.utils.tqdm_position_registry import TqdmPositionRegistry
+from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.eval.evaluator.evaluator_model import EvalOutput
+from nat.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.eval.utils.tqdm_position_registry import TqdmPositionRegistry
 
 
 class BaseEvaluator(ABC):

@@ -17,12 +17,12 @@ import logging
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_logging_method
-from aiq.cli.register_workflow import register_telemetry_exporter
-from aiq.data_models.logging import LoggingBaseConfig
-from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.observability.mixin.file_mode import FileMode
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_logging_method
+from nat.cli.register_workflow import register_telemetry_exporter
+from nat.data_models.logging import LoggingBaseConfig
+from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.observability.mixin.file_mode import FileMode
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ async def file_telemetry_exporter(config: FileTelemetryExporterConfig, builder: 
     Build and return a FileExporter for file-based telemetry export with optional rolling.
     """
 
-    from aiq.observability.exporter.file_exporter import FileExporter
+    from nat.observability.exporter.file_exporter import FileExporter
 
     yield FileExporter(output_path=config.output_path,
                        project=config.project,

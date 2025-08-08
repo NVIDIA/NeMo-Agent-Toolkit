@@ -23,13 +23,13 @@ from collections.abc import Callable
 
 from pydantic import BaseModel
 
-from aiq.builder.context import Context
-from aiq.builder.function_base import FunctionBase
-from aiq.builder.function_base import InputT
-from aiq.builder.function_base import SingleOutputT
-from aiq.builder.function_base import StreamingOutputT
-from aiq.builder.function_info import FunctionInfo
-from aiq.data_models.function import FunctionBaseConfig
+from nat.builder.context import Context
+from nat.builder.function_base import FunctionBase
+from nat.builder.function_base import InputT
+from nat.builder.function_base import SingleOutputT
+from nat.builder.function_base import StreamingOutputT
+from nat.builder.function_info import FunctionInfo
+from nat.data_models.function import FunctionBaseConfig
 
 _InvokeFnT = Callable[[InputT], Awaitable[SingleOutputT]]
 _StreamFnT = Callable[[InputT], AsyncGenerator[StreamingOutputT]]

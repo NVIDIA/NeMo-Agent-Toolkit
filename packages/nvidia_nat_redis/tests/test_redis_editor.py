@@ -18,10 +18,10 @@ from unittest.mock import MagicMock
 
 import pytest
 from langchain_core.embeddings import Embeddings
+from nat.plugins.redis.redis_editor import RedisEditor
 
-from aiq.memory.models import MemoryItem
-from aiq.plugins.redis.redis_editor import RedisEditor
-from aiq.utils.type_utils import override
+from nat.memory.models import MemoryItem
+from nat.utils.type_utils import override
 
 
 class TestEmbeddings(Embeddings):

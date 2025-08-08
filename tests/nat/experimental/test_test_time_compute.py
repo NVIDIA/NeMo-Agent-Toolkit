@@ -15,11 +15,11 @@
 
 import pytest
 
-from aiq.data_models.ttc_strategy import TTCStrategyBaseConfig
-from aiq.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
-from aiq.experimental.test_time_compute.models.stage_enums import StageTypeEnum
-from aiq.experimental.test_time_compute.models.strategy_base import StrategyBase
-from aiq.experimental.test_time_compute.models.ttc_item import TTCItem
+from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
+from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
+from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+from nat.experimental.test_time_compute.models.ttc_item import TTCItem
 
 
 # ──────────────────────────────────────────────────────────────────────────────

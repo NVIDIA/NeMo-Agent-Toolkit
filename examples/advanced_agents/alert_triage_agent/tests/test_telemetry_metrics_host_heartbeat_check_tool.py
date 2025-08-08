@@ -19,12 +19,12 @@ from unittest.mock import patch
 
 import pytest
 import requests
-from aiq_alert_triage_agent.telemetry_metrics_host_heartbeat_check_tool import \
+from nat_alert_triage_agent.telemetry_metrics_host_heartbeat_check_tool import \
     TelemetryMetricsHostHeartbeatCheckToolConfig
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.data_models.component_ref import LLMRef
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.data_models.component_ref import LLMRef
 
 
 async def test_telemetry_metrics_host_heartbeat_check_tool():

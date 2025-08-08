@@ -18,13 +18,13 @@ import pickle
 
 import aiomysql
 from aiomysql.pool import Pool
+from nat.plugins.mysql.object_store import MySQLObjectStoreClientConfig
 
-from aiq.data_models.object_store import KeyAlreadyExistsError
-from aiq.data_models.object_store import NoSuchKeyError
-from aiq.object_store.interfaces import ObjectStore
-from aiq.object_store.models import ObjectStoreItem
-from aiq.plugins.mysql.object_store import MySQLObjectStoreClientConfig
-from aiq.utils.type_utils import override
+from nat.data_models.object_store import KeyAlreadyExistsError
+from nat.data_models.object_store import NoSuchKeyError
+from nat.object_store.interfaces import ObjectStore
+from nat.object_store.models import ObjectStoreItem
+from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
 

@@ -23,15 +23,15 @@ from contextlib import nullcontext
 
 from starlette.requests import HTTPConnection
 
-from aiq.builder.context import Context
-from aiq.builder.context import ContextState
-from aiq.builder.workflow import Workflow
-from aiq.data_models.authentication import AuthenticatedContext
-from aiq.data_models.authentication import AuthFlowType
-from aiq.data_models.authentication import AuthProviderBaseConfig
-from aiq.data_models.config import Config
-from aiq.data_models.interactive import HumanResponse
-from aiq.data_models.interactive import InteractionPrompt
+from nat.builder.context import Context
+from nat.builder.context import ContextState
+from nat.builder.workflow import Workflow
+from nat.data_models.authentication import AuthenticatedContext
+from nat.data_models.authentication import AuthFlowType
+from nat.data_models.authentication import AuthProviderBaseConfig
+from nat.data_models.config import Config
+from nat.data_models.interactive import HumanResponse
+from nat.data_models.interactive import InteractionPrompt
 
 _T = typing.TypeVar("_T")
 

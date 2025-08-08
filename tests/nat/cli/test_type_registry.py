@@ -16,9 +16,9 @@
 import pytest
 
 from _utils.configs import FunctionTestConfig
-from aiq.builder.builder import Builder
-from aiq.cli.type_registry import RegisteredFunctionInfo
-from aiq.cli.type_registry import TypeRegistry
+from nat.builder.builder import Builder
+from nat.cli.type_registry import RegisteredFunctionInfo
+from nat.cli.type_registry import TypeRegistry
 
 
 def test_register_function(registry: TypeRegistry):

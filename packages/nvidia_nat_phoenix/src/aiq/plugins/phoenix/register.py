@@ -17,11 +17,11 @@ import logging
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_telemetry_exporter
-from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.observability.mixin.batch_config_mixin import BatchConfigMixin
-from aiq.observability.mixin.collector_config_mixin import CollectorConfigMixin
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_telemetry_exporter
+from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
+from nat.observability.mixin.collector_config_mixin import CollectorConfigMixin
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: 
     """Create a Phoenix telemetry exporter."""
 
     try:
-        from aiq.plugins.phoenix.phoenix_exporter import PhoenixOtelExporter
+        from nat.plugins.phoenix.phoenix_exporter import PhoenixOtelExporter
 
         # Create the exporter
         yield PhoenixOtelExporter(endpoint=config.endpoint,

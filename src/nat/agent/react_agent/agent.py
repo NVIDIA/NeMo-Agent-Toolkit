@@ -33,18 +33,18 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 from pydantic import Field
 
-from aiq.agent.base import AGENT_CALL_LOG_MESSAGE
-from aiq.agent.base import AGENT_LOG_PREFIX
-from aiq.agent.base import INPUT_SCHEMA_MESSAGE
-from aiq.agent.base import NO_INPUT_ERROR_MESSAGE
-from aiq.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
-from aiq.agent.base import AgentDecision
-from aiq.agent.dual_node import DualNodeAgent
-from aiq.agent.react_agent.output_parser import ReActOutputParser
-from aiq.agent.react_agent.output_parser import ReActOutputParserException
-from aiq.agent.react_agent.prompt import SYSTEM_PROMPT
-from aiq.agent.react_agent.prompt import USER_PROMPT
-from aiq.agent.react_agent.register import ReActAgentWorkflowConfig
+from nat.agent.base import AGENT_CALL_LOG_MESSAGE
+from nat.agent.base import AGENT_LOG_PREFIX
+from nat.agent.base import INPUT_SCHEMA_MESSAGE
+from nat.agent.base import NO_INPUT_ERROR_MESSAGE
+from nat.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
+from nat.agent.base import AgentDecision
+from nat.agent.dual_node import DualNodeAgent
+from nat.agent.react_agent.output_parser import ReActOutputParser
+from nat.agent.react_agent.output_parser import ReActOutputParserException
+from nat.agent.react_agent.prompt import SYSTEM_PROMPT
+from nat.agent.react_agent.prompt import USER_PROMPT
+from nat.agent.react_agent.register import ReActAgentWorkflowConfig
 
 logger = logging.getLogger(__name__)
 

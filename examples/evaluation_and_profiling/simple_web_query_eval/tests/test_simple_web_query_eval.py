@@ -19,11 +19,11 @@ import json
 import logging
 from pathlib import Path
 
-import aiq_simple_web_query_eval
+import nat_simple_web_query_eval
 import pytest
 
-from aiq.eval.evaluate import EvaluationRun
-from aiq.eval.evaluate import EvaluationRunConfig
+from nat.eval.evaluate import EvaluationRun
+from nat.eval.evaluate import EvaluationRunConfig
 
 logger = logging.getLogger(__name__)
 

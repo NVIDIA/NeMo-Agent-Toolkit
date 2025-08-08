@@ -15,21 +15,21 @@
 
 import pytest
 
-from aiq.data_models.component import ComponentGroup
-from aiq.data_models.component_ref import ComponentRef
-from aiq.data_models.component_ref import EmbedderRef
-from aiq.data_models.component_ref import FunctionRef
-from aiq.data_models.component_ref import LLMRef
-from aiq.data_models.component_ref import MemoryRef
-from aiq.data_models.component_ref import ObjectStoreRef
-from aiq.data_models.component_ref import RetrieverRef
-from aiq.data_models.component_ref import generate_instance_id
-from aiq.data_models.embedder import EmbedderBaseConfig
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.data_models.llm import LLMBaseConfig
-from aiq.data_models.memory import MemoryBaseConfig
-from aiq.data_models.object_store import ObjectStoreBaseConfig
-from aiq.data_models.retriever import RetrieverBaseConfig
+from nat.data_models.component import ComponentGroup
+from nat.data_models.component_ref import ComponentRef
+from nat.data_models.component_ref import EmbedderRef
+from nat.data_models.component_ref import FunctionRef
+from nat.data_models.component_ref import LLMRef
+from nat.data_models.component_ref import MemoryRef
+from nat.data_models.component_ref import ObjectStoreRef
+from nat.data_models.component_ref import RetrieverRef
+from nat.data_models.component_ref import generate_instance_id
+from nat.data_models.embedder import EmbedderBaseConfig
+from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.llm import LLMBaseConfig
+from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.object_store import ObjectStoreBaseConfig
+from nat.data_models.retriever import RetrieverBaseConfig
 
 
 def test_generate_instance_id():

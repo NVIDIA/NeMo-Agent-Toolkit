@@ -19,8 +19,8 @@ This file contains the abstract base class for SWE Bench predictor workflows.
 from abc import ABC
 from abc import abstractmethod
 
-from aiq.builder.builder import Builder
-from aiq.data_models.swe_bench_model import SWEBenchInput
+from nat.builder.builder import Builder
+from nat.data_models.swe_bench_model import SWEBenchInput
 
 from ..config import SweBenchWorkflowConfig
 

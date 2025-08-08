@@ -17,10 +17,10 @@ import typing
 from abc import ABC
 from abc import abstractmethod
 
-from aiq.data_models.front_end import FrontEndConfigT
+from nat.data_models.front_end import FrontEndConfigT
 
 if (typing.TYPE_CHECKING):
-    from aiq.data_models.config import Config
+    from nat.data_models.config import Config
 
 
 class FrontEndBase(typing.Generic[FrontEndConfigT], ABC):

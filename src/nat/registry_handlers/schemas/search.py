@@ -18,8 +18,8 @@ from enum import Enum
 
 from pydantic import BaseModel
 
-from aiq.data_models.component import ComponentEnum
-from aiq.registry_handlers.schemas.status import StatusMessage
+from nat.data_models.component import ComponentEnum
+from nat.registry_handlers.schemas.status import StatusMessage
 
 logger = logging.getLogger(__name__)
 

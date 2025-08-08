@@ -20,13 +20,13 @@ from types import NoneType
 import pytest
 from pydantic import BaseModel
 
-from aiq.builder.builder import Builder
-from aiq.builder.function import Function
-from aiq.builder.function import LambdaFunction
-from aiq.builder.function_info import FunctionInfo
-from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.function import FunctionBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.function import Function
+from nat.builder.function import LambdaFunction
+from nat.builder.function_info import FunctionInfo
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.cli.register_workflow import register_function
+from nat.data_models.function import FunctionBaseConfig
 
 
 class DummyConfig(FunctionBaseConfig, name="dummy"):

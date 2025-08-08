@@ -24,9 +24,9 @@ from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import model_validator
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.invocation_node import InvocationNode
+from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
 
 class IntermediateStepCategory(str, Enum):

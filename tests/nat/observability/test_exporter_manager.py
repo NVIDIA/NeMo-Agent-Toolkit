@@ -24,10 +24,10 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.builder.context import ContextState
-from aiq.observability.exporter.base_exporter import BaseExporter
-from aiq.observability.exporter.base_exporter import IsolatedAttribute
-from aiq.observability.exporter_manager import ExporterManager
+from nat.builder.context import ContextState
+from nat.observability.exporter.base_exporter import BaseExporter
+from nat.observability.exporter.base_exporter import IsolatedAttribute
+from nat.observability.exporter_manager import ExporterManager
 
 
 def get_exporter_counts():

@@ -21,8 +21,8 @@ import re
 import aiofiles
 import pytest
 
-from aiq.observability.mixin.file_mixin import FileExportMixin
-from aiq.observability.mixin.file_mode import FileMode
+from nat.observability.mixin.file_mixin import FileExportMixin
+from nat.observability.mixin.file_mode import FileMode
 
 
 class TestFileExportMixin:

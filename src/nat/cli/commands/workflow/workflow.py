@@ -17,9 +17,9 @@ import logging
 
 import click
 
-from aiq.cli.commands.workflow.workflow_commands import create_command
-from aiq.cli.commands.workflow.workflow_commands import delete_command
-from aiq.cli.commands.workflow.workflow_commands import reinstall_command
+from nat.cli.commands.workflow.workflow_commands import create_command
+from nat.cli.commands.workflow.workflow_commands import delete_command
+from nat.cli.commands.workflow.workflow_commands import reinstall_command
 
 logger = logging.getLogger(__name__)
 

@@ -17,8 +17,8 @@ import logging
 
 import numpy as np
 
-from aiq.profiler.forecasting.models.forecasting_base_model import ForecastingBaseModel
-from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+from nat.profiler.forecasting.models.forecasting_base_model import ForecastingBaseModel
+from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 logger = logging.getLogger(__name__)
 

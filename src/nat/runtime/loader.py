@@ -24,14 +24,14 @@ from enum import auto
 from functools import lru_cache
 from functools import reduce
 
-from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.cli.type_registry import GlobalTypeRegistry
-from aiq.data_models.config import Config
-from aiq.runtime.session import SessionManager
-from aiq.utils.data_models.schema_validator import validate_schema
-from aiq.utils.debugging_utils import is_debugger_attached
-from aiq.utils.io.yaml_tools import yaml_load
-from aiq.utils.type_utils import StrPath
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.cli.type_registry import GlobalTypeRegistry
+from nat.data_models.config import Config
+from nat.runtime.session import SessionManager
+from nat.utils.data_models.schema_validator import validate_schema
+from nat.utils.debugging_utils import is_debugger_attached
+from nat.utils.io.yaml_tools import yaml_load
+from nat.utils.type_utils import StrPath
 
 logger = logging.getLogger(__name__)
 

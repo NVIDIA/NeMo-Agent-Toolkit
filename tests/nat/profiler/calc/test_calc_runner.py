@@ -19,12 +19,12 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.profiler.calc.calc_runner import CalcRunner
-from aiq.profiler.calc.data_models import CalcRunnerConfig
-from aiq.profiler.calc.data_models import CalcRunnerOutput
-from aiq.profiler.calc.data_models import SizingMetricPerItem
-from aiq.profiler.calc.data_models import SizingMetrics
-from aiq.profiler.calc.data_models import SizingMetricsAlerts
+from nat.profiler.calc.calc_runner import CalcRunner
+from nat.profiler.calc.data_models import CalcRunnerConfig
+from nat.profiler.calc.data_models import CalcRunnerOutput
+from nat.profiler.calc.data_models import SizingMetricPerItem
+from nat.profiler.calc.data_models import SizingMetrics
+from nat.profiler.calc.data_models import SizingMetricsAlerts
 
 
 def make_sizing_metrics(latency, runtime, interrupted=False):

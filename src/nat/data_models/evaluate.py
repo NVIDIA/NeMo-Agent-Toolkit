@@ -21,12 +21,12 @@ from pydantic import BaseModel
 from pydantic import Discriminator
 from pydantic import model_validator
 
-from aiq.data_models.common import TypedBaseModel
-from aiq.data_models.dataset_handler import EvalDatasetConfig
-from aiq.data_models.dataset_handler import EvalS3Config
-from aiq.data_models.evaluator import EvaluatorBaseConfig
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.profiler import ProfilerConfig
+from nat.data_models.common import TypedBaseModel
+from nat.data_models.dataset_handler import EvalDatasetConfig
+from nat.data_models.dataset_handler import EvalS3Config
+from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.profiler import ProfilerConfig
 
 
 class JobEvictionPolicy(str, Enum):
@@ -108,7 +108,7 @@ class EvalConfig(BaseModel):
     @classmethod
     def rebuild_annotations(cls):
 
-        from aiq.cli.type_registry import GlobalTypeRegistry  # pylint: disable=cyclic-import
+        from nat.cli.type_registry import GlobalTypeRegistry  # pylint: disable=cyclic-import
 
         type_registry = GlobalTypeRegistry.get()
 

@@ -38,35 +38,35 @@ from pydantic import BaseModel
 from pydantic import Field
 from starlette.websockets import WebSocket
 
-from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.data_models.api_server import ChatRequest
-from aiq.data_models.api_server import ChatResponse
-from aiq.data_models.api_server import ChatResponseChunk
-from aiq.data_models.api_server import ResponseIntermediateStep
-from aiq.data_models.config import Config
-from aiq.data_models.object_store import KeyAlreadyExistsError
-from aiq.data_models.object_store import NoSuchKeyError
-from aiq.eval.config import EvaluationRunOutput
-from aiq.eval.evaluate import EvaluationRun
-from aiq.eval.evaluate import EvaluationRunConfig
-from aiq.front_ends.fastapi.auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
-from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
-from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
-from aiq.front_ends.fastapi.fastapi_front_end_config import AsyncGenerateResponse
-from aiq.front_ends.fastapi.fastapi_front_end_config import AsyncGenerationStatusResponse
-from aiq.front_ends.fastapi.fastapi_front_end_config import EvaluateRequest
-from aiq.front_ends.fastapi.fastapi_front_end_config import EvaluateResponse
-from aiq.front_ends.fastapi.fastapi_front_end_config import EvaluateStatusResponse
-from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
-from aiq.front_ends.fastapi.job_store import JobInfo
-from aiq.front_ends.fastapi.job_store import JobStore
-from aiq.front_ends.fastapi.message_handler import WebSocketMessageHandler
-from aiq.front_ends.fastapi.response_helpers import generate_single_response
-from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
-from aiq.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
-from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
-from aiq.object_store.models import ObjectStoreItem
-from aiq.runtime.session import SessionManager
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import ChatResponseChunk
+from nat.data_models.api_server import ResponseIntermediateStep
+from nat.data_models.config import Config
+from nat.data_models.object_store import KeyAlreadyExistsError
+from nat.data_models.object_store import NoSuchKeyError
+from nat.eval.config import EvaluationRunOutput
+from nat.eval.evaluate import EvaluationRun
+from nat.eval.evaluate import EvaluationRunConfig
+from nat.front_ends.fastapi.auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
+from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
+from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
+from nat.front_ends.fastapi.fastapi_front_end_config import AsyncGenerateResponse
+from nat.front_ends.fastapi.fastapi_front_end_config import AsyncGenerationStatusResponse
+from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateRequest
+from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateResponse
+from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateStatusResponse
+from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+from nat.front_ends.fastapi.job_store import JobInfo
+from nat.front_ends.fastapi.job_store import JobStore
+from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
+from nat.front_ends.fastapi.response_helpers import generate_single_response
+from nat.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
+from nat.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
+from nat.front_ends.fastapi.step_adaptor import StepAdaptor
+from nat.object_store.models import ObjectStoreItem
+from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +171,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         """
         Intercepts authentication request and supreses logs that contain sensitive data.
         """
-        from aiq.utils.log_utils import LogFilter
+        from nat.utils.log_utils import LogFilter
 
         logs_to_suppress: list[str] = []
 
@@ -1032,7 +1032,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         from fastapi.responses import HTMLResponse
 
-        from aiq.front_ends.fastapi.html_snippets.auth_code_grant_success import AUTH_REDIRECT_SUCCESS_HTML
+        from nat.front_ends.fastapi.html_snippets.auth_code_grant_success import AUTH_REDIRECT_SUCCESS_HTML
 
         async def redirect_uri(request: Request):
             """

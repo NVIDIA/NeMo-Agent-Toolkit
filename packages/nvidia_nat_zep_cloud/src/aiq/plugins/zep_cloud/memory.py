@@ -13,11 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_memory
-from aiq.data_models.memory import MemoryBaseConfig
-from aiq.data_models.retry_mixin import RetryMixin
-from aiq.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_memory
+from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.retry_mixin import RetryMixin
+from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
 class ZepMemoryClientConfig(MemoryBaseConfig, RetryMixin, name="zep_memory"):
@@ -30,9 +30,8 @@ class ZepMemoryClientConfig(MemoryBaseConfig, RetryMixin, name="zep_memory"):
 async def zep_memory_client(config: ZepMemoryClientConfig, builder: Builder):
     import os
 
+    from nat.plugins.zep_cloud.zep_editor import ZepEditor
     from zep_cloud.client import AsyncZep
-
-    from aiq.plugins.zep_cloud.zep_editor import ZepEditor
 
     zep_api_key = os.environ.get("ZEP_API_KEY")
 

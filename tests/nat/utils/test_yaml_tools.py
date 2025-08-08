@@ -19,17 +19,17 @@ from io import StringIO
 
 import pytest
 
-from aiq.builder.builder import Builder
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.config import Config
-from aiq.data_models.config import HashableBaseModel
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.utils.io.yaml_tools import _interpolate_variables
-from aiq.utils.io.yaml_tools import yaml_dump
-from aiq.utils.io.yaml_tools import yaml_dumps
-from aiq.utils.io.yaml_tools import yaml_load
-from aiq.utils.io.yaml_tools import yaml_loads
+from nat.builder.builder import Builder
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.config import Config
+from nat.data_models.config import HashableBaseModel
+from nat.data_models.function import FunctionBaseConfig
+from nat.utils.io.yaml_tools import _interpolate_variables
+from nat.utils.io.yaml_tools import yaml_dump
+from nat.utils.io.yaml_tools import yaml_dumps
+from nat.utils.io.yaml_tools import yaml_load
+from nat.utils.io.yaml_tools import yaml_loads
 
 
 @pytest.fixture(name="env_vars", scope="function", autouse=True)

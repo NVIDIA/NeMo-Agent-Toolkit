@@ -19,7 +19,7 @@ from collections.abc import Callable
 from typing import Any
 from typing import TypeVar
 
-from aiq.observability.processor.processor import Processor
+from nat.observability.processor.processor import Processor
 
 InputT = TypeVar('InputT')
 OutputT = TypeVar('OutputT')

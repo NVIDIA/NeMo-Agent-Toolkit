@@ -17,10 +17,10 @@ import logging
 
 import pytest
 
-from aiq.experimental.decorators.experimental_warning_decorator import BASE_WARNING_MESSAGE
-from aiq.experimental.decorators.experimental_warning_decorator import _warning_issued
-from aiq.experimental.decorators.experimental_warning_decorator import experimental
-from aiq.experimental.decorators.experimental_warning_decorator import issue_experimental_warning
+from nat.experimental.decorators.experimental_warning_decorator import BASE_WARNING_MESSAGE
+from nat.experimental.decorators.experimental_warning_decorator import _warning_issued
+from nat.experimental.decorators.experimental_warning_decorator import experimental
+from nat.experimental.decorators.experimental_warning_decorator import issue_experimental_warning
 
 
 # Reset warning state before each test

@@ -21,18 +21,18 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.data_models.component import ComponentEnum
-from aiq.data_models.discovery_metadata import DiscoveryMetadata
-from aiq.registry_handlers.package_utils import build_aiq_artifact
-from aiq.registry_handlers.package_utils import build_package_metadata
-from aiq.registry_handlers.package_utils import build_wheel
-from aiq.registry_handlers.package_utils import extract_dependencies_with_extras_resolved
-from aiq.registry_handlers.package_utils import get_all_transitive_dependencies
-from aiq.registry_handlers.package_utils import get_transitive_dependencies
-from aiq.registry_handlers.package_utils import parse_requirement
-from aiq.registry_handlers.package_utils import resolve_extras_to_packages
-from aiq.registry_handlers.schemas.package import WheelData
-from aiq.registry_handlers.schemas.publish import Artifact
+from nat.data_models.component import ComponentEnum
+from nat.data_models.discovery_metadata import DiscoveryMetadata
+from nat.registry_handlers.package_utils import build_aiq_artifact
+from nat.registry_handlers.package_utils import build_package_metadata
+from nat.registry_handlers.package_utils import build_wheel
+from nat.registry_handlers.package_utils import extract_dependencies_with_extras_resolved
+from nat.registry_handlers.package_utils import get_all_transitive_dependencies
+from nat.registry_handlers.package_utils import get_transitive_dependencies
+from nat.registry_handlers.package_utils import parse_requirement
+from nat.registry_handlers.package_utils import resolve_extras_to_packages
+from nat.registry_handlers.schemas.package import WheelData
+from nat.registry_handlers.schemas.publish import Artifact
 
 
 def test_build_wheel():

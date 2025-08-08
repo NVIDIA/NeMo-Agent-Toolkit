@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.cli.register_workflow import register_embedder_client
-from aiq.data_models.retry_mixin import RetryMixin
-from aiq.embedder.openai_embedder import OpenAIEmbedderModelConfig
-from aiq.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.cli.register_workflow import register_embedder_client
+from nat.data_models.retry_mixin import RetryMixin
+from nat.embedder.openai_embedder import OpenAIEmbedderModelConfig
+from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
 @register_embedder_client(config_type=OpenAIEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

@@ -32,11 +32,11 @@ import logging
 import numpy as np
 import pandas as pd
 
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.profiler.inference_optimization.data_models import FrequentPattern
-from aiq.profiler.inference_optimization.data_models import PrefixCallNode
-from aiq.profiler.inference_optimization.data_models import PrefixSpanSubworkflowResult
-from aiq.profiler.utils import create_standardized_dataframe
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.profiler.inference_optimization.data_models import FrequentPattern
+from nat.profiler.inference_optimization.data_models import PrefixCallNode
+from nat.profiler.inference_optimization.data_models import PrefixSpanSubworkflowResult
+from nat.profiler.utils import create_standardized_dataframe
 
 logger = logging.getLogger(__name__)
 

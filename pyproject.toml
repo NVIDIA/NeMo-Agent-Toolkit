@@ -22,7 +22,7 @@ dependencies = [
   "authlib~=1.3.1",
   "click~=8.1",
   "colorama~=0.4.6",
-  "datasets~=4.0", # workaround for uv's solver choosing different versions of datasets based on sys_platform
+  "datasets~=4.0",                              # workaround for uv's solver choosing different versions of datasets based on sys_platform
   "expandvars~=1.0",
   "fastapi~=0.115.5",
   "httpx~=0.27",
@@ -36,7 +36,7 @@ dependencies = [
   "pkce==1.0.3",
   "pkginfo~=1.12",
   "platformdirs~=4.3",
-  "pydantic==2.10.*", # work-around for arize-phoenix==6.1.0 incompatibility with pydantic==2.11.*, remove once we update arize-phoenix
+  "pydantic==2.10.*",                           # work-around for arize-phoenix==6.1.0 incompatibility with pydantic==2.11.*, remove once we update arize-phoenix
   "pymilvus~=2.4",
   "PyYAML~=6.0",
   "ragas~=0.2.14",
@@ -105,16 +105,10 @@ examples = [
   "aiq_user_report",
 ]
 
-profiling = [
-  "matplotlib~=3.9",
-  "prefixspan~=0.5.2",
-  "scikit-learn~=1.6",
-]
+profiling = ["matplotlib~=3.9", "prefixspan~=0.5.2", "scikit-learn~=1.6"]
 
 # Optional dependency needed when use_gunicorn is set to true
-gunicorn = [
-  "gunicorn~=23.0"
-]
+gunicorn = ["gunicorn~=23.0"]
 
 
 [tool.uv]
@@ -252,7 +246,7 @@ filterwarnings = [
   # trigger the warnings. In Python 3.12 this triggers a SyntaxWarning, in Python 3.11 it triggers a DeprecationWarning
   # which unfortunately pytest is unable to filter.
   # Remove once https://github.com/qdrant/qdrant-client/issues/983 is resolved.
-  "ignore:^invalid escape sequence:SyntaxWarning"
+  "ignore:^invalid escape sequence:SyntaxWarning",
 ]
 testpaths = ["tests", "examples/*/tests", "packages/*/tests"]
 asyncio_mode = "auto"
@@ -943,7 +937,7 @@ skip = [
   "models",
   "thirdparty",
 ]
-known_first_party = ["aiq"]
+known_first_party = ["aiq", "nat"]
 # Need to declare known third party for namespace packages which have the same name
 known_third_party = [
   "agno",
@@ -955,7 +949,7 @@ known_third_party = [
   "semantic_kernel",
   "zep_cloud",
 ]
-namespace_packages = ["aiq", "aiq.plugins"]
+namespace_packages = ["aiq", "aiq.plugins", "nat", "nat.plugins"]
 
 [tool.flake8]
 filename = ["*.py"]

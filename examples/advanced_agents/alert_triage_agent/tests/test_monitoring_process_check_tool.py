@@ -16,8 +16,8 @@
 from unittest.mock import AsyncMock
 from unittest.mock import patch
 
-from aiq_alert_triage_agent.monitoring_process_check_tool import _run_ansible_playbook_for_monitor_process_check
-from aiq_alert_triage_agent.playbooks import MONITOR_PROCESS_CHECK_PLAYBOOK
+from nat_alert_triage_agent.monitoring_process_check_tool import _run_ansible_playbook_for_monitor_process_check
+from nat_alert_triage_agent.playbooks import MONITOR_PROCESS_CHECK_PLAYBOOK
 
 
 async def test_run_ansible_playbook_for_monitor_process_check():

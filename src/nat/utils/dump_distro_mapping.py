@@ -16,7 +16,7 @@
 import argparse
 import json
 
-from aiq.runtime.loader import get_all_aiq_entrypoints_distro_mapping
+from nat.runtime.loader import get_all_aiq_entrypoints_distro_mapping
 
 
 def dump_distro_mapping(path: str):

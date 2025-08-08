@@ -15,11 +15,11 @@
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.component_ref import LLMRef
-from aiq.data_models.function import FunctionBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import LLMRef
+from nat.data_models.function import FunctionBaseConfig
 
 from . import utils
 from .playbooks import HOST_PERFORMANCE_CHECK_PLAYBOOK

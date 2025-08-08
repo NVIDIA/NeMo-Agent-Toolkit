@@ -19,17 +19,17 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from enum import Enum
 
-from aiq.data_models.component import ComponentEnum
-from aiq.data_models.discovery_metadata import DiscoveryMetadata
-from aiq.registry_handlers.schemas.package import PackageNameVersionList
-from aiq.registry_handlers.schemas.publish import Artifact
-from aiq.registry_handlers.schemas.publish import PublishResponse
-from aiq.registry_handlers.schemas.pull import PullRequestPackages
-from aiq.registry_handlers.schemas.pull import PullResponse
-from aiq.registry_handlers.schemas.remove import RemoveResponse
-from aiq.registry_handlers.schemas.search import SearchQuery
-from aiq.registry_handlers.schemas.search import SearchResponse
-from aiq.registry_handlers.schemas.search import VisualizeFields
+from nat.data_models.component import ComponentEnum
+from nat.data_models.discovery_metadata import DiscoveryMetadata
+from nat.registry_handlers.schemas.package import PackageNameVersionList
+from nat.registry_handlers.schemas.publish import Artifact
+from nat.registry_handlers.schemas.publish import PublishResponse
+from nat.registry_handlers.schemas.pull import PullRequestPackages
+from nat.registry_handlers.schemas.pull import PullResponse
+from nat.registry_handlers.schemas.remove import RemoveResponse
+from nat.registry_handlers.schemas.search import SearchQuery
+from nat.registry_handlers.schemas.search import SearchResponse
+from nat.registry_handlers.schemas.search import VisualizeFields
 
 
 class AbstractRegistryHandler(ABC):

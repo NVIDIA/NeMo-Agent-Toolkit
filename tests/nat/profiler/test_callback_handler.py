@@ -19,17 +19,17 @@ from uuid import uuid4
 
 import pytest
 
-from aiq.builder.context import Context
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.intermediate_step import StreamEventData
-from aiq.data_models.intermediate_step import TraceMetadata
-from aiq.data_models.intermediate_step import UsageInfo
-from aiq.profiler.callbacks.langchain_callback_handler import LangchainProfilerHandler
-from aiq.profiler.callbacks.llama_index_callback_handler import LlamaIndexProfilerHandler
-from aiq.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
-from aiq.utils.reactive.subject import Subject
+from nat.builder.context import Context
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.intermediate_step import TraceMetadata
+from nat.data_models.intermediate_step import UsageInfo
+from nat.profiler.callbacks.langchain_callback_handler import LangchainProfilerHandler
+from nat.profiler.callbacks.llama_index_callback_handler import LlamaIndexProfilerHandler
+from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
+from nat.utils.reactive.subject import Subject
 
 
 async def test_langchain_handler(reactive_stream: Subject):
@@ -208,7 +208,7 @@ async def test_semantic_kernel_handler_tool_call(reactive_stream: Subject):
 
     pytest.importorskip("semantic_kernel")
 
-    from aiq.profiler.callbacks.semantic_kernel_callback_handler import SemanticKernelProfilerHandler
+    from nat.profiler.callbacks.semantic_kernel_callback_handler import SemanticKernelProfilerHandler
 
     all_ = []
     _ = SemanticKernelProfilerHandler(workflow_llms={})
@@ -246,9 +246,9 @@ async def test_agno_handler_llm_call(reactive_stream: Subject):
     """
     pytest.importorskip("litellm")
 
-    from aiq.builder.context import Context
-    from aiq.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
-    from aiq.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
+    from nat.builder.context import Context
+    from nat.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
+    from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
     # Create handler and set up collection of results
     all_stats = []
@@ -329,8 +329,8 @@ async def test_agno_handler_llm_call(reactive_stream: Subject):
                                                                          seconds_between_calls=5))
 
             # Make sure the event has all payload parameters expected by the ReactiveX stream
-            from aiq.data_models.intermediate_step import IntermediateStep
-            from aiq.data_models.invocation_node import InvocationNode
+            from nat.data_models.intermediate_step import IntermediateStep
+            from nat.data_models.invocation_node import InvocationNode
 
             # Create a proper IntermediateStep object
             start_event = IntermediateStep(parent_id="root",
@@ -466,10 +466,10 @@ async def test_agno_handler_tool_execution(reactive_stream: Subject):
     Note: This test simulates how tool execution is tracked in the tool_wrapper.py
     since AgnoProfilerHandler doesn't directly patch tool execution.
     """
-    from aiq.builder.context import Context
-    from aiq.data_models.intermediate_step import IntermediateStep
-    from aiq.data_models.invocation_node import InvocationNode
-    from aiq.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
+    from nat.builder.context import Context
+    from nat.data_models.intermediate_step import IntermediateStep
+    from nat.data_models.invocation_node import InvocationNode
+    from nat.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
 
     # Set up handler and collect results
     all_stats = []

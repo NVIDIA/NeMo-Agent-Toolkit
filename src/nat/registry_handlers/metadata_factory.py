@@ -15,10 +15,10 @@
 
 import logging
 
-from aiq.data_models.component import ComponentEnum
-from aiq.data_models.discovery_metadata import DiscoveryMetadata
-from aiq.data_models.discovery_metadata import DiscoveryStatusEnum
-from aiq.registry_handlers.schemas.package import WheelData
+from nat.data_models.component import ComponentEnum
+from nat.data_models.discovery_metadata import DiscoveryMetadata
+from nat.data_models.discovery_metadata import DiscoveryStatusEnum
+from nat.registry_handlers.schemas.package import WheelData
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class ComponentDiscoveryMetadata:
 
     def load_metadata(self):
 
-        from aiq.cli.type_registry import GlobalTypeRegistry
+        from nat.cli.type_registry import GlobalTypeRegistry
 
         registry = GlobalTypeRegistry.get()
 

@@ -19,10 +19,10 @@ from unittest.mock import MagicMock
 import pytest
 from langchain_core.language_models import BaseChatModel
 
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
-from aiq.eval.evaluator.evaluator_model import EvalOutput
-from aiq.eval.tunable_rag_evaluator.evaluate import TunableRagEvaluator
+from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.eval.evaluator.evaluator_model import EvalOutput
+from nat.eval.tunable_rag_evaluator.evaluate import TunableRagEvaluator
 
 
 @pytest.fixture

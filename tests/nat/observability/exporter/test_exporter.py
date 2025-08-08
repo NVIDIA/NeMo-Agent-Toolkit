@@ -19,8 +19,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.observability.exporter.exporter import Exporter
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.observability.exporter.exporter import Exporter
 
 
 class TestExporter:

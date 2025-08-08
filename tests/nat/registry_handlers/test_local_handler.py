@@ -20,16 +20,16 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.cli.type_registry import GlobalTypeRegistry
-from aiq.cli.type_registry import TypeRegistry
-from aiq.registry_handlers.local.register_local import LocalRegistryHandlerConfig
-from aiq.registry_handlers.schemas.package import PackageNameVersion
-from aiq.registry_handlers.schemas.package import PackageNameVersionList
-from aiq.registry_handlers.schemas.remove import RemoveResponse
-from aiq.registry_handlers.schemas.search import SearchQuery
-from aiq.runtime.loader import PluginTypes
-from aiq.runtime.loader import discover_and_register_plugins
-from aiq.settings.global_settings import Settings
+from nat.cli.type_registry import GlobalTypeRegistry
+from nat.cli.type_registry import TypeRegistry
+from nat.registry_handlers.local.register_local import LocalRegistryHandlerConfig
+from nat.registry_handlers.schemas.package import PackageNameVersion
+from nat.registry_handlers.schemas.package import PackageNameVersionList
+from nat.registry_handlers.schemas.remove import RemoveResponse
+from nat.registry_handlers.schemas.search import SearchQuery
+from nat.runtime.loader import PluginTypes
+from nat.runtime.loader import discover_and_register_plugins
+from nat.settings.global_settings import Settings
 
 
 @pytest.mark.parametrize("field_name, component_type, top_k, expected",

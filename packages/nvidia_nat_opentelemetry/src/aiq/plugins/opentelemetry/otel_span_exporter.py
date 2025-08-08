@@ -18,15 +18,15 @@ from abc import abstractmethod
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version
 
+from nat.plugins.opentelemetry.otel_span import OtelSpan
+from nat.plugins.opentelemetry.span_converter import convert_span_to_otel
 from opentelemetry.sdk.resources import Resource
 
-from aiq.builder.context import ContextState
-from aiq.data_models.span import Span
-from aiq.observability.exporter.span_exporter import SpanExporter
-from aiq.observability.processor.batching_processor import BatchingProcessor
-from aiq.observability.processor.processor import Processor
-from aiq.plugins.opentelemetry.otel_span import OtelSpan
-from aiq.plugins.opentelemetry.span_converter import convert_span_to_otel
+from nat.builder.context import ContextState
+from nat.data_models.span import Span
+from nat.observability.exporter.span_exporter import SpanExporter
+from nat.observability.processor.batching_processor import BatchingProcessor
+from nat.observability.processor.processor import Processor
 
 logger = logging.getLogger(__name__)
 

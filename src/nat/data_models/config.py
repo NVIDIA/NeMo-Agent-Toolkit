@@ -25,14 +25,14 @@ from pydantic import ValidationInfo
 from pydantic import ValidatorFunctionWrapHandler
 from pydantic import field_validator
 
-from aiq.data_models.evaluate import EvalConfig
-from aiq.data_models.front_end import FrontEndBaseConfig
-from aiq.data_models.function import EmptyFunctionConfig
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.data_models.logging import LoggingBaseConfig
-from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.data_models.ttc_strategy import TTCStrategyBaseConfig
-from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+from nat.data_models.evaluate import EvalConfig
+from nat.data_models.front_end import FrontEndBaseConfig
+from nat.data_models.function import EmptyFunctionConfig
+from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.logging import LoggingBaseConfig
+from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 
 from .authentication import AuthProviderBaseConfig
 from .common import HashableBaseModel
@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 
 
 def _process_validation_error(err: ValidationError, handler: ValidatorFunctionWrapHandler, info: ValidationInfo):
-    from aiq.cli.type_registry import GlobalTypeRegistry  # pylint: disable=cyclic-import
+    from nat.cli.type_registry import GlobalTypeRegistry  # pylint: disable=cyclic-import
 
     new_errors = []
     logged_once = False
@@ -151,7 +151,7 @@ class TelemetryConfig(BaseModel):
     @classmethod
     def rebuild_annotations(cls):
 
-        from aiq.cli.type_registry import GlobalTypeRegistry
+        from nat.cli.type_registry import GlobalTypeRegistry
 
         type_registry = GlobalTypeRegistry.get()
 
@@ -209,7 +209,7 @@ class GeneralConfig(BaseModel):
     @classmethod
     def rebuild_annotations(cls):
 
-        from aiq.cli.type_registry import GlobalTypeRegistry
+        from nat.cli.type_registry import GlobalTypeRegistry
 
         type_registry = GlobalTypeRegistry.get()
 
@@ -307,7 +307,7 @@ class Config(HashableBaseModel):
     @classmethod
     def rebuild_annotations(cls):
 
-        from aiq.cli.type_registry import GlobalTypeRegistry
+        from nat.cli.type_registry import GlobalTypeRegistry
 
         type_registry = GlobalTypeRegistry.get()
 

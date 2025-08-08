@@ -17,14 +17,14 @@ import asyncio
 import typing
 from collections.abc import AsyncGenerator
 
-from aiq.data_models.api_server import ResponseIntermediateStep
-from aiq.data_models.api_server import ResponsePayloadOutput
-from aiq.data_models.api_server import ResponseSerializable
-from aiq.data_models.step_adaptor import StepAdaptorConfig
-from aiq.front_ends.fastapi.intermediate_steps_subscriber import pull_intermediate
-from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
-from aiq.runtime.session import SessionManager
-from aiq.utils.producer_consumer_queue import AsyncIOProducerConsumerQueue
+from nat.data_models.api_server import ResponseIntermediateStep
+from nat.data_models.api_server import ResponsePayloadOutput
+from nat.data_models.api_server import ResponseSerializable
+from nat.data_models.step_adaptor import StepAdaptorConfig
+from nat.front_ends.fastapi.intermediate_steps_subscriber import pull_intermediate
+from nat.front_ends.fastapi.step_adaptor import StepAdaptor
+from nat.runtime.session import SessionManager
+from nat.utils.producer_consumer_queue import AsyncIOProducerConsumerQueue
 
 
 async def generate_streaming_response_as_str(payload: typing.Any,

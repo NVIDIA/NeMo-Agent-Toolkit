@@ -17,8 +17,8 @@ import os
 
 from pydantic import Field
 
-from aiq.cli.register_workflow import register_registry_handler
-from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
+from nat.cli.register_workflow import register_registry_handler
+from nat.data_models.registry_handler import RegistryHandlerBaseConfig
 
 
 class RestRegistryHandlerConfig(RegistryHandlerBaseConfig, name="rest"):
@@ -36,7 +36,7 @@ class RestRegistryHandlerConfig(RegistryHandlerBaseConfig, name="rest"):
 @register_registry_handler(config_type=RestRegistryHandlerConfig)
 async def rest_search_handler(config: RestRegistryHandlerConfig):
 
-    from aiq.registry_handlers.rest.rest_handler import RestRegistryHandler
+    from nat.registry_handlers.rest.rest_handler import RestRegistryHandler
 
     if (config.token is None):
         registry_token = os.getenv("REGISTRY_TOKEN")

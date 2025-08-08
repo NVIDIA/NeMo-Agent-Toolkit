@@ -18,9 +18,9 @@ from typing import ClassVar
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_object_store
-from aiq.data_models.object_store import ObjectStoreBaseConfig
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_object_store
+from nat.data_models.object_store import ObjectStoreBaseConfig
 
 
 class MySQLObjectStoreClientConfig(ObjectStoreBaseConfig, name="mysql"):

@@ -16,17 +16,17 @@
 import pytest
 from pydantic import Field
 
-from aiq.data_models.common import TypedBaseModel
-from aiq.data_models.common import TypedBaseModelT
-from aiq.data_models.embedder import EmbedderBaseConfig
-from aiq.data_models.evaluate import EvaluatorBaseConfig
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.data_models.llm import LLMBaseConfig
-from aiq.data_models.memory import MemoryBaseConfig
-from aiq.data_models.object_store import ObjectStoreBaseConfig
-from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
-from aiq.data_models.retriever import RetrieverBaseConfig
-from aiq.utils.metadata_utils import generate_config_type_docs
+from nat.data_models.common import TypedBaseModel
+from nat.data_models.common import TypedBaseModelT
+from nat.data_models.embedder import EmbedderBaseConfig
+from nat.data_models.evaluate import EvaluatorBaseConfig
+from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.llm import LLMBaseConfig
+from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.object_store import ObjectStoreBaseConfig
+from nat.data_models.registry_handler import RegistryHandlerBaseConfig
+from nat.data_models.retriever import RetrieverBaseConfig
+from nat.utils.metadata_utils import generate_config_type_docs
 
 
 @pytest.fixture(name="base_configs", scope="function", autouse=True)

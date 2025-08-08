@@ -24,7 +24,7 @@ import aioboto3
 from botocore.exceptions import NoCredentialsError
 from tqdm import tqdm
 
-from aiq.data_models.evaluate import EvalOutputConfig
+from nat.data_models.evaluate import EvalOutputConfig
 
 logger = logging.getLogger(__name__)
 

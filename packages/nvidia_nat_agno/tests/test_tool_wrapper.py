@@ -20,14 +20,14 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.function import Function
 # Import the module under test with the correct import path
-from aiq.plugins.agno.tool_wrapper import agno_tool_wrapper
-from aiq.plugins.agno.tool_wrapper import execute_agno_tool
-from aiq.plugins.agno.tool_wrapper import process_result
+from nat.plugins.agno.tool_wrapper import agno_tool_wrapper
+from nat.plugins.agno.tool_wrapper import execute_agno_tool
+from nat.plugins.agno.tool_wrapper import process_result
+
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function import Function
 
 
 @pytest.fixture(name="run_loop_thread")
@@ -213,7 +213,7 @@ class TestToolWrapper:
     def test_registration_decorator(self):
         """Test that the register_tool_wrapper decorator correctly registers the agno_tool_wrapper function."""
         # Get the global type registry to access registered tool wrappers
-        from aiq.cli.type_registry import GlobalTypeRegistry
+        from nat.cli.type_registry import GlobalTypeRegistry
 
         # Get the registered tool wrappers
         registry = GlobalTypeRegistry.get()
@@ -252,8 +252,8 @@ class TestToolWrapper:
         result = execute_agno_tool("test_tool", mock_coroutine_fn, ["query"], run_loop_thread)
 
         # Verify that the counters and initialization flags were set correctly
-        from aiq.plugins.agno.tool_wrapper import _tool_call_counters
-        from aiq.plugins.agno.tool_wrapper import _tool_initialization_done
+        from nat.plugins.agno.tool_wrapper import _tool_call_counters
+        from nat.plugins.agno.tool_wrapper import _tool_initialization_done
         assert "test_tool" in _tool_call_counters
         assert "test_tool" in _tool_initialization_done
 

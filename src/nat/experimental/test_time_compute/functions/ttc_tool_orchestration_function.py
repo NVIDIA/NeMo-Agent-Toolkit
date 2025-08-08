@@ -18,18 +18,18 @@ import logging
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.component_ref import FunctionRef
-from aiq.data_models.component_ref import TTCStrategyRef
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
-from aiq.experimental.test_time_compute.models.stage_enums import StageTypeEnum
-from aiq.experimental.test_time_compute.models.tool_use_config import ToolUseInputSchema
-from aiq.experimental.test_time_compute.models.tool_use_config import ToolUselist
-from aiq.experimental.test_time_compute.models.ttc_item import TTCItem
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import FunctionRef
+from nat.data_models.component_ref import TTCStrategyRef
+from nat.data_models.function import FunctionBaseConfig
+from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
+from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
+from nat.experimental.test_time_compute.models.tool_use_config import ToolUseInputSchema
+from nat.experimental.test_time_compute.models.tool_use_config import ToolUselist
+from nat.experimental.test_time_compute.models.ttc_item import TTCItem
 
 logger = logging.getLogger(__name__)
 

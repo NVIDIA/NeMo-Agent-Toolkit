@@ -18,16 +18,16 @@ import logging
 from pydantic import AliasChoices
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.api_server import ChatRequest
-from aiq.data_models.api_server import ChatResponse
-from aiq.data_models.component_ref import FunctionRef
-from aiq.data_models.component_ref import LLMRef
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.utils.type_converter import GlobalTypeConverter
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import ChatResponse
+from nat.data_models.component_ref import FunctionRef
+from nat.data_models.component_ref import LLMRef
+from nat.data_models.function import FunctionBaseConfig
+from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
 
@@ -78,10 +78,10 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     from langchain_core.messages import trim_messages
     from langgraph.graph.graph import CompiledGraph
 
-    from aiq.agent.base import AGENT_LOG_PREFIX
-    from aiq.agent.react_agent.agent import ReActAgentGraph
-    from aiq.agent.react_agent.agent import ReActGraphState
-    from aiq.agent.react_agent.agent import create_react_agent_prompt
+    from nat.agent.base import AGENT_LOG_PREFIX
+    from nat.agent.react_agent.agent import ReActAgentGraph
+    from nat.agent.react_agent.agent import ReActGraphState
+    from nat.agent.react_agent.agent import create_react_agent_prompt
 
     prompt = create_react_agent_prompt(config)
 

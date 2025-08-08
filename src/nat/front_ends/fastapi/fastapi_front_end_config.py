@@ -22,9 +22,9 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import field_validator
 
-from aiq.data_models.component_ref import ObjectStoreRef
-from aiq.data_models.front_end import FrontEndBaseConfig
-from aiq.data_models.step_adaptor import StepAdaptorConfig
+from nat.data_models.component_ref import ObjectStoreRef
+from nat.data_models.front_end import FrontEndBaseConfig
+from nat.data_models.step_adaptor import StepAdaptorConfig
 
 logger = logging.getLogger(__name__)
 

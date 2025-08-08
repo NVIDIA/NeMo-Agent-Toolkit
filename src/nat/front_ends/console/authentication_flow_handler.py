@@ -25,12 +25,12 @@ from authlib.integrations.httpx_client import AsyncOAuth2Client
 from fastapi import FastAPI
 from fastapi import Request
 
-from aiq.authentication.interfaces import FlowHandlerBase
-from aiq.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
-from aiq.data_models.authentication import AuthenticatedContext
-from aiq.data_models.authentication import AuthFlowType
-from aiq.data_models.authentication import AuthProviderBaseConfig
-from aiq.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEndController
+from nat.authentication.interfaces import FlowHandlerBase
+from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
+from nat.data_models.authentication import AuthenticatedContext
+from nat.data_models.authentication import AuthFlowType
+from nat.data_models.authentication import AuthProviderBaseConfig
+from nat.front_ends.fastapi.fastapi_front_end_controller import _FastApiFrontEndController
 
 
 # --------------------------------------------------------------------------- #

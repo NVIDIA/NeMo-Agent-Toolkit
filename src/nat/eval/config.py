@@ -17,10 +17,10 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalOutput
-from aiq.eval.usage_stats import UsageStats
-from aiq.profiler.data_models import ProfilerResults
+from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.eval.evaluator.evaluator_model import EvalOutput
+from nat.eval.usage_stats import UsageStats
+from nat.profiler.data_models import ProfilerResults
 
 
 class EvaluationRunConfig(BaseModel):

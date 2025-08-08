@@ -17,8 +17,8 @@ import logging
 
 from langchain_core.agents import AgentAction
 
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepType
 
 logger = logging.getLogger(__name__)
 

@@ -23,14 +23,14 @@ import pytest_asyncio
 #
 # The "build_reasoning_function" to be tested:
 #
-from aiq.agent.reasoning_agent.reasoning_agent import ReasoningFunctionConfig
-from aiq.agent.reasoning_agent.reasoning_agent import build_reasoning_function
-from aiq.builder.builder import Builder
-from aiq.builder.function import Function
-from aiq.builder.function import LambdaFunction
-from aiq.builder.function_info import FunctionInfo
-from aiq.data_models.api_server import ChatRequest
-from aiq.data_models.function import FunctionBaseConfig
+from nat.agent.reasoning_agent.reasoning_agent import ReasoningFunctionConfig
+from nat.agent.reasoning_agent.reasoning_agent import build_reasoning_function
+from nat.builder.builder import Builder
+from nat.builder.function import Function
+from nat.builder.function import LambdaFunction
+from nat.builder.function_info import FunctionInfo
+from nat.data_models.api_server import ChatRequest
+from nat.data_models.function import FunctionBaseConfig
 
 #############################
 # EXAMPLE MOCK CLASSES

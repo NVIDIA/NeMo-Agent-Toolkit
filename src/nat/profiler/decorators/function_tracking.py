@@ -20,11 +20,11 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from aiq.builder.context import Context
-from aiq.builder.intermediate_step_manager import IntermediateStepManager
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.intermediate_step import TraceMetadata
+from nat.builder.context import Context
+from nat.builder.intermediate_step_manager import IntermediateStepManager
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import TraceMetadata
 
 
 # --- Helper function to recursively serialize any object into JSON-friendly data ---

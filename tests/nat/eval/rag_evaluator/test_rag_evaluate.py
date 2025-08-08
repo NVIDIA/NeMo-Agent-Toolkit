@@ -27,8 +27,8 @@ from ragas.evaluation import SingleTurnSample
 from ragas.llms import LangchainLLMWrapper
 from ragas.metrics import Metric
 
-from aiq.eval.evaluator.evaluator_model import EvalOutput
-from aiq.eval.rag_evaluator.evaluate import RAGEvaluator
+from nat.eval.evaluator.evaluator_model import EvalOutput
+from nat.eval.rag_evaluator.evaluate import RAGEvaluator
 
 # pylint: disable=redefined-outer-name
 

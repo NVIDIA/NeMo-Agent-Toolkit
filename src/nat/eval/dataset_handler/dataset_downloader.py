@@ -19,7 +19,7 @@ import boto3
 import requests
 from botocore.exceptions import NoCredentialsError
 
-from aiq.data_models.dataset_handler import EvalDatasetConfig
+from nat.data_models.dataset_handler import EvalDatasetConfig
 
 logger = logging.getLogger(__name__)
 

@@ -18,8 +18,8 @@ limitations under the License.
 # Test Time Compute With NVIDIA NeMo Agent Toolkit
 Test time compute reallocates compute after a model has been trained, trading extra inference cycles for much better reasoning, factuality, and robustness, often without any additional training data. The new **`aiq.experimental.test_time_compute`** package codifies this idea as four strategy types (Search ▶ Editing ▶ Scoring ▶ Selection) that operate on a lightweight `TTCItem` record.  Developers can compose these strategies manually or use several **pre‑built TTC functions** that wire everything up automatically. To add your own strategy, you can simply follow these steps:
 1. Write a config subclass.
-2. Implement a `StrategyBase` child. 
-3. Register it with the `@register_ttc_strategy` decorator.  
+2. Implement a `StrategyBase` child.
+3. Register it with the `@register_ttc_strategy` decorator.
 The remainder of this document explains each step in detail.
 
 ## Core Design
@@ -130,7 +130,7 @@ Follow the steps below to create and register a new strategy.
 2. Implement the strategy
 
    ```python
-   from aiq.experimental.test_time_compute.models.strategy_base import StrategyBase
+   from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
    class MyStrategy(StrategyBase):
        ...
    ```
@@ -138,7 +138,7 @@ Follow the steps below to create and register a new strategy.
 3. Register the strategy.
 
    ```python
-   from aiq.cli.register_workflow import register_ttc_strategy
+   from nat.cli.register_workflow import register_ttc_strategy
 
    @register_ttc_strategy(config_type=MyStrategyConfig)
    async def register_my_strategy(cfg: MyStrategyConfig, builder: Builder):
@@ -153,7 +153,7 @@ Your strategy is now discoverable by `TypeRegistry` and can be referenced in `AI
 
 ## Composing Strategies in an `AIQConfig`
 
-TTC Strategies can be part of workflow configurations, just like other components such as `LLMs`. For example, the following configuration excerpt shows how an TTC strategy can be 
+TTC Strategies can be part of workflow configurations, just like other components such as `LLMs`. For example, the following configuration excerpt shows how an TTC strategy can be
 configured in a `config.yml` file and used in a workflow function:
 
 ```yaml

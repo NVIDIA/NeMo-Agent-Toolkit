@@ -17,11 +17,11 @@ import typing
 from abc import ABC
 from abc import abstractmethod
 
-from aiq.data_models.authentication import AuthenticatedContext
-from aiq.data_models.authentication import AuthFlowType
-from aiq.data_models.authentication import AuthProviderBaseConfig
-from aiq.data_models.authentication import AuthProviderBaseConfigT
-from aiq.data_models.authentication import AuthResult
+from nat.data_models.authentication import AuthenticatedContext
+from nat.data_models.authentication import AuthFlowType
+from nat.data_models.authentication import AuthProviderBaseConfig
+from nat.data_models.authentication import AuthProviderBaseConfigT
+from nat.data_models.authentication import AuthResult
 
 AUTHORIZATION_HEADER = "Authorization"
 

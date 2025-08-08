@@ -21,13 +21,13 @@ import uuid
 
 import pytest
 
-from aiq.builder.context import Context
-from aiq.builder.context import ContextState
-from aiq.builder.intermediate_step_manager import IntermediateStepManager
-from aiq.builder.intermediate_step_manager import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.invocation_node import InvocationNode
+from nat.builder.context import Context
+from nat.builder.context import ContextState
+from nat.builder.intermediate_step_manager import IntermediateStepManager
+from nat.builder.intermediate_step_manager import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.invocation_node import InvocationNode
 
 # --------------------------------------------------------------------------- #
 # Minimal stubs so the tests do not need the whole aiq code-base

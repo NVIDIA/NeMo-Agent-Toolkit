@@ -17,7 +17,7 @@ import typing
 
 from pydantic import BaseModel
 
-from aiq.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStep
 
 
 class EvalInputItem(BaseModel):

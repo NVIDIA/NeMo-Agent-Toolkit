@@ -17,7 +17,7 @@ import typing
 
 import pytest
 
-from aiq.tool.retriever import RetrieverConfig
+from nat.tool.retriever import RetrieverConfig
 
 
 @pytest.mark.parametrize("config_values",

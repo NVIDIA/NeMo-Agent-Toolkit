@@ -26,15 +26,15 @@ from pydantic import BaseModel
 from pydantic import Field
 from semantic_kernel.connectors.ai.open_ai.services.open_ai_chat_completion_base import OpenAIChatCompletionBase
 
-from aiq.builder.context import Context
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.intermediate_step import StreamEventData
-from aiq.data_models.intermediate_step import TraceMetadata
-from aiq.data_models.intermediate_step import UsageInfo
-from aiq.profiler.callbacks.base_callback_class import BaseProfilerCallback
-from aiq.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
+from nat.builder.context import Context
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.intermediate_step import TraceMetadata
+from nat.data_models.intermediate_step import UsageInfo
+from nat.profiler.callbacks.base_callback_class import BaseProfilerCallback
+from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
 logger = logging.getLogger(__name__)
 

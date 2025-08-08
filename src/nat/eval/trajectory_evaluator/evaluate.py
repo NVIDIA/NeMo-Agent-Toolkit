@@ -19,9 +19,9 @@ from langchain.evaluation import TrajectoryEvalChain
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
-from aiq.eval.evaluator.base_evaluator import BaseEvaluator
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
-from aiq.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.eval.evaluator.base_evaluator import BaseEvaluator
+from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.eval.evaluator.evaluator_model import EvalOutputItem
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +48,8 @@ class TrajectoryEvaluator(BaseEvaluator):
         """
         Evaluate a single EvalInputItem and return an EvalOutputItem.
         """
-        from aiq.data_models.intermediate_step import IntermediateStepType
-        from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
+        from nat.data_models.intermediate_step import IntermediateStepType
+        from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
 
         intermediate_step_adapter = IntermediateStepAdapter()
         event_filter = [IntermediateStepType.LLM_END, IntermediateStepType.TOOL_END]

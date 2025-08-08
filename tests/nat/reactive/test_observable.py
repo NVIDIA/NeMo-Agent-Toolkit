@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.utils.reactive.observable import Observable
-from aiq.utils.reactive.observer import Observer
+from nat.utils.reactive.observable import Observable
+from nat.utils.reactive.observer import Observer
 
 
 class MockObservable(Observable[str]):

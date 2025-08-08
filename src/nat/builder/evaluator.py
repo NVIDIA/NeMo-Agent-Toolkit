@@ -15,9 +15,9 @@
 
 from collections.abc import Callable
 
-from aiq.data_models.evaluator import EvaluatorBaseConfig
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalOutput
+from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.eval.evaluator.evaluator_model import EvalOutput
 
 
 class EvaluatorInfo:

@@ -16,11 +16,11 @@ import pytest
 from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.llm.aws_bedrock_llm import AWSBedrockModelConfig
-from aiq.llm.nim_llm import NIMModelConfig
-from aiq.llm.openai_llm import OpenAIModelConfig
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from nat.llm.nim_llm import NIMModelConfig
+from nat.llm.openai_llm import OpenAIModelConfig
 
 
 @pytest.mark.integration

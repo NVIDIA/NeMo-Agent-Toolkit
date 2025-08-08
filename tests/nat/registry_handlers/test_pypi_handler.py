@@ -19,12 +19,12 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.cli.type_registry import TypeRegistry
-from aiq.registry_handlers.package_utils import build_aiq_artifact
-from aiq.registry_handlers.pypi.pypi_handler import PypiRegistryHandler
-from aiq.registry_handlers.schemas.pull import PullRequestPackages
-from aiq.registry_handlers.schemas.search import SearchQuery
-from aiq.settings.global_settings import Settings
+from nat.cli.type_registry import TypeRegistry
+from nat.registry_handlers.package_utils import build_aiq_artifact
+from nat.registry_handlers.pypi.pypi_handler import PypiRegistryHandler
+from nat.registry_handlers.schemas.pull import PullRequestPackages
+from nat.registry_handlers.schemas.search import SearchQuery
+from nat.settings.global_settings import Settings
 
 
 @patch.object(PypiRegistryHandler, "_upload_to_pypi")

@@ -21,8 +21,8 @@ import pytest
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
-from aiq.eval.evaluator.evaluator_model import EvalOutput
-from aiq.eval.trajectory_evaluator.evaluate import TrajectoryEvaluator
+from nat.eval.evaluator.evaluator_model import EvalOutput
+from nat.eval.trajectory_evaluator.evaluate import TrajectoryEvaluator
 
 # pylint: disable=redefined-outer-name
 

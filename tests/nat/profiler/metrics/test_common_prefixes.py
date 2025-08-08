@@ -15,14 +15,14 @@
 
 import pytest
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.intermediate_step import StreamEventData
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.profiler.inference_optimization.prompt_caching import get_common_prefixes
-from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.invocation_node import InvocationNode
+from nat.profiler.inference_optimization.prompt_caching import get_common_prefixes
+from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 ###############################################################################
 # Fixtures
@@ -73,8 +73,8 @@ def test_get_common_prefixes_minimal(minimal_valid_df):
     """
     Basic run with minimal valid data => expect some prefix info for each llm_name.
     """
-    from aiq.profiler.inference_optimization.data_models import CommonPrefixesOutput
-    from aiq.profiler.inference_optimization.data_models import FrameworkLLMPrefixData
+    from nat.profiler.inference_optimization.data_models import CommonPrefixesOutput
+    from nat.profiler.inference_optimization.data_models import FrameworkLLMPrefixData
 
     result = get_common_prefixes(minimal_valid_df)
     assert isinstance(result, CommonPrefixesOutput)

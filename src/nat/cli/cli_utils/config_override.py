@@ -22,8 +22,8 @@ from typing import Any
 import click
 import yaml
 
-from aiq.utils.data_models.schema_validator import validate_yaml
-from aiq.utils.io.yaml_tools import yaml_load
+from nat.utils.data_models.schema_validator import validate_yaml
+from nat.utils.io.yaml_tools import yaml_load
 
 logger = logging.getLogger(__name__)
 

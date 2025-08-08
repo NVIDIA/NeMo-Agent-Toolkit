@@ -18,8 +18,8 @@ import typing
 from pydantic import Field
 from pydantic import model_validator
 
-from aiq.data_models.component_ref import LLMRef
-from aiq.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.data_models.component_ref import LLMRef
+from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 
 
 class LLMBasedPlanSelectionConfig(TTCStrategyBaseConfig, name="llm_based_plan_selection"):

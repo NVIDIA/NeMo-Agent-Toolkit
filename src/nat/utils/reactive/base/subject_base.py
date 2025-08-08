@@ -22,7 +22,7 @@ from .observable_base import ObservableBase
 from .observer_base import ObserverBase
 
 if typing.TYPE_CHECKING:
-    from aiq.utils.reactive.subscription import Subscription
+    from nat.utils.reactive.subscription import Subscription
 
 T = TypeVar("T")
 

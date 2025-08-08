@@ -21,7 +21,7 @@ from unittest.mock import patch
 @patch("aiq.cli.entrypoint.cli.add_command")
 def test_mcp_command_registration(mock_add_command):
     """Test the CLI command registration mechanism for MCP."""
-    from aiq.cli.entrypoint import start_command
+    from nat.cli.entrypoint import start_command
 
     # Create a mock module to simulate main.py
     mock_main_module = MagicMock()
@@ -35,7 +35,7 @@ def test_mcp_command_registration(mock_add_command):
         with patch.dict(sys.modules, {'aiq.front_ends.mcp.main': mock_main_module}):
             # Import the module which would register the command
             # Since we're mocking the module, we'll call the registration code directly
-            from aiq.cli.entrypoint import cli
+            from nat.cli.entrypoint import cli
             cli.add_command(mock_command, name="mcp")
 
     # Verify that add_command was called with the correct arguments

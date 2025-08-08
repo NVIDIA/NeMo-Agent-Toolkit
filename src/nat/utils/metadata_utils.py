@@ -15,8 +15,8 @@
 
 from pydantic_core import PydanticUndefined
 
-from aiq.data_models.common import TypedBaseModelT
-from aiq.utils.type_utils import DecomposedType
+from nat.data_models.common import TypedBaseModelT
+from nat.utils.type_utils import DecomposedType
 
 
 def generate_config_type_docs(config_type: TypedBaseModelT) -> str:

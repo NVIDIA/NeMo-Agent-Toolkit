@@ -30,12 +30,12 @@ from pydantic import ValidationInfo
 from pydantic import ValidatorFunctionWrapHandler
 from pydantic import field_validator
 
-from aiq.cli.type_registry import GlobalTypeRegistry
-from aiq.cli.type_registry import RegisteredInfo
-from aiq.data_models.common import HashableBaseModel
-from aiq.data_models.common import TypedBaseModel
-from aiq.data_models.common import TypedBaseModelT
-from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
+from nat.cli.type_registry import GlobalTypeRegistry
+from nat.cli.type_registry import RegisteredInfo
+from nat.data_models.common import HashableBaseModel
+from nat.data_models.common import TypedBaseModel
+from nat.data_models.common import TypedBaseModelT
+from nat.data_models.registry_handler import RegistryHandlerBaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -246,7 +246,7 @@ class Settings(HashableBaseModel):
 
     def override_settings(self, config_file: str) -> "Settings":
 
-        from aiq.utils.io.yaml_tools import yaml_load
+        from nat.utils.io.yaml_tools import yaml_load
 
         override_settings_dict = yaml_load(config_file)
 
@@ -293,8 +293,8 @@ class GlobalSettings:
     def get() -> Settings:
 
         if (GlobalSettings._global_settings is None):
-            from aiq.runtime.loader import PluginTypes
-            from aiq.runtime.loader import discover_and_register_plugins
+            from nat.runtime.loader import PluginTypes
+            from nat.runtime.loader import discover_and_register_plugins
 
             discover_and_register_plugins(PluginTypes.REGISTRY_HANDLER)
 

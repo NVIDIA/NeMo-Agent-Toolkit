@@ -15,8 +15,8 @@
 
 import pytest
 
-from aiq.retriever.milvus.register import MilvusRetrieverConfig
-from aiq.retriever.nemo_retriever.register import NemoRetrieverConfig
+from nat.retriever.milvus.register import MilvusRetrieverConfig
+from nat.retriever.nemo_retriever.register import NemoRetrieverConfig
 
 
 def test_milvus_config():
@@ -60,8 +60,8 @@ def get_default_nemo_retriever_config():
 
 
 async def test_build_retrievers(default_milvus_config, default_nemo_retriever_config, httpserver):
-    from aiq.retriever.milvus.retriever import MilvusRetriever
-    from aiq.retriever.nemo_retriever.retriever import NemoRetriever
+    from nat.retriever.milvus.retriever import MilvusRetriever
+    from nat.retriever.nemo_retriever.retriever import NemoRetriever
 
     class MockEmbedder:
         pass

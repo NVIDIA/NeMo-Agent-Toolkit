@@ -17,9 +17,9 @@ import logging
 
 import click
 
-from aiq.cli.commands.configure.channel.add import add
-from aiq.cli.commands.configure.channel.remove import remove
-from aiq.cli.commands.configure.channel.update import update
+from nat.cli.commands.configure.channel.add import add
+from nat.cli.commands.configure.channel.remove import remove
+from nat.cli.commands.configure.channel.update import update
 
 logger = logging.getLogger(__name__)
 

@@ -16,10 +16,10 @@
 import copy
 import typing
 
-from aiq.eval.config import EvaluationRunConfig
-from aiq.eval.config import EvaluationRunOutput
-from aiq.eval.evaluate import EvaluationRun
-from aiq.eval.runners.config import MultiEvaluationRunConfig
+from nat.eval.config import EvaluationRunConfig
+from nat.eval.config import EvaluationRunOutput
+from nat.eval.evaluate import EvaluationRun
+from nat.eval.runners.config import MultiEvaluationRunConfig
 
 
 class MultiEvaluationRunner:

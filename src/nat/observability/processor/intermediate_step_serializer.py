@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.observability.mixin.serialize_mixin import SerializeMixin
-from aiq.observability.processor.processor import Processor
-from aiq.utils.type_utils import override
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.observability.mixin.serialize_mixin import SerializeMixin
+from nat.observability.processor.processor import Processor
+from nat.utils.type_utils import override
 
 
 class IntermediateStepSerializer(SerializeMixin, Processor[IntermediateStep, str]):

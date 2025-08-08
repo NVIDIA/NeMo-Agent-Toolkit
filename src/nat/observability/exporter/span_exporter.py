@@ -18,20 +18,20 @@ import re
 from abc import abstractmethod
 from typing import TypeVar
 
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepState
-from aiq.data_models.intermediate_step import TraceMetadata
-from aiq.data_models.span import MimeTypes
-from aiq.data_models.span import Span
-from aiq.data_models.span import SpanAttributes
-from aiq.data_models.span import SpanContext
-from aiq.data_models.span import event_type_to_span_kind
-from aiq.observability.exporter.base_exporter import IsolatedAttribute
-from aiq.observability.exporter.processing_exporter import ProcessingExporter
-from aiq.observability.mixin.serialize_mixin import SerializeMixin
-from aiq.observability.utils.dict_utils import merge_dicts
-from aiq.observability.utils.time_utils import ns_timestamp
-from aiq.utils.type_utils import override
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepState
+from nat.data_models.intermediate_step import TraceMetadata
+from nat.data_models.span import MimeTypes
+from nat.data_models.span import Span
+from nat.data_models.span import SpanAttributes
+from nat.data_models.span import SpanContext
+from nat.data_models.span import event_type_to_span_kind
+from nat.observability.exporter.base_exporter import IsolatedAttribute
+from nat.observability.exporter.processing_exporter import ProcessingExporter
+from nat.observability.mixin.serialize_mixin import SerializeMixin
+from nat.observability.utils.dict_utils import merge_dicts
+from nat.observability.utils.time_utils import ns_timestamp
+from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
 

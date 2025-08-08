@@ -15,11 +15,11 @@
 
 import logging
 
-from aiq.builder.context import ContextState
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.observability.exporter.raw_exporter import RawExporter
-from aiq.observability.mixin.file_mixin import FileExportMixin
-from aiq.observability.processor.intermediate_step_serializer import IntermediateStepSerializer
+from nat.builder.context import ContextState
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.observability.exporter.raw_exporter import RawExporter
+from nat.observability.mixin.file_mixin import FileExportMixin
+from nat.observability.processor.intermediate_step_serializer import IntermediateStepSerializer
 
 logger = logging.getLogger(__name__)
 

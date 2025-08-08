@@ -25,12 +25,12 @@ from ragas.llms import LangchainLLMWrapper
 from ragas.metrics import Metric
 from tqdm import tqdm
 
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
-from aiq.eval.evaluator.evaluator_model import EvalOutput
-from aiq.eval.evaluator.evaluator_model import EvalOutputItem
-from aiq.eval.utils.tqdm_position_registry import TqdmPositionRegistry
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.eval.evaluator.evaluator_model import EvalOutput
+from nat.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.eval.utils.tqdm_position_registry import TqdmPositionRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class RAGEvaluator:
 
     def eval_input_to_ragas(self, eval_input: EvalInput) -> EvaluationDataset:
         """Converts EvalInput into a Ragas-compatible EvaluationDataset."""
-        from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
+        from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
         event_filter = [IntermediateStepType.TOOL_END, IntermediateStepType.LLM_END, IntermediateStepType.CUSTOM_END]
         samples = []
 

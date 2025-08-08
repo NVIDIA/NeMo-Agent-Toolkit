@@ -20,18 +20,18 @@ from asgi_lifespan import LifespanManager
 from httpx import ASGITransport
 from httpx import AsyncClient
 from httpx_sse import aconnect_sse
+from nat.test.functions import EchoFunctionConfig
+from nat.test.functions import StreamingEchoFunctionConfig
 
-from aiq.data_models.api_server import ChatRequest
-from aiq.data_models.api_server import ChatResponse
-from aiq.data_models.api_server import ChatResponseChunk
-from aiq.data_models.api_server import ChoiceDelta
-from aiq.data_models.api_server import Message
-from aiq.data_models.config import Config
-from aiq.data_models.config import GeneralConfig
-from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
-from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
-from aiq.test.functions import EchoFunctionConfig
-from aiq.test.functions import StreamingEchoFunctionConfig
+from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import ChatResponseChunk
+from nat.data_models.api_server import ChoiceDelta
+from nat.data_models.api_server import Message
+from nat.data_models.config import Config
+from nat.data_models.config import GeneralConfig
+from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 
 
 @asynccontextmanager
@@ -360,8 +360,8 @@ async def test_legacy_mode_backward_compatibility():
 
 def test_converter_functions_backward_compatibility():
     """Test that converter functions handle both legacy and new formats"""
-    from aiq.data_models.api_server import _aiq_chat_response_chunk_to_string
-    from aiq.data_models.api_server import _chat_response_to_chat_response_chunk
+    from nat.data_models.api_server import _aiq_chat_response_chunk_to_string
+    from nat.data_models.api_server import _chat_response_to_chat_response_chunk
 
     # Test legacy chunk (with message) conversion to string
     legacy_chunk = ChatResponseChunk.from_string("Legacy content")

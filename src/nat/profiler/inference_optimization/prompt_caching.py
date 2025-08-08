@@ -13,11 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.profiler.inference_optimization.data_models import CommonPrefixesOutput
-from aiq.profiler.inference_optimization.data_models import FrameworkLLMPrefixData
-from aiq.profiler.inference_optimization.data_models import PrefixInfo
-from aiq.profiler.utils import create_standardized_dataframe
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.profiler.inference_optimization.data_models import CommonPrefixesOutput
+from nat.profiler.inference_optimization.data_models import FrameworkLLMPrefixData
+from nat.profiler.inference_optimization.data_models import PrefixInfo
+from nat.profiler.utils import create_standardized_dataframe
 
 
 # -----------------------------------------------------------

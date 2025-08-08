@@ -16,9 +16,9 @@
 import pandas as pd
 import pytest
 
-from aiq.data_models.dataset_handler import EvalFilterConfig
-from aiq.data_models.dataset_handler import EvalFilterEntryConfig
-from aiq.eval.dataset_handler.dataset_filter import DatasetFilter
+from nat.data_models.dataset_handler import EvalFilterConfig
+from nat.data_models.dataset_handler import EvalFilterEntryConfig
+from nat.eval.dataset_handler.dataset_filter import DatasetFilter
 
 # pylint: disable=redefined-outer-name
 

@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.intermediate_step import TokenUsageBaseModel
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import TokenUsageBaseModel
 
 
 class IntermediatePropertyAdaptor(IntermediateStep):

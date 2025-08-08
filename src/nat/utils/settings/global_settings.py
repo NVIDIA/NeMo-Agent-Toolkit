@@ -17,9 +17,9 @@ import logging
 
 from pydantic import create_model
 
-from aiq.cli.type_registry import GlobalTypeRegistry
-from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
-from aiq.settings.global_settings import GlobalSettings
+from nat.cli.type_registry import GlobalTypeRegistry
+from nat.data_models.registry_handler import RegistryHandlerBaseConfig
+from nat.settings.global_settings import GlobalSettings
 
 logger = logging.getLogger(__name__)
 

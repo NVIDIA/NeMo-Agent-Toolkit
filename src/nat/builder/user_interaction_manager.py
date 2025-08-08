@@ -17,11 +17,11 @@ import logging
 import time
 import uuid
 
-from aiq.data_models.interactive import HumanPrompt
-from aiq.data_models.interactive import HumanResponse
-from aiq.data_models.interactive import InteractionPrompt
-from aiq.data_models.interactive import InteractionResponse
-from aiq.data_models.interactive import InteractionStatus
+from nat.data_models.interactive import HumanPrompt
+from nat.data_models.interactive import HumanResponse
+from nat.data_models.interactive import InteractionPrompt
+from nat.data_models.interactive import InteractionResponse
+from nat.data_models.interactive import InteractionStatus
 
 logger = logging.getLogger(__name__)
 

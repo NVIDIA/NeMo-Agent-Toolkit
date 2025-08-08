@@ -18,7 +18,7 @@ from abc import ABC
 from abc import abstractmethod
 from collections.abc import AsyncGenerator
 
-from aiq.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStep
 
 logger = logging.getLogger(__name__)
 

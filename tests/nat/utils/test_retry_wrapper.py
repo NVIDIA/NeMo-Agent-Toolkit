@@ -17,7 +17,7 @@ from collections.abc import Iterable
 
 import pytest
 
-from aiq.utils.exception_handlers import automatic_retries as ar
+from nat.utils.exception_handlers import automatic_retries as ar
 
 # Helpers --------------------------------------------------------------------
 

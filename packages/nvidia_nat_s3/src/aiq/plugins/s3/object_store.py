@@ -18,9 +18,9 @@ from typing import ClassVar
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_object_store
-from aiq.data_models.object_store import ObjectStoreBaseConfig
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_object_store
+from nat.data_models.object_store import ObjectStoreBaseConfig
 
 
 class S3ObjectStoreClientConfig(ObjectStoreBaseConfig, name="s3"):
@@ -43,7 +43,7 @@ class S3ObjectStoreClientConfig(ObjectStoreBaseConfig, name="s3"):
 @register_object_store(config_type=S3ObjectStoreClientConfig)
 async def s3_object_store_client(config: S3ObjectStoreClientConfig, builder: Builder):
 
-    from aiq.plugins.s3.s3_object_store import S3ObjectStore
+    from nat.plugins.s3.s3_object_store import S3ObjectStore
 
     async with S3ObjectStore(config) as store:
         yield store

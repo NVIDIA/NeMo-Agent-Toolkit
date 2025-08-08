@@ -15,14 +15,14 @@
 
 import pytest
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType as WorkflowEventEnum
-from aiq.data_models.intermediate_step import StreamEventData
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.profiler.inference_optimization.bottleneck_analysis.simple_stack_analysis import profile_workflow_bottlenecks
-from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType as WorkflowEventEnum
+from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.invocation_node import InvocationNode
+from nat.profiler.inference_optimization.bottleneck_analysis.simple_stack_analysis import profile_workflow_bottlenecks
+from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 ##########################################################
 # Fixtures
@@ -93,7 +93,7 @@ def test_profile_workflow_bottlenecks_incomplete_pairs(minimal_valid_df):
     If we have partial data for a particular UUID with no matching END => skip or partial coverage.
     We'll mutate minimal_valid_df so that one operation has only START, no END.
     """
-    from aiq.profiler.inference_optimization.data_models import SimpleBottleneckReport
+    from nat.profiler.inference_optimization.data_models import SimpleBottleneckReport
 
     # We'll remove the LLM_END row => so the LLM calls are partial
     # minimal_valid_df has row with event_type LLM_END => remove it
@@ -111,8 +111,8 @@ def test_profile_workflow_bottlenecks_normal(minimal_valid_df):
     Normal usage with a minimal valid df => expect a valid SimpleBottleneckReport
     with stats for LLM and tool operations.
     """
-    from aiq.profiler.inference_optimization.data_models import SimpleBottleneckReport
-    from aiq.profiler.inference_optimization.data_models import SimpleOperationStats
+    from nat.profiler.inference_optimization.data_models import SimpleBottleneckReport
+    from nat.profiler.inference_optimization.data_models import SimpleOperationStats
 
     result = profile_workflow_bottlenecks(minimal_valid_df)
     assert isinstance(result, SimpleBottleneckReport)

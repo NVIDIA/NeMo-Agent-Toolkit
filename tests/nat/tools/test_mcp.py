@@ -19,7 +19,7 @@ import pytest
 from pydantic import ValidationError
 from pytest_httpserver import HTTPServer
 
-from aiq.tool.mcp.mcp_client import model_from_mcp_schema
+from nat.tool.mcp.mcp_client import model_from_mcp_schema
 
 
 @pytest.fixture(name="test_mcp_server")

@@ -18,17 +18,17 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from aiq.builder.builder import EvalBuilder
-from aiq.builder.evaluator import EvaluatorInfo
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.cli.type_registry import TypeRegistry
-from aiq.data_models.config import Config
-from aiq.data_models.config import GeneralConfig
-from aiq.data_models.evaluate import EvalGeneralConfig
-from aiq.data_models.evaluator import EvaluatorBaseConfig
-from aiq.data_models.function import EmptyFunctionConfig
-from aiq.utils.type_utils import override
+from nat.builder.builder import EvalBuilder
+from nat.builder.evaluator import EvaluatorInfo
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.cli.type_registry import TypeRegistry
+from nat.data_models.config import Config
+from nat.data_models.config import GeneralConfig
+from nat.data_models.evaluate import EvalGeneralConfig
+from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.data_models.function import EmptyFunctionConfig
+from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
 

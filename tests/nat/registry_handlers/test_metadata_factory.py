@@ -15,13 +15,13 @@
 
 import pytest
 
-from aiq.cli.type_registry import TypeRegistry
-from aiq.data_models.component import ComponentEnum
-from aiq.registry_handlers.metadata_factory import ComponentDiscoveryMetadata
-from aiq.registry_handlers.package_utils import build_wheel
-from aiq.registry_handlers.schemas.package import WheelData
-from aiq.runtime.loader import PluginTypes
-from aiq.runtime.loader import discover_and_register_plugins
+from nat.cli.type_registry import TypeRegistry
+from nat.data_models.component import ComponentEnum
+from nat.registry_handlers.metadata_factory import ComponentDiscoveryMetadata
+from nat.registry_handlers.package_utils import build_wheel
+from nat.registry_handlers.schemas.package import WheelData
+from nat.runtime.loader import PluginTypes
+from nat.runtime.loader import discover_and_register_plugins
 
 
 @pytest.mark.parametrize("use_wheel_data", [

@@ -19,7 +19,7 @@ from io import StringIO
 import pytest
 
 from _utils.configs import WorkflowTestConfig
-from aiq.data_models.config import Config
+from nat.data_models.config import Config
 
 
 # Make a fixture which auto registers the test workflow

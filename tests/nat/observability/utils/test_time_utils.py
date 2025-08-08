@@ -15,7 +15,7 @@
 
 import pytest
 
-from aiq.observability.utils.time_utils import ns_timestamp
+from nat.observability.utils.time_utils import ns_timestamp
 
 
 def test_ns_timestamp_basic():

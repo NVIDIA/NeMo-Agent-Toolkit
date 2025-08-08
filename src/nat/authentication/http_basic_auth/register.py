@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_auth_provider
-from aiq.data_models.authentication import AuthProviderBaseConfig
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_auth_provider
+from nat.data_models.authentication import AuthProviderBaseConfig
 
 
 class HTTPBasicAuthProviderConfig(AuthProviderBaseConfig, name="http_basic"):
@@ -25,6 +25,6 @@ class HTTPBasicAuthProviderConfig(AuthProviderBaseConfig, name="http_basic"):
 @register_auth_provider(config_type=HTTPBasicAuthProviderConfig)
 async def http_basic_auth_provider(config: HTTPBasicAuthProviderConfig, builder: Builder):
 
-    from aiq.authentication.http_basic_auth.http_basic_auth_provider import HTTPBasicAuthProvider
+    from nat.authentication.http_basic_auth.http_basic_auth_provider import HTTPBasicAuthProvider
 
     yield HTTPBasicAuthProvider(config)

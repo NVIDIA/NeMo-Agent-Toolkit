@@ -21,14 +21,14 @@ from typing import Any
 from typing import Generic
 from typing import TypeVar
 
-from aiq.builder.context import ContextState
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.observability.exporter.base_exporter import BaseExporter
-from aiq.observability.mixin.type_introspection_mixin import TypeIntrospectionMixin
-from aiq.observability.processor.callback_processor import CallbackProcessor
-from aiq.observability.processor.processor import Processor
-from aiq.utils.type_utils import DecomposedType
-from aiq.utils.type_utils import override
+from nat.builder.context import ContextState
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.observability.exporter.base_exporter import BaseExporter
+from nat.observability.mixin.type_introspection_mixin import TypeIntrospectionMixin
+from nat.observability.processor.callback_processor import CallbackProcessor
+from nat.observability.processor.processor import Processor
+from nat.utils.type_utils import DecomposedType
+from nat.utils.type_utils import override
 
 PipelineInputT = TypeVar("PipelineInputT")
 PipelineOutputT = TypeVar("PipelineOutputT")

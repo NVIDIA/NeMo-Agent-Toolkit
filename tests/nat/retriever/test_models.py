@@ -15,10 +15,10 @@
 
 import pytest
 
-from aiq.retriever.models import Document
-from aiq.retriever.models import RetrieverOutput
-from aiq.retriever.models import retriever_output_to_dict
-from aiq.retriever.models import retriever_output_to_str
+from nat.retriever.models import Document
+from nat.retriever.models import RetrieverOutput
+from nat.retriever.models import retriever_output_to_dict
+from nat.retriever.models import retriever_output_to_str
 
 
 def test_document_methods():

@@ -16,4 +16,4 @@
 # flake8: noqa: F401, pylint: disable=unused-import
 
 # Import the predictor classes to register them
-from aiq_swe_bench.predictors.predict_gold.predict_gold_stub import SweBenchPredictor as GoldPredictor
+from nat_swe_bench.predictors.predict_gold.predict_gold_stub import SweBenchPredictor as GoldPredictor

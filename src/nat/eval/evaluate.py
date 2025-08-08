@@ -23,21 +23,21 @@ from uuid import uuid4
 from pydantic import BaseModel
 from tqdm import tqdm
 
-from aiq.data_models.evaluate import EvalConfig
-from aiq.data_models.evaluate import JobEvictionPolicy
-from aiq.eval.config import EvaluationRunConfig
-from aiq.eval.config import EvaluationRunOutput
-from aiq.eval.dataset_handler.dataset_handler import DatasetHandler
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
-from aiq.eval.evaluator.evaluator_model import EvalOutput
-from aiq.eval.usage_stats import UsageStats
-from aiq.eval.usage_stats import UsageStatsItem
-from aiq.eval.usage_stats import UsageStatsLLM
-from aiq.eval.utils.output_uploader import OutputUploader
-from aiq.eval.utils.weave_eval import WeaveEvaluationIntegration
-from aiq.profiler.data_models import ProfilerResults
-from aiq.runtime.session import SessionManager
+from nat.data_models.evaluate import EvalConfig
+from nat.data_models.evaluate import JobEvictionPolicy
+from nat.eval.config import EvaluationRunConfig
+from nat.eval.config import EvaluationRunOutput
+from nat.eval.dataset_handler.dataset_handler import DatasetHandler
+from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.eval.evaluator.evaluator_model import EvalOutput
+from nat.eval.usage_stats import UsageStats
+from nat.eval.usage_stats import UsageStatsItem
+from nat.eval.usage_stats import UsageStatsLLM
+from nat.eval.utils.output_uploader import OutputUploader
+from nat.eval.utils.weave_eval import WeaveEvaluationIntegration
+from nat.profiler.data_models import ProfilerResults
+from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         """
         Initialize an EvaluationRun with configuration.
         """
-        from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
+        from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
 
         # Run-specific configuration
         self.config: EvaluationRunConfig = config
@@ -79,7 +79,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
     def _compute_usage_stats(self, item: EvalInputItem):
         """Compute usage stats for a single item using the intermediate steps"""
         # get the prompt and completion tokens from the intermediate steps
-        from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+        from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
         steps = [IntermediatePropertyAdaptor.from_intermediate_step(step) for step in item.trajectory]
         usage_stats_per_llm = {}
         total_tokens = 0
@@ -136,7 +136,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         # import function level dependencies
         from jsonpath_ng import parse
 
-        from aiq.eval.runtime_event_subscriber import pull_intermediate
+        from nat.eval.runtime_event_subscriber import pull_intermediate
 
         # Run the workflow
         jsonpath_expr = parse(self.config.result_json_path)
@@ -220,7 +220,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         pbar.close()
 
     async def run_workflow_remote(self):
-        from aiq.eval.remote_workflow import EvaluationRemoteWorkflowHandler
+        from nat.eval.remote_workflow import EvaluationRemoteWorkflowHandler
         handler = EvaluationRemoteWorkflowHandler(self.config, self.eval_config.general.max_concurrency)
         await handler.run_workflow_remote(self.eval_input)
         for item in self.eval_input.eval_input_items:
@@ -237,7 +237,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             logger.info("Profiler is not enabled. Skipping profiling.")
             return ProfilerResults()
 
-        from aiq.profiler.profile_runner import ProfilerRunner
+        from nat.profiler.profile_runner import ProfilerRunner
 
         all_stats = []
         for input_item in self.eval_input.eval_input_items:
@@ -374,11 +374,11 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             await self.weave_eval.afinish_loggers()
 
     def apply_overrides(self):
-        from aiq.cli.cli_utils.config_override import load_and_override_config
-        from aiq.data_models.config import Config
-        from aiq.runtime.loader import PluginTypes
-        from aiq.runtime.loader import discover_and_register_plugins
-        from aiq.utils.data_models.schema_validator import validate_schema
+        from nat.cli.cli_utils.config_override import load_and_override_config
+        from nat.data_models.config import Config
+        from nat.runtime.loader import PluginTypes
+        from nat.runtime.loader import discover_and_register_plugins
+        from nat.utils.data_models.schema_validator import validate_schema
 
         # Register plugins before validation
         discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
@@ -405,8 +405,8 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         """
         logger.info("Starting evaluation run with config file: %s", self.config.config_file)
 
-        from aiq.builder.eval_builder import WorkflowEvalBuilder
-        from aiq.runtime.loader import load_config
+        from nat.builder.eval_builder import WorkflowEvalBuilder
+        from nat.runtime.loader import load_config
 
         # Load and override the config
         if self.config.override:

@@ -20,8 +20,8 @@ import pytest
 import requests
 from pytest_httpserver import HTTPServer
 
-from aiq.tool.code_execution import code_sandbox
-from aiq.tool.code_execution.local_sandbox.local_sandbox_server import do_execute
+from nat.tool.code_execution import code_sandbox
+from nat.tool.code_execution.local_sandbox.local_sandbox_server import do_execute
 
 logger = logging.getLogger(__name__)
 

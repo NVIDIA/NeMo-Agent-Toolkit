@@ -21,7 +21,7 @@ from typing import Any
 from pydantic import BaseModel
 from pydantic import Field
 
-from aiq.utils.type_converter import GlobalTypeConverter
+from nat.utils.type_converter import GlobalTypeConverter
 
 
 class Document(BaseModel):

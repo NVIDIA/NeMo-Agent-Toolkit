@@ -15,7 +15,7 @@
 
 from pydantic import Field
 
-from aiq.data_models.authentication import AuthProviderBaseConfig
+from nat.data_models.authentication import AuthProviderBaseConfig
 
 
 class OAuth2AuthCodeFlowProviderConfig(AuthProviderBaseConfig, name="oauth2_auth_code_flow"):

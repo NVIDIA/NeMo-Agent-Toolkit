@@ -24,29 +24,29 @@ from pydantic import BaseModel
 from pydantic import ValidationError
 from starlette.websockets import WebSocketDisconnect
 
-from aiq.authentication.interfaces import FlowHandlerBase
-from aiq.data_models.api_server import ChatResponse
-from aiq.data_models.api_server import Error
-from aiq.data_models.api_server import ErrorTypes
-from aiq.data_models.api_server import ResponsePayloadOutput
-from aiq.data_models.api_server import ResponseSerializable
-from aiq.data_models.api_server import SystemResponseContent
-from aiq.data_models.api_server import TextContent
-from aiq.data_models.api_server import WebSocketMessageStatus
-from aiq.data_models.api_server import WebSocketMessageType
-from aiq.data_models.api_server import WebSocketSystemInteractionMessage
-from aiq.data_models.api_server import WebSocketSystemIntermediateStepMessage
-from aiq.data_models.api_server import WebSocketSystemResponseTokenMessage
-from aiq.data_models.api_server import WebSocketUserInteractionResponseMessage
-from aiq.data_models.api_server import WebSocketUserMessage
-from aiq.data_models.interactive import HumanPromptNotification
-from aiq.data_models.interactive import HumanResponse
-from aiq.data_models.interactive import HumanResponseNotification
-from aiq.data_models.interactive import InteractionPrompt
-from aiq.front_ends.fastapi.message_validator import MessageValidator
-from aiq.front_ends.fastapi.response_helpers import generate_streaming_response
-from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
-from aiq.runtime.session import SessionManager
+from nat.authentication.interfaces import FlowHandlerBase
+from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import Error
+from nat.data_models.api_server import ErrorTypes
+from nat.data_models.api_server import ResponsePayloadOutput
+from nat.data_models.api_server import ResponseSerializable
+from nat.data_models.api_server import SystemResponseContent
+from nat.data_models.api_server import TextContent
+from nat.data_models.api_server import WebSocketMessageStatus
+from nat.data_models.api_server import WebSocketMessageType
+from nat.data_models.api_server import WebSocketSystemInteractionMessage
+from nat.data_models.api_server import WebSocketSystemIntermediateStepMessage
+from nat.data_models.api_server import WebSocketSystemResponseTokenMessage
+from nat.data_models.api_server import WebSocketUserInteractionResponseMessage
+from nat.data_models.api_server import WebSocketUserMessage
+from nat.data_models.interactive import HumanPromptNotification
+from nat.data_models.interactive import HumanResponse
+from nat.data_models.interactive import HumanResponseNotification
+from nat.data_models.interactive import InteractionPrompt
+from nat.front_ends.fastapi.message_validator import MessageValidator
+from nat.front_ends.fastapi.response_helpers import generate_streaming_response
+from nat.front_ends.fastapi.step_adaptor import StepAdaptor
+from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
 

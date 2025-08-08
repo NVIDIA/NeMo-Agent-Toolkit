@@ -20,10 +20,10 @@ from langchain_core.messages import ToolMessage
 from langgraph.graph.graph import CompiledGraph
 from langgraph.prebuilt import ToolNode
 
-from aiq.agent.base import AgentDecision
-from aiq.agent.tool_calling_agent.agent import ToolCallAgentGraph
-from aiq.agent.tool_calling_agent.agent import ToolCallAgentGraphState
-from aiq.agent.tool_calling_agent.register import ToolCallAgentWorkflowConfig
+from nat.agent.base import AgentDecision
+from nat.agent.tool_calling_agent.agent import ToolCallAgentGraph
+from nat.agent.tool_calling_agent.agent import ToolCallAgentGraphState
+from nat.agent.tool_calling_agent.register import ToolCallAgentWorkflowConfig
 
 
 async def test_state_schema():

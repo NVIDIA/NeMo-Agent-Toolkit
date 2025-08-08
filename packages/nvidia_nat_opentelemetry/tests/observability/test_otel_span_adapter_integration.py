@@ -25,16 +25,16 @@ from datetime import datetime
 
 import pytest
 import pytest_httpserver
+from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 from werkzeug import Request
 from werkzeug import Response
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.intermediate_step import StreamEventData
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.invocation_node import InvocationNode
 
 
 def create_test_intermediate_step(parent_id="root",

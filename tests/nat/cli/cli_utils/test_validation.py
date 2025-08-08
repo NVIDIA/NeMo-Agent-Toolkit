@@ -18,7 +18,7 @@ import os
 import click
 import pytest
 
-from aiq.cli.cli_utils import validation
+from nat.cli.cli_utils import validation
 
 
 # Make a fixture which auto registers the test workflow

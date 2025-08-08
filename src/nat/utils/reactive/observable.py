@@ -16,11 +16,11 @@
 from collections.abc import Callable
 from typing import TypeVar
 
-from aiq.utils.reactive.base.observable_base import ObservableBase
-from aiq.utils.reactive.base.observer_base import ObserverBase
-from aiq.utils.reactive.observer import Observer
-from aiq.utils.reactive.subscription import Subscription
-from aiq.utils.type_utils import override
+from nat.utils.reactive.base.observable_base import ObservableBase
+from nat.utils.reactive.base.observer_base import ObserverBase
+from nat.utils.reactive.observer import Observer
+from nat.utils.reactive.subscription import Subscription
+from nat.utils.type_utils import override
 
 # Covariant type param: An Observable producing type X can also produce
 # a subtype of X.

@@ -20,11 +20,11 @@ import string
 from pydantic import Field
 from pydantic import field_validator
 
-from aiq.authentication.exceptions.api_key_exceptions import APIKeyFieldError
-from aiq.authentication.exceptions.api_key_exceptions import HeaderNameFieldError
-from aiq.authentication.exceptions.api_key_exceptions import HeaderPrefixFieldError
-from aiq.data_models.authentication import AuthProviderBaseConfig
-from aiq.data_models.authentication import HeaderAuthScheme
+from nat.authentication.exceptions.api_key_exceptions import APIKeyFieldError
+from nat.authentication.exceptions.api_key_exceptions import HeaderNameFieldError
+from nat.authentication.exceptions.api_key_exceptions import HeaderPrefixFieldError
+from nat.data_models.authentication import AuthProviderBaseConfig
+from nat.data_models.authentication import HeaderAuthScheme
 
 logger = logging.getLogger(__name__)
 

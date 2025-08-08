@@ -16,6 +16,7 @@
 import logging
 import time
 
+from nat.plugins.opentelemetry.otel_span import OtelSpan
 from openinference.semconv.trace import OpenInferenceSpanKindValues
 from openinference.semconv.trace import SpanAttributes
 from opentelemetry.trace import SpanContext
@@ -24,9 +25,8 @@ from opentelemetry.trace import Status
 from opentelemetry.trace import StatusCode
 from opentelemetry.trace import TraceFlags
 
-from aiq.data_models.span import Span
-from aiq.data_models.span import SpanStatusCode
-from aiq.plugins.opentelemetry.otel_span import OtelSpan
+from nat.data_models.span import Span
+from nat.data_models.span import SpanStatusCode
 
 logger = logging.getLogger(__name__)
 

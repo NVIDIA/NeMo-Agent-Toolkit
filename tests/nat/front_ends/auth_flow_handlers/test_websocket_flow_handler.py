@@ -21,13 +21,13 @@ import httpx
 import pytest
 from httpx import ASGITransport
 from mock_oauth2_server import MockOAuth2Server
+from nat.test.functions import EchoFunctionConfig
 
-from aiq.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
-from aiq.data_models.authentication import AuthFlowType
-from aiq.data_models.config import Config
-from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
-from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
-from aiq.test.functions import EchoFunctionConfig
+from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
+from nat.data_models.authentication import AuthFlowType
+from nat.data_models.config import Config
+from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
+from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 
 
 # --------------------------------------------------------------------------- #

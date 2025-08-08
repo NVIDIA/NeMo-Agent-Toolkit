@@ -21,13 +21,13 @@ from typing import Callable
 
 import pytest
 
-from aiq.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
-from aiq.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
-from aiq.builder.context import Context
-from aiq.data_models.authentication import AuthenticatedContext
-from aiq.data_models.authentication import AuthFlowType
-from aiq.data_models.authentication import AuthResult
-from aiq.data_models.authentication import BearerTokenCred
+from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
+from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
+from nat.builder.context import Context
+from nat.data_models.authentication import AuthenticatedContext
+from nat.data_models.authentication import AuthFlowType
+from nat.data_models.authentication import AuthResult
+from nat.data_models.authentication import BearerTokenCred
 
 
 # --------------------------------------------------------------------------- #

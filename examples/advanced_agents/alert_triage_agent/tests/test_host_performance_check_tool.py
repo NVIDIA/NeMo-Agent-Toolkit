@@ -17,8 +17,8 @@ import json
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
-from aiq_alert_triage_agent.host_performance_check_tool import _parse_stdout_lines
-from aiq_alert_triage_agent.prompts import HostPerformanceCheckPrompts
+from nat_alert_triage_agent.host_performance_check_tool import _parse_stdout_lines
+from nat_alert_triage_agent.prompts import HostPerformanceCheckPrompts
 
 EXAMPLE_CPU_USAGE_OUTPUT = """
 03:45:00 PM  CPU    %usr   %nice    %sys %iowait    %irq   %soft  %steal  %guest  %gnice   %idle

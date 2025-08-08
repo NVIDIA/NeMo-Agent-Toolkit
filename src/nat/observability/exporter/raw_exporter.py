@@ -17,9 +17,9 @@ import logging
 from abc import abstractmethod
 from typing import TypeVar
 
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.observability.exporter.processing_exporter import ProcessingExporter
-from aiq.utils.type_utils import override
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.observability.exporter.processing_exporter import ProcessingExporter
+from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
 

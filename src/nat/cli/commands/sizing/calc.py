@@ -20,9 +20,9 @@ from pathlib import Path
 import click
 from tabulate import tabulate
 
-from aiq.profiler.calc.calc_runner import CalcRunner
-from aiq.profiler.calc.data_models import CalcRunnerConfig
-from aiq.profiler.calc.data_models import CalcRunnerOutput
+from nat.profiler.calc.calc_runner import CalcRunner
+from nat.profiler.calc.data_models import CalcRunnerConfig
+from nat.profiler.calc.data_models import CalcRunnerOutput
 
 logger = logging.getLogger(__name__)
 

@@ -18,7 +18,7 @@ from abc import abstractmethod
 from typing import Generic
 from typing import TypeVar
 
-from aiq.observability.mixin.type_introspection_mixin import TypeIntrospectionMixin
+from nat.observability.mixin.type_introspection_mixin import TypeIntrospectionMixin
 
 InputT = TypeVar('InputT')
 OutputT = TypeVar('OutputT')

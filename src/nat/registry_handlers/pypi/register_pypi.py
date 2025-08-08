@@ -15,8 +15,8 @@
 
 from pydantic import Field
 
-from aiq.cli.register_workflow import register_registry_handler
-from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
+from nat.cli.register_workflow import register_registry_handler
+from nat.data_models.registry_handler import RegistryHandlerBaseConfig
 
 
 class PypiRegistryHandlerConfig(RegistryHandlerBaseConfig, name="pypi"):
@@ -33,7 +33,7 @@ class PypiRegistryHandlerConfig(RegistryHandlerBaseConfig, name="pypi"):
 @register_registry_handler(config_type=PypiRegistryHandlerConfig)
 async def pypi_publish_registry_handler(config: PypiRegistryHandlerConfig):
 
-    from aiq.registry_handlers.pypi.pypi_handler import PypiRegistryHandler
+    from nat.registry_handlers.pypi.pypi_handler import PypiRegistryHandler
 
     registry_handler = PypiRegistryHandler(endpoint=config.endpoint, token=config.token)
 

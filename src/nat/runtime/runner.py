@@ -17,12 +17,12 @@ import logging
 import typing
 from enum import Enum
 
-from aiq.builder.context import Context
-from aiq.builder.context import ContextState
-from aiq.builder.function import Function
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.observability.exporter_manager import ExporterManager
-from aiq.utils.reactive.subject import Subject
+from nat.builder.context import Context
+from nat.builder.context import ContextState
+from nat.builder.function import Function
+from nat.data_models.invocation_node import InvocationNode
+from nat.observability.exporter_manager import ExporterManager
+from nat.utils.reactive.subject import Subject
 
 logger = logging.getLogger(__name__)
 

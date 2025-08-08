@@ -20,8 +20,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from aiq.profiler.calc.data_models import LinearFitResult
-from aiq.profiler.calc.data_models import SizingMetrics
+from nat.profiler.calc.data_models import LinearFitResult
+from nat.profiler.calc.data_models import SizingMetrics
 
 logger = logging.getLogger(__name__)
 

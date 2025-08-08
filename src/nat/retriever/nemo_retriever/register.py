@@ -16,11 +16,11 @@
 from pydantic import Field
 from pydantic import HttpUrl
 
-from aiq.builder.builder import Builder
-from aiq.builder.retriever import RetrieverProviderInfo
-from aiq.cli.register_workflow import register_retriever_client
-from aiq.cli.register_workflow import register_retriever_provider
-from aiq.data_models.retriever import RetrieverBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.retriever import RetrieverProviderInfo
+from nat.cli.register_workflow import register_retriever_client
+from nat.cli.register_workflow import register_retriever_provider
+from nat.data_models.retriever import RetrieverBaseConfig
 
 
 class NemoRetrieverConfig(RetrieverBaseConfig, name="nemo_retriever"):
@@ -48,7 +48,7 @@ async def nemo_retriever(retriever_config: NemoRetrieverConfig, builder: Builder
 
 @register_retriever_client(config_type=NemoRetrieverConfig, wrapper_type=None)
 async def nemo_retriever_client(config: NemoRetrieverConfig, builder: Builder):
-    from aiq.retriever.nemo_retriever.retriever import NemoRetriever
+    from nat.retriever.nemo_retriever.retriever import NemoRetriever
 
     retriever = NemoRetriever(**config.model_dump(exclude={"type", "top_k", "collection_name"}))
     optional_fields = ["collection_name", "top_k", "output_fields"]

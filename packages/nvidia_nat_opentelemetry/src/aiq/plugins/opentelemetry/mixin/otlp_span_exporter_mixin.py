@@ -15,9 +15,8 @@
 
 import logging
 
+from nat.plugins.opentelemetry.otel_span import OtelSpan
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-
-from aiq.plugins.opentelemetry.otel_span import OtelSpan
 
 logger = logging.getLogger(__name__)
 

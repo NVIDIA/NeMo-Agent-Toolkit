@@ -18,11 +18,11 @@ import os
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_telemetry_exporter
-from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.observability.mixin.batch_config_mixin import BatchConfigMixin
-from aiq.observability.mixin.collector_config_mixin import CollectorConfigMixin
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_telemetry_exporter
+from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
+from nat.observability.mixin.collector_config_mixin import CollectorConfigMixin
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder
 
     import base64
 
-    from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
+    from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
     secret_key = config.secret_key or os.environ.get("LANGFUSE_SECRET_KEY")
     public_key = config.public_key or os.environ.get("LANGFUSE_PUBLIC_KEY")
@@ -78,7 +78,7 @@ class LangsmithTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemet
 async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, builder: Builder):  # pylint: disable=W0613
     """Create a Langsmith telemetry exporter."""
 
-    from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
+    from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
     api_key = config.api_key or os.environ.get("LANGSMITH_API_KEY")
     if not api_key:
@@ -108,8 +108,8 @@ class OtelCollectorTelemetryExporter(BatchConfigMixin,
 async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builder: Builder):  # pylint: disable=W0613
     """Create an OpenTelemetry telemetry exporter."""
 
-    from aiq.plugins.opentelemetry.otel_span_exporter import get_opentelemetry_sdk_version
-    from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
+    from nat.plugins.opentelemetry.otel_span_exporter import get_opentelemetry_sdk_version
+    from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
     # Default resource attributes
     default_resource_attributes = {
@@ -143,7 +143,7 @@ class PatronusTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemetr
 async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder: Builder):  # pylint: disable=W0613
     """Create a Patronus telemetry exporter."""
 
-    from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
+    from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
     api_key = config.api_key or os.environ.get("PATRONUS_API_KEY")
     if not api_key:
@@ -176,7 +176,7 @@ class GalileoTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemetry
 async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: Builder):  # pylint: disable=W0613
     """Create a Galileo telemetry exporter."""
 
-    from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
+    from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 
     headers = {
         "Galileo-API-Key": config.api_key,

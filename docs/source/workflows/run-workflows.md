@@ -95,8 +95,8 @@ The toolkit offers a programmatic way to execute workflows through its Python AP
 ```python
 import asyncio
 
-from aiq.runtime.loader import load_workflow
-from aiq.utils.type_utils import StrPath
+from nat.runtime.loader import load_workflow
+from nat.utils.type_utils import StrPath
 
 
 async def run_workflow(config_file: StrPath, input_str: str) -> str:

@@ -19,17 +19,17 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+from nat.plugins.opentelemetry.otel_span import OtelSpan
+from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
-from aiq.builder.context import ContextState
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.intermediate_step import StreamEventData
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.plugins.opentelemetry.otel_span import OtelSpan
-from aiq.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
+from nat.builder.context import ContextState
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.invocation_node import InvocationNode
 
 
 def create_test_intermediate_step(parent_id="root",
@@ -302,8 +302,8 @@ class TestOTLPSpanAdapterExporter:
 
     def test_inheritance_structure(self, basic_exporter_config):
         """Test that OTLPSpanAdapterExporter has the correct inheritance structure."""
-        from aiq.plugins.opentelemetry.mixin.otlp_span_exporter_mixin import OTLPSpanExporterMixin
-        from aiq.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
+        from nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin import OTLPSpanExporterMixin
+        from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 
         exporter = OTLPSpanAdapterExporter(endpoint=basic_exporter_config["endpoint"])
 

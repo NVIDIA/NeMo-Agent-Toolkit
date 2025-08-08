@@ -15,11 +15,11 @@
 
 import logging
 
-from aiq.builder.front_end import FrontEndBase
-from aiq.builder.function import Function
-from aiq.builder.workflow import Workflow
-from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
+from nat.builder.front_end import FrontEndBase
+from nat.builder.function import Function
+from nat.builder.workflow import Workflow
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
         # Import FastMCP
         from mcp.server.fastmcp import FastMCP
 
-        from aiq.front_ends.mcp.tool_converter import register_function_with_mcp
+        from nat.front_ends.mcp.tool_converter import register_function_with_mcp
 
         # Create an MCP server with the configured parameters
         mcp = FastMCP(

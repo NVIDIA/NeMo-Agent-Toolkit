@@ -15,9 +15,10 @@
 
 from contextlib import asynccontextmanager
 
-from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.object_store.in_memory_object_store import InMemoryObjectStoreConfig
-from aiq.test.object_store_tests import ObjectStoreTests
+from nat.test.object_store_tests import ObjectStoreTests
+
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.object_store.in_memory_object_store import InMemoryObjectStoreConfig
 
 
 class TestInMemoryObjectStore(ObjectStoreTests):

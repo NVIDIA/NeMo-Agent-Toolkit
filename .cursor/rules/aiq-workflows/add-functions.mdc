@@ -1,6 +1,6 @@
 ---
 description: Follow these rules when the user's request involves implementing, adding, creating, or modifying functions within AIQ workflows
-globs: 
+globs:
 alwaysApply: false
 ---
 # Creating AIQ Toolkit Functions
@@ -26,7 +26,7 @@ Every function needs a configuration class that inherits from `aiq.data_models.f
 
 **Example:**
 ```python
-from aiq.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionBaseConfig
 from pydantic import Field
 
 class MyFunctionConfig(FunctionBaseConfig, name="my_function"):
@@ -76,7 +76,7 @@ Inherit from `aiq.builder.function.Function` and implement `_ainvoke` and/or `_a
 
 **Example:**
 ```python
-from aiq.builder.function import Function
+from nat.builder.function import Function
 from typing import AsyncGenerator, NoneType
 
 class MyComplexFunction(Function[str, str, str]):
@@ -100,8 +100,8 @@ Use the `@register_function` decorator on an `async` generator function. This re
 
 **Example (Registering a Callable):**
 ```python
-from aiq.cli.register_workflow import register_function
-from aiq.builder.builder import Builder
+from nat.cli.register_workflow import register_function
+from nat.builder.builder import Builder
 
 @register_function(config_type=MyFunctionConfig)
 async def register_my_function(config: MyFunctionConfig, builder: Builder):
@@ -151,7 +151,7 @@ To call other functions, use the `builder` object passed to the registration fun
 
 **Example:**
 ```python
-from aiq.data_models.component_ref import FunctionRef
+from nat.data_models.component_ref import FunctionRef
 
 class MyCompositeConfig(FunctionBaseConfig, name="my_composite_function"):
     """Config for a composite function."""

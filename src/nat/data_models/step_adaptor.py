@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import model_validator
 
-from aiq.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import IntermediateStepType
 
 logger = logging.getLogger(__name__)
 

@@ -17,7 +17,7 @@ from pathlib import Path
 
 from pydantic import Field
 
-from aiq.data_models.front_end import FrontEndBaseConfig
+from nat.data_models.front_end import FrontEndBaseConfig
 
 
 class ConsoleFrontEndConfig(FrontEndBaseConfig, name="console"):

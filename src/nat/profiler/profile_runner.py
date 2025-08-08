@@ -23,13 +23,13 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from aiq.data_models.evaluate import ProfilerConfig
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.profiler.data_models import ProfilerResults
-from aiq.profiler.forecasting.model_trainer import ModelTrainer
-from aiq.profiler.inference_metrics_model import InferenceMetricsModel
-from aiq.profiler.utils import create_standardized_dataframe
-from aiq.utils.type_converter import TypeConverter
+from nat.data_models.evaluate import ProfilerConfig
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.profiler.data_models import ProfilerResults
+from nat.profiler.forecasting.model_trainer import ModelTrainer
+from nat.profiler.inference_metrics_model import InferenceMetricsModel
+from nat.profiler.utils import create_standardized_dataframe
+from nat.utils.type_converter import TypeConverter
 
 logger = logging.getLogger(__name__)
 
@@ -88,19 +88,19 @@ class ProfilerRunner:
         writes out combined requests JSON, then computes and saves additional metrics,
         and optionally fits a forecasting model.
         """
-        from aiq.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import \
+        from nat.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import \
             multi_example_call_profiling
-        from aiq.profiler.inference_optimization.bottleneck_analysis.simple_stack_analysis import \
+        from nat.profiler.inference_optimization.bottleneck_analysis.simple_stack_analysis import \
             profile_workflow_bottlenecks
-        from aiq.profiler.inference_optimization.experimental.concurrency_spike_analysis import \
+        from nat.profiler.inference_optimization.experimental.concurrency_spike_analysis import \
             concurrency_spike_analysis
-        from aiq.profiler.inference_optimization.experimental.prefix_span_analysis import \
+        from nat.profiler.inference_optimization.experimental.prefix_span_analysis import \
             prefixspan_subworkflow_with_text
-        from aiq.profiler.inference_optimization.llm_metrics import LLMMetrics
-        from aiq.profiler.inference_optimization.prompt_caching import get_common_prefixes
-        from aiq.profiler.inference_optimization.token_uniqueness import compute_inter_query_token_uniqueness_by_llm
-        from aiq.profiler.inference_optimization.workflow_runtimes import compute_workflow_runtime_metrics
-        from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+        from nat.profiler.inference_optimization.llm_metrics import LLMMetrics
+        from nat.profiler.inference_optimization.prompt_caching import get_common_prefixes
+        from nat.profiler.inference_optimization.token_uniqueness import compute_inter_query_token_uniqueness_by_llm
+        from nat.profiler.inference_optimization.workflow_runtimes import compute_workflow_runtime_metrics
+        from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
         # Convert the incoming DataFrame to a list of dicts and store
         all_steps = [[IntermediatePropertyAdaptor.from_intermediate_step(step) for step in steps]

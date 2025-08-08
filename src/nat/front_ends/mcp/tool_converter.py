@@ -21,9 +21,9 @@ from inspect import Signature
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 
-from aiq.builder.function import Function
-from aiq.builder.function_base import FunctionBase
-from aiq.builder.workflow import Workflow
+from nat.builder.function import Function
+from nat.builder.function_base import FunctionBase
+from nat.builder.workflow import Workflow
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +104,7 @@ def create_function_wrapper(
             try:
                 # Special handling for AIQChatRequest
                 if is_chat_request:
-                    from aiq.data_models.api_server import ChatRequest
+                    from nat.data_models.api_server import ChatRequest
 
                     # Create a chat request from the query string
                     query = kwargs.get("query", "")

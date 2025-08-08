@@ -20,15 +20,15 @@ from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 
-from aiq.builder.builder import Builder
-from aiq.builder.function import Function
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.type_registry import GlobalTypeRegistry
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.data_models.object_store import ObjectStoreBaseConfig
-from aiq.object_store.interfaces import ObjectStore
-from aiq.runtime.loader import PluginTypes
-from aiq.runtime.loader import discover_and_register_plugins
+from nat.builder.builder import Builder
+from nat.builder.function import Function
+from nat.builder.function_info import FunctionInfo
+from nat.cli.type_registry import GlobalTypeRegistry
+from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.object_store import ObjectStoreBaseConfig
+from nat.object_store.interfaces import ObjectStore
+from nat.runtime.loader import PluginTypes
+from nat.runtime.loader import discover_and_register_plugins
 
 logger = logging.getLogger(__name__)
 

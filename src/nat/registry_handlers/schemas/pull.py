@@ -17,8 +17,8 @@ import logging
 
 from pydantic import BaseModel
 
-from aiq.registry_handlers.schemas.package import PackageNameVersion
-from aiq.registry_handlers.schemas.status import StatusMessage
+from nat.registry_handlers.schemas.package import PackageNameVersion
+from nat.registry_handlers.schemas.status import StatusMessage
 
 logger = logging.getLogger(__name__)
 

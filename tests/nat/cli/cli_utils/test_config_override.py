@@ -16,8 +16,8 @@
 import click
 import pytest
 
-from aiq.cli.cli_utils import config_override
-from aiq.data_models.function import FunctionBaseConfig
+from nat.cli.cli_utils import config_override
+from nat.data_models.function import FunctionBaseConfig
 
 
 @pytest.fixture(name="base_config")

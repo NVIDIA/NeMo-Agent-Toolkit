@@ -20,7 +20,7 @@ import pytest
 from click.testing import CliRunner
 
 # Replace this with the correct filename for your CLI script
-from aiq.cli.commands.info.list_mcp import list_mcp
+from nat.cli.commands.info.list_mcp import list_mcp
 
 
 @pytest.fixture

@@ -23,15 +23,15 @@ from unittest.mock import patch
 import pytest
 from pytest_httpserver import HTTPServer
 
-from aiq.cli.type_registry import TypeRegistry
-from aiq.data_models.component import ComponentEnum
-from aiq.data_models.discovery_metadata import DiscoveryMetadata
-from aiq.registry_handlers.schemas.package import PackageNameVersionList
-from aiq.registry_handlers.schemas.publish import Artifact
-from aiq.registry_handlers.schemas.publish import BuiltArtifact
-from aiq.registry_handlers.schemas.pull import PullRequestPackages
-from aiq.registry_handlers.schemas.search import SearchQuery
-from aiq.settings.global_settings import Settings
+from nat.cli.type_registry import TypeRegistry
+from nat.data_models.component import ComponentEnum
+from nat.data_models.discovery_metadata import DiscoveryMetadata
+from nat.registry_handlers.schemas.package import PackageNameVersionList
+from nat.registry_handlers.schemas.publish import Artifact
+from nat.registry_handlers.schemas.publish import BuiltArtifact
+from nat.registry_handlers.schemas.pull import PullRequestPackages
+from nat.registry_handlers.schemas.search import SearchQuery
+from nat.settings.global_settings import Settings
 
 
 @pytest.mark.parametrize("url, route, status, expected",

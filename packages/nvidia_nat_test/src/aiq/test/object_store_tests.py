@@ -20,10 +20,10 @@ from contextlib import asynccontextmanager
 import pytest
 import pytest_asyncio
 
-from aiq.data_models.object_store import KeyAlreadyExistsError
-from aiq.data_models.object_store import NoSuchKeyError
-from aiq.object_store.interfaces import ObjectStore
-from aiq.object_store.models import ObjectStoreItem
+from nat.data_models.object_store import KeyAlreadyExistsError
+from nat.data_models.object_store import NoSuchKeyError
+from nat.object_store.interfaces import ObjectStore
+from nat.object_store.models import ObjectStoreItem
 
 
 @pytest.mark.asyncio(loop_scope="class")

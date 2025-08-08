@@ -34,11 +34,11 @@ To implement the full predictor, populate the following functions in the predict
 import logging
 
 # flake8: noqa: F401, pylint: disable=unused-import
-from aiq_swe_bench import register_tools
-from aiq_swe_bench.config import SweBenchWorkflowConfig
+from nat_swe_bench import register_tools
+from nat_swe_bench.config import SweBenchWorkflowConfig
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_function
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_function
 
 logger = logging.getLogger(__name__)
 
@@ -46,13 +46,13 @@ logger = logging.getLogger(__name__)
 @register_function(config_type=SweBenchWorkflowConfig)
 async def swe_bench_workflow(config: SweBenchWorkflowConfig, builder: Builder):
     '''Workflow for solving SWE bench problems'''
-    from aiq_swe_bench.predictors import register as register_predictors
-    from aiq_swe_bench.predictors.predict_abc import SweBenchPredictorBase
-    from aiq_swe_bench.predictors.predictor_registry import PredictorRegistry
+    from nat_swe_bench.predictors import register as register_predictors
+    from nat_swe_bench.predictors.predict_abc import SweBenchPredictorBase
+    from nat_swe_bench.predictors.predictor_registry import PredictorRegistry
 
-    from aiq.builder.function_info import FunctionInfo
-    from aiq.data_models.swe_bench_model import SWEBenchInput
-    from aiq.data_models.swe_bench_model import SWEBenchOutput
+    from nat.builder.function_info import FunctionInfo
+    from nat.data_models.swe_bench_model import SWEBenchInput
+    from nat.data_models.swe_bench_model import SWEBenchOutput
 
     def _convert_input(input_str: str) -> SWEBenchInput:
         '''Convert a JSON string into an SWEBenchInput object.'''

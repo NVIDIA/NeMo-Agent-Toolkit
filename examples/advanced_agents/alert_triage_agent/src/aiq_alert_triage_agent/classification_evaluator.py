@@ -15,13 +15,13 @@
 
 import logging
 
-from aiq.builder.builder import EvalBuilder
-from aiq.builder.evaluator import EvaluatorInfo
-from aiq.cli.register_workflow import register_evaluator
-from aiq.data_models.evaluator import EvaluatorBaseConfig
-from aiq.eval.evaluator.base_evaluator import BaseEvaluator
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
-from aiq.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.builder.builder import EvalBuilder
+from nat.builder.evaluator import EvaluatorInfo
+from nat.cli.register_workflow import register_evaluator
+from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.eval.evaluator.base_evaluator import BaseEvaluator
+from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.eval.evaluator.evaluator_model import EvalOutputItem
 
 logger = logging.getLogger(__name__)
 

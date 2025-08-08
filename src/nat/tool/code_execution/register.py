@@ -20,10 +20,10 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
 
-from aiq.builder.builder import Builder
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.function import FunctionBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class CodeExecutionToolConfig(FunctionBaseConfig, name="code_execution"):
 
 @register_function(config_type=CodeExecutionToolConfig)
 async def code_execution_tool(config: CodeExecutionToolConfig, builder: Builder):
-    from aiq.tool.code_execution.code_sandbox import get_sandbox
+    from nat.tool.code_execution.code_sandbox import get_sandbox
 
     class CodeExecutionInputSchema(BaseModel):
         generated_code: str = Field(description="String containing the code to be executed")

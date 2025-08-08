@@ -21,21 +21,21 @@ from collections.abc import Iterable
 import networkx as nx
 from pydantic import BaseModel
 
-from aiq.data_models.authentication import AuthProviderBaseConfig
-from aiq.data_models.common import TypedBaseModel
-from aiq.data_models.component import ComponentGroup
-from aiq.data_models.component_ref import ComponentRef
-from aiq.data_models.component_ref import ComponentRefNode
-from aiq.data_models.component_ref import generate_instance_id
-from aiq.data_models.config import Config
-from aiq.data_models.embedder import EmbedderBaseConfig
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.data_models.llm import LLMBaseConfig
-from aiq.data_models.memory import MemoryBaseConfig
-from aiq.data_models.object_store import ObjectStoreBaseConfig
-from aiq.data_models.retriever import RetrieverBaseConfig
-from aiq.data_models.ttc_strategy import TTCStrategyBaseConfig
-from aiq.utils.type_utils import DecomposedType
+from nat.data_models.authentication import AuthProviderBaseConfig
+from nat.data_models.common import TypedBaseModel
+from nat.data_models.component import ComponentGroup
+from nat.data_models.component_ref import ComponentRef
+from nat.data_models.component_ref import ComponentRefNode
+from nat.data_models.component_ref import generate_instance_id
+from nat.data_models.config import Config
+from nat.data_models.embedder import EmbedderBaseConfig
+from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.llm import LLMBaseConfig
+from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.object_store import ObjectStoreBaseConfig
+from nat.data_models.retriever import RetrieverBaseConfig
+from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.utils.type_utils import DecomposedType
 
 logger = logging.getLogger(__name__)
 

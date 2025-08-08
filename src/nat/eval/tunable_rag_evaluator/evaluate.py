@@ -25,9 +25,9 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import RunnableLambda
 from tqdm import tqdm
 
-from aiq.eval.evaluator.base_evaluator import BaseEvaluator
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
-from aiq.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.eval.evaluator.base_evaluator import BaseEvaluator
+from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.eval.evaluator.evaluator_model import EvalOutputItem
 
 logger = logging.getLogger(__name__)
 

@@ -22,11 +22,11 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.builder.context import ContextState
-from aiq.observability.exporter.processing_exporter import ProcessingExporter
-from aiq.observability.processor.callback_processor import CallbackProcessor
-from aiq.observability.processor.processor import Processor
-from aiq.utils.reactive.subject import Subject
+from nat.builder.context import ContextState
+from nat.observability.exporter.processing_exporter import ProcessingExporter
+from nat.observability.processor.callback_processor import CallbackProcessor
+from nat.observability.processor.processor import Processor
+from nat.utils.reactive.subject import Subject
 
 # Note: Some tests in this module create coroutines that are intentionally not awaited
 # to test error conditions. These are handled individually with targeted warnings filters.

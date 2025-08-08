@@ -16,11 +16,11 @@
 import logging
 from pathlib import Path
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.function import FunctionBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -44,12 +44,12 @@ async def plot_charts_function(config: PlotChartsWorkflowConfig, builder: Builde
     from JSON data files based on user instructions.
     """
 
-    from aiq_plot_charts.plot_chat import create_bar_plot
-    from aiq_plot_charts.plot_chat import create_line_plot
-    from aiq_plot_charts.plot_chat import create_scatter_plot
-    from aiq_plot_charts.plot_chat import determine_chart_type
-    from aiq_plot_charts.plot_chat import generate_chart_description
-    from aiq_plot_charts.plot_chat import load_data_from_file
+    from nat_plot_charts.plot_chat import create_bar_plot
+    from nat_plot_charts.plot_chat import create_line_plot
+    from nat_plot_charts.plot_chat import create_scatter_plot
+    from nat_plot_charts.plot_chat import determine_chart_type
+    from nat_plot_charts.plot_chat import generate_chart_description
+    from nat_plot_charts.plot_chat import load_data_from_file
 
     # Get the LLM from builder configuration
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

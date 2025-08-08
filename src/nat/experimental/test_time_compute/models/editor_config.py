@@ -18,8 +18,8 @@ import typing
 from pydantic import Field
 from pydantic import model_validator
 
-from aiq.data_models.component_ref import LLMRef
-from aiq.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.data_models.component_ref import LLMRef
+from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 
 
 class LLMAsAJudgeEditorConfig(TTCStrategyBaseConfig, name="llm_as_a_judge_editor"):

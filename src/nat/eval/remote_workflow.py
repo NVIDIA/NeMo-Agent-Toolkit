@@ -21,13 +21,13 @@ import aiohttp
 from pydantic import ValidationError
 from tqdm import tqdm
 
-from aiq.data_models.api_server import ResponseIntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.eval.config import EvaluationRunConfig
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
+from nat.data_models.api_server import ResponseIntermediateStep
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.invocation_node import InvocationNode
+from nat.eval.config import EvaluationRunConfig
+from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.eval.evaluator.evaluator_model import EvalInputItem
 
 logger = logging.getLogger(__name__)
 

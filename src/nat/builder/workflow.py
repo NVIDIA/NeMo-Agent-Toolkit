@@ -17,22 +17,22 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import Any
 
-from aiq.builder.context import ContextState
-from aiq.builder.embedder import EmbedderProviderInfo
-from aiq.builder.function import Function
-from aiq.builder.function_base import FunctionBase
-from aiq.builder.function_base import InputT
-from aiq.builder.function_base import SingleOutputT
-from aiq.builder.function_base import StreamingOutputT
-from aiq.builder.llm import LLMProviderInfo
-from aiq.builder.retriever import RetrieverProviderInfo
-from aiq.data_models.config import Config
-from aiq.experimental.test_time_compute.models.strategy_base import StrategyBase
-from aiq.memory.interfaces import MemoryEditor
-from aiq.object_store.interfaces import ObjectStore
-from aiq.observability.exporter.base_exporter import BaseExporter
-from aiq.observability.exporter_manager import ExporterManager
-from aiq.runtime.runner import Runner
+from nat.builder.context import ContextState
+from nat.builder.embedder import EmbedderProviderInfo
+from nat.builder.function import Function
+from nat.builder.function_base import FunctionBase
+from nat.builder.function_base import InputT
+from nat.builder.function_base import SingleOutputT
+from nat.builder.function_base import StreamingOutputT
+from nat.builder.llm import LLMProviderInfo
+from nat.builder.retriever import RetrieverProviderInfo
+from nat.data_models.config import Config
+from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+from nat.memory.interfaces import MemoryEditor
+from nat.object_store.interfaces import ObjectStore
+from nat.observability.exporter.base_exporter import BaseExporter
+from nat.observability.exporter_manager import ExporterManager
+from nat.runtime.runner import Runner
 
 callback_handler_var: ContextVar[Any | None] = ContextVar("callback_handler_var", default=None)
 
@@ -102,7 +102,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
 
         async with self.run(message) as runner:
 
-            from aiq.eval.runtime_event_subscriber import pull_intermediate
+            from nat.eval.runtime_event_subscriber import pull_intermediate
 
             # Start the intermediate stream
             pull_done, intermediate_steps = pull_intermediate()

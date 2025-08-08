@@ -18,10 +18,10 @@ import json
 import logging
 from pathlib import Path
 
-from aiq.builder.builder import Builder
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.function import FunctionBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 

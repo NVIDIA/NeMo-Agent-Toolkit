@@ -19,10 +19,10 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
 
-from aiq.builder.builder import Builder
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.function import FunctionBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +53,8 @@ async def mcp_tool(config: MCPToolConfig, builder: Builder):  # pylint: disable=
     Generate an AIQ Toolkit Function that wraps a tool provided by the MCP server.
     """
 
-    from aiq.tool.mcp.mcp_client import MCPBuilder
-    from aiq.tool.mcp.mcp_client import MCPToolClient
+    from nat.tool.mcp.mcp_client import MCPBuilder
+    from nat.tool.mcp.mcp_client import MCPToolClient
 
     client = MCPBuilder(url=str(config.url))
 

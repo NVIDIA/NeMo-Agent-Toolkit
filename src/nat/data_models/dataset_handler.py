@@ -24,8 +24,8 @@ from pydantic import Discriminator
 from pydantic import FilePath
 from pydantic import Tag
 
-from aiq.data_models.common import BaseModelRegistryTag
-from aiq.data_models.common import TypedBaseModel
+from nat.data_models.common import BaseModelRegistryTag
+from nat.data_models.common import TypedBaseModel
 
 
 class EvalS3Config(BaseModel):

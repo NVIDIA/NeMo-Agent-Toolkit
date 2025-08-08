@@ -24,20 +24,20 @@ from fastapi import FastAPI
 from httpx import ASGITransport
 from httpx import AsyncClient
 from httpx_sse import aconnect_sse
+from nat.test.functions import EchoFunctionConfig
+from nat.test.functions import StreamingEchoFunctionConfig
 
-from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.data_models.api_server import ChatRequest
-from aiq.data_models.api_server import ChatResponse
-from aiq.data_models.api_server import ChatResponseChunk
-from aiq.data_models.api_server import Message
-from aiq.data_models.config import Config
-from aiq.data_models.config import GeneralConfig
-from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
-from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
-from aiq.object_store.in_memory_object_store import InMemoryObjectStoreConfig
-from aiq.test.functions import EchoFunctionConfig
-from aiq.test.functions import StreamingEchoFunctionConfig
-from aiq.utils.type_utils import override
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import ChatResponseChunk
+from nat.data_models.api_server import Message
+from nat.data_models.config import Config
+from nat.data_models.config import GeneralConfig
+from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+from nat.object_store.in_memory_object_store import InMemoryObjectStoreConfig
+from nat.utils.type_utils import override
 
 
 class CustomWorker(FastApiFrontEndPluginWorker):

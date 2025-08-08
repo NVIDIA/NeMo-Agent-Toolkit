@@ -22,15 +22,15 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.builder.context import ContextState
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.observability.exporter.file_exporter import FileExporter
-from aiq.observability.exporter.raw_exporter import RawExporter
-from aiq.observability.mixin.file_mixin import FileExportMixin
-from aiq.observability.processor.intermediate_step_serializer import IntermediateStepSerializer
+from nat.builder.context import ContextState
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.invocation_node import InvocationNode
+from nat.observability.exporter.file_exporter import FileExporter
+from nat.observability.exporter.raw_exporter import RawExporter
+from nat.observability.mixin.file_mixin import FileExportMixin
+from nat.observability.processor.intermediate_step_serializer import IntermediateStepSerializer
 
 
 @pytest.fixture
@@ -367,7 +367,7 @@ class TestFileExporterLogging:
 
     def test_logger_configuration(self):
         """Test that logger is properly configured."""
-        from aiq.observability.exporter.file_exporter import logger
+        from nat.observability.exporter.file_exporter import logger
 
         assert logger.name == 'aiq.observability.exporter.file_exporter'
 

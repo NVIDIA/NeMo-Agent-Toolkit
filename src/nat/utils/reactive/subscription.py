@@ -19,7 +19,7 @@ from typing import Generic
 from typing import TypeVar
 
 if typing.TYPE_CHECKING:
-    from aiq.utils.reactive.base.subject_base import SubjectBase
+    from nat.utils.reactive.base.subject_base import SubjectBase
 
 _T = TypeVar("_T")  # pylint: disable=invalid-name
 

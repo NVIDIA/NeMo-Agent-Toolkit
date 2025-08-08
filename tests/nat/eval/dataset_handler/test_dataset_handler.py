@@ -18,16 +18,16 @@ import json
 import pandas as pd
 import pytest
 
-from aiq.data_models.dataset_handler import EvalDatasetJsonConfig
-from aiq.data_models.dataset_handler import EvalDatasetStructureConfig
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.eval.dataset_handler.dataset_handler import DatasetHandler
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
-from aiq.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.data_models.dataset_handler import EvalDatasetJsonConfig
+from nat.data_models.dataset_handler import EvalDatasetStructureConfig
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.invocation_node import InvocationNode
+from nat.eval.dataset_handler.dataset_handler import DatasetHandler
+from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.eval.evaluator.evaluator_model import EvalOutputItem
 
 # pylint: disable=redefined-outer-name
 

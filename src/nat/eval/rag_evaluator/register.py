@@ -19,13 +19,13 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import model_validator
 
-from aiq.builder.builder import EvalBuilder
-from aiq.builder.evaluator import EvaluatorInfo
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.cli.register_workflow import register_evaluator
-from aiq.data_models.evaluator import EvaluatorBaseConfig
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalOutput
+from nat.builder.builder import EvalBuilder
+from nat.builder.evaluator import EvaluatorInfo
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.cli.register_workflow import register_evaluator
+from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.eval.evaluator.evaluator_model import EvalOutput
 
 logger = logging.getLogger(__name__)
 

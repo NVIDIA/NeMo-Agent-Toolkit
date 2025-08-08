@@ -16,11 +16,11 @@
 import redis.asyncio as redis
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.cli.register_workflow import register_memory
-from aiq.data_models.component_ref import EmbedderRef
-from aiq.data_models.memory import MemoryBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.cli.register_workflow import register_memory
+from nat.data_models.component_ref import EmbedderRef
+from nat.data_models.memory import MemoryBaseConfig
 
 
 class RedisMemoryClientConfig(MemoryBaseConfig, name="redis_memory"):
@@ -35,7 +35,7 @@ class RedisMemoryClientConfig(MemoryBaseConfig, name="redis_memory"):
 @register_memory(config_type=RedisMemoryClientConfig)
 async def redis_memory_client(config: RedisMemoryClientConfig, builder: Builder):
 
-    from aiq.plugins.redis.redis_editor import RedisEditor
+    from nat.plugins.redis.redis_editor import RedisEditor
 
     from .schema import ensure_index_exists
 

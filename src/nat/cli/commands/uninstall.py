@@ -24,11 +24,11 @@ logger = logging.getLogger(__name__)
 
 async def uninstall_packages(packages: list[dict[str, str]]) -> None:
 
-    from aiq.cli.type_registry import GlobalTypeRegistry
-    from aiq.registry_handlers.schemas.package import PackageNameVersionList
-    from aiq.runtime.loader import PluginTypes
-    from aiq.runtime.loader import discover_and_register_plugins
-    from aiq.settings.global_settings import GlobalSettings
+    from nat.cli.type_registry import GlobalTypeRegistry
+    from nat.registry_handlers.schemas.package import PackageNameVersionList
+    from nat.runtime.loader import PluginTypes
+    from nat.runtime.loader import discover_and_register_plugins
+    from nat.settings.global_settings import GlobalSettings
 
     discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
 

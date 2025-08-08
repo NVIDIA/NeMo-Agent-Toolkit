@@ -72,7 +72,7 @@ The `OAuth2AuthCodeFlowProviderConfig` from the previous section is registered a
 ```python
 @register_auth_provider(config_type=OAuth2AuthCodeFlowProviderConfig)
 async def oauth2_client(authentication_provider: OAuth2AuthCodeFlowProviderConfig, builder: Builder):
-    from aiq.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
+    from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
 
     yield OAuth2AuthCodeFlowProvider(authentication_provider)
 ```

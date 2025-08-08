@@ -16,8 +16,8 @@
 import asyncio
 import logging
 
-from aiq.builder.context import Context
-from aiq.data_models.intermediate_step import IntermediateStep
+from nat.builder.context import Context
+from nat.data_models.intermediate_step import IntermediateStep
 
 logger = logging.getLogger(__name__)
 

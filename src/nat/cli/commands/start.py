@@ -23,12 +23,12 @@ from pathlib import Path
 import click
 from pydantic_core import SchemaValidator
 
-from aiq.cli.cli_utils.config_override import load_and_override_config
-from aiq.cli.type_registry import GlobalTypeRegistry
-from aiq.cli.type_registry import RegisteredFrontEndInfo
-from aiq.data_models.config import Config
-from aiq.utils.data_models.schema_validator import validate_schema
-from aiq.utils.type_utils import DecomposedType
+from nat.cli.cli_utils.config_override import load_and_override_config
+from nat.cli.type_registry import GlobalTypeRegistry
+from nat.cli.type_registry import RegisteredFrontEndInfo
+from nat.data_models.config import Config
+from nat.utils.data_models.schema_validator import validate_schema
+from nat.utils.type_utils import DecomposedType
 
 logger = logging.getLogger(__name__)
 
@@ -133,8 +133,8 @@ class StartCommandGroup(click.Group):
         if (self._commands is not None):
             return self._commands
 
-        from aiq.runtime.loader import PluginTypes
-        from aiq.runtime.loader import discover_and_register_plugins
+        from nat.runtime.loader import PluginTypes
+        from nat.runtime.loader import discover_and_register_plugins
 
         # Only load front ends here for performance. Ensures a responsive CLI
         discover_and_register_plugins(PluginTypes.FRONT_END)
@@ -169,8 +169,8 @@ class StartCommandGroup(click.Group):
                           override: tuple[tuple[str, str], ...],
                           **kwargs) -> int | None:
 
-        from aiq.runtime.loader import PluginTypes
-        from aiq.runtime.loader import discover_and_register_plugins
+        from nat.runtime.loader import PluginTypes
+        from nat.runtime.loader import discover_and_register_plugins
 
         if (config_file is None):
             raise click.ClickException("No config file provided.")

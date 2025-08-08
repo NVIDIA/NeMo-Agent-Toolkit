@@ -20,8 +20,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from aiq.profiler.inference_metrics_model import InferenceMetricsModel
-from aiq.profiler.profile_runner import ProfilerRunner
+from nat.profiler.inference_metrics_model import InferenceMetricsModel
+from nat.profiler.profile_runner import ProfilerRunner
 
 # ---------------------------------------------------------------------------
 # helpers

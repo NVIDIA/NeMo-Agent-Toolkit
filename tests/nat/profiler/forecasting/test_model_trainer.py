@@ -15,12 +15,12 @@
 
 import pytest
 
-from aiq.profiler.forecasting.model_trainer import ModelTrainer
-from aiq.profiler.forecasting.model_trainer import create_model
-from aiq.profiler.forecasting.models import ForecastingBaseModel
-from aiq.profiler.forecasting.models import LinearModel
-from aiq.profiler.forecasting.models import RandomForestModel
-from aiq.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+from nat.profiler.forecasting.model_trainer import ModelTrainer
+from nat.profiler.forecasting.model_trainer import create_model
+from nat.profiler.forecasting.models import ForecastingBaseModel
+from nat.profiler.forecasting.models import LinearModel
+from nat.profiler.forecasting.models import RandomForestModel
+from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 
 @pytest.mark.parametrize("model_type, expected_model_class", [

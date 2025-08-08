@@ -18,15 +18,15 @@ import os
 
 import pytest
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.evaluate import EvalConfig
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType as WorkflowEventEnum
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.data_models.profiler import ProfilerConfig
-from aiq.profiler.data_frame_row import DataFrameRow
-from aiq.profiler.profile_runner import ProfilerRunner
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.evaluate import EvalConfig
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType as WorkflowEventEnum
+from nat.data_models.invocation_node import InvocationNode
+from nat.data_models.profiler import ProfilerConfig
+from nat.profiler.data_frame_row import DataFrameRow
+from nat.profiler.profile_runner import ProfilerRunner
 
 
 @pytest.fixture(name="minimal_eval_config")

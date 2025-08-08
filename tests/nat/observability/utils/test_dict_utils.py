@@ -18,10 +18,10 @@ from weakref import WeakKeyDictionary
 
 import pytest
 
-from aiq.observability.utils.dict_utils import AsyncDictionary
-from aiq.observability.utils.dict_utils import AsyncSafeWeakKeyDictionary
-from aiq.observability.utils.dict_utils import KeyedLock
-from aiq.observability.utils.dict_utils import merge_dicts
+from nat.observability.utils.dict_utils import AsyncDictionary
+from nat.observability.utils.dict_utils import AsyncSafeWeakKeyDictionary
+from nat.observability.utils.dict_utils import KeyedLock
+from nat.observability.utils.dict_utils import merge_dicts
 
 
 class TestAsyncDictionary:

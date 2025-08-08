@@ -13,17 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.cli.register_workflow import register_retriever_client
-from aiq.retriever.milvus.register import MilvusRetrieverConfig
-from aiq.retriever.nemo_retriever.register import NemoRetrieverConfig
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.cli.register_workflow import register_retriever_client
+from nat.retriever.milvus.register import MilvusRetrieverConfig
+from nat.retriever.nemo_retriever.register import NemoRetrieverConfig
 
 
 @register_retriever_client(config_type=NemoRetrieverConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def nemo_langchain(retriever_config: NemoRetrieverConfig, builder: Builder):
-    from aiq.retriever.nemo_retriever.retriever import NemoLangchainRetriever
-    from aiq.retriever.nemo_retriever.retriever import NemoRetriever
+    from nat.retriever.nemo_retriever.retriever import NemoLangchainRetriever
+    from nat.retriever.nemo_retriever.retriever import NemoRetriever
 
     retriever = NemoRetriever(**retriever_config.model_dump(exclude={"type", "top_k", "collection_name"}))
     optional_fields = ["collection_name", "top_k", "output_fields"]

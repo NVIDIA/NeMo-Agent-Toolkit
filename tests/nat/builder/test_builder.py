@@ -20,47 +20,47 @@ import pytest
 from openai import BaseModel
 from pydantic import ConfigDict
 
-from aiq.builder.builder import Builder
-from aiq.builder.embedder import EmbedderProviderInfo
-from aiq.builder.function import Function
-from aiq.builder.function_info import FunctionInfo
-from aiq.builder.llm import LLMProviderInfo
-from aiq.builder.retriever import RetrieverProviderInfo
-from aiq.builder.workflow import Workflow
-from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.cli.register_workflow import register_embedder_client
-from aiq.cli.register_workflow import register_embedder_provider
-from aiq.cli.register_workflow import register_function
-from aiq.cli.register_workflow import register_llm_client
-from aiq.cli.register_workflow import register_llm_provider
-from aiq.cli.register_workflow import register_memory
-from aiq.cli.register_workflow import register_object_store
-from aiq.cli.register_workflow import register_retriever_client
-from aiq.cli.register_workflow import register_retriever_provider
-from aiq.cli.register_workflow import register_telemetry_exporter
-from aiq.cli.register_workflow import register_tool_wrapper
-from aiq.cli.register_workflow import register_ttc_strategy
-from aiq.data_models.config import Config
-from aiq.data_models.config import GeneralConfig
-from aiq.data_models.embedder import EmbedderBaseConfig
-from aiq.data_models.function import FunctionBaseConfig
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.llm import LLMBaseConfig
-from aiq.data_models.memory import MemoryBaseConfig
-from aiq.data_models.object_store import ObjectStoreBaseConfig
-from aiq.data_models.retriever import RetrieverBaseConfig
-from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from aiq.data_models.ttc_strategy import TTCStrategyBaseConfig
-from aiq.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
-from aiq.experimental.test_time_compute.models.stage_enums import StageTypeEnum
-from aiq.experimental.test_time_compute.models.strategy_base import StrategyBase
-from aiq.memory.interfaces import MemoryEditor
-from aiq.memory.models import MemoryItem
-from aiq.object_store.in_memory_object_store import InMemoryObjectStore
-from aiq.observability.exporter.base_exporter import BaseExporter
-from aiq.retriever.interface import Retriever
-from aiq.retriever.models import Document
-from aiq.retriever.models import RetrieverOutput
+from nat.builder.builder import Builder
+from nat.builder.embedder import EmbedderProviderInfo
+from nat.builder.function import Function
+from nat.builder.function_info import FunctionInfo
+from nat.builder.llm import LLMProviderInfo
+from nat.builder.retriever import RetrieverProviderInfo
+from nat.builder.workflow import Workflow
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.cli.register_workflow import register_embedder_client
+from nat.cli.register_workflow import register_embedder_provider
+from nat.cli.register_workflow import register_function
+from nat.cli.register_workflow import register_llm_client
+from nat.cli.register_workflow import register_llm_provider
+from nat.cli.register_workflow import register_memory
+from nat.cli.register_workflow import register_object_store
+from nat.cli.register_workflow import register_retriever_client
+from nat.cli.register_workflow import register_retriever_provider
+from nat.cli.register_workflow import register_telemetry_exporter
+from nat.cli.register_workflow import register_tool_wrapper
+from nat.cli.register_workflow import register_ttc_strategy
+from nat.data_models.config import Config
+from nat.data_models.config import GeneralConfig
+from nat.data_models.embedder import EmbedderBaseConfig
+from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.llm import LLMBaseConfig
+from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.object_store import ObjectStoreBaseConfig
+from nat.data_models.retriever import RetrieverBaseConfig
+from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
+from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
+from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+from nat.memory.interfaces import MemoryEditor
+from nat.memory.models import MemoryItem
+from nat.object_store.in_memory_object_store import InMemoryObjectStore
+from nat.observability.exporter.base_exporter import BaseExporter
+from nat.retriever.interface import Retriever
+from nat.retriever.models import Document
+from nat.retriever.models import RetrieverOutput
 
 
 class FunctionReturningFunctionConfig(FunctionBaseConfig, name="fn_return_fn"):
@@ -909,7 +909,7 @@ def test_log_build_failure_no_remaining_components(caplog_fixture, mock_componen
 
 def test_log_evaluator_build_failure_helper_method(caplog_fixture):
     """Test the _log_evaluator_build_failure helper method directly."""
-    from aiq.builder.eval_builder import WorkflowEvalBuilder
+    from nat.builder.eval_builder import WorkflowEvalBuilder
 
     builder = WorkflowEvalBuilder()
 
@@ -937,7 +937,7 @@ def test_log_evaluator_build_failure_helper_method(caplog_fixture):
 
 def test_log_evaluator_build_failure_no_completed(caplog_fixture):
     """Test evaluator error logging when no evaluators have been successfully built."""
-    from aiq.builder.eval_builder import WorkflowEvalBuilder
+    from nat.builder.eval_builder import WorkflowEvalBuilder
 
     builder = WorkflowEvalBuilder()
 
@@ -961,7 +961,7 @@ def test_log_evaluator_build_failure_no_completed(caplog_fixture):
 
 def test_log_evaluator_build_failure_no_remaining(caplog_fixture):
     """Test evaluator error logging when no evaluators remain to be built."""
-    from aiq.builder.eval_builder import WorkflowEvalBuilder
+    from nat.builder.eval_builder import WorkflowEvalBuilder
 
     builder = WorkflowEvalBuilder()
 

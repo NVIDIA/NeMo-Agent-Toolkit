@@ -17,9 +17,9 @@ import logging
 
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_telemetry_exporter
-from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_telemetry_exporter
+from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +42,7 @@ class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
 @register_telemetry_exporter(config_type=WeaveTelemetryExporter)
 async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Builder):  # pylint: disable=unused-argument
     import weave
-
-    from aiq.plugins.weave.weave_exporter import WeaveExporter
+    from nat.plugins.weave.weave_exporter import WeaveExporter
 
     weave_settings = {}
 

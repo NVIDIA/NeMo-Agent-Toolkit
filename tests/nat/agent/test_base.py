@@ -25,7 +25,7 @@ from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph.graph import CompiledGraph
 
-from aiq.agent.base import BaseAgent
+from nat.agent.base import BaseAgent
 
 
 class MockBaseAgent(BaseAgent):

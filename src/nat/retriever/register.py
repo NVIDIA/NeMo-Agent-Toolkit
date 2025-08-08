@@ -18,5 +18,5 @@
 # isort:skip_file
 
 # Import any providers which need to be automatically registered here
-import aiq.retriever.milvus.register
-import aiq.retriever.nemo_retriever.register
+import nat.retriever.milvus.register
+import nat.retriever.nemo_retriever.register

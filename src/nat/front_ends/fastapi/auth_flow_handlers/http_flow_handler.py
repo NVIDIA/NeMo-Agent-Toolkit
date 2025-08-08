@@ -13,10 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.authentication.interfaces import FlowHandlerBase
-from aiq.data_models.authentication import AuthenticatedContext
-from aiq.data_models.authentication import AuthFlowType
-from aiq.data_models.authentication import AuthProviderBaseConfig
+from nat.authentication.interfaces import FlowHandlerBase
+from nat.data_models.authentication import AuthenticatedContext
+from nat.data_models.authentication import AuthFlowType
+from nat.data_models.authentication import AuthProviderBaseConfig
 
 
 class HTTPAuthenticationFlowHandler(FlowHandlerBase):

@@ -15,13 +15,13 @@
 
 import logging
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_ttc_strategy
-from aiq.experimental.test_time_compute.models.selection_config import BestOfNSelectionConfig
-from aiq.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
-from aiq.experimental.test_time_compute.models.stage_enums import StageTypeEnum
-from aiq.experimental.test_time_compute.models.strategy_base import StrategyBase
-from aiq.experimental.test_time_compute.models.ttc_item import TTCItem
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_ttc_strategy
+from nat.experimental.test_time_compute.models.selection_config import BestOfNSelectionConfig
+from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
+from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
+from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
+from nat.experimental.test_time_compute.models.ttc_item import TTCItem
 
 logger = logging.getLogger(__name__)
 

@@ -20,8 +20,8 @@ import asyncio
 from zep_cloud.client import AsyncZep
 from zep_cloud.types import Message
 
-from aiq.memory.interfaces import MemoryEditor
-from aiq.memory.models import MemoryItem
+from nat.memory.interfaces import MemoryEditor
+from nat.memory.models import MemoryItem
 
 
 class ZepEditor(MemoryEditor):

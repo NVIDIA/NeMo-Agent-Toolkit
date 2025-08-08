@@ -16,9 +16,9 @@
 from unittest.mock import AsyncMock
 
 import pytest
+from nat.plugins.mem0ai.mem0_editor import Mem0Editor
 
-from aiq.memory.models import MemoryItem
-from aiq.plugins.mem0ai.mem0_editor import Mem0Editor
+from nat.memory.models import MemoryItem
 
 
 @pytest.fixture(name="mock_mem0_client")

@@ -20,7 +20,7 @@ import typing
 import expandvars
 import yaml
 
-from aiq.utils.type_utils import StrPath
+from nat.utils.type_utils import StrPath
 
 logger = logging.getLogger(__name__)
 

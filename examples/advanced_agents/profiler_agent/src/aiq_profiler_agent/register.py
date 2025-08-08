@@ -16,17 +16,17 @@
 import logging
 from datetime import datetime
 
-from aiq_profiler_agent import tool  # noqa: F401 # pylint: disable=unused-import
-from aiq_profiler_agent.prompts import RETRY_PROMPT
-from aiq_profiler_agent.prompts import SYSTEM_PROMPT
+from nat_profiler_agent import tool  # noqa: F401 # pylint: disable=unused-import
+from nat_profiler_agent.prompts import RETRY_PROMPT
+from nat_profiler_agent.prompts import SYSTEM_PROMPT
 from pydantic import Field
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.builder.function_info import FunctionInfo
-from aiq.cli.register_workflow import register_function
-from aiq.data_models.component_ref import LLMRef
-from aiq.data_models.function import FunctionBaseConfig
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.function_info import FunctionInfo
+from nat.cli.register_workflow import register_function
+from nat.data_models.component_ref import LLMRef
+from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
 
@@ -64,14 +64,14 @@ async def profiler_agent(config: ProfilerAgentConfig, builder: Builder):
     and analyzes the data to provide insights about LLM usage, performance,
     and issues.
     """
-    from aiq_profiler_agent.agent import ProfilerAgent
-    from aiq_profiler_agent.agent import ProfilerAgentState
-    from aiq_profiler_agent.data_models import ExecPlan
-    from aiq_profiler_agent.tool import flow_chart  # noqa: F401 # pylint: disable=unused-import
     from langchain_core.messages import SystemMessage
     from langchain_core.output_parsers import PydanticOutputParser
     from langchain_core.prompts import PromptTemplate
     from langgraph.graph.graph import CompiledGraph
+    from nat_profiler_agent.agent import ProfilerAgent
+    from nat_profiler_agent.agent import ProfilerAgentState
+    from nat_profiler_agent.data_models import ExecPlan
+    from nat_profiler_agent.tool import flow_chart  # noqa: F401 # pylint: disable=unused-import
 
     # Create the agent executor
     tools = builder.get_tools(tool_names=config.tools, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

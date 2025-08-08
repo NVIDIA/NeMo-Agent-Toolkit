@@ -28,25 +28,25 @@ from uuid import uuid4
 
 import pytest
 
-from aiq.data_models.config import Config
-from aiq.data_models.dataset_handler import EvalDatasetJsonConfig
-from aiq.data_models.evaluate import EvalConfig
-from aiq.data_models.evaluate import EvalOutputConfig
-from aiq.data_models.evaluate import JobEvictionPolicy
-from aiq.data_models.evaluate import JobManagementConfig
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.intermediate_step import StreamEventData
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.eval.evaluate import EvaluationRun
-from aiq.eval.evaluate import EvaluationRunConfig
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
-from aiq.eval.evaluator.evaluator_model import EvalOutput
-from aiq.eval.evaluator.evaluator_model import EvalOutputItem
-from aiq.profiler.data_models import ProfilerResults
-from aiq.runtime.session import SessionManager
+from nat.data_models.config import Config
+from nat.data_models.dataset_handler import EvalDatasetJsonConfig
+from nat.data_models.evaluate import EvalConfig
+from nat.data_models.evaluate import EvalOutputConfig
+from nat.data_models.evaluate import JobEvictionPolicy
+from nat.data_models.evaluate import JobManagementConfig
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.invocation_node import InvocationNode
+from nat.eval.evaluate import EvaluationRun
+from nat.eval.evaluate import EvaluationRunConfig
+from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.eval.evaluator.evaluator_model import EvalOutput
+from nat.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.profiler.data_models import ProfilerResults
+from nat.runtime.session import SessionManager
 
 # pylint: disable=redefined-outer-name
 

@@ -25,7 +25,7 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import Any
 
-from aiq.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.framework_enum import LLMFrameworkEnum
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ def set_framework_profiler_handler(
             if LLMFrameworkEnum.LANGCHAIN in frameworks and not _library_instrumented["langchain"]:
                 from langchain_core.tracers.context import register_configure_hook
 
-                from aiq.profiler.callbacks.langchain_callback_handler import LangchainProfilerHandler
+                from nat.profiler.callbacks.langchain_callback_handler import LangchainProfilerHandler
 
                 handler = LangchainProfilerHandler()
                 callback_handler_var.set(handler)
@@ -68,14 +68,14 @@ def set_framework_profiler_handler(
                 from llama_index.core import Settings
                 from llama_index.core.callbacks import CallbackManager
 
-                from aiq.profiler.callbacks.llama_index_callback_handler import LlamaIndexProfilerHandler
+                from nat.profiler.callbacks.llama_index_callback_handler import LlamaIndexProfilerHandler
 
                 handler = LlamaIndexProfilerHandler()
                 Settings.callback_manager = CallbackManager([handler])
                 logger.debug("LlamaIndex callback handler registered")
 
             if LLMFrameworkEnum.CREWAI in frameworks and not _library_instrumented["crewai"]:
-                from aiq.plugins.crewai.crewai_callback_handler import \
+                from nat.plugins.crewai.crewai_callback_handler import \
                     CrewAIProfilerHandler  # pylint: disable=ungrouped-imports,line-too-long  # noqa E501
 
                 handler = CrewAIProfilerHandler()
@@ -84,7 +84,7 @@ def set_framework_profiler_handler(
                 logger.debug("CrewAI callback handler registered")
 
             if LLMFrameworkEnum.SEMANTIC_KERNEL in frameworks and not _library_instrumented["semantic_kernel"]:
-                from aiq.profiler.callbacks.semantic_kernel_callback_handler import SemanticKernelProfilerHandler
+                from nat.profiler.callbacks.semantic_kernel_callback_handler import SemanticKernelProfilerHandler
 
                 handler = SemanticKernelProfilerHandler(workflow_llms=workflow_llms)
                 handler.instrument()
@@ -92,7 +92,7 @@ def set_framework_profiler_handler(
                 logger.debug("SemanticKernel callback handler registered")
 
             if LLMFrameworkEnum.AGNO in frameworks and not _library_instrumented["agno"]:
-                from aiq.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
+                from nat.profiler.callbacks.agno_callback_handler import AgnoProfilerHandler
 
                 handler = AgnoProfilerHandler()
                 handler.instrument()

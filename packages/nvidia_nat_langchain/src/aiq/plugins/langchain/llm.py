@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.builder.builder import Builder
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.cli.register_workflow import register_llm_client
-from aiq.data_models.retry_mixin import RetryMixin
-from aiq.llm.aws_bedrock_llm import AWSBedrockModelConfig
-from aiq.llm.nim_llm import NIMModelConfig
-from aiq.llm.openai_llm import OpenAIModelConfig
-from aiq.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.cli.register_workflow import register_llm_client
+from nat.data_models.retry_mixin import RetryMixin
+from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from nat.llm.nim_llm import NIMModelConfig
+from nat.llm.openai_llm import OpenAIModelConfig
+from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

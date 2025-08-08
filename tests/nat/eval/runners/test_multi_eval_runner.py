@@ -20,14 +20,14 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.eval.config import EvaluationRunConfig
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
-from aiq.eval.evaluator.evaluator_model import EvalOutput
-from aiq.eval.evaluator.evaluator_model import EvalOutputItem
-from aiq.eval.runners.config import MultiEvaluationRunConfig
-from aiq.eval.runners.multi_eval_runner import MultiEvaluationRunner
-from aiq.profiler.data_models import ProfilerResults
+from nat.eval.config import EvaluationRunConfig
+from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.eval.evaluator.evaluator_model import EvalOutput
+from nat.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.eval.runners.config import MultiEvaluationRunConfig
+from nat.eval.runners.multi_eval_runner import MultiEvaluationRunner
+from nat.profiler.data_models import ProfilerResults
 
 
 @pytest.fixture
@@ -55,7 +55,7 @@ def multi_eval_config(base_eval_run_config):
 @pytest.fixture
 def mock_evaluation_run_output():
     """Fixture for mock evaluation run output."""
-    from aiq.eval.config import EvaluationRunOutput
+    from nat.eval.config import EvaluationRunOutput
 
     # Create simple mock objects for testing
     eval_item = EvalInputItem(id=1,

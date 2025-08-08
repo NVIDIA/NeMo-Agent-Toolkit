@@ -20,16 +20,16 @@ from pathlib import Path
 
 import click
 
-from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
-from aiq.utils.data_models.schema_validator import validate_yaml
+from nat.data_models.registry_handler import RegistryHandlerBaseConfig
+from nat.utils.data_models.schema_validator import validate_yaml
 
 logger = logging.getLogger(__name__)
 
 
 async def remove_artifact(registry_handler_config: RegistryHandlerBaseConfig, packages: list[dict[str, str]]) -> None:
 
-    from aiq.cli.type_registry import GlobalTypeRegistry
-    from aiq.registry_handlers.schemas.package import PackageNameVersionList
+    from nat.cli.type_registry import GlobalTypeRegistry
+    from nat.registry_handlers.schemas.package import PackageNameVersionList
 
     registry = GlobalTypeRegistry.get()
 
@@ -69,7 +69,7 @@ def remove(channel: str, config_file: str, packages: str) -> None:
     Remove AIQ Toolkit artifacts from a remote registry.
     """
 
-    from aiq.settings.global_settings import GlobalSettings
+    from nat.settings.global_settings import GlobalSettings
 
     # Extract package name and version
     packages = packages.split()

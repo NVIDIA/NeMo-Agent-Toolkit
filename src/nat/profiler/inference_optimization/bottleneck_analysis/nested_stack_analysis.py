@@ -34,12 +34,12 @@ import os
 
 import pandas as pd
 
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.profiler.inference_optimization.data_models import CallNode
-from aiq.profiler.inference_optimization.data_models import ConcurrencyDistribution
-from aiq.profiler.inference_optimization.data_models import NestedCallProfilingResult
-from aiq.profiler.inference_optimization.data_models import NodeMetrics
-from aiq.profiler.utils import create_standardized_dataframe
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.profiler.inference_optimization.data_models import CallNode
+from nat.profiler.inference_optimization.data_models import ConcurrencyDistribution
+from nat.profiler.inference_optimization.data_models import NestedCallProfilingResult
+from nat.profiler.inference_optimization.data_models import NodeMetrics
+from nat.profiler.utils import create_standardized_dataframe
 
 logger = logging.getLogger(__name__)
 

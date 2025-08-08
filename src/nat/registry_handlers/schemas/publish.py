@@ -17,9 +17,9 @@ import logging
 
 from pydantic import BaseModel
 
-from aiq.data_models.component import ComponentEnum
-from aiq.data_models.discovery_metadata import DiscoveryMetadata
-from aiq.registry_handlers.schemas.status import StatusMessage
+from nat.data_models.component import ComponentEnum
+from nat.data_models.discovery_metadata import DiscoveryMetadata
+from nat.registry_handlers.schemas.status import StatusMessage
 
 logger = logging.getLogger(__name__)
 

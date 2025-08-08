@@ -21,19 +21,19 @@ import pytest
 from pydantic import TypeAdapter
 from pydantic import ValidationError
 
-from aiq.data_models.authentication import AuthenticatedContext  # enums; models
-from aiq.data_models.authentication import AuthFlowType
-from aiq.data_models.authentication import AuthResult
-from aiq.data_models.authentication import BasicAuthCred
-from aiq.data_models.authentication import BearerTokenCred
-from aiq.data_models.authentication import CookieCred
-from aiq.data_models.authentication import Credential
-from aiq.data_models.authentication import CredentialKind
-from aiq.data_models.authentication import CredentialLocation
-from aiq.data_models.authentication import HeaderAuthScheme
-from aiq.data_models.authentication import HeaderCred
-from aiq.data_models.authentication import HTTPMethod
-from aiq.data_models.authentication import QueryCred
+from nat.data_models.authentication import AuthenticatedContext  # enums; models
+from nat.data_models.authentication import AuthFlowType
+from nat.data_models.authentication import AuthResult
+from nat.data_models.authentication import BasicAuthCred
+from nat.data_models.authentication import BearerTokenCred
+from nat.data_models.authentication import CookieCred
+from nat.data_models.authentication import Credential
+from nat.data_models.authentication import CredentialKind
+from nat.data_models.authentication import CredentialLocation
+from nat.data_models.authentication import HeaderAuthScheme
+from nat.data_models.authentication import HeaderCred
+from nat.data_models.authentication import HTTPMethod
+from nat.data_models.authentication import QueryCred
 
 
 # --------------------------------------------------------------------------- #

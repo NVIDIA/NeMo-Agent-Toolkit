@@ -16,15 +16,15 @@
 # pylint: disable=redefined-outer-name, invalid-name
 import pytest
 
-from aiq.data_models.api_server import ResponseIntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.data_models.intermediate_step import StreamEventData
-from aiq.data_models.invocation_node import InvocationNode
-from aiq.data_models.step_adaptor import StepAdaptorConfig
-from aiq.data_models.step_adaptor import StepAdaptorMode
-from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
+from nat.data_models.api_server import ResponseIntermediateStep
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.invocation_node import InvocationNode
+from nat.data_models.step_adaptor import StepAdaptorConfig
+from nat.data_models.step_adaptor import StepAdaptorMode
+from nat.front_ends.fastapi.step_adaptor import StepAdaptor
 
 
 @pytest.fixture

@@ -18,11 +18,11 @@ import os
 import tempfile
 import typing
 
-from aiq.builder.front_end import FrontEndBase
-from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
-from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
-from aiq.front_ends.fastapi.main import get_app
-from aiq.utils.io.yaml_tools import yaml_dump
+from nat.builder.front_end import FrontEndBase
+from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
+from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
+from nat.front_ends.fastapi.main import get_app
+from nat.utils.io.yaml_tools import yaml_dump
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class FastApiFrontEndPlugin(FrontEndBase[FastApiFrontEndConfig]):
 
     def get_worker_class(self) -> type[FastApiFrontEndPluginWorkerBase]:
-        from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+        from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 
         return FastApiFrontEndPluginWorker
 

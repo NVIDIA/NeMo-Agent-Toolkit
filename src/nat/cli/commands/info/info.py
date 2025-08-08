@@ -17,9 +17,9 @@ import logging
 
 import click
 
-from aiq.cli.commands.info.list_channels import list_channels
-from aiq.cli.commands.info.list_components import list_components
-from aiq.cli.commands.info.list_mcp import list_mcp
+from nat.cli.commands.info.list_channels import list_channels
+from nat.cli.commands.info.list_components import list_components
+from nat.cli.commands.info.list_mcp import list_mcp
 
 logger = logging.getLogger(__name__)
 

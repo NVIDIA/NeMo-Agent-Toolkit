@@ -18,14 +18,14 @@ import math
 
 import pandas as pd
 
-from aiq.data_models.dataset_handler import EvalDatasetConfig
-from aiq.data_models.dataset_handler import EvalDatasetJsonConfig
-from aiq.data_models.intermediate_step import IntermediateStep
-from aiq.data_models.intermediate_step import IntermediateStepType
-from aiq.eval.dataset_handler.dataset_downloader import DatasetDownloader
-from aiq.eval.dataset_handler.dataset_filter import DatasetFilter
-from aiq.eval.evaluator.evaluator_model import EvalInput
-from aiq.eval.evaluator.evaluator_model import EvalInputItem
+from nat.data_models.dataset_handler import EvalDatasetConfig
+from nat.data_models.dataset_handler import EvalDatasetJsonConfig
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.eval.dataset_handler.dataset_downloader import DatasetDownloader
+from nat.eval.dataset_handler.dataset_filter import DatasetFilter
+from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.eval.evaluator.evaluator_model import EvalInputItem
 
 
 class DatasetHandler:
@@ -40,7 +40,7 @@ class DatasetHandler:
                  concurrency: int,
                  num_passes: int | None = None,
                  adjust_dataset_size: bool = False):
-        from aiq.eval.intermediate_step_adapter import IntermediateStepAdapter
+        from nat.eval.intermediate_step_adapter import IntermediateStepAdapter
 
         self.dataset_config = dataset_config
         self.dataset_filter = DatasetFilter(dataset_config.filter)

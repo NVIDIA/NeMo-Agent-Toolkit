@@ -19,7 +19,7 @@ import re
 import pytest
 from click.testing import CliRunner
 
-from aiq.cli.commands.validate import validate_command
+from nat.cli.commands.validate import validate_command
 
 
 # Make a fixture which auto registers the test workflow

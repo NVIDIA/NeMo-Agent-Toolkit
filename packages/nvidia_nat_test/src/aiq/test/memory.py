@@ -13,11 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.builder.builder import Builder
-from aiq.cli.register_workflow import register_memory
-from aiq.data_models.memory import MemoryBaseConfig
-from aiq.memory.interfaces import MemoryEditor
-from aiq.memory.models import MemoryItem
+from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_memory
+from nat.data_models.memory import MemoryBaseConfig
+from nat.memory.interfaces import MemoryEditor
+from nat.memory.models import MemoryItem
 
 
 class DummyMemoryConfig(MemoryBaseConfig, name="test_dummy"):

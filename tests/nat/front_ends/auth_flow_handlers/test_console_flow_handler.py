@@ -21,9 +21,9 @@ import pytest
 from httpx import ASGITransport
 from mock_oauth2_server import MockOAuth2Server
 
-from aiq.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
-from aiq.data_models.authentication import AuthFlowType
-from aiq.front_ends.console.authentication_flow_handler import ConsoleAuthenticationFlowHandler
+from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
+from nat.data_models.authentication import AuthFlowType
+from nat.front_ends.console.authentication_flow_handler import ConsoleAuthenticationFlowHandler
 
 
 # --------------------------------------------------------------------------- #

@@ -15,11 +15,11 @@
 
 from uuid import uuid4
 
-from aiq.builder.context import Context
-from aiq.builder.framework_enum import LLMFrameworkEnum
-from aiq.data_models.intermediate_step import IntermediateStepPayload
-from aiq.data_models.intermediate_step import IntermediateStepType as WorkflowEventEnum
-from aiq.utils.reactive.subject import Subject
+from nat.builder.context import Context
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType as WorkflowEventEnum
+from nat.utils.reactive.subject import Subject
 
 
 async def test_usage_stat_order_and_latency(reactive_stream: Subject):

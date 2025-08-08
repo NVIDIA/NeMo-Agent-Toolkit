@@ -16,7 +16,7 @@
 from starlette.datastructures import Headers
 from starlette.datastructures import QueryParams
 
-from aiq.data_models.api_server import Request
+from nat.data_models.api_server import Request
 
 
 class RequestAttributes:
