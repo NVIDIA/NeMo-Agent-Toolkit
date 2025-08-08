@@ -13,4 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nat import *
+import nat
+
+# Provide a compatibility alias
+__path__ = nat.__path__
