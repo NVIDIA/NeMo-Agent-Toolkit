@@ -9,7 +9,12 @@ root = "../../../.."
 name = "aiq_my_agent_workflow"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain]",
+  "aiqtoolkit[langchain]~=1.2",
+  "jupyter~=1.1",
+  "jupyterlab~=4.3",
+  "notebook~=7.3",
+  "ipykernel~=6.29",
+  "ipywidgets~=8.1"
 ]
 requires-python = ">=3.11,<3.13"
 description = "Custom AIQ Toolkit Workflow"

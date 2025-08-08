@@ -35,6 +35,7 @@ class LlamaIndexRAGConfig(FunctionBaseConfig, name="local_llama_index_rag"):
     data_dir: str = Field(description="The directory containing the data to use for the RAG engine.")
     description: str = Field(description="A description of the knowledge included in the RAG system.")
     uri: str = Field(default="http://localhost:19530", description="The URI of the Milvus vector store.")
+    use_milvus: bool = Field(default=False, description="Whether to use Milvus for the RAG engine.")
     collection_name: str = Field(default="context", description="The name of the collection to use for the RAG engine.")
 
 @register_function(config_type=LlamaIndexRAGConfig, framework_wrappers=[LLMFrameworkEnum.LLAMA_INDEX])
@@ -63,20 +64,23 @@ async def llama_index_rag_tool(config: LlamaIndexRAGConfig, builder: Builder):
     )
     nodes = parser.get_nodes_from_documents(docs)
 
-    try:
-        vector_store = MilvusVectorStore(
-            uri=config.uri,
-            collection_name=config.collection_name,
-            overwrite=True,
-            dim=1024,
-            enable_sparse=False,
-        )
-        storage_context = StorageContext.from_defaults(vector_store=vector_store)
+    if config.use_milvus:
+        try:
+            vector_store = MilvusVectorStore(
+                uri=config.uri,
+                collection_name=config.collection_name,
+                overwrite=True,
+                dim=1024,
+                enable_sparse=False,
+            )
+            storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
-        index = VectorStoreIndex(nodes, storage_context=storage_context)
-    
-    except MilvusException as e:
-        logger.error(f"Error initializing Milvus vector store: {e}. Falling back to default vector store.")
+            index = VectorStoreIndex(nodes, storage_context=storage_context)
+        
+        except MilvusException as e:
+            logger.error(f"Error initializing Milvus vector store: {e}. Falling back to default vector store.")
+            index = VectorStoreIndex(nodes)
+    else:
         index = VectorStoreIndex(nodes)
 
     query_engine = index.as_query_engine(
