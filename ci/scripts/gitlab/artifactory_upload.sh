@@ -110,13 +110,14 @@ if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
                 RELATIVE_PATH="${WHEEL_FILE#${WHEELS_BASE_DIR}/}"
                 RELATIVE_PATH=$(echo "${RELATIVE_PATH}" | sed -e 's|^nvidia-nat/|aiqtoolkit/|')
                 ARTIFACTORY_PATH="${AIQ_ARTIFACTORY_NAME}/${RELATIVE_PATH}"
-
+                # Like the RELATIVE_PATH above, we need to fix the name of the component in artifactory to aiqtoolkit
+                ARTIFACTORY_COMPONENT_FIXED_NAME="aiqtoolkit"
                 echo "Uploading ${WHEEL_FILE} to ${ARTIFACTORY_PATH}..."
 
                 CI=true jf rt u --fail-no-op --url="${AIQ_ARTIFACTORY_URL}" \
                     --user="${URM_USER}" --password="${URM_API_KEY}" \
                     --flat=false "${WHEEL_FILE}" "${ARTIFACTORY_PATH}" \
-                    --target-props "arch=${AIQ_ARCH};os=${AIQ_OS};branch=${GIT_TAG};component_name=${AIQ_COMPONENT_NAME};version=${GIT_TAG};release_approver=${RELEASE_APPROVER};release_status=${RELEASE_STATUS}"
+                    --target-props "arch=${AIQ_ARCH};os=${AIQ_OS};branch=${GIT_TAG};component_name=${ARTIFACTORY_COMPONENT_FIXED_NAME};version=${GIT_TAG};release_approver=${RELEASE_APPROVER};release_status=${RELEASE_STATUS}"
             done
         done
     done
