@@ -51,9 +51,6 @@ function create_env() {
     source ${VENV_DIR}/bin/activate
 
     rapids-logger "Creating Environment with extras: ${@}"
-    echo "uv : $(uv --version)"
-    echo "pip: $(pip --version)"
-    echo "python: $(python --version)"
 
     UV_SYNC_STDERROUT=$(uv sync --active ${extras[@]} 2>&1)
 
