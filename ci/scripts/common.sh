@@ -45,9 +45,7 @@ export SKIP_COPYRIGHT=${SKIP_COPYRIGHT:-""}
 # result variable otherwise the output is printed to stdout
 function get_merge_base() {
    local __resultvar=$1
-   echo "get_merge_base - BASE_SHA=${BASE_SHA} COMMIT_SHA=${COMMIT_SHA}"
    local result=$(git merge-base ${BASE_SHA} ${COMMIT_SHA:-HEAD})
-   echo "get_merge_base - result: ${result}"
 
    if [[ "$__resultvar" ]]; then
       eval $__resultvar="'${result}'"
@@ -61,15 +59,12 @@ function get_merge_base() {
 # results. Otherwise the output is printed to stdout. Result is an array
 function get_modified_files() {
    local  __resultvar=$2
-   echo "get_modified_files - GIT_DIFF_ARGS=${GIT_DIFF_ARGS} GIT_DIFF_BASE=${GIT_DIFF_BASE}"
 
    local GIT_DIFF_ARGS=${GIT_DIFF_ARGS:-"--name-only"}
    local GIT_DIFF_BASE=${GIT_DIFF_BASE:-$(get_merge_base)}
-   echo "get_modified_files - GIT_DIFF_BASE=${GIT_DIFF_BASE}"
 
    # If invoked by a git-commit-hook, this will be populated
    local result=( $(git diff ${GIT_DIFF_ARGS} ${GIT_DIFF_BASE} | grep -P ${1:-'.*'}) )
-   echo "get_modified_files - result: ${result[@]}"
 
    local files=()
 
