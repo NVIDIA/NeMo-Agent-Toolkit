@@ -23,7 +23,7 @@ from collections.abc import Callable
 
 from pydantic import BaseModel
 
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.builder.function_base import FunctionBase
 from aiq.builder.function_base import InputT
 from aiq.builder.function_base import SingleOutputT
@@ -59,7 +59,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         self.config = config
         self.description = description
         self.instance_name = instance_name or config.type
-        self._context = AIQContext.get()
+        self._context = Context.get()
 
     def convert(self, value: typing.Any, to_type: type[_T]) -> _T:
         """

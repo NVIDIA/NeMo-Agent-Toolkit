@@ -21,7 +21,7 @@ from unittest.mock import patch
 import pytest
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import ContextState
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
@@ -48,7 +48,7 @@ class TestOTLPSpanAdapterExporter:
     @pytest.fixture
     def mock_context_state(self):
         """Create a mock AIQContextState for testing."""
-        return Mock(spec=AIQContextState)
+        return Mock(spec=ContextState)
 
     @pytest.fixture
     def basic_exporter_config(self):

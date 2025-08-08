@@ -104,11 +104,11 @@ def create_function_wrapper(
             try:
                 # Special handling for AIQChatRequest
                 if is_chat_request:
-                    from aiq.data_models.api_server import AIQChatRequest
+                    from aiq.data_models.api_server import ChatRequest
 
                     # Create a chat request from the query string
                     query = kwargs.get("query", "")
-                    chat_request = AIQChatRequest.from_string(query)
+                    chat_request = ChatRequest.from_string(query)
 
                     # Special handling for Workflow objects
                     if is_workflow:

@@ -18,9 +18,9 @@ from collections.abc import AsyncGenerator
 from aiq.builder.builder import Builder
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
-from aiq.data_models.api_server import AIQChatRequest
-from aiq.data_models.api_server import AIQChatResponse
-from aiq.data_models.api_server import AIQChatResponseChunk
+from aiq.data_models.api_server import ChatRequest
+from aiq.data_models.api_server import ChatResponse
+from aiq.data_models.api_server import ChatResponseChunk
 from aiq.data_models.function import FunctionBaseConfig
 
 
@@ -34,8 +34,8 @@ async def echo_function(config: EchoFunctionConfig, builder: Builder):
     async def inner(message: str) -> str:
         return message
 
-    async def inner_oai(message: AIQChatRequest) -> AIQChatResponse:
-        return AIQChatResponse.from_string(message.messages[0].content)
+    async def inner_oai(message: ChatRequest) -> ChatResponse:
+        return ChatResponse.from_string(message.messages[0].content)
 
     if (config.use_openai_api):
         yield inner_oai
@@ -50,16 +50,16 @@ class StreamingEchoFunctionConfig(FunctionBaseConfig, name="test_streaming_echo"
 @register_function(config_type=StreamingEchoFunctionConfig)
 async def streaming_function(config: StreamingEchoFunctionConfig, builder: Builder):
 
-    def oai_to_list(message: AIQChatRequest) -> list[str]:
+    def oai_to_list(message: ChatRequest) -> list[str]:
         return [m.content for m in message.messages]
 
     async def inner(message: list[str]) -> AsyncGenerator[str]:
         for value in message:
             yield value
 
-    async def inner_oai(message: AIQChatRequest) -> AsyncGenerator[AIQChatResponseChunk]:
+    async def inner_oai(message: ChatRequest) -> AsyncGenerator[ChatResponseChunk]:
         for value in oai_to_list(message):
-            yield AIQChatResponseChunk.from_string(value)
+            yield ChatResponseChunk.from_string(value)
 
     yield FunctionInfo.from_fn(inner_oai if config.use_openai_api else inner, converters=[oai_to_list])
 

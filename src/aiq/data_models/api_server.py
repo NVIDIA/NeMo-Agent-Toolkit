@@ -109,9 +109,9 @@ class Message(BaseModel):
     role: str
 
 
-class AIQChatRequest(BaseModel):
+class ChatRequest(BaseModel):
     """
-    AIQChatRequest is a data model that represents a request to the AIQ Toolkit chat API.
+    ChatRequest is a data model that represents a request to the AIQ Toolkit chat API.
     Fully compatible with OpenAI Chat Completions API specification.
     """
 
@@ -160,13 +160,13 @@ class AIQChatRequest(BaseModel):
                     model: str | None = None,
                     temperature: float | None = None,
                     max_tokens: int | None = None,
-                    top_p: float | None = None) -> "AIQChatRequest":
+                    top_p: float | None = None) -> "ChatRequest":
 
-        return AIQChatRequest(messages=[Message(content=data, role="user")],
-                              model=model,
-                              temperature=temperature,
-                              max_tokens=max_tokens,
-                              top_p=top_p)
+        return ChatRequest(messages=[Message(content=data, role="user")],
+                           model=model,
+                           temperature=temperature,
+                           max_tokens=max_tokens,
+                           top_p=top_p)
 
     @staticmethod
     def from_content(content: list[UserContent],
@@ -174,43 +174,43 @@ class AIQChatRequest(BaseModel):
                      model: str | None = None,
                      temperature: float | None = None,
                      max_tokens: int | None = None,
-                     top_p: float | None = None) -> "AIQChatRequest":
+                     top_p: float | None = None) -> "ChatRequest":
 
-        return AIQChatRequest(messages=[Message(content=content, role="user")],
-                              model=model,
-                              temperature=temperature,
-                              max_tokens=max_tokens,
-                              top_p=top_p)
+        return ChatRequest(messages=[Message(content=content, role="user")],
+                           model=model,
+                           temperature=temperature,
+                           max_tokens=max_tokens,
+                           top_p=top_p)
 
 
-class AIQChoiceMessage(BaseModel):
+class ChoiceMessage(BaseModel):
     content: str | None = None
     role: str | None = None
 
 
-class AIQChoiceDelta(BaseModel):
+class ChoiceDelta(BaseModel):
     """Delta object for streaming responses (OpenAI-compatible)"""
     content: str | None = None
     role: str | None = None
 
 
-class AIQChoice(BaseModel):
+class Choice(BaseModel):
     model_config = ConfigDict(extra="allow")
 
-    message: AIQChoiceMessage | None = None
-    delta: AIQChoiceDelta | None = None
+    message: ChoiceMessage | None = None
+    delta: ChoiceDelta | None = None
     finish_reason: typing.Literal['stop', 'length', 'tool_calls', 'content_filter', 'function_call'] | None = None
     index: int
     # logprobs: AIQChoiceLogprobs | None = None
 
 
-class AIQUsage(BaseModel):
+class Usage(BaseModel):
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int
 
 
-class AIQResponseSerializable(abc.ABC):
+class ResponseSerializable(abc.ABC):
     """
     AIQChatResponseSerializable is an abstract class that defines the interface for serializing output for the AIQ
     Toolkit chat streaming API.
@@ -221,21 +221,21 @@ class AIQResponseSerializable(abc.ABC):
         pass
 
 
-class AIQResponseBaseModelOutput(BaseModel, AIQResponseSerializable):
+class ResponseBaseModelOutput(BaseModel, ResponseSerializable):
 
     def get_stream_data(self) -> str:
         return f"data: {self.model_dump_json()}\n\n"
 
 
-class AIQResponseBaseModelIntermediate(BaseModel, AIQResponseSerializable):
+class ResponseBaseModelIntermediate(BaseModel, ResponseSerializable):
 
     def get_stream_data(self) -> str:
         return f"intermediate_data: {self.model_dump_json()}\n\n"
 
 
-class AIQChatResponse(AIQResponseBaseModelOutput):
+class ChatResponse(ResponseBaseModelOutput):
     """
-    AIQChatResponse is a data model that represents a response from the AIQ Toolkit chat API.
+    ChatResponse is a data model that represents a response from the AIQ Toolkit chat API.
     Fully compatible with OpenAI Chat Completions API specification.
     """
 
@@ -245,8 +245,8 @@ class AIQChatResponse(AIQResponseBaseModelOutput):
     object: str = "chat.completion"
     model: str = ""
     created: datetime.datetime
-    choices: list[AIQChoice]
-    usage: AIQUsage | None = None
+    choices: list[Choice]
+    usage: Usage | None = None
     system_fingerprint: str | None = None
     service_tier: typing.Literal["scale", "default"] | None = None
 
@@ -262,7 +262,7 @@ class AIQChatResponse(AIQResponseBaseModelOutput):
                     object_: str | None = None,
                     model: str | None = None,
                     created: datetime.datetime | None = None,
-                    usage: AIQUsage | None = None) -> "AIQChatResponse":
+                    usage: Usage | None = None) -> "ChatResponse":
 
         if id_ is None:
             id_ = str(uuid.uuid4())
@@ -273,18 +273,17 @@ class AIQChatResponse(AIQResponseBaseModelOutput):
         if created is None:
             created = datetime.datetime.now(datetime.timezone.utc)
 
-        return AIQChatResponse(
-            id=id_,
-            object=object_,
-            model=model,
-            created=created,
-            choices=[AIQChoice(index=0, message=AIQChoiceMessage(content=data), finish_reason="stop")],
-            usage=usage)
+        return ChatResponse(id=id_,
+                            object=object_,
+                            model=model,
+                            created=created,
+                            choices=[Choice(index=0, message=ChoiceMessage(content=data), finish_reason="stop")],
+                            usage=usage)
 
 
-class AIQChatResponseChunk(AIQResponseBaseModelOutput):
+class ChatResponseChunk(ResponseBaseModelOutput):
     """
-    AIQChatResponseChunk is a data model that represents a response chunk from the AIQ Toolkit chat streaming API.
+    ChatResponseChunk is a data model that represents a response chunk from the AIQ Toolkit chat streaming API.
     Fully compatible with OpenAI Chat Completions API specification.
     """
 
@@ -292,13 +291,13 @@ class AIQChatResponseChunk(AIQResponseBaseModelOutput):
     model_config = ConfigDict(extra="allow")
 
     id: str
-    choices: list[AIQChoice]
+    choices: list[Choice]
     created: datetime.datetime
     model: str = ""
     object: str = "chat.completion.chunk"
     system_fingerprint: str | None = None
     service_tier: typing.Literal["scale", "default"] | None = None
-    usage: AIQUsage | None = None
+    usage: Usage | None = None
 
     @field_serializer('created')
     def serialize_created(self, created: datetime.datetime) -> int:
@@ -311,7 +310,7 @@ class AIQChatResponseChunk(AIQResponseBaseModelOutput):
                     id_: str | None = None,
                     created: datetime.datetime | None = None,
                     model: str | None = None,
-                    object_: str | None = None) -> "AIQChatResponseChunk":
+                    object_: str | None = None) -> "ChatResponseChunk":
 
         if id_ is None:
             id_ = str(uuid.uuid4())
@@ -322,12 +321,11 @@ class AIQChatResponseChunk(AIQResponseBaseModelOutput):
         if object_ is None:
             object_ = "chat.completion.chunk"
 
-        return AIQChatResponseChunk(
-            id=id_,
-            choices=[AIQChoice(index=0, message=AIQChoiceMessage(content=data), finish_reason="stop")],
-            created=created,
-            model=model,
-            object=object_)
+        return ChatResponseChunk(id=id_,
+                                 choices=[Choice(index=0, message=ChoiceMessage(content=data), finish_reason="stop")],
+                                 created=created,
+                                 model=model,
+                                 object=object_)
 
     @staticmethod
     def create_streaming_chunk(content: str,
@@ -337,8 +335,8 @@ class AIQChatResponseChunk(AIQResponseBaseModelOutput):
                                model: str | None = None,
                                role: str | None = None,
                                finish_reason: str | None = None,
-                               usage: AIQUsage | None = None,
-                               system_fingerprint: str | None = None) -> "AIQChatResponseChunk":
+                               usage: Usage | None = None,
+                               system_fingerprint: str | None = None) -> "ChatResponseChunk":
         """Create an OpenAI-compatible streaming chunk"""
         if id_ is None:
             id_ = str(uuid.uuid4())
@@ -347,22 +345,20 @@ class AIQChatResponseChunk(AIQResponseBaseModelOutput):
         if model is None:
             model = ""
 
-        delta = AIQChoiceDelta(content=content,
-                               role=role) if content is not None or role is not None else AIQChoiceDelta()
+        delta = ChoiceDelta(content=content, role=role) if content is not None or role is not None else ChoiceDelta()
 
-        return AIQChatResponseChunk(
-            id=id_,
-            choices=[AIQChoice(index=0, message=None, delta=delta, finish_reason=finish_reason)],
-            created=created,
-            model=model,
-            object="chat.completion.chunk",
-            usage=usage,
-            system_fingerprint=system_fingerprint)
+        return ChatResponseChunk(id=id_,
+                                 choices=[Choice(index=0, message=None, delta=delta, finish_reason=finish_reason)],
+                                 created=created,
+                                 model=model,
+                                 object="chat.completion.chunk",
+                                 usage=usage,
+                                 system_fingerprint=system_fingerprint)
 
 
-class AIQResponseIntermediateStep(AIQResponseBaseModelIntermediate):
+class ResponseIntermediateStep(ResponseBaseModelIntermediate):
     """
-    AIQResponseSerializedStep is a data model that represents a serialized step in the AIQ Toolkit chat streaming API.
+    ResponseSerializedStep is a data model that represents a serialized step in the AIQ Toolkit chat streaming API.
     """
 
     # Allow extra fields in the model_config to support derived models
@@ -375,7 +371,7 @@ class AIQResponseIntermediateStep(AIQResponseBaseModelIntermediate):
     payload: str
 
 
-class AIQResponsePayloadOutput(BaseModel, AIQResponseSerializable):
+class ResponsePayloadOutput(BaseModel, ResponseSerializable):
 
     payload: typing.Any
 
@@ -387,7 +383,7 @@ class AIQResponsePayloadOutput(BaseModel, AIQResponseSerializable):
         return f"data: {self.payload}\n\n"
 
 
-class AIQGenerateResponse(BaseModel):
+class GenerateResponse(BaseModel):
     # Allow extra fields in the model_config to support derived models
     model_config = ConfigDict(extra="allow")
 
@@ -546,18 +542,18 @@ class WebSocketSystemResponseTokenMessage(BaseModel):
     id: str | None = "default"
     thread_id: str | None = "default"
     parent_id: str = "default"
-    content: SystemResponseContent | Error | AIQGenerateResponse
+    content: SystemResponseContent | Error | GenerateResponse
     status: WebSocketMessageStatus
     timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
 
     @field_validator("content")
     @classmethod
-    def validate_content_by_type(cls, value: SystemResponseContent | Error | AIQGenerateResponse, info: ValidationInfo):
+    def validate_content_by_type(cls, value: SystemResponseContent | Error | GenerateResponse, info: ValidationInfo):
         if info.data.get("type") == WebSocketMessageType.ERROR_MESSAGE and not isinstance(value, Error):
             raise ValueError(f"Field: content must be 'Error' when type is {WebSocketMessageType.ERROR_MESSAGE}")
 
         if info.data.get("type") == WebSocketMessageType.RESPONSE_MESSAGE and not isinstance(
-                value, (SystemResponseContent, AIQGenerateResponse)):
+                value, (SystemResponseContent, GenerateResponse)):
             raise ValueError(
                 f"Field: content must be 'SystemResponseContent' when type is {WebSocketMessageType.RESPONSE_MESSAGE}")
         return value
@@ -584,31 +580,31 @@ class WebSocketSystemInteractionMessage(BaseModel):
 # ======== AIQGenerateResponse Converters ========
 
 
-def _generate_response_to_str(response: AIQGenerateResponse) -> str:
+def _generate_response_to_str(response: GenerateResponse) -> str:
     return response.output
 
 
 GlobalTypeConverter.register_converter(_generate_response_to_str)
 
 
-def _generate_response_to_chat_response(response: AIQGenerateResponse) -> AIQChatResponse:
+def _generate_response_to_chat_response(response: GenerateResponse) -> ChatResponse:
     data = response.output
 
     # Simulate usage
     prompt_tokens = 0
-    usage = AIQUsage(prompt_tokens=prompt_tokens,
-                     completion_tokens=len(data.split()),
-                     total_tokens=prompt_tokens + len(data.split()))
+    usage = Usage(prompt_tokens=prompt_tokens,
+                  completion_tokens=len(data.split()),
+                  total_tokens=prompt_tokens + len(data.split()))
 
     # Build and return the response
-    return AIQChatResponse.from_string(data, usage=usage)
+    return ChatResponse.from_string(data, usage=usage)
 
 
 GlobalTypeConverter.register_converter(_generate_response_to_chat_response)
 
 
 # ======== AIQChatRequest Converters ========
-def _aiq_chat_request_to_string(data: AIQChatRequest) -> str:
+def _aiq_chat_request_to_string(data: ChatRequest) -> str:
     if isinstance(data.messages[-1].content, str):
         return data.messages[-1].content
     return str(data.messages[-1].content)
@@ -617,47 +613,47 @@ def _aiq_chat_request_to_string(data: AIQChatRequest) -> str:
 GlobalTypeConverter.register_converter(_aiq_chat_request_to_string)
 
 
-def _string_to_aiq_chat_request(data: str) -> AIQChatRequest:
-    return AIQChatRequest.from_string(data, model="")
+def _string_to_aiq_chat_request(data: str) -> ChatRequest:
+    return ChatRequest.from_string(data, model="")
 
 
 GlobalTypeConverter.register_converter(_string_to_aiq_chat_request)
 
 
 # ======== AIQChatResponse Converters ========
-def _aiq_chat_response_to_string(data: AIQChatResponse) -> str:
+def _aiq_chat_response_to_string(data: ChatResponse) -> str:
     return data.choices[0].message.content or ""
 
 
 GlobalTypeConverter.register_converter(_aiq_chat_response_to_string)
 
 
-def _string_to_aiq_chat_response(data: str) -> AIQChatResponse:
+def _string_to_aiq_chat_response(data: str) -> ChatResponse:
     '''Converts a string to an AIQChatResponse object'''
 
     # Simulate usage
     prompt_tokens = 0
-    usage = AIQUsage(prompt_tokens=prompt_tokens,
-                     completion_tokens=len(data.split()),
-                     total_tokens=prompt_tokens + len(data.split()))
+    usage = Usage(prompt_tokens=prompt_tokens,
+                  completion_tokens=len(data.split()),
+                  total_tokens=prompt_tokens + len(data.split()))
 
     # Build and return the response
-    return AIQChatResponse.from_string(data, usage=usage)
+    return ChatResponse.from_string(data, usage=usage)
 
 
 GlobalTypeConverter.register_converter(_string_to_aiq_chat_response)
 
 
-def _chat_response_to_chat_response_chunk(data: AIQChatResponse) -> AIQChatResponseChunk:
+def _chat_response_to_chat_response_chunk(data: ChatResponse) -> ChatResponseChunk:
     # Preserve original message structure for backward compatibility
-    return AIQChatResponseChunk(id=data.id, choices=data.choices, created=data.created, model=data.model)
+    return ChatResponseChunk(id=data.id, choices=data.choices, created=data.created, model=data.model)
 
 
 GlobalTypeConverter.register_converter(_chat_response_to_chat_response_chunk)
 
 
 # ======== AIQChatResponseChunk Converters ========
-def _aiq_chat_response_chunk_to_string(data: AIQChatResponseChunk) -> str:
+def _aiq_chat_response_chunk_to_string(data: ChatResponseChunk) -> str:
     if data.choices and len(data.choices) > 0:
         choice = data.choices[0]
         if choice.delta and choice.delta.content:
@@ -670,18 +666,18 @@ def _aiq_chat_response_chunk_to_string(data: AIQChatResponseChunk) -> str:
 GlobalTypeConverter.register_converter(_aiq_chat_response_chunk_to_string)
 
 
-def _string_to_aiq_chat_response_chunk(data: str) -> AIQChatResponseChunk:
+def _string_to_aiq_chat_response_chunk(data: str) -> ChatResponseChunk:
     '''Converts a string to an AIQChatResponseChunk object'''
 
     # Build and return the response
-    return AIQChatResponseChunk.from_string(data)
+    return ChatResponseChunk.from_string(data)
 
 
 GlobalTypeConverter.register_converter(_string_to_aiq_chat_response_chunk)
 
 
 # ======== AINodeMessageChunk Converters ========
-def _ai_message_chunk_to_aiq_chat_response_chunk(data) -> AIQChatResponseChunk:
+def _ai_message_chunk_to_aiq_chat_response_chunk(data) -> ChatResponseChunk:
     '''Converts LangChain AINodeMessageChunk to AIQChatResponseChunk'''
     content = ""
     if hasattr(data, 'content') and data.content is not None:
@@ -691,4 +687,20 @@ def _ai_message_chunk_to_aiq_chat_response_chunk(data) -> AIQChatResponseChunk:
     elif hasattr(data, 'message') and data.message is not None:
         content = str(data.message)
 
-    return AIQChatResponseChunk.create_streaming_chunk(content=content, role="assistant", finish_reason=None)
+    return ChatResponseChunk.create_streaming_chunk(content=content, role="assistant", finish_reason=None)
+
+
+# Compatibility aliases with previous releases
+AIQChatRequest = ChatRequest
+AIQChoiceMessage = ChoiceMessage
+AIQChoiceDelta = ChoiceDelta
+AIQChoice = Choice
+AIQUsage = Usage
+AIQResponseSerializable = ResponseSerializable
+AIQResponseBaseModelOutput = ResponseBaseModelOutput
+AIQResponseBaseModelIntermediate = ResponseBaseModelIntermediate
+AIQChatResponse = ChatResponse
+AIQChatResponseChunk = ChatResponseChunk
+AIQResponseIntermediateStep = ResponseIntermediateStep
+AIQResponsePayloadOutput = ResponsePayloadOutput
+AIQGenerateResponse = GenerateResponse

@@ -17,8 +17,8 @@ import logging
 import typing
 from enum import Enum
 
-from aiq.builder.context import AIQContext
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import Context
+from aiq.builder.context import ContextState
 from aiq.builder.function import Function
 from aiq.data_models.invocation_node import InvocationNode
 from aiq.observability.exporter_manager import ExporterManager
@@ -47,7 +47,7 @@ class AIQRunner:
     def __init__(self,
                  input_message: typing.Any,
                  entry_fn: Function,
-                 context_state: AIQContextState,
+                 context_state: ContextState,
                  exporter_manager: ExporterManager):
         """
         The AIQRunner class is used to run a workflow. It handles converting input and output data types and running the
@@ -70,7 +70,7 @@ class AIQRunner:
 
         self._entry_fn = entry_fn
         self._context_state = context_state
-        self._context = AIQContext(self._context_state)
+        self._context = Context(self._context_state)
 
         self._state = AIQRunnerState.UNINITIALIZED
 
@@ -82,7 +82,7 @@ class AIQRunner:
         self._exporter_manager = exporter_manager
 
     @property
-    def context(self) -> AIQContext:
+    def context(self) -> Context:
         return self._context
 
     def convert(self, value: typing.Any, to_type: type[_T]) -> _T:

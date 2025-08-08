@@ -23,8 +23,8 @@ from contextlib import nullcontext
 
 from starlette.requests import HTTPConnection
 
-from aiq.builder.context import AIQContext
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import Context
+from aiq.builder.context import ContextState
 from aiq.builder.workflow import Workflow
 from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
@@ -61,8 +61,8 @@ class AIQSessionManager:
         self._workflow: Workflow = workflow
 
         self._max_concurrency = max_concurrency
-        self._context_state = AIQContextState.get()
-        self._context = AIQContext(self._context_state)
+        self._context_state = ContextState.get()
+        self._context = Context(self._context_state)
 
         # We save the context because Uvicorn spawns a new process
         # for each request, and we need to restore the context vars
@@ -83,7 +83,7 @@ class AIQSessionManager:
         return self._workflow
 
     @property
-    def context(self) -> AIQContext:
+    def context(self) -> Context:
         return self._context
 
     @asynccontextmanager

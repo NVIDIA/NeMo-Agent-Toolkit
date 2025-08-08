@@ -17,7 +17,7 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import Any
 
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import ContextState
 from aiq.builder.embedder import EmbedderProviderInfo
 from aiq.builder.function import Function
 from aiq.builder.function_base import FunctionBase
@@ -51,7 +51,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
                  telemetry_exporters: dict[str, BaseExporter] | None = None,
                  retrievers: dict[str | None, RetrieverProviderInfo] | None = None,
                  ttc_strategies: dict[str, StrategyBase] | None = None,
-                 context_state: AIQContextState):
+                 context_state: ContextState):
 
         super().__init__(input_schema=entry_fn.input_schema,
                          streaming_output_schema=entry_fn.streaming_output_schema,
@@ -126,7 +126,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
                       telemetry_exporters: dict[str, BaseExporter] | None = None,
                       retrievers: dict[str | None, RetrieverProviderInfo] | None = None,
                       ttc_strategies: dict[str, StrategyBase] | None = None,
-                      context_state: AIQContextState) -> 'Workflow[InputT, StreamingOutputT, SingleOutputT]':
+                      context_state: ContextState) -> 'Workflow[InputT, StreamingOutputT, SingleOutputT]':
 
         input_type: type = entry_fn.input_type
         streaming_output_type = entry_fn.streaming_output_type

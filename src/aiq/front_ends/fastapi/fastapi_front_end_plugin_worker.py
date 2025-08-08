@@ -39,10 +39,10 @@ from pydantic import Field
 from starlette.websockets import WebSocket
 
 from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.data_models.api_server import AIQChatRequest
-from aiq.data_models.api_server import AIQChatResponse
-from aiq.data_models.api_server import AIQChatResponseChunk
-from aiq.data_models.api_server import AIQResponseIntermediateStep
+from aiq.data_models.api_server import ChatRequest
+from aiq.data_models.api_server import ChatResponse
+from aiq.data_models.api_server import ChatResponseChunk
+from aiq.data_models.api_server import ResponseIntermediateStep
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.object_store import KeyAlreadyExistsError
 from aiq.data_models.object_store import NoSuchKeyError
@@ -688,13 +688,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                                      session_manager=session_manager,
                                                      streaming=True,
                                                      step_adaptor=self.get_step_adaptor(),
-                                                     result_type=AIQChatResponseChunk,
-                                                     output_type=AIQChatResponseChunk))
+                                                     result_type=ChatResponseChunk,
+                                                     output_type=ChatResponseChunk))
                     else:
                         # Return single response - check if workflow supports non-streaming
                         try:
                             response.headers["Content-Type"] = "application/json"
-                            return await generate_single_response(payload, session_manager, result_type=AIQChatResponse)
+                            return await generate_single_response(payload, session_manager, result_type=ChatResponse)
                         except ValueError as e:
                             if "Cannot get a single output value for streaming workflows" in str(e):
                                 # Workflow only supports streaming, but client requested non-streaming
@@ -705,13 +705,13 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                                         session_manager=session_manager,
                                         streaming=True,
                                         step_adaptor=self.get_step_adaptor(),
-                                        result_type=AIQChatResponseChunk,
-                                        output_type=AIQChatResponseChunk):
+                                        result_type=ChatResponseChunk,
+                                        output_type=ChatResponseChunk):
                                     if chunk_str.startswith("data: ") and not chunk_str.startswith("data: [DONE]"):
                                         chunk_data = chunk_str[6:].strip()  # Remove "data: " prefix
                                         if chunk_data:
                                             try:
-                                                chunk_json = AIQChatResponseChunk.model_validate_json(chunk_data)
+                                                chunk_json = ChatResponseChunk.model_validate_json(chunk_data)
                                                 if (chunk_json.choices and len(chunk_json.choices) > 0
                                                         and chunk_json.choices[0].delta
                                                         and chunk_json.choices[0].delta.content is not None):
@@ -721,7 +721,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                                 # Create a single response from collected chunks
                                 content = "".join(chunks)
-                                single_response = AIQChatResponse.from_string(content)
+                                single_response = ChatResponse.from_string(content)
                                 response.headers["Content-Type"] = "application/json"
                                 return single_response
                             else:
@@ -970,9 +970,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
                 app.add_api_route(
                     path=endpoint.openai_api_path,
-                    endpoint=get_single_endpoint(result_type=AIQChatResponse),
+                    endpoint=get_single_endpoint(result_type=ChatResponse),
                     methods=[endpoint.method],
-                    response_model=AIQChatResponse,
+                    response_model=ChatResponse,
                     description=endpoint.description,
                     responses={500: response_500},
                 )
@@ -980,10 +980,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 app.add_api_route(
                     path=f"{endpoint.openai_api_path}/stream",
                     endpoint=get_streaming_endpoint(streaming=True,
-                                                    result_type=AIQChatResponseChunk,
-                                                    output_type=AIQChatResponseChunk),
+                                                    result_type=ChatResponseChunk,
+                                                    output_type=ChatResponseChunk),
                     methods=[endpoint.method],
-                    response_model=AIQChatResponseChunk,
+                    response_model=ChatResponseChunk,
                     description=endpoint.description,
                     responses={500: response_500},
                 )
@@ -998,9 +998,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     # <openai_api_path> = non-streaming (legacy behavior)
                     app.add_api_route(
                         path=endpoint.openai_api_path,
-                        endpoint=post_single_endpoint(request_type=AIQChatRequest, result_type=AIQChatResponse),
+                        endpoint=post_single_endpoint(request_type=ChatRequest, result_type=ChatResponse),
                         methods=[endpoint.method],
-                        response_model=AIQChatResponse,
+                        response_model=ChatResponse,
                         description=endpoint.description,
                         responses={500: response_500},
                     )
@@ -1008,12 +1008,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     # <openai_api_path>/stream = streaming (legacy behavior)
                     app.add_api_route(
                         path=f"{endpoint.openai_api_path}/stream",
-                        endpoint=post_streaming_endpoint(request_type=AIQChatRequest,
+                        endpoint=post_streaming_endpoint(request_type=ChatRequest,
                                                          streaming=True,
-                                                         result_type=AIQChatResponseChunk,
-                                                         output_type=AIQChatResponseChunk),
+                                                         result_type=ChatResponseChunk,
+                                                         output_type=ChatResponseChunk),
                         methods=[endpoint.method],
-                        response_model=AIQChatResponseChunk | AIQResponseIntermediateStep,
+                        response_model=ChatResponseChunk | ResponseIntermediateStep,
                         description=endpoint.description,
                         responses={500: response_500},
                     )
@@ -1023,9 +1023,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                     # OpenAI v1 Compatible Mode: Create single endpoint that handles both streaming and non-streaming
                     app.add_api_route(
                         path=openai_v1_path,
-                        endpoint=post_openai_api_compatible_endpoint(request_type=AIQChatRequest),
+                        endpoint=post_openai_api_compatible_endpoint(request_type=ChatRequest),
                         methods=[endpoint.method],
-                        response_model=AIQChatResponse | AIQChatResponseChunk,
+                        response_model=ChatResponse | ChatResponseChunk,
                         description=f"{endpoint.description} (OpenAI Chat Completions API compatible)",
                         responses={500: response_500},
                     )

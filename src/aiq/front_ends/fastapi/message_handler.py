@@ -25,11 +25,11 @@ from pydantic import ValidationError
 from starlette.websockets import WebSocketDisconnect
 
 from aiq.authentication.interfaces import FlowHandlerBase
-from aiq.data_models.api_server import AIQChatResponse
-from aiq.data_models.api_server import AIQResponsePayloadOutput
-from aiq.data_models.api_server import AIQResponseSerializable
+from aiq.data_models.api_server import ChatResponse
 from aiq.data_models.api_server import Error
 from aiq.data_models.api_server import ErrorTypes
+from aiq.data_models.api_server import ResponsePayloadOutput
+from aiq.data_models.api_server import ResponseSerializable
 from aiq.data_models.api_server import SystemResponseContent
 from aiq.data_models.api_server import TextContent
 from aiq.data_models.api_server import WebSocketMessageStatus
@@ -158,7 +158,7 @@ class WebSocketMessageHandler:
                 # await self._process_response()
                 self._running_workflow_task = asyncio.create_task(
                     self._run_workflow(content.text, conversation_id,
-                                       result_type=AIQChatResponse)).add_done_callback(_done_callback)
+                                       result_type=ChatResponse)).add_done_callback(_done_callback)
 
         except ValueError as e:
             logger.error("User message content not found: %s", str(e), exc_info=True)
@@ -287,8 +287,8 @@ class WebSocketMessageHandler:
                                                                result_type=result_type,
                                                                output_type=output_type):
 
-                    if not isinstance(value, AIQResponseSerializable):
-                        value = AIQResponsePayloadOutput(payload=value)
+                    if not isinstance(value, ResponseSerializable):
+                        value = ResponsePayloadOutput(payload=value)
 
                     await self.create_websocket_message(data_model=value, status=WebSocketMessageStatus.IN_PROGRESS)
 

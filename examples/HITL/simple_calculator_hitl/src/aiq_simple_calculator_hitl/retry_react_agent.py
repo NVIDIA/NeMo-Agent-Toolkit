@@ -18,12 +18,12 @@ import logging
 from pydantic import Field
 
 from aiq.builder.builder import Builder
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.builder.function_info import FunctionInfo
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.cli.register_workflow import register_function
-from aiq.data_models.api_server import AIQChatRequest
-from aiq.data_models.api_server import AIQChatResponse
+from aiq.data_models.api_server import ChatRequest
+from aiq.data_models.api_server import ChatResponse
 from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.interactive import HumanPromptText
@@ -115,7 +115,7 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
 
             return temp_retry_agent, retry_config
 
-    async def handle_recursion_error(input_message: AIQChatRequest) -> AIQChatResponse:
+    async def handle_recursion_error(input_message: ChatRequest) -> ChatResponse:
         """
         Handle recursion errors by retrying with increased max_iterations.
 
@@ -161,12 +161,12 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
 
                 # If user doesn't approve, return error message
                 if not selected_option:
-                    return AIQChatResponse.from_string("I seem to be having a problem.")
+                    return ChatResponse.from_string("I seem to be having a problem.")
 
         # If we exhausted all retries, return the last response
         return response
 
-    async def _response_fn(input_message: AIQChatRequest) -> AIQChatResponse:
+    async def _response_fn(input_message: ChatRequest) -> ChatResponse:
         """
         Main response function that handles the initial attempt and retry logic.
 
@@ -202,11 +202,11 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
                 return await handle_recursion_error(input_message)
 
             # User declined - return error message
-            return AIQChatResponse.from_string("I seem to be having a problem.")
+            return ChatResponse.from_string("I seem to be having a problem.")
 
         except Exception:
             # Handle any other unexpected exceptions
-            return AIQChatResponse.from_string("I seem to be having a problem.")
+            return ChatResponse.from_string("I seem to be having a problem.")
 
     yield FunctionInfo.from_fn(_response_fn, description=config.description)
 
@@ -220,7 +220,7 @@ async def time_zone_prompt(config: TimeZonePromptConfig, builder: Builder):
 
     async def _response_fn(empty: None) -> str:
 
-        response: InteractionResponse = await AIQContext.get().user_interaction_manager.prompt_user_input(
+        response: InteractionResponse = await Context.get().user_interaction_manager.prompt_user_input(
             HumanPromptText(text="What is the current time in the user's timezone?", required=True, placeholder=""))
 
         return response.content.text

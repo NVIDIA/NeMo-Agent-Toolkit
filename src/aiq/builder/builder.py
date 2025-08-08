@@ -21,7 +21,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from aiq.authentication.interfaces import AuthProviderBase
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function import Function
 from aiq.data_models.authentication import AuthProviderBaseConfig
@@ -51,7 +51,7 @@ from aiq.retriever.interface import AIQRetriever
 
 class UserManagerHolder():
 
-    def __init__(self, context: AIQContext) -> None:
+    def __init__(self, context: Context) -> None:
         self._context = context
 
     def get_id(self):

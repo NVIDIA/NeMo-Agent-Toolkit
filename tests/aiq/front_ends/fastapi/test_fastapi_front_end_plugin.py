@@ -26,9 +26,9 @@ from httpx import AsyncClient
 from httpx_sse import aconnect_sse
 
 from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.data_models.api_server import AIQChatRequest
-from aiq.data_models.api_server import AIQChatResponse
-from aiq.data_models.api_server import AIQChatResponseChunk
+from aiq.data_models.api_server import ChatRequest
+from aiq.data_models.api_server import ChatResponse
+from aiq.data_models.api_server import ChatResponseChunk
 from aiq.data_models.api_server import Message
 from aiq.data_models.config import AIQConfig
 from aiq.data_models.config import GeneralConfig
@@ -87,10 +87,10 @@ async def test_generate_and_openai_single(fn_use_openai_api: bool):
         # Test both the function accepting OAI and also using the OAI API
         if (fn_use_openai_api):
             response = await client.post(
-                workflow_path, json=AIQChatRequest(messages=[Message(content="Hello", role="user")]).model_dump())
+                workflow_path, json=ChatRequest(messages=[Message(content="Hello", role="user")]).model_dump())
 
             assert response.status_code == 200
-            assert AIQChatResponse.model_validate(response.json()).choices[0].message.content == "Hello"
+            assert ChatResponse.model_validate(response.json()).choices[0].message.content == "Hello"
 
         else:
             response = await client.post(workflow_path, json={"message": "Hello"})
@@ -99,10 +99,10 @@ async def test_generate_and_openai_single(fn_use_openai_api: bool):
             assert response.json() == {"value": "Hello"}
 
         response = await client.post(oai_path,
-                                     json=AIQChatRequest(messages=[Message(content="Hello", role="user")]).model_dump())
+                                     json=ChatRequest(messages=[Message(content="Hello", role="user")]).model_dump())
 
         assert response.status_code == 200
-        oai_response = AIQChatResponse.model_validate(response.json())
+        oai_response = ChatResponse.model_validate(response.json())
 
         assert oai_response.choices[0].message.content == "Hello"
 
@@ -111,7 +111,7 @@ async def test_generate_and_openai_single(fn_use_openai_api: bool):
 async def test_generate_and_openai_stream(fn_use_openai_api: bool):
 
     if (fn_use_openai_api):
-        values = AIQChatRequest(messages=[Message(content="Hello", role="user")]).model_dump()
+        values = ChatRequest(messages=[Message(content="Hello", role="user")]).model_dump()
     values = ["a", "b", "c", "d"]
 
     front_end_config = FastApiFrontEndConfig()
@@ -135,10 +135,10 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
             async with aconnect_sse(client,
                                     "POST",
                                     f"{workflow_path}/stream",
-                                    json=AIQChatRequest(messages=[Message(content=x, role="user")
-                                                                  for x in values]).model_dump()) as event_source:
+                                    json=ChatRequest(messages=[Message(content=x, role="user")
+                                                               for x in values]).model_dump()) as event_source:
                 async for sse in event_source.aiter_sse():
-                    response.append(AIQChatResponseChunk.model_validate(sse.json()).choices[0].message.content or "")
+                    response.append(ChatResponseChunk.model_validate(sse.json()).choices[0].message.content or "")
 
                 assert event_source.response.status_code == 200
                 assert response == values
@@ -157,10 +157,10 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
         async with aconnect_sse(client,
                                 "POST",
                                 f"{oai_path}/stream",
-                                json=AIQChatRequest(messages=[Message(content=x, role="user")
-                                                              for x in values]).model_dump()) as event_source:
+                                json=ChatRequest(messages=[Message(content=x, role="user")
+                                                           for x in values]).model_dump()) as event_source:
             async for sse in event_source.aiter_sse():
-                response_oai.append(AIQChatResponseChunk.model_validate(sse.json()).choices[0].message.content or "")
+                response_oai.append(ChatResponseChunk.model_validate(sse.json()).choices[0].message.content or "")
 
             assert event_source.response.status_code == 200
             assert response_oai == values

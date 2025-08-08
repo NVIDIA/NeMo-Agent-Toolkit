@@ -26,8 +26,8 @@ from aiq.builder.builder import Builder
 from aiq.builder.builder import UserManagerHolder
 from aiq.builder.component_utils import ComponentInstanceData
 from aiq.builder.component_utils import build_dependency_sequence
-from aiq.builder.context import AIQContext
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import Context
+from aiq.builder.context import ContextState
 from aiq.builder.embedder import EmbedderProviderInfo
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function import Function
@@ -156,7 +156,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._retrievers: dict[str, ConfiguredRetriever] = {}
         self._ttc_strategies: dict[str, ConfiguredTTCStrategy] = {}
 
-        self._context_state = AIQContextState.get()
+        self._context_state = ContextState.get()
 
         self._exit_stack: AsyncExitStack | None = None
 
@@ -768,7 +768,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     @override
     def get_user_manager(self):
-        return UserManagerHolder(context=AIQContext(self._context_state))
+        return UserManagerHolder(context=Context(self._context_state))
 
     async def add_telemetry_exporter(self, name: str, config: TelemetryExporterBaseConfig) -> None:
         """Add an configured telemetry exporter to the builder.

@@ -19,7 +19,7 @@ import pytest
 from pydantic import BaseModel
 
 from aiq.builder.builder import Builder
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import ContextState
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.cli.register_workflow import register_function
 from aiq.data_models.function import FunctionBaseConfig
@@ -69,7 +69,7 @@ async def test_runner_result_successful_type_conversion():
     async with WorkflowBuilder() as builder:
         entry_fn = await builder.add_function(name="test_function", config=SingleOutputConfig())
 
-        context_state = AIQContextState()
+        context_state = ContextState()
         exporter_manager = ExporterManager()
 
         async with AIQRunner(input_message="test",
@@ -109,7 +109,7 @@ async def test_runner_result_type_conversion_failure():
     async with WorkflowBuilder() as builder:
         entry_fn = await builder.add_function(name="test_function", config=DummyConfig())
 
-        context_state = AIQContextState()
+        context_state = ContextState()
         exporter_manager = ExporterManager()
 
         async with AIQRunner(input_message="test",
@@ -135,7 +135,7 @@ async def test_runner_result_primitive_type_conversion_failure():
     async with WorkflowBuilder() as builder:
         entry_fn = await builder.add_function(name="test_function", config=SingleOutputConfig())
 
-        context_state = AIQContextState()
+        context_state = ContextState()
         exporter_manager = ExporterManager()
 
         async with AIQRunner(input_message="test",
@@ -161,7 +161,7 @@ async def test_runner_result_stream_successful_type_conversion():
     async with WorkflowBuilder() as builder:
         entry_fn = await builder.add_function(name="test_function", config=StreamOutputConfig())
 
-        context_state = AIQContextState()
+        context_state = ContextState()
         exporter_manager = ExporterManager()
 
         async with AIQRunner(input_message="test",
@@ -205,7 +205,7 @@ async def test_runner_result_stream_type_conversion_failure():
     async with WorkflowBuilder() as builder:
         entry_fn = await builder.add_function(name="test_function", config=DummyConfig())
 
-        context_state = AIQContextState()
+        context_state = ContextState()
         exporter_manager = ExporterManager()
 
         async with AIQRunner(input_message="test",
@@ -237,7 +237,7 @@ async def test_runner_result_stream_primitive_type_conversion_failure():
     async with WorkflowBuilder() as builder:
         entry_fn = await builder.add_function(name="test_function", config=StreamOutputConfig())
 
-        context_state = AIQContextState()
+        context_state = ContextState()
         exporter_manager = ExporterManager()
 
         async with AIQRunner(input_message="test",
@@ -266,7 +266,7 @@ async def test_runner_state_management():
     async with WorkflowBuilder() as builder:
         entry_fn = await builder.add_function(name="test_function", config=SingleOutputConfig())
 
-        context_state = AIQContextState()
+        context_state = ContextState()
         exporter_manager = ExporterManager()
 
         runner = AIQRunner(input_message="test",
