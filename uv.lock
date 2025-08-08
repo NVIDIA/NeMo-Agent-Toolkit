@@ -4395,7 +4395,7 @@ requires-dist = [
     { name = "nvidia-nat", editable = "." },
     { name = "presidio-analyzer", specifier = "~=2.2" },
     { name = "presidio-anonymizer", specifier = "~=2.2" },
-    { name = "weave", specifier = "==0.51.56" },
+    { name = "weave", specifier = "~=0.51" },
 ]
 
 [[package]]
