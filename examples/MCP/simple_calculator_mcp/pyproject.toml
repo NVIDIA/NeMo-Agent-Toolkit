@@ -11,15 +11,12 @@ root = "../../.."
 [project]
 name = "aiq_simple_calculator_mcp"
 dynamic = ["version"]
-dependencies = [
-  "aiqtoolkit[langchain]~=1.2",
-  "aiq_simple_calculator",
-]
+dependencies = ["nvidia-nat[langchain]~=1.2", "aiq_simple_calculator"]
 requires-python = ">=3.11,<3.13"
-description = "Simple Calculator MCP - demonstrates AIQ toolkit Model Context Protocol integration"
+description = "Simple Calculator MCP - demonstrates NeMo Agent toolkit Model Context Protocol integration"
 keywords = ["ai", "mcp", "protocol", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 aiq_simple_calculator = { path = "../../getting_started/simple_calculator", editable = true }

@@ -34,11 +34,11 @@ if [[ "${CI_CRON_NIGHTLY}" == "1" || ( ${IS_TAGGED} == "1" && "${CI_COMMIT_BRANC
 fi
 
 WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
-WHEELS_DIR="${WHEELS_BASE_DIR}/aiqtoolkit"
+WHEELS_DIR="${WHEELS_BASE_DIR}/nvidia-nat"
 
 create_env extra:all
 
-build_wheel . "aiqtoolkit/${GIT_TAG}"
+build_wheel . "nvidia-nat/${GIT_TAG}"
 
 
 # Build all examples with a pyproject.toml in the first directory below examples
@@ -53,7 +53,7 @@ for AIQ_PACKAGE in "${AIQ_PACKAGES[@]}"; do
 done
 
 if [[ "${BUILD_AIQ_COMPAT}" == "true" ]]; then
-    WHEELS_DIR="${WHEELS_BASE_DIR}/agentiq"
+    WHEELS_DIR="${WHEELS_BASE_DIR}/aiqtoolkit"
     for AIQ_COMPAT_PACKAGE in "${AIQ_COMPAT_PACKAGES[@]}"; do
         build_package_wheel ${AIQ_COMPAT_PACKAGE}
     done

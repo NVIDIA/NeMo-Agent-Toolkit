@@ -143,7 +143,7 @@ async def test_crewai_handler_time_between_calls(reactive_stream: Subject):
 
     import math
 
-    from packages.aiqtoolkit_crewai.src.aiq.plugins.crewai.crewai_callback_handler import CrewAIProfilerHandler
+    from packages.nvidia_nat_crewai.src.aiq.plugins.crewai.crewai_callback_handler import CrewAIProfilerHandler
 
     # The crewAI handler monkey-patch logic is for real code instrumentation,
     # but let's just call the wrapped calls directly:
