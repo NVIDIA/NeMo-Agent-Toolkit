@@ -22,8 +22,8 @@ from aiq.data_models.llm import APITypeEnum
 from aiq.data_models.retry_mixin import RetryMixin
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
-from aiq.utils.responses_api import validate_no_responses_api
 from aiq.utils.exception_handlers.automatic_retries import patch_with_retry
+from aiq.utils.responses_api import validate_no_responses_api
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
@@ -82,13 +82,15 @@ async def openai_agno(llm_config: OpenAIModelConfig, builder: Builder):
         if "model" in kwargs:
             kwargs["id"] = kwargs.pop("model")
 
-        client =  OpenAIResponses(**kwargs)
+        client = OpenAIResponses(**kwargs)
     else:
         config_obj = {
             **llm_config.model_dump(exclude={"type", "model_name", "api_type", "stream"}, by_alias=True),
             "id":
                 f"{llm_config.model_name}",
         }
+
+        client = OpenAIChat(**config_obj)
 
     if isinstance(llm_config, RetryMixin):
         client = patch_with_retry(client,

@@ -30,15 +30,13 @@ class APITypeEnum(str, Enum):
 class LLMBaseConfig(TypedBaseModel, BaseModelRegistryTag):
     """Base configuration for LLM providers."""
 
-    api_type: APITypeEnum = Field(
-        default=APITypeEnum.CHAT_COMPLETION,
-        description="The type of API to use for the LLM provider.",
-        json_schema_extra={
-            "enum": [e.value for e in APITypeEnum],
-            "examples": [e.value for e in APITypeEnum],
-        },
-        exclude=True
-    )
+    api_type: APITypeEnum = Field(default=APITypeEnum.CHAT_COMPLETION,
+                                  description="The type of API to use for the LLM provider.",
+                                  json_schema_extra={
+                                      "enum": [e.value for e in APITypeEnum],
+                                      "examples": [e.value for e in APITypeEnum],
+                                  },
+                                  exclude=True)
 
 
 LLMBaseConfigT = typing.TypeVar("LLMBaseConfigT", bound=LLMBaseConfig)

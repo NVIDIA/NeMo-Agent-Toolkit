@@ -21,8 +21,8 @@ from aiq.cli.register_workflow import register_llm_client
 from aiq.data_models.retry_mixin import RetryMixin
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.llm.openai_llm import OpenAIModelConfig
-from aiq.utils.responses_api import validate_no_responses_api
 from aiq.utils.exception_handlers.automatic_retries import patch_with_retry
+from aiq.utils.responses_api import validate_no_responses_api
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.CREWAI)
