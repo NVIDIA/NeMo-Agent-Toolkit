@@ -20,8 +20,8 @@ from .editing import iterative_plan_refinement_editor
 from .editing import llm_as_a_judge_editor
 from .editing import motivation_aware_summarization
 from .functions import execute_score_select_function
-from .functions import its_tool_orchestration_function
-from .functions import its_tool_wrapper_function
+from .functions import ttc_tool_orchestration_function
+from .functions import ttc_tool_wrapper_function
 from .functions import plan_select_execute_function
 from .scoring import llm_based_agent_scorer
 from .scoring import llm_based_plan_scorer
