@@ -18,8 +18,6 @@ import logging
 from aiq.builder.context import AIQContextState
 from aiq.plugins.data_flywheel.observability.exporter.dfw_exporter import DFWExporter
 from aiq.plugins.data_flywheel.observability.mixin.elasticsearch_mixin import ElasticsearchMixin
-from aiq.plugins.data_flywheel.observability.processor.dfw_record_processor import DFWToDictProcessor
-from aiq.plugins.data_flywheel.observability.processor.dfw_record_processor import SpanToDFWRecordProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -58,13 +56,8 @@ class DFWElasticsearchExporter(ElasticsearchMixin, DFWExporter):
                          max_queue_size=max_queue_size,
                          drop_on_overflow=drop_on_overflow,
                          shutdown_timeout=shutdown_timeout,
+                         client_id=client_id,
                          **elasticsearch_kwargs)
-
-        self._client_id = client_id
-        self.add_processor(SpanToDFWRecordProcessor(client_id=client_id))
-        self.add_processor(DFWToDictProcessor())
-        self.add_processor(self._batching_processor)
-        self.add_processor(self._batch_filter_processor)
 
     async def export_processed(self, item: dict | list[dict]) -> None:
         """Export processed DFW records to Elasticsearch."""

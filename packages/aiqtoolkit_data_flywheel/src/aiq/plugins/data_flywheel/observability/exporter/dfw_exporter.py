@@ -21,6 +21,8 @@ from aiq.builder.context import AIQContextState
 from aiq.data_models.span import Span
 from aiq.observability.exporter.span_exporter import SpanExporter
 from aiq.observability.processor.batching_processor import BatchingProcessor
+from aiq.plugins.data_flywheel.observability.processor.dfw_record_processor import DFWToDictProcessor
+from aiq.plugins.data_flywheel.observability.processor.dfw_record_processor import SpanToDFWRecordProcessor
 from aiq.plugins.data_flywheel.observability.processor.falsy_batch_filter_processor import DictBatchFilterProcessor
 
 logger = logging.getLogger(__name__)
@@ -45,7 +47,8 @@ class DFWExporter(SpanExporter[Span, dict]):
                  flush_interval: float = 5.0,
                  max_queue_size: int = 1000,
                  drop_on_overflow: bool = False,
-                 shutdown_timeout: float = 10.0):
+                 shutdown_timeout: float = 10.0,
+                 client_id: str = "default"):
         """Initialize the Data Flywheel exporter.
 
         Args:
@@ -58,18 +61,17 @@ class DFWExporter(SpanExporter[Span, dict]):
         """
         super().__init__(context_state)
 
-        self._batching_processor = DictBatchingProcessor(batch_size=batch_size,
-                                                         flush_interval=flush_interval,
-                                                         max_queue_size=max_queue_size,
-                                                         drop_on_overflow=drop_on_overflow,
-                                                         shutdown_timeout=shutdown_timeout,
-                                                         done_callback=self._filtered_export_processed)
+        self.add_processor(SpanToDFWRecordProcessor(client_id=client_id))
+        self.add_processor(DFWToDictProcessor())
 
-        self._batch_filter_processor = DictBatchFilterProcessor()
+        self.add_processor(
+            DictBatchingProcessor(batch_size=batch_size,
+                                  flush_interval=flush_interval,
+                                  max_queue_size=max_queue_size,
+                                  drop_on_overflow=drop_on_overflow,
+                                  shutdown_timeout=shutdown_timeout))
 
-    async def _filtered_export_processed(self, item: list[dict]) -> None:
-        filtered_items = await self._batch_filter_processor.process(item)
-        await self.export_processed(filtered_items)
+        self.add_processor(DictBatchFilterProcessor())
 
     @abstractmethod
     async def export_processed(self, item: dict | list[dict]) -> None:
