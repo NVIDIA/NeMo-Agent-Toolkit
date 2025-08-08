@@ -62,9 +62,6 @@ function create_env() {
         echo ""
         echo ""
         rapids-logger "Failed Env:"
-        echo "uv : $(uv --version)"
-        echo "pip: $(pip --version)"
-        echo "python: $(python --version)"
         uv pip list
         exit 1
     fi
