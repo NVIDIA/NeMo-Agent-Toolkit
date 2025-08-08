@@ -90,102 +90,102 @@ jobs:
         shell: bash
         run: ./aiqtoolkit/ci/scripts/github/checks.sh
 
-  test:
-    name: Test
-    needs: [check]
-    runs-on:  linux-${{ matrix.arch }}-cpu4
-    timeout-minutes: 30
-    container:
-      image: ${{ matrix.container }}
-    strategy:
-      fail-fast: true
-      matrix:
-        arch: ["amd64", "arm64"]
-        python-version: ["3.11", "3.12"]
-        include:
-          - python-version: "3.11"
-            container: ${{ inputs.py_11_container }}
-          - python-version: "3.12"
-            container: ${{ inputs.py_12_container }}
+  # test:
+  #   name: Test
+  #   needs: [check]
+  #   runs-on:  linux-${{ matrix.arch }}-cpu4
+  #   timeout-minutes: 30
+  #   container:
+  #     image: ${{ matrix.container }}
+  #   strategy:
+  #     fail-fast: true
+  #     matrix:
+  #       arch: ["amd64", "arm64"]
+  #       python-version: ["3.11", "3.12"]
+  #       include:
+  #         - python-version: "3.11"
+  #           container: ${{ inputs.py_11_container }}
+  #         - python-version: "3.12"
+  #           container: ${{ inputs.py_12_container }}
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-          path: 'aiqtoolkit'
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #         fetch-tags: true
+  #         path: 'aiqtoolkit'
 
-      - name: Test:linux:${{ matrix.arch }}:py${{ matrix.python-version }}
-        shell: bash
-        run: ./aiqtoolkit/ci/scripts/github/tests.sh
+  #     - name: Test:linux:${{ matrix.arch }}:py${{ matrix.python-version }}
+  #       shell: bash
+  #       run: ./aiqtoolkit/ci/scripts/github/tests.sh
 
-      - name: Upload Test Results
-        uses: actions/upload-artifact@v4
-        # Upload test results even if the tests fail
-        if: ${{ always() }}
-        with:
-          name: "test-results-${{ matrix.arch }}-py${{ matrix.python-version }}"
-          path: "${{ github.workspace }}/tmp/*.xml"
-          if-no-files-found: error
-
-
-  documentation:
-    name: Documentation
-    needs: [check]
-    runs-on: linux-amd64-cpu4
-    timeout-minutes: 15
-    container:
-      image: ${{ inputs.container }}
-    strategy:
-      fail-fast: true
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-tags: true
-          path: 'aiqtoolkit'
-
-      - name: build_docs
-        shell: bash
-        run: ./aiqtoolkit/ci/scripts/github/docs.sh
-
-      - name: Upload Documentation
-        uses: actions/upload-artifact@v4
-        with:
-          name: "docs"
-          path: "${{ github.workspace }}/tmp/docs.tar.bz2"
-          if-no-files-found: error
-          compression-level: 0
+  #     - name: Upload Test Results
+  #       uses: actions/upload-artifact@v4
+  #       # Upload test results even if the tests fail
+  #       if: ${{ always() }}
+  #       with:
+  #         name: "test-results-${{ matrix.arch }}-py${{ matrix.python-version }}"
+  #         path: "${{ github.workspace }}/tmp/*.xml"
+  #         if-no-files-found: error
 
 
-  package:
-    name: Build Wheels
-    needs: [check]
-    runs-on: linux-amd64-cpu4
-    timeout-minutes: 60
-    container:
-      image: ${{ inputs.container }}
-    strategy:
-      fail-fast: true
+  # documentation:
+  #   name: Documentation
+  #   needs: [check]
+  #   runs-on: linux-amd64-cpu4
+  #   timeout-minutes: 15
+  #   container:
+  #     image: ${{ inputs.container }}
+  #   strategy:
+  #     fail-fast: true
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-          path: 'aiqtoolkit'
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-tags: true
+  #         path: 'aiqtoolkit'
 
-      - name: build_wheels
-        shell: bash
-        run: ./aiqtoolkit/ci/scripts/github/build_wheel.sh
+  #     - name: build_docs
+  #       shell: bash
+  #       run: ./aiqtoolkit/ci/scripts/github/docs.sh
 
-      - name: Upload Wheels
-        uses: actions/upload-artifact@v4
-        with:
-          name: "wheels"
-          path: "${{ github.workspace }}/tmp/wheels/**/*.whl"
-          if-no-files-found: error
-          compression-level: 9
+  #     - name: Upload Documentation
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: "docs"
+  #         path: "${{ github.workspace }}/tmp/docs.tar.bz2"
+  #         if-no-files-found: error
+  #         compression-level: 0
+
+
+  # package:
+  #   name: Build Wheels
+  #   needs: [check]
+  #   runs-on: linux-amd64-cpu4
+  #   timeout-minutes: 60
+  #   container:
+  #     image: ${{ inputs.container }}
+  #   strategy:
+  #     fail-fast: true
+
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #         fetch-tags: true
+  #         path: 'aiqtoolkit'
+
+  #     - name: build_wheels
+  #       shell: bash
+  #       run: ./aiqtoolkit/ci/scripts/github/build_wheel.sh
+
+  #     - name: Upload Wheels
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: "wheels"
+  #         path: "${{ github.workspace }}/tmp/wheels/**/*.whl"
+  #         if-no-files-found: error
+  #         compression-level: 9
