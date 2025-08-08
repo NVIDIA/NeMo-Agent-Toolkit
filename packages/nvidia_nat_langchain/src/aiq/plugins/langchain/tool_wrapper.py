@@ -36,7 +36,7 @@ def langchain_tool_wrapper(name: str, fn: Function, builder: Builder):
 
     # Provide a sync wrapper for the tool to support synchronous tool calls
     def _sync_fn(*args, **kwargs):
-        logger.warning("Non-async tool called: %s", fn.instance_name)
+        logger.warning("Invoking a synchronous tool call, performance may be degraded: `%s`", fn.instance_name)
         return loop.run_until_complete(fn.acall_invoke(*args, **kwargs))
 
     if fn.description is None:
