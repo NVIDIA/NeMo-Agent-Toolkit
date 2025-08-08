@@ -683,7 +683,7 @@ async def test_add_ttc_strategy():
 
         # Duplicate name
         with pytest.raises(ValueError):
-            await builder.add_ttc_strategy("itcc_strategy", TestTTCStrategyConfig())
+            await builder.add_ttc_strategy("ttc_strategy", TestTTCStrategyConfig())
 
 
 async def test_get_ttc_strategy_and_config():
