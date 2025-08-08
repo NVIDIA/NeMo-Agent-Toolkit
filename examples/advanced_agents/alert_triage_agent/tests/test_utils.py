@@ -100,11 +100,10 @@ def test_preload_offline_data():
         config = yaml.safe_load(file)
         offline_data_path = config["workflow"]["offline_data_path"]
         benign_fallback_data_path = config["workflow"]["benign_fallback_data_path"]
-
-    repo_root = Path(__file__).resolve().parents[4]
-    offline_data_path_abs = (repo_root / offline_data_path).resolve()
-
-    benign_fallback_data_path_abs = (repo_root / benign_fallback_data_path).resolve()
+    offline_data_path_abs = importlib.resources.files(package_name).joinpath("../../../../",
+                                                                             offline_data_path).absolute()
+    benign_fallback_data_path_abs = importlib.resources.files(package_name).joinpath(
+        "../../../../", benign_fallback_data_path).absolute()
 
     # Test successful loading with actual test files
     preload_offline_data(offline_data_path_abs, benign_fallback_data_path_abs)

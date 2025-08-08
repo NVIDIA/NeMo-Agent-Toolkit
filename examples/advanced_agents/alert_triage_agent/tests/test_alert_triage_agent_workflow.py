@@ -37,18 +37,14 @@ async def test_full_workflow():
     config_file: Path = importlib.resources.files(package_name).joinpath("configs",
                                                                          "config_offline_mode.yml").absolute()
 
-    with open(config_file, "r", encoding="utf-8") as file:
+    with open(config_file, "r") as file:
         config = yaml.safe_load(file)
         input_filepath = config["eval"]["general"]["dataset"]["file_path"]
 
-    # Build an absolute path to the dataset file.
-    # `input_filepath` is relative to the repo root (e.g. "examples/advanced/...").
-    # Ascend from this test file to the repo root and join the relative path.
-    repo_root = Path(__file__).resolve().parents[4]  # adjust if directory depth changes
-    input_filepath_abs = (repo_root / input_filepath).resolve()
+    input_filepath_abs = importlib.resources.files(package_name).joinpath("../../../../", input_filepath).absolute()
 
     # Load input data
-    with open(input_filepath_abs, 'r', encoding='utf-8') as f:
+    with open(input_filepath_abs, 'r') as f:
         input_data = json.load(f)
 
     # Run the workflow
@@ -68,6 +64,6 @@ async def test_full_workflow():
     assert 'maintenance' in results[3]
 
     # Check that rows with hosts not under maintenance contain root cause categorization
-    for i, res in enumerate(results):
+    for i in range(len(results)):
         if i != 3:
-            assert "root cause category" in res.lower()
+            assert "root cause category" in results[i].lower()

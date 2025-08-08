@@ -47,10 +47,8 @@ def test_load_maintenance_data():
     with open(config_file, "r") as file:
         config = yaml.safe_load(file)
         maintenance_data_path = config["functions"]["maintenance_check"]["static_data_path"]
-
-    # Build an absolute path to the maintenance data file.
-    repo_root = Path(__file__).resolve().parents[4]
-    maintenance_data_path_abs = (repo_root / maintenance_data_path).resolve()
+    maintenance_data_path_abs = importlib.resources.files(package_name).joinpath("../../../../",
+                                                                                 maintenance_data_path).absolute()
 
     # Test successful loading with actual maintenance data file
     df = _load_maintenance_data(maintenance_data_path_abs)
