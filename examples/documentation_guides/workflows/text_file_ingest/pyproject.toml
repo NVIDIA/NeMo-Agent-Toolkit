@@ -17,5 +17,5 @@ classifiers = ["Programming Language :: Python"]
 [tool.uv.sources]
 nvidia-nat = { path = "../../../..", editable = true }
 
-[project.entry-points.'aiq.components']
+[project.entry-points.'nat.components']
 text_file_ingest = "text_file_ingest.register"

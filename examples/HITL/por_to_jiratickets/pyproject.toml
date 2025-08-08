@@ -6,7 +6,7 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../.."
 
 [project]
-name = "aiq_por_to_jiratickets"
+name = "nat_por_to_jiratickets"
 dynamic = ["version"]
 dependencies = ["nvidia-nat[langchain]~=1.2"]
 requires-python = ">=3.11,<3.13"
@@ -16,5 +16,5 @@ classifiers = ["Programming Language :: Python"]
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
 
-[project.entry-points.'aiq.components']
-aiq_por_to_jiratickets = "aiq_por_to_jiratickets.register"
+[project.entry-points.'nat.components']
+nat_por_to_jiratickets = "nat_por_to_jiratickets.register"
