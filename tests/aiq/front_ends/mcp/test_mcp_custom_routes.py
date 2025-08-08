@@ -16,10 +16,12 @@
 from unittest.mock import Mock
 from unittest.mock import patch
 
+import pytest
 from mcp.server.fastmcp import FastMCP
 
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import GeneralConfig
 from aiq.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 from aiq.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
 from aiq.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorker
@@ -49,15 +51,19 @@ class CustomMCPWorker(MCPFrontEndPluginWorker):
             return JSONResponse({"status": "ok", "server_name": mcp.name, "custom_worker": True})
 
 
-async def test_custom_mcp_worker():
+@pytest.fixture
+def aiq_config() -> AIQConfig:
+    """Fixture to provide a minimal AIQ configuration."""
+    general_config = GeneralConfig(front_end=MCPFrontEndConfig(name="Test MCP", host="localhost", port=9902))
+    return AIQConfig(general=general_config)
+
+
+async def test_custom_mcp_worker(aiq_config: AIQConfig):
     """Test that custom MCP worker can add routes without breaking functionality."""
-    # Create a custom MCP worker and add custom routes
-    config = AIQConfig(general={"front_end": MCPFrontEndConfig(name="Test MCP", host="localhost", port=9902)})
-    worker = CustomMCPWorker(config)
+    worker = CustomMCPWorker(aiq_config)
     mcp = FastMCP("Test Server")
 
     # Mock out the function registration since we're only testing custom routes
-
     mock_builder = Mock(spec=WorkflowBuilder)
 
     # Create a minimal mock workflow with functions
@@ -83,16 +89,15 @@ async def test_custom_mcp_worker():
     assert len(health_routes) > 0, "Health route /health should be added"
 
 
-def test_runner_class_configuration():
+def test_runner_class_configuration(aiq_config: AIQConfig):
     """Test that the runner_class configuration works correctly."""
     # Test with no runner_class (should use default)
-    config_default = AIQConfig(general={"front_end": MCPFrontEndConfig()})
-
-    plugin_default = MCPFrontEndPlugin(config_default)
+    plugin_default = MCPFrontEndPlugin(aiq_config)
     assert "MCPFrontEndPluginWorker" in plugin_default.get_worker_class_name()
 
     # Test with custom runner_class (should return the custom class name)
-    config_custom = AIQConfig(general={"front_end": MCPFrontEndConfig(runner_class="my.custom.module.CustomWorker")})
+    custom_aiq_config = AIQConfig(general=GeneralConfig(front_end=MCPFrontEndConfig(
+        runner_class="aiq.front_ends.mcp.test_mcp_custom_routes.CustomMCPWorker")))
 
-    plugin_custom = MCPFrontEndPlugin(config_custom)
-    assert plugin_custom.get_worker_class_name() == "my.custom.module.CustomWorker"
+    plugin_custom = MCPFrontEndPlugin(custom_aiq_config)
+    assert "CustomMCPWorker" in plugin_custom.get_worker_class_name()

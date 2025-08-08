@@ -64,9 +64,10 @@ def test_get_all_functions():
     # Create the plugin with a valid config
     config = AIQConfig(general=GeneralConfig(front_end=MCPFrontEndConfig()), workflow=EchoFunctionConfig())
     plugin = MCPFrontEndPlugin(full_config=config)
+    worker = plugin._get_worker_instance()
 
     # Test the method
-    functions = plugin._get_all_functions(mock_workflow)
+    functions = worker._get_all_functions(mock_workflow)
 
     # Verify that the functions were correctly extracted
     assert "function1" in functions
@@ -85,9 +86,10 @@ def test_filter_functions(mock_run, mcp_config):
     mock_workflow = MagicMock()
     mock_workflow.functions = {"echo": MagicMock(), "another_function": MagicMock()}
     mock_workflow.config.workflow.type = "test_workflow"
+    worker = plugin._get_worker_instance()
 
     # Call _get_all_functions first
-    all_functions = plugin._get_all_functions(mock_workflow)
+    all_functions = worker._get_all_functions(mock_workflow)
     assert len(all_functions) == 3
 
     # Now simulate filtering with tool_names
