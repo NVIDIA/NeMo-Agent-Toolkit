@@ -59,10 +59,6 @@ function create_env() {
         echo "Error, uv sync emitted warnings. These are usually due to missing lower bound constraints."
         echo "StdErr output:"
         echo "${UV_SYNC_STDERROUT}"
-        echo ""
-        echo ""
-        rapids-logger "Failed Env:"
-        uv pip list
         exit 1
     fi
 
