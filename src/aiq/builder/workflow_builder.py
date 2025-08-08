@@ -59,7 +59,7 @@ from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.data_models.ttc_strategy import TTCStrategyBaseConfig
-from aiq.experimental.decorators.experimental_warning_decorator import aiq_experimental
+from aiq.experimental.decorators.experimental_warning_decorator import experimental
 from aiq.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from aiq.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from aiq.experimental.test_time_compute.models.strategy_base import StrategyBase
@@ -470,7 +470,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Return the tool configuration object
         return self._llms[llm_name].config
 
-    @aiq_experimental(feature_name="Authentication")
+    @experimental(feature_name="Authentication")
     @override
     async def add_auth_provider(self, name: str | AuthenticationRef,
                                 config: AuthProviderBaseConfig) -> AuthProviderBase:
@@ -699,7 +699,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return self._retrievers[retriever_name].config
 
-    @aiq_experimental(feature_name="TTC")
+    @experimental(feature_name="TTC")
     @override
     async def add_ttc_strategy(self, name: str | str, config: TTCStrategyBaseConfig):
         if (name in self._ttc_strategies):

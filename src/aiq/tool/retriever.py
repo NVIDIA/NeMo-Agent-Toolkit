@@ -56,7 +56,7 @@ def _get_description_from_config(config: RetrieverConfig) -> str:
 
 
 @register_function(config_type=RetrieverConfig)
-async def aiq_retriever_tool(config: RetrieverConfig, builder: Builder):
+async def retriever_tool(config: RetrieverConfig, builder: Builder):
     """
     Configure an AIQ Toolkit Retriever Tool which supports different clients such as Milvus and Nemo Retriever.
 
@@ -91,3 +91,4 @@ async def aiq_retriever_tool(config: RetrieverConfig, builder: Builder):
 
 # Compatibility aliases with previous releases
 AIQRetrieverConfig = RetrieverConfig
+aiq_retriever_tool = retriever_tool
