@@ -166,7 +166,7 @@ You can also test if an MCP server is responsive and healthy using the `aiq info
 ```bash
 aiq info mcp ping --url http://localhost:9901/sse
 ```
-This launches a MCP client that connects to the MCP server and verifies if the server is healthy.
+This launches a MCP client that connects to the MCP server and sends a `MCP ping` message to the server.
 
 Sample output for a healthy server:
 ```
