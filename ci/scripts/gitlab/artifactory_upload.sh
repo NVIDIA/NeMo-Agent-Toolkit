@@ -38,6 +38,8 @@ AIQ_ARCH="any"
 AIQ_OS="any"
 
 AIQ_COMPONENTS=("nvidia-nat" "aiqtoolkit")
+# We need to fix the name of the component in artifactory to aiqtoolkit
+ARTIFACTORY_COMPONENT_FIXED_NAME="aiqtoolkit"
 
 WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
 
@@ -110,8 +112,7 @@ if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
                 RELATIVE_PATH="${WHEEL_FILE#${WHEELS_BASE_DIR}/}"
                 RELATIVE_PATH=$(echo "${RELATIVE_PATH}" | sed -e 's|^nvidia-nat/|aiqtoolkit/|')
                 ARTIFACTORY_PATH="${AIQ_ARTIFACTORY_NAME}/${RELATIVE_PATH}"
-                # Like the RELATIVE_PATH above, we need to fix the name of the component in artifactory to aiqtoolkit
-                ARTIFACTORY_COMPONENT_FIXED_NAME="aiqtoolkit"
+"
                 echo "Uploading ${WHEEL_FILE} to ${ARTIFACTORY_PATH}..."
 
                 CI=true jf rt u --fail-no-op --url="${AIQ_ARTIFACTORY_URL}" \
