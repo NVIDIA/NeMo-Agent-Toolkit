@@ -34,6 +34,7 @@ _library_instrumented = {
     "crewai": False,
     "semantic_kernel": False,
     "agno": False,
+    "ag2": False,
 }
 
 callback_handler_var: ContextVar[Any | None] = ContextVar("callback_handler_var", default=None)

@@ -50,7 +50,7 @@ WORKDIR /workspace
 RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     . /workspace/.venv/bin/activate && \
-    uv pip install "aiqtoolkit[crewai, langchain, llama-index, mem0ai, semantic-kernel, zep-cloud] == ${AIQ_VERSION}"
+    uv pip install "aiqtoolkit[ag2, crewai, langchain, llama-index, mem0ai, semantic-kernel, zep-cloud] == ${AIQ_VERSION}"
 
 # Enivronment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"

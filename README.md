@@ -198,6 +198,7 @@ We would love to hear from you! Please file an issue on [GitHub](https://github.
 
 We would like to thank the following open source projects that made NeMo Agent toolkit possible:
 
+- [AG2](https://github.com/ag2ai/ag2)
 - [CrewAI](https://github.com/crewAIInc/crewAI)
 - [FastAPI](https://github.com/tiangolo/fastapi)
 - [LangChain](https://github.com/langchain-ai/langchain)

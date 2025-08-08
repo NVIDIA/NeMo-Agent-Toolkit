@@ -58,6 +58,7 @@ maintainers = [{ name = "NVIDIA Corporation" }]
 [project.optional-dependencies]
 # Optional dependencies are things that users would want to install with AIQtoolkit. i.e. `uv pip install aiq[langchain]`
 # Keep sorted!!!
+ag2 = ["nvidia-nat-ag2"]
 agno = ["nvidia-nat-agno"]
 crewai = ["nvidia-nat-crewai"]
 ingestion = ["lxml~=5.4"]
@@ -123,6 +124,7 @@ config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
 # Workspace members
+nvidia-nat-ag2 = { workspace = true }
 nvidia-nat-crewai = { workspace = true }
 nvidia-nat-langchain = { workspace = true }
 nvidia-nat-llama-index = { workspace = true }
@@ -946,6 +948,7 @@ skip = [
 known_first_party = ["aiq"]
 # Need to declare known third party for namespace packages which have the same name
 known_third_party = [
+  "ag2",
   "agno",
   "crewai",
   "langchain",
