@@ -29,11 +29,9 @@ Question: the input question you must answer
 Thought: Do I need to use a tool? Yes.
 Action: one of [{tool_names}]
 Action Input: the input to the action (prefer valid JSON when applicable; if no input, use the word None)
-Observation:
+Observation: the result of the action, do not assume the tool's response
 ```
-
-- After writing "Observation:", STOP. Do not write any observation content. Do not assume the tool's response.
-- You may repeat Thought/Action/Action Input/Observation for multiple steps if needed.
+You may repeat Thought/Action/Action Input/Observation for multiple steps if needed.
 
 2) Do not use a tool
 
@@ -53,7 +51,6 @@ Final Answer: the final answer to the original input question
 ```
 
 General rules:
-- Never hallucinate tool results. Never write anything after the word "Observation:".
 - When using a tool, provide exactly one Action and one Action Input per step.
 - When not using a tool, output only the Final Answer format (cases 2 or 3).
 - Keep answers concise and directly address the user's request.
