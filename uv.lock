@@ -1900,6 +1900,15 @@ wheels = [
 ]
 
 [[package]]
+name = "google-search-results"
+version = "2.4.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/77/30/b3a6f6a2e00f8153549c2fa345c58ae1ce8e5f3153c2fe0484d444c3abcb/google_search_results-2.4.2.tar.gz", hash = "sha256:603a30ecae2af8e600b22635757a6df275dad4b934f975e67878ccd640b78245", size = 18818, upload-time = "2023-03-10T11:13:09.953Z" }
+
+[[package]]
 name = "googleapis-common-protos"
 version = "1.70.0"
 source = { registry = "https://pypi.org/simple" }
@@ -4127,6 +4136,7 @@ name = "nvidia-nat-agno"
 source = { editable = "packages/nvidia_nat_agno" }
 dependencies = [
     { name = "agno" },
+    { name = "google-search-results" },
     { name = "nvidia-nat" },
     { name = "openai" },
 ]
@@ -4134,6 +4144,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "agno", specifier = "~=1.2.3" },
+    { name = "google-search-results", specifier = "~=2.4.2" },
     { name = "nvidia-nat", editable = "." },
     { name = "openai", specifier = "~=1.66" },
 ]
@@ -4348,7 +4359,7 @@ requires-dist = [
     { name = "nvidia-nat", editable = "." },
     { name = "presidio-analyzer", specifier = "~=2.2" },
     { name = "presidio-anonymizer", specifier = "~=2.2" },
-    { name = "weave", specifier = ">=0.51,<0.51.59" },
+    { name = "weave", specifier = "~=0.51" },
 ]
 
 [[package]]
