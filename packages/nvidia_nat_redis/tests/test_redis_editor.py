@@ -18,9 +18,9 @@ from unittest.mock import MagicMock
 
 import pytest
 from langchain_core.embeddings import Embeddings
-from nat.plugins.redis.redis_editor import RedisEditor
 
 from nat.memory.models import MemoryItem
+from nat.plugins.redis.redis_editor import RedisEditor
 from nat.utils.type_utils import override
 
 

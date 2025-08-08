@@ -30,8 +30,9 @@ class ZepMemoryClientConfig(MemoryBaseConfig, RetryMixin, name="zep_memory"):
 async def zep_memory_client(config: ZepMemoryClientConfig, builder: Builder):
     import os
 
-    from nat.plugins.zep_cloud.zep_editor import ZepEditor
     from zep_cloud.client import AsyncZep
+
+    from nat.plugins.zep_cloud.zep_editor import ZepEditor
 
     zep_api_key = os.environ.get("ZEP_API_KEY")
 

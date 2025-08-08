@@ -20,8 +20,6 @@ from asgi_lifespan import LifespanManager
 from httpx import ASGITransport
 from httpx import AsyncClient
 from httpx_sse import aconnect_sse
-from nat.test.functions import EchoFunctionConfig
-from nat.test.functions import StreamingEchoFunctionConfig
 
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
@@ -32,6 +30,8 @@ from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+from nat.test.functions import EchoFunctionConfig
+from nat.test.functions import StreamingEchoFunctionConfig
 
 
 @asynccontextmanager

@@ -20,13 +20,14 @@ import os
 from dataclasses import asdict
 
 import ragaai_catalyst
-from nat.plugins.opentelemetry.otel_span import OtelSpan
 from ragaai_catalyst.tracers.agentic_tracing.utils.trace_utils import format_interactions
 from ragaai_catalyst.tracers.agentic_tracing.utils.zip_list_of_unique_files import zip_list_of_unique_files
 from ragaai_catalyst.tracers.exporters import DynamicTraceExporter
 from ragaai_catalyst.tracers.exporters.ragaai_trace_exporter import RAGATraceExporter
 from ragaai_catalyst.tracers.exporters.ragaai_trace_exporter import TracerJSONEncoder
 from ragaai_catalyst.tracers.utils.trace_json_converter import convert_json_format
+
+from nat.plugins.opentelemetry.otel_span import OtelSpan
 
 logger = logging.getLogger(__name__)
 

@@ -15,10 +15,9 @@
 
 from contextlib import asynccontextmanager
 
-from nat.test.object_store_tests import ObjectStoreTests
-
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.object_store.in_memory_object_store import InMemoryObjectStoreConfig
+from nat.test.object_store_tests import ObjectStoreTests
 
 
 class TestInMemoryObjectStore(ObjectStoreTests):

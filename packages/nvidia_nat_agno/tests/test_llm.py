@@ -20,13 +20,13 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from nat.plugins.agno.llm import nim_agno
-from nat.plugins.agno.llm import openai_agno
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.plugins.agno.llm import nim_agno
+from nat.plugins.agno.llm import openai_agno
 
 
 class TestNimAgno:

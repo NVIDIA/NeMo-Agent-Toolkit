@@ -18,12 +18,12 @@ import logging
 import aioboto3
 from botocore.client import BaseClient
 from botocore.exceptions import ClientError
-from nat.plugins.s3.object_store import S3ObjectStoreClientConfig
 
 from nat.data_models.object_store import KeyAlreadyExistsError
 from nat.data_models.object_store import NoSuchKeyError
 from nat.object_store.interfaces import ObjectStore
 from nat.object_store.models import ObjectStoreItem
+from nat.plugins.s3.object_store import S3ObjectStoreClientConfig
 
 logger = logging.getLogger(__name__)
 

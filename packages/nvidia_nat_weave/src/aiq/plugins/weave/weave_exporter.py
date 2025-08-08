@@ -15,10 +15,9 @@
 
 import logging
 
-from nat.plugins.weave.mixins.weave_mixin import WeaveMixin
-
 from nat.data_models.span import Span
 from nat.observability.exporter.span_exporter import SpanExporter
+from nat.plugins.weave.mixins.weave_mixin import WeaveMixin
 
 logger = logging.getLogger(__name__)
 

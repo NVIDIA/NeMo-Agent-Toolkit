@@ -24,7 +24,6 @@ else:
 
 import networkx as nx
 import pytest
-from nat.test.memory import DummyMemoryConfig
 from pydantic import BaseModel
 
 from nat.builder.builder import Builder
@@ -60,6 +59,7 @@ from nat.llm.nim_llm import NIMModelConfig
 from nat.object_store.in_memory_object_store import InMemoryObjectStoreConfig
 from nat.retriever.nemo_retriever.register import NemoRetrieverConfig
 from nat.runtime.session import SessionManager
+from nat.test.memory import DummyMemoryConfig
 
 
 @pytest.fixture(name="nested_aiq_config", scope="function")

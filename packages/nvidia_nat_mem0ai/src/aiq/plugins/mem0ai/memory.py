@@ -33,6 +33,7 @@ async def mem0_memory_client(config: Mem0MemoryClientConfig, builder: Builder):
     import os
 
     from mem0 import AsyncMemoryClient
+
     from nat.plugins.mem0ai.mem0_editor import Mem0Editor
 
     mem0_api_key = os.environ.get("MEM0_API_KEY")

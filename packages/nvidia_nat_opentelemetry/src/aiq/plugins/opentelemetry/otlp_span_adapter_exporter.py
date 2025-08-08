@@ -15,10 +15,9 @@
 
 import logging
 
+from nat.builder.context import ContextState
 from nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin import OTLPSpanExporterMixin
 from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
-
-from nat.builder.context import ContextState
 
 logger = logging.getLogger(__name__)
 

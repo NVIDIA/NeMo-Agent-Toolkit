@@ -24,8 +24,6 @@ from fastapi import FastAPI
 from httpx import ASGITransport
 from httpx import AsyncClient
 from httpx_sse import aconnect_sse
-from nat.test.functions import EchoFunctionConfig
-from nat.test.functions import StreamingEchoFunctionConfig
 
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.api_server import ChatRequest
@@ -37,6 +35,8 @@ from nat.data_models.config import GeneralConfig
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 from nat.object_store.in_memory_object_store import InMemoryObjectStoreConfig
+from nat.test.functions import EchoFunctionConfig
+from nat.test.functions import StreamingEchoFunctionConfig
 from nat.utils.type_utils import override
 
 

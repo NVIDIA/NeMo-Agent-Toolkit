@@ -13,13 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nat.test.functions import EchoFunctionConfig
-
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 from nat.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
 from nat.front_ends.mcp.register import register_mcp_front_end
+from nat.test.functions import EchoFunctionConfig
 
 
 async def test_register_mcp_front_end():

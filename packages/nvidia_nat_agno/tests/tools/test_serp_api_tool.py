@@ -23,12 +23,12 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from nat.plugins.agno.tools.serp_api_tool import SerpApiToolConfig
-from nat.plugins.agno.tools.serp_api_tool import serp_api_tool
 
 from nat.builder.builder import Builder
 from nat.builder.function import LambdaFunction
 from nat.builder.function_info import FunctionInfo
+from nat.plugins.agno.tools.serp_api_tool import SerpApiToolConfig
+from nat.plugins.agno.tools.serp_api_tool import serp_api_tool
 
 
 # Mock the agno.tools.serpapi module and SerpApiTools class

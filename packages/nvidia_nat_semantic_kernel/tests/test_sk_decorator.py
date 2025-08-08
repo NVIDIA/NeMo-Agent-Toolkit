@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pydantic import BaseModel
+
 # Import the semantic_kernel_tool_wrapper from tool_wrapper.py
 from nat.plugins.semantic_kernel.tool_wrapper import semantic_kernel_tool_wrapper
-from pydantic import BaseModel
 
 # ----------------------------
 # Dummy Models for Testing
