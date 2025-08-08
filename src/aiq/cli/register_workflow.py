@@ -28,8 +28,6 @@ from aiq.cli.type_registry import FrontEndBuildCallableT
 from aiq.cli.type_registry import FrontEndRegisteredCallableT
 from aiq.cli.type_registry import FunctionBuildCallableT
 from aiq.cli.type_registry import FunctionRegisteredCallableT
-from aiq.cli.type_registry import ITSStrategyBuildCallableT
-from aiq.cli.type_registry import ITSStrategyRegisterCallableT
 from aiq.cli.type_registry import LLMClientBuildCallableT
 from aiq.cli.type_registry import LLMClientRegisteredCallableT
 from aiq.cli.type_registry import LLMProviderBuildCallableT
@@ -53,6 +51,8 @@ from aiq.cli.type_registry import TeleExporterRegisteredCallableT
 from aiq.cli.type_registry import TelemetryExporterBuildCallableT
 from aiq.cli.type_registry import TelemetryExporterConfigT
 from aiq.cli.type_registry import ToolWrapperBuildCallableT
+from aiq.cli.type_registry import TTCStrategyBuildCallableT
+from aiq.cli.type_registry import TTCStrategyRegisterCallableT
 from aiq.data_models.authentication import AuthProviderBaseConfigT
 from aiq.data_models.component import AIQComponentEnum
 from aiq.data_models.discovery_metadata import DiscoveryMetadata
@@ -371,28 +371,28 @@ def register_object_store(config_type: type[ObjectStoreBaseConfigT]):
     return register_kv_store_inner
 
 
-def register_its_strategy(config_type: type[ITSStrategyRegisterCallableT]):
+def register_ttc_strategy(config_type: type[TTCStrategyRegisterCallableT]):
 
-    def register_its_strategy_inner(
-        fn: ITSStrategyBuildCallableT[ITSStrategyRegisterCallableT]
-    ) -> ITSStrategyRegisterCallableT[ITSStrategyRegisterCallableT]:
+    def register_ttc_strategy_inner(
+        fn: TTCStrategyBuildCallableT[TTCStrategyRegisterCallableT]
+    ) -> TTCStrategyRegisterCallableT[TTCStrategyRegisterCallableT]:
         from .type_registry import GlobalTypeRegistry
-        from .type_registry import RegisteredITSStrategyInfo
+        from .type_registry import RegisteredTTCStrategyInfo
 
         context_manager_fn = asynccontextmanager(fn)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=AIQComponentEnum.ITS_STRATEGY)
+                                                                component_type=AIQComponentEnum.TTC_STRATEGY)
 
-        GlobalTypeRegistry.get().register_its_strategy(
-            RegisteredITSStrategyInfo(full_type=config_type.full_type,
+        GlobalTypeRegistry.get().register_ttc_strategy(
+            RegisteredTTCStrategyInfo(full_type=config_type.full_type,
                                       config_type=config_type,
                                       build_fn=context_manager_fn,
                                       discovery_metadata=discovery_metadata))
 
         return context_manager_fn
 
-    return register_its_strategy_inner
+    return register_ttc_strategy_inner
 
 
 def register_retriever_provider(config_type: type[RetrieverBaseConfigT]):
