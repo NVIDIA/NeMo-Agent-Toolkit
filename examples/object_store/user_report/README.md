@@ -68,6 +68,7 @@ For the up-to-date installation instructions of MinIO, see [MinIO Page](https://
 
 #### macOS
 To install MinIO on your macOS machine, run the following commands:
+<!-- path-check-skip-begin -->
 ```bash
 brew install minio/stable/mc
 mc --help
@@ -75,9 +76,11 @@ mc alias set myminio http://localhost:9000 minioadmin minioadmin
 
 brew install minio/stable/minio
 ```
+<!-- path-check-skip-end -->
 
 #### Linux
 To install MinIO on your Linux machine, run the following commands:
+<!-- path-check-skip-begin -->
 ```bash
 curl https://dl.min.io/client/mc/release/linux-amd64/mc \
   --create-dirs \
@@ -91,6 +94,7 @@ mc alias set myminio http://localhost:9000 minioadmin minioadmin
 wget https://dl.min.io/server/minio/release/linux-amd64/archive/minio_20250422221226.0.0_amd64.deb -O minio.deb
 sudo dpkg -i minio.deb
 ```
+<!-- path-check-skip-end -->
 
 ### Start the MinIO Server
 To start the MinIO server, run the following command:
@@ -106,9 +110,11 @@ mc ls myminio
 ```
 
 List all files in a bucket:
+<!-- path-check-skip-begin -->
 ```bash
 mc ls --recursive myminio/my-bucket
 ```
+<!-- path-check-skip-end -->
 
 ### Load Mock Data to MiniIO
 To load mock data to minIO, use the `upload_to_minio.sh` script in this directory. For this example, we will load the mock user reports in the `data/object_store` directory.

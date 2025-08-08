@@ -180,12 +180,14 @@ curl --request POST \
 1. Create your own data file following the JSON format above
 2. Update the configuration:
 
+<!-- path-check-skip-begin -->
 ```yaml
 workflow:
   _type: plot_charts
   llm_name: nim_llm
   data_file_path: "path/to/your/data.json"
 ```
+<!-- path-check-skip-end -->
 
 ### Customizing Chart Types
 
