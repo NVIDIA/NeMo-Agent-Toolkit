@@ -37,8 +37,8 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
 
     async def _get_request_attributes(unused: str) -> str:
 
-        from aiq.builder.context import AIQContext
-        aiq_context = AIQContext.get()
+        from aiq.builder.context import Context
+        aiq_context = Context.get()
 
         method: str | None = aiq_context.metadata.method
         url_path: str | None = aiq_context.metadata.url_path

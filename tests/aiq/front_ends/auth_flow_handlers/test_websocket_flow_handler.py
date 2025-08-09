@@ -24,7 +24,7 @@ from mock_oauth2_server import MockOAuth2Server
 
 from aiq.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from aiq.data_models.authentication import AuthFlowType
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
 from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 from aiq.test.functions import EchoFunctionConfig
@@ -97,7 +97,7 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server):
     )
 
     # ----------------- build front‑end worker & FastAPI app ------------- #
-    cfg_aiq = AIQConfig(workflow=EchoFunctionConfig())
+    cfg_aiq = Config(workflow=EchoFunctionConfig())
     worker = FastApiFrontEndPluginWorker(cfg_aiq)
     # we need the add/remove‑flow callbacks but NOT the worker’s WS endpoint
     add_flow = worker._add_flow  # pylint: disable=protected-access

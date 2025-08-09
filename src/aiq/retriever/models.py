@@ -24,19 +24,19 @@ from pydantic import Field
 from aiq.utils.type_converter import GlobalTypeConverter
 
 
-class AIQDocument(BaseModel):
+class Document(BaseModel):
     """
-    Object representing a retrieved document/chunk from a standard AIQ Toolkit Retriever.
+    Object representing a retrieved document/chunk from a standard NAT Retriever.
     """
     page_content: str = Field(description="Primary content of the document to insert or retrieve")
-    metadata: dict[str, Any] = Field(description="Metadata dictionary attached to the AIQDocument")
+    metadata: dict[str, Any] = Field(description="Metadata dictionary attached to the Document")
     document_id: str | None = Field(description="Unique ID for the document, if supported by the configured datastore",
                                     default=None)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> AIQDocument:
+    def from_dict(cls, data: dict[str, Any]) -> Document:
         """
-        Deserialize an AIQDocument from a dictionary representation.
+        Deserialize an Document from a dictionary representation.
 
         Args:
             data (dict): A dictionary containing keys
@@ -49,7 +49,7 @@ class AIQDocument(BaseModel):
 
 
 class RetrieverOutput(BaseModel):
-    results: list[AIQDocument] = Field(description="A list of retrieved AIQDocuments")
+    results: list[Document] = Field(description="A list of retrieved Documents")
 
     def __len__(self):
         return len(self.results)
@@ -72,3 +72,6 @@ def retriever_output_to_str(obj: RetrieverOutput) -> str:
 
 GlobalTypeConverter.register_converter(retriever_output_to_dict)
 GlobalTypeConverter.register_converter(retriever_output_to_str)
+
+# Compatibility aliases with previous releases
+AIQDocument = Document

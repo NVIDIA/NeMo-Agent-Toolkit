@@ -21,8 +21,8 @@ import uuid
 
 import pytest
 
-from aiq.builder.context import AIQContext
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import Context
+from aiq.builder.context import ContextState
 from aiq.builder.intermediate_step_manager import IntermediateStepManager
 from aiq.builder.intermediate_step_manager import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStep
@@ -51,7 +51,7 @@ class _DummyFunction(InvocationNode):  # what active_function.get() returns
 @pytest.fixture(name="ctx_state")
 def ctx_state_fixture():
     """Fresh manager + its stubbed context-state for each test."""
-    s = AIQContextState()
+    s = ContextState()
 
     s.active_function.set(_DummyFunction(parent_id="root", parent_name="root"))
 
@@ -66,12 +66,12 @@ def output_steps_fixture():
 
 
 @pytest.fixture(name="ctx")
-def ctx_fixture(ctx_state: AIQContextState):
-    return AIQContext(ctx_state)
+def ctx_fixture(ctx_state: ContextState):
+    return Context(ctx_state)
 
 
 @pytest.fixture(name="mgr")
-def mgr_fixture(ctx_state: AIQContextState, output_steps):
+def mgr_fixture(ctx_state: ContextState, output_steps):
     """Fresh manager + its stubbed context-state for each test."""
     mgr = IntermediateStepManager(context_state=ctx_state)
 
@@ -110,7 +110,7 @@ def test_start_pushes_event_and_tracks_open_step(mgr: IntermediateStepManager, o
     assert pay.UUID not in mgr._outstanding_start_steps
 
 
-def test_chunk_preserves_parent_id(ctx: AIQContext, mgr: IntermediateStepManager):
+def test_chunk_preserves_parent_id(ctx: Context, mgr: IntermediateStepManager):
 
     start = _payload()
     mgr.push_intermediate_step(start)  # START
@@ -126,7 +126,7 @@ def test_chunk_preserves_parent_id(ctx: AIQContext, mgr: IntermediateStepManager
     mgr.push_intermediate_step(_payload(step_id=start.UUID, etype=IntermediateStepType.LLM_END))
 
 
-def test_end_same_context_restores_parent(ctx: AIQContext, mgr: IntermediateStepManager):
+def test_end_same_context_restores_parent(ctx: Context, mgr: IntermediateStepManager):
     start1 = _payload()
     mgr.push_intermediate_step(start1)
 
