@@ -20,7 +20,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.builder.intermediate_step_manager import IntermediateStepManager
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
@@ -110,7 +110,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
 
         @functools.wraps(func)
         async def async_gen_wrapper(*args, **kwargs):
-            step_manager: IntermediateStepManager = AIQContext.get().intermediate_step_manager
+            step_manager: IntermediateStepManager = Context.get().intermediate_step_manager
             # 1) Serialize input
             serialized_args, serialized_kwargs = _prepare_serialized_args_kwargs(*args, **kwargs)
 
@@ -156,7 +156,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
         # ---------------------
         @functools.wraps(func)
         async def async_wrapper(*args, **kwargs):
-            step_manager: IntermediateStepManager = AIQContext.get().intermediate_step_manager
+            step_manager: IntermediateStepManager = Context.get().intermediate_step_manager
             serialized_args, serialized_kwargs = _prepare_serialized_args_kwargs(*args, **kwargs)
             invocation_id = str(uuid.uuid4())
             push_intermediate_step(step_manager,
@@ -189,7 +189,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
         # ---------------------
         @functools.wraps(func)
         def sync_gen_wrapper(*args, **kwargs):
-            step_manager: IntermediateStepManager = AIQContext.get().intermediate_step_manager
+            step_manager: IntermediateStepManager = Context.get().intermediate_step_manager
             serialized_args, serialized_kwargs = _prepare_serialized_args_kwargs(*args, **kwargs)
             invocation_id = str(uuid.uuid4())
             push_intermediate_step(step_manager,
@@ -226,7 +226,7 @@ def track_function(func: Any = None, *, metadata: dict[str, Any] | None = None):
 
     @functools.wraps(func)
     def sync_wrapper(*args, **kwargs):
-        step_manager: IntermediateStepManager = AIQContext.get().intermediate_step_manager
+        step_manager: IntermediateStepManager = Context.get().intermediate_step_manager
         serialized_args, serialized_kwargs = _prepare_serialized_args_kwargs(*args, **kwargs)
         invocation_id = str(uuid.uuid4())
         push_intermediate_step(step_manager,

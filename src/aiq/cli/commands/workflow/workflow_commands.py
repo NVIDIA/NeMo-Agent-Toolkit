@@ -27,7 +27,7 @@ from jinja2 import FileSystemLoader
 logger = logging.getLogger(__name__)
 
 
-class AIQPackageError(Exception):
+class PackageError(Exception):
     pass
 
 
@@ -93,7 +93,7 @@ def find_package_root(package_name: str) -> Path | None:
         return None
 
     except PackageNotFoundError as e:
-        raise AIQPackageError(f"Package {package_name} is not installed") from e
+        raise PackageError(f"Package {package_name} is not installed") from e
 
 
 def get_workflow_path_from_name(workflow_name: str):
@@ -112,7 +112,7 @@ def get_workflow_path_from_name(workflow_name: str):
         package_root = find_package_root(module_name)
         return package_root
 
-    except AIQPackageError as e:
+    except PackageError as e:
         logger.info("Unable to get the directory path for %s: %s", workflow_name, e)
         return None
 
@@ -145,7 +145,7 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         # Get the repository root
         try:
             repo_root = get_repo_root()
-        except AIQPackageError:
+        except PackageError:
             repo_root = None
 
         # Get the absolute path for the output directory
@@ -311,3 +311,7 @@ def delete_command(workflow_name: str):
     except Exception as e:
         logger.exception("An error occurred while deleting the workflow: %s", e, exc_info=True)
         click.echo(f"An error occurred while deleting the workflow: {e}")
+
+
+# Compatibility aliases with previous releases
+AIQPackageError = PackageError

@@ -19,7 +19,7 @@ from pytest_httpserver import HTTPServer
 
 from aiq.retriever.milvus.retriever import CollectionNotFoundError
 from aiq.retriever.milvus.retriever import MilvusRetriever
-from aiq.retriever.models import AIQDocument
+from aiq.retriever.models import Document
 from aiq.retriever.models import RetrieverOutput
 from aiq.retriever.nemo_retriever.retriever import CollectionUnavailableError
 from aiq.retriever.nemo_retriever.retriever import NemoRetriever
@@ -175,8 +175,8 @@ def _get_milvus_retriever():
     )
 
 
-def _validate_document_milvus(doc: AIQDocument, output_fields=None):
-    assert isinstance(doc, AIQDocument)
+def _validate_document_milvus(doc: Document, output_fields=None):
+    assert isinstance(doc, Document)
     assert doc.page_content.startswith("Text")
     if not output_fields:
         assert "title" in doc.metadata

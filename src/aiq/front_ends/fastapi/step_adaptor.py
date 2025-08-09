@@ -18,8 +18,8 @@ import logging
 from functools import reduce
 from textwrap import dedent
 
-from aiq.data_models.api_server import AIQResponseIntermediateStep
-from aiq.data_models.api_server import AIQResponseSerializable
+from aiq.data_models.api_server import ResponseIntermediateStep
+from aiq.data_models.api_server import ResponseSerializable
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepCategory
 from aiq.data_models.intermediate_step import IntermediateStepPayload
@@ -63,7 +63,7 @@ class StepAdaptor:
 
         return False
 
-    def _handle_llm(self, step: IntermediateStepPayload, ancestry: InvocationNode) -> AIQResponseSerializable | None:
+    def _handle_llm(self, step: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
         input_str: str | None = None
         output_str: str | None = None
 
@@ -113,14 +113,14 @@ class StepAdaptor:
             {output_value}
             """).strip("\n").format(payload=payload, output_value=escaped_output)
 
-        event = AIQResponseIntermediateStep(id=step.UUID,
-                                            name=step.name or "",
-                                            payload=payload,
-                                            parent_id=ancestry.function_id)
+        event = ResponseIntermediateStep(id=step.UUID,
+                                         name=step.name or "",
+                                         payload=payload,
+                                         parent_id=ancestry.function_id)
 
         return event
 
-    def _handle_tool(self, step: IntermediateStepPayload, ancestry: InvocationNode) -> AIQResponseSerializable | None:
+    def _handle_tool(self, step: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
         """
         Handles both TOOL_START and TOOL_END events
         """
@@ -168,15 +168,14 @@ class StepAdaptor:
             ```
             """).strip("\n").format(payload=payload, output_value=escaped_output, format_output_type=format_output_type)
 
-        event = AIQResponseIntermediateStep(id=step.UUID,
-                                            name=f"Tool: {step.name}",
-                                            payload=payload,
-                                            parent_id=ancestry.function_id)
+        event = ResponseIntermediateStep(id=step.UUID,
+                                         name=f"Tool: {step.name}",
+                                         payload=payload,
+                                         parent_id=ancestry.function_id)
 
         return event
 
-    def _handle_function(self, step: IntermediateStepPayload,
-                         ancestry: InvocationNode) -> AIQResponseSerializable | None:
+    def _handle_function(self, step: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
         """
         Handles the FUNCTION_START and FUNCTION_END events
         """
@@ -204,10 +203,10 @@ class StepAdaptor:
             ```
             """).strip("\n").format(input_value=escaped_input, format_input_type=format_input_type)
 
-            event = AIQResponseIntermediateStep(id=step.UUID,
-                                                name=f"Function Start: {step.name}",
-                                                payload=payload_str,
-                                                parent_id=ancestry.parent_id)
+            event = ResponseIntermediateStep(id=step.UUID,
+                                             name=f"Function Start: {step.name}",
+                                             payload=payload_str,
+                                             parent_id=ancestry.parent_id)
             return event
 
         if step.event_type == IntermediateStepType.FUNCTION_END:
@@ -257,16 +256,15 @@ class StepAdaptor:
                                     output_value=escaped_output,
                                     format_output_type=format_output_type)
 
-            event = AIQResponseIntermediateStep(id=step.UUID,
-                                                name=f"Function Complete: {step.name}",
-                                                payload=payload_str,
-                                                parent_id=ancestry.parent_id)
+            event = ResponseIntermediateStep(id=step.UUID,
+                                             name=f"Function Complete: {step.name}",
+                                             payload=payload_str,
+                                             parent_id=ancestry.parent_id)
             return event
 
         return None
 
-    def _handle_custom(self, payload: IntermediateStepPayload,
-                       ancestry: InvocationNode) -> AIQResponseSerializable | None:
+    def _handle_custom(self, payload: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
         """
         Handles the CUSTOM event
         """
@@ -284,14 +282,14 @@ class StepAdaptor:
         """).strip("\n").format(payload=escaped_payload, format_type=format_type)
 
         # Return the event
-        event = AIQResponseIntermediateStep(id=payload.UUID,
-                                            name=f"{payload.event_type}",
-                                            payload=payload_str,
-                                            parent_id=ancestry.function_id)
+        event = ResponseIntermediateStep(id=payload.UUID,
+                                         name=f"{payload.event_type}",
+                                         payload=payload_str,
+                                         parent_id=ancestry.function_id)
 
         return event
 
-    def process(self, step: IntermediateStep) -> AIQResponseSerializable | None:  # pylint: disable=R1710
+    def process(self, step: IntermediateStep) -> ResponseSerializable | None:  # pylint: disable=R1710
 
         # Track the chunk
         self._history.append(step)

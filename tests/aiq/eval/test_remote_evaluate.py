@@ -22,7 +22,7 @@ from aiohttp import web
 from aiohttp.test_utils import TestClient
 from aiohttp.test_utils import TestServer
 
-from aiq.data_models.api_server import AIQResponseIntermediateStep
+from aiq.data_models.api_server import ResponseIntermediateStep
 from aiq.eval.config import EvaluationRunConfig
 from aiq.eval.remote_workflow import EvaluationRemoteWorkflowHandler
 
@@ -37,11 +37,11 @@ def rag_streamed_intermediate_payloads(rag_intermediate_steps) -> list[str]:
     # Use the first list of steps
     steps1, steps2 = rag_intermediate_steps
     for step in steps1:
-        wrapped = AIQResponseIntermediateStep(id=str(uuid.uuid4()),
-                                              name=step.name or "",
-                                              parent_id=step.parent_id,
-                                              type=step.event_type,
-                                              payload=step.payload.model_dump_json())
+        wrapped = ResponseIntermediateStep(id=str(uuid.uuid4()),
+                                           name=step.name or "",
+                                           parent_id=step.parent_id,
+                                           type=step.event_type,
+                                           payload=step.payload.model_dump_json())
         streamed_lines.append(f"intermediate_data: {wrapped.model_dump_json()}\n")
 
     return streamed_lines

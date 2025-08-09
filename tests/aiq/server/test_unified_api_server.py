@@ -26,16 +26,16 @@ from httpx import ASGITransport
 from pydantic import BaseModel
 from pydantic import ValidationError
 
-from aiq.builder.context import AIQContext
-from aiq.data_models.api_server import AIQChatRequest
-from aiq.data_models.api_server import AIQChatResponse
-from aiq.data_models.api_server import AIQChatResponseChunk
-from aiq.data_models.api_server import AIQChoice
-from aiq.data_models.api_server import AIQChoiceMessage
-from aiq.data_models.api_server import AIQResponseIntermediateStep
-from aiq.data_models.api_server import AIQResponsePayloadOutput
+from aiq.builder.context import Context
+from aiq.data_models.api_server import ChatRequest
+from aiq.data_models.api_server import ChatResponse
+from aiq.data_models.api_server import ChatResponseChunk
+from aiq.data_models.api_server import Choice
+from aiq.data_models.api_server import ChoiceMessage
 from aiq.data_models.api_server import Error
 from aiq.data_models.api_server import ErrorTypes
+from aiq.data_models.api_server import ResponseIntermediateStep
+from aiq.data_models.api_server import ResponsePayloadOutput
 from aiq.data_models.api_server import SystemIntermediateStepContent
 from aiq.data_models.api_server import SystemResponseContent
 from aiq.data_models.api_server import TextContent
@@ -327,8 +327,8 @@ async def test_chat_endpoint(client: httpx.AsyncClient, config: Config):
     input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
     response = await client.post(f"{config.endpoint.chat}", json=input_message)
     assert response.status_code == 200
-    validated_response = AIQChatResponse(**response.json())
-    assert isinstance(validated_response, AIQChatResponse)
+    validated_response = ChatResponse(**response.json())
+    assert isinstance(validated_response, ChatResponse)
 
 
 @pytest.mark.e2e
@@ -339,8 +339,8 @@ async def test_chat_stream_endpoint(client: httpx.AsyncClient, config: Config):
     assert response.status_code == 200
     data_match: re.Match[str] | None = re.search(r'data:\s*(.*)', response.text)
     data_match_dict: dict = json.loads(data_match.group(1))
-    validated_response = AIQChatResponseChunk(**data_match_dict)
-    assert isinstance(validated_response, AIQChatResponseChunk)
+    validated_response = ChatResponseChunk(**data_match_dict)
+    assert isinstance(validated_response, ChatResponseChunk)
 
 
 @pytest.mark.e2e
@@ -355,7 +355,7 @@ async def test_user_attributes_from_http_request(client: httpx.AsyncClient, conf
         headers=headers,
         params=query_params,
     )
-    aiq_context = AIQContext.get()
+    aiq_context = Context.get()
     assert aiq_context.metadata.headers['header-test'] == headers["Header-Test"]
     assert aiq_context.metadata.query_params['param1'] == query_params["param1"]
     assert response.status_code == 200
@@ -423,16 +423,16 @@ async def test_invalid_websocket_message():
     assert message.content.code == ErrorTypes.INVALID_MESSAGE
 
 
-aiq_response_payload_output_test = AIQResponsePayloadOutput(payload="TEST")
-aiq_chat_response_test = AIQChatResponse(id="default",
-                                         object="default",
-                                         created=datetime.datetime.now(datetime.timezone.utc),
-                                         choices=[AIQChoice(message=AIQChoiceMessage(), index=0)],
-                                         usage=None)
-aiq_chat_response_chunk_test = AIQChatResponseChunk(id="default",
-                                                    choices=[AIQChoice(message=AIQChoiceMessage(), index=0)],
-                                                    created=datetime.datetime.now(datetime.timezone.utc))
-aiq_response_intermediate_step_test = AIQResponseIntermediateStep(id="default", name="default", payload="default")
+aiq_response_payload_output_test = ResponsePayloadOutput(payload="TEST")
+aiq_chat_response_test = ChatResponse(id="default",
+                                      object="default",
+                                      created=datetime.datetime.now(datetime.timezone.utc),
+                                      choices=[Choice(message=ChoiceMessage(), index=0)],
+                                      usage=None)
+aiq_chat_response_chunk_test = ChatResponseChunk(id="default",
+                                                 choices=[Choice(message=ChoiceMessage(), index=0)],
+                                                 created=datetime.datetime.now(datetime.timezone.utc))
+aiq_response_intermediate_step_test = ResponseIntermediateStep(id="default", name="default", payload="default")
 
 validated_response_data_models = [
     aiq_response_payload_output_test, aiq_chat_response_test, aiq_chat_response_chunk_test
@@ -687,36 +687,36 @@ async def test_valid_openai_chat_request_fields():
     }
 
     # Both should validate successfully
-    assert AIQChatRequest(**minimal_request)
-    assert AIQChatRequest(**comprehensive_request)
+    assert ChatRequest(**minimal_request)
+    assert ChatRequest(**comprehensive_request)
 
 
 async def test_invalid_openai_chat_request_fields():
     """Test that AIQChatRequest raises ValidationError for improper payloads"""
 
     with pytest.raises(ValidationError):
-        AIQChatRequest()
+        ChatRequest()
 
     with pytest.raises(ValidationError):
-        AIQChatRequest(messages=[{"content": "Hello"}])
+        ChatRequest(messages=[{"content": "Hello"}])
 
     with pytest.raises(ValidationError):
-        AIQChatRequest(messages=[{"role": "user"}])
+        ChatRequest(messages=[{"role": "user"}])
 
     with pytest.raises(ValidationError):
-        AIQChatRequest(messages=[{"role": "user", "content": "Hello"}], temperature="not_a_number")
+        ChatRequest(messages=[{"role": "user", "content": "Hello"}], temperature="not_a_number")
 
     with pytest.raises(ValidationError):
-        AIQChatRequest(messages=[{"role": "user", "content": "Hello"}], max_tokens="not_an_integer")
+        ChatRequest(messages=[{"role": "user", "content": "Hello"}], max_tokens="not_an_integer")
 
     with pytest.raises(ValidationError):
-        AIQChatRequest(messages=[{"role": "user", "content": "Hello"}], stream="not_a_boolean")
+        ChatRequest(messages=[{"role": "user", "content": "Hello"}], stream="not_a_boolean")
 
     with pytest.raises(ValidationError):
-        AIQChatRequest(messages="not_a_list")
+        ChatRequest(messages="not_a_list")
 
     with pytest.raises(ValidationError):
-        AIQChatRequest(messages=["not_a_dict"])
+        ChatRequest(messages=["not_a_dict"])
 
     with pytest.raises(ValidationError):
-        AIQChatRequest(messages=None)
+        ChatRequest(messages=None)

@@ -22,7 +22,7 @@ from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
-from aiq.data_models.api_server import AIQChatRequest
+from aiq.data_models.api_server import ChatRequest
 from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.component_ref import TTCStrategyRef
 from aiq.data_models.function import FunctionBaseConfig
@@ -154,7 +154,7 @@ async def plan_select_execute_function(config: PlanSelectExecuteFunctionConfig, 
     if augmented_function.has_streaming_output:
 
         async def streaming_inner(
-                input_message: AIQChatRequest) -> AsyncGenerator[augmented_function.streaming_output_type]:
+                input_message: ChatRequest) -> AsyncGenerator[augmented_function.streaming_output_type]:
             """
             Perform reasoning on the input text.
 
@@ -187,7 +187,7 @@ async def plan_select_execute_function(config: PlanSelectExecuteFunctionConfig, 
 
     if augmented_function.has_single_output:
 
-        async def single_inner(input_message: AIQChatRequest) -> augmented_function.single_output_type:
+        async def single_inner(input_message: ChatRequest) -> augmented_function.single_output_type:
             """
             Perform reasoning on the input text.
 

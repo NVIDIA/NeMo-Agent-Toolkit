@@ -75,7 +75,7 @@ def semantic_kernel_tool_wrapper(name: str, fn: Function, builder: Builder):
         async for item in fn.acall_stream(*args, **kwargs):
             yield item
 
-    def aiq_kernel_function(
+    def nat_kernel_function(
         func: Callable[..., object] | None = None,
         aiq_function: Function | None = None,
         name: str | None = None,
@@ -156,8 +156,8 @@ def semantic_kernel_tool_wrapper(name: str, fn: Function, builder: Builder):
         return decorator
 
     if fn.has_streaming_output and not fn.has_single_output:
-        kernel_func = aiq_kernel_function(func=callable_astream, aiq_function=fn, name=name, description=fn.description)
+        kernel_func = nat_kernel_function(func=callable_astream, aiq_function=fn, name=name, description=fn.description)
     else:
-        kernel_func = aiq_kernel_function(func=callable_ainvoke, aiq_function=fn, name=name, description=fn.description)
+        kernel_func = nat_kernel_function(func=callable_ainvoke, aiq_function=fn, name=name, description=fn.description)
 
     return {name: kernel_func}

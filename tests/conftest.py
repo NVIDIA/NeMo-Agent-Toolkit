@@ -193,21 +193,21 @@ def reactive_stream_fixture():
     A fixture that sets up a fresh usage_stats queue in the context var
     for each test, then resets it afterward.
     """
-    from aiq.builder.context import AIQContextState
+    from aiq.builder.context import ContextState
     from aiq.utils.reactive.subject import Subject
 
     token = None
-    original_queue = AIQContextState.get().event_stream.get()
+    original_queue = ContextState.get().event_stream.get()
 
     try:
         new_queue = Subject()
-        token = AIQContextState.get().event_stream.set(new_queue)
+        token = ContextState.get().event_stream.set(new_queue)
         yield new_queue
     finally:
         if token is not None:
             # Reset to the original queue after the test
-            AIQContextState.get().event_stream.reset(token)
-            AIQContextState.get().event_stream.set(original_queue)
+            ContextState.get().event_stream.reset(token)
+            ContextState.get().event_stream.set(original_queue)
 
 
 @pytest.fixture(name="global_settings", scope="function", autouse=False)

@@ -26,7 +26,7 @@ from llama_index.core.callbacks import EventPayload
 from llama_index.core.callbacks.base_handler import BaseCallbackHandler
 from llama_index.core.llms import ChatResponse
 
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
@@ -58,7 +58,7 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
         self._lock = threading.Lock()
         self.last_call_ts = time.time()
         self._last_tool_map: dict[str, str] = {}
-        self.step_manager = AIQContext.get().intermediate_step_manager
+        self.step_manager = Context.get().intermediate_step_manager
 
         self._run_id_to_llm_input = {}
         self._run_id_to_tool_input = {}

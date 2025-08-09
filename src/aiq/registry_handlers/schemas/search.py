@@ -18,7 +18,7 @@ from enum import Enum
 
 from pydantic import BaseModel
 
-from aiq.data_models.component import AIQComponentEnum
+from aiq.data_models.component import ComponentEnum
 from aiq.registry_handlers.schemas.status import StatusMessage
 
 logger = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ class SearchQuery(BaseModel):
 
     query: str = "*"
     fields: list[SearchFields] = [SearchFields.ALL]
-    component_types: list[AIQComponentEnum]
+    component_types: list[ComponentEnum]
     top_k: int = 10
 
 
@@ -70,7 +70,7 @@ class SearchResponseItem(BaseModel):
 
     package: str
     version: str
-    component_type: AIQComponentEnum
+    component_type: ComponentEnum
     component_name: str
     description: str
     developer_notes: str

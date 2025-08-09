@@ -23,7 +23,7 @@ import pytest
 
 from aiq.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
 from aiq.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.authentication import AuthResult
@@ -43,7 +43,7 @@ def _patch_context(
         def __init__(self, cb):
             self.user_auth_callback = cb
 
-    monkeypatch.setattr(AIQContext, "get", staticmethod(lambda: _DummyCtx(callback)), raising=True)
+    monkeypatch.setattr(Context, "get", staticmethod(lambda: _DummyCtx(callback)), raising=True)
 
 
 @pytest.fixture()

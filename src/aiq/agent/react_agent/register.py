@@ -22,8 +22,8 @@ from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
-from aiq.data_models.api_server import AIQChatRequest
-from aiq.data_models.api_server import AIQChatResponse
+from aiq.data_models.api_server import ChatRequest
+from aiq.data_models.api_server import ChatResponse
 from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
@@ -105,7 +105,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
         tool_call_max_retries=config.tool_call_max_retries,
         pass_tool_call_errors_to_agent=config.pass_tool_call_errors_to_agent).build_graph()
 
-    async def _response_fn(input_message: AIQChatRequest) -> AIQChatResponse:
+    async def _response_fn(input_message: ChatRequest) -> ChatResponse:
         try:
             # initialize the starting state with the user query
             messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in input_message.messages],
@@ -126,21 +126,21 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             # get and return the output from the state
             state = ReActGraphState(**state)
             output_message = state.messages[-1]  # pylint: disable=E1136
-            return AIQChatResponse.from_string(str(output_message.content))
+            return ChatResponse.from_string(str(output_message.content))
 
         except Exception as ex:
             logger.exception("%s ReAct Agent failed with exception: %s", AGENT_LOG_PREFIX, ex, exc_info=ex)
             # here, we can implement custom error messages
             if config.verbose:
-                return AIQChatResponse.from_string(str(ex))
-            return AIQChatResponse.from_string("I seem to be having a problem.")
+                return ChatResponse.from_string(str(ex))
+            return ChatResponse.from_string("I seem to be having a problem.")
 
     if (config.use_openai_api):
         yield FunctionInfo.from_fn(_response_fn, description=config.description)
     else:
 
         async def _str_api_fn(input_message: str) -> str:
-            oai_input = GlobalTypeConverter.get().try_convert(input_message, to_type=AIQChatRequest)
+            oai_input = GlobalTypeConverter.get().try_convert(input_message, to_type=ChatRequest)
 
             oai_output = await _response_fn(oai_input)
 

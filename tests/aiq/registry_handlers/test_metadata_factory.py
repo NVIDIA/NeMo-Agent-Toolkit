@@ -16,7 +16,7 @@
 import pytest
 
 from aiq.cli.type_registry import TypeRegistry
-from aiq.data_models.component import AIQComponentEnum
+from aiq.data_models.component import ComponentEnum
 from aiq.registry_handlers.metadata_factory import ComponentDiscoveryMetadata
 from aiq.registry_handlers.package_utils import build_wheel
 from aiq.registry_handlers.schemas.package import WheelData
@@ -39,8 +39,8 @@ def test_metadata_factory(registry: TypeRegistry, use_wheel_data: bool):
         wheel_data = build_wheel(package_root=package_root)
         registry.register_package(package_name=wheel_data.package_name, package_version=wheel_data.whl_version)
 
-    for component_type in [AIQComponentEnum.PACKAGE]:
-        if component_type == AIQComponentEnum.UNDEFINED:
+    for component_type in [ComponentEnum.PACKAGE]:
+        if component_type == ComponentEnum.UNDEFINED:
             continue
         component_discovery_metadata = ComponentDiscoveryMetadata.from_package_component_type(
             component_type=component_type, wheel_data=wheel_data)
@@ -51,7 +51,7 @@ def test_metadata_factory(registry: TypeRegistry, use_wheel_data: bool):
         if (wheel_data is not None):
             assert len(component_metadata_items) > 0
         else:
-            if (component_type == AIQComponentEnum.PACKAGE):
+            if (component_type == ComponentEnum.PACKAGE):
                 assert len(component_metadata_items) == 0
             else:
                 assert len(component_metadata_items) > 0

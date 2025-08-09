@@ -26,7 +26,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from semantic_kernel.connectors.ai.open_ai.services.open_ai_chat_completion_base import OpenAIChatCompletionBase
 
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
@@ -62,7 +62,7 @@ class SemanticKernelProfilerHandler(BaseProfilerCallback):
         super().__init__()
         self._lock = threading.Lock()
         self.last_call_ts = time.time()
-        self.step_manager = AIQContext.get().intermediate_step_manager
+        self.step_manager = Context.get().intermediate_step_manager
         self._builder_llms = workflow_llms
 
         # Original references to SK methods

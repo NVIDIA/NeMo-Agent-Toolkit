@@ -20,7 +20,7 @@ from importlib.metadata import version
 
 from opentelemetry.sdk.resources import Resource
 
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import ContextState
 from aiq.data_models.span import Span
 from aiq.observability.exporter.span_exporter import SpanExporter
 from aiq.observability.processor.batching_processor import BatchingProcessor
@@ -89,7 +89,7 @@ class OtelSpanExporter(SpanExporter[Span, OtelSpan]):  # pylint: disable=R0901
     """
 
     def __init__(self,
-                 context_state: AIQContextState | None = None,
+                 context_state: ContextState | None = None,
                  batch_size: int = 100,
                  flush_interval: float = 5.0,
                  max_queue_size: int = 1000,
