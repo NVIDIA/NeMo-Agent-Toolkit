@@ -24,6 +24,8 @@ from aiq.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 from aiq.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
 from aiq.test.functions import EchoFunctionConfig
 
+# pylint: disable=redefined-outer-name
+
 
 @pytest.fixture
 def echo_function_config():
