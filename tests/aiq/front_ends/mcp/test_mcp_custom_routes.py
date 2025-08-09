@@ -41,13 +41,13 @@ class CustomMCPWorker(MCPFrontEndPluginWorker):
 
         # Add custom routes here
         @mcp.custom_route("/custom", methods=["GET"])
-        async def custom_route(request):
+        async def custom_route(_request):
             """Custom route for testing."""
             from starlette.responses import JSONResponse
             return JSONResponse({"message": "This is a custom MCP route"})
 
         @mcp.custom_route("/api/status", methods=["GET"])
-        async def api_status(request):
+        async def api_status(_request):
             """API status endpoint."""
             from starlette.responses import JSONResponse
             return JSONResponse({"status": "ok", "server_name": mcp.name, "custom_worker": True})

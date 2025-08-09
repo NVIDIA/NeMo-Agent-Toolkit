@@ -17,6 +17,9 @@ import logging
 from abc import ABC
 from abc import abstractmethod
 
+from fastmcp import FastMCP
+from starlette.requests import Request
+
 from aiq.builder.function import Function
 from aiq.builder.workflow import Workflow
 from aiq.builder.workflow_builder import WorkflowBuilder
@@ -38,11 +41,11 @@ class MCPFrontEndPluginWorkerBase(ABC):
         self.full_config = config
         self.front_end_config: MCPFrontEndConfig = config.general.front_end
 
-    def _setup_health_endpoint(self, mcp):
+    def _setup_health_endpoint(self, mcp: FastMCP):
         """Set up the HTTP health endpoint that exercises MCP ping handler."""
 
         @mcp.custom_route("/health", methods=["GET"])
-        async def health_check(request):
+        async def health_check(_request: Request):
             """HTTP health check using server's internal ping handler"""
             from starlette.responses import JSONResponse
 
@@ -70,12 +73,12 @@ class MCPFrontEndPluginWorkerBase(ABC):
                                     status_code=503)
 
     @abstractmethod
-    async def add_routes(self, mcp, builder: WorkflowBuilder):
+    async def add_routes(self, mcp: FastMCP, builder: WorkflowBuilder):
         """Add routes to the MCP server.
 
         Args:
             mcp: The FastMCP server instance
-            builder: The workflow builder instance
+            builder (WorkflowBuilder): The workflow builder instance
         """
         pass
 
@@ -102,12 +105,12 @@ class MCPFrontEndPluginWorkerBase(ABC):
 class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
     """Default MCP front end plugin worker implementation."""
 
-    async def add_routes(self, mcp, builder: WorkflowBuilder):
+    async def add_routes(self, mcp: FastMCP, builder: WorkflowBuilder):
         """Add default routes to the MCP server.
 
         Args:
             mcp: The FastMCP server instance
-            builder: The workflow builder instance
+            builder (WorkflowBuilder): The workflow builder instance
         """
         from aiq.front_ends.mcp.tool_converter import register_function_with_mcp
 
@@ -122,13 +125,13 @@ class MCPFrontEndPluginWorker(MCPFrontEndPluginWorkerBase):
 
         # Filter functions based on tool_names if provided
         if self.front_end_config.tool_names:
-            logger.info(f"Filtering functions based on tool_names: {self.front_end_config.tool_names}")
+            logger.info("Filtering functions based on tool_names: %s", self.front_end_config.tool_names)
             filtered_functions: dict[str, Function] = {}
             for function_name, function in functions.items():
                 if function_name in self.front_end_config.tool_names:
                     filtered_functions[function_name] = function
                 else:
-                    logger.debug(f"Skipping function {function_name} as it's not in tool_names")
+                    logger.debug("Skipping function %s as it's not in tool_names", function_name)
             functions = filtered_functions
 
         # Register each function with MCP

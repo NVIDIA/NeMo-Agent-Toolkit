@@ -120,9 +120,8 @@ async def list_tools_and_schemas(url: str, tool_name: str | None = None) -> list
         if tool_name:
             tool = await builder.get_tool(tool_name)
             return [format_tool(tool)]
-        else:
-            tools = await builder.get_tools()
-            return [format_tool(tool) for tool in tools.values()]
+        tools = await builder.get_tools()
+        return [format_tool(tool) for tool in tools.values()]
     except MCPError as e:
         format_mcp_error(e, include_traceback=False)
         return []
