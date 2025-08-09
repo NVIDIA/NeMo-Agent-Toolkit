@@ -55,7 +55,7 @@ async def test_run_ansible_playbook_for_monitor_process_check():
     }
 
     # Mock the run_ansible_playbook function
-    with patch("aiq_alert_triage_agent.utils.run_ansible_playbook", new_callable=AsyncMock) as mock_run:
+    with patch("nat_alert_triage_agent.utils.run_ansible_playbook", new_callable=AsyncMock) as mock_run:
         mock_run.return_value = mock_playbook_output
 
         # Call the function

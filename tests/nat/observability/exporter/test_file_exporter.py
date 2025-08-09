@@ -21,7 +21,6 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-
 from nat.builder.context import ContextState
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
@@ -95,7 +94,7 @@ class TestFileExporterInitialization:
                          project="test_project",
                          extra_param="extra_value")
 
-    @patch('aiq.observability.exporter.file_exporter.IntermediateStepSerializer')
+    @patch('nat.observability.exporter.file_exporter.IntermediateStepSerializer')
     def test_processor_initialization(self, mock_serializer_class, mock_context_state, tmp_path):
         """Test that the processor is properly initialized and added."""
         mock_serializer_instance = Mock()
@@ -209,7 +208,7 @@ class TestFileExporterFunctionality:
                                 project="test_project")
 
         # Should not raise exception, but log error
-        with patch('aiq.observability.mixin.file_mixin.logger') as mock_logger:
+        with patch('nat.observability.mixin.file_mixin.logger') as mock_logger:
             await exporter.export_processed('{"test": "data"}')
             # Verify error was logged (implementation logs errors but doesn't re-raise)
             mock_logger.error.assert_called()
@@ -371,7 +370,7 @@ class TestFileExporterLogging:
 
         assert logger.name == 'aiq.observability.exporter.file_exporter'
 
-    @patch('aiq.observability.exporter.file_exporter.logger')
+    @patch('nat.observability.exporter.file_exporter.logger')
     def test_no_unexpected_logging_during_normal_operation(self, mock_logger, mock_context_state, temp_file):
         """Test that normal operations don't produce unexpected log messages."""
         exporter = FileExporter(context_state=mock_context_state, output_path=str(temp_file), project="test_project")

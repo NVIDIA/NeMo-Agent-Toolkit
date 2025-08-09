@@ -18,7 +18,6 @@ from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
-
 # Replace this with the correct filename for your CLI script
 from nat.cli.commands.info.list_mcp import list_mcp
 
@@ -39,7 +38,7 @@ def mock_tools():
     ]
 
 
-@patch("aiq.cli.commands.info.list_mcp.list_tools_and_schemas", new_callable=AsyncMock)
+@patch("nat.cli.commands.info.list_mcp.list_tools_and_schemas", new_callable=AsyncMock)
 def test_list_tool_names(mock_fetcher, mock_tools):
     mock_fetcher.return_value = mock_tools
     runner = CliRunner()
@@ -49,7 +48,7 @@ def test_list_tool_names(mock_fetcher, mock_tools):
     assert "tool_b" in result.output
 
 
-@patch("aiq.cli.commands.info.list_mcp.list_tools_and_schemas", new_callable=AsyncMock)
+@patch("nat.cli.commands.info.list_mcp.list_tools_and_schemas", new_callable=AsyncMock)
 def test_list_tool_details(mock_fetcher, mock_tools):
     mock_fetcher.return_value = mock_tools
     runner = CliRunner()
@@ -59,7 +58,7 @@ def test_list_tool_details(mock_fetcher, mock_tools):
     assert "Input Schema:" in result.output
 
 
-@patch("aiq.cli.commands.info.list_mcp.list_tools_and_schemas", new_callable=AsyncMock)
+@patch("nat.cli.commands.info.list_mcp.list_tools_and_schemas", new_callable=AsyncMock)
 def test_list_json_output(mock_fetcher, mock_tools):
     mock_fetcher.return_value = mock_tools
     runner = CliRunner()
@@ -69,7 +68,7 @@ def test_list_json_output(mock_fetcher, mock_tools):
     assert result.output.strip().startswith("[")
 
 
-@patch("aiq.cli.commands.info.list_mcp.list_tools_and_schemas", new_callable=AsyncMock)
+@patch("nat.cli.commands.info.list_mcp.list_tools_and_schemas", new_callable=AsyncMock)
 def test_list_specific_tool(mock_fetcher, mock_tools):
     mock_fetcher.return_value = [mock_tools[1]]  # return only one tool
     runner = CliRunner()

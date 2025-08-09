@@ -21,7 +21,6 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-
 from nat.builder.context import ContextState
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
@@ -209,7 +208,7 @@ class TestRawExporterCoreLogic:
         assert exporter1._context_state is mock_context_state
 
         # Without context state (uses default)
-        with patch('aiq.builder.context.AIQContextState.get') as mock_get:
+        with patch('nat.builder.context.AIQContextState.get') as mock_get:
             mock_get.return_value = mock_context_state
             exporter2 = ConcreteRawExporter()
             assert exporter2._context_state is mock_context_state

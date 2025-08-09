@@ -20,7 +20,6 @@ from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.human import HumanMessage
 from langchain_core.messages.tool import ToolMessage
 from langgraph.graph.graph import CompiledGraph
-
 from nat.agent.base import AgentDecision
 from nat.agent.rewoo_agent.agent import NO_INPUT_ERROR_MESSAGE
 from nat.agent.rewoo_agent.agent import TOOL_NOT_FOUND_ERROR_MESSAGE
@@ -146,7 +145,7 @@ async def test_executor_node_with_not_configured_tool(mock_rewoo_agent):
 
 async def test_executor_node_parse_input(mock_rewoo_agent):
     from nat.agent.base import AGENT_LOG_PREFIX
-    with patch('aiq.agent.rewoo_agent.agent.logger.debug') as mock_logger_debug:
+    with patch('nat.agent.rewoo_agent.agent.logger.debug') as mock_logger_debug:
         # Test with dict as tool input
         mock_state = ReWOOGraphState(
             task=HumanMessage(content="This is a task"),

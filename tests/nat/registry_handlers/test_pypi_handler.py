@@ -18,7 +18,6 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-
 from nat.cli.type_registry import TypeRegistry
 from nat.registry_handlers.package_utils import build_aiq_artifact
 from nat.registry_handlers.pypi.pypi_handler import PypiRegistryHandler
@@ -60,7 +59,7 @@ async def test_pypi_handler_publish(mock_run: MagicMock,
     assert publish_response.status.status == expected
 
 
-@patch("aiq.registry_handlers.pypi.pypi_handler.subprocess.run")
+@patch("nat.registry_handlers.pypi.pypi_handler.subprocess.run")
 @pytest.mark.parametrize("return_value, expected", [
     (0, "success"),
     (1, "success"),
@@ -102,7 +101,7 @@ async def test_pypi_handler_pull(mock_run: MagicMock,
     assert pull_response.status.status == expected
 
 
-@patch("aiq.registry_handlers.pypi.pypi_handler.subprocess.run")
+@patch("nat.registry_handlers.pypi.pypi_handler.subprocess.run")
 @pytest.mark.parametrize("return_value, expected", [
     (0, "success"),
     (1, "success"),

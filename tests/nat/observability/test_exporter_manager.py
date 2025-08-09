@@ -23,7 +23,6 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-
 from nat.builder.context import ContextState
 from nat.observability.exporter.base_exporter import BaseExporter
 from nat.observability.exporter.base_exporter import IsolatedAttribute
@@ -419,7 +418,7 @@ class TestCreateIsolatedExporters:
         mock_exporter = MockExporter("test")
         exporter_manager.add_exporter("test", mock_exporter)
 
-        with patch('aiq.builder.context.AIQContextState.get') as mock_get:
+        with patch('nat.builder.context.AIQContextState.get') as mock_get:
             mock_context = Mock(spec=ContextState)
             mock_get.return_value = mock_context
 

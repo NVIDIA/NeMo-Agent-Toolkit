@@ -21,7 +21,6 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-
 from nat.builder.context import ContextState
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.observability.exporter.base_exporter import BaseExporter
@@ -160,7 +159,7 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
         assert exporter._loop is None
         assert exporter._is_isolated_instance is False
 
-    @patch('aiq.observability.exporter.base_exporter.ContextState.get')
+    @patch('nat.observability.exporter.base_exporter.ContextState.get')
     def test_init_without_context_state(self, mock_get_context):
         """Test initialization without context state (uses default)."""
         mock_context = Mock(spec=ContextState)
@@ -248,7 +247,7 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
         mock_context_state.event_stream.get.return_value = mock_subject
         exporter = ConcreteExporter(mock_context_state)
 
-        with patch('aiq.observability.exporter.base_exporter.logger') as mock_logger:
+        with patch('nat.observability.exporter.base_exporter.logger') as mock_logger:
             result = exporter._start()
             assert result is None
             mock_logger.error.assert_called_once()
@@ -546,7 +545,7 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
         exporter._running = True
 
         # Patch the logger to verify the warning is called
-        with patch('aiq.observability.exporter.base_exporter.logger') as mock_logger:
+        with patch('nat.observability.exporter.base_exporter.logger') as mock_logger:
             exporter.__del__()  # pylint: disable=unnecessary-dunder-call
 
         # Check that warning was called with the expected message
@@ -561,7 +560,7 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
         exporter._running = True
 
         # Patch the logger to verify the warning is called
-        with patch('aiq.observability.exporter.base_exporter.logger') as mock_logger:
+        with patch('nat.observability.exporter.base_exporter.logger') as mock_logger:
             exporter.__del__()  # pylint: disable=unnecessary-dunder-call
 
         # Check that warning was called with the expected message

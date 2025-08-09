@@ -23,7 +23,6 @@ from unittest.mock import patch
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
 from nat.data_models.config import Config
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -39,7 +38,7 @@ def test_config_fixture() -> Config:
 
 @pytest.fixture(autouse=True)
 def patch_evaluation_run():
-    with patch("aiq.front_ends.fastapi.fastapi_front_end_plugin_worker.EvaluationRun") as MockEvaluationRun:
+    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.EvaluationRun") as MockEvaluationRun:
         mock_eval_instance = MagicMock()
         mock_eval_instance.run_and_evaluate = AsyncMock(
             return_value=MagicMock(workflow_interrupted=False, workflow_output_file="/fake/output/path.json"))
@@ -53,7 +52,7 @@ def test_client_fixture(test_config: Config) -> TestClient:
     app = FastAPI()
     worker.set_cors_config(app)
 
-    with patch("aiq.front_ends.fastapi.fastapi_front_end_plugin_worker.SessionManager") as MockSessionManager:
+    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.SessionManager") as MockSessionManager:
 
         # Mock session manager
         mock_session = MagicMock()

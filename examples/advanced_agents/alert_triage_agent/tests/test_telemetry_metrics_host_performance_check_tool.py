@@ -21,14 +21,13 @@ from unittest.mock import patch
 
 import pytest
 import requests
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.data_models.component_ref import LLMRef
 from nat_alert_triage_agent.telemetry_metrics_host_performance_check_tool import \
     TelemetryMetricsHostPerformanceCheckToolConfig
 from nat_alert_triage_agent.telemetry_metrics_host_performance_check_tool import _get_llm_analysis_input
 from nat_alert_triage_agent.telemetry_metrics_host_performance_check_tool import _timeseries_stats
-
-from nat.builder.framework_enum import LLMFrameworkEnum
-from nat.builder.workflow_builder import WorkflowBuilder
-from nat.data_models.component_ref import LLMRef
 
 
 async def test_telemetry_metrics_host_performance_check_tool():
@@ -101,7 +100,7 @@ async def test_telemetry_metrics_host_performance_check_tool():
         for case in test_cases:
             # Mock the requests.get call
             with patch('requests.get') as mock_get, \
-                 patch('aiq_alert_triage_agent.utils.llm_ainvoke') as mock_llm_invoke:
+                 patch('nat_alert_triage_agent.utils.llm_ainvoke') as mock_llm_invoke:
 
                 if 'api_error' in case:
                     # Simulate API error

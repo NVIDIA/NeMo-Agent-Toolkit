@@ -18,7 +18,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 
-@patch("aiq.cli.entrypoint.cli.add_command")
+@patch("nat.cli.entrypoint.cli.add_command")
 def test_mcp_command_registration(mock_add_command):
     """Test the CLI command registration mechanism for MCP."""
     from nat.cli.entrypoint import start_command

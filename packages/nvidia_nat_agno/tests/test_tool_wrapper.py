@@ -20,7 +20,6 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
@@ -118,7 +117,7 @@ class TestToolWrapper:
         """Create a mock Builder object."""
         return MagicMock(spec=Builder)
 
-    @patch("aiq.plugins.agno.tool_wrapper.tool")
+    @patch("nat.plugins.agno.tool_wrapper.tool")
     def test_agno_tool_wrapper(self, mock_tool, mock_function, mock_builder):
         """Test that agno_tool_wrapper creates an Agno Tool with the correct parameters."""
         # Mock the tool decorator to return a function that returns its input
@@ -134,7 +133,7 @@ class TestToolWrapper:
         assert result.__name__ == "test_tool"
         assert result.__doc__ == "Test function description"
 
-    @patch("aiq.plugins.agno.tool_wrapper.tool")
+    @patch("nat.plugins.agno.tool_wrapper.tool")
     def test_agno_tool_wrapper_with_schema_description(self, mock_tool, mock_model_schema_function, mock_builder):
         """Test that agno_tool_wrapper correctly incorporates schema description."""
         # Mock the tool decorator to return a function that returns its input
@@ -151,8 +150,8 @@ class TestToolWrapper:
         assert result.__name__ == "test_tool"
         assert result.__doc__ == expected_description
 
-    @patch("aiq.plugins.agno.tool_wrapper.execute_agno_tool")
-    @patch("aiq.plugins.agno.tool_wrapper.tool")
+    @patch("nat.plugins.agno.tool_wrapper.execute_agno_tool")
+    @patch("nat.plugins.agno.tool_wrapper.tool")
     def test_wrapper_function(self, mock_tool, mock_execute_agno_tool, mock_function, mock_builder):
         """Test that the wrapper function correctly calls execute_agno_tool."""
         # Mock the tool decorator to return a function that returns its input
@@ -173,7 +172,7 @@ class TestToolWrapper:
         # Verify the result
         assert result == "test_result"
 
-    @patch("aiq.plugins.agno.tool_wrapper.asyncio.get_running_loop")
+    @patch("nat.plugins.agno.tool_wrapper.asyncio.get_running_loop")
     def test_get_event_loop_called(self, mock_get_running_loop, mock_function, mock_builder):
         """Test that get_running_loop is called when agno_tool_wrapper is executed."""
         # Set up the mock event loop
@@ -186,9 +185,9 @@ class TestToolWrapper:
         # Verify that get_running_loop was called
         mock_get_running_loop.assert_called_once()
 
-    @patch("aiq.plugins.agno.tool_wrapper.asyncio.new_event_loop")
-    @patch("aiq.plugins.agno.tool_wrapper.asyncio.set_event_loop")
-    @patch("aiq.plugins.agno.tool_wrapper.asyncio.get_running_loop")
+    @patch("nat.plugins.agno.tool_wrapper.asyncio.new_event_loop")
+    @patch("nat.plugins.agno.tool_wrapper.asyncio.set_event_loop")
+    @patch("nat.plugins.agno.tool_wrapper.asyncio.get_running_loop")
     def test_create_event_loop_if_none_available(self,
                                                  mock_get_running_loop,
                                                  mock_set_event_loop,
@@ -239,8 +238,8 @@ class TestToolWrapper:
         with pytest.raises(AssertionError, match="Tool must have input schema"):
             agno_tool_wrapper("test_tool", mock_fn, mock_builder)
 
-    @patch("aiq.plugins.agno.tool_wrapper._tool_call_counters", {})
-    @patch("aiq.plugins.agno.tool_wrapper._tool_initialization_done", {})
+    @patch("nat.plugins.agno.tool_wrapper._tool_call_counters", {})
+    @patch("nat.plugins.agno.tool_wrapper._tool_initialization_done", {})
     def test_execute_agno_tool_initialization(self, run_loop_thread: asyncio.AbstractEventLoop):
         """Test that execute_agno_tool correctly handles tool initialization."""
 
@@ -263,8 +262,8 @@ class TestToolWrapper:
         # Verify the result
         assert result == "initialization_result"
 
-    @patch("aiq.plugins.agno.tool_wrapper._tool_call_counters", {"search_api_tool": 0})
-    @patch("aiq.plugins.agno.tool_wrapper._tool_initialization_done", {"search_api_tool": True})
+    @patch("nat.plugins.agno.tool_wrapper._tool_call_counters", {"search_api_tool": 0})
+    @patch("nat.plugins.agno.tool_wrapper._tool_initialization_done", {"search_api_tool": True})
     def test_execute_agno_tool_search_api_empty_query(self, run_loop_thread):
         """Test that execute_agno_tool correctly handles search API tools with empty queries."""
         # Create a mock coroutine function
@@ -280,8 +279,8 @@ class TestToolWrapper:
         # Verify that coroutine was not called since we called execute_agno_tool with an empty query
         mock_coroutine_fn.assert_not_called()
 
-    @patch("aiq.plugins.agno.tool_wrapper._tool_call_counters", {"test_tool": 0})
-    @patch("aiq.plugins.agno.tool_wrapper._tool_initialization_done", {"test_tool": False})
+    @patch("nat.plugins.agno.tool_wrapper._tool_call_counters", {"test_tool": 0})
+    @patch("nat.plugins.agno.tool_wrapper._tool_initialization_done", {"test_tool": False})
     def test_execute_agno_tool_filtered_kwargs(self, run_loop_thread: asyncio.AbstractEventLoop):
         """Test that execute_agno_tool correctly filters reserved keywords."""
 
@@ -303,8 +302,8 @@ class TestToolWrapper:
         # Verify the result
         assert result == "processed_result"
 
-    @patch("aiq.plugins.agno.tool_wrapper._tool_call_counters", {"test_tool": 0})
-    @patch("aiq.plugins.agno.tool_wrapper._tool_initialization_done", {"test_tool": False})
+    @patch("nat.plugins.agno.tool_wrapper._tool_call_counters", {"test_tool": 0})
+    @patch("nat.plugins.agno.tool_wrapper._tool_initialization_done", {"test_tool": False})
     def test_execute_agno_tool_wrapped_kwargs(self, run_loop_thread: asyncio.AbstractEventLoop):
         """Test that execute_agno_tool correctly unwraps nested kwargs."""
         # Create a mock coroutine function
@@ -325,8 +324,8 @@ class TestToolWrapper:
         # Verify the result
         assert result == "processed_result"
 
-    @patch("aiq.plugins.agno.tool_wrapper._tool_call_counters", {"test_tool": 0})
-    @patch("aiq.plugins.agno.tool_wrapper._MAX_EMPTY_CALLS", 2)
+    @patch("nat.plugins.agno.tool_wrapper._tool_call_counters", {"test_tool": 0})
+    @patch("nat.plugins.agno.tool_wrapper._MAX_EMPTY_CALLS", 2)
     def test_execute_agno_tool_infinite_loop_detection(self, run_loop_thread: asyncio.AbstractEventLoop):
         """Test that execute_agno_tool detects and prevents infinite loops."""
         # Create a mock coroutine function
@@ -416,7 +415,7 @@ class TestToolWrapper:
         result = await process_result(mock_response, "test_tool")
         assert result == "OpenAI response content"
 
-    @patch("aiq.plugins.agno.tool_wrapper.tool")
+    @patch("nat.plugins.agno.tool_wrapper.tool")
     def test_different_calling_styles(self,
                                       mock_tool,
                                       mock_function,
@@ -440,7 +439,7 @@ class TestToolWrapper:
         wrapper_func = agno_tool_wrapper("test_tool", mock_function, mock_builder)
 
         # Patch execute_agno_tool to use our mock
-        with patch("aiq.plugins.agno.tool_wrapper.execute_agno_tool") as mock_execute:
+        with patch("nat.plugins.agno.tool_wrapper.execute_agno_tool") as mock_execute:
             mock_execute.return_value = "test_result"
             result = wrapper_func(kwarg1="value1")
 

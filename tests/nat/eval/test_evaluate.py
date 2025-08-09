@@ -27,7 +27,6 @@ from uuid import UUID
 from uuid import uuid4
 
 import pytest
-
 from nat.data_models.config import Config
 from nat.data_models.dataset_handler import EvalDatasetJsonConfig
 from nat.data_models.evaluate import EvalConfig
@@ -163,7 +162,7 @@ class MockWorkflow:
 @pytest.fixture
 def mock_pull_intermediate(tool_end_intermediate_step, llm_end_intermediate_step, generated_answer):
     """Fixture to mock pull_intermediate as a simple async function returning TOOL_END and LLM_END steps."""
-    with patch("aiq.eval.runtime_event_subscriber.pull_intermediate",
+    with patch("nat.eval.runtime_event_subscriber.pull_intermediate",
                AsyncMock(return_value=[tool_end_intermediate_step, llm_end_intermediate_step])) as mock:
         yield mock
 
@@ -300,7 +299,7 @@ async def test_run_workflow_remote_success(evaluation_run, generated_answer):
     Mock RemoteWorkflowHandler and test evaluation with a remote workflow.
     """
     # Patch the remote handler
-    with patch("aiq.eval.remote_workflow.EvaluationRemoteWorkflowHandler") as MockHandler:
+    with patch("nat.eval.remote_workflow.EvaluationRemoteWorkflowHandler") as MockHandler:
         mock_handler = MockHandler.return_value
 
         async def fake_run_workflow_remote(eval_input):
@@ -377,7 +376,7 @@ async def test_run_evaluators_partial_failure(evaluation_run, mock_evaluator, ev
     evaluators = {good_evaluator_name: mock_evaluator, bad_evaluator_name: mock_failing_evaluator}
 
     # Patch logger to check error logging
-    with patch("aiq.eval.evaluate.logger.exception") as mock_logger:
+    with patch("nat.eval.evaluate.logger.exception") as mock_logger:
         # Run the evaluators (actual function)
         await evaluation_run.run_evaluators(evaluators)
 
@@ -428,7 +427,7 @@ def test_write_output(evaluation_run, default_eval_config, eval_input, eval_outp
     # Patch file operations and logging. It is important to keep logs frozen to match user expectations.
     with patch("builtins.open", mock_open()) as mock_file, \
          patch("pathlib.Path.mkdir") as mock_mkdir, \
-         patch("aiq.eval.evaluate.logger.info") as mock_logger:
+         patch("nat.eval.evaluate.logger.info") as mock_logger:
 
         # Run the actual function
         evaluation_run.write_output(mock_dataset_handler, mock_profiler_results)
@@ -464,7 +463,7 @@ def test_write_output_handles_none_output(evaluation_run, eval_input):
     # Patch file operations and logging
     with patch("builtins.open", mock_open()), \
          patch("pathlib.Path.mkdir"), \
-         patch("aiq.eval.evaluate.logger.info"):
+         patch("nat.eval.evaluate.logger.info"):
         # Should not raise AttributeError
         try:
             evaluation_run.write_output(mock_dataset_handler, mock_profiler_results)
@@ -509,10 +508,10 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
 
     # check if run_custom_scripts and upload_directory are called
     # Patch functions and classes. Goal here is simply to ensure calls are made to the right functions.
-    with patch("aiq.runtime.loader.load_config", mock_load_config), \
-         patch("aiq.builder.eval_builder.WorkflowEvalBuilder.from_config", side_effect=mock_eval_builder), \
-         patch("aiq.eval.evaluate.DatasetHandler", return_value=mock_dataset_handler), \
-         patch("aiq.eval.evaluate.OutputUploader", return_value=mock_uploader), \
+    with patch("nat.runtime.loader.load_config", mock_load_config), \
+         patch("nat.builder.eval_builder.WorkflowEvalBuilder.from_config", side_effect=mock_eval_builder), \
+         patch("nat.eval.evaluate.DatasetHandler", return_value=mock_dataset_handler), \
+         patch("nat.eval.evaluate.OutputUploader", return_value=mock_uploader), \
          patch.object(evaluation_run, "run_workflow_local",
                       wraps=evaluation_run.run_workflow_local) as mock_run_workflow, \
          patch.object(evaluation_run, "run_evaluators", AsyncMock()) as mock_run_evaluators, \

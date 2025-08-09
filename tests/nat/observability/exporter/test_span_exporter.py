@@ -18,7 +18,6 @@ from datetime import datetime
 from unittest.mock import patch
 
 import pytest
-
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
@@ -200,7 +199,7 @@ class TestSpanExporterFunctionality:
                                          data=StreamEventData(input="Child input"),
                                          metadata={"child_key": "child_value"})
 
-        with patch('aiq.observability.exporter.span_exporter.logger') as mock_logger:
+        with patch('nat.observability.exporter.span_exporter.logger') as mock_logger:
             span_exporter.export(event)
             mock_logger.warning.assert_called_once()
 
@@ -253,7 +252,7 @@ class TestSpanExporterFunctionality:
 
     def test_process_end_event_missing_span(self, span_exporter, sample_end_event):
         """Test processing END event with missing span."""
-        with patch('aiq.observability.exporter.span_exporter.logger') as mock_logger:
+        with patch('nat.observability.exporter.span_exporter.logger') as mock_logger:
             span_exporter.export(sample_end_event)
             mock_logger.warning.assert_called_once()
 
@@ -356,7 +355,7 @@ class TestSpanExporterFunctionality:
 
         # Manually create an end event that will cause issues when trying to validate
         # metadata (since pydantic validates at creation time, we need to test different scenario)
-        with patch('aiq.observability.exporter.span_exporter.logger') as mock_logger:
+        with patch('nat.observability.exporter.span_exporter.logger') as mock_logger:
             # Test when end_metadata is not a dict or TraceMetadata after creation
             end_event = start_event.model_copy()
             end_event.payload.event_type = IntermediateStepType.LLM_END
@@ -400,7 +399,7 @@ class TestSpanExporterFunctionality:
         span_exporter._span_stack["span1"] = span1
         span_exporter._metadata_stack["span1"] = {"key": "value"}
 
-        with patch('aiq.observability.exporter.span_exporter.logger') as mock_logger:
+        with patch('nat.observability.exporter.span_exporter.logger') as mock_logger:
             await span_exporter._cleanup()
             mock_logger.warning.assert_called_once()
 

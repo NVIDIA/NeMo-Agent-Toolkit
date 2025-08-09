@@ -16,9 +16,8 @@
 import json
 from unittest.mock import patch
 
-from pydantic import BaseModel
-
 from nat.observability.mixin.serialize_mixin import SerializeMixin
+from pydantic import BaseModel
 
 
 class SampleModel(BaseModel):
@@ -181,7 +180,7 @@ class TestSerializeMixin:
         test_model = SampleModel(name="test", value=42)
 
         # Mock TypeAdapter to raise an exception
-        with patch('aiq.observability.mixin.serialize_mixin.TypeAdapter') as mock_adapter:
+        with patch('nat.observability.mixin.serialize_mixin.TypeAdapter') as mock_adapter:
             mock_adapter.return_value.dump_json.side_effect = Exception("Serialization error")
 
             result, is_json = self.mixin._serialize_payload(test_model)

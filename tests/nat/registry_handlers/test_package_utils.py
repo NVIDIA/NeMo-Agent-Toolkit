@@ -20,7 +20,6 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-
 from nat.data_models.component import ComponentEnum
 from nat.data_models.discovery_metadata import DiscoveryMetadata
 from nat.registry_handlers.package_utils import build_aiq_artifact
@@ -129,7 +128,7 @@ class TestParseRequirement:
 class TestResolveExtrasToPackages:
     """Test the resolve_extras_to_packages function."""
 
-    @patch('aiq.registry_handlers.package_utils.importlib.metadata.distribution')
+    @patch('nat.registry_handlers.package_utils.importlib.metadata.distribution')
     def test_resolve_simple_extras(self, mock_distribution):
         """Test resolving simple extras."""
         # Mock the distribution metadata
@@ -150,7 +149,7 @@ class TestResolveExtrasToPackages:
         result = resolve_extras_to_packages("test-package", ["extra1", "extra2"])
         assert result == {"package-a", "package-b"}
 
-    @patch('aiq.registry_handlers.package_utils.importlib.metadata.distribution')
+    @patch('nat.registry_handlers.package_utils.importlib.metadata.distribution')
     def test_resolve_nonexistent_extras(self, mock_distribution):
         """Test resolving non-existent extras."""
         mock_dist = Mock()
@@ -162,7 +161,7 @@ class TestResolveExtrasToPackages:
         result = resolve_extras_to_packages("test-package", ["nonexistent"])
         assert result == set()
 
-    @patch('aiq.registry_handlers.package_utils.importlib.metadata.distribution')
+    @patch('nat.registry_handlers.package_utils.importlib.metadata.distribution')
     def test_package_not_found(self, mock_distribution):
         """Test behavior when package is not found."""
         from importlib.metadata import PackageNotFoundError
@@ -175,7 +174,7 @@ class TestResolveExtrasToPackages:
 class TestExtractDependenciesWithExtrasResolved:
     """Test the extract_dependencies_with_extras_resolved function."""
 
-    @patch('aiq.registry_handlers.package_utils.resolve_extras_to_packages')
+    @patch('nat.registry_handlers.package_utils.resolve_extras_to_packages')
     def test_extract_with_extras_resolution(self, mock_resolve_extras):
         """Test extracting dependencies with extras resolution."""
         mock_resolve_extras.return_value = {"resolved-package-1", "resolved-package-2"}
@@ -212,7 +211,7 @@ class TestExtractDependenciesWithExtrasResolved:
 class TestGetTransitiveDependencies:
     """Test the get_transitive_dependencies function."""
 
-    @patch('aiq.registry_handlers.package_utils.importlib.metadata.distribution')
+    @patch('nat.registry_handlers.package_utils.importlib.metadata.distribution')
     def test_simple_transitive_dependencies(self, mock_distribution):
         """Test getting simple transitive dependencies."""
 
@@ -239,7 +238,7 @@ class TestGetTransitiveDependencies:
         expected_deps = {"package-b", "package-c", "package-d"}
         assert result["package-a"] == expected_deps
 
-    @patch('aiq.registry_handlers.package_utils.importlib.metadata.distribution')
+    @patch('nat.registry_handlers.package_utils.importlib.metadata.distribution')
     def test_cycle_detection(self, mock_distribution):
         """Test that cycles are properly detected and handled."""
 
@@ -263,7 +262,7 @@ class TestGetTransitiveDependencies:
         # Should include package-b despite the cycle
         assert "package-b" in result["package-a"]
 
-    @patch('aiq.registry_handlers.package_utils.importlib.metadata.distribution')
+    @patch('nat.registry_handlers.package_utils.importlib.metadata.distribution')
     def test_missing_package(self, mock_distribution):
         """Test behavior with missing packages."""
         from importlib.metadata import PackageNotFoundError
@@ -277,7 +276,7 @@ class TestGetTransitiveDependencies:
 class TestGetAllTransitiveDependencies:
     """Test the get_all_transitive_dependencies function."""
 
-    @patch('aiq.registry_handlers.package_utils.get_transitive_dependencies')
+    @patch('nat.registry_handlers.package_utils.get_transitive_dependencies')
     def test_flatten_dependencies(self, mock_get_transitive):
         """Test flattening of transitive dependencies."""
         mock_get_transitive.return_value = {

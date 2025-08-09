@@ -18,7 +18,6 @@ from unittest.mock import AsyncMock
 from unittest.mock import patch
 
 import pytest
-
 from nat.profiler.calc.calc_runner import CalcRunner
 from nat.profiler.calc.data_models import CalcRunnerConfig
 from nat.profiler.calc.data_models import CalcRunnerOutput
@@ -61,7 +60,7 @@ def make_config(
 
 @pytest.fixture(autouse=True)
 def patch_write_output():
-    with patch("aiq.profiler.calc.calc_runner.CalcRunner.write_output", return_value=None):
+    with patch("nat.profiler.calc.calc_runner.CalcRunner.write_output", return_value=None):
         yield
 
 
@@ -95,7 +94,7 @@ async def test_calc_runner(latencies, runtimes):
                             workflow_interrupted=True)
     }
 
-    with patch("aiq.profiler.calc.calc_runner.MultiEvaluationRunner") as mock_runner:
+    with patch("nat.profiler.calc.calc_runner.MultiEvaluationRunner") as mock_runner:
         mock_instance = mock_runner.return_value
         mock_instance.run_all = AsyncMock(return_value=evaluation_run_outputs)
         output = await runner.run_online()

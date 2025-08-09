@@ -21,7 +21,6 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
-
 from nat.builder.context import ContextState
 from nat.observability.exporter.processing_exporter import ProcessingExporter
 from nat.observability.processor.callback_processor import CallbackProcessor
@@ -176,7 +175,7 @@ class TestProcessingExporterInitialization:
         assert not exporter._processors
         assert hasattr(exporter, '_running')  # Inherited from BaseExporter
 
-    @patch('aiq.observability.exporter.processing_exporter.ContextState.get')
+    @patch('nat.observability.exporter.processing_exporter.ContextState.get')
     def test_init_without_context_state(self, mock_get_context):
         """Test initialization without context state (uses default)."""
         mock_context = Mock(spec=ContextState)
@@ -318,7 +317,7 @@ class TestTypeValidation:
         processing_exporter.add_processor(processor2)
 
         # Mock DecomposedType.is_type_compatible to return False
-        with patch('aiq.observability.exporter.processing_exporter.DecomposedType.is_type_compatible',
+        with patch('nat.observability.exporter.processing_exporter.DecomposedType.is_type_compatible',
                    return_value=False):
             with pytest.raises(ValueError, match="is not compatible with the .* output type"):
                 await processing_exporter._pre_start()
@@ -355,7 +354,7 @@ class TestTypeValidation:
         processing_exporter.add_processor(processor)
 
         # Mock DecomposedType.is_type_compatible to raise TypeError for output validation
-        with patch('aiq.observability.exporter.processing_exporter.DecomposedType.is_type_compatible',
+        with patch('nat.observability.exporter.processing_exporter.DecomposedType.is_type_compatible',
                    side_effect=TypeError("cannot use with generics")):
 
             with caplog.at_level(logging.WARNING):
@@ -612,7 +611,7 @@ class TestCleanup:
 
     async def test_cleanup_no_processors(self, processing_exporter):
         """Test cleanup with no processors."""
-        with patch('aiq.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup:
+        with patch('nat.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup:
             mock_parent_cleanup.return_value = asyncio.Future()
             mock_parent_cleanup.return_value.set_result(None)
 
@@ -625,7 +624,7 @@ class TestCleanup:
         processor = MockProcessor("proc1")
         processing_exporter.add_processor(processor)
 
-        with patch('aiq.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup:
+        with patch('nat.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup:
             mock_parent_cleanup.return_value = asyncio.Future()
             mock_parent_cleanup.return_value.set_result(None)
 
@@ -638,7 +637,7 @@ class TestCleanup:
         processor = MockProcessorWithShutdown("proc1")
         processing_exporter.add_processor(processor)
 
-        with patch('aiq.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup:
+        with patch('nat.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup:
             mock_parent_cleanup.return_value = asyncio.Future()
             mock_parent_cleanup.return_value.set_result(None)
 
@@ -656,7 +655,7 @@ class TestCleanup:
         processing_exporter.add_processor(processor1)
         processing_exporter.add_processor(processor2)
 
-        with patch('aiq.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup:
+        with patch('nat.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup:
             mock_parent_cleanup.return_value = asyncio.Future()
             mock_parent_cleanup.return_value.set_result(None)
 
@@ -693,7 +692,7 @@ class TestCleanup:
                         raise
             return results
 
-        with patch('aiq.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup, \
+        with patch('nat.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup, \
              patch('asyncio.gather', side_effect=mock_gather):
             mock_parent_cleanup.return_value = asyncio.Future()
             mock_parent_cleanup.return_value.set_result(None)
@@ -710,7 +709,7 @@ class TestCleanup:
         processor = MockProcessorWithShutdown("proc1")
         processing_exporter.add_processor(processor)
 
-        with patch('aiq.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup:
+        with patch('nat.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup:
             mock_parent_cleanup.return_value = asyncio.Future()
             mock_parent_cleanup.return_value.set_result(None)
 
@@ -745,7 +744,7 @@ class TestCleanup:
                         raise
             return results
 
-        with patch('aiq.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup, \
+        with patch('nat.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup, \
              patch('asyncio.gather', side_effect=mock_gather):
             mock_parent_cleanup.return_value = asyncio.Future()
             mock_parent_cleanup.return_value.set_result(None)
@@ -761,7 +760,7 @@ class TestCleanup:
         # Remove the _processors attribute
         delattr(processing_exporter, '_processors')
 
-        with patch('aiq.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup:
+        with patch('nat.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup:
             mock_parent_cleanup.return_value = asyncio.Future()
             mock_parent_cleanup.return_value.set_result(None)
 
@@ -971,7 +970,7 @@ class TestErrorPathCoverage:
         async def failing_gather(*tasks, return_exceptions=True):
             raise RuntimeError("Shutdown failed")
 
-        with patch('aiq.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup:
+        with patch('nat.observability.exporter.base_exporter.BaseExporter._cleanup') as mock_parent_cleanup:
             mock_parent_cleanup.return_value = asyncio.Future()
             mock_parent_cleanup.return_value.set_result(None)
 
