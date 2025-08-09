@@ -45,6 +45,10 @@ logger = logging.getLogger(__name__)
 class EvaluationRun:  # pylint: disable=too-many-public-methods
     """
     Instantiated for each evaluation run and used to store data for that single run.
+
+    .. warning::
+        **Experimental Feature**: The Evaluation API is experimental and may change in future releases.
+        Future versions may introduce breaking changes without notice.
     """
 
     def __init__(self, config: EvaluationRunConfig):

@@ -30,6 +30,10 @@ class BaseEvaluator(ABC):
     """
     Base class for custom evaluators.
 
+    .. warning::
+        **Experimental Feature**: The Evaluation API is experimental and may change in future releases.
+        Future versions may introduce breaking changes without notice.
+
     Each custom evaluator must implement the `evaluate_item` method which is used to evaluate a
     single EvalInputItem.
     """
