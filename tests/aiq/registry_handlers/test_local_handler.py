@@ -46,7 +46,6 @@ from aiq.settings.global_settings import Settings
                          ])
 async def test_local_handler_search(
     local_registry_channel: dict,
-    global_settings: Settings,
     registry: TypeRegistry,
     field_name: str,
     component_type: str,
