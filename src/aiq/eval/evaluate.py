@@ -310,7 +310,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             except Exception as e:
                 logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e, exc_info=True)
 
-    def write_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):
+    def write_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):  # pylint: disable=unused-argument  # noqa: E501
         workflow_output_file = self.eval_config.general.output_dir / "workflow_output.json"
         workflow_output_file.parent.mkdir(parents=True, exist_ok=True)
 
