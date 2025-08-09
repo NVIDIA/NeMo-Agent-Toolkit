@@ -21,12 +21,12 @@ from httpx import ASGITransport
 from httpx import AsyncClient
 from httpx_sse import aconnect_sse
 
-from aiq.data_models.api_server import AIQChatRequest
-from aiq.data_models.api_server import AIQChatResponse
-from aiq.data_models.api_server import AIQChatResponseChunk
-from aiq.data_models.api_server import AIQChoiceDelta
+from aiq.data_models.api_server import ChatRequest
+from aiq.data_models.api_server import ChatResponse
+from aiq.data_models.api_server import ChatResponseChunk
+from aiq.data_models.api_server import ChoiceDelta
 from aiq.data_models.api_server import Message
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.data_models.config import GeneralConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -35,8 +35,7 @@ from aiq.test.functions import StreamingEchoFunctionConfig
 
 
 @asynccontextmanager
-async def _build_client(config: AIQConfig,
-                        worker_class: type[FastApiFrontEndPluginWorker] = FastApiFrontEndPluginWorker):
+async def _build_client(config: Config, worker_class: type[FastApiFrontEndPluginWorker] = FastApiFrontEndPluginWorker):
     """Helper to build test client with proper lifecycle management"""
     worker = worker_class(config)
     app = worker.build_app()
@@ -67,36 +66,36 @@ def test_fastapi_config_openai_api_v1_path_field():
 def test_aiq_chat_request_openai_fields():
     """Test that AIQChatRequest includes all OpenAI Chat Completions API fields"""
     # Test with minimal required fields
-    request = AIQChatRequest(messages=[Message(content="Hello", role="user")])
+    request = ChatRequest(messages=[Message(content="Hello", role="user")])
     assert request.messages[0].content == "Hello"
     assert request.stream is False  # Default value
 
     # Test with all OpenAI fields
-    request = AIQChatRequest(messages=[Message(content="Hello", role="user")],
-                             model="gpt-3.5-turbo",
-                             frequency_penalty=0.5,
-                             logit_bias={"token1": 0.1},
-                             logprobs=True,
-                             top_logprobs=5,
-                             max_tokens=100,
-                             n=1,
-                             presence_penalty=-0.5,
-                             response_format={"type": "json_object"},
-                             seed=42,
-                             service_tier="auto",
-                             stop=["END"],
-                             stream=True,
-                             stream_options={"include_usage": True},
-                             temperature=0.7,
-                             top_p=0.9,
-                             tools=[{
-                                 "type": "function", "function": {
-                                     "name": "test"
-                                 }
-                             }],
-                             tool_choice="auto",
-                             parallel_tool_calls=False,
-                             user="user123")
+    request = ChatRequest(messages=[Message(content="Hello", role="user")],
+                          model="gpt-3.5-turbo",
+                          frequency_penalty=0.5,
+                          logit_bias={"token1": 0.1},
+                          logprobs=True,
+                          top_logprobs=5,
+                          max_tokens=100,
+                          n=1,
+                          presence_penalty=-0.5,
+                          response_format={"type": "json_object"},
+                          seed=42,
+                          service_tier="auto",
+                          stop=["END"],
+                          stream=True,
+                          stream_options={"include_usage": True},
+                          temperature=0.7,
+                          top_p=0.9,
+                          tools=[{
+                              "type": "function", "function": {
+                                  "name": "test"
+                              }
+                          }],
+                          tool_choice="auto",
+                          parallel_tool_calls=False,
+                          user="user123")
 
     # Verify all fields are set correctly
     assert request.model == "gpt-3.5-turbo"
@@ -124,22 +123,22 @@ def test_aiq_chat_request_openai_fields():
 def test_aiq_choice_delta_class():
     """Test that AIQChoiceDelta class works correctly"""
     # Test empty delta
-    delta = AIQChoiceDelta()
+    delta = ChoiceDelta()
     assert delta.content is None
     assert delta.role is None
 
     # Test delta with content
-    delta = AIQChoiceDelta(content="Hello")
+    delta = ChoiceDelta(content="Hello")
     assert delta.content == "Hello"
     assert delta.role is None
 
     # Test delta with role
-    delta = AIQChoiceDelta(role="assistant")
+    delta = ChoiceDelta(role="assistant")
     assert delta.content is None
     assert delta.role == "assistant"
 
     # Test delta with both
-    delta = AIQChoiceDelta(content="Hello", role="assistant")
+    delta = ChoiceDelta(content="Hello", role="assistant")
     assert delta.content == "Hello"
     assert delta.role == "assistant"
 
@@ -147,7 +146,7 @@ def test_aiq_choice_delta_class():
 def test_aiq_chat_response_chunk_create_streaming_chunk():
     """Test the new create_streaming_chunk method"""
     # Test basic streaming chunk
-    chunk = AIQChatResponseChunk.create_streaming_chunk(content="Hello", role="assistant")
+    chunk = ChatResponseChunk.create_streaming_chunk(content="Hello", role="assistant")
 
     assert chunk.choices[0].delta.content == "Hello"
     assert chunk.choices[0].delta.role == "assistant"
@@ -156,7 +155,7 @@ def test_aiq_chat_response_chunk_create_streaming_chunk():
     assert chunk.object == "chat.completion.chunk"
 
     # Test streaming chunk with finish_reason
-    chunk = AIQChatResponseChunk.create_streaming_chunk(content="", finish_reason="stop")
+    chunk = ChatResponseChunk.create_streaming_chunk(content="", finish_reason="stop")
 
     assert chunk.choices[0].delta.content == ""
     assert chunk.choices[0].finish_reason == "stop"
@@ -168,7 +167,7 @@ def test_aiq_chat_response_timestamp_serialization():
 
     # Create response with known timestamp
     test_time = datetime.datetime(2024, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)
-    response = AIQChatResponse.from_string("Hello", created=test_time)
+    response = ChatResponse.from_string("Hello", created=test_time)
 
     # Serialize to JSON
     json_data = response.model_dump()
@@ -177,7 +176,7 @@ def test_aiq_chat_response_timestamp_serialization():
     assert json_data["created"] == 1704110400
 
     # Same test for chunk
-    chunk = AIQChatResponseChunk.from_string("Hello", created=test_time)
+    chunk = ChatResponseChunk.from_string("Hello", created=test_time)
     chunk_json = chunk.model_dump()
     assert chunk_json["created"] == 1704110400
 
@@ -191,7 +190,7 @@ async def test_legacy_vs_openai_v1_mode_endpoints(openai_api_v1_path: str | None
     front_end_config.workflow.openai_api_v1_path = openai_api_v1_path
     front_end_config.workflow.openai_api_path = "/v1/chat/completions"
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=front_end_config),
         workflow=EchoFunctionConfig(use_openai_api=True),
     )
@@ -210,7 +209,7 @@ async def test_legacy_vs_openai_v1_mode_endpoints(openai_api_v1_path: str | None
                                              }], "stream": False
                                          })
             assert response.status_code == 200
-            chat_response = AIQChatResponse.model_validate(response.json())
+            chat_response = ChatResponse.model_validate(response.json())
             assert chat_response.choices[0].message.content == "Hello"
             assert chat_response.object == "chat.completion"
 
@@ -226,7 +225,7 @@ async def test_legacy_vs_openai_v1_mode_endpoints(openai_api_v1_path: str | None
                                     }) as event_source:
                 async for sse in event_source.aiter_sse():
                     if sse.data != "[DONE]":
-                        chunk = AIQChatResponseChunk.model_validate(sse.json())
+                        chunk = ChatResponseChunk.model_validate(sse.json())
                         response_chunks.append(chunk)
 
             assert event_source.response.status_code == 200
@@ -243,7 +242,7 @@ async def test_legacy_vs_openai_v1_mode_endpoints(openai_api_v1_path: str | None
             # Test non-streaming endpoint (base path)
             response = await client.post(base_path, json={"messages": [{"content": "Hello", "role": "user"}]})
             assert response.status_code == 200
-            chat_response = AIQChatResponse.model_validate(response.json())
+            chat_response = ChatResponse.model_validate(response.json())
             assert chat_response.choices[0].message.content == "Hello"
 
             # Test streaming endpoint (base path + /stream)
@@ -256,7 +255,7 @@ async def test_legacy_vs_openai_v1_mode_endpoints(openai_api_v1_path: str | None
                                     }]}) as event_source:
                 async for sse in event_source.aiter_sse():
                     if sse.data != "[DONE]":
-                        chunk = AIQChatResponseChunk.model_validate(sse.json())
+                        chunk = ChatResponseChunk.model_validate(sse.json())
                         response_chunks.append(chunk)
 
             assert event_source.response.status_code == 200
@@ -275,7 +274,7 @@ async def test_openai_compatible_mode_stream_parameter():
     front_end_config.workflow.openai_api_path = "/v1/chat/completions"
 
     # Use streaming config since that's what's available
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=front_end_config),
         workflow=StreamingEchoFunctionConfig(use_openai_api=True),
     )
@@ -296,7 +295,7 @@ async def test_openai_compatible_mode_stream_parameter():
             chunks_received = 0
             async for sse in event_source.aiter_sse():
                 if sse.data != "[DONE]":
-                    chunk = AIQChatResponseChunk.model_validate(sse.json())
+                    chunk = ChatResponseChunk.model_validate(sse.json())
                     assert chunk.object == "chat.completion.chunk"
                     chunks_received += 1
                     if chunks_received >= 2:  # Stop after receiving a few chunks
@@ -313,7 +312,7 @@ async def test_legacy_mode_backward_compatibility():
     front_end_config.workflow.openai_api_v1_path = None  # Legacy mode
     front_end_config.workflow.openai_api_path = "/v1/chat/completions"
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=front_end_config),
         workflow=EchoFunctionConfig(use_openai_api=True),
     )
@@ -324,7 +323,7 @@ async def test_legacy_mode_backward_compatibility():
         # Test legacy non-streaming endpoint structure
         response = await client.post(base_path, json={"messages": [{"content": "Hello", "role": "user"}]})
         assert response.status_code == 200
-        chat_response = AIQChatResponse.model_validate(response.json())
+        chat_response = ChatResponse.model_validate(response.json())
 
         # Verify legacy response structure
         assert chat_response.choices[0].message is not None
@@ -341,7 +340,7 @@ async def test_legacy_mode_backward_compatibility():
                                 }]}) as event_source:
             async for sse in event_source.aiter_sse():
                 if sse.data != "[DONE]":
-                    chunk = AIQChatResponseChunk.model_validate(sse.json())
+                    chunk = ChatResponseChunk.model_validate(sse.json())
                     response_chunks.append(chunk)
                     if len(response_chunks) >= 1:  # Just need to verify structure
                         break
@@ -365,17 +364,17 @@ def test_converter_functions_backward_compatibility():
     from aiq.data_models.api_server import _chat_response_to_chat_response_chunk
 
     # Test legacy chunk (with message) conversion to string
-    legacy_chunk = AIQChatResponseChunk.from_string("Legacy content")
+    legacy_chunk = ChatResponseChunk.from_string("Legacy content")
     legacy_content = _aiq_chat_response_chunk_to_string(legacy_chunk)
     assert legacy_content == "Legacy content"
 
     # Test new chunk (with delta) conversion to string
-    new_chunk = AIQChatResponseChunk.create_streaming_chunk("New content")
+    new_chunk = ChatResponseChunk.create_streaming_chunk("New content")
     new_content = _aiq_chat_response_chunk_to_string(new_chunk)
     assert new_content == "New content"
 
     # Test response to chunk conversion preserves message structure
-    response = AIQChatResponse.from_string("Response content")
+    response = ChatResponse.from_string("Response content")
     converted_chunk = _chat_response_to_chat_response_chunk(response)
 
     # Should preserve original message structure for backward compatibility

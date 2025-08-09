@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.data_models.config import GeneralConfig
 from aiq.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 from aiq.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
@@ -39,9 +39,9 @@ def mcp_config(echo_function_config):
                                              log_level="INFO",
                                              tool_names=["echo"])
 
-    return AIQConfig(general=GeneralConfig(front_end=mcp_front_end_config),
-                     workflow=echo_function_config,
-                     functions={"echo": echo_function_config})
+    return Config(general=GeneralConfig(front_end=mcp_front_end_config),
+                  workflow=echo_function_config,
+                  functions={"echo": echo_function_config})
 
 
 def test_mcp_front_end_plugin_init(mcp_config):
@@ -62,7 +62,7 @@ def test_get_all_functions():
     mock_workflow.config.workflow.type = "test_workflow"
 
     # Create the plugin with a valid config
-    config = AIQConfig(general=GeneralConfig(front_end=MCPFrontEndConfig()), workflow=EchoFunctionConfig())
+    config = Config(general=GeneralConfig(front_end=MCPFrontEndConfig()), workflow=EchoFunctionConfig())
     plugin = MCPFrontEndPlugin(full_config=config)
 
     # Test the method

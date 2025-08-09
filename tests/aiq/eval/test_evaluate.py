@@ -28,7 +28,7 @@ from uuid import uuid4
 
 import pytest
 
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.data_models.dataset_handler import EvalDatasetJsonConfig
 from aiq.data_models.evaluate import EvalConfig
 from aiq.data_models.evaluate import EvalOutputConfig
@@ -46,7 +46,7 @@ from aiq.eval.evaluator.evaluator_model import EvalInputItem
 from aiq.eval.evaluator.evaluator_model import EvalOutput
 from aiq.eval.evaluator.evaluator_model import EvalOutputItem
 from aiq.profiler.data_models import ProfilerResults
-from aiq.runtime.session import AIQSessionManager
+from aiq.runtime.session import SessionManager
 
 # pylint: disable=redefined-outer-name
 
@@ -176,7 +176,7 @@ def session_manager(generated_answer, mock_pull_intermediate):
     DONT REMOVE mock_pull_intermediate arg. Although it is not used in this function,
     it is needed to ensure that pull_intermediate is mocked for all tests that use session_manager.
     """
-    session_manager = MagicMock(spec=AIQSessionManager)
+    session_manager = MagicMock(spec=SessionManager)
 
     # Create a mock runner that behaves like an async context manager
     mock_runner = AsyncMock()
@@ -484,7 +484,7 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
     """
     evaluation_run.config.skip_workflow = skip_workflow
     # Patch load_config to return an AIQConfig instance with eval_config set
-    mock_aiq_config = AIQConfig()
+    mock_aiq_config = Config()
     mock_aiq_config.eval = default_eval_config
     mock_load_config = MagicMock(return_value=mock_aiq_config)
 

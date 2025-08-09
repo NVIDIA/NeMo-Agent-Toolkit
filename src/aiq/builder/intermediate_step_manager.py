@@ -26,7 +26,7 @@ from aiq.utils.reactive.observable import OnNext
 from aiq.utils.reactive.subscription import Subscription
 
 if typing.TYPE_CHECKING:
-    from aiq.builder.context import AIQContextState
+    from aiq.builder.context import ContextState
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class IntermediateStepManager:
     Manages updates to the AIQ Toolkit Event Stream for intermediate steps
     """
 
-    def __init__(self, context_state: "AIQContextState"):  # noqa: F821
+    def __init__(self, context_state: "ContextState"):  # noqa: F821
         self._context_state = context_state
 
         self._outstanding_start_steps: dict[str, OpenStep] = {}

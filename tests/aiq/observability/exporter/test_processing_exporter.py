@@ -22,7 +22,7 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import ContextState
 from aiq.observability.exporter.processing_exporter import ProcessingExporter
 from aiq.observability.processor.callback_processor import CallbackProcessor
 from aiq.observability.processor.processor import Processor
@@ -130,7 +130,7 @@ class MockCallbackProcessor(CallbackProcessor[str, str]):
 class ConcreteProcessingExporter(ProcessingExporter[str, int]):
     """Concrete implementation of ProcessingExporter for testing."""
 
-    def __init__(self, context_state: AIQContextState | None = None):
+    def __init__(self, context_state: ContextState | None = None):
         super().__init__(context_state)
         self.exported_items = []
         self.export_processed_called = False
@@ -152,7 +152,7 @@ class ConcreteProcessingExporterWithError(ProcessingExporter[str, int]):
 @pytest.fixture
 def mock_context_state():
     """Create a mock context state."""
-    mock_state = Mock(spec=AIQContextState)
+    mock_state = Mock(spec=ContextState)
     mock_subject = Mock(spec=Subject)
     mock_event_stream = Mock()
     mock_event_stream.get.return_value = mock_subject
@@ -176,10 +176,10 @@ class TestProcessingExporterInitialization:
         assert not exporter._processors
         assert hasattr(exporter, '_running')  # Inherited from BaseExporter
 
-    @patch('aiq.observability.exporter.processing_exporter.AIQContextState.get')
+    @patch('aiq.observability.exporter.processing_exporter.ContextState.get')
     def test_init_without_context_state(self, mock_get_context):
         """Test initialization without context state (uses default)."""
-        mock_context = Mock(spec=AIQContextState)
+        mock_context = Mock(spec=ContextState)
         mock_get_context.return_value = mock_context
 
         exporter = ConcreteProcessingExporter()
@@ -444,7 +444,7 @@ class TestExportWithProcessing:
         # Create a specialized exporter for list output
         class ListProcessingExporter(ProcessingExporter[str, list[int]]):
 
-            def __init__(self, context_state: AIQContextState | None = None):
+            def __init__(self, context_state: ContextState | None = None):
                 super().__init__(context_state)
                 self.exported_items = []
                 self.export_processed_called = False
@@ -473,7 +473,7 @@ class TestExportWithProcessing:
         # Create a specialized exporter for list output
         class ListProcessingExporter(ProcessingExporter[str, list[int]]):
 
-            def __init__(self, context_state: AIQContextState | None = None):
+            def __init__(self, context_state: ContextState | None = None):
                 super().__init__(context_state)
                 self.exported_items = []
                 self.export_processed_called = False

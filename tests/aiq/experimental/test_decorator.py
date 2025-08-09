@@ -19,7 +19,7 @@ import pytest
 
 from aiq.experimental.decorators.experimental_warning_decorator import BASE_WARNING_MESSAGE
 from aiq.experimental.decorators.experimental_warning_decorator import _warning_issued
-from aiq.experimental.decorators.experimental_warning_decorator import aiq_experimental
+from aiq.experimental.decorators.experimental_warning_decorator import experimental
 from aiq.experimental.decorators.experimental_warning_decorator import issue_experimental_warning
 
 
@@ -34,7 +34,7 @@ def clear_warnings():
 def test_sync_function_logs_warning_once(caplog):
     caplog.set_level(logging.WARNING)
 
-    @aiq_experimental
+    @experimental
     def foo(x):
         return x + 1
 
@@ -52,7 +52,7 @@ def test_sync_function_logs_warning_once(caplog):
 async def test_async_function_logs_warning_once(caplog):
     caplog.set_level(logging.WARNING)
 
-    @aiq_experimental
+    @experimental
     async def bar(x):
         return x * 2
 
@@ -72,7 +72,7 @@ async def test_async_function_logs_warning_once(caplog):
 def test_sync_generator_logs_and_yields(caplog):
     caplog.set_level(logging.WARNING)
 
-    @aiq_experimental
+    @experimental
     def gen(n):
         for i in range(n):
             yield i
@@ -93,7 +93,7 @@ def test_sync_generator_logs_and_yields(caplog):
 async def test_async_generator_logs_and_yields(caplog):
     caplog.set_level(logging.WARNING)
 
-    @aiq_experimental
+    @experimental
     async def agen(n):
         for i in range(n):
             yield i
@@ -129,7 +129,7 @@ def test_issue_warning_idempotent(caplog):
 def test_metadata_must_be_dict():
     with pytest.raises(TypeError):
 
-        @aiq_experimental(metadata="not-a-dict")
+        @experimental(metadata="not-a-dict")
         def f1():
             pass
 
@@ -137,6 +137,6 @@ def test_metadata_must_be_dict():
 def test_metadata_keys_must_be_str():
     with pytest.raises(TypeError):
 
-        @aiq_experimental(metadata={1: "value"})
+        @experimental(metadata={1: "value"})
         def f2():
             pass

@@ -26,8 +26,8 @@ from aiq.builder.builder import Builder
 from aiq.builder.builder import UserManagerHolder
 from aiq.builder.component_utils import ComponentInstanceData
 from aiq.builder.component_utils import build_dependency_sequence
-from aiq.builder.context import AIQContext
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import Context
+from aiq.builder.context import ContextState
 from aiq.builder.embedder import EmbedderProviderInfo
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function import Function
@@ -48,7 +48,7 @@ from aiq.data_models.component_ref import MemoryRef
 from aiq.data_models.component_ref import ObjectStoreRef
 from aiq.data_models.component_ref import RetrieverRef
 from aiq.data_models.component_ref import TTCStrategyRef
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
@@ -59,7 +59,7 @@ from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
 from aiq.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from aiq.data_models.ttc_strategy import TTCStrategyBaseConfig
-from aiq.experimental.decorators.experimental_warning_decorator import aiq_experimental
+from aiq.experimental.decorators.experimental_warning_decorator import experimental
 from aiq.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from aiq.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from aiq.experimental.test_time_compute.models.strategy_base import StrategyBase
@@ -156,7 +156,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._retrievers: dict[str, ConfiguredRetriever] = {}
         self._ttc_strategies: dict[str, ConfiguredTTCStrategy] = {}
 
-        self._context_state = AIQContextState.get()
+        self._context_state = ContextState.get()
 
         self._exit_stack: AsyncExitStack | None = None
 
@@ -226,36 +226,36 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise ValueError("Must set a workflow before building")
 
         # Build the config from the added objects
-        config = AIQConfig(general=self.general_config,
-                           functions={
-                               k: v.config
-                               for k, v in self._functions.items()
-                           },
-                           workflow=self._workflow.config,
-                           llms={
-                               k: v.config
-                               for k, v in self._llms.items()
-                           },
-                           embedders={
-                               k: v.config
-                               for k, v in self._embedders.items()
-                           },
-                           memory={
-                               k: v.config
-                               for k, v in self._memory_clients.items()
-                           },
-                           object_stores={
-                               k: v.config
-                               for k, v in self._object_stores.items()
-                           },
-                           retrievers={
-                               k: v.config
-                               for k, v in self._retrievers.items()
-                           },
-                           ttc_strategies={
-                               k: v.config
-                               for k, v in self._ttc_strategies.items()
-                           })
+        config = Config(general=self.general_config,
+                        functions={
+                            k: v.config
+                            for k, v in self._functions.items()
+                        },
+                        workflow=self._workflow.config,
+                        llms={
+                            k: v.config
+                            for k, v in self._llms.items()
+                        },
+                        embedders={
+                            k: v.config
+                            for k, v in self._embedders.items()
+                        },
+                        memory={
+                            k: v.config
+                            for k, v in self._memory_clients.items()
+                        },
+                        object_stores={
+                            k: v.config
+                            for k, v in self._object_stores.items()
+                        },
+                        retrievers={
+                            k: v.config
+                            for k, v in self._retrievers.items()
+                        },
+                        ttc_strategies={
+                            k: v.config
+                            for k, v in self._ttc_strategies.items()
+                        })
 
         if (entry_function is None):
             entry_fn_obj = self.get_workflow()
@@ -470,7 +470,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         # Return the tool configuration object
         return self._llms[llm_name].config
 
-    @aiq_experimental(feature_name="Authentication")
+    @experimental(feature_name="Authentication")
     @override
     async def add_auth_provider(self, name: str | AuthenticationRef,
                                 config: AuthProviderBaseConfig) -> AuthProviderBase:
@@ -699,7 +699,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         return self._retrievers[retriever_name].config
 
-    @aiq_experimental(feature_name="TTC")
+    @experimental(feature_name="TTC")
     @override
     async def add_ttc_strategy(self, name: str | str, config: TTCStrategyBaseConfig):
         if (name in self._ttc_strategies):
@@ -768,7 +768,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     @override
     def get_user_manager(self):
-        return UserManagerHolder(context=AIQContext(self._context_state))
+        return UserManagerHolder(context=Context(self._context_state))
 
     async def add_telemetry_exporter(self, name: str, config: TelemetryExporterBaseConfig) -> None:
         """Add an configured telemetry exporter to the builder.
@@ -860,7 +860,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         """
         self._log_build_failure("<workflow>", "workflow", completed_components, remaining_components, original_error)
 
-    async def populate_builder(self, config: AIQConfig, skip_workflow: bool = False):
+    async def populate_builder(self, config: Config, skip_workflow: bool = False):
         """
         Populate the builder with components and optionally set up the workflow.
 
@@ -937,7 +937,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
     @classmethod
     @asynccontextmanager
-    async def from_config(cls, config: AIQConfig):
+    async def from_config(cls, config: Config):
 
         async with cls(general_config=config.general) as builder:
             await builder.populate_builder(config)

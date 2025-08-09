@@ -23,12 +23,12 @@ from typing import Literal
 from pydantic import BaseModel
 from pydantic import ValidationError
 
-from aiq.data_models.api_server import AIQChatResponse
-from aiq.data_models.api_server import AIQChatResponseChunk
-from aiq.data_models.api_server import AIQResponseIntermediateStep
-from aiq.data_models.api_server import AIQResponsePayloadOutput
+from aiq.data_models.api_server import ChatResponse
+from aiq.data_models.api_server import ChatResponseChunk
 from aiq.data_models.api_server import Error
 from aiq.data_models.api_server import ErrorTypes
+from aiq.data_models.api_server import ResponseIntermediateStep
+from aiq.data_models.api_server import ResponsePayloadOutput
 from aiq.data_models.api_server import SystemIntermediateStepContent
 from aiq.data_models.api_server import SystemResponseContent
 from aiq.data_models.api_server import TextContent
@@ -71,10 +71,10 @@ class MessageValidator:
             WebSocketMessageType.ERROR_MESSAGE: Error
         }
         self._data_type_schema_mapping: dict[str, type[BaseModel]] = {
-            WorkflowSchemaType.GENERATE: AIQResponsePayloadOutput,
-            WorkflowSchemaType.CHAT: AIQChatResponse,
-            WorkflowSchemaType.CHAT_STREAM: AIQChatResponseChunk,
-            WorkflowSchemaType.GENERATE_STREAM: AIQResponseIntermediateStep,
+            WorkflowSchemaType.GENERATE: ResponsePayloadOutput,
+            WorkflowSchemaType.CHAT: ChatResponse,
+            WorkflowSchemaType.CHAT_STREAM: ChatResponseChunk,
+            WorkflowSchemaType.GENERATE_STREAM: ResponseIntermediateStep,
         }
         self._message_parent_id: str = "default_id"
 
@@ -138,13 +138,13 @@ class MessageValidator:
 
         validated_message_content: BaseModel = None
         try:
-            if (isinstance(data_model, AIQResponsePayloadOutput)):
+            if (isinstance(data_model, ResponsePayloadOutput)):
                 validated_message_content = SystemResponseContent(text=data_model.payload)
 
-            elif (isinstance(data_model, (AIQChatResponse, AIQChatResponseChunk))):
+            elif (isinstance(data_model, (ChatResponse, ChatResponseChunk))):
                 validated_message_content = SystemResponseContent(text=data_model.choices[0].message.content)
 
-            elif (isinstance(data_model, AIQResponseIntermediateStep)):
+            elif (isinstance(data_model, ResponseIntermediateStep)):
                 validated_message_content = SystemIntermediateStepContent(name=data_model.name,
                                                                           payload=data_model.payload)
             elif (isinstance(data_model, HumanPromptBase)):
@@ -206,10 +206,10 @@ class MessageValidator:
 
         validated_message_type: str = ""
         try:
-            if (isinstance(data_model, (AIQResponsePayloadOutput, AIQChatResponse, AIQChatResponseChunk))):
+            if (isinstance(data_model, (ResponsePayloadOutput, ChatResponse, ChatResponseChunk))):
                 validated_message_type = WebSocketMessageType.RESPONSE_MESSAGE
 
-            elif (isinstance(data_model, AIQResponseIntermediateStep)):
+            elif (isinstance(data_model, ResponseIntermediateStep)):
                 validated_message_type = WebSocketMessageType.INTERMEDIATE_STEP_MESSAGE
 
             elif (isinstance(data_model, HumanPromptBase)):
@@ -225,7 +225,7 @@ class MessageValidator:
                          exc_info=True)
             return WebSocketMessageType.ERROR_MESSAGE
 
-    async def get_intermediate_step_parent_id(self, data_model: AIQResponseIntermediateStep) -> str:
+    async def get_intermediate_step_parent_id(self, data_model: ResponseIntermediateStep) -> str:
         """
         Retrieves intermediate step parent_id from AIQResponseIntermediateStep instance.
 

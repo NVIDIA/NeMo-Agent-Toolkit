@@ -26,7 +26,7 @@ from typing import Generic
 from typing import TypeVar
 from typing import overload
 
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import ContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.observability.exporter.exporter import Exporter
 from aiq.utils.reactive.subject import Subject
@@ -130,10 +130,10 @@ class BaseExporter(Exporter):
     _ready_event: IsolatedAttribute[asyncio.Event] = IsolatedAttribute(asyncio.Event)
     _shutdown_event: IsolatedAttribute[asyncio.Event] = IsolatedAttribute(asyncio.Event)
 
-    def __init__(self, context_state: AIQContextState | None = None):
+    def __init__(self, context_state: ContextState | None = None):
         """Initialize the BaseExporter."""
         if context_state is None:
-            context_state = AIQContextState.get()
+            context_state = ContextState.get()
 
         self._context_state = context_state
         self._subscription = None
@@ -413,7 +413,7 @@ class BaseExporter(Exporter):
         """
         await self._ready_event.wait()
 
-    def create_isolated_instance(self, context_state: AIQContextState) -> "BaseExporter":
+    def create_isolated_instance(self, context_state: ContextState) -> "BaseExporter":
         """Create an isolated copy with automatic descriptor-based state reset.
 
         This method creates a shallow copy that shares expensive resources

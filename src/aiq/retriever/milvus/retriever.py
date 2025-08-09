@@ -20,8 +20,8 @@ from langchain_core.embeddings import Embeddings
 from pymilvus import MilvusClient
 from pymilvus.client.abstract import Hit
 
-from aiq.retriever.interface import AIQRetriever
-from aiq.retriever.models import AIQDocument
+from aiq.retriever.interface import Retriever
+from aiq.retriever.models import Document
 from aiq.retriever.models import RetrieverError
 from aiq.retriever.models import RetrieverOutput
 
@@ -32,7 +32,7 @@ class CollectionNotFoundError(RetrieverError):
     pass
 
 
-class MilvusRetriever(AIQRetriever):
+class MilvusRetriever(Retriever):
     """
     Client for retrieving document chunks from a Milvus vectorstore
     """
@@ -213,16 +213,16 @@ def _wrap_milvus_results(res: list[Hit], content_field: str):
     return RetrieverOutput(results=[_wrap_milvus_single_results(r, content_field=content_field) for r in res])
 
 
-def _wrap_milvus_single_results(res: Hit | dict, content_field: str) -> AIQDocument:
+def _wrap_milvus_single_results(res: Hit | dict, content_field: str) -> Document:
     if not isinstance(res, (Hit, dict)):
         raise ValueError(f"Milvus search returned object of type {type(res)}. Expected 'Hit' or 'dict'.")
 
     if isinstance(res, Hit):
         metadata = {k: v for k, v in res.fields.items() if k != content_field}
         metadata.update({"distance": res.distance})
-        return AIQDocument(page_content=res.fields[content_field], metadata=metadata, document_id=res.id)
+        return Document(page_content=res.fields[content_field], metadata=metadata, document_id=res.id)
 
     fields = res["entity"]
     metadata = {k: v for k, v in fields.items() if k != content_field}
     metadata.update({"distance": res.get("distance")})
-    return AIQDocument(page_content=fields.get(content_field), metadata=metadata, document_id=res["id"])
+    return Document(page_content=fields.get(content_field), metadata=metadata, document_id=res["id"])

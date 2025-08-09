@@ -47,7 +47,7 @@ from aiq.data_models.component_ref import MemoryRef
 from aiq.data_models.component_ref import ObjectStoreRef
 from aiq.data_models.component_ref import RetrieverRef
 from aiq.data_models.component_ref import generate_instance_id
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
@@ -58,7 +58,7 @@ from aiq.embedder.nim_embedder import NIMEmbedderModelConfig
 from aiq.llm.nim_llm import NIMModelConfig
 from aiq.object_store.in_memory_object_store import InMemoryObjectStoreConfig
 from aiq.retriever.nemo_retriever.register import NemoRetrieverConfig
-from aiq.runtime.session import AIQSessionManager
+from aiq.runtime.session import SessionManager
 from aiq.test.memory import DummyMemoryConfig
 
 
@@ -148,7 +148,7 @@ def nested_aiq_config_fixture():
         "workflow": nested_workflow_config
     }
 
-    aiq_config = AIQConfig.model_validate(config)
+    aiq_config = Config.model_validate(config)
 
     return aiq_config
 
@@ -272,7 +272,7 @@ def test_recursive_componentref_discovery():
         assert len(result_set.difference(expected_result)) == 0
 
 
-def test_update_dependency_graph(nested_aiq_config: AIQConfig):
+def test_update_dependency_graph(nested_aiq_config: Config):
 
     dependency_graph = nx.DiGraph()
 
@@ -306,7 +306,7 @@ def test_update_dependency_graph(nested_aiq_config: AIQConfig):
     assert dependency_graph.out_degree(generate_instance_id(nested_aiq_config.functions["nested_fn0"])) == 4
 
 
-def test_config_to_dependency_objects(nested_aiq_config: AIQConfig):
+def test_config_to_dependency_objects(nested_aiq_config: Config):
 
     # Setup some expected output
     functions_set = set(str(id(value)) for value in nested_aiq_config.functions.values())
@@ -340,7 +340,7 @@ def test_config_to_dependency_objects(nested_aiq_config: AIQConfig):
             assert node.ref_name in getattr(nested_aiq_config, node.component_group.value)
 
 
-def test_build_dependency_sequence(nested_aiq_config: AIQConfig):
+def test_build_dependency_sequence(nested_aiq_config: Config):
 
     # Setup expected outputs
     expected_dependency_sequence = [
@@ -429,8 +429,8 @@ def test_build_dependency_sequence(nested_aiq_config: AIQConfig):
 
 
 @pytest.mark.usefixtures("set_test_api_keys")
-async def test_load_hierarchial_workflow(nested_aiq_config: AIQConfig):
+async def test_load_hierarchial_workflow(nested_aiq_config: Config):
 
     # Validate nested workflow instantiation
     async with WorkflowBuilder.from_config(config=nested_aiq_config) as workflow:
-        assert AIQSessionManager(workflow.build(), max_concurrency=1)
+        assert SessionManager(workflow.build(), max_concurrency=1)

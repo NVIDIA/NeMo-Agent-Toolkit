@@ -26,8 +26,8 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import HttpUrl
 
-from aiq.retriever.interface import AIQRetriever
-from aiq.retriever.models import AIQDocument
+from aiq.retriever.interface import Retriever
+from aiq.retriever.models import Document
 from aiq.retriever.models import RetrieverError
 from aiq.retriever.models import RetrieverOutput
 
@@ -51,7 +51,7 @@ class CollectionUnavailableError(RetrieverError):
     pass
 
 
-class NemoRetriever(AIQRetriever):
+class NemoRetriever(Retriever):
     """
     Client for retrieving document chunks from a Nemo Retriever service.
     """
@@ -153,11 +153,11 @@ def _wrap_nemo_results(output: list[dict], content_field: str):
 
 
 def _wrap_nemo_single_results(output: dict, content_field: str):
-    return AIQDocument(page_content=output[content_field],
-                       metadata={
-                           k: v
-                           for k, v in output.items() if k != content_field
-                       })
+    return Document(page_content=output[content_field],
+                    metadata={
+                        k: v
+                        for k, v in output.items() if k != content_field
+                    })
 
 
 def _flatten(obj: dict, output_fields: list[str]) -> list[str]:
