@@ -58,7 +58,7 @@ class PluginTypes(IntFlag):
     # Convenience flag for groups of plugin types
     CONFIG_OBJECT = COMPONENT | FRONT_END | EVALUATOR | AUTHENTICATION
     """
-    Any plugin that can be specified in the AIQ Toolkit configuration file.
+    Any plugin that can be specified in the NAT configuration file.
     """
     ALL = COMPONENT | FRONT_END | EVALUATOR | REGISTRY_HANDLER | AUTHENTICATION
     """
@@ -68,7 +68,7 @@ class PluginTypes(IntFlag):
 
 def load_config(config_file: StrPath) -> AIQConfig:
     """
-    This is the primary entry point for loading an AIQ Toolkit configuration file. It ensures that all plugins are
+    This is the primary entry point for loading an NAT configuration file. It ensures that all plugins are
     loaded and then validates the configuration file against the AIQConfig schema.
 
     Parameters
@@ -87,7 +87,7 @@ def load_config(config_file: StrPath) -> AIQConfig:
 
     config_yaml = yaml_load(config_file)
 
-    # Validate configuration adheres to AIQ Toolkit schemas
+    # Validate configuration adheres to NAT schemas
     validated_aiq_config = validate_schema(config_yaml, AIQConfig)
 
     return validated_aiq_config
@@ -96,8 +96,8 @@ def load_config(config_file: StrPath) -> AIQConfig:
 @asynccontextmanager
 async def load_workflow(config_file: StrPath, max_concurrency: int = -1):
     """
-    Load the AIQ Toolkit configuration file and create an AIQRunner object. This is the primary entry point for running
-    AIQ Toolkit workflows.
+    Load the NAT configuration file and create an AIQRunner object. This is the primary entry point for running
+    NAT workflows.
 
     Parameters
     ----------

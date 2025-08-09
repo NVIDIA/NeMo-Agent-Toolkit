@@ -49,7 +49,7 @@ async def tavily_internet_search(tool_config: TavilyInternetSearchToolConfig, bu
             [f'<Document href="{doc["url"]}"/>\n{doc["content"]}\n</Document>' for doc in search_docs])
         return web_search_results
 
-    # Create a Generic AIQ Toolkit tool that can be used with any supported LLM framework
+    # Create a Generic NAT tool that can be used with any supported LLM framework
     yield FunctionInfo.from_fn(
         _tavily_internet_search,
         description=("""This tool retrieves relevant contexts from web search (using Tavily) for the given question.

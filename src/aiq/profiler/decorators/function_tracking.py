@@ -61,7 +61,7 @@ def push_intermediate_step(step_manager: IntermediateStepManager,
                            kwargs: Any = None,
                            output: Any = None,
                            metadata: dict[str, Any] | None = None) -> None:
-    """Push an intermediate step to the AIQ Toolkit Event Stream."""
+    """Push an intermediate step to the NAT Event Stream."""
 
     payload = IntermediateStepPayload(UUID=identifier,
                                       event_type=event_type,

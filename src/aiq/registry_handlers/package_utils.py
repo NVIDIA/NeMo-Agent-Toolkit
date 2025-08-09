@@ -502,7 +502,7 @@ def build_wheel(package_root: str) -> WheelData:
 
 
 def build_package_metadata(wheel_data: WheelData | None) -> dict[AIQComponentEnum, list[dict | DiscoveryMetadata]]:
-    """Loads discovery metadata for all registered AIQ Toolkit components included in this Python package.
+    """Loads discovery metadata for all registered NAT components included in this Python package.
 
     Args:
         wheel_data (WheelData): Data model containing a built python wheel and its corresponding metadata.
@@ -549,7 +549,7 @@ def build_package_metadata(wheel_data: WheelData | None) -> dict[AIQComponentEnu
 
 
 def build_aiq_artifact(package_root: str) -> AIQArtifact:
-    """Builds a complete AIQ Toolkit Artifact that can be published for discovery and reuse.
+    """Builds a complete NAT Artifact that can be published for discovery and reuse.
 
     Args:
         package_root (str): Path to root of python package

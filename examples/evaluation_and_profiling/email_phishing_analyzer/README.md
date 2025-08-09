@@ -76,7 +76,7 @@ The configuration file specified above contains configurations for the NeMo Agen
 **Expected Workflow Output**
 ```console
 2025-04-23 15:24:54,183 - aiq.runtime.loader - WARNING - Loading module 'aiq_automated_description_generation.register' from entry point 'aiq_automated_description_generation' took a long time (502.501011 ms). Ensure all imports are inside your registered functions.
-2025-04-23 15:24:54,483 - aiq.cli.commands.start - INFO - Starting AIQ toolkit from config file: 'examples/evaluation_and_profiling/email_phishing_analyzer/configs/config.yml'
+2025-04-23 15:24:54,483 - aiq.cli.commands.start - INFO - Starting NeMo Agent toolkit from config file: 'examples/evaluation_and_profiling/email_phishing_analyzer/configs/config.yml'
 2025-04-23 15:24:54,495 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 
 Configuration Summary:

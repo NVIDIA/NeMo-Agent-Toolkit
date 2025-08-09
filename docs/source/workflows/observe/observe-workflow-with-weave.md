@@ -76,7 +76,7 @@ Note how the integration captures not only the `aiq` intermediate steps but also
 
 ## Redacting Sensitive Data
 
-When tracing LLM workflows, you may be processing sensitive information like personal identifiers, credit card numbers, or API keys. AIQ Toolkit Weave integration supports automatic redaction of Personally Identifiable Information (PII) and sensitive keys from your traces.
+When tracing LLM workflows, you may be processing sensitive information like personal identifiers, credit card numbers, or API keys. NeMo Agent toolkit Weave integration supports automatic redaction of Personally Identifiable Information (PII) and sensitive keys from your traces.
 
 **Prerequisites**: To enable PII redaction, you need `presidio-analyzer` and `presidio-anonymizer` installed. Installing the weave plugin will install these packages for you.
 

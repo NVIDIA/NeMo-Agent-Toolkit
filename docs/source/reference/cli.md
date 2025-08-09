@@ -86,14 +86,14 @@ Options:
   --step_adaptor STEPADAPTORCONFIG
   --workflow ENDPOINTBASE         Endpoint for the default workflow.
   --endpoints ENDPOINT            Additional endpoints to add to the FastAPI
-                                  app which run functions within the AIQ toolkit
+                                  app which run functions within the NeMo Agent toolkit
                                   configuration. Each endpoint must have a
                                   unique path.
   --use_gunicorn BOOLEAN          Use Gunicorn to run the FastAPI app
-  --runner_class TEXT             The AIQ toolkit runner class to use when launching
+  --runner_class TEXT             The NeMo Agent toolkit runner class to use when launching
                                   the FastAPI app from multiple processes.
                                   Each runner is responsible for loading and
-                                  running the AIQ toolkit workflow. Note: This is
+                                  running the NeMo Agent toolkit workflow. Note: This is
                                   different from the worker class used by
                                   Gunicorn.
   --help                          Show this message and exit.
@@ -221,14 +221,14 @@ Options:
   --step_adaptor STEPADAPTORCONFIG
   --workflow ENDPOINTBASE         Endpoint for the default workflow.
   --endpoints ENDPOINT            Additional endpoints to add to the FastAPI
-                                  app which run functions within the AIQ toolkit
+                                  app which run functions within the NeMo Agent toolkit
                                   configuration. Each endpoint must have a
                                   unique path.
   --use_gunicorn BOOLEAN          Use Gunicorn to run the FastAPI app
-  --runner_class TEXT             The AIQ toolkit runner class to use when launching
+  --runner_class TEXT             The NeMo Agent toolkit runner class to use when launching
                                   the FastAPI app from multiple processes.
                                   Each runner is responsible for loading and
-                                  running the AIQ toolkit workflow. Note: This is
+                                  running the NeMo Agent toolkit workflow. Note: This is
                                   different from the worker class used by
                                   Gunicorn.
   --help                          Show this message and exit.
@@ -355,7 +355,7 @@ Options:
                             be used to populate the docstring and will
                             describe the component when inspecting installed
                             components using 'aiq info component'  [default:
-                            AIQ toolkit function template. Please update the
+                            NeMo Agent toolkit function template. Please update the
                             description.]
   --help                    Show this message and exit.
 ```
@@ -380,7 +380,7 @@ The `aiq workflow reinstall --help` utility provides a description of its usage:
 $ aiq workflow reinstall --help
 Usage: aiq workflow reinstall [OPTIONS] WORKFLOW_NAME
 
-  Reinstall an AIQ toolkit workflow package.
+  Reinstall an NeMo Agent toolkit workflow package.
 
   Args:
       workflow_name (str): The name of the workflow to reinstall.
@@ -414,7 +414,7 @@ into the local environment. To remove a workflow package from the local environm
 $ aiq workflow delete --help
 Usage: aiq workflow delete [OPTIONS] WORKFLOW_NAME
 
-  Delete an AIQ toolkit workflow and uninstall its package.
+  Delete an NeMo Agent toolkit workflow and uninstall its package.
 
   Args:     workflow_name (str): The name of the workflow to delete.
 
@@ -450,11 +450,11 @@ The `aiq info components --help` utility provides an overview of usage and filte
 $ aiq info components --help
 Usage: aiq info components [OPTIONS] COMMAND [ARGS]...
 
-  List the locally registered AIQ toolkit components.
+  List the locally registered NeMo Agent toolkit components.
 
 Options:
   -t, --types [front_end|function|tool_wrapper|llm_provider|llm_client|embedder_provider|embedder_client|evaluator|memory|retriever_provider|retriever_client|registry_handler|logging|tracing|package|undefined]
-                                  Filter the search by AIQ toolkit component type.
+                                  Filter the search by NeMo Agent toolkit component type.
   -o, --output_path TEXT          Path to save search results.
   -q, --query TEXT                The query string.  [default: ""]
   -n, --num_results INTEGER       Number of results to return.  [default: -1]
@@ -514,9 +514,9 @@ $ aiq configure channel add rest
 Channel Name: my_rest_channel  # A user defined locally unique name used to reference this configured channel
 Endpoint: http://my_rest_channel_url.com  # The endpoint to the remote rest registry service
 Token: my_rest_token  # The authentication token to interact with this rest registry service
-Publish Route: publish  # The route to use when publishing AIQ toolkit packages
-Pull Route: pull  # The route to use when downloading AIQ toolkit packages
-Search Route: search  # The route use when searching for relevant AIQ toolkit packages
+Publish Route: publish  # The route to use when publishing NeMo Agent toolkit packages
+Pull Route: pull  # The route to use when downloading NeMo Agent toolkit packages
+Search Route: search  # The route use when searching for relevant NeMo Agent toolkit packages
 Remove Route: remove  # The route to use when removing a published package from a remote rest registy
 ```
 
@@ -527,9 +527,9 @@ $ aiq configure channel add pypi
 Channel Name: my_pypi_channel  # A user defined locally unique name used to reference this configured channel
 Endpoint: http://my_pypi_channel_url.com  # The endpoint to the private pypi registry service
 Token: my_pypi_token  # The authentication token to interact with this pypi registry service
-Publish Route:  # The route to use when publishing AIQ toolkit packages, setting an empty value here
-Pull Route: # The route to use when downloading AIQ toolkit packages, setting an empty value here
-Search Route: simple  # The route use when searching for relevant AIQ toolkit packages
+Publish Route:  # The route to use when publishing NeMo Agent toolkit packages, setting an empty value here
+Pull Route: # The route to use when downloading NeMo Agent toolkit packages, setting an empty value here
+Search Route: simple  # The route use when searching for relevant NeMo Agent toolkit packages
 ```
 
 #### Updating a Remote Registry Channel Configuration
@@ -580,16 +580,16 @@ The `aiq registry` help command will provide the available commands in this grou
 $ aiq registry --help
 Usage: aiq registry [OPTIONS] COMMAND [ARGS]...
 
-  Utility to configure AIQ toolkit remote registry channels.
+  Utility to configure NeMo Agent toolkit remote registry channels.
 
 Options:
   --help  Show this message and exit.
 
 Commands:
-  publish  Publish local AIQ toolkit artifacts to a remote registry from package...
-  pull     Pull AIQ toolkit artifacts from a remote registry by package name.
-  remove   Remove AIQ toolkit artifact from a remote registry by name and version.
-  search   Search for AIQ toolkit artifacts from remote registry.
+  publish  Publish local NeMo Agent toolkit artifacts to a remote registry from package...
+  pull     Pull NeMo Agent toolkit artifacts from a remote registry by package name.
+  remove   Remove NeMo Agent toolkit artifact from a remote registry by name and version.
+  search   Search for NeMo Agent toolkit artifacts from remote registry.
 ```
 
 #### Publishing NeMo Agent Toolkit Components
@@ -606,13 +606,13 @@ The `aiq registry publish --help` utility provides an overview of its usage:
 $ aiq registry publish --help
 Usage: aiq registry publish [OPTIONS] PACKAGE_ROOT COMMAND [ARGS]...
 
-  Publish local AIQ toolkit artifacts to a remote registry from package
+  Publish local NeMo Agent toolkit artifacts to a remote registry from package
   repository.
 
 Options:
   --config_file FILE  A YAML file to override configured channel settings.
   -c, --channel TEXT  The remote registry channel to use when publishing the
-                      AIQ toolkit artifact.  [required]
+                      NeMo Agent toolkit artifact.  [required]
   --help              Show this message and exit.
 
 ```
@@ -632,13 +632,13 @@ The `aiq registry search --help` utility provides an overview of its usage:
 $ aiq registry search --help
 Usage: aiq registry search [OPTIONS] COMMAND [ARGS]...
 
-  Search for AIQ toolkit artifacts from remote registry.
+  Search for NeMo Agent toolkit artifacts from remote registry.
 
 Options:
   --config_file FILE              A JSON/YAML file that sets the parameters
                                   for the workflow.
   -c, --channel TEXT              The remote registry channel to use when
-                                  pulling the AIQ toolkit artifact.  [required]
+                                  pulling the NeMo Agent toolkit artifact.  [required]
   -o, --output_path TEXT          Path to save search results.
   -f, --fields [all|package|version|component_name|description|developer_notes]
                                   The fields to include in the search.
@@ -662,12 +662,12 @@ The `aiq registry pull --help` command provides an overview of its usage:
 $ aiq registry pull --help
 Usage: aiq registry pull [OPTIONS] PACKAGES COMMAND [ARGS]...
 
-  Pull AIQ toolkit artifacts from a remote registry by package name.
+  Pull NeMo Agent toolkit artifacts from a remote registry by package name.
 
 Options:
   --config_file FILE  A YAML file to override the channel settings.
   -c, --channel TEXT  The remote registry channel to use when pulling the
-                      AIQ toolkit artifact.  [required]
+                      NeMo Agent toolkit artifact.  [required]
   --help              Show this message and exit.
 ```
 
@@ -685,11 +685,11 @@ The `aiq registry remove --help` utility provides an overview of its usage.
 $ aiq registry remove --help
 Usage: aiq registry remove [OPTIONS] PACKAGES COMMAND [ARGS]...
 
-  Remove AIQ toolkit artifact from a remote registry by name and version.
+  Remove NeMo Agent toolkit artifact from a remote registry by name and version.
 
 Options:
   --config_file FILE  A YAML file to override the channel settings.
-  -c, --channel TEXT  The remote registry channel that will remove the AIQ toolkit
+  -c, --channel TEXT  The remote registry channel that will remove the NeMo Agent toolkit
                       artifact.  [required]
   --help              Show this message and exit.
 ```

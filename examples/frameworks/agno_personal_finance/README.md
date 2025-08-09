@@ -103,7 +103,7 @@ aiq run --config_file examples/frameworks/agno_personal_finance/configs/config.y
 2025-07-23 03:43:32,279 - aiq.runtime.loader - WARNING - Loading module 'aiq_plot_charts.register' from entry point 'aiq_plot_charts' took a long time (473.043442 ms). Ensure all imports are inside your registered functions.
 2025-07-23 03:43:32,455 - aiq.runtime.loader - WARNING - Loading module 'aiq_semantic_kernel_demo.register' from entry point 'aiq_semantic_kernel_demo' took a long time (175.730944 ms). Ensure all imports are inside your registered functions.
 2025-07-23 03:43:32,572 - aiq.runtime.loader - WARNING - Loading module 'aiq_alert_triage_agent.register' from entry point 'aiq_alert_triage_agent' took a long time (117.298603 ms). Ensure all imports are inside your registered functions.
-2025-07-23 03:43:32,786 - aiq.cli.commands.start - INFO - Starting AIQ Toolkit from config file: 'examples/frameworks/agno_personal_finance/configs/config.yml'
+2025-07-23 03:43:32,786 - aiq.cli.commands.start - INFO - Starting NeMo Agent toolkit from config file: 'examples/frameworks/agno_personal_finance/configs/config.yml'
 2025-07-23 03:43:32,788 - aiq.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
 2025-07-23 03:43:34,109 - aiq.profiler.decorators.framework_wrapper - INFO - Agno callback handler registered
 

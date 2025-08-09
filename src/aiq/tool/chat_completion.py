@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Simple Completion Function for AIQ Toolkit
+Simple Completion Function for NAT
 
 This module provides a simple completion function that can handle
 natural language queries and perform basic text completion tasks.

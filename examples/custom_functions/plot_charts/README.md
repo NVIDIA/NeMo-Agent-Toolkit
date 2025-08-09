@@ -22,7 +22,7 @@ limitations under the License.
 
 # Plot Charts Agent
 
-A simple and reusable example that demonstrates creating charts from data using the AIQ Toolkit. This workflow can generate line charts, bar charts, and scatter plots from JSON data files based on user requests. The implementation follows AIQ Toolkit best practices for configuration-driven, reusable workflows.
+A simple and reusable example that demonstrates creating charts from data using the NeMo Agent toolkit. This workflow can generate line charts, bar charts, and scatter plots from JSON data files based on user requests. The implementation follows NeMo Agent toolkit best practices for configuration-driven, reusable workflows.
 
 ## Table of Contents
 
@@ -41,7 +41,7 @@ A simple and reusable example that demonstrates creating charts from data using 
 
 ## Installation and Setup
 
-### Setup Virtual Environment and Install AIQ Toolkit
+### Setup Virtual Environment and Install NeMo Agent toolkit
 
 If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
 

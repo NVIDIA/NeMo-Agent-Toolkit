@@ -32,8 +32,8 @@ An example of a Mixture of Agents (naive Mixture of Experts / naive Agent Hyperv
   - [Install this Workflow](#install-this-workflow)
   - [Set Up API Keys](#set-up-api-keys)
   - [Run the Workflow](#run-the-workflow)
-  - [Starting the AIQ Toolkit Server](#starting-the-aiq-toolkit-server)
-  - [Making Requests to the AIQ Toolkit Server](#making-requests-to-the-aiq-toolkit-server)
+  - [Starting the NeMo Agent toolkit Server](#starting-the-aiq-toolkit-server)
+  - [Making Requests to the NeMo Agent toolkit Server](#making-requests-to-the-aiq-toolkit-server)
 
 ## Key Features
 
@@ -135,7 +135,7 @@ Workflow Result:
 ```
 ---
 
-### Starting the AIQ Toolkit Server
+### Starting the NeMo Agent toolkit Server
 
 You can start the NeMo Agent toolkit server using the `aiq serve` command with the appropriate configuration file.
 
@@ -145,7 +145,7 @@ You can start the NeMo Agent toolkit server using the `aiq serve` command with t
 aiq serve --config_file=examples/agents/mixture_of_agents/configs/config.yml
 ```
 
-### Making Requests to the AIQ Toolkit Server
+### Making Requests to the NeMo Agent toolkit Server
 
 Once the server is running, you can make HTTP requests to interact with the workflow.
 

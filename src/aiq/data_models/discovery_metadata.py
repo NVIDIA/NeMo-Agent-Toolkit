@@ -56,11 +56,11 @@ class DiscoveryMetadata(BaseModel):
     """A data model representing metadata about each registered component to faciliate its discovery.
 
     Args:
-        package (str): The name of the package containing the AIQ Toolkit component.
-        version (str): The version number of the package containing the AIQ Toolkit component.
-        component_type (AIQComponentEnum): The type of AIQ Toolkit component this metadata represents.
-        component_name (str): The registered name of the AIQ Toolkit component.
-        description (str): Description of the AIQ Toolkit component pulled from its config objects docstrings.
+        package (str): The name of the package containing the NAT component.
+        version (str): The version number of the package containing the NAT component.
+        component_type (AIQComponentEnum): The type of NAT component this metadata represents.
+        component_name (str): The registered name of the NAT component.
+        description (str): Description of the NAT component pulled from its config objects docstrings.
         developer_notes (str): Other notes to a developers to aid in the use of the component.
         status (DiscoveryStatusEnum): Provides the status of the metadata discovery process.
     """
@@ -125,7 +125,7 @@ class DiscoveryMetadata(BaseModel):
             module (ModuleType): A registered component's module.
 
         Returns:
-            str: The distribution name of the AIQ Toolkit component.
+            str: The distribution name of the NAT component.
         """
         from aiq.runtime.loader import get_all_aiq_entrypoints_distro_mapping
 
@@ -140,7 +140,7 @@ class DiscoveryMetadata(BaseModel):
             return "aiqtoolkit"
 
         # Traverse the module package parts in reverse order to find the distro name
-        # This is because the module package is the root package for the AIQ Toolkit component
+        # This is because the module package is the root package for the NAT component
         # and the distro name is the name of the package that contains the component
         module_package_parts = module_package.split(".")
         for part_idx in range(len(module_package_parts), 0, -1):
@@ -160,7 +160,7 @@ class DiscoveryMetadata(BaseModel):
             config_type (type[TypedBaseModelT]): A registered component's configuration object.
 
         Returns:
-            str: The distribution name of the AIQ Toolkit component.
+            str: The distribution name of the NAT component.
         """
         module = inspect.getmodule(config_type)
         return DiscoveryMetadata.get_distribution_name_from_module(module)
@@ -180,7 +180,7 @@ class DiscoveryMetadata(BaseModel):
     @staticmethod
     def from_config_type(config_type: type["TypedBaseModelT"],
                          component_type: AIQComponentEnum = AIQComponentEnum.UNDEFINED) -> "DiscoveryMetadata":
-        """Generates discovery metadata from an AIQ Toolkit config object.
+        """Generates discovery metadata from an NAT config object.
 
         Args:
             config_type (type[TypedBaseModelT]): A registered component's configuration object.
@@ -263,7 +263,7 @@ class DiscoveryMetadata(BaseModel):
         """Generates discovery metadata from an installed package name.
 
         Args:
-            package_name (str): The name of the AIQ Toolkit plugin package containing registered components.
+            package_name (str): The name of the NAT plugin package containing registered components.
             package_version (str, optional): The version of the package, Defaults to None.
 
         Returns:

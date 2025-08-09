@@ -28,8 +28,8 @@ This example demonstrates how to integrate the NVIDIA NeMo Agent toolkit with Mo
 - [Installation and Setup](#installation-and-setup)
   - [Install this Workflow](#install-this-workflow)
 - [Run the Workflow](#run-the-workflow)
-  - [AIQ Toolkit as an MCP Client](#aiq-toolkit-as-an-mcp-client)
-  - [AIQ Toolkit as an MCP Server](#aiq-toolkit-as-an-mcp-server)
+  - [NeMo Agent toolkit as an MCP Client](#aiq-toolkit-as-an-mcp-client)
+  - [NeMo Agent toolkit as an MCP Server](#aiq-toolkit-as-an-mcp-server)
 - [Configuration Examples](#configuration-examples)
 
 ## Key Features
@@ -75,10 +75,10 @@ uv pip install -e examples/MCP/simple_calculator_mcp
 
 ## Run the Workflow
 
-### AIQ Toolkit as an MCP Client
+### NeMo Agent toolkit as an MCP Client
 You can run the simple calculator workflow using Remote MCP tools. In this case, the workflow acts as a MCP client and connects to the MCP server running on the specified URL. Details are provided in the [MCP Client Guide](../../../docs/source/workflows/mcp/mcp-client.md).
 
-### AIQ Toolkit as an MCP Server
+### NeMo Agent toolkit as an MCP Server
 You can publish the simple calculator tools via MCP using the `aiq mcp` command. Details are provided in the [MCP Server Guide](../../../docs/source/workflows/mcp/mcp-server.md).
 
 ## Configuration Examples

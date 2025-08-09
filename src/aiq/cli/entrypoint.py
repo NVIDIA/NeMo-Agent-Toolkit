@@ -78,7 +78,7 @@ def get_version():
               help='Set the logging level')
 @click.pass_context
 def cli(ctx: click.Context, log_level: str):
-    """Main entrypoint for the AIQ Toolkit CLI"""
+    """Main entrypoint for the NAT CLI"""
 
     ctx_dict = ctx.ensure_object(dict)
 

@@ -99,7 +99,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         @asynccontextmanager
         async def lifespan(starting_app: FastAPI):
 
-            logger.debug("Starting AIQ Toolkit server from process %s", os.getpid())
+            logger.debug("Starting NAT server from process %s", os.getpid())
 
             async with WorkflowBuilder.from_config(self.config) as builder:
 
@@ -121,7 +121,7 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
                     self._cleanup_tasks.clear()
 
-            logger.debug("Closing AIQ Toolkit server from process %s", os.getpid())
+            logger.debug("Closing NAT server from process %s", os.getpid())
 
         aiq_app = FastAPI(lifespan=lifespan)
 

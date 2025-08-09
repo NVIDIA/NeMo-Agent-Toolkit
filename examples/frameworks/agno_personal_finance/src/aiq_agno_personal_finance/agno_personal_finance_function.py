@@ -46,7 +46,7 @@ async def agno_personal_finance_function(config: AgnoPersonalFinanceFunctionConf
     config : AgnoPersonalFinanceFunctionConfig
         Configuration for the financial planning function
     builder : Builder
-        The AIQ Toolkit builder instance
+        The NAT builder instance
 
     Returns
     -------

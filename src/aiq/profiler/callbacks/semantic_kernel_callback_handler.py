@@ -55,7 +55,7 @@ class SemanticKernelProfilerHandler(BaseProfilerCallback):
     - Tool calls
 
     to collect usage statistics (tokens, inputs, outputs, time intervals, etc.)
-    and store them in AIQ Toolkit's usage_stats queue for subsequent analysis.
+    and store them in NAT's usage_stats queue for subsequent analysis.
     """
 
     def __init__(self, workflow_llms: dict) -> None:

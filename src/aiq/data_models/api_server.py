@@ -111,7 +111,7 @@ class Message(BaseModel):
 
 class AIQChatRequest(BaseModel):
     """
-    AIQChatRequest is a data model that represents a request to the AIQ Toolkit chat API.
+    AIQChatRequest is a data model that represents a request to the NAT chat API.
     Fully compatible with OpenAI Chat Completions API specification.
     """
 
@@ -235,7 +235,7 @@ class AIQResponseBaseModelIntermediate(BaseModel, AIQResponseSerializable):
 
 class AIQChatResponse(AIQResponseBaseModelOutput):
     """
-    AIQChatResponse is a data model that represents a response from the AIQ Toolkit chat API.
+    AIQChatResponse is a data model that represents a response from the NAT chat API.
     Fully compatible with OpenAI Chat Completions API specification.
     """
 
@@ -284,7 +284,7 @@ class AIQChatResponse(AIQResponseBaseModelOutput):
 
 class AIQChatResponseChunk(AIQResponseBaseModelOutput):
     """
-    AIQChatResponseChunk is a data model that represents a response chunk from the AIQ Toolkit chat streaming API.
+    AIQChatResponseChunk is a data model that represents a response chunk from the NAT chat streaming API.
     Fully compatible with OpenAI Chat Completions API specification.
     """
 
@@ -362,7 +362,7 @@ class AIQChatResponseChunk(AIQResponseBaseModelOutput):
 
 class AIQResponseIntermediateStep(AIQResponseBaseModelIntermediate):
     """
-    AIQResponseSerializedStep is a data model that represents a serialized step in the AIQ Toolkit chat streaming API.
+    AIQResponseSerializedStep is a data model that represents a serialized step in the NAT chat streaming API.
     """
 
     # Allow extra fields in the model_config to support derived models
