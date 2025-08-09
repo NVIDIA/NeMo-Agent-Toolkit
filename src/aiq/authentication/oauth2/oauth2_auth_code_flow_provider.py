@@ -82,7 +82,7 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
 
         auth_callback = self._context.user_auth_callback
         if not auth_callback:
-            raise RuntimeError("Authentication callback not set on AIQContext.")
+            raise RuntimeError("Authentication callback not set on Context.")
 
         try:
             authenticated_context = await auth_callback(self.config, AuthFlowType.OAUTH2_AUTHORIZATION_CODE)

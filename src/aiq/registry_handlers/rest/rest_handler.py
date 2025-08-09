@@ -65,7 +65,7 @@ class RestRegistryHandler(AbstractRegistryHandler):
         """Publishes an NAT artifact to a remote REST registry.
 
         Args:
-            artifact (AIQArtifact): An artifact that contain NAT plugin wheel and it's corrosponding discovery
+            artifact (Artifact): An artifact that contain NAT plugin wheel and it's corrosponding discovery
             metadata.
 
         Yields:

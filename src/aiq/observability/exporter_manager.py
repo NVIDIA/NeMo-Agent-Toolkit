@@ -141,7 +141,7 @@ class ExporterManager:
         expensive resources but have separate mutable state.
 
         Args:
-            context_state (AIQContextState | None, optional): The isolated context state for the new exporter instances.
+            context_state (ContextState | None, optional): The isolated context state for the new exporter instances.
                 If not provided, a new context state will be created.
 
         Returns:

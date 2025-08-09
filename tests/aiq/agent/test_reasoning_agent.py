@@ -198,7 +198,7 @@ async def test_build_reasoning_function_streaming_with_chat_request(fake_builder
     If the augmented function has streaming output, the resulting FunctionInfo should have a stream_fn,
     and we test that streaming logic calls LLM in the background, then calls the augmented function in streaming mode.
 
-    We also test that the connector can convert to the AIQChatRequest if the target requires it.
+    We also test that the connector can convert to the ChatRequest if the target requires it.
     """
 
     # Return a streaming augmented function

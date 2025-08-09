@@ -45,16 +45,16 @@ def create_function_wrapper(
     Returns:
         A wrapper function suitable for registration with MCP
     """
-    # Check if we're dealing with AIQChatRequest - special case
+    # Check if we're dealing with ChatRequest - special case
     is_chat_request = False
 
-    # Check if the schema name is AIQChatRequest
-    if schema.__name__ == "AIQChatRequest" or (hasattr(schema, "__qualname__")
-                                               and "AIQChatRequest" in schema.__qualname__):
+    # Check if the schema name is ChatRequest
+    if schema.__name__ == "ChatRequest" or (hasattr(schema, "__qualname__")
+                                               and "ChatRequest" in schema.__qualname__):
         is_chat_request = True
-        logger.info("Function %s uses AIQChatRequest - creating simplified interface", function_name)
+        logger.info("Function %s uses ChatRequest - creating simplified interface", function_name)
 
-        # For AIQChatRequest, we'll create a simple wrapper with just a query parameter
+        # For ChatRequest, we'll create a simple wrapper with just a query parameter
         parameters = [Parameter(
             name="query",
             kind=Parameter.KEYWORD_ONLY,
@@ -102,7 +102,7 @@ def create_function_wrapper(
                 await ctx.report_progress(0, 100)
 
             try:
-                # Special handling for AIQChatRequest
+                # Special handling for ChatRequest
                 if is_chat_request:
                     from aiq.data_models.api_server import ChatRequest
 

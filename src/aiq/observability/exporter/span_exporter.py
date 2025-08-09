@@ -68,7 +68,7 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
     2. IntermediateStep (END) → Complete Span → Process through pipeline → Export
 
     Args:
-        context_state (AIQContextState, optional): The context state to use for the exporter. Defaults to None.
+        context_state (ContextState, optional): The context state to use for the exporter. Defaults to None.
     """
 
     # Use descriptors for automatic isolation of span-specific state

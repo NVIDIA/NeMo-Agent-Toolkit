@@ -75,7 +75,7 @@ class FlowHandlerBase(ABC):
 
     Each front end will define a FlowHandler that will implement the authenticate method.
 
-    The `authenticate` method will be stored as the callback in the AIQContextState.user_auth_callback
+    The `authenticate` method will be stored as the callback in the ContextState.user_auth_callback
     """
 
     @abstractmethod

@@ -26,7 +26,7 @@ async def test_register_mcp_front_end():
     # Create configuration objects
     mcp_config = MCPFrontEndConfig(name="Test MCP Server")
 
-    # Use a real AIQConfig with a proper workflow
+    # Use a real Config with a proper workflow
     full_config = Config(general=GeneralConfig(front_end=mcp_config), workflow=EchoFunctionConfig())
 
     # Use the context manager pattern since register_mcp_front_end

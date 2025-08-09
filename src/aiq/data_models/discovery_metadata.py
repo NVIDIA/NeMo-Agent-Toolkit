@@ -58,7 +58,7 @@ class DiscoveryMetadata(BaseModel):
     Args:
         package (str): The name of the package containing the NAT component.
         version (str): The version number of the package containing the NAT component.
-        component_type (AIQComponentEnum): The type of NAT component this metadata represents.
+        component_type (ComponentEnum): The type of NAT component this metadata represents.
         component_name (str): The registered name of the NAT component.
         description (str): Description of the NAT component pulled from its config objects docstrings.
         developer_notes (str): Other notes to a developers to aid in the use of the component.
@@ -184,8 +184,8 @@ class DiscoveryMetadata(BaseModel):
 
         Args:
             config_type (type[TypedBaseModelT]): A registered component's configuration object.
-            component_type (AIQComponentEnum, optional): The type of the registered component. Defaults to
-            AIQComponentEnum.UNDEFINED.
+            component_type (ComponentEnum, optional): The type of the registered component. Defaults to
+            ComponentEnum.UNDEFINED.
 
         Returns:
             DiscoveryMetadata: A an object containing component metadata to facilitate discovery and reuse.
@@ -228,8 +228,8 @@ class DiscoveryMetadata(BaseModel):
             wrapper_type (LLMFrameworkEnum): The wrapper to apply to the callable to faciliate inter-framwork
             interoperability.
 
-            component_type (AIQComponentEnum, optional): The type of the registered component. Defaults to
-            AIQComponentEnum.TOOL_WRAPPER.
+            component_type (ComponentEnum, optional): The type of the registered component. Defaults to
+            ComponentEnum.TOOL_WRAPPER.
 
         Returns:
             DiscoveryMetadata: A an object containing component metadata to facilitate discovery and reuse.
@@ -302,9 +302,9 @@ class DiscoveryMetadata(BaseModel):
             wrapper_type (LLMFrameworkEnum | str): The wrapper to apply to the callable to faciliate inter-framwork
             interoperability.
 
-            provider_type (AIQComponentEnum): The type of provider the registered component supports.
-            component_type (AIQComponentEnum, optional): The type of the registered component. Defaults to
-            AIQComponentEnum.UNDEFINED.
+            provider_type (ComponentEnum): The type of provider the registered component supports.
+            component_type (ComponentEnum, optional): The type of the registered component. Defaults to
+            ComponentEnum.UNDEFINED.
 
         Returns:
             DiscoveryMetadata: A an object containing component metadata to facilitate discovery and reuse.

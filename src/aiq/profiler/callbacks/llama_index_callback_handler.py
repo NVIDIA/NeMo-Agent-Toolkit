@@ -49,7 +49,7 @@ class LlamaIndexProfilerHandler(BaseCallbackHandler, BaseProfilerCallback):
     - Response data
     - Time intervals between calls
 
-    and appends them to AIQContextState.usage_stats.
+    and appends them to ContextState.usage_stats.
     """
 
     def __init__(self) -> None:

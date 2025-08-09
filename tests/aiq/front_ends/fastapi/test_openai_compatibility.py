@@ -64,7 +64,7 @@ def test_fastapi_config_openai_api_v1_path_field():
 
 
 def test_aiq_chat_request_openai_fields():
-    """Test that AIQChatRequest includes all OpenAI Chat Completions API fields"""
+    """Test that ChatRequest includes all OpenAI Chat Completions API fields"""
     # Test with minimal required fields
     request = ChatRequest(messages=[Message(content="Hello", role="user")])
     assert request.messages[0].content == "Hello"
@@ -121,7 +121,7 @@ def test_aiq_chat_request_openai_fields():
 
 
 def test_aiq_choice_delta_class():
-    """Test that AIQChoiceDelta class works correctly"""
+    """Test that ChoiceDelta class works correctly"""
     # Test empty delta
     delta = ChoiceDelta()
     assert delta.content is None

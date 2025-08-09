@@ -44,7 +44,7 @@ class SessionManager:
 
     def __init__(self, workflow: Workflow, max_concurrency: int = 8):
         """
-        The AIQSessionManager class is used to run and manage a user workflow session. It runs and manages the context,
+        The SessionManager class is used to run and manage a user workflow session. It runs and manages the context,
         and configuration of a workflow with the specified concurrency.
 
         Parameters

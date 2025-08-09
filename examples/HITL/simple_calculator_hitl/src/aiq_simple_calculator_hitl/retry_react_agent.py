@@ -129,7 +129,7 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
             input_message: The original input message to process
 
         Returns:
-            AIQChatResponse: The response from the successful retry or error message
+            ChatResponse: The response from the successful retry or error message
         """
         temp_react_agent: Function
         temp_react_agent_config: RetryReactAgentConfig
@@ -180,7 +180,7 @@ async def retry_react_agent(config: RetryReactAgentConfig, builder: Builder):
             input_message: The input message to process
 
         Returns:
-            AIQChatResponse: The response from the agent or error message
+            ChatResponse: The response from the agent or error message
         """
         try:
             # First attempt: try the original React agent

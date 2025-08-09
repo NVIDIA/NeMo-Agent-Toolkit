@@ -865,7 +865,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         Populate the builder with components and optionally set up the workflow.
 
         Args:
-            config (AIQConfig): The configuration object containing component definitions.
+            config (Config): The configuration object containing component definitions.
             skip_workflow (bool): If True, skips the workflow instantiation step. Defaults to False.
 
         """

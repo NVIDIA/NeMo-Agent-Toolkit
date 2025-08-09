@@ -50,7 +50,7 @@ class Runner:
                  context_state: ContextState,
                  exporter_manager: ExporterManager):
         """
-        The AIQRunner class is used to run a workflow. It handles converting input and output data types and running the
+        The Runner class is used to run a workflow. It handles converting input and output data types and running the
         workflow with the specified concurrency.
 
         Parameters
@@ -59,7 +59,7 @@ class Runner:
             The input message to the workflow
         entry_fn : Function
             The entry function to the workflow
-        context_state : AIQContextState
+        context_state : ContextState
             The context state to use
         exporter_manager : ExporterManager
             The exporter manager to use

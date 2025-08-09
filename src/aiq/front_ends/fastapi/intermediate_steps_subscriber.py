@@ -41,7 +41,7 @@ async def pull_intermediate(_q, adapter):
         Synchronously called whenever the runner publishes an event.
         We process it, then place it into the async queue (via a small async task).
         If adapter is None, convert the raw IntermediateStep into the complete
-        AIQResponseIntermediateStep and place it into the queue.
+        ResponseIntermediateStep and place it into the queue.
         """
         if adapter is None:
             adapted = ResponseIntermediateStep(id=item.UUID,

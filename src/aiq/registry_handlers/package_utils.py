@@ -287,7 +287,7 @@ def get_transitive_dependencies(distribution_names: list[str]) -> dict[str, set[
     This function recursively resolves all dependencies for the given distribution names,
     returning a mapping of each package to its complete set of transitive dependencies.
     This is useful when publishing plugins to remote registries that contain with nested dependencies,
-    ensuring that all dependencies are included in the AIQArtifact's metadata.
+    ensuring that all dependencies are included in the Artifact's metadata.
 
     Args:
         distribution_names (list[str]): List of Python distribution names (package names) to analyze.
@@ -408,7 +408,7 @@ def get_all_transitive_dependencies(distribution_names: list[str]) -> set[str]:
 
     Returns a flattened set of all unique dependencies across all the provided distribution names.
     This is useful when publishing plugins to remote registries that contain with nested dependencies,
-    ensuring that all dependencies are included in the AIQArtifact's metadata.
+    ensuring that all dependencies are included in the Artifact's metadata.
 
     Args:
         distribution_names: List of Python distribution names (package names) to analyze
@@ -508,7 +508,7 @@ def build_package_metadata(wheel_data: WheelData | None) -> dict[ComponentEnum, 
         wheel_data (WheelData): Data model containing a built python wheel and its corresponding metadata.
 
     Returns:
-        dict[AIQComponentEnum, list[typing.Union[dict, DiscoveryMetadata]]]: List containing each components discovery
+        dict[ComponentEnum, list[typing.Union[dict, DiscoveryMetadata]]]: List containing each components discovery
         metadata.
     """
 
@@ -555,7 +555,7 @@ def build_aiq_artifact(package_root: str) -> Artifact:
         package_root (str): Path to root of python package
 
     Returns:
-        AIQArtifact: An publishabla AIQArtifact containing package wheel and discovery metadata.
+        Artifact: An publishabla Artifact containing package wheel and discovery metadata.
     """
 
     from aiq.registry_handlers.schemas.publish import BuiltArtifact

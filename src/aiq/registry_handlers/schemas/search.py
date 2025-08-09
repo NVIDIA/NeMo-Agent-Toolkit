@@ -47,7 +47,7 @@ class SearchQuery(BaseModel):
     Args:
         query (str): A query string used to find useful NAT components.
         fields (list[SearchFields]): The list of fields used when applying the query string.
-        component_types (list[AIQComponentEnum]): NAT components types to filter search results.
+        component_types (list[ComponentEnum]): NAT components types to filter search results.
         top_k (int): Specifies the number of search results to provide.
     """
 
@@ -63,7 +63,7 @@ class SearchResponseItem(BaseModel):
     Args:
         package (str): The name of the NAT package that includes the component.
         version (str): The version of the NAT package that includes the component.
-        component_type (AIQComponentEnum): Type of NAT component this item represents.
+        component_type (ComponentEnum): Type of NAT component this item represents.
         description (str): A description of this NAT component.
         developer_notes (str): Additional details that would help a developer use this component.
     """

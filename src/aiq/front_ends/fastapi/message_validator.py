@@ -227,9 +227,9 @@ class MessageValidator:
 
     async def get_intermediate_step_parent_id(self, data_model: ResponseIntermediateStep) -> str:
         """
-        Retrieves intermediate step parent_id from AIQResponseIntermediateStep instance.
+        Retrieves intermediate step parent_id from ResponseIntermediateStep instance.
 
-        :param data_model: AIQResponseIntermediateStep Data Model instance.
+        :param data_model: ResponseIntermediateStep Data Model instance.
         :return: Intermediate step parent_id or "default".
         """
         return data_model.parent_id or "root"

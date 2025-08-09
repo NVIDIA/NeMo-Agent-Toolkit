@@ -442,7 +442,7 @@ validated_response_data_models = [
 @pytest.mark.parametrize("data_model", validated_response_data_models)
 async def test_resolve_response_message_type_by_input_data(data_model: BaseModel):
     """Resolve validated message type WebSocketMessageType.RESPONSE_MESSAGE from
-    AIQResponsePayloadOutput, AIQChatResponse, AIQChatResponseChunk input data."""
+    ResponsePayloadOutput, ChatResponse, ChatResponseChunk input data."""
     message_validator = MessageValidator()
 
     message_type = await message_validator.resolve_message_type_by_data(data_model)
@@ -451,7 +451,7 @@ async def test_resolve_response_message_type_by_input_data(data_model: BaseModel
 
 async def test_resolve_intermediate_step_message_type_by_input_data():
     """Resolve validated message type WebSocketMessageType.INTERMEDIATE_STEP_MESSAGE from
-    AIQResponseIntermediateStep input data."""
+    ResponseIntermediateStep input data."""
     message_validator = MessageValidator()
 
     message_type = await message_validator.resolve_message_type_by_data(aiq_response_intermediate_step_test)
@@ -496,7 +496,7 @@ async def test_resolve_error_message_type_by_invalid_input_data():
 
 
 async def test_aiq_response_to_websocket_message():
-    """Tests AIQResponsePayloadOutput can be converted to a WebSocketSystemResponseTokenMessage"""
+    """Tests ResponsePayloadOutput can be converted to a WebSocketSystemResponseTokenMessage"""
     message_validator = MessageValidator()
 
     aiq_response_content = await message_validator.convert_data_to_message_content(aiq_response_payload_output_test)
@@ -509,7 +509,7 @@ async def test_aiq_response_to_websocket_message():
 
 
 async def test_aiq_chat_response_to_websocket_message():
-    """Tests AIQChatResponse can be converted to a WebSocketSystemResponseTokenMessage"""
+    """Tests ChatResponse can be converted to a WebSocketSystemResponseTokenMessage"""
     message_validator = MessageValidator()
 
     aiq_chat_response_content = await message_validator.convert_data_to_message_content(aiq_chat_response_test)
@@ -522,7 +522,7 @@ async def test_aiq_chat_response_to_websocket_message():
 
 
 async def test_chat_response_chunk_to_websocket_message():
-    """Tests AIQChatResponseChunk can be converted to a WebSocketSystemResponseTokenMessage"""
+    """Tests ChatResponseChunk can be converted to a WebSocketSystemResponseTokenMessage"""
     message_validator = MessageValidator()
 
     aiq_chat_repsonse_chunk_content = await message_validator.convert_data_to_message_content(
@@ -536,7 +536,7 @@ async def test_chat_response_chunk_to_websocket_message():
 
 
 async def test_aiq_intermediate_step_to_websocket_message():
-    """Tests AIQResponseIntermediateStep can be converted to a WebSocketSystemIntermediateStepMessage"""
+    """Tests ResponseIntermediateStep can be converted to a WebSocketSystemIntermediateStepMessage"""
     message_validator = MessageValidator()
 
     aiq_intermediate_step_content = await message_validator.convert_data_to_message_content(
@@ -660,7 +660,7 @@ async def test_websocket_error_message():
 
 
 async def test_valid_openai_chat_request_fields():
-    """Test that AIQChatRequest accepts valid field structures"""
+    """Test that ChatRequest accepts valid field structures"""
     # Test with minimal required fields
     minimal_request = {"messages": [{"role": "user", "content": "Hello"}]}
 
@@ -692,7 +692,7 @@ async def test_valid_openai_chat_request_fields():
 
 
 async def test_invalid_openai_chat_request_fields():
-    """Test that AIQChatRequest raises ValidationError for improper payloads"""
+    """Test that ChatRequest raises ValidationError for improper payloads"""
 
     with pytest.raises(ValidationError):
         ChatRequest()

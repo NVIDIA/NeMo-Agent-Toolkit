@@ -226,10 +226,10 @@ async def test_generate_async(fn_use_openai_api: bool):
         # Test both the function accepting OAI and also using the OAI API
         if (fn_use_openai_api):
             # response = await client.post(
-            #     workflow_path, json=AIQChatRequest(messages=[Message(content="Hello", role="user")]).model_dump())
+            #     workflow_path, json=ChatRequest(messages=[Message(content="Hello", role="user")]).model_dump())
 
             # assert response.status_code == 200
-            # assert AIQChatResponse.model_validate(response.json()).choices[0].message.content == "Hello"
+            # assert ChatResponse.model_validate(response.json()).choices[0].message.content == "Hello"
             assert True  # TODO: Implement async support in the EchoFunctionConfig
 
         else:

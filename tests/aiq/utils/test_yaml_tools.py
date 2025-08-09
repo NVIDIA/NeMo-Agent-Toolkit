@@ -198,7 +198,7 @@ def test_yaml_loads_with_function(env_vars: dict):
 
     # Test loading with function
     config_data: dict = yaml_loads(yaml_str)
-    # Convert the YAML data to an AIQConfig object
+    # Convert the YAML data to an Config object
     workflow_config: HashableBaseModel = Config(**config_data)
 
     assert workflow_config.workflow.type == "my_test_fn"
@@ -237,7 +237,7 @@ def test_yaml_load_with_function(env_vars: dict):
     try:
         # Test loading with function
         config_data: dict = yaml_load(temp_file_path)
-        # Convert the YAML data to an AIQConfig object
+        # Convert the YAML data to an Config object
         workflow_config: HashableBaseModel = Config(**config_data)
 
         workflow_config.workflow.type = "my_test_fn"

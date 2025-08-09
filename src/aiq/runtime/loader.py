@@ -69,7 +69,7 @@ class PluginTypes(IntFlag):
 def load_config(config_file: StrPath) -> Config:
     """
     This is the primary entry point for loading an NAT configuration file. It ensures that all plugins are
-    loaded and then validates the configuration file against the AIQConfig schema.
+    loaded and then validates the configuration file against the Config schema.
 
     Parameters
     ----------
@@ -78,8 +78,8 @@ def load_config(config_file: StrPath) -> Config:
 
     Returns
     -------
-    AIQConfig
-        The validated AIQConfig object
+    Config
+        The validated Config object
     """
 
     # Ensure all of the plugins are loaded
@@ -96,7 +96,7 @@ def load_config(config_file: StrPath) -> Config:
 @asynccontextmanager
 async def load_workflow(config_file: StrPath, max_concurrency: int = -1):
     """
-    Load the NAT configuration file and create an AIQRunner object. This is the primary entry point for running
+    Load the NAT configuration file and create an Runner object. This is the primary entry point for running
     NAT workflows.
 
     Parameters

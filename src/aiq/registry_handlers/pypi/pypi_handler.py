@@ -63,7 +63,7 @@ class PypiRegistryHandler(AbstractRegistryHandler):
         """Publishes an NAT artifact to a PyPI remote registry.
 
         Args:
-            artifact (AIQArtifact): An artifact that contain NAT plugin wheel and it's corrosponding discovery
+            artifact (Artifact): An artifact that contain NAT plugin wheel and it's corrosponding discovery
             metadata.
 
         Yields:

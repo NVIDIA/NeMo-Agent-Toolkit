@@ -171,7 +171,7 @@ def mock_pull_intermediate(tool_end_intermediate_step, llm_end_intermediate_step
 @pytest.fixture
 def session_manager(generated_answer, mock_pull_intermediate):
     """
-    Fixture to provide a mocked AIQSessionManager instance.
+    Fixture to provide a mocked SessionManager instance.
 
     DONT REMOVE mock_pull_intermediate arg. Although it is not used in this function,
     it is needed to ensure that pull_intermediate is mocked for all tests that use session_manager.
@@ -483,7 +483,7 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
     5. writes output.
     """
     evaluation_run.config.skip_workflow = skip_workflow
-    # Patch load_config to return an AIQConfig instance with eval_config set
+    # Patch load_config to return an Config instance with eval_config set
     mock_aiq_config = Config()
     mock_aiq_config.eval = default_eval_config
     mock_load_config = MagicMock(return_value=mock_aiq_config)

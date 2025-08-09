@@ -47,7 +47,7 @@ class TestOTLPSpanAdapterExporter:
 
     @pytest.fixture
     def mock_context_state(self):
-        """Create a mock AIQContextState for testing."""
+        """Create a mock ContextState for testing."""
         return Mock(spec=ContextState)
 
     @pytest.fixture

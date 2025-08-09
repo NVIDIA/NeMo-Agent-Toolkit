@@ -201,7 +201,7 @@ class Choice(BaseModel):
     delta: ChoiceDelta | None = None
     finish_reason: typing.Literal['stop', 'length', 'tool_calls', 'content_filter', 'function_call'] | None = None
     index: int
-    # logprobs: AIQChoiceLogprobs | None = None
+    # logprobs: ChoiceLogprobs | None = None
 
 
 class Usage(BaseModel):
@@ -212,7 +212,7 @@ class Usage(BaseModel):
 
 class ResponseSerializable(abc.ABC):
     """
-    AIQChatResponseSerializable is an abstract class that defines the interface for serializing output for the AIQ
+    ResponseSerializable is an abstract class that defines the interface for serializing output for the NAT
     Toolkit chat streaming API.
     """
 
@@ -577,7 +577,7 @@ class WebSocketSystemInteractionMessage(BaseModel):
     timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
 
 
-# ======== AIQGenerateResponse Converters ========
+# ======== GenerateResponse Converters ========
 
 
 def _generate_response_to_str(response: GenerateResponse) -> str:
@@ -603,7 +603,7 @@ def _generate_response_to_chat_response(response: GenerateResponse) -> ChatRespo
 GlobalTypeConverter.register_converter(_generate_response_to_chat_response)
 
 
-# ======== AIQChatRequest Converters ========
+# ======== ChatRequest Converters ========
 def _aiq_chat_request_to_string(data: ChatRequest) -> str:
     if isinstance(data.messages[-1].content, str):
         return data.messages[-1].content
@@ -620,7 +620,7 @@ def _string_to_aiq_chat_request(data: str) -> ChatRequest:
 GlobalTypeConverter.register_converter(_string_to_aiq_chat_request)
 
 
-# ======== AIQChatResponse Converters ========
+# ======== ChatResponse Converters ========
 def _aiq_chat_response_to_string(data: ChatResponse) -> str:
     return data.choices[0].message.content or ""
 
@@ -629,7 +629,7 @@ GlobalTypeConverter.register_converter(_aiq_chat_response_to_string)
 
 
 def _string_to_aiq_chat_response(data: str) -> ChatResponse:
-    '''Converts a string to an AIQChatResponse object'''
+    '''Converts a string to an ChatResponse object'''
 
     # Simulate usage
     prompt_tokens = 0
@@ -652,7 +652,7 @@ def _chat_response_to_chat_response_chunk(data: ChatResponse) -> ChatResponseChu
 GlobalTypeConverter.register_converter(_chat_response_to_chat_response_chunk)
 
 
-# ======== AIQChatResponseChunk Converters ========
+# ======== ChatResponseChunk Converters ========
 def _aiq_chat_response_chunk_to_string(data: ChatResponseChunk) -> str:
     if data.choices and len(data.choices) > 0:
         choice = data.choices[0]
@@ -667,7 +667,7 @@ GlobalTypeConverter.register_converter(_aiq_chat_response_chunk_to_string)
 
 
 def _string_to_aiq_chat_response_chunk(data: str) -> ChatResponseChunk:
-    '''Converts a string to an AIQChatResponseChunk object'''
+    '''Converts a string to an ChatResponseChunk object'''
 
     # Build and return the response
     return ChatResponseChunk.from_string(data)
@@ -678,7 +678,7 @@ GlobalTypeConverter.register_converter(_string_to_aiq_chat_response_chunk)
 
 # ======== AINodeMessageChunk Converters ========
 def _ai_message_chunk_to_aiq_chat_response_chunk(data) -> ChatResponseChunk:
-    '''Converts LangChain AINodeMessageChunk to AIQChatResponseChunk'''
+    '''Converts LangChain AINodeMessageChunk to ChatResponseChunk'''
     content = ""
     if hasattr(data, 'content') and data.content is not None:
         content = str(data.content)

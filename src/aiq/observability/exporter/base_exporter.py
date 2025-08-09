@@ -117,7 +117,7 @@ class BaseExporter(Exporter):
         - This keeps observability "off the hot path" for optimal performance
 
     Args:
-        context_state (AIQContextState, optional): The context state to use for the exporter. Defaults to None.
+        context_state (ContextState, optional): The context state to use for the exporter. Defaults to None.
     """
 
     # Class-level tracking for debugging and monitoring

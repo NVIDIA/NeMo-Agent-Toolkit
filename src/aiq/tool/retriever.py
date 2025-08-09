@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 class RetrieverConfig(FunctionBaseConfig, name="aiq_retriever"):
     """
-    AIQRetriever tool which provides a common interface for different vectorstores. Its
+    Retriever tool which provides a common interface for different vectorstores. Its
     configuration uses clients, which are the vectorstore-specific implementaiton of the retriever interface.
     """
     retriever: RetrieverRef = Field(description="The retriever instance name from the workflow configuration object.")

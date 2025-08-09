@@ -87,13 +87,13 @@ def test_human_response_discriminator_text():
 
 
 # ------------------------------------------------------------------------------
-# Tests for AIQUserInteractionManager (callback handler)
+# Tests for UserInteractionManager (callback handler)
 # ------------------------------------------------------------------------------
 
 
 async def test_prompt_user_input_text():
     """
-    Test that AIQUserInteractionManager.prompt_user_input correctly wraps a
+    Test that UserInteractionManager.prompt_user_input correctly wraps a
     user-input callback that returns a text response.
     """
 
