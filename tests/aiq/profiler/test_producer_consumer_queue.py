@@ -15,7 +15,7 @@
 
 from uuid import uuid4
 
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType as WorkflowEventEnum
@@ -32,7 +32,7 @@ async def test_usage_stat_order_and_latency(reactive_stream: Subject):
     """
 
     result_stats = []
-    step_manager = AIQContext.get().intermediate_step_manager
+    step_manager = Context.get().intermediate_step_manager
     _ = step_manager.subscribe(result_stats.append)
 
     # Simulate first LLM call

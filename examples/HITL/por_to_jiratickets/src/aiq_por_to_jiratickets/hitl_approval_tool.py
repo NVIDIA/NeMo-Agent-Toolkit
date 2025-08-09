@@ -18,7 +18,7 @@ import logging
 from pydantic import Field
 
 from aiq.builder.builder import Builder
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
 from aiq.data_models.function import FunctionBaseConfig
@@ -46,7 +46,7 @@ async def hitl_approval_function(config: HITLApprovalFnConfig, builder: Builder)
 
     async def _arun(unused: str = "") -> bool:
 
-        aiq_context = AIQContext.get()
+        aiq_context = Context.get()
         user_input_manager = aiq_context.user_interaction_manager
 
         human_prompt_text = HumanPromptText(text=prompt, required=True, placeholder="<your response here>")

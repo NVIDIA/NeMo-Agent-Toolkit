@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 YAML_EXTENSIONS = (".yaml", ".yml")
 
 
-class AIQEvaluateRequest(BaseModel):
+class EvaluateRequest(BaseModel):
     """Request model for the evaluate endpoint."""
     config_file: str = Field(description="Path to the configuration file for evaluation")
     job_id: str | None = Field(default=None, description="Unique identifier for the evaluation job")
@@ -84,12 +84,12 @@ class BaseAsyncResponse(BaseModel):
     status: str = Field(description="Current status of the job")
 
 
-class AIQEvaluateResponse(BaseAsyncResponse):
+class EvaluateResponse(BaseAsyncResponse):
     """Response model for the evaluate endpoint."""
     pass
 
 
-class AIQAsyncGenerateResponse(BaseAsyncResponse):
+class AsyncGenerateResponse(BaseAsyncResponse):
     """Response model for the async generation endpoint."""
     pass
 
@@ -104,14 +104,14 @@ class BaseAsyncStatusResponse(BaseModel):
     expires_at: datetime | None = Field(default=None, description="Timestamp when the job will expire")
 
 
-class AIQEvaluateStatusResponse(BaseAsyncStatusResponse):
+class EvaluateStatusResponse(BaseAsyncStatusResponse):
     """Response model for the evaluate status endpoint."""
     config_file: str = Field(description="Path to the configuration file used for evaluation")
     output_path: str | None = Field(default=None,
                                     description="Path to the output file if the job completed successfully")
 
 
-class AIQAsyncGenerationStatusResponse(BaseAsyncStatusResponse):
+class AsyncGenerationStatusResponse(BaseAsyncStatusResponse):
     output: dict | None = Field(
         default=None,
         description="Output of the generate request, this is only available if the job completed successfully.")
@@ -232,3 +232,11 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
             "Object store reference for the FastAPI app. If present, static files can be uploaded via a POST "
             "request to '/static' and files will be served from the object store. The files will be served from the "
             "object store at '/static/{file_name}'."))
+
+
+# Compatibility aliases with previous releases
+AIQEvaluateRequest = EvaluateRequest
+AIQEvaluateResponse = EvaluateResponse
+AIQAsyncGenerateResponse = AsyncGenerateResponse
+AIQEvaluateStatusResponse = EvaluateStatusResponse
+AIQAsyncGenerationStatusResponse = AsyncGenerationStatusResponse

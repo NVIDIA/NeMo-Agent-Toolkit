@@ -21,8 +21,8 @@ from aiq.builder.builder import Builder
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
-from aiq.data_models.api_server import AIQChatRequest
-from aiq.data_models.api_server import AIQChatResponse
+from aiq.data_models.api_server import ChatRequest
+from aiq.data_models.api_server import ChatResponse
 from aiq.data_models.component_ref import FunctionRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.function import FunctionBaseConfig
@@ -117,7 +117,7 @@ async def ReWOO_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
                                                  use_tool_schema=config.include_tool_input_schema_in_tool_description,
                                                  detailed_logs=config.verbose).build_graph()
 
-    async def _response_fn(input_message: AIQChatRequest) -> AIQChatResponse:
+    async def _response_fn(input_message: ChatRequest) -> ChatResponse:
         try:
             # initialize the starting state with the user query
             messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in input_message.messages],
@@ -135,14 +135,14 @@ async def ReWOO_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
             # get and return the output from the state
             state = ReWOOGraphState(**state)
             output_message = state.result.content  # pylint: disable=E1101
-            return AIQChatResponse.from_string(output_message)
+            return ChatResponse.from_string(output_message)
 
         except Exception as ex:
             logger.exception("ReWOO Agent failed with exception: %s", ex, exc_info=ex)
             # here, we can implement custom error messages
             if config.verbose:
-                return AIQChatResponse.from_string(str(ex))
-            return AIQChatResponse.from_string("I seem to be having a problem.")
+                return ChatResponse.from_string(str(ex))
+            return ChatResponse.from_string("I seem to be having a problem.")
 
     if (config.use_openai_api):
         yield FunctionInfo.from_fn(_response_fn, description=config.description)
@@ -150,7 +150,7 @@ async def ReWOO_agent_workflow(config: ReWOOAgentWorkflowConfig, builder: Builde
     else:
 
         async def _str_api_fn(input_message: str) -> str:
-            oai_input = GlobalTypeConverter.get().try_convert(input_message, to_type=AIQChatRequest)
+            oai_input = GlobalTypeConverter.get().try_convert(input_message, to_type=ChatRequest)
             oai_output = await _response_fn(oai_input)
 
             return GlobalTypeConverter.get().try_convert(oai_output, to_type=str)

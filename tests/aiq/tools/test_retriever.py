@@ -17,7 +17,7 @@ import typing
 
 import pytest
 
-from aiq.tool.retriever import AIQRetrieverConfig
+from aiq.tool.retriever import RetrieverConfig
 
 
 @pytest.mark.parametrize("config_values",
@@ -41,10 +41,10 @@ def test_retriever_config(config_values: dict[str, typing.Any]):
     Test the AIQRetrieverConfig class.
     """
 
-    AIQRetrieverConfig.model_validate(config_values, strict=True)
-    config = AIQRetrieverConfig(**config_values)
+    RetrieverConfig.model_validate(config_values, strict=True)
+    config = RetrieverConfig(**config_values)
 
     model_dump = config.model_dump()
     model_dump.pop('type')
 
-    AIQRetrieverConfig.model_validate(model_dump, strict=True)
+    RetrieverConfig.model_validate(model_dump, strict=True)

@@ -16,7 +16,7 @@
 from pydantic import SecretStr
 
 from aiq.authentication.interfaces import AuthProviderBase
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.authentication import AuthProviderBaseConfig
@@ -43,7 +43,7 @@ class HTTPBasicAuthProvider(AuthProviderBase):
         Performs simple HTTP Authentication using the provided user ID.
         """
 
-        context = AIQContext.get()
+        context = Context.get()
 
         if user_id is None and hasattr(context, "metadata") and hasattr(
                 context.metadata, "cookies") and context.metadata.cookies is not None:

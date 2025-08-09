@@ -16,8 +16,8 @@
 import asyncio
 import logging
 
-from aiq.builder.context import AIQContext
-from aiq.data_models.api_server import AIQResponseIntermediateStep
+from aiq.builder.context import Context
+from aiq.data_models.api_server import ResponseIntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStep
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ async def pull_intermediate(_q, adapter):
     results to `_q`.
     """
     intermediate_done = asyncio.Event()
-    context = AIQContext.get()
+    context = Context.get()
     loop = asyncio.get_running_loop()
 
     async def set_intermediate_done():
@@ -44,11 +44,11 @@ async def pull_intermediate(_q, adapter):
         AIQResponseIntermediateStep and place it into the queue.
         """
         if adapter is None:
-            adapted = AIQResponseIntermediateStep(id=item.UUID,
-                                                  type=item.event_type,
-                                                  name=item.name or "",
-                                                  parent_id=item.parent_id,
-                                                  payload=item.payload.model_dump_json())
+            adapted = ResponseIntermediateStep(id=item.UUID,
+                                               type=item.event_type,
+                                               name=item.name or "",
+                                               parent_id=item.parent_id,
+                                               payload=item.payload.model_dump_json())
         else:
             adapted = adapter.process(item)
 

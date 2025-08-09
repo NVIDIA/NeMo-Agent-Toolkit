@@ -23,7 +23,7 @@ from uuid import uuid4
 
 import litellm
 
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
@@ -51,7 +51,7 @@ class AgnoProfilerHandler(BaseProfilerCallback):
         super().__init__()
         self._lock = threading.Lock()
         self.last_call_ts = time.time()
-        self.step_manager = AIQContext.get().intermediate_step_manager
+        self.step_manager = Context.get().intermediate_step_manager
 
         # Original references to Agno methods (for uninstrumenting if needed)
         self._original_tool_execute = None

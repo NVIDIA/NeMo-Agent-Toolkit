@@ -15,7 +15,7 @@
 
 import pytest
 
-from aiq.retriever.models import AIQDocument
+from aiq.retriever.models import Document
 from aiq.retriever.models import RetrieverOutput
 from aiq.retriever.models import retriever_output_to_dict
 from aiq.retriever.models import retriever_output_to_str
@@ -24,20 +24,20 @@ from aiq.retriever.models import retriever_output_to_str
 def test_document_methods():
     data = {"page_content": "Here is the document text", "metadata": {"title": "My Document", "type": "test_document"}}
 
-    doc = AIQDocument(page_content="My AIQ Toolkit Document", metadata={})
-    assert isinstance(doc, AIQDocument)
+    doc = Document(page_content="My AIQ Toolkit Document", metadata={})
+    assert isinstance(doc, Document)
     assert doc.page_content == "My AIQ Toolkit Document"
     assert not doc.metadata
 
-    doc = AIQDocument.from_dict(data)
-    assert isinstance(doc, AIQDocument)
+    doc = Document.from_dict(data)
+    assert isinstance(doc, Document)
     assert doc.page_content == data["page_content"]
     assert isinstance(doc.metadata, dict)
     assert doc.document_id is None
 
     data.update({"document_id": "1234"})
-    doc = AIQDocument.from_dict(data)
-    assert isinstance(doc, AIQDocument)
+    doc = Document.from_dict(data)
+    assert isinstance(doc, Document)
     assert doc.page_content == data["page_content"]
     assert isinstance(doc.metadata, dict)
     assert doc.document_id == "1234"
@@ -64,7 +64,7 @@ def mock_output_dict():
 def test_retriever_output(mock_results_dict):
     import json
 
-    output = RetrieverOutput(results=[AIQDocument.from_dict(d) for d in mock_results_dict])
+    output = RetrieverOutput(results=[Document.from_dict(d) for d in mock_results_dict])
     assert len(output) == 2
 
     results_dict = retriever_output_to_dict(output)
@@ -82,9 +82,9 @@ def test_validation():
     from pydantic import ValidationError
     data = {"page_content": "Document content"}
     with pytest.raises(ValidationError):
-        _ = AIQDocument.from_dict(data)
+        _ = Document.from_dict(data)
         data.update({"metadata": "Not a dict!"})
-        _ = AIQDocument.from_dict(data)
+        _ = Document.from_dict(data)
         data["metadata"] = {"title": "Valid Dictionary"}
         data.update({"document_id": 1234})
-        _ = AIQDocument.from_dict(data)
+        _ = Document.from_dict(data)

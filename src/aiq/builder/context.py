@@ -21,7 +21,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 
 from aiq.builder.intermediate_step_manager import IntermediateStepManager
-from aiq.builder.user_interaction_manager import AIQUserInteractionManager
+from aiq.builder.user_interaction_manager import UserInteractionManager
 from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.authentication import AuthProviderBaseConfig
@@ -61,7 +61,7 @@ class ActiveFunctionContextManager:
         self._output = output
 
 
-class AIQContextState(metaclass=Singleton):
+class ContextState(metaclass=Singleton):
 
     def __init__(self):
         self.conversation_id: ContextVar[str | None] = ContextVar("conversation_id", default=None)
@@ -78,19 +78,19 @@ class AIQContextState(metaclass=Singleton):
         self.user_input_callback: ContextVar[Callable[[InteractionPrompt], Awaitable[HumanResponse | None]]
                                              | None] = ContextVar(
                                                  "user_input_callback",
-                                                 default=AIQUserInteractionManager.default_callback_handler)
+                                                 default=UserInteractionManager.default_callback_handler)
         self.user_auth_callback: ContextVar[Callable[[AuthProviderBaseConfig, AuthFlowType],
                                                      Awaitable[AuthenticatedContext]]
                                             | None] = ContextVar("user_auth_callback", default=None)
 
     @staticmethod
-    def get() -> "AIQContextState":
-        return AIQContextState()
+    def get() -> "ContextState":
+        return ContextState()
 
 
-class AIQContext:
+class Context:
 
-    def __init__(self, context: AIQContextState):
+    def __init__(self, context: ContextState):
         self._context_state = context
 
     @property
@@ -134,12 +134,12 @@ class AIQContext:
         return self._context_state.metadata.get()
 
     @property
-    def user_interaction_manager(self) -> AIQUserInteractionManager:
+    def user_interaction_manager(self) -> UserInteractionManager:
         """
         Return an instance of AIQUserInteractionManager that uses
         the current context's user_input_callback.
         """
-        return AIQUserInteractionManager(self._context_state)
+        return UserInteractionManager(self._context_state)
 
     @property
     def intermediate_step_manager(self) -> IntermediateStepManager:
@@ -251,7 +251,7 @@ class AIQContext:
         return callback
 
     @staticmethod
-    def get() -> "AIQContext":
+    def get() -> "Context":
         """
         Static method to retrieve the current AIQContext instance.
 
@@ -261,4 +261,10 @@ class AIQContext:
         Returns:
             AIQContext: The created AIQContext instance.
         """
-        return AIQContext(AIQContextState.get())
+        return Context(ContextState.get())
+
+
+# Compatibility aliases with previous releases
+
+AIQContextState = ContextState
+AIQContext = Context

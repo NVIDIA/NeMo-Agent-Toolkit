@@ -24,14 +24,14 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 
 
 @pytest.fixture(name="test_config")
-def test_config_fixture() -> AIQConfig:
-    config = AIQConfig()
+def test_config_fixture() -> Config:
+    config = Config()
     config.general.front_end = FastApiFrontEndConfig(evaluate=FastApiFrontEndConfig.EndpointBase(
         path="/evaluate", method="POST", description="Test evaluate endpoint"))
     return config
@@ -48,12 +48,12 @@ def patch_evaluation_run():
 
 
 @pytest.fixture(name="test_client")
-def test_client_fixture(test_config: AIQConfig) -> TestClient:
+def test_client_fixture(test_config: Config) -> TestClient:
     worker = FastApiFrontEndPluginWorker(test_config)
     app = FastAPI()
     worker.set_cors_config(app)
 
-    with patch("aiq.front_ends.fastapi.fastapi_front_end_plugin_worker.AIQSessionManager") as MockSessionManager:
+    with patch("aiq.front_ends.fastapi.fastapi_front_end_plugin_worker.SessionManager") as MockSessionManager:
 
         # Mock session manager
         mock_session = MagicMock()
