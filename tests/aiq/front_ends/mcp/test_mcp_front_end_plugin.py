@@ -33,7 +33,7 @@ def echo_function_config():
 
 
 @pytest.fixture
-def mcp_config(echo_function_config):
+def mcp_config(echo_function_config) -> Config:
     mcp_front_end_config = MCPFrontEndConfig(name="Test MCP Server",
                                              host="localhost",
                                              port=9901,
@@ -79,10 +79,10 @@ def test_get_all_functions():
 
 
 @patch.object(MCPFrontEndPlugin, 'run')
-def test_filter_functions(_mock_run, test_mcp_config):
+def test_filter_functions(_mock_run, mcp_config):
     """Test function filtering logic directly."""
     # Create a plugin
-    plugin = MCPFrontEndPlugin(full_config=test_mcp_config)
+    plugin = MCPFrontEndPlugin(full_config=mcp_config)
 
     # Mock workflow with multiple functions
     mock_workflow = MagicMock()
@@ -95,10 +95,10 @@ def test_filter_functions(_mock_run, test_mcp_config):
     assert len(all_functions) == 3
 
     # Now simulate filtering with tool_names
-    test_mcp_config.general.front_end.tool_names = ["echo"]
+    mcp_config.general.front_end.tool_names = ["echo"]
     filtered_functions = {}
     for function_name, function in all_functions.items():
-        if function_name in test_mcp_config.general.front_end.tool_names:
+        if function_name in mcp_config.general.front_end.tool_names:
             filtered_functions[function_name] = function
 
     # Verify filtering worked correctly
