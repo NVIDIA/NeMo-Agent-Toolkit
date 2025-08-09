@@ -40,7 +40,7 @@ def langchain_tool_wrapper(name: str, fn: Function, builder: Builder):
         return loop.run_until_complete(fn.acall_invoke(*args, **kwargs))
 
     if fn.description is None:
-        logger.warning("No description set for `%s` falling back to instance name: %s",
+        logger.warning("No description set for `%s` falling back to instance name: `%s`",
                        type(fn).__name__,
                        fn.instance_name)
         _sync_fn.__doc__ = fn.instance_name
