@@ -27,6 +27,8 @@ from aiq.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
 from aiq.front_ends.mcp.mcp_front_end_plugin_worker import MCPFrontEndPluginWorker
 from aiq.utils.type_utils import override
 
+# pylint: disable=redefined-outer-name
+
 
 class CustomMCPWorker(MCPFrontEndPluginWorker):
     """Custom MCP worker that adds additional routes."""
