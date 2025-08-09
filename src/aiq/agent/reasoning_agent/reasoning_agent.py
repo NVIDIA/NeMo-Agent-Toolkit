@@ -140,7 +140,7 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
             Perform reasoning on the input text.
 
             Args:
-                input_message (AIQChatRequest): The input text to reason on.
+                input_message (ChatRequest): The input text to reason on.
             """
 
             input_text = "".join([str(message.model_dump()) + "\n" for message in input_message.messages])
@@ -183,7 +183,7 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
             Perform reasoning on the input text.
 
             Args:
-                input_message (AIQChatRequest): The input text to reason on.
+                input_message (ChatRequest): The input text to reason on.
             """
 
             input_text = "".join([str(message.model_dump()) + "\n" for message in input_message.messages])

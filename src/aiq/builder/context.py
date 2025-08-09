@@ -136,7 +136,7 @@ class Context:
     @property
     def user_interaction_manager(self) -> UserInteractionManager:
         """
-        Return an instance of AIQUserInteractionManager that uses
+        Return an instance of UserInteractionManager that uses
         the current context's user_input_callback.
         """
         return UserInteractionManager(self._context_state)
@@ -253,13 +253,13 @@ class Context:
     @staticmethod
     def get() -> "Context":
         """
-        Static method to retrieve the current AIQContext instance.
+        Static method to retrieve the current Context instance.
 
-        This method creates and returns an instance of the AIQContext class
-        by obtaining the current state from the AIQContextState.
+        This method creates and returns an instance of the Context class
+        by obtaining the current state from the ContextState.
 
         Returns:
-            AIQContext: The created AIQContext instance.
+            Context: The created Context instance.
         """
         return Context(ContextState.get())
 

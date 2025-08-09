@@ -166,7 +166,7 @@ def update_dependency_graph(config: "Config", instance_config: TypedBaseModel,
     """Updates the hierarchical component instance dependency graph from a configuration runtime instance.
 
     Args:
-        config (AIQConfig): An NAT configuration object with runtime instance details.
+        config (Config): An NAT configuration object with runtime instance details.
         instance_config (TypedBaseModel): A component's runtime instance configuration object.
         dependency_graph (nx.DiGraph): A graph tracking runtime instance component dependencies.
 
@@ -196,7 +196,7 @@ def config_to_dependency_objects(config: "Config") -> tuple[dict[str, ComponentI
     """Generates a map of component runtime instance IDs to use when generating a build sequence.
 
     Args:
-        config (AIQConfig): The NAT workflow configuration object.
+        config (Config): The NAT workflow configuration object.
 
     Returns:
         tuple[dict[str, ComponentInstanceData], nx.DiGraph]: A tuple containing a map of component runtime instance
@@ -247,7 +247,7 @@ def build_dependency_sequence(config: "Config") -> list[ComponentInstanceData]:
     """Generates the depencency sequence from an NAT configuration object
 
     Args:
-        config (AIQConfig): An NAT configuration object.
+        config (Config): An NAT configuration object.
 
     Returns:
         list[ComponentInstanceData]: A list representing the instatiation sequence to ensure all valid

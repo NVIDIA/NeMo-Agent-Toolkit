@@ -31,7 +31,7 @@ class FrontEndBase(typing.Generic[FrontEndConfigT], ABC):
 
         Parameters
         ----------
-        full_config : AIQConfig
+        full_config : Config
             The configuration object to use for the front end.
         """
 
@@ -59,7 +59,7 @@ class FrontEndBase(typing.Generic[FrontEndConfigT], ABC):
 
         Returns
         -------
-        AIQConfig
+        Config
             The full NAT configuration object.
         """
 

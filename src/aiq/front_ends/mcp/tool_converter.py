@@ -49,8 +49,7 @@ def create_function_wrapper(
     is_chat_request = False
 
     # Check if the schema name is ChatRequest
-    if schema.__name__ == "ChatRequest" or (hasattr(schema, "__qualname__")
-                                               and "ChatRequest" in schema.__qualname__):
+    if schema.__name__ == "ChatRequest" or (hasattr(schema, "__qualname__") and "ChatRequest" in schema.__qualname__):
         is_chat_request = True
         logger.info("Function %s uses ChatRequest - creating simplified interface", function_name)
 
@@ -113,7 +112,7 @@ def create_function_wrapper(
                     # Special handling for Workflow objects
                     if is_workflow:
                         # Workflows have a run method that is an async context manager
-                        # that returns an AIQRunner
+                        # that returns a Runner
                         async with function.run(chat_request) as runner:
                             # Get the result from the runner
                             result = await runner.result(to_type=str)
@@ -142,7 +141,7 @@ def create_function_wrapper(
                         input_value = list(kwargs.values())[0] if kwargs else ""
 
                         # Workflows have a run method that is an async context manager
-                        # that returns an AIQRunner
+                        # that returns a Runner
                         async with function.run(input_value) as runner:
                             # Get the result from the runner
                             result = await runner.result(to_type=str)

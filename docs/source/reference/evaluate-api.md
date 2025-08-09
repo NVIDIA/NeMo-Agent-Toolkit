@@ -60,7 +60,7 @@ curl --request POST \
 You can optionally pipe the output to `jq` for response formatting.
 
 ### Evaluate Request Format
-`AIQEvaluateRequest`:
+`EvaluateRequest`:
 - `config_file`: Path to the evaluation configuration file on the remote server.
 - `job_id`: Unique identifier for the evaluation job. If not provided, a new job ID is generated.
 - `reps`: Number of repetitions for the evaluation. Defaults to 1.
@@ -76,7 +76,7 @@ The evaluation request is stored as a background job in the server and the endpo
 ```
 
 ### Evaluate Response Format
-`AIQEvaluateResponse`:
+`EvaluateResponse`:
 - `job_id`: Unique identifier for the evaluation job.
 - `status`: Status of the evaluation job. Possible values are:
 **Possible `status` values**:
@@ -161,6 +161,6 @@ A separate output directory is created for each job. The output directory contai
 As the results are maintained per-job, output directory cleanup is recommended. This can be done by enabling `eval.general.output.cleanup` in the evaluation configuration file. If this configuration is enabled, the server removes the entire contents of the output directory at the start of each job. This way only the last job's results are kept in the output directory.
 
 ### Job Expiry
-You can also configure the expiry timer per-job using the `expiry_seconds` parameter in the `AIQEvaluateRequest`. The server will automatically clean up expired jobs based on this timer. The default expiry value is 3600 seconds (1 hour). The expiration time is clamped between 600 (10 min) and 86400 (24h).
+You can also configure the expiry timer per-job using the `expiry_seconds` parameter in the `EvaluateRequest`. The server will automatically clean up expired jobs based on this timer. The default expiry value is 3600 seconds (1 hour). The expiration time is clamped between 600 (10 min) and 86400 (24h).
 
 This cleanup includes both the job metadata and the contents of the output directory. The most recently finished job is always preserved, even if expired. Similarly, active jobs, `["submitted", "running"]`, are exempt from cleanup.

@@ -849,7 +849,7 @@ exporter1._processing_queue.append("item1")
 exporter1._export_metrics['success'] = 5
 
 # Create isolated instance
-context_state = AIQContextState.get()
+context_state = ContextState.get()
 exporter2 = exporter1.create_isolated_instance(context_state)
 
 # Isolated state - each has independent data
@@ -1216,7 +1216,7 @@ async def test_export_processed(custom_exporter):
 
 def test_isolated_attributes():
     """Test that isolated attributes work correctly across instances."""
-    from aiq.builder.context import AIQContextState
+    from aiq.builder.context import ContextState
 
     # Create original exporter
     exporter1 = CustomSpanExporter(
@@ -1231,7 +1231,7 @@ def test_isolated_attributes():
     exporter1._export_metrics["success"] = 5
 
     # Create isolated instance
-    context_state = AIQContextState.get()
+    context_state = ContextState.get()
     exporter2 = exporter1.create_isolated_instance(context_state)
 
     # Add different data to second exporter

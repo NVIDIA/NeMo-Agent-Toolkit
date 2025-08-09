@@ -322,7 +322,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
                 return EvaluateResponse(job_id=job_id, status="submitted")
 
         def translate_job_to_response(job: JobInfo) -> EvaluateStatusResponse:
-            """Translate a JobInfo object to an AIQEvaluateStatusResponse."""
+            """Translate a JobInfo object to an EvaluateStatusResponse."""
             return EvaluateStatusResponse(job_id=job.job_id,
                                           status=job.status,
                                           config_file=str(job.config_file),
