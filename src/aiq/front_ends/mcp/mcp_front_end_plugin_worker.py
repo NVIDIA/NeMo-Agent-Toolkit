@@ -17,7 +17,7 @@ import logging
 from abc import ABC
 from abc import abstractmethod
 
-from fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP
 from starlette.requests import Request
 
 from aiq.builder.function import Function
