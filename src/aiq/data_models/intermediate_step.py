@@ -243,7 +243,7 @@ class IntermediateStep(BaseModel):
 
     function_ancestry: InvocationNode
     """
-    The function ancestry for the current step showing the current AIQ function that was being executed when the step
+    The function ancestry for the current step showing the current NAT function that was being executed when the step
     was created.
     """
 

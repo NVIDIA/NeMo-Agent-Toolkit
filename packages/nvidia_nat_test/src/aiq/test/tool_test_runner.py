@@ -231,7 +231,7 @@ class MockBuilder(Builder):
 
 class ToolTestRunner:
     """
-    A test runner that enables isolated testing of AIQ tools without requiring
+    A test runner that enables isolated testing of NAT tools without requiring
     full workflow setup, LLMs, or complex dependencies.
 
     Usage:

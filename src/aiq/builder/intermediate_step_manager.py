@@ -129,7 +129,7 @@ class IntermediateStepManager:
             # Verify that the stack is now equal to the previous stack
             if (curr_stack != prev_stack):
                 logger.warning("Current span ID stack is not equal to the previous stack. "
-                               "This is likely an error. Report this to the AIQ team.")
+                               "This is likely an error. Report this to the NeMo Agent toolkit team.")
 
             logger.debug("Popped end step %s, name %s, type %s, parent %s, stack id %s",
                          payload.UUID,

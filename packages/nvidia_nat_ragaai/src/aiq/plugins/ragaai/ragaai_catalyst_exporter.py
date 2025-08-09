@@ -29,7 +29,7 @@ class RagaAICatalystExporter(RagaAICatalystMixin, OtelSpanExporter):  # pylint: 
     and analysis of AI agent behavior and performance.
 
     Features:
-    - Automatic span conversion from AIQ events
+    - Automatic span conversion from NAT events
     - RagaAI Catalyst-specific authentication
     - Project and dataset-based trace organization
     - Integration with custom DynamicTraceExporter for optimal local file control

@@ -77,7 +77,7 @@ class MCPFrontEndPlugin(FrontEndBase[MCPFrontEndConfig]):
         """Get all functions from the workflow.
 
         Args:
-            workflow: The AIQ workflow.
+            workflow: The NAT workflow.
 
         Returns:
             Dict mapping function names to Function objects.

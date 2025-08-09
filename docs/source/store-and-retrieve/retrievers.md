@@ -92,7 +92,7 @@ functions:
     retriever_tool:
         _type: aiq_retriever
         retriever: my_retriever
-        topic: "AIQ documentation"
+        topic: "NeMo Agent toolkit documentation"
 ```
 
 ### Developing with Retrievers

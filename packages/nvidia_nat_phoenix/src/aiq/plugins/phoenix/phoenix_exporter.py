@@ -29,7 +29,7 @@ class PhoenixOtelExporter(PhoenixMixin, OtelSpanExporter):  # pylint: disable=R0
     and analysis of AI agent behavior and performance.
 
     Features:
-    - Automatic span conversion from AIQ events
+    - Automatic span conversion from NAT events
     - Phoenix-specific resource tagging
     - Project-based trace organization
 
