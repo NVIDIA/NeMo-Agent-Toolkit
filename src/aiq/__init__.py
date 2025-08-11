@@ -13,7 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import warnings
+
 import nat
 
 # Provide a compatibility alias for the old aiq namespace
 __path__ = nat.__path__
+
+warnings.warn(
+    "The 'aiq' namespace is deprecated and will be removed in a future release. "
+    "Please use the 'nat' namespace instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)

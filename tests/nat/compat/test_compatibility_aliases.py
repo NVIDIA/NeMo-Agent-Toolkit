@@ -18,6 +18,11 @@ import importlib
 import pytest
 
 
+def test_deprecation_warning():
+    with pytest.deprecated_call():
+        import aiq
+
+
 @pytest.mark.parametrize(
     "module_name, alias_name, target_name",
     [
