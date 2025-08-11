@@ -20,9 +20,14 @@ from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 
 
-def extract_nested_questions(input_path: Path, filter_by_tag: str = None, max_rows: int = None, **kwargs) -> EvalInput:
+def extract_nested_questions(input_path: Path, difficulty: str = None, max_rows: int = None) -> EvalInput:
     """
-    Extract questions from a nested JSON structure with optional filtering.
+    This is a sample custom dataset parser that:
+    1. Loads a nested JSON file
+    2. Extracts the questions array from the nested structure
+    3. Applies optional filtering by difficulty (hard, medium, easy)
+    4. Applies an optional maximum number of questions to return
+    5. Creates an EvalInput object with the extracted questions and returns it
 
     Expects JSON format:
     {
@@ -36,9 +41,8 @@ def extract_nested_questions(input_path: Path, filter_by_tag: str = None, max_ro
 
     Args:
         input_path: Path to the nested JSON file
-        filter_by_tag: Optional tag to filter questions by (matches against category or difficulty)
+        difficulty: Optional difficulty to filter questions by
         max_rows: Optional maximum number of questions to return
-        **kwargs: Additional parameters (unused in this example)
 
     Returns:
         EvalInput object containing the extracted questions
@@ -50,17 +54,13 @@ def extract_nested_questions(input_path: Path, filter_by_tag: str = None, max_ro
 
     # Extract questions array from the nested structure
     questions = data.get('questions', [])
-    metadata = data.get('metadata', {})
-    configuration = data.get('configuration', {})
 
     # Apply filtering if specified
-    if filter_by_tag:
+    if difficulty:
         filtered_questions = []
         for question in questions:
-            # Check if filter_by_tag matches category, difficulty, or any other field
-            if (question.get('category', '').lower() == filter_by_tag.lower()
-                    or question.get('difficulty', '').lower() == filter_by_tag.lower()
-                    or filter_by_tag.lower() in str(question).lower()):
+            # Check if category matches category (hard, medium, easy)
+            if (question.get('difficulty', '').lower() == difficulty.lower()):
                 filtered_questions.append(question)
         questions = filtered_questions
 
@@ -71,18 +71,6 @@ def extract_nested_questions(input_path: Path, filter_by_tag: str = None, max_ro
     eval_items = []
 
     for item in questions:
-        # Create EvalInputItem with additional metadata in full_dataset_entry
-        full_entry = {
-            **item,  # Include original question data
-            'dataset_metadata': metadata,
-            'dataset_configuration': configuration,
-            'processing_info': {
-                'filtered_by_tag': filter_by_tag,
-                'max_rows_applied': max_rows,
-                'total_questions_in_dataset': len(data.get('questions', []))
-            }
-        }
-
         eval_item = EvalInputItem(
             id=item['id'],
             input_obj=item['question'],
@@ -90,7 +78,7 @@ def extract_nested_questions(input_path: Path, filter_by_tag: str = None, max_ro
             output_obj="",  # Will be filled by workflow
             expected_trajectory=[],
             trajectory=[],  # Will be filled by workflow
-            full_dataset_entry=full_entry)
+            full_dataset_entry=item)
         eval_items.append(eval_item)
 
     return EvalInput(eval_input_items=eval_items)

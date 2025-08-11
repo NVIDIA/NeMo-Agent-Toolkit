@@ -138,6 +138,42 @@ eval:
               - sympy__sympy-21055
 ```
 
+### Custom Dataset Format
+You can use a dataset of a custom format by providing a custom dataset parser function.
+
+**Example:**
+`examples/evaluation_and_profiling/simple_calculator_eval/configs/config-custom-dataset-format.yml`:
+```yaml
+eval:
+  general:
+    dataset:
+      _type: custom
+      file_path: examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_nested.json
+      function: aiq_simple_calculator_eval.custom_dataset_parser.extract_nested_questions
+      kwargs:
+        filter_by_tag: "important"
+        max_rows: 5
+```
+This example configuration uses a custom dataset parser function to extract the nested questions from the example dataset, filter them by difficulty and return only the first five questions. The example dataset `simple_calculator_nested.json` is a nested JSON file with questions and answers.
+
+The custom dataset parser function is a Python function that takes a dataset file path and returns an `EvalInput` object.
+
+{py:class}`~aiq.eval.evaluator.evaluator_model.EvalInput` is a Pydantic model that contains the list of `EvalInputItem` objects.
+{py:class}`~aiq.eval.evaluator.evaluator_model.EvalInputItem` is a Pydantic model that contains the fields for an item in the dataset.
+The custom dataset parser function should fill the following fields in the `EvalInputItem` object:
+- `id`: The id of the item. Every item in the dataset must have a unique id of type `str` or `int`.
+- `input_obj`: This is the question.
+- `expected_output_obj`: This is the ground truth answer.
+- `output_obj`: This is the generated answer. This can be an empty string if it needs to be filled by running the workflow.
+- `expected_trajectory`: This is the expected trajectory. This can be an empty list if it needs to be filled by running the workflow.
+- `trajectory`: This is the trajectory. This can be an empty list if it needs to be filled by running the workflow.
+- `full_dataset_entry`: This is the entire dataset entry. This is passed to the evaluator.
+
+To run the evaluation, run the following command:
+```bash
+aiq eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-custom-dataset-format.yml
+```
+
 ## NeMo Agent Toolkit Built-in Evaluators
 NeMo Agent toolkit provides the following built-in evaluator:
 - `ragas` - An evaluator to run and evaluate RAG-like workflows using the public RAGAS API.
