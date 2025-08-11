@@ -67,7 +67,7 @@ eval:
       cleanup: true
       custom_scripts:
         convert_workflow_to_csv:
-          script: examples/evaluation_and_profiling/simple_web_query_eval/src/aiq_simple_web_query_eval/scripts/workflow_to_csv.py
+          script: examples/evaluation_and_profiling/simple_web_query_eval/src/nat_simple_web_query_eval/scripts/workflow_to_csv.py
           kwargs:
             # input and output files here are relative to the output dir
             input: workflow_output.json

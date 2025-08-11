@@ -155,14 +155,14 @@ in the input instance.
 That information is only used for evaluation. Using it can taint the predictor and lead to overfitting.
 
 These predictors are provided in this NeMo Agent toolkit example:
-- `gold` - Uses the patch from the `SWEBenchInput` instance, bypassing problem-solving logic. See [predict_gold_stub.py](src/aiq_swe_bench/predictors/predict_gold/predict_gold_stub.py) and configuration file `examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml`.
-- `skeleton` - Skeleton code for creating a problem-solving workflow. This code can be copied to create a net-new predictor. See [predict_skeleton.py](src/aiq_swe_bench/predictors/predict_skeleton/predict_skeleton.py) and configuration file `examples/evaluation_and_profiling/swe_bench/configs/config_skeleton.yml`.
+- `gold` - Uses the patch from the `SWEBenchInput` instance, bypassing problem-solving logic. See [predict_gold_stub.py](src/nat_swe_bench/predictors/predict_gold/predict_gold_stub.py) and configuration file `examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml`.
+- `skeleton` - Skeleton code for creating a problem-solving workflow. This code can be copied to create a net-new predictor. See [predict_skeleton.py](src/nat_swe_bench/predictors/predict_skeleton/predict_skeleton.py) and configuration file `examples/evaluation_and_profiling/swe_bench/configs/config_skeleton.yml`.
 
 ### Adding a net new predictor
 To add a new predictor:
-- Create a new directory in the predictors directory, copy over the contents of [predictors/predict_skeleton](src/aiq_swe_bench/predictors/predict_skeleton/). Rename the files and fill in the logic to solve the problem.
+- Create a new directory in the predictors directory, copy over the contents of [predictors/predict_skeleton](src/nat_swe_bench/predictors/predict_skeleton/). Rename the files and fill in the logic to solve the problem.
 - Register the new predictor class with an unique name using the `@register_predictor` decorator.
-- Import the new predictor class in [predictors/register.py](src/aiq_swe_bench/predictors/register.py) to make it discoverable by the NeMo Agent toolkit `swe_bench` harness.
+- Import the new predictor class in [predictors/register.py](src/nat_swe_bench/predictors/register.py) to make it discoverable by the NeMo Agent toolkit `swe_bench` harness.
 
 ## Evaluation
 The `model_patch` returned by the `swe_bench` workflow is run through the `swe_bench` evaluation harness. This harness -
