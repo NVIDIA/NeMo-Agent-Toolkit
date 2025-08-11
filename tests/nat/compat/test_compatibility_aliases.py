@@ -59,46 +59,18 @@ import pytest
         ("aiq.tool.retriever", "AIQRetrieverConfig", "RetrieverConfig"),
         ("aiq.tool.retriever", "aiq_retriever_tool", "retriever_tool"),
         ("aiq.experimental.decorators.experimental_warning_decorator", "aiq_experimental", "experimental"),
-        ("nat.builder.context", "AIQContextState", "ContextState"),
-        ("nat.builder.context", "AIQContext", "Context"),
-        ("nat.builder.user_interaction_manager", "AIQUserInteractionManager", "UserInteractionManager"),
-        ("nat.cli.commands.workflow.workflow_commands", "AIQPackageError", "PackageError"),
-        ("nat.data_models.api_server", "AIQChatRequest", "ChatRequest"),
-        ("nat.data_models.api_server", "AIQChoiceMessage", "ChoiceMessage"),
-        ("nat.data_models.api_server", "AIQChoiceDelta", "ChoiceDelta"),
-        ("nat.data_models.api_server", "AIQChoice", "Choice"),
-        ("nat.data_models.api_server", "AIQUsage", "Usage"),
-        ("nat.data_models.api_server", "AIQResponseSerializable", "ResponseSerializable"),
-        ("nat.data_models.api_server", "AIQResponseBaseModelOutput", "ResponseBaseModelOutput"),
-        ("nat.data_models.api_server", "AIQResponseBaseModelIntermediate", "ResponseBaseModelIntermediate"),
-        ("nat.data_models.api_server", "AIQChatResponse", "ChatResponse"),
-        ("nat.data_models.api_server", "AIQChatResponseChunk", "ChatResponseChunk"),
-        ("nat.data_models.api_server", "AIQResponseIntermediateStep", "ResponseIntermediateStep"),
-        ("nat.data_models.api_server", "AIQResponsePayloadOutput", "ResponsePayloadOutput"),
-        ("nat.data_models.api_server", "AIQGenerateResponse", "GenerateResponse"),
-        ("nat.data_models.component", "AIQComponentEnum", "ComponentEnum"),
-        ("nat.data_models.config", "AIQConfig", "Config"),
-        ("nat.front_ends.fastapi.fastapi_front_end_config", "AIQEvaluateRequest", "EvaluateRequest"),
-        ("nat.front_ends.fastapi.fastapi_front_end_config", "AIQEvaluateResponse", "EvaluateResponse"),
-        ("nat.front_ends.fastapi.fastapi_front_end_config", "AIQAsyncGenerateResponse", "AsyncGenerateResponse"),
-        ("nat.front_ends.fastapi.fastapi_front_end_config", "AIQEvaluateStatusResponse", "EvaluateStatusResponse"),
-        ("nat.front_ends.fastapi.fastapi_front_end_config",
-         "AIQAsyncGenerationStatusResponse",
-         "AsyncGenerationStatusResponse"),
-        ("nat.registry_handlers.package_utils", "build_aiq_artifact", "build_artifact"),
-        ("nat.registry_handlers.schemas.publish", "BuiltAIQArtifact", "BuiltArtifact"),
-        ("nat.registry_handlers.schemas.publish", "AIQArtifact", "Artifact"),
-        ("nat.retriever.interface", "AIQRetriever", "Retriever"),
-        ("nat.retriever.models", "AIQDocument", "Document"),
-        ("nat.runtime.loader", "get_all_aiq_entrypoints_distro_mapping", "get_all_entrypoints_distro_mapping"),
-        ("nat.runtime.runner", "AIQRunnerState", "RunnerState"),
-        ("nat.runtime.runner", "AIQRunner", "Runner"),
-        ("nat.runtime.session", "AIQSessionManager", "SessionManager"),
-        ("nat.tool.retriever", "AIQRetrieverConfig", "RetrieverConfig"),
-        ("nat.tool.retriever", "aiq_retriever_tool", "retriever_tool"),
-        ("nat.experimental.decorators.experimental_warning_decorator", "aiq_experimental", "experimental"),
     ])
-def test_compatibility_aliases(module_name: str, alias_name: str, target_name: str):
+@pytest.mark.parametrize("use_nat_namespace", [False, True])
+def test_compatibility_aliases(module_name: str, alias_name: str, target_name: str, use_nat_namespace: bool):
+    """
+    Tests the compatibility aliases for classes and functions which contain "aiq" in the name.
+    This test verifies that the alias points to the correct target, and that it is available under both the 'aiq'
+    namespace and the 'nat' namespace.
+    """
+    if use_nat_namespace:
+        module_name = module_name.replace("aiq.", "nat.", 1)
+        assert module_name.startswith("nat.")
+
     module = importlib.import_module(module_name)
     alias = getattr(module, alias_name)
     target = getattr(module, target_name)
