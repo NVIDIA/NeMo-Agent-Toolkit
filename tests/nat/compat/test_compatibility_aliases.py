@@ -18,17 +18,14 @@ import importlib
 import pytest
 
 
-def test_deprecation_warning():
-    with pytest.deprecated_call():
-        import aiq  # noqa: F401
-
-
 def test_namespace_compat():
-    import aiq
     import nat
 
-    # Check that the aiq namespace is an alias for nat
-    assert aiq.__path__ == nat.__path__
+    with pytest.deprecated_call():
+        import aiq
+
+        # Check that the aiq namespace is an alias for nat
+        assert aiq.__path__ == nat.__path__
 
 
 @pytest.mark.parametrize(
