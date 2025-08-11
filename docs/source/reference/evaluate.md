@@ -156,18 +156,18 @@ eval:
 ```
 This example configuration uses a custom dataset parser function to extract the nested questions from the example dataset, filter them by difficulty and return only the first five questions. The example dataset `simple_calculator_nested.json` is a nested JSON file with questions and answers.
 
-The custom dataset parser function is a Python function that takes a dataset file path and returns an `EvalInput` object.
+The custom dataset parser function is a Python function that takes the dataset `file_path`, optional `kwargs` and returns an `EvalInput` object. Signature of the sample custom dataset parser function is as follows:
+```python
+def extract_nested_questions(file_path: Path, difficulty: str = None, max_rows: int = None) -> EvalInput:
+```
 
-{py:class}`~aiq.eval.evaluator.evaluator_model.EvalInput` is a Pydantic model that contains the list of `EvalInputItem` objects.
+{py:class}`~aiq.eval.evaluator.evaluator_model.EvalInput` is a Pydantic model that contains a list of `EvalInputItem` objects.
 {py:class}`~aiq.eval.evaluator.evaluator_model.EvalInputItem` is a Pydantic model that contains the fields for an item in the dataset.
 The custom dataset parser function should fill the following fields in the `EvalInputItem` object:
 - `id`: The id of the item. Every item in the dataset must have a unique id of type `str` or `int`.
 - `input_obj`: This is the question.
 - `expected_output_obj`: This is the ground truth answer.
-- `output_obj`: This is the generated answer. This can be an empty string if it needs to be filled by running the workflow.
-- `expected_trajectory`: This is the expected trajectory. This can be an empty list if it needs to be filled by running the workflow.
-- `trajectory`: This is the trajectory. This can be an empty list if it needs to be filled by running the workflow.
-- `full_dataset_entry`: This is the entire dataset entry. This is passed to the evaluator.
+- `full_dataset_entry`: This is the entire dataset entry and is passed as is to the evaluator.
 
 To run the evaluation, run the following command:
 ```bash

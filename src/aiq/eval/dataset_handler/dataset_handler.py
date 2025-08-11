@@ -279,8 +279,8 @@ class DatasetHandler:
         custom_function, kwargs = self.dataset_config.parser()
 
         try:
-            # Call the custom function with input_path and kwargs
-            eval_input = custom_function(input_path=input_path, **kwargs)
+            # Call the custom function with file_path and kwargs
+            eval_input = custom_function(file_path=input_path, **kwargs)
 
             if not isinstance(eval_input, EvalInput):
                 raise ValueError(f"Custom function must return an EvalInput object, "

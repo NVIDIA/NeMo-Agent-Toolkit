@@ -20,7 +20,7 @@ from aiq.eval.evaluator.evaluator_model import EvalInput
 from aiq.eval.evaluator.evaluator_model import EvalInputItem
 
 
-def extract_nested_questions(input_path: Path, difficulty: str = None, max_rows: int = None) -> EvalInput:
+def extract_nested_questions(file_path: Path, difficulty: str = None, max_rows: int = None) -> EvalInput:
     """
     This is a sample custom dataset parser that:
     1. Loads a nested JSON file
@@ -40,7 +40,7 @@ def extract_nested_questions(input_path: Path, difficulty: str = None, max_rows:
     }
 
     Args:
-        input_path: Path to the nested JSON file
+        file_path: Path to the nested JSON file
         difficulty: Optional difficulty to filter questions by
         max_rows: Optional maximum number of questions to return
 
@@ -49,7 +49,7 @@ def extract_nested_questions(input_path: Path, difficulty: str = None, max_rows:
     """
 
     # Load the nested JSON
-    with open(input_path, 'r') as f:
+    with open(file_path, 'r') as f:
         data = json.load(f)
 
     # Extract questions array from the nested structure
@@ -71,14 +71,10 @@ def extract_nested_questions(input_path: Path, difficulty: str = None, max_rows:
     eval_items = []
 
     for item in questions:
-        eval_item = EvalInputItem(
-            id=item['id'],
-            input_obj=item['question'],
-            expected_output_obj=item['answer'],
-            output_obj="",  # Will be filled by workflow
-            expected_trajectory=[],
-            trajectory=[],  # Will be filled by workflow
-            full_dataset_entry=item)
+        eval_item = EvalInputItem(id=item['id'],
+                                  input_obj=item['question'],
+                                  expected_output_obj=item['answer'],
+                                  full_dataset_entry=item)
         eval_items.append(eval_item)
 
     return EvalInput(eval_input_items=eval_items)
