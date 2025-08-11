@@ -146,7 +146,7 @@ def discover_entrypoints(plugin_type: PluginTypes):
 
 
 @lru_cache
-def get_all_aiq_entrypoints_distro_mapping() -> dict[str, str]:
+def get_all_entrypoints_distro_mapping() -> dict[str, str]:
     """
     Get the mapping of all AIQ entry points to their distribution names.
     """
@@ -213,3 +213,7 @@ def discover_and_register_plugins(plugin_type: PluginTypes):
 
             finally:
                 count += 1
+
+
+# Compatibility alias
+get_all_aiq_entrypoints_distro_mapping = get_all_entrypoints_distro_mapping

@@ -18,8 +18,9 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+
 from nat.cli.type_registry import TypeRegistry
-from nat.registry_handlers.package_utils import build_aiq_artifact
+from nat.registry_handlers.package_utils import build_artifact
 from nat.registry_handlers.pypi.pypi_handler import PypiRegistryHandler
 from nat.registry_handlers.schemas.pull import PullRequestPackages
 from nat.registry_handlers.schemas.search import SearchQuery
@@ -49,7 +50,7 @@ async def test_pypi_handler_publish(mock_run: MagicMock,
 
     assert pypi_registry_config is not None
 
-    artifact = build_aiq_artifact(package_root=package_root)
+    artifact = build_artifact(package_root=package_root)
 
     async with AsyncExitStack() as stack:
         registry_handler_info = registry.get_registry_handler(type(pypi_registry_config))

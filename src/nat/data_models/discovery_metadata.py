@@ -127,13 +127,13 @@ class DiscoveryMetadata(BaseModel):
         Returns:
             str: The distribution name of the AIQ Toolkit component.
         """
-        from nat.runtime.loader import get_all_aiq_entrypoints_distro_mapping
+        from nat.runtime.loader import get_all_entrypoints_distro_mapping
 
         if module is None:
             return "aiqtoolkit"
 
         # Get the mapping of module names to distro names
-        mapping = get_all_aiq_entrypoints_distro_mapping()
+        mapping = get_all_entrypoints_distro_mapping()
         module_package = module.__package__
 
         if module_package is None:

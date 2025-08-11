@@ -20,9 +20,10 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from nat.data_models.component import ComponentEnum
 from nat.data_models.discovery_metadata import DiscoveryMetadata
-from nat.registry_handlers.package_utils import build_aiq_artifact
+from nat.registry_handlers.package_utils import build_artifact
 from nat.registry_handlers.package_utils import build_package_metadata
 from nat.registry_handlers.package_utils import build_wheel
 from nat.registry_handlers.package_utils import extract_dependencies_with_extras_resolved
@@ -77,7 +78,7 @@ def test_build_aiq_artifact():
 
     package_root = "."
 
-    aiq_artifact = build_aiq_artifact(package_root=package_root)
+    aiq_artifact = build_artifact(package_root=package_root)
 
     assert isinstance(aiq_artifact, Artifact)
 

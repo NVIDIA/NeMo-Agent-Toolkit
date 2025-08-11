@@ -652,8 +652,8 @@ def _chat_response_to_chat_response_chunk(data: ChatResponse) -> ChatResponseChu
 GlobalTypeConverter.register_converter(_chat_response_to_chat_response_chunk)
 
 
-# ======== AIQChatResponseChunk Converters ========
-def _aiq_chat_response_chunk_to_string(data: ChatResponseChunk) -> str:
+# ======== ChatResponseChunk Converters ========
+def _chat_response_chunk_to_string(data: ChatResponseChunk) -> str:
     if data.choices and len(data.choices) > 0:
         choice = data.choices[0]
         if choice.delta and choice.delta.content:
@@ -663,7 +663,7 @@ def _aiq_chat_response_chunk_to_string(data: ChatResponseChunk) -> str:
     return ""
 
 
-GlobalTypeConverter.register_converter(_aiq_chat_response_chunk_to_string)
+GlobalTypeConverter.register_converter(_chat_response_chunk_to_string)
 
 
 def _string_to_aiq_chat_response_chunk(data: str) -> ChatResponseChunk:

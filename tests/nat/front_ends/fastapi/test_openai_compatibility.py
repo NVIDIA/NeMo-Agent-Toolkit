@@ -360,17 +360,17 @@ async def test_legacy_mode_backward_compatibility():
 
 def test_converter_functions_backward_compatibility():
     """Test that converter functions handle both legacy and new formats"""
-    from nat.data_models.api_server import _aiq_chat_response_chunk_to_string
+    from nat.data_models.api_server import _chat_response_chunk_to_string
     from nat.data_models.api_server import _chat_response_to_chat_response_chunk
 
     # Test legacy chunk (with message) conversion to string
     legacy_chunk = ChatResponseChunk.from_string("Legacy content")
-    legacy_content = _aiq_chat_response_chunk_to_string(legacy_chunk)
+    legacy_content = _chat_response_chunk_to_string(legacy_chunk)
     assert legacy_content == "Legacy content"
 
     # Test new chunk (with delta) conversion to string
     new_chunk = ChatResponseChunk.create_streaming_chunk("New content")
-    new_content = _aiq_chat_response_chunk_to_string(new_chunk)
+    new_content = _chat_response_chunk_to_string(new_chunk)
     assert new_content == "New content"
 
     # Test response to chunk conversion preserves message structure

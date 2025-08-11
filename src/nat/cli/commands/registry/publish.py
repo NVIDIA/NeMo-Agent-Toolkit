@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 async def publish_artifact(registry_handler_config: RegistryHandlerBaseConfig, package_root: str) -> None:
 
     from nat.cli.type_registry import GlobalTypeRegistry
-    from nat.registry_handlers.package_utils import build_aiq_artifact
+    from nat.registry_handlers.package_utils import build_artifact
 
     registry = GlobalTypeRegistry.get()
 
@@ -38,7 +38,7 @@ async def publish_artifact(registry_handler_config: RegistryHandlerBaseConfig, p
         registry_handler_info = registry.get_registry_handler(type(registry_handler_config))
         registry_handler = await stack.enter_async_context(registry_handler_info.build_fn(registry_handler_config))
         try:
-            artifact = build_aiq_artifact(package_root=package_root)
+            artifact = build_artifact(package_root=package_root)
         except Exception as e:
             logger.exception("Error building artifact: %s", e, exc_info=True)
             return

@@ -548,7 +548,7 @@ def build_package_metadata(wheel_data: WheelData | None) -> dict[ComponentEnum, 
     return discovery_metadata
 
 
-def build_aiq_artifact(package_root: str) -> Artifact:
+def build_artifact(package_root: str) -> Artifact:
     """Builds a complete AIQ Toolkit Artifact that can be published for discovery and reuse.
 
     Args:
@@ -565,3 +565,7 @@ def build_aiq_artifact(package_root: str) -> Artifact:
     built_artifact = BuiltArtifact(whl=wheel_data.whl_base64, metadata=metadata)
 
     return Artifact(artifact=built_artifact, whl_path=wheel_data.whl_path)
+
+
+# Compatibility alias
+build_aiq_artifact = build_artifact
