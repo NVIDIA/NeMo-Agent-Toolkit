@@ -120,7 +120,7 @@ llms:
 
 eval:
   general:
-    output_dir: .tmp/aiq/examples/advanced_agents/alert_triage_agent/output/llama_33/
+    output_dir: .tmp/nat/examples/advanced_agents/alert_triage_agent/output/llama_33/
     workflow_alias: alert_triage_agent_llama_33_70b
     dataset:
       _type: json
