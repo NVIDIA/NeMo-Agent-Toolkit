@@ -25,7 +25,7 @@ dependencies = [
   "weave~=0.51",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Subpackage for Weave NeMo Agent toolkit"
+description = "Subpackage for Weave integration in NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "observability", "wandb", "pii"]
 classifiers = ["Programming Language :: Python"]
