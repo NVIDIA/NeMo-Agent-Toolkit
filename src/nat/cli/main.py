@@ -48,7 +48,8 @@ def run_cli_aiq_compat():
     warnings.warn(
         "The 'aiq' command is deprecated and will be removed in a future release. "
         "Please use the 'nat' command instead.",
-        UserWarning)
+        UserWarning,
+        stacklevel=2)
     run_cli()
 
 
