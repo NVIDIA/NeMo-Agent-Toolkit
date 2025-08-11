@@ -61,6 +61,7 @@ class WebSocketMessageHandler:
         self._message_validator: MessageValidator = MessageValidator()
         self._running_workflow_task: asyncio.Task | None = None
         self._message_parent_id: str = "default_id"
+        self._conversation_id: str | None = None
         self._workflow_schema_type: str = None
         self._user_interaction_response: asyncio.Future[HumanResponse] | None = None
 
@@ -76,7 +77,7 @@ class WebSocketMessageHandler:
 
     async def __aexit__(self, exc_type, exc_value, traceback) -> None:
 
-        # TODO: Handle the exit
+        # TODO: Handle the exit  # pylint: disable=fixme
         pass
 
     async def run(self) -> None:
@@ -109,7 +110,7 @@ class WebSocketMessageHandler:
                     user_content = await self.process_user_message_content(validated_message)
                     self._user_interaction_response.set_result(user_content)
             except (asyncio.CancelledError, WebSocketDisconnect):
-                # TODO: Handle the disconnect
+                # TODO: Handle the disconnect  # pylint: disable=fixme
                 break
 
         return None
@@ -143,7 +144,7 @@ class WebSocketMessageHandler:
         try:
             self._message_parent_id = user_message_as_validated_type.id
             self._workflow_schema_type = user_message_as_validated_type.schema_type
-            conversation_id: str = user_message_as_validated_type.conversation_id
+            self._conversation_id = user_message_as_validated_type.conversation_id
 
             content: BaseModel | None = await self.process_user_message_content(user_message_as_validated_type)
 
@@ -152,12 +153,12 @@ class WebSocketMessageHandler:
 
             if isinstance(content, TextContent) and (self._running_workflow_task is None):
 
-                def _done_callback(task: asyncio.Task):
+                def _done_callback(task: asyncio.Task):  # pylint: disable=unused-argument
                     self._running_workflow_task = None
 
                 # await self._process_response()
                 self._running_workflow_task = asyncio.create_task(
-                    self._run_workflow(content.text, conversation_id,
+                    self._run_workflow(content.text, self._conversation_id,
                                        result_type=ChatResponse)).add_done_callback(_done_callback)
 
         except ValueError as e:
@@ -196,18 +197,27 @@ class WebSocketMessageHandler:
 
             if issubclass(message_schema, WebSocketSystemResponseTokenMessage):
                 message = await self._message_validator.create_system_response_token_message(
-                    message_id=message_id, parent_id=self._message_parent_id, content=content, status=status)
+                    message_id=message_id,
+                    parent_id=self._message_parent_id,
+                    conversation_id=self._conversation_id,
+                    content=content,
+                    status=status)
 
             elif issubclass(message_schema, WebSocketSystemIntermediateStepMessage):
                 message = await self._message_validator.create_system_intermediate_step_message(
                     message_id=message_id,
                     parent_id=await self._message_validator.get_intermediate_step_parent_id(data_model),
+                    conversation_id=self._conversation_id,
                     content=content,
                     status=status)
 
             elif issubclass(message_schema, WebSocketSystemInteractionMessage):
                 message = await self._message_validator.create_system_interaction_message(
-                    message_id=message_id, parent_id=self._message_parent_id, content=content, status=status)
+                    message_id=message_id,
+                    parent_id=self._message_parent_id,
+                    conversation_id=self._conversation_id,
+                    content=content,
+                    status=status)
 
             elif isinstance(content, Error):
                 raise ValidationError(f"Invalid input data creating websocket message. {data_model.model_dump_json()}")
@@ -223,6 +233,7 @@ class WebSocketMessageHandler:
             logger.error("A data vaidation error ocurred creating websocket message: %s", str(e), exc_info=True)
             message = await self._message_validator.create_system_response_token_message(
                 message_type=WebSocketMessageType.ERROR_MESSAGE,
+                conversation_id=self._conversation_id,
                 content=Error(code=ErrorTypes.UNKNOWN_ERROR, message="default", details=str(e)))
 
         finally:

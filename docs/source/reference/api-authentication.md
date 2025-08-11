@@ -17,6 +17,10 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit Streamlining API Authentication
 
+:::{warning}
+**Experimental Feature**: The Authentication Provider API is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
+:::
+
 The NeMo Agent toolkit simplifies API authentication by streamlining credential management and validation, enabling secure
 access to API providers across a variety of runtime environments. This functionality allows users to authenticate with
 protected API resources directly from workflow tools, abstracting away low-level authentication logic and enabling

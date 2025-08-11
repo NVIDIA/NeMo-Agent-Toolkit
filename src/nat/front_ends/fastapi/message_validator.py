@@ -241,6 +241,7 @@ class MessageValidator:
         message_id: str | None = str(uuid.uuid4()),
         thread_id: str = "default",
         parent_id: str = "default",
+        conversation_id: str | None = None,
         content: SystemResponseContent
         | Error = SystemResponseContent(),
         status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
@@ -253,6 +254,7 @@ class MessageValidator:
         :param message_id: Unique identifier for the message (default: generated UUID).
         :param thread_id: ID of the thread the message belongs to (default: "default").
         :param parent_id: ID of the user message that spawned child messages.
+        :param conversation_id: ID of the conversation this message belongs to (default: None).
         :param content: Message content.
         :param status: Status of the message (default: IN_PROGRESS).
         :param timestamp: Timestamp of the message (default: current UTC time).
@@ -263,6 +265,7 @@ class MessageValidator:
                                                        id=message_id,
                                                        thread_id=thread_id,
                                                        parent_id=parent_id,
+                                                       conversation_id=conversation_id,
                                                        content=content,
                                                        status=status,
                                                        timestamp=timestamp)
@@ -278,6 +281,7 @@ class MessageValidator:
         message_id: str = str(uuid.uuid4()),
         thread_id: str = "default",
         parent_id: str = "default",
+        conversation_id: str | None = None,
         content: SystemIntermediateStepContent = SystemIntermediateStepContent(name="default", payload="default"),
         status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
         timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
@@ -289,6 +293,7 @@ class MessageValidator:
         :param message_id: Unique identifier for the message (default: generated UUID).
         :param thread_id: ID of the thread the message belongs to (default: "default").
         :param parent_id: ID of the user message that spawned child messages.
+        :param conversation_id: ID of the conversation this message belongs to (default: None).
         :param content: Message content
         :param status: Status of the message (default: IN_PROGRESS).
         :param timestamp: Timestamp of the message (default: current UTC time).
@@ -299,6 +304,7 @@ class MessageValidator:
                                                           id=message_id,
                                                           thread_id=thread_id,
                                                           parent_id=parent_id,
+                                                          conversation_id=conversation_id,
                                                           content=content,
                                                           status=status,
                                                           timestamp=timestamp)
@@ -315,6 +321,7 @@ class MessageValidator:
         message_id: str | None = str(uuid.uuid4()),
         thread_id: str = "default",
         parent_id: str = "default",
+        conversation_id: str | None = None,
         content: HumanPrompt,
         status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
         timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
@@ -326,6 +333,7 @@ class MessageValidator:
         :param message_id: Unique identifier for the message (default: generated UUID).
         :param thread_id: ID of the thread the message belongs to (default: "default").
         :param parent_id: ID of the user message that spawned child messages.
+        :param conversation_id: ID of the conversation this message belongs to (default: None).
         :param content: Message content
         :param status: Status of the message (default: IN_PROGRESS).
         :param timestamp: Timestamp of the message (default: current UTC time).
@@ -336,6 +344,7 @@ class MessageValidator:
                                                      id=message_id,
                                                      thread_id=thread_id,
                                                      parent_id=parent_id,
+                                                     conversation_id=conversation_id,
                                                      content=content,
                                                      status=status,
                                                      timestamp=timestamp)

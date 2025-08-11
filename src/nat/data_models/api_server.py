@@ -519,6 +519,7 @@ class WebSocketSystemIntermediateStepMessage(BaseModel):
     parent_id: str = "default"
     intermediate_parent_id: str | None = "default"
     update_message_id: str | None = "default"
+    conversation_id: str | None = None
     content: SystemIntermediateStepContent
     status: WebSocketMessageStatus
     timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
@@ -542,6 +543,7 @@ class WebSocketSystemResponseTokenMessage(BaseModel):
     id: str | None = "default"
     thread_id: str | None = "default"
     parent_id: str = "default"
+    conversation_id: str | None = None
     content: SystemResponseContent | Error | GenerateResponse
     status: WebSocketMessageStatus
     timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))
@@ -572,6 +574,7 @@ class WebSocketSystemInteractionMessage(BaseModel):
     id: str | None = "default"
     thread_id: str | None = "default"
     parent_id: str = "default"
+    conversation_id: str | None = None
     content: HumanPrompt
     status: WebSocketMessageStatus
     timestamp: str = str(datetime.datetime.now(datetime.timezone.utc))

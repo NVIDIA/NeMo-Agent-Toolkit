@@ -17,6 +17,10 @@ limitations under the License.
 
 # Evaluating NVIDIA NeMo Agent Toolkit Workflows Details
 
+:::{warning}
+**Experimental Feature**: The Evaluation API is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
+:::
+
 :::{note}
 We recommend reading the [Evaluating NeMo Agent Toolkit Workflows](../workflows/evaluate.md) guide before proceeding with this detailed documentation.
 :::

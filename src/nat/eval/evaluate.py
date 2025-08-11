@@ -45,6 +45,10 @@ logger = logging.getLogger(__name__)
 class EvaluationRun:  # pylint: disable=too-many-public-methods
     """
     Instantiated for each evaluation run and used to store data for that single run.
+
+    .. warning::
+        **Experimental Feature**: The Evaluation API is experimental and may change in future releases.
+        Future versions may introduce breaking changes without notice.
     """
 
     def __init__(self, config: EvaluationRunConfig):
@@ -306,7 +310,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             except Exception as e:
                 logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e, exc_info=True)
 
-    def write_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):
+    def write_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):  # pylint: disable=unused-argument  # noqa: E501
         workflow_output_file = self.eval_config.general.output_dir / "workflow_output.json"
         workflow_output_file.parent.mkdir(parents=True, exist_ok=True)
 
