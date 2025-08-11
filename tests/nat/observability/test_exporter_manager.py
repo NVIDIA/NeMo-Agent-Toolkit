@@ -23,6 +23,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from nat.builder.context import ContextState
 from nat.observability.exporter.base_exporter import BaseExporter
 from nat.observability.exporter.base_exporter import IsolatedAttribute

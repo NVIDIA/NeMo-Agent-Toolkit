@@ -20,6 +20,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.llm.nim_llm import NIMModelConfig

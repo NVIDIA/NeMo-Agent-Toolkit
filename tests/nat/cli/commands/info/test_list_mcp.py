@@ -18,6 +18,7 @@ from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
+
 # Replace this with the correct filename for your CLI script
 from nat.cli.commands.info.list_mcp import list_mcp
 

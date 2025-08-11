@@ -18,6 +18,7 @@ from unittest.mock import AsyncMock
 from unittest.mock import patch
 
 import pytest
+
 from nat.profiler.calc.calc_runner import CalcRunner
 from nat.profiler.calc.data_models import CalcRunnerConfig
 from nat.profiler.calc.data_models import CalcRunnerOutput

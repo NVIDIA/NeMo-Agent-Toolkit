@@ -27,6 +27,7 @@ from uuid import UUID
 from uuid import uuid4
 
 import pytest
+
 from nat.data_models.config import Config
 from nat.data_models.dataset_handler import EvalDatasetJsonConfig
 from nat.data_models.evaluate import EvalConfig

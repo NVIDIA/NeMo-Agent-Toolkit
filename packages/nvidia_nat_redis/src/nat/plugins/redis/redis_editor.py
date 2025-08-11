@@ -20,9 +20,10 @@ import numpy as np
 import redis.asyncio as redis
 import redis.exceptions as redis_exceptions
 from langchain_core.embeddings import Embeddings
+from redis.commands.search.query import Query
+
 from nat.memory.interfaces import MemoryEditor
 from nat.memory.models import MemoryItem
-from redis.commands.search.query import Query
 
 logger = logging.getLogger(__name__)
 

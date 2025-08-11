@@ -21,6 +21,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from nat.builder.context import ContextState
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload

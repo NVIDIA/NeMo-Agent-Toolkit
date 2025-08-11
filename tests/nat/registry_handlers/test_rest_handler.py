@@ -21,6 +21,8 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+from pytest_httpserver import HTTPServer
+
 from nat.cli.type_registry import TypeRegistry
 from nat.data_models.component import ComponentEnum
 from nat.data_models.discovery_metadata import DiscoveryMetadata
@@ -30,7 +32,6 @@ from nat.registry_handlers.schemas.publish import BuiltArtifact
 from nat.registry_handlers.schemas.pull import PullRequestPackages
 from nat.registry_handlers.schemas.search import SearchQuery
 from nat.settings.global_settings import Settings
-from pytest_httpserver import HTTPServer
 
 
 @pytest.mark.parametrize("url, route, status, expected",

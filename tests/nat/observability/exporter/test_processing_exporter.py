@@ -21,6 +21,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from nat.builder.context import ContextState
 from nat.observability.exporter.processing_exporter import ProcessingExporter
 from nat.observability.processor.callback_processor import CallbackProcessor

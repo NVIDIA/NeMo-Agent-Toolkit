@@ -16,8 +16,9 @@
 import json
 from unittest.mock import patch
 
-from nat.observability.mixin.serialize_mixin import SerializeMixin
 from pydantic import BaseModel
+
+from nat.observability.mixin.serialize_mixin import SerializeMixin
 
 
 class SampleModel(BaseModel):
