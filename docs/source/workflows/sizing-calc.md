@@ -96,7 +96,7 @@ The dataset is provided in the eval section of the workflow configuration file.
 ```yaml
 eval:
   general:
-    output_dir: .tmp/aiq/examples/simple_calculator/eval
+    output_dir: .tmp/nat/examples/simple_calculator/eval
     dataset:
       _type: json
       file_path: examples/getting_started/simple_calculator/data/simple_calculator.json
@@ -190,7 +190,7 @@ Sample output:
 }
 ```
 
-The output is truncated for brevity. For more information, refer to the [CalcRunnerOutput](../../../src/aiq/profiler/calc/data_models.py) Pydantic model.
+The output is truncated for brevity. For more information, refer to the [CalcRunnerOutput](../../../src/nat/profiler/calc/data_models.py) Pydantic model.
 
 ### Using a Remote Workflow
 By default, the calculator runs the workflow locally to gather metrics. You can use the `--endpoint` and `--endpoint_timeout` command line parameters to use a remote workflow for gathering metrics.
