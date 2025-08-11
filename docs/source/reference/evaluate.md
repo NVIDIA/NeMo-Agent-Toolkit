@@ -151,7 +151,7 @@ eval:
       file_path: examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_nested.json
       function: aiq_simple_calculator_eval.scripts.custom_dataset_parser.extract_nested_questions
       kwargs:
-        difficulty: "important"
+        difficulty: "medium"
         max_rows: 5
 ```
 This example configuration uses a custom dataset parser function to extract the nested questions from the example dataset, filter them by difficulty and return only the first five questions. The example dataset `simple_calculator_nested.json` is a nested JSON file with questions and answers.
