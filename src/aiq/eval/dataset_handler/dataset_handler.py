@@ -289,7 +289,7 @@ class DatasetHandler:
         except Exception as e:
             raise RuntimeError(f"Error calling custom dataset function: {e}") from e
 
-            # Apply standard preprocessing (filters, deduplication, repetitions)
+        # Apply standard preprocessing (filters, deduplication, repetitions)
         return self._preprocess_eval_input(eval_input)
 
     def _eval_input_to_dataframe(self, eval_input: EvalInput) -> pd.DataFrame:
