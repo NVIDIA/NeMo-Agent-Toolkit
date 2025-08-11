@@ -24,4 +24,4 @@ classifiers = ["Programming Language :: Python"]
 nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'nat.components']
-_alert_triage_agent = "nat_alert_triage_agent.register"
+nat_alert_triage_agent = "nat_alert_triage_agent.register"
