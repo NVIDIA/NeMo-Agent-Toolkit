@@ -119,7 +119,7 @@ class AsyncGenerationStatusResponse(BaseAsyncStatusResponse):
 
 class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
     """
-    A FastAPI based front end that allows an AIQ Toolkit workflow to be served as a microservice.
+    A FastAPI based front end that allows an NAT workflow to be served as a microservice.
     """
 
     class EndpointBase(BaseModel):
