@@ -40,5 +40,17 @@ def run_cli():
     cli(obj={}, auto_envvar_prefix='NAT', show_default=True, prog_name="nat")
 
 
+def run_cli_aiq_compat():
+    "Entrypoint for the `aiq` compatibility command"
+    import warnings
+
+    # Warn with a UserWarning since DeprecationWarnings are not shown by default
+    warnings.warn(
+        "The 'aiq' command is deprecated and will be removed in a future release. "
+        "Please use the 'nat' command instead.",
+        UserWarning)
+    run_cli()
+
+
 if __name__ == '__main__':
     run_cli()

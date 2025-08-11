@@ -222,7 +222,7 @@ nat_registry_handlers = "nat.registry_handlers.register"
 
 
 [project.scripts]
-aiq = "aiq.cli.main:run_cli"
+aiq = "nat.cli.main:run_cli_aiq_compat"
 nat = "nat.cli.main:run_cli"
 
 [tool.setuptools]
