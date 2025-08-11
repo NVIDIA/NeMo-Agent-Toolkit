@@ -21,6 +21,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from nat.builder.context import ContextState
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
@@ -368,7 +369,7 @@ class TestFileExporterLogging:
         """Test that logger is properly configured."""
         from nat.observability.exporter.file_exporter import logger
 
-        assert logger.name == 'aiq.observability.exporter.file_exporter'
+        assert logger.name == 'nat.observability.exporter.file_exporter'
 
     @patch('nat.observability.exporter.file_exporter.logger')
     def test_no_unexpected_logging_during_normal_operation(self, mock_logger, mock_context_state, temp_file):

@@ -21,6 +21,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+
 from nat.builder.context import ContextState
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.observability.exporter.base_exporter import BaseExporter
@@ -362,7 +363,7 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
         exporter._tasks.add(task)
 
         # Capture logs from the specific logger
-        with caplog.at_level(logging.WARNING, logger="aiq.observability.exporter.base_exporter"):
+        with caplog.at_level(logging.WARNING, logger="nat.observability.exporter.base_exporter"):
             await exporter._wait_for_tasks(timeout=0.01)
 
         assert "did not complete within" in caplog.text
@@ -441,7 +442,7 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
         exporter._running = True
 
         # Capture logs from the specific logger
-        with caplog.at_level(logging.WARNING, logger="aiq.observability.exporter.base_exporter"):
+        with caplog.at_level(logging.WARNING, logger="nat.observability.exporter.base_exporter"):
             await exporter.stop()
 
         # New behavior: no cancellation warnings since tasks aren't cancelled
@@ -534,7 +535,7 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
             isolated_instances.append(exporter.create_isolated_instance(Mock(spec=ContextState)))
 
         # Capture logs from the specific logger
-        with caplog.at_level(logging.WARNING, logger="aiq.observability.exporter.base_exporter"):
+        with caplog.at_level(logging.WARNING, logger="nat.observability.exporter.base_exporter"):
             BaseExporter.log_instance_stats()
 
         assert "High number of isolated BaseExporter instances" in caplog.text

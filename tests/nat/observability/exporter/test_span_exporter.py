@@ -18,6 +18,7 @@ from datetime import datetime
 from unittest.mock import patch
 
 import pytest
+
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
@@ -135,10 +136,10 @@ class TestSpanExporterFunctionality:
         span = span_exporter._outstanding_spans[sample_start_event.payload.UUID]
         assert isinstance(span, Span)
         assert span.name == "test_llm_call"
-        assert span.attributes["aiq.event_type"] == IntermediateStepType.LLM_START.value
-        assert span.attributes["aiq.function.id"] == "func_123"
-        assert span.attributes["aiq.function.name"] == "test_function"
-        assert span.attributes["aiq.framework"] == LLMFrameworkEnum.LANGCHAIN.value
+        assert span.attributes["nat.event_type"] == IntermediateStepType.LLM_START.value
+        assert span.attributes["nat.function.id"] == "func_123"
+        assert span.attributes["nat.function.name"] == "test_function"
+        assert span.attributes["nat.framework"] == LLMFrameworkEnum.LANGCHAIN.value
 
     def test_process_start_event_with_parent(self, span_exporter):
         """Test processing START event with parent span."""
@@ -248,7 +249,7 @@ class TestSpanExporterFunctionality:
             assert exported_span.attributes[SpanAttributes.LLM_TOKEN_COUNT_COMPLETION.value] == 20
             assert exported_span.attributes[SpanAttributes.LLM_TOKEN_COUNT_TOTAL.value] == 30
             assert exported_span.attributes[SpanAttributes.OUTPUT_VALUE.value] == "Test output"
-            assert "aiq.metadata" in exported_span.attributes
+            assert "nat.metadata" in exported_span.attributes
 
     def test_process_end_event_missing_span(self, span_exporter, sample_end_event):
         """Test processing END event with missing span."""

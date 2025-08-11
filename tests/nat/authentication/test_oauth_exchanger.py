@@ -161,7 +161,7 @@ async def test_refresh_expired_token(monkeypatch, cfg):
 
     # **fixed patch line**
     monkeypatch.setattr(
-        "aiq.authentication.oauth2.oauth2_auth_code_flow_provider.AuthlibOAuth2Client",
+        "nat.authentication.oauth2.oauth2_auth_code_flow_provider.AuthlibOAuth2Client",
         _DummyAuthlibClient,
         raising=True,
     )
@@ -204,7 +204,7 @@ async def test_refresh_fallback_to_callback(monkeypatch, cfg):
 
     # **fixed patch line**
     monkeypatch.setattr(
-        "aiq.authentication.oauth2.oauth2_auth_code_flow_provider.AuthlibOAuth2Client",
+        "nat.authentication.oauth2.oauth2_auth_code_flow_provider.AuthlibOAuth2Client",
         _RaisingClient,
         raising=True,
     )

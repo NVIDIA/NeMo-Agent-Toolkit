@@ -32,7 +32,7 @@ def test_mcp_command_registration(mock_add_command):
     # Patch the get_command method to return our mock command
     with patch.object(start_command, 'get_command', return_value=mock_command):
         # Mock sys.modules to include our mock module
-        with patch.dict(sys.modules, {'aiq.front_ends.mcp.main': mock_main_module}):
+        with patch.dict(sys.modules, {'nat.front_ends.mcp.main': mock_main_module}):
             # Import the module which would register the command
             # Since we're mocking the module, we'll call the registration code directly
             from nat.cli.entrypoint import cli
