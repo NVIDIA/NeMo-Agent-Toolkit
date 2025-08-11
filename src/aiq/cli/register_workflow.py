@@ -54,7 +54,7 @@ from aiq.cli.type_registry import ToolWrapperBuildCallableT
 from aiq.cli.type_registry import TTCStrategyBuildCallableT
 from aiq.cli.type_registry import TTCStrategyRegisterCallableT
 from aiq.data_models.authentication import AuthProviderBaseConfigT
-from aiq.data_models.component import AIQComponentEnum
+from aiq.data_models.component import ComponentEnum
 from aiq.data_models.discovery_metadata import DiscoveryMetadata
 from aiq.data_models.embedder import EmbedderBaseConfigT
 from aiq.data_models.evaluator import EvaluatorBaseConfigT
@@ -80,7 +80,7 @@ def register_telemetry_exporter(config_type: type[TelemetryExporterConfigT]):
         context_manager_fn = asynccontextmanager(fn)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=AIQComponentEnum.TRACING)
+                                                                component_type=ComponentEnum.TRACING)
 
         GlobalTypeRegistry.get().register_telemetry_exporter(
             RegisteredTelemetryExporter(full_type=config_type.full_type,
@@ -103,7 +103,7 @@ def register_logging_method(config_type: type[LoggingMethodConfigT]):
         context_manager_fn = asynccontextmanager(fn)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=AIQComponentEnum.LOGGING)
+                                                                component_type=ComponentEnum.LOGGING)
 
         GlobalTypeRegistry.get().register_logging_method(
             RegisteredLoggingMethod(full_type=config_type.full_type,
@@ -129,7 +129,7 @@ def register_front_end(config_type: type[FrontEndConfigT]):
         context_manager_fn = asynccontextmanager(fn)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=AIQComponentEnum.FRONT_END)
+                                                                component_type=ComponentEnum.FRONT_END)
 
         GlobalTypeRegistry.get().register_front_end(
             RegisteredFrontEndInfo(full_type=config_type.full_type,
@@ -161,7 +161,7 @@ def register_function(config_type: type[FunctionConfigT],
             framework_wrappers_list = list(framework_wrappers)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=AIQComponentEnum.FUNCTION)
+                                                                component_type=ComponentEnum.FUNCTION)
 
         GlobalTypeRegistry.get().register_function(
             RegisteredFunctionInfo(
@@ -187,7 +187,7 @@ def register_llm_provider(config_type: type[LLMBaseConfigT]):
         context_manager_fn = asynccontextmanager(fn)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=AIQComponentEnum.LLM_PROVIDER)
+                                                                component_type=ComponentEnum.LLM_PROVIDER)
 
         GlobalTypeRegistry.get().register_llm_provider(
             RegisteredLLMProviderInfo(full_type=config_type.full_type,
@@ -211,7 +211,7 @@ def register_auth_provider(config_type: type[AuthProviderBaseConfigT]):
         context_manager_fn = asynccontextmanager(fn)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=AIQComponentEnum.AUTHENTICATION_PROVIDER)
+                                                                component_type=ComponentEnum.AUTHENTICATION_PROVIDER)
 
         GlobalTypeRegistry.get().register_auth_provider(
             RegisteredAuthProviderInfo(full_type=config_type.full_type,
@@ -235,8 +235,8 @@ def register_llm_client(config_type: type[LLMBaseConfigT], wrapper_type: LLMFram
 
         discovery_metadata = DiscoveryMetadata.from_provider_framework_map(config_type=config_type,
                                                                            wrapper_type=wrapper_type,
-                                                                           provider_type=AIQComponentEnum.LLM_PROVIDER,
-                                                                           component_type=AIQComponentEnum.LLM_CLIENT)
+                                                                           provider_type=ComponentEnum.LLM_PROVIDER,
+                                                                           component_type=ComponentEnum.LLM_CLIENT)
         GlobalTypeRegistry.get().register_llm_client(
             RegisteredLLMClientInfo(full_type=config_type.full_type,
                                     config_type=config_type,
@@ -260,7 +260,7 @@ def register_embedder_provider(config_type: type[EmbedderBaseConfigT]):
         context_manager_fn = asynccontextmanager(fn)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=AIQComponentEnum.EMBEDDER_PROVIDER)
+                                                                component_type=ComponentEnum.EMBEDDER_PROVIDER)
 
         GlobalTypeRegistry.get().register_embedder_provider(
             RegisteredEmbedderProviderInfo(full_type=config_type.full_type,
@@ -286,8 +286,8 @@ def register_embedder_client(config_type: type[EmbedderBaseConfigT], wrapper_typ
         discovery_metadata = DiscoveryMetadata.from_provider_framework_map(
             config_type=config_type,
             wrapper_type=wrapper_type,
-            provider_type=AIQComponentEnum.EMBEDDER_PROVIDER,
-            component_type=AIQComponentEnum.EMBEDDER_CLIENT)
+            provider_type=ComponentEnum.EMBEDDER_PROVIDER,
+            component_type=ComponentEnum.EMBEDDER_CLIENT)
 
         GlobalTypeRegistry.get().register_embedder_client(
             RegisteredEmbedderClientInfo(full_type=config_type.full_type,
@@ -311,7 +311,7 @@ def register_evaluator(config_type: type[EvaluatorBaseConfigT]):
         context_manager_fn = asynccontextmanager(fn)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=AIQComponentEnum.EVALUATOR)
+                                                                component_type=ComponentEnum.EVALUATOR)
 
         GlobalTypeRegistry.get().register_evaluator(
             RegisteredEvaluatorInfo(full_type=config_type.full_type,
@@ -334,7 +334,7 @@ def register_memory(config_type: type[MemoryBaseConfigT]):
         context_manager_fn = asynccontextmanager(fn)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=AIQComponentEnum.MEMORY)
+                                                                component_type=ComponentEnum.MEMORY)
 
         GlobalTypeRegistry.get().register_memory(
             RegisteredMemoryInfo(full_type=config_type.full_type,
@@ -358,7 +358,7 @@ def register_object_store(config_type: type[ObjectStoreBaseConfigT]):
         context_manager_fn = asynccontextmanager(fn)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=AIQComponentEnum.OBJECT_STORE)
+                                                                component_type=ComponentEnum.OBJECT_STORE)
 
         GlobalTypeRegistry.get().register_object_store(
             RegisteredObjectStoreInfo(full_type=config_type.full_type,
@@ -382,7 +382,7 @@ def register_ttc_strategy(config_type: type[TTCStrategyRegisterCallableT]):
         context_manager_fn = asynccontextmanager(fn)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=AIQComponentEnum.TTC_STRATEGY)
+                                                                component_type=ComponentEnum.TTC_STRATEGY)
 
         GlobalTypeRegistry.get().register_ttc_strategy(
             RegisteredTTCStrategyInfo(full_type=config_type.full_type,
@@ -406,7 +406,7 @@ def register_retriever_provider(config_type: type[RetrieverBaseConfigT]):
         context_manager_fn = asynccontextmanager(fn)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=AIQComponentEnum.RETRIEVER_PROVIDER)
+                                                                component_type=ComponentEnum.RETRIEVER_PROVIDER)
 
         GlobalTypeRegistry.get().register_retriever_provider(
             RegisteredRetrieverProviderInfo(full_type=config_type.full_type,
@@ -432,8 +432,8 @@ def register_retriever_client(config_type: type[RetrieverBaseConfigT], wrapper_t
         discovery_metadata = DiscoveryMetadata.from_provider_framework_map(
             config_type=config_type,
             wrapper_type=wrapper_type,
-            provider_type=AIQComponentEnum.RETRIEVER_PROVIDER,
-            component_type=AIQComponentEnum.RETRIEVER_CLIENT,
+            provider_type=ComponentEnum.RETRIEVER_PROVIDER,
+            component_type=ComponentEnum.RETRIEVER_CLIENT,
         )
 
         GlobalTypeRegistry.get().register_retriever_client(
@@ -455,7 +455,7 @@ def register_tool_wrapper(wrapper_type: LLMFrameworkEnum | str):
 
         discovery_metadata = DiscoveryMetadata.from_fn_wrapper(fn=fn,
                                                                wrapper_type=wrapper_type,
-                                                               component_type=AIQComponentEnum.TOOL_WRAPPER)
+                                                               component_type=ComponentEnum.TOOL_WRAPPER)
         GlobalTypeRegistry.get().register_tool_wrapper(
             RegisteredToolWrapper(llm_framework=wrapper_type, build_fn=fn, discovery_metadata=discovery_metadata))
 
@@ -475,7 +475,7 @@ def register_registry_handler(config_type: type[RegistryHandlerBaseConfigT]):
         context_manager_fn = asynccontextmanager(fn)
 
         discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
-                                                                component_type=AIQComponentEnum.REGISTRY_HANDLER)
+                                                                component_type=ComponentEnum.REGISTRY_HANDLER)
 
         GlobalTypeRegistry.get().register_registry_handler(
             RegisteredRegistryHandlerInfo(full_type=config_type.full_type,

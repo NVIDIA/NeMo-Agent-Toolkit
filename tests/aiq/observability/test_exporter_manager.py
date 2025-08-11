@@ -24,7 +24,7 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import ContextState
 from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.observability.exporter.base_exporter import IsolatedAttribute
 from aiq.observability.exporter_manager import ExporterManager
@@ -43,7 +43,7 @@ def log_exporter_stats():
 class MockExporter(BaseExporter):
     """Mock exporter for testing."""
 
-    def __init__(self, name: str = "test_exporter", context_state: AIQContextState | None = None):
+    def __init__(self, name: str = "test_exporter", context_state: ContextState | None = None):
         super().__init__(context_state)
         self._name = name
         self._export_called = False
@@ -75,7 +75,7 @@ class MockExporter(BaseExporter):
         self._wait_ready_called = True
         await self._ready_event.wait()
 
-    def create_isolated_instance(self, context_state: AIQContextState) -> "MockExporter":
+    def create_isolated_instance(self, context_state: ContextState) -> "MockExporter":
         """Create isolated instance for testing copy-on-write functionality."""
         isolated = MockExporter(f"{self._name}_isolated", context_state)
         isolated._isolated_instance_created = True
@@ -85,7 +85,7 @@ class MockExporter(BaseExporter):
 class MockExporterWithoutIsolation(BaseExporter):
     """Mock exporter without isolation support for testing fallback behavior."""
 
-    def __init__(self, name: str = "no_isolation_exporter", context_state: AIQContextState | None = None):
+    def __init__(self, name: str = "no_isolation_exporter", context_state: ContextState | None = None):
         super().__init__(context_state)
         self._name = name
         # Remove the create_isolated_instance method using built-in delattr
@@ -113,7 +113,7 @@ class MockExporterWithoutIsolation(BaseExporter):
 @pytest.fixture
 def mock_context_state():
     """Create a mock context state for testing."""
-    context = Mock(spec=AIQContextState)
+    context = Mock(spec=ContextState)
     context.conversation_id = Mock()
     context.conversation_id.get.return_value = "test-conversation-123"
     return context
@@ -420,7 +420,7 @@ class TestCreateIsolatedExporters:
         exporter_manager.add_exporter("test", mock_exporter)
 
         with patch('aiq.builder.context.AIQContextState.get') as mock_get:
-            mock_context = Mock(spec=AIQContextState)
+            mock_context = Mock(spec=ContextState)
             mock_get.return_value = mock_context
 
             isolated = exporter_manager.create_isolated_exporters()
@@ -687,7 +687,7 @@ class TestIntegrationScenarios:
 class DummyExporter(BaseExporter):
     """Dummy exporter for memory leak testing."""
 
-    def __init__(self, context_state: AIQContextState | None = None):
+    def __init__(self, context_state: ContextState | None = None):
         super().__init__(context_state)
         self._export_count = 0
 
@@ -720,7 +720,7 @@ class TestMemoryLeakImprovements:
         initial_counts = get_exporter_counts()
 
         # Create base exporter
-        context_state = AIQContextState()
+        context_state = ContextState()
         base_exporter = DummyExporter(context_state)
 
         # Verify instance tracking
@@ -732,7 +732,7 @@ class TestMemoryLeakImprovements:
         assert base_exporter.name == "DummyExporter"
 
         # Create isolated instance
-        isolated = base_exporter.create_isolated_instance(AIQContextState())
+        isolated = base_exporter.create_isolated_instance(ContextState())
         assert isolated.is_isolated_instance
         assert isolated.name == "DummyExporter (isolated)"
 
@@ -750,7 +750,7 @@ class TestMemoryLeakImprovements:
         initial_counts = get_exporter_counts()
 
         # Create exporters
-        context_state = AIQContextState()
+        context_state = ContextState()
         exporter1 = DummyExporter(context_state)
         exporter2 = DummyExporter(context_state)
 
@@ -763,7 +763,7 @@ class TestMemoryLeakImprovements:
         assert after_creation_counts['total'] >= initial_counts['total'] + 2
 
         # Test with isolated exporters (this was the source of memory leaks)
-        new_context = AIQContextState()
+        new_context = ContextState()
 
         # Verify isolated exporters are created properly
         isolated_exporters = manager.create_isolated_exporters(new_context)
@@ -795,13 +795,13 @@ class TestMemoryLeakImprovements:
         initial_counts = get_exporter_counts()
 
         # Create base exporter and manager
-        context_state = AIQContextState()
+        context_state = ContextState()
         base_exporter = DummyExporter(context_state)
 
         # Simulate high traffic with sequential workflow runs (not concurrent due to manager lock)
         num_workflows = 5  # Reduced for faster test
         for _ in range(num_workflows):
-            isolated_context = AIQContextState()
+            isolated_context = ContextState()
             manager = ExporterManager()  # Create fresh manager for each run
             manager.add_exporter("traffic_test", base_exporter)
 
@@ -826,13 +826,13 @@ class TestMemoryLeakImprovements:
         initial_counts = get_exporter_counts()
 
         # Create base exporter
-        context_state = AIQContextState()
+        context_state = ContextState()
         base_exporter = DummyExporter(context_state)
 
         # Create several isolated instances manually (simulating potential leaks)
         isolated_instances = []
         for _ in range(3):
-            isolated = base_exporter.create_isolated_instance(AIQContextState())
+            isolated = base_exporter.create_isolated_instance(ContextState())
             isolated_instances.append(isolated)
             assert isolated.is_isolated_instance
 
@@ -875,14 +875,14 @@ class TestMemoryLeakImprovements:
     async def test_manager_isolated_exporter_tracking(self):
         """Test that ExporterManager properly tracks and cleans up isolated exporters."""
         manager = ExporterManager()
-        base_exporter = DummyExporter(AIQContextState())
+        base_exporter = DummyExporter(ContextState())
         manager.add_exporter("tracked", base_exporter)
 
         initial_counts = get_exporter_counts()
 
         # Use the manager with isolated context multiple times
         for _ in range(3):
-            isolated_context = AIQContextState()
+            isolated_context = ContextState()
             async with manager.start(context_state=isolated_context):
                 await asyncio.sleep(0.01)  # Simulate work
 
@@ -908,12 +908,12 @@ class TestMemoryLeakImprovements:
                 raise RuntimeError("Cleanup failed")
 
         manager = ExporterManager()
-        problematic = ProblematicExporter(AIQContextState())
+        problematic = ProblematicExporter(ContextState())
         manager.add_exporter("problematic", problematic)
 
         with caplog.at_level(logging.WARNING):
             # Should handle cleanup errors gracefully
-            async with manager.start(context_state=AIQContextState()):
+            async with manager.start(context_state=ContextState()):
                 await asyncio.sleep(0.01)
 
         # Cleanup errors should be logged but not crash the system
@@ -1043,7 +1043,7 @@ class TestExporterManagerPreStartHook:
                 self.pre_start_called = True
                 await super()._pre_start()
 
-            def create_isolated_instance(self, context_state: AIQContextState) -> "TestExporter":
+            def create_isolated_instance(self, context_state: ContextState) -> "TestExporter":
                 """Override to create testable isolated instance."""
                 isolated = TestExporter(f"{self._name}_isolated", context_state)
                 isolated._isolated_instance_created = True
@@ -1054,7 +1054,7 @@ class TestExporterManagerPreStartHook:
         manager.add_exporter("test", exporter)
 
         # Test with isolated context (creates isolated exporters)
-        async with manager.start(context_state=AIQContextState()):
+        async with manager.start(context_state=ContextState()):
             # The isolated exporter should have had _pre_start called
             # We can't directly access it, but we can verify the manager worked
             assert len(manager._active_isolated_exporters) == 1

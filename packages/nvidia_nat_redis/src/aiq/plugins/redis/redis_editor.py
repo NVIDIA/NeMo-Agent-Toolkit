@@ -32,7 +32,7 @@ INDEX_NAME = "memory_idx"
 
 class RedisEditor(MemoryEditor):
     """
-    Wrapper class that implements AIQ Toolkit Interfaces for Redis memory storage.
+    Wrapper class that implements NAT interfaces for Redis memory storage.
     """
 
     def __init__(self, redis_client: redis.Redis, key_prefix: str, embedder: Embeddings):

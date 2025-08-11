@@ -26,7 +26,7 @@ from pydantic_core import SchemaValidator
 from aiq.cli.cli_utils.config_override import load_and_override_config
 from aiq.cli.type_registry import GlobalTypeRegistry
 from aiq.cli.type_registry import RegisteredFrontEndInfo
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.utils.data_models.schema_validator import validate_schema
 from aiq.utils.type_utils import DecomposedType
 
@@ -185,7 +185,7 @@ class StartCommandGroup(click.Group):
         # Get the front end for the command
         front_end: RegisteredFrontEndInfo = self._registered_front_ends[cmd_name]
 
-        config = validate_schema(config_dict, AIQConfig)
+        config = validate_schema(config_dict, Config)
 
         # Override default front end config with values from the config file for serverless execution modes.
         # Check that we have the right kind of front end

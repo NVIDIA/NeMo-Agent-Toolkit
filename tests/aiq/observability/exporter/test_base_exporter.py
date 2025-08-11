@@ -22,7 +22,7 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import ContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.observability.exporter.base_exporter import IsolatedAttribute
@@ -160,10 +160,10 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
         assert exporter._loop is None
         assert exporter._is_isolated_instance is False
 
-    @patch('aiq.observability.exporter.base_exporter.AIQContextState.get')
+    @patch('aiq.observability.exporter.base_exporter.ContextState.get')
     def test_init_without_context_state(self, mock_get_context):
         """Test initialization without context state (uses default)."""
-        mock_context = Mock(spec=AIQContextState)
+        mock_context = Mock(spec=ContextState)
         mock_get_context.return_value = mock_context
 
         exporter = ConcreteExporter()
@@ -467,7 +467,7 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
 
     def test_create_isolated_instance(self, exporter):
         """Test create_isolated_instance method."""
-        new_context = Mock(spec=AIQContextState)
+        new_context = Mock(spec=ContextState)
 
         isolated = exporter.create_isolated_instance(new_context)
 
@@ -488,7 +488,7 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
         """Test that isolated instances are tracked separately."""
         initial_isolated_count = BaseExporter.get_isolated_instance_count()
 
-        isolated = exporter.create_isolated_instance(Mock(spec=AIQContextState))
+        isolated = exporter.create_isolated_instance(Mock(spec=ContextState))
         assert isolated is not None  # Use the variable
 
         assert BaseExporter.get_isolated_instance_count() == initial_isolated_count + 1
@@ -509,11 +509,11 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
         """Test get_isolated_instance_count class method."""
         initial_count = BaseExporter.get_isolated_instance_count()
 
-        isolated1 = exporter.create_isolated_instance(Mock(spec=AIQContextState))
+        isolated1 = exporter.create_isolated_instance(Mock(spec=ContextState))
         assert isolated1 is not None  # Use the variable
         assert BaseExporter.get_isolated_instance_count() == initial_count + 1
 
-        isolated2 = exporter.create_isolated_instance(Mock(spec=AIQContextState))
+        isolated2 = exporter.create_isolated_instance(Mock(spec=ContextState))
         assert isolated2 is not None  # Use the variable
         assert BaseExporter.get_isolated_instance_count() == initial_count + 2
 
@@ -532,7 +532,7 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
         # Create many isolated instances to trigger warning
         isolated_instances = []
         for _ in range(51):
-            isolated_instances.append(exporter.create_isolated_instance(Mock(spec=AIQContextState)))
+            isolated_instances.append(exporter.create_isolated_instance(Mock(spec=ContextState)))
 
         # Capture logs from the specific logger
         with caplog.at_level(logging.WARNING, logger="aiq.observability.exporter.base_exporter"):
@@ -576,7 +576,7 @@ class TestBaseExporter:  # pylint: disable=too-many-public-methods
         exporter._tasks.add(original_task)
 
         # Create isolated instance
-        isolated = exporter.create_isolated_instance(Mock(spec=AIQContextState))
+        isolated = exporter.create_isolated_instance(Mock(spec=ContextState))
 
         # Add different task to isolated instance
         isolated_task = Mock()

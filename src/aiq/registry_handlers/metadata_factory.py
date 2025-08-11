@@ -15,7 +15,7 @@
 
 import logging
 
-from aiq.data_models.component import AIQComponentEnum
+from aiq.data_models.component import ComponentEnum
 from aiq.data_models.discovery_metadata import DiscoveryMetadata
 from aiq.data_models.discovery_metadata import DiscoveryStatusEnum
 from aiq.registry_handlers.schemas.package import WheelData
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 class ComponentDiscoveryMetadata:
 
-    def __init__(self, component_type: AIQComponentEnum, wheel_data: WheelData | None = None):
+    def __init__(self, component_type: ComponentEnum, wheel_data: WheelData | None = None):
         self._component_type = component_type
         self._metadata_items: list[dict | DiscoveryMetadata] = []
         self._wheel_data: WheelData = wheel_data
@@ -55,6 +55,6 @@ class ComponentDiscoveryMetadata:
         return self._metadata_items
 
     @staticmethod
-    def from_package_component_type(component_type: AIQComponentEnum,
+    def from_package_component_type(component_type: ComponentEnum,
                                     wheel_data: WheelData | None = None) -> "ComponentDiscoveryMetadata":
         return ComponentDiscoveryMetadata(component_type=component_type, wheel_data=wheel_data)

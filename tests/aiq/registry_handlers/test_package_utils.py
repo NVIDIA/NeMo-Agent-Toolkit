@@ -21,7 +21,7 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.data_models.component import AIQComponentEnum
+from aiq.data_models.component import ComponentEnum
 from aiq.data_models.discovery_metadata import DiscoveryMetadata
 from aiq.registry_handlers.package_utils import build_aiq_artifact
 from aiq.registry_handlers.package_utils import build_package_metadata
@@ -32,7 +32,7 @@ from aiq.registry_handlers.package_utils import get_transitive_dependencies
 from aiq.registry_handlers.package_utils import parse_requirement
 from aiq.registry_handlers.package_utils import resolve_extras_to_packages
 from aiq.registry_handlers.schemas.package import WheelData
-from aiq.registry_handlers.schemas.publish import AIQArtifact
+from aiq.registry_handlers.schemas.publish import Artifact
 
 
 def test_build_wheel():
@@ -68,7 +68,7 @@ def test_build_package_metadata(use_wheel_data):
     assert isinstance(discovery_metadata, dict)
 
     for component_type, discovery_metadatas in discovery_metadata.items():
-        assert isinstance(component_type, AIQComponentEnum)
+        assert isinstance(component_type, ComponentEnum)
 
         for discovery_metadata in discovery_metadatas:
             DiscoveryMetadata(**discovery_metadata)
@@ -80,7 +80,7 @@ def test_build_aiq_artifact():
 
     aiq_artifact = build_aiq_artifact(package_root=package_root)
 
-    assert isinstance(aiq_artifact, AIQArtifact)
+    assert isinstance(aiq_artifact, Artifact)
 
 
 class TestParseRequirement:

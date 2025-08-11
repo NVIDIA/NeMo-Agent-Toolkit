@@ -19,7 +19,7 @@ from enum import StrEnum
 logger = logging.getLogger(__name__)
 
 
-class AIQComponentEnum(StrEnum):
+class ComponentEnum(StrEnum):
     # Keep sorted!!!
     AUTHENTICATION_PROVIDER = "auth_provider"
     EMBEDDER_CLIENT = "embedder_client"
@@ -52,3 +52,7 @@ class ComponentGroup(StrEnum):
     MEMORY = "memory"
     OBJECT_STORES = "object_stores"
     RETRIEVERS = "retrievers"
+
+
+# Compatibility aliases with previous releases
+AIQComponentEnum = ComponentEnum

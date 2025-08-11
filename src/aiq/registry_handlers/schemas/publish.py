@@ -17,38 +17,38 @@ import logging
 
 from pydantic import BaseModel
 
-from aiq.data_models.component import AIQComponentEnum
+from aiq.data_models.component import ComponentEnum
 from aiq.data_models.discovery_metadata import DiscoveryMetadata
 from aiq.registry_handlers.schemas.status import StatusMessage
 
 logger = logging.getLogger(__name__)
 
 
-class BuiltAIQArtifact(BaseModel):
-    """An AIQ Toolkit artifact including base64 encoded string of wheel package and corrosponding discovery metadata.
+class BuiltArtifact(BaseModel):
+    """An NAT artifact including base64 encoded string of wheel package and corrosponding discovery metadata.
 
     Args:
-        whl (str): A base64 encoded string of an AIQ Toolkit package wheel (.whl).
+        whl (str): A base64 encoded string of an NAT package wheel (.whl).
 
-        metadata (dict[AIQComponentEnum, list[DiscoveryMetadata]]): Provides rich discover metadata for developers to
+        metadata (dict[ComponentEnum, list[DiscoveryMetadata]]): Provides rich discover metadata for developers to
         quickly find useful components.
     """
 
     whl: str
-    metadata: dict[AIQComponentEnum, list[DiscoveryMetadata]]
+    metadata: dict[ComponentEnum, list[DiscoveryMetadata]]
 
 
-class AIQArtifact(BaseModel):
+class Artifact(BaseModel):
     """An AIQ Toolkit artifact including base64 encoded string of wheel package and corrosponding discovery metadata.
 
     Args:
-        artifact (BuildAIQArtifact): An AIQ Toolkit artifact including base64 encoded string of wheel package and
+        artifact (BuiltArtifact): An NAT artifact including base64 encoded string of wheel package and
         corrosponding discovery metadata.
 
         whl_path (str): A local path to the built wheel package.
     """
 
-    artifact: BuiltAIQArtifact | None = None
+    artifact: BuiltArtifact | None = None
     whl_path: str
 
 
@@ -61,3 +61,8 @@ class PublishResponse(BaseModel):
     """
 
     status: StatusMessage
+
+
+# Compatibility aliases with previous releases
+BuiltAIQArtifact = BuiltArtifact
+AIQArtifact = Artifact

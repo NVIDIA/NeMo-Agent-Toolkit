@@ -17,7 +17,7 @@ from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from typing import Any
 
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import ContextState
 from aiq.builder.embedder import EmbedderProviderInfo
 from aiq.builder.function import Function
 from aiq.builder.function_base import FunctionBase
@@ -26,13 +26,13 @@ from aiq.builder.function_base import SingleOutputT
 from aiq.builder.function_base import StreamingOutputT
 from aiq.builder.llm import LLMProviderInfo
 from aiq.builder.retriever import RetrieverProviderInfo
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.experimental.test_time_compute.models.strategy_base import StrategyBase
 from aiq.memory.interfaces import MemoryEditor
 from aiq.object_store.interfaces import ObjectStore
 from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.observability.exporter_manager import ExporterManager
-from aiq.runtime.runner import AIQRunner
+from aiq.runtime.runner import Runner
 
 callback_handler_var: ContextVar[Any | None] = ContextVar("callback_handler_var", default=None)
 
@@ -41,7 +41,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
 
     def __init__(self,
                  *,
-                 config: AIQConfig,
+                 config: Config,
                  entry_fn: Function[InputT, StreamingOutputT, SingleOutputT],
                  functions: dict[str, Function] | None = None,
                  llms: dict[str, LLMProviderInfo] | None = None,
@@ -51,7 +51,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
                  telemetry_exporters: dict[str, BaseExporter] | None = None,
                  retrievers: dict[str | None, RetrieverProviderInfo] | None = None,
                  ttc_strategies: dict[str, StrategyBase] | None = None,
-                 context_state: AIQContextState):
+                 context_state: ContextState):
 
         super().__init__(input_schema=entry_fn.input_schema,
                          streaming_output_schema=entry_fn.streaming_output_schema,
@@ -90,10 +90,10 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
         a new top-level workflow span here.
         """
 
-        async with AIQRunner(input_message=message,
-                             entry_fn=self._entry_fn,
-                             context_state=self._context_state,
-                             exporter_manager=self._exporter_manager.get()) as runner:
+        async with Runner(input_message=message,
+                          entry_fn=self._entry_fn,
+                          context_state=self._context_state,
+                          exporter_manager=self._exporter_manager.get()) as runner:
 
             # The caller can `yield runner` so they can do `runner.result()` or `runner.result_stream()`
             yield runner
@@ -116,7 +116,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
 
     @staticmethod
     def from_entry_fn(*,
-                      config: AIQConfig,
+                      config: Config,
                       entry_fn: Function[InputT, StreamingOutputT, SingleOutputT],
                       functions: dict[str, Function] | None = None,
                       llms: dict[str, LLMProviderInfo] | None = None,
@@ -126,7 +126,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
                       telemetry_exporters: dict[str, BaseExporter] | None = None,
                       retrievers: dict[str | None, RetrieverProviderInfo] | None = None,
                       ttc_strategies: dict[str, StrategyBase] | None = None,
-                      context_state: AIQContextState) -> 'Workflow[InputT, StreamingOutputT, SingleOutputT]':
+                      context_state: ContextState) -> 'Workflow[InputT, StreamingOutputT, SingleOutputT]':
 
         input_type: type = entry_fn.input_type
         streaming_output_type = entry_fn.streaming_output_type

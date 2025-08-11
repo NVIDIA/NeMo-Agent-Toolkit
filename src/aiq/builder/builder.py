@@ -21,7 +21,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from aiq.authentication.interfaces import AuthProviderBase
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function import Function
 from aiq.data_models.authentication import AuthProviderBaseConfig
@@ -46,12 +46,12 @@ from aiq.experimental.test_time_compute.models.stage_enums import PipelineTypeEn
 from aiq.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from aiq.memory.interfaces import MemoryEditor
 from aiq.object_store.interfaces import ObjectStore
-from aiq.retriever.interface import AIQRetriever
+from aiq.retriever.interface import Retriever
 
 
 class UserManagerHolder():
 
-    def __init__(self, context: AIQContext) -> None:
+    def __init__(self, context: Context) -> None:
         self._context = context
 
     def get_id(self):
@@ -214,11 +214,11 @@ class Builder(ABC):  # pylint: disable=too-many-public-methods
         ...
 
     @typing.overload
-    async def get_retriever(self, retriever_name: str | RetrieverRef, wrapper_type: None) -> AIQRetriever:
+    async def get_retriever(self, retriever_name: str | RetrieverRef, wrapper_type: None) -> Retriever:
         ...
 
     @typing.overload
-    async def get_retriever(self, retriever_name: str | RetrieverRef) -> AIQRetriever:
+    async def get_retriever(self, retriever_name: str | RetrieverRef) -> Retriever:
         ...
 
     @abstractmethod

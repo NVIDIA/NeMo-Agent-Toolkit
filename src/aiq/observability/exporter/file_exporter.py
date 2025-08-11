@@ -15,7 +15,7 @@
 
 import logging
 
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import ContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.observability.exporter.raw_exporter import RawExporter
 from aiq.observability.mixin.file_mixin import FileExportMixin
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 class FileExporter(FileExportMixin, RawExporter[IntermediateStep, str]):  # pylint: disable=R0901
     """A File exporter that exports telemetry traces to a local file."""
 
-    def __init__(self, context_state: AIQContextState | None = None, **file_kwargs):
+    def __init__(self, context_state: ContextState | None = None, **file_kwargs):
         super().__init__(context_state=context_state, **file_kwargs)
         self._processor = IntermediateStepSerializer()
         self.add_processor(self._processor)

@@ -53,7 +53,7 @@ def issue_experimental_warning(function_name: str,
         _warning_issued.add(function_name)
 
 
-def aiq_experimental(func: Any = None, *, feature_name: str | None = None, metadata: dict[str, Any] | None = None):
+def experimental(func: Any = None, *, feature_name: str | None = None, metadata: dict[str, Any] | None = None):
     """
     Decorator that can wrap any type of function (sync, async, generator,
     async generator) and logs a warning that the function is experimental.
@@ -72,7 +72,7 @@ def aiq_experimental(func: Any = None, *, feature_name: str | None = None, metad
     if func is None:
 
         def decorator_wrapper(actual_func):
-            return aiq_experimental(actual_func, feature_name=feature_name, metadata=metadata)
+            return experimental(actual_func, feature_name=feature_name, metadata=metadata)
 
         return decorator_wrapper
 
@@ -128,3 +128,7 @@ def aiq_experimental(func: Any = None, *, feature_name: str | None = None, metad
         return result
 
     return sync_wrapper
+
+
+# Compatibility aliases with previous releases
+aiq_experimental = experimental

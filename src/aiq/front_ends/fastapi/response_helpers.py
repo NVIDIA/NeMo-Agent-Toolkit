@@ -17,19 +17,19 @@ import asyncio
 import typing
 from collections.abc import AsyncGenerator
 
-from aiq.data_models.api_server import AIQResponseIntermediateStep
-from aiq.data_models.api_server import AIQResponsePayloadOutput
-from aiq.data_models.api_server import AIQResponseSerializable
+from aiq.data_models.api_server import ResponseIntermediateStep
+from aiq.data_models.api_server import ResponsePayloadOutput
+from aiq.data_models.api_server import ResponseSerializable
 from aiq.data_models.step_adaptor import StepAdaptorConfig
 from aiq.front_ends.fastapi.intermediate_steps_subscriber import pull_intermediate
 from aiq.front_ends.fastapi.step_adaptor import StepAdaptor
-from aiq.runtime.session import AIQSessionManager
+from aiq.runtime.session import SessionManager
 from aiq.utils.producer_consumer_queue import AsyncIOProducerConsumerQueue
 
 
 async def generate_streaming_response_as_str(payload: typing.Any,
                                              *,
-                                             session_manager: AIQSessionManager,
+                                             session_manager: SessionManager,
                                              streaming: bool,
                                              step_adaptor: StepAdaptor = StepAdaptor(StepAdaptorConfig()),
                                              result_type: type | None = None,
@@ -42,7 +42,7 @@ async def generate_streaming_response_as_str(payload: typing.Any,
                                                   result_type=result_type,
                                                   output_type=output_type):
 
-        if (isinstance(item, AIQResponseSerializable)):
+        if (isinstance(item, ResponseSerializable)):
             yield item.get_stream_data()
         else:
             raise ValueError("Unexpected item type in stream. Expected AIQChatResponseSerializable, got: " +
@@ -51,15 +51,15 @@ async def generate_streaming_response_as_str(payload: typing.Any,
 
 async def generate_streaming_response(payload: typing.Any,
                                       *,
-                                      session_manager: AIQSessionManager,
+                                      session_manager: SessionManager,
                                       streaming: bool,
                                       step_adaptor: StepAdaptor = StepAdaptor(StepAdaptorConfig()),
                                       result_type: type | None = None,
-                                      output_type: type | None = None) -> AsyncGenerator[AIQResponseSerializable]:
+                                      output_type: type | None = None) -> AsyncGenerator[ResponseSerializable]:
 
     async with session_manager.run(payload) as runner:
 
-        q: AsyncIOProducerConsumerQueue[AIQResponseSerializable] = AsyncIOProducerConsumerQueue()
+        q: AsyncIOProducerConsumerQueue[ResponseSerializable] = AsyncIOProducerConsumerQueue()
 
         # Start the intermediate stream
         intermediate_complete = await pull_intermediate(q, step_adaptor)
@@ -94,10 +94,10 @@ async def generate_streaming_response(payload: typing.Any,
 
             async for item in q:
 
-                if (isinstance(item, AIQResponseSerializable)):
+                if (isinstance(item, ResponseSerializable)):
                     yield item
                 else:
-                    yield AIQResponsePayloadOutput(payload=item)
+                    yield ResponsePayloadOutput(payload=item)
         except Exception as e:
             # Handle exceptions here
             raise e
@@ -107,7 +107,7 @@ async def generate_streaming_response(payload: typing.Any,
 
 async def generate_single_response(
     payload: typing.Any,
-    session_manager: AIQSessionManager,
+    session_manager: SessionManager,
     result_type: type | None = None,
 ) -> typing.Any:
     if (not session_manager.workflow.has_single_output):
@@ -119,11 +119,11 @@ async def generate_single_response(
 
 async def generate_streaming_response_full(payload: typing.Any,
                                            *,
-                                           session_manager: AIQSessionManager,
+                                           session_manager: SessionManager,
                                            streaming: bool,
                                            result_type: type | None = None,
                                            output_type: type | None = None,
-                                           filter_steps: str | None = None) -> AsyncGenerator[AIQResponseSerializable]:
+                                           filter_steps: str | None = None) -> AsyncGenerator[ResponseSerializable]:
     """
     Similar to generate_streaming_response but provides raw AIQResponseIntermediateStep objects
     without any step adaptor translations.
@@ -138,7 +138,7 @@ async def generate_streaming_response_full(payload: typing.Any,
             allowed_types = set(filter_steps.split(','))
 
     async with session_manager.run(payload) as runner:
-        q: AsyncIOProducerConsumerQueue[AIQResponseSerializable] = AsyncIOProducerConsumerQueue()
+        q: AsyncIOProducerConsumerQueue[ResponseSerializable] = AsyncIOProducerConsumerQueue()
 
         # Start the intermediate stream without step adaptor
         intermediate_complete = await pull_intermediate(q, None)
@@ -159,12 +159,12 @@ async def generate_streaming_response_full(payload: typing.Any,
             asyncio.create_task(pull_result())
 
             async for item in q:
-                if (isinstance(item, AIQResponseIntermediateStep)):
+                if (isinstance(item, ResponseIntermediateStep)):
                     # Filter intermediate steps if filter_steps is provided
                     if allowed_types is None or item.type in allowed_types:
                         yield item
                 else:
-                    yield AIQResponsePayloadOutput(payload=item)
+                    yield ResponsePayloadOutput(payload=item)
         except Exception as e:
             # Handle exceptions here
             raise e
@@ -174,7 +174,7 @@ async def generate_streaming_response_full(payload: typing.Any,
 
 async def generate_streaming_response_full_as_str(payload: typing.Any,
                                                   *,
-                                                  session_manager: AIQSessionManager,
+                                                  session_manager: SessionManager,
                                                   streaming: bool,
                                                   result_type: type | None = None,
                                                   output_type: type | None = None,
@@ -188,7 +188,7 @@ async def generate_streaming_response_full_as_str(payload: typing.Any,
                                                        result_type=result_type,
                                                        output_type=output_type,
                                                        filter_steps=filter_steps):
-        if (isinstance(item, AIQResponseIntermediateStep) or isinstance(item, AIQResponsePayloadOutput)):
+        if (isinstance(item, ResponseIntermediateStep) or isinstance(item, ResponsePayloadOutput)):
             yield item.get_stream_data()
         else:
             raise ValueError("Unexpected item type in stream. Expected AIQChatResponseSerializable, got: " +

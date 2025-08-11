@@ -14,12 +14,12 @@
 # limitations under the License.
 
 from aiq.cli.register_workflow import register_front_end
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 
 
 @register_front_end(config_type=FastApiFrontEndConfig)
-async def register_fastapi_front_end(config: FastApiFrontEndConfig, full_config: AIQConfig):
+async def register_fastapi_front_end(config: FastApiFrontEndConfig, full_config: Config):
     from aiq.front_ends.fastapi.fastapi_front_end_plugin import FastApiFrontEndPlugin
 
     yield FastApiFrontEndPlugin(full_config=full_config)

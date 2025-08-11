@@ -18,10 +18,10 @@ import subprocess
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from aiq.data_models.component import AIQComponentEnum
+from aiq.data_models.component import ComponentEnum
 from aiq.registry_handlers.registry_handler_base import AbstractRegistryHandler
 from aiq.registry_handlers.schemas.package import PackageNameVersionList
-from aiq.registry_handlers.schemas.publish import AIQArtifact
+from aiq.registry_handlers.schemas.publish import Artifact
 from aiq.registry_handlers.schemas.publish import PublishResponse
 from aiq.registry_handlers.schemas.pull import PackageNameVersion
 from aiq.registry_handlers.schemas.pull import PullRequestPackages
@@ -59,7 +59,7 @@ class PypiRegistryHandler(AbstractRegistryHandler):
         self._search_route = search_route.strip("/")
 
     @asynccontextmanager
-    async def publish(self, artifact: AIQArtifact) -> AsyncGenerator[PublishResponse]:
+    async def publish(self, artifact: Artifact) -> AsyncGenerator[PublishResponse]:
         """Publishes an AIQ Toolkit artifact to a PyPI remote registry.
 
         Args:
@@ -192,7 +192,7 @@ class PypiRegistryHandler(AbstractRegistryHandler):
 
                 search_resp_item = SearchResponseItem(package=package,
                                                       version=version,
-                                                      component_type=AIQComponentEnum.PACKAGE,
+                                                      component_type=ComponentEnum.PACKAGE,
                                                       component_name=package,
                                                       description="",
                                                       developer_notes="")

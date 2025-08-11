@@ -15,7 +15,7 @@
 
 import logging
 
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import ContextState
 from aiq.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 from aiq.plugins.ragaai.mixin.ragaai_catalyst_mixin import RagaAICatalystMixin
 
@@ -52,7 +52,7 @@ class RagaAICatalystExporter(RagaAICatalystMixin, OtelSpanExporter):  # pylint: 
     """
 
     def __init__(self,
-                 context_state: AIQContextState | None = None,
+                 context_state: ContextState | None = None,
                  batch_size: int = 100,
                  flush_interval: float = 5.0,
                  max_queue_size: int = 1000,

@@ -19,10 +19,10 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from enum import Enum
 
-from aiq.data_models.component import AIQComponentEnum
+from aiq.data_models.component import ComponentEnum
 from aiq.data_models.discovery_metadata import DiscoveryMetadata
 from aiq.registry_handlers.schemas.package import PackageNameVersionList
-from aiq.registry_handlers.schemas.publish import AIQArtifact
+from aiq.registry_handlers.schemas.publish import Artifact
 from aiq.registry_handlers.schemas.publish import PublishResponse
 from aiq.registry_handlers.schemas.pull import PullRequestPackages
 from aiq.registry_handlers.schemas.pull import PullResponse
@@ -36,15 +36,15 @@ class AbstractRegistryHandler(ABC):
     """Base class outlining the interfaces for remote AIQ Toolkit registry interactions."""
 
     def __init__(self):
-        self._discovery_metadata: dict[AIQComponentEnum, list[dict | DiscoveryMetadata]] = {}
-        self._aiq_artifact: AIQArtifact | None = None
+        self._discovery_metadata: dict[ComponentEnum, list[dict | DiscoveryMetadata]] = {}
+        self._aiq_artifact: Artifact | None = None
         self._whl_bytes: bytes
         self._whl_path: str
         self._whl_base64: str
 
     @abstractmethod
     @asynccontextmanager
-    async def publish(self, artifact: AIQArtifact) -> AsyncGenerator[PublishResponse]:
+    async def publish(self, artifact: Artifact) -> AsyncGenerator[PublishResponse]:
         """Publishes an AIQ Toolkit artifact to a remote registry.
 
         Args:
