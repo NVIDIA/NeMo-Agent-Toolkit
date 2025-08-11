@@ -37,7 +37,7 @@ def run_cli():
 
     from nat.cli.entrypoint import cli
 
-    cli(obj={}, auto_envvar_prefix='AIQ', show_default=True, prog_name="aiq")
+    cli(obj={}, auto_envvar_prefix='NAT', show_default=True, prog_name="nat")
 
 
 if __name__ == '__main__':

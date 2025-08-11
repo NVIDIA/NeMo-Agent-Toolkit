@@ -65,12 +65,12 @@ def get_version():
     from importlib.metadata import version
     try:
         # Use the distro name to get the version
-        return version("aiqtoolkit")
+        return version("nvidia-nat")
     except PackageNotFoundError:
         return "unknown"
 
 
-@click.group(name="aiq", chain=False, invoke_without_command=True, no_args_is_help=True)
+@click.group(name="nat", chain=False, invoke_without_command=True, no_args_is_help=True)
 @click.version_option(version=get_version())
 @click.option('--log-level',
               type=click.Choice(LOG_LEVELS.keys(), case_sensitive=False),
@@ -78,20 +78,20 @@ def get_version():
               help='Set the logging level')
 @click.pass_context
 def cli(ctx: click.Context, log_level: str):
-    """Main entrypoint for the AIQ Toolkit CLI"""
+    """Main entrypoint for the NAT CLI"""
 
     ctx_dict = ctx.ensure_object(dict)
 
     # Setup logging
     numeric_level = setup_logging(log_level)
 
-    aiq_logger = logging.getLogger("aiq")
-    aiq_logger.setLevel(numeric_level)
+    nat_logger = logging.getLogger("nat")
+    nat_logger.setLevel(numeric_level)
 
     logger = logging.getLogger(__package__)
 
     # Set the parent logger for all of the llm examples to use morpheus so we can take advantage of configure_logging
-    logger.parent = aiq_logger
+    logger.parent = nat_logger
     logger.setLevel(numeric_level)
 
     ctx_dict["start_time"] = time.time()
