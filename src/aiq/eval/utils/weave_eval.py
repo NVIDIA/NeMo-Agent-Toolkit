@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# pylint: disable=invalid-name
 
 import asyncio
 import logging
@@ -173,7 +174,7 @@ class WeaveEvaluationIntegration:  # pylint: disable=too-many-public-methods
         if profiler_results.workflow_runtime_metrics:
             profile_metrics["wf_runtime_p95"] = profiler_results.workflow_runtime_metrics.p95
 
-        # TODO:get the LLM tokens from the usage stats and log them
+        # Eventually get the LLM tokens from the usage stats and log them
         profile_metrics["total_runtime"] = usage_stats.total_runtime
 
         return profile_metrics
