@@ -46,7 +46,7 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 # Set working directory
 WORKDIR /workspace
 
-# Install the AIQ toolkit package and the example package
+# Install the nvidia-nat package and the example package
 RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     . /workspace/.venv/bin/activate && \
@@ -55,5 +55,5 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
 # Enivronment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"
 
-# Define the entry point to start the aiq CLI tool
+# Define the entry point to start the nat CLI tool
 ENTRYPOINT ["nat"]
