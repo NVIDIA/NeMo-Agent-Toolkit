@@ -1,3 +1,4 @@
 {
-    "aiq": "nvidia-nat"
+    "aiq": "nvidia-nat",
+    "nat": "nvidia-nat"
 }
