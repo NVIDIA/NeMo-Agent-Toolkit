@@ -1,9 +1,9 @@
 ---
 description: Follow these rules when creating, modifying, or generating any code, tests, documentation, or configuration files
-globs: 
+globs:
 alwaysApply: false
 ---
-# AIQToolkit General Coding Guidelines
+# NeMo Agent Toolkit General Coding Guidelines
 
 These are the overarching standards that every **source, test, documentation and CI file** in this repository must follow.  Adhering to these rules locally ensures the project's automated checks and pipelines succeed on your first push.
 

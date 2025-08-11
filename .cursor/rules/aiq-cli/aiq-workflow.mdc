@@ -1,9 +1,9 @@
 ---
-description: Follow these rules when the user's request involves creating, reinstalling, or deleting AIQ workflows
-globs: 
+description: Follow these rules when the user's request involves creating, reinstalling, or deleting NeMo Agent Toolkit workflows
+globs:
 alwaysApply: false
 ---
-# AIQ Workflow Commands
+# NeMo Agent Toolkit Workflow Commands
 
 This rule provides guidance for using `aiq workflow create`, `aiq workflow reinstall`, and `aiq workflow delete` commands effectively.
 

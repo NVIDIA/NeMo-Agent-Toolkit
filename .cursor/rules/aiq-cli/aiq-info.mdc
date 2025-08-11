@@ -1,15 +1,15 @@
 ---
-description: Follow these rules when the user requests information about AIQ components, including: functions, tools, etc.
-globs: 
+description: Follow these rules when the user requests information about NeMo Agent Toolkit components, including: functions, tools, etc.
+globs:
 alwaysApply: false
 ---
-# AIQ Info Commands
+# NeMo Agent Toolkit Info Commands
 
-This rule provides guidance for using `aiq info` commands to discover locally registered AIQ toolkit components and configured registry channels.
+This rule provides guidance for using `aiq info` commands to discover locally registered NeMo Agent Toolkit components and configured registry channels.
 
 ## aiq info components
 
-Lists the locally registered AIQ toolkit components with filtering and search capabilities.
+Lists the locally registered NeMo Agent Toolkit components with filtering and search capabilities.
 
 ### Basic Usage
 ```bash

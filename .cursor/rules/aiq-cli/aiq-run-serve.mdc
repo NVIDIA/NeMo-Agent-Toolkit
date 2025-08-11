@@ -1,15 +1,15 @@
 ---
-description: Follow these rules when the user's request involves running, serving, or executing AIQ workflows
-globs: 
+description: Follow these rules when the user's request involves running, serving, or executing NeMo Agent Toolkit workflows
+globs:
 alwaysApply: false
 ---
-# AIQ Run and Serve Commands
+# NeMo Agent Toolkit Run and Serve Commands
 
-This rule provides guidance for using `aiq run` and `aiq serve` commands to execute and deploy AIQ toolkit workflows.
+This rule provides guidance for using `aiq run` and `aiq serve` commands to execute and deploy NeMo Agent Toolkit workflows.
 
 ## aiq run
 
-Runs an AIQ toolkit workflow from a configuration file with command-line inputs. This is an alias for `aiq start console`.
+Runs a NeMo Agent Toolkit workflow from a configuration file with command-line inputs. This is an alias for `aiq start console`.
 
 ### Basic Usage
 ```bash
@@ -102,7 +102,7 @@ Example: `http://localhost:8000/docs`
 Both commands require a valid workflow configuration file that:
 - Defines the workflow components and their parameters
 - Uses proper YAML or JSON format
-- Maps to registered AIQ toolkit components
+- Maps to registered NeMo Agent Toolkit components
 
 ### Example Configuration Structure
 ```yaml

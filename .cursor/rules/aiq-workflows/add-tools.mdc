@@ -1,9 +1,9 @@
 ---
-description: Follow these rules when the user's request involves adding, integrating, implementing, or configuring tools for AIQ workflows
+description: Follow these rules when the user's request involves adding, integrating, implementing, or configuring tools for NeMo Agent Toolkit workflows
 globs:
 alwaysApply: false
 ---
-# Adding Tools to AIQ Workflows
+# Adding Tools to NeMo Agent Toolkit Workflows
 
 ## Overview
 

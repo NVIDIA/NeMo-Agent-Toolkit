@@ -1,11 +1,11 @@
 ---
 description: Follow these rules when the user requests to evaluate a workflow
-globs: 
+globs:
 alwaysApply: false
 ---
-# AIQ Evaluation Commands
+# NeMo Agent Toolkit Evaluation Commands
 
-This rule provides guidance for using `aiq eval` command to assess the accuracy of AIQ toolkit workflows and instrument their performance characteristics.
+This rule provides guidance for using `aiq eval` command to assess the accuracy of NeMo Agent Toolkit workflows and instrument their performance characteristics.
 
 ## aiq eval
 

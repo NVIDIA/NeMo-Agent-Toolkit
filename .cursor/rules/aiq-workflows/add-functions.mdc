@@ -1,11 +1,11 @@
 ---
-description: Follow these rules when the user's request involves implementing, adding, creating, or modifying functions within AIQ workflows
-globs: 
+description: Follow these rules when the user's request involves implementing, adding, creating, or modifying functions within NeMo Agent Toolkit workflows
+globs:
 alwaysApply: false
 ---
-# Creating AIQ Toolkit Functions
+# Creating NeMo Agent Toolkit Functions
 
-This document provides rules and guidelines for creating functions (also referred to as tools) in the AIQ Toolkit. Functions are the core building blocks for defining workflow logic.
+This document provides rules and guidelines for creating functions (also referred to as tools) in the NeMo Agent Toolkit. Functions are the core building blocks for defining workflow logic.
 
 ## Core Concepts
 
