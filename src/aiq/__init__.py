@@ -15,5 +15,5 @@
 
 import nat
 
-# Provide a compatibility alias
+# Provide a compatibility alias for the old aiq namespace
 __path__ = nat.__path__
