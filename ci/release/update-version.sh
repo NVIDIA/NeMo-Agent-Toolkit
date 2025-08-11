@@ -51,10 +51,10 @@ function sed_runner() {
 }
 
 # Update the pypi description file
-# Currently only the pypi.md file for the aiqtoolkit package contains links to documentation
+# Currently only the pypi.md file for the nvidia-nat package contains links to documentation
 # Replace this with a `find ./ -name "pypi.md"` if this is needed for the other pypi.md files
 if [[ -z "${SKIP_MD_UPDATE}" ]]; then
-   sed_runner "s|https:\/\/docs.nvidia.com\/aiqtoolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/aiqtoolkit\/${NEXT_VERSION}|g" src/aiq/meta/pypi.md
+   sed_runner "s|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/${NEXT_VERSION}|g" src/nat/meta/pypi.md
 fi
 
 
@@ -70,7 +70,7 @@ fi
 # Change directory to the repo root
 pushd "${PROJECT_ROOT}" &> /dev/null
 
-# Update the dependencies that the examples and packages depend on aiqtoolkit, we are explicitly specifying the
+# Update the dependencies that the examples and packages depend on nvidia-nat, we are explicitly specifying the
 # `examples` and `packages` directories in order to avoid accidentally updating toml files of third-party packages in
 # the `.venv` directory, and updating the root pyproject.toml file. The sort is not really needed, but it makes the
 # output deterministic and easier to read.

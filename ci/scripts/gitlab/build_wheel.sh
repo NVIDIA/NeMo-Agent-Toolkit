@@ -53,7 +53,7 @@ for NAT_PACKAGE in "${NAT_PACKAGES[@]}"; do
 done
 
 if [[ "${BUILD_NAT_COMPAT}" == "true" ]]; then
-    WHEELS_DIR="${WHEELS_BASE_DIR}/aiqtoolkit"
+    WHEELS_DIR="${WHEELS_BASE_DIR}/nat"
     for NAT_COMPAT_PACKAGE in "${NAT_COMPAT_PACKAGES[@]}"; do
         build_package_wheel ${NAT_COMPAT_PACKAGE}
     done

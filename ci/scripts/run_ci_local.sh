@@ -77,7 +77,7 @@ for STAGE in "${STAGES[@]}"; do
     DOCKER_RUN_ARGS="--rm -ti --net=host --platform=linux/${CI_ARCH} -v "${LOCAL_CI_TMP}":/ci_tmp ${ENV_LIST} --env STAGE=${STAGE}"
 
     if [[ "${USE_HOST_GIT}" == "1" ]]; then
-        DOCKER_RUN_ARGS="${DOCKER_RUN_ARGS} -v ${NAT_ROOT}:/aiqtoolkit"
+        DOCKER_RUN_ARGS="${DOCKER_RUN_ARGS} -v ${NAT_ROOT}:/nat"
     fi
 
     if [[ "${STAGE}" == "bash" ]]; then
