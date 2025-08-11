@@ -23,7 +23,7 @@ import pandas as pd
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 
-logger = logging.getLogger("aiq_alert_triage_agent")
+logger = logging.getLogger("nat_alert_triage_agent")
 
 # module‐level variable; loaded on first use
 _DATA_CACHE: dict[str, pd.DataFrame | dict | None] = {
