@@ -59,7 +59,7 @@ def extract_nested_questions(input_path: Path, difficulty: str = None, max_rows:
     if difficulty:
         filtered_questions = []
         for question in questions:
-            # Check if category matches category (hard, medium, easy)
+            # Check if difficulty matches difficulty (hard, medium, easy)
             if (question.get('difficulty', '').lower() == difficulty.lower()):
                 filtered_questions.append(question)
         questions = filtered_questions
