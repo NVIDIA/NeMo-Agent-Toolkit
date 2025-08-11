@@ -87,7 +87,7 @@ def event_type_to_span_kind(event_type: str) -> SpanKind:
 
 
 class SpanAttributes(Enum):
-    AIQ_SPAN_KIND = "aiq.span.kind"
+    NAT_SPAN_KIND = "nat.span.kind"
     INPUT_VALUE = "input.value"
     INPUT_MIME_TYPE = "input.mime_type"
     LLM_TOKEN_COUNT_PROMPT = "llm.token_count.prompt"
@@ -95,12 +95,12 @@ class SpanAttributes(Enum):
     LLM_TOKEN_COUNT_TOTAL = "llm.token_count.total"
     OUTPUT_VALUE = "output.value"
     OUTPUT_MIME_TYPE = "output.mime_type"
-    AIQ_USAGE_NUM_LLM_CALLS = "aiq.usage.num_llm_calls"
-    AIQ_USAGE_SECONDS_BETWEEN_CALLS = "aiq.usage.seconds_between_calls"
-    AIQ_USAGE_TOKEN_COUNT_PROMPT = "aiq.usage.token_count.prompt"
-    AIQ_USAGE_TOKEN_COUNT_COMPLETION = "aiq.usage.token_count.completion"
-    AIQ_USAGE_TOKEN_COUNT_TOTAL = "aiq.usage.token_count.total"
-    AIQ_EVENT_TYPE = "aiq.event_type"
+    NAT_USAGE_NUM_LLM_CALLS = "nat.usage.num_llm_calls"
+    NAT_USAGE_SECONDS_BETWEEN_CALLS = "nat.usage.seconds_between_calls"
+    NAT_USAGE_TOKEN_COUNT_PROMPT = "nat.usage.token_count.prompt"
+    NAT_USAGE_TOKEN_COUNT_COMPLETION = "nat.usage.token_count.completion"
+    NAT_USAGE_TOKEN_COUNT_TOTAL = "nat.usage.token_count.total"
+    NAT_EVENT_TYPE = "nat.event_type"
 
 
 class MimeTypes(Enum):
