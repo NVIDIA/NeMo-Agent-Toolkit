@@ -4127,7 +4127,7 @@ docs = [
     { name = "sphinx-autoapi", specifier = ">=3.6" },
     { name = "sphinx-copybutton", specifier = ">=0.5" },
     { name = "sphinx-mermaid" },
-    { name = "vale", specifier = "==3.9.5" },
+    { name = "vale", specifier = "~=3.12" },
 ]
 
 [[package]]
@@ -7241,11 +7241,11 @@ wheels = [
 
 [[package]]
 name = "vale"
-version = "3.9.5.0"
+version = "3.12.0.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a6/3d/6e368803c08fcd3738e8cc5b33ccf89775c8900a60ce64bdfc67054b59cc/vale-3.9.5.0.tar.gz", hash = "sha256:417efe1721d172311a214ad5ec2a63f54d889c9ddcdac6be38f284c0e264181c", size = 5305, upload-time = "2025-02-08T13:21:15.732Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/48/09/0254ecbf8847a3b926e77284568ce30bcb3485dc5b065f7ec3f7eb61afa5/vale-3.12.0.0.tar.gz", hash = "sha256:26bf05326e8fbc878edb782fc9ecee87b826395ba00c066d91ef87a4ed6a6fed", size = 5311, upload-time = "2025-06-10T08:57:28.246Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9e/68/1dcdd3f4ebfdd2b2fb19a3a472411c188d78559d5e4d4ce4e236e7124aa3/vale-3.9.5.0-py3-none-any.whl", hash = "sha256:b19082fcd71bb6e27e4127c8756d65999bbcd79b180631d51493620ca5b8f84f", size = 5854, upload-time = "2025-02-08T13:21:14.431Z" },
+    { url = "https://files.pythonhosted.org/packages/c6/e5/bbd5a55e50b75de4f3b98b91262191004ba069f8ec2fd36e8bd066177de8/vale-3.12.0.0-py3-none-any.whl", hash = "sha256:bb5f0907bfdbb61e3a11097d4e2b771b2796be2c4af94a45b09f74db39c50d30", size = 5904, upload-time = "2025-06-10T08:57:26.276Z" },
 ]
 
 [[package]]
