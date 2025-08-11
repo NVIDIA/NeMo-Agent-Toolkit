@@ -149,7 +149,7 @@ eval:
     dataset:
       _type: custom
       file_path: examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_nested.json
-      function: aiq_simple_calculator_eval.custom_dataset_parser.extract_nested_questions
+      function: aiq_simple_calculator_eval.scripts.custom_dataset_parser.extract_nested_questions
       kwargs:
         difficulty: "important"
         max_rows: 5
