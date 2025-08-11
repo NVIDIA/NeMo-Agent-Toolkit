@@ -68,7 +68,7 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
     2. IntermediateStep (END) → Complete Span → Process through pipeline → Export
 
     Args:
-        context_state (AIQContextState, optional): The context state to use for the exporter. Defaults to None.
+        context_state (ContextState, optional): The context state to use for the exporter. Defaults to None.
     """
 
     # Use descriptors for automatic isolation of span-specific state
@@ -142,17 +142,17 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
             parent=parent_span,
             context=span_ctx,
             attributes={
-                "aiq.event_type": event.payload.event_type.value,
-                "aiq.function.id": event.function_ancestry.function_id if event.function_ancestry else "unknown",
-                "aiq.function.name": event.function_ancestry.function_name if event.function_ancestry else "unknown",
-                "aiq.subspan.name": event.payload.name or "",
-                "aiq.event_timestamp": event.event_timestamp,
-                "aiq.framework": event.payload.framework.value if event.payload.framework else "unknown",
+                "nat.event_type": event.payload.event_type.value,
+                "nat.function.id": event.function_ancestry.function_id if event.function_ancestry else "unknown",
+                "nat.function.name": event.function_ancestry.function_name if event.function_ancestry else "unknown",
+                "nat.subspan.name": event.payload.name or "",
+                "nat.event_timestamp": event.event_timestamp,
+                "nat.framework": event.payload.framework.value if event.payload.framework else "unknown",
             },
             start_time=start_ns)
 
         span_kind = event_type_to_span_kind(event.event_type)
-        sub_span.set_attribute("aiq.span.kind", span_kind.value)
+        sub_span.set_attribute("nat.span.kind", span_kind.value)
 
         if event.payload.data and event.payload.data.input:
             match = re.search(r"Human:\s*Question:\s*(.*)", str(event.payload.data.input))
@@ -204,9 +204,9 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
         # Optionally add more attributes from usage_info or data
         usage_info = event.payload.usage_info
         if usage_info:
-            sub_span.set_attribute(SpanAttributes.AIQ_USAGE_NUM_LLM_CALLS.value,
+            sub_span.set_attribute(SpanAttributes.NAT_USAGE_NUM_LLM_CALLS.value,
                                    usage_info.num_llm_calls if usage_info.num_llm_calls else 0)
-            sub_span.set_attribute(SpanAttributes.AIQ_USAGE_SECONDS_BETWEEN_CALLS.value,
+            sub_span.set_attribute(SpanAttributes.NAT_USAGE_SECONDS_BETWEEN_CALLS.value,
                                    usage_info.seconds_between_calls if usage_info.seconds_between_calls else 0)
             sub_span.set_attribute(SpanAttributes.LLM_TOKEN_COUNT_PROMPT.value,
                                    usage_info.token_usage.prompt_tokens if usage_info.token_usage else 0)
@@ -239,8 +239,8 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
 
         merged_metadata = merge_dicts(start_metadata, end_metadata)
         serialized_metadata, is_json = self._serialize_payload(merged_metadata)
-        sub_span.set_attribute("aiq.metadata", serialized_metadata)
-        sub_span.set_attribute("aiq.metadata.mime_type", MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
+        sub_span.set_attribute("nat.metadata", serialized_metadata)
+        sub_span.set_attribute("nat.metadata.mime_type", MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
 
         end_ns = ns_timestamp(event.payload.event_timestamp)
 

@@ -244,7 +244,7 @@ class TestSpanExporterFunctionality:
             exported_span = span_exporter.exported_spans[0]
 
             # Check attributes were set correctly
-            assert exported_span.attributes[SpanAttributes.AIQ_USAGE_NUM_LLM_CALLS.value] == 1
+            assert exported_span.attributes[SpanAttributes.NAT_USAGE_NUM_LLM_CALLS.value] == 1
             assert exported_span.attributes[SpanAttributes.LLM_TOKEN_COUNT_PROMPT.value] == 10
             assert exported_span.attributes[SpanAttributes.LLM_TOKEN_COUNT_COMPLETION.value] == 20
             assert exported_span.attributes[SpanAttributes.LLM_TOKEN_COUNT_TOTAL.value] == 30
