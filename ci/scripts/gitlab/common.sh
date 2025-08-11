@@ -18,7 +18,7 @@ SCRIPT_DIR=$( dirname ${GITLAB_SCRIPT_DIR} )
 
 source ${SCRIPT_DIR}/common.sh
 
-export AIQ_AVOID_GH_CLI=1 # gh cli not working with gitlab, todo look into seeing if this can be fixed
+export NAT_AVOID_GH_CLI=1 # gh cli not working with gitlab, todo look into seeing if this can be fixed
 
 function get_git_tag() {
     FT=$(git fetch --all --tags)
