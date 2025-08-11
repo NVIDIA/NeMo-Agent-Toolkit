@@ -23,7 +23,7 @@ dependencies = [
   "semantic-kernel~=1.24.0",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Subpackage for Semantic-Kernel NeMo Agent toolkit"
+description = "Subpackage for Semantic-Kernel integration in NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
