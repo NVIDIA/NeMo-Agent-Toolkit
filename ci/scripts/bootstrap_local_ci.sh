@@ -39,6 +39,7 @@ export WORKSPACE=$(pwd)
 export LOCAL_CI=1
 export WORKSPACE_TMP="${LOCAL_CI_TMP}/local_ci_workspace"
 export UV_CACHE_DIR="${LOCAL_CI_TMP}/cache/uv"
+export UV_VENV_CLEAR=1
 export PRE_COMMIT_HOME="${LOCAL_CI_TMP}/cache/pre_commit"
 export BUILD_NAT_COMPAT="true"
 mkdir -p ${UV_CACHE_DIR}
