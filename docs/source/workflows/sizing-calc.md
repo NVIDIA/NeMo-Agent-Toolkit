@@ -362,4 +362,4 @@ asyncio.run(run_calc())
 
 {py:class}`~nat.profiler.calc.data_models.CalcRunnerConfig` is a Pydantic model that contains the configuration for the calculator. It provides fine-grained control over the calculator's behavior.
 {py:class}`~nat.profiler.calc.data_models.CalcRunnerOutput` is a Pydantic model that contains the per-concurrency metrics and the GPU count estimates.
-For more information, refer to the [calculator data models](../../../src/aiq/profiler/calc/data_models.py).
+For more information, refer to the [calculator data models](../../../src/nat/profiler/calc/data_models.py).
