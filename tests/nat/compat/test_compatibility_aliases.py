@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import importlib
+import subprocess
 
 import pytest
 
@@ -26,6 +27,14 @@ def test_namespace_compat():
 
         # Check that the aiq namespace is an alias for nat
         assert aiq.__path__ == nat.__path__
+
+
+def test_cli_compat():
+    expected_deprecation_warning = ("The 'aiq' command is deprecated and will be removed in a future release. "
+                                    "Please use the 'nat' command instead.")
+
+    result = subprocess.run("aiq", capture_output=True, check=True)
+    assert expected_deprecation_warning in result.stderr.decode(encoding="utf-8")
 
 
 @pytest.mark.parametrize(
