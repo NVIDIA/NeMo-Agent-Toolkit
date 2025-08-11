@@ -16,7 +16,7 @@
 # pylint: disable=redefined-outer-name, invalid-name
 import pytest
 
-from aiq.data_models.api_server import AIQResponseIntermediateStep
+from aiq.data_models.api_server import ResponseIntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
@@ -111,7 +111,7 @@ def test_process_llm_events_in_default(step_adaptor_default, make_intermediate_s
     result = step_adaptor_default.process(step)
 
     assert result is not None, f"Expected LLM event '{event_type}' to be processed in DEFAULT mode."
-    assert isinstance(result, AIQResponseIntermediateStep)
+    assert isinstance(result, ResponseIntermediateStep)
     assert step_adaptor_default._history[-1] is step, "Step must be appended to _history."
 
 
@@ -128,7 +128,7 @@ def test_process_tool_in_default(step_adaptor_default, make_intermediate_step):
     result = step_adaptor_default.process(step)
 
     assert result is not None, "Expected TOOL_START event to be processed in DEFAULT mode."
-    assert isinstance(result, AIQResponseIntermediateStep)
+    assert isinstance(result, ResponseIntermediateStep)
     assert "Tool:" in result.name
     assert "Input:" in result.payload
     assert step_adaptor_default._history[-1] is step
@@ -142,7 +142,7 @@ def test_process_tool_in_default(step_adaptor_default, make_intermediate_step):
     result = step_adaptor_default.process(step)
 
     assert result is not None, "Expected TOOL_END event to be processed in DEFAULT mode."
-    assert isinstance(result, AIQResponseIntermediateStep)
+    assert isinstance(result, ResponseIntermediateStep)
     assert "Tool:" in result.name
     assert "Input:" in result.payload
     assert "Output:" in result.payload
@@ -191,9 +191,9 @@ def test_process_custom_events_in_custom_mode(step_adaptor_custom, make_intermed
 
     # Validate the custom events produce an AIQResponseIntermediateStep
     assert result_start is not None
-    assert isinstance(result_start, AIQResponseIntermediateStep)
+    assert isinstance(result_start, ResponseIntermediateStep)
     assert result_end is not None
-    assert isinstance(result_end, AIQResponseIntermediateStep)
+    assert isinstance(result_end, ResponseIntermediateStep)
 
     # Validate we do not process LLM or TOOL_END in custom mode (with given custom_event_types)
     assert result_llm is None
@@ -323,7 +323,7 @@ def test_custom_end_markdown_structure(step_adaptor_custom, make_intermediate_st
 
     result = step_adaptor_custom.process(step_custom_end)
     assert result is not None
-    assert isinstance(result, AIQResponseIntermediateStep)
+    assert isinstance(result, ResponseIntermediateStep)
     # We only generate minimal markdown for custom events; check if content is present
     assert "CUSTOM_END" in result.name, "Should show the event type in the name"
     # The entire payload is just a code block: ensure we see the string
@@ -347,7 +347,7 @@ def test_process_function_start_in_default(step_adaptor_default, make_intermedia
     result = step_adaptor_default.process(step)
 
     assert result is not None, "Expected FUNCTION_START event to be processed in DEFAULT mode."
-    assert isinstance(result, AIQResponseIntermediateStep)
+    assert isinstance(result, ResponseIntermediateStep)
     assert "Function Start:" in result.name
     assert "test_function" in result.name
     assert "Function Input:" in result.payload
@@ -368,7 +368,7 @@ def test_process_function_end_in_default(step_adaptor_default, make_intermediate
     result = step_adaptor_default.process(step)
 
     assert result is not None, "Expected FUNCTION_END event to be processed in DEFAULT mode."
-    assert isinstance(result, AIQResponseIntermediateStep)
+    assert isinstance(result, ResponseIntermediateStep)
     assert "Function Complete:" in result.name
     assert "test_function" in result.name
     assert "Function Output:" in result.payload
@@ -468,7 +468,7 @@ def test_process_function_start_without_input(step_adaptor_default, make_interme
     result = step_adaptor_default.process(step)
 
     assert result is not None, "FUNCTION_START events should be processed even with None input"
-    assert isinstance(result, AIQResponseIntermediateStep)
+    assert isinstance(result, ResponseIntermediateStep)
     assert "Function Start:" in result.name
     assert "test_function_no_input" in result.name
     assert "Function Input:" in result.payload
@@ -489,7 +489,7 @@ def test_process_function_end_without_output(step_adaptor_default, make_intermed
     result = step_adaptor_default.process(step)
 
     assert result is not None, "FUNCTION_END events should be processed even with None output"
-    assert isinstance(result, AIQResponseIntermediateStep)
+    assert isinstance(result, ResponseIntermediateStep)
     assert "Function Complete:" in result.name
     assert "test_function_no_output" in result.name
     assert "Function Output:" in result.payload

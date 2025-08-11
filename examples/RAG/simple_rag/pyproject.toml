@@ -12,7 +12,7 @@ root = "../../.."
 name = "aiq_simple_rag"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[ingestion, langchain, mem0ai]~=1.2"
+  "nvidia-nat[ingestion, langchain, mem0ai]~=1.2"
 ]
 requires-python = ">=3.11,<3.13"
 description = "Simple Rag AIQ example"
@@ -20,4 +20,4 @@ keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }

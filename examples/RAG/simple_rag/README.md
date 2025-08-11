@@ -39,7 +39,7 @@ This is a simple example RAG application to showcase how one can configure and u
   - [Prerequisites](#prerequisites)
   - [Adding Memory to the Agent](#adding-memory-to-the-agent)
 - [Adding Additional Tools](#adding-additional-tools)
-- [Using Inference Time Scaling](#using-inference-time-scaling)
+- [Using Test Time Compute](#using-test-time-compute)
 
 ## Key Features
 
@@ -305,18 +305,18 @@ The expected workflow result of the above run is:
 ["To install CUDA and get started with developing applications using it, you can follow the instructions provided in the CUDA Installation Guide for your specific operating system. The guide covers various installation methods, including package manager installation, runfile installation, Conda installation, and pip wheels. After installing CUDA, you can use it in your Python applications by importing the cupy library, which provides a similar interface to numpy but uses the GPU for computations. Here's an example Python code that demonstrates how to use CUDA:\n\n```python\nimport numpy as np\nimport cupy as cp\n\n# Create a sample array\narr = np.array([1, 2, 3, 4, 5])\n\n# Transfer the array to the GPU\narr_gpu = cp.asarray(arr)\n\n# Perform some operations on the GPU\nresult_gpu = cp.square(arr_gpu)\n\n# Transfer the result back to the CPU\nresult_cpu = cp.asnumpy(result_gpu)\n\nprint(result_cpu)\n```\n\nThis code creates a sample array, transfers it to the GPU, performs a square operation on the GPU, and then transfers the result back to the CPU for printing. Make sure to install the cupy library and have a CUDA-capable GPU to run this code."]
 ```
 
-## Using Inference Time Scaling
-You can also use the experimental `inference_time_scaling` feature to scale the inference time of the agent. This feature allows you to control the inference time of the agent. Particularly, in this example, we demonstrate how to enable multiple
+## Using Test Time Compute
+You can also use the experimental `test_time_compute` feature to scale the inference time of the agent. Particularly, in this example, we demonstrate how to enable multiple
 executions of the retrieval agent with a higher LLM temperature to encourage diversity. We then merge the outputs of the multiple runs with another LLM call to synthesize one comprehensive answer from multiple searches.
 
-An example configuration can be found in the `configs/milvus_rag_config_its.yml` file. Notably, it has a few additions to the standard configuration:
-- An `its_strategies` section of the configuration that details which inference time scaling techniques will be used in the workflow
+An example configuration can be found in the `configs/milvus_rag_config_ttc.yml` file. Notably, it has a few additions to the standard configuration:
+- An `ttc_strategies` section of the configuration that details which Test Time Compute techniques will be used in the workflow
 - A `selection_strategy` called `llm_based_agent_output_merging` selection, that takes the output of multiple workflow runs and combines them using a single LLM call.
 - A new `workflow` entrypoint called the `execute_score_select` function. The function executes the `augmented_fn` (the ReAct agent here) `num_iterations` times, and then passes the outputs to the selector.
 
 To run this workflow, you can use the following command:
 ```bash
-aiq run --config_file examples/RAG/simple_rag/configs/milvus_rag_config_its.yml --input "What is the difference between CUDA and MCP?"
+aiq run --config_file examples/RAG/simple_rag/configs/milvus_rag_config_ttc.yml --input "What is the difference between CUDA and MCP?"
 ```
 
 You should see several concurrent agent runs in the intermediate output which include output similar to:
@@ -346,10 +346,10 @@ Thought: I have found information about CUDA and MCP. CUDA is a general-purpose 
 Action: None
 ```
 
-Near the end of the output you should see the following lines indicating that the inference time scaling feature is working as expected.
+Near the end of the output you should see the following lines indicating that the Test Time Compute feature is working as expected.
 ```console
-2025-07-31 15:01:06,939 - aiq.experimental.inference_time_scaling.functions.execute_score_select_function - INFO - Beginning selection
-2025-07-31 15:01:08,633 - aiq.experimental.inference_time_scaling.selection.llm_based_output_merging_selector - INFO - Merged output: The main difference between CUDA and MCP is their purpose and scope. CUDA is a general-purpose parallel computing platform and programming model developed by NVIDIA, while MCP stands for Model Context Protocol, which is a protocol that enables large language models (LLMs) to securely access tools and data sources. In essence, CUDA is designed for parallel computing and programming, whereas MCP is specifically designed to facilitate secure access to tools and data sources for Large Language Models. This distinction highlights the unique objectives and applications of each technology, with CUDA focusing on computation and MCP focusing on secure data access for AI models.
+2025-07-31 15:01:06,939 - aiq.experimental.test_time_compute.functions.execute_score_select_function - INFO - Beginning selection
+2025-07-31 15:01:08,633 - aiq.experimental.test_time_compute.selection.llm_based_output_merging_selector - INFO - Merged output: The main difference between CUDA and MCP is their purpose and scope. CUDA is a general-purpose parallel computing platform and programming model developed by NVIDIA, while MCP stands for Model Context Protocol, which is a protocol that enables large language models (LLMs) to securely access tools and data sources. In essence, CUDA is designed for parallel computing and programming, whereas MCP is specifically designed to facilitate secure access to tools and data sources for Large Language Models. This distinction highlights the unique objectives and applications of each technology, with CUDA focusing on computation and MCP focusing on secure data access for AI models.
 ```
 
 The final workflow result should look similar to the following:

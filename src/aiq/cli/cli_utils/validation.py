@@ -18,10 +18,10 @@ from pathlib import Path
 import click
 import yaml
 
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 
 
-def validate_config(config_file: Path) -> AIQConfig:
+def validate_config(config_file: Path) -> Config:
     """Validate configuration file and return parsed config"""
     try:
         from aiq.runtime.loader import load_config

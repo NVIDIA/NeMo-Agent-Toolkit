@@ -8,14 +8,14 @@ root = "../../../.."
 [project]
 name = "text_file_ingest"
 dynamic = ["version"]
-dependencies = ["aiqtoolkit[langchain]~=1.2", "bs4==0.0.2", "faiss-cpu==1.9.0"]
+dependencies = ["nvidia-nat[langchain]~=1.2", "bs4==0.0.2", "faiss-cpu==1.9.0"]
 requires-python = ">=3.11,<3.13"
 description = "Ingest data from text files"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../../..", editable = true }
+nvidia-nat = { path = "../../../..", editable = true }
 
 [project.entry-points.'aiq.components']
 text_file_ingest = "text_file_ingest.register"

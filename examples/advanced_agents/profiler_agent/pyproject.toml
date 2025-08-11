@@ -14,11 +14,11 @@ dependencies = [
   # of precision in the version specifier. For example, use `~=1.2` instead of `~=1.2.3` and `~=0.1.3` instead of
   # `~=0.1.3.5`.
   # Keep sorted!!!
-  "aiqtoolkit[langchain,profiling,telemetry]~=1.2",
+  "nvidia-nat[langchain,profiling,telemetry]~=1.2",
   "pydantic ~= 2.10.0, <2.11.0",
 ]
 requires-python = ">=3.11,<3.13"
-description = "AIQ toolkit Profiler Agent"
+description = "NeMo Agent toolkit Profiler Agent"
 license = { file = "LICENSE.md" }
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
@@ -26,7 +26,7 @@ authors = [{ name = "NVIDIA Corporation" }]
 maintainers = [{ name = "NVIDIA Corporation" }]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'aiq.plugins']
 aiq_profiler_agent = "aiq_profiler_agent.register"

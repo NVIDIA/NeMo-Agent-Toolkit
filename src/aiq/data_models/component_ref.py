@@ -157,12 +157,12 @@ class AuthenticationRef(ComponentRef):
         return ComponentGroup.AUTHENTICATION
 
 
-class ITSStrategyRef(ComponentRef):
+class TTCStrategyRef(ComponentRef):
     """
-    A reference to an ITS strategy in an AgentIQ configuration object.
+    A reference to an TTC strategy in an NeMo Agent Toolkit configuration object.
     """
 
     @property
     @override
     def component_group(self):
-        return ComponentGroup.ITS_STRATEGIES
+        return ComponentGroup.TTC_STRATEGIES

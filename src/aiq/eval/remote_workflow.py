@@ -21,7 +21,7 @@ import aiohttp
 from pydantic import ValidationError
 from tqdm import tqdm
 
-from aiq.data_models.api_server import AIQResponseIntermediateStep
+from aiq.data_models.api_server import ResponseIntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.invocation_node import InvocationNode
@@ -80,7 +80,7 @@ class EvaluationRemoteWorkflowHandler:
                         # This is an intermediate step
                         try:
                             step_data = json.loads(line[len(INTERMEDIATE_DATA_PREFIX):])
-                            response_intermediate = AIQResponseIntermediateStep.model_validate(step_data)
+                            response_intermediate = ResponseIntermediateStep.model_validate(step_data)
                             # The payload is expected to be IntermediateStepPayload
                             payload = IntermediateStepPayload.model_validate_json(response_intermediate.payload)
                             intermediate_step = IntermediateStep(parent_id="remote",

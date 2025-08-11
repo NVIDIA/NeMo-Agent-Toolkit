@@ -9,8 +9,8 @@ root = "../../.."
 name = "aiq_simple_auth"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit",
-  "aiqtoolkit[langchain]",
+  "nvidia-nat",
+  "nvidia-nat[langchain]",
   "httpx",
 ]
 requires-python = ">=3.11,<3.13"
@@ -18,7 +18,7 @@ description = "Custom AIQ Toolkit Workflow"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'aiq.components']
 simple_auth = "aiq_simple_auth.register"

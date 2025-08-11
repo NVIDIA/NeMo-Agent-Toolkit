@@ -20,7 +20,7 @@ from pathlib import Path
 
 import click
 
-from aiq.data_models.component import AIQComponentEnum
+from aiq.data_models.component import ComponentEnum
 from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
 from aiq.registry_handlers.schemas.search import SearchFields
 from aiq.registry_handlers.schemas.status import StatusEnum
@@ -34,7 +34,7 @@ async def search_artifacts(  # pylint: disable=R0917
         query: str,
         search_fields: list[SearchFields],
         visualize: bool,
-        component_types: list[AIQComponentEnum],
+        component_types: list[ComponentEnum],
         save_path: str | None = None,
         n_results: int = 10) -> None:
 
@@ -49,7 +49,7 @@ async def search_artifacts(  # pylint: disable=R0917
         registry_handler = await stack.enter_async_context(registry_handler_info.build_fn(registry_handler_config))
 
         if (len(component_types) == 0):
-            component_types = [t.value for t in AIQComponentEnum]
+            component_types = [t.value for t in ComponentEnum]
 
         query = SearchQuery(query=query, fields=search_fields, top_k=n_results, component_types=component_types)
 
@@ -112,7 +112,7 @@ async def search_artifacts(  # pylint: disable=R0917
     "--types",
     "component_types",
     multiple=True,
-    type=click.Choice([e.value for e in AIQComponentEnum], case_sensitive=False),
+    type=click.Choice([e.value for e in ComponentEnum], case_sensitive=False),
     required=False,
     help=("The component types to include in search."),
 )
@@ -121,7 +121,7 @@ def search(  # pylint: disable=R0917
         channel: str,
         fields: list[str],
         query: str,
-        component_types: list[AIQComponentEnum],
+        component_types: list[ComponentEnum],
         n_results: int,
         output_path: str) -> None:
     """

@@ -9,17 +9,17 @@ root = "../../.."
 name = "aiq_simple_web_query"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain]~=1.2",
-  "aiqtoolkit[telemetry]~=1.2",
+  "nvidia-nat[langchain]~=1.2",
+  "nvidia-nat[telemetry]~=1.2",
   "faiss-cpu==1.9.0",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Simple AIQ toolkit example"
+description = "Simple NeMo Agent toolkit example"
 keywords = ["ai", "rag", "agents"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_simple_web_query = "aiq_simple_web_query.register"

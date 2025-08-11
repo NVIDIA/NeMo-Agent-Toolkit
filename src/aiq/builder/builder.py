@@ -21,37 +21,37 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from aiq.authentication.interfaces import AuthProviderBase
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.function import Function
 from aiq.data_models.authentication import AuthProviderBaseConfig
 from aiq.data_models.component_ref import AuthenticationRef
 from aiq.data_models.component_ref import EmbedderRef
 from aiq.data_models.component_ref import FunctionRef
-from aiq.data_models.component_ref import ITSStrategyRef
 from aiq.data_models.component_ref import LLMRef
 from aiq.data_models.component_ref import MemoryRef
 from aiq.data_models.component_ref import ObjectStoreRef
 from aiq.data_models.component_ref import RetrieverRef
+from aiq.data_models.component_ref import TTCStrategyRef
 from aiq.data_models.embedder import EmbedderBaseConfig
 from aiq.data_models.evaluator import EvaluatorBaseConfig
 from aiq.data_models.function import FunctionBaseConfig
 from aiq.data_models.function_dependencies import FunctionDependencies
-from aiq.data_models.its_strategy import ITSStrategyBaseConfig
 from aiq.data_models.llm import LLMBaseConfig
 from aiq.data_models.memory import MemoryBaseConfig
 from aiq.data_models.object_store import ObjectStoreBaseConfig
 from aiq.data_models.retriever import RetrieverBaseConfig
-from aiq.experimental.inference_time_scaling.models.stage_enums import PipelineTypeEnum
-from aiq.experimental.inference_time_scaling.models.stage_enums import StageTypeEnum
+from aiq.data_models.ttc_strategy import TTCStrategyBaseConfig
+from aiq.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
+from aiq.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from aiq.memory.interfaces import MemoryEditor
 from aiq.object_store.interfaces import ObjectStore
-from aiq.retriever.interface import AIQRetriever
+from aiq.retriever.interface import Retriever
 
 
 class UserManagerHolder():
 
-    def __init__(self, context: AIQContext) -> None:
+    def __init__(self, context: Context) -> None:
         self._context = context
 
     def get_id(self):
@@ -214,11 +214,11 @@ class Builder(ABC):  # pylint: disable=too-many-public-methods
         ...
 
     @typing.overload
-    async def get_retriever(self, retriever_name: str | RetrieverRef, wrapper_type: None) -> AIQRetriever:
+    async def get_retriever(self, retriever_name: str | RetrieverRef, wrapper_type: None) -> Retriever:
         ...
 
     @typing.overload
-    async def get_retriever(self, retriever_name: str | RetrieverRef) -> AIQRetriever:
+    async def get_retriever(self, retriever_name: str | RetrieverRef) -> Retriever:
         ...
 
     @abstractmethod
@@ -232,21 +232,21 @@ class Builder(ABC):  # pylint: disable=too-many-public-methods
         pass
 
     @abstractmethod
-    async def add_its_strategy(self, name: str | str, config: ITSStrategyBaseConfig):
+    async def add_ttc_strategy(self, name: str | str, config: TTCStrategyBaseConfig):
         pass
 
     @abstractmethod
-    async def get_its_strategy(self,
-                               strategy_name: str | ITSStrategyRef,
+    async def get_ttc_strategy(self,
+                               strategy_name: str | TTCStrategyRef,
                                pipeline_type: PipelineTypeEnum,
                                stage_type: StageTypeEnum):
         pass
 
     @abstractmethod
-    async def get_its_strategy_config(self,
-                                      strategy_name: str | ITSStrategyRef,
+    async def get_ttc_strategy_config(self,
+                                      strategy_name: str | TTCStrategyRef,
                                       pipeline_type: PipelineTypeEnum,
-                                      stage_type: StageTypeEnum) -> ITSStrategyBaseConfig:
+                                      stage_type: StageTypeEnum) -> TTCStrategyBaseConfig:
         pass
 
     @abstractmethod

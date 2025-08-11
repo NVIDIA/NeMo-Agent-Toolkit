@@ -24,9 +24,12 @@ class MCPFrontEndConfig(FrontEndBaseConfig, name="mcp"):
     A simple MCP (Modular Communication Protocol) front end for AIQ.
     """
 
-    name: str = Field(default="AIQ MCP", description="Name of the MCP server")
-    host: str = Field(default="localhost", description="Host to bind the server to")
-    port: int = Field(default=9901, description="Port to bind the server to", ge=0, le=65535)
-    debug: bool = Field(default=False, description="Enable debug mode")
-    log_level: str = Field(default="INFO", description="Log level for the MCP server")
-    tool_names: list[str] = Field(default_factory=list, description="The list of tools MCP server will expose.")
+    name: str = Field(default="AIQ MCP", description="Name of the MCP server (default: AIQ MCP)")
+    host: str = Field(default="localhost", description="Host to bind the server to (default: localhost)")
+    port: int = Field(default=9901, description="Port to bind the server to (default: 9901)", ge=0, le=65535)
+    debug: bool = Field(default=False, description="Enable debug mode (default: False)")
+    log_level: str = Field(default="INFO", description="Log level for the MCP server (default: INFO)")
+    tool_names: list[str] = Field(default_factory=list,
+                                  description="The list of tools MCP server will expose (default: all tools)")
+    runner_class: str | None = Field(
+        default=None, description="Custom worker class for handling MCP routes (default: built-in worker)")

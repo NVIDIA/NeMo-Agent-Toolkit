@@ -9,19 +9,19 @@ root = "../../.."
 name = "aiq_alert_triage_agent"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain]~=1.2",
-  "langchain-core", # version determined by aiqtoolkit[langchain]
+  "nvidia-nat[langchain]~=1.2",
+  "langchain-core",             # version determined by nvidia-nat[langchain]
   "pandas>=2.0.0",
   "ansible-runner>=2.3.0",
-  "langgraph>=0.0.10", # version determined by aiqtoolkit[langchain]
-  "flask>=3.0.0"
+  "langgraph>=0.0.10",          # version determined by nvidia-nat[langchain]
+  "flask>=3.0.0",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Alert Triage AIQ toolkit example"
+description = "Alert Triage NeMo Agent toolkit example"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_alert_triage_agent = "aiq_alert_triage_agent.register"

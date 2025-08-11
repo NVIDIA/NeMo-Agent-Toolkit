@@ -26,7 +26,7 @@ import httpx
 from aiq.registry_handlers.registry_handler_base import AbstractRegistryHandler
 from aiq.registry_handlers.schemas.headers import RequestHeaders
 from aiq.registry_handlers.schemas.package import PackageNameVersionList
-from aiq.registry_handlers.schemas.publish import AIQArtifact
+from aiq.registry_handlers.schemas.publish import Artifact
 from aiq.registry_handlers.schemas.publish import PublishResponse
 from aiq.registry_handlers.schemas.pull import PullRequestPackages
 from aiq.registry_handlers.schemas.pull import PullResponse
@@ -61,7 +61,7 @@ class RestRegistryHandler(AbstractRegistryHandler):
         self._headers = RequestHeaders(Authorization=f"Bearer: {token}").model_dump(by_alias=True)
 
     @asynccontextmanager
-    async def publish(self, artifact: AIQArtifact) -> AsyncGenerator[PublishResponse]:
+    async def publish(self, artifact: Artifact) -> AsyncGenerator[PublishResponse]:
         """Publishes an AIQ Toolkit artifact to a remote REST registry.
 
         Args:

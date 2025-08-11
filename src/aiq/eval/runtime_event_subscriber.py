@@ -16,7 +16,7 @@
 import asyncio
 import logging
 
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.data_models.intermediate_step import IntermediateStep
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ def pull_intermediate() -> asyncio.Future[list[dict]]:
     """
     future = asyncio.Future()
     intermediate_steps = []  # We'll store the dumped steps here.
-    context = AIQContext.get()
+    context = Context.get()
 
     def on_next_cb(item: IntermediateStep):
         # Append each new intermediate step (dumped to dict) to the list.

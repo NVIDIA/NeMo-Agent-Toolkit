@@ -19,7 +19,7 @@ from contextlib import AsyncExitStack
 
 import click
 
-from aiq.data_models.component import AIQComponentEnum
+from aiq.data_models.component import ComponentEnum
 from aiq.data_models.registry_handler import RegistryHandlerBaseConfig
 from aiq.registry_handlers.schemas.search import SearchFields
 
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 async def search_artifacts(  # pylint: disable=R0917
         registry_handler_config: RegistryHandlerBaseConfig,
-        component_types: list[AIQComponentEnum],
+        component_types: list[ComponentEnum],
         visualize: bool,
         query: str,
         num_results: int,
@@ -46,7 +46,7 @@ async def search_artifacts(  # pylint: disable=R0917
         registry_handler = await stack.enter_async_context(registry_handler_info.build_fn(registry_handler_config))
 
         if (len(component_types) == 0):
-            component_types = [t.value for t in AIQComponentEnum]
+            component_types = [t.value for t in ComponentEnum]
 
         if (len(query_fields) == 0):
             query_fields = (SearchFields.ALL, )
@@ -66,7 +66,7 @@ async def search_artifacts(  # pylint: disable=R0917
     "--types",
     "component_types",
     multiple=True,
-    type=click.Choice([e.value for e in AIQComponentEnum], case_sensitive=False),
+    type=click.Choice([e.value for e in ComponentEnum], case_sensitive=False),
     required=False,
     help=("Filter the search by AIQ Toolkit component type."),
 )
@@ -104,7 +104,7 @@ async def search_artifacts(  # pylint: disable=R0917
 def list_components(fields: list[SearchFields],
                     query: str,
                     num_results: int,
-                    component_types: list[AIQComponentEnum],
+                    component_types: list[ComponentEnum],
                     output_path: str | None = None) -> None:
 
     from aiq.runtime.loader import PluginTypes

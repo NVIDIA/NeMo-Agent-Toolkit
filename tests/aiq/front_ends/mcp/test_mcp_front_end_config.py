@@ -18,6 +18,8 @@ from pydantic import ValidationError
 
 from aiq.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 
+# pylint: disable=redefined-outer-name
+
 
 def test_mcp_front_end_config_default_values():
     """Test that the default values are set correctly."""

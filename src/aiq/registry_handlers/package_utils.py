@@ -22,10 +22,10 @@ from functools import lru_cache
 
 from packaging.requirements import Requirement
 
-from aiq.data_models.component import AIQComponentEnum
+from aiq.data_models.component import ComponentEnum
 from aiq.data_models.discovery_metadata import DiscoveryMetadata
 from aiq.registry_handlers.schemas.package import WheelData
-from aiq.registry_handlers.schemas.publish import AIQArtifact
+from aiq.registry_handlers.schemas.publish import Artifact
 from aiq.runtime.loader import PluginTypes
 from aiq.runtime.loader import discover_entrypoints
 
@@ -501,7 +501,7 @@ def build_wheel(package_root: str) -> WheelData:
                      whl_version=whl_version)
 
 
-def build_package_metadata(wheel_data: WheelData | None) -> dict[AIQComponentEnum, list[dict | DiscoveryMetadata]]:
+def build_package_metadata(wheel_data: WheelData | None) -> dict[ComponentEnum, list[dict | DiscoveryMetadata]]:
     """Loads discovery metadata for all registered AIQ Toolkit components included in this Python package.
 
     Args:
@@ -536,9 +536,9 @@ def build_package_metadata(wheel_data: WheelData | None) -> dict[AIQComponentEnu
             registry.register_package(package_name=entry_point.dist.name)
 
     discovery_metadata = {}
-    for component_type in AIQComponentEnum:
+    for component_type in ComponentEnum:
 
-        if (component_type == AIQComponentEnum.UNDEFINED):
+        if (component_type == ComponentEnum.UNDEFINED):
             continue
         component_metadata = ComponentDiscoveryMetadata.from_package_component_type(wheel_data=wheel_data,
                                                                                     component_type=component_type)
@@ -548,7 +548,7 @@ def build_package_metadata(wheel_data: WheelData | None) -> dict[AIQComponentEnu
     return discovery_metadata
 
 
-def build_aiq_artifact(package_root: str) -> AIQArtifact:
+def build_aiq_artifact(package_root: str) -> Artifact:
     """Builds a complete AIQ Toolkit Artifact that can be published for discovery and reuse.
 
     Args:
@@ -558,10 +558,10 @@ def build_aiq_artifact(package_root: str) -> AIQArtifact:
         AIQArtifact: An publishabla AIQArtifact containing package wheel and discovery metadata.
     """
 
-    from aiq.registry_handlers.schemas.publish import BuiltAIQArtifact
+    from aiq.registry_handlers.schemas.publish import BuiltArtifact
 
     wheel_data = build_wheel(package_root=package_root)
     metadata = build_package_metadata(wheel_data=wheel_data)
-    built_artifact = BuiltAIQArtifact(whl=wheel_data.whl_base64, metadata=metadata)
+    built_artifact = BuiltArtifact(whl=wheel_data.whl_base64, metadata=metadata)
 
-    return AIQArtifact(artifact=built_artifact, whl_path=wheel_data.whl_path)
+    return Artifact(artifact=built_artifact, whl_path=wheel_data.whl_path)

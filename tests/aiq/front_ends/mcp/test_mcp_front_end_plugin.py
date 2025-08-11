@@ -18,11 +18,13 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.data_models.config import GeneralConfig
 from aiq.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 from aiq.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
 from aiq.test.functions import EchoFunctionConfig
+
+# pylint: disable=redefined-outer-name
 
 
 @pytest.fixture
@@ -31,7 +33,7 @@ def echo_function_config():
 
 
 @pytest.fixture
-def mcp_config(echo_function_config):
+def mcp_config(echo_function_config) -> Config:
     mcp_front_end_config = MCPFrontEndConfig(name="Test MCP Server",
                                              host="localhost",
                                              port=9901,
@@ -39,9 +41,9 @@ def mcp_config(echo_function_config):
                                              log_level="INFO",
                                              tool_names=["echo"])
 
-    return AIQConfig(general=GeneralConfig(front_end=mcp_front_end_config),
-                     workflow=echo_function_config,
-                     functions={"echo": echo_function_config})
+    return Config(general=GeneralConfig(front_end=mcp_front_end_config),
+                  workflow=echo_function_config,
+                  functions={"echo": echo_function_config})
 
 
 def test_mcp_front_end_plugin_init(mcp_config):
@@ -62,11 +64,12 @@ def test_get_all_functions():
     mock_workflow.config.workflow.type = "test_workflow"
 
     # Create the plugin with a valid config
-    config = AIQConfig(general=GeneralConfig(front_end=MCPFrontEndConfig()), workflow=EchoFunctionConfig())
+    config = Config(general=GeneralConfig(front_end=MCPFrontEndConfig()), workflow=EchoFunctionConfig())
     plugin = MCPFrontEndPlugin(full_config=config)
+    worker = plugin._get_worker_instance()
 
     # Test the method
-    functions = plugin._get_all_functions(mock_workflow)
+    functions = worker._get_all_functions(mock_workflow)
 
     # Verify that the functions were correctly extracted
     assert "function1" in functions
@@ -76,7 +79,7 @@ def test_get_all_functions():
 
 
 @patch.object(MCPFrontEndPlugin, 'run')
-def test_filter_functions(mock_run, mcp_config):
+def test_filter_functions(_mock_run, mcp_config):
     """Test function filtering logic directly."""
     # Create a plugin
     plugin = MCPFrontEndPlugin(full_config=mcp_config)
@@ -85,9 +88,10 @@ def test_filter_functions(mock_run, mcp_config):
     mock_workflow = MagicMock()
     mock_workflow.functions = {"echo": MagicMock(), "another_function": MagicMock()}
     mock_workflow.config.workflow.type = "test_workflow"
+    worker = plugin._get_worker_instance()
 
     # Call _get_all_functions first
-    all_functions = plugin._get_all_functions(mock_workflow)
+    all_functions = worker._get_all_functions(mock_workflow)
     assert len(all_functions) == 3
 
     # Now simulate filtering with tool_names
