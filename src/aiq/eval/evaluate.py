@@ -37,7 +37,7 @@ from aiq.eval.usage_stats import UsageStatsLLM
 from aiq.eval.utils.output_uploader import OutputUploader
 from aiq.eval.utils.weave_eval import WeaveEvaluationIntegration
 from aiq.profiler.data_models import ProfilerResults
-from aiq.runtime.session import AIQSessionManager
+from aiq.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,10 @@ logger = logging.getLogger(__name__)
 class EvaluationRun:  # pylint: disable=too-many-public-methods
     """
     Instantiated for each evaluation run and used to store data for that single run.
+
+    .. warning::
+        **Experimental Feature**: The Evaluation API is experimental and may change in future releases.
+        Future versions may introduce breaking changes without notice.
     """
 
     def __init__(self, config: EvaluationRunConfig):
@@ -129,7 +133,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
                                                                      llm_latency=llm_latency)
         return self.usage_stats.usage_stats_items[item.id]
 
-    async def run_workflow_local(self, session_manager: AIQSessionManager):
+    async def run_workflow_local(self, session_manager: SessionManager):
         '''
         Launch the workflow with the specified questions and extract the output using the jsonpath
         '''
@@ -306,7 +310,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             except Exception as e:
                 logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e, exc_info=True)
 
-    def write_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):
+    def write_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):  # pylint: disable=unused-argument  # noqa: E501
         workflow_output_file = self.eval_config.general.output_dir / "workflow_output.json"
         workflow_output_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -375,7 +379,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
 
     def apply_overrides(self):
         from aiq.cli.cli_utils.config_override import load_and_override_config
-        from aiq.data_models.config import AIQConfig
+        from aiq.data_models.config import Config
         from aiq.runtime.loader import PluginTypes
         from aiq.runtime.loader import discover_and_register_plugins
         from aiq.utils.data_models.schema_validator import validate_schema
@@ -384,7 +388,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
 
         config_dict = load_and_override_config(self.config.config_file, self.config.override)
-        config = validate_schema(config_dict, AIQConfig)
+        config = validate_schema(config_dict, Config)
         return config
 
     def _get_workflow_alias(self, workflow_type: str | None = None):
@@ -398,7 +402,7 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
         return workflow_type
 
     async def run_and_evaluate(self,
-                               session_manager: AIQSessionManager | None = None,
+                               session_manager: SessionManager | None = None,
                                job_id: str | None = None) -> EvaluationRunOutput:
         """
         Run the workflow with the specified config file and evaluate the dataset
@@ -469,8 +473,8 @@ class EvaluationRun:  # pylint: disable=too-many-public-methods
             else:
                 if not self.config.skip_workflow:
                     if session_manager is None:
-                        session_manager = AIQSessionManager(eval_workflow.build(),
-                                                            max_concurrency=self.eval_config.general.max_concurrency)
+                        session_manager = SessionManager(eval_workflow.build(),
+                                                         max_concurrency=self.eval_config.general.max_concurrency)
                     await self.run_workflow_local(session_manager)
 
             # Evaluate

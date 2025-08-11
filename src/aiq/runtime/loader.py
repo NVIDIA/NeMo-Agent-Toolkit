@@ -26,8 +26,8 @@ from functools import reduce
 
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.cli.type_registry import GlobalTypeRegistry
-from aiq.data_models.config import AIQConfig
-from aiq.runtime.session import AIQSessionManager
+from aiq.data_models.config import Config
+from aiq.runtime.session import SessionManager
 from aiq.utils.data_models.schema_validator import validate_schema
 from aiq.utils.debugging_utils import is_debugger_attached
 from aiq.utils.io.yaml_tools import yaml_load
@@ -66,7 +66,7 @@ class PluginTypes(IntFlag):
     """
 
 
-def load_config(config_file: StrPath) -> AIQConfig:
+def load_config(config_file: StrPath) -> Config:
     """
     This is the primary entry point for loading an AIQ Toolkit configuration file. It ensures that all plugins are
     loaded and then validates the configuration file against the AIQConfig schema.
@@ -88,7 +88,7 @@ def load_config(config_file: StrPath) -> AIQConfig:
     config_yaml = yaml_load(config_file)
 
     # Validate configuration adheres to AIQ Toolkit schemas
-    validated_aiq_config = validate_schema(config_yaml, AIQConfig)
+    validated_aiq_config = validate_schema(config_yaml, Config)
 
     return validated_aiq_config
 
@@ -114,7 +114,7 @@ async def load_workflow(config_file: StrPath, max_concurrency: int = -1):
     # Must yield the workflow function otherwise it cleans up
     async with WorkflowBuilder.from_config(config=config) as workflow:
 
-        yield AIQSessionManager(workflow.build(), max_concurrency=max_concurrency)
+        yield SessionManager(workflow.build(), max_concurrency=max_concurrency)
 
 
 @lru_cache

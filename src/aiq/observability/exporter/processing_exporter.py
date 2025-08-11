@@ -21,7 +21,7 @@ from typing import Any
 from typing import Generic
 from typing import TypeVar
 
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import ContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.observability.exporter.base_exporter import BaseExporter
 from aiq.observability.mixin.type_introspection_mixin import TypeIntrospectionMixin
@@ -53,7 +53,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
     - Automatic type validation before export
     """
 
-    def __init__(self, context_state: AIQContextState | None = None):
+    def __init__(self, context_state: ContextState | None = None):
         """Initialize the processing exporter.
 
         Args:
@@ -314,7 +314,7 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
         if shutdown_tasks:
             try:
                 await asyncio.gather(*shutdown_tasks, return_exceptions=True)
-                logger.info("Successfully shut down %d processors", len(shutdown_tasks))
+                logger.debug("Successfully shut down %d processors", len(shutdown_tasks))
             except Exception as e:
                 logger.error("Error shutting down processors: %s", e, exc_info=True)
 

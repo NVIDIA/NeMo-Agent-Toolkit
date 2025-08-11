@@ -23,7 +23,7 @@ import click
 from aiq.builder.front_end import FrontEndBase
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.data_models.front_end import FrontEndConfigT
-from aiq.runtime.session import AIQSessionManager
+from aiq.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
 
@@ -46,9 +46,9 @@ class SimpleFrontEndPluginBase(FrontEndBase[FrontEndConfigT], ABC):
                 click.echo(stream.getvalue())
 
             workflow = builder.build()
-            session_manager = AIQSessionManager(workflow)
+            session_manager = SessionManager(workflow)
             await self.run_workflow(session_manager)
 
     @abstractmethod
-    async def run_workflow(self, session_manager: AIQSessionManager):
+    async def run_workflow(self, session_manager: SessionManager):
         pass

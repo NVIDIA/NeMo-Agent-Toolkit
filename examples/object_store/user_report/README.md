@@ -28,12 +28,12 @@ And example tool in the NeMo Agent toolkit that makes use of an Object Store to 
   - [Setting up MinIO (Optional)](#setting-up-minio-optional)
   - [Setting up the MySQL Server (Optional)](#setting-up-the-mysql-server-optional)
 - [NeMo Agent Toolkit File Server](#nemo-agent-toolkit-file-server)
-  - [Using the Object Store Backed File Server](#using-the-object-store-backed-file-server)
+  - [Using the Object Store Backed File Server (Optional)](#using-the-object-store-backed-file-server-optional)
 - [Run the Workflow](#run-the-workflow)
-  - [Example 1](#example-1)
-  - [Example 2](#example-2)
-  - [Example 3](#example-3)
-  - [Example 4 (Continued from Example 3)](#example-4-continued-from-example-3)
+  - [Get User Report](#get-user-report)
+  - [Put User Report](#put-user-report)
+  - [Update User Report](#update-user-report)
+  - [Delete User Report](#delete-user-report)
 
 ## Key Features
 
@@ -209,7 +209,7 @@ You can start the server by running:
 aiq serve --config_file examples/object_store/user_report/configs/config_s3.yml
 ```
 
-### Using the Object Store Backed File Server
+### Using the Object Store Backed File Server (Optional)
 
 - Download an object: `curl -X GET http://<hostname>:<port>/static/{file_path}`
 - Upload an object: `curl -X POST http://<hostname>:<port>/static/{file_path}`
@@ -221,66 +221,44 @@ If any of the loading scripts were run and the files are in the object store, ex
 - Get an object: `curl -X GET http://localhost:8000/static/reports/67890/latest.json`
 - Delete an object: `curl -X DELETE http://localhost:8000/static/reports/67890/latest.json`
 
-
 ## Run the Workflow
 
-Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
+For each of the following examples, a command is provided to run the workflow with the specified input. Run the following command from the root of the NeMo Agent toolkit repo to execute the workflow.
 
-### Example 1
+### Get User Report
 ```
 aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 67890"
 ```
 
 **Expected Workflow Output**
 ```console
-The latest report for user 67890 is as follows:
-- Timestamp: 2025-04-21T15:40:00Z
-- System:
-  - OS: macOS 14.1
-  - CPU Usage: 43%
-  - Memory Usage: 8.1 GB / 16 GB
-  - Disk Space: 230 GB free of 512 GB
-- Network:
-  - Latency: 95 ms
-  - Packet Loss: 0%
-  - VPN Connected: True
-- Errors: None
-- Recommendations: System operating normally, No action required.
+<snipped for brevity>
+
+[AGENT]
+Calling tools: get_user_report
+Tool's input: {"user_id": "67890", "date": null}
+
+<snipped for brevity>
+
+Workflow Result:
+['The latest report of user 67890 is:\n\n{\n    "user_id": "67890",\n    "timestamp": "2025-04-21T15:40:00Z",\n    "system": {\n      "os": "macOS 14.1",\n      "cpu_usage": "43%",\n      "memory_usage": "8.1 GB / 16 GB",\n      "disk_space": "230 GB free of 512 GB"\n    },\n    "network": {\n      "latency_ms": 95,\n      "packet_loss": "0%",\n      "vpn_connected": true\n    },\n    "errors": [],\n    "recommendations": [\n      "System operating normally",\n      "No action required"\n    ]\n}']
 ```
 
-### Example 2
-```
-aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 12345 on April 15th 2025"
-```
+In the case of a non-existent report, the workflow will return an error message.
 
+```
+aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input "Give me the latest report of user 12345"
+```
 
 **Expected Workflow Output**
 ```console
-The latest report for user 12345 on April 15th, 2025, is as follows:
+<snipped for brevity>
 
-- **System Information:**
-  - OS: Windows 11
-  - CPU Usage: 82%
-  - Memory Usage: 6.3 GB / 8 GB
-  - Disk Space: 120 GB free of 500 GB
-
-- **Network Information:**
-  - Latency: 240 ms
-  - Packet Loss: 0.5%
-  - VPN Connected: False
-
-- **Errors:**
-  - Timestamp: 2025-04-15T10:21:59Z
-  - Message: "App crash detected: \'PhotoEditorPro.exe\' exited unexpectedly"
-  - Severity: High
-
-- **Recommendations:**
-  - Update graphics driver
-  - Check for overheating hardware
-  - Enable automatic crash reporting
+Workflow Result:
+['The report for user 12345 is not available.']
 ```
 
-### Example 3
+### Put User Report
 ```bash
 aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Create a latest report for user 6789 with the following JSON contents:
     {
@@ -295,18 +273,102 @@ aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --
 
 **Expected Workflow Output**
 ```console
-The latest report for user 6789 has been successfully created with the specified recommendations.
+<snipped for brevity>
+
+[AGENT]
+Calling tools: put_user_report
+Tool's input: {"report": "{\n    \"recommendations\": [\n        \"Update graphics driver\",\n        \"Check for overheating hardware\",\n        \"Enable automatic crash reporting\"\n    ]\n}", "user_id": "6789", "date": null}
+Tool's response:
+User report for 678901 with date latest added successfully
+
+<snipped for brevity>
+
+Workflow Result:
+['The latest report for user 6789 has been created with the provided JSON contents.']
 ```
 
-### Example 4 (Continued from Example 3)
+If you attempt to put a report for a user and date that already exists, the workflow will return an error message. Rerunning the workflow should produce the following output:
+
+**Expected Workflow Output**
+```console
+<snipped for brevity>
+
+[AGENT]
+Calling tools: put_user_report
+Tool's input: {"report": "{\"recommendations\": [\"Update graphics driver\", \"Check for overheating hardware\", \"Enable automatic crash reporting\"]}", "user_id": "6789", "date": null}
+Tool's response:
+User report for 6789 with date latest already exists
+
+<snipped for brevity>
+
+Workflow Result:
+['The report for user 6789 with date "latest" already exists and cannot be replaced.']
+```
+
+### Update User Report
 ```bash
-aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Get the latest report for user 6789'
+aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Update the latest report for user 6789 with the following JSON contents:
+    {
+        "recommendations": [
+            "Update graphics driver",
+            "Check for overheating hardware",
+            "Reboot the system"
+        ]
+    }
+'
 ```
 
 **Expected Workflow Output**
 ```console
-The latest report for user 6789 includes the following recommendations:
-1. Update graphics driver
-2. Check for overheating hardware
-3. Enable automatic crash reporting
+<snipped for brevity>
+
+[AGENT]
+Calling tools: update_user_report
+Tool's input: {"report": "{\"recommendations\": [\"Update graphics driver\", \"Check for overheating hardware\", \"Reboot the system\"]}", "user_id": "6789", "date": null}
+Tool's response:
+User report for 6789 with date latest updated
+
+<snipped for brevity>
+
+Workflow Result:
+['The latest report for user 6789 has been updated with the provided JSON contents.']
+```
+
+### Delete User Report
+```bash
+aiq run --config_file examples/object_store/user_report/configs/config_s3.yml --input 'Delete the latest report for user 6789'
+```
+
+**Expected Workflow Output**
+```console
+<snipped for brevity>
+
+[AGENT]
+Calling tools: delete_user_report
+Tool's input: {"user_id": "6789", "date": null}
+Tool's response:
+User report for 6789 with date latest deleted
+
+<snipped for brevity>
+
+Workflow Result:
+['The latest report for user 6789 has been successfully deleted.']
+```
+
+If you attempt to delete a report that does not exist, the workflow will return an error message. Rerunning the workflow should produce the following output:
+
+**Expected Workflow Output**
+```console
+<snipped for brevity>
+
+[AGENT]
+Calling tools: delete_user_report
+Tool's input: {"user_id": "6789", "date": null}
+Tool's response:
+Tool call failed after all retry attempts. Last error: No object found with key: /reports/6789/latest.json. An error occurred (NoSuchKey) when calling the GetObject operation: The specified key does not exist.
+
+<snipped for brevity>
+
+Workflow Result:
+['The report for user 6789 does not exist, so it cannot be deleted.']
 ```

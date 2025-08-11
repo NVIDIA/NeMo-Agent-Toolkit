@@ -83,14 +83,14 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
     uv sync --all-groups --all-extras
     ```
 
-1. Install and configure pre-commit hooks.
+1. Install and configure pre-commit hooks (optional these can also be run manually).
 
     ```bash
     pre-commit install
     ```
     **NOTE**: Running pre-commit for the first time will take longer than normal.
 
-7. Open the NeMo Agent toolkit Workspace in Visual Studio Code.
+1. Open the NeMo Agent toolkit Workspace in Visual Studio Code.
     ```bash
     code ./aiq.code-workspace
     ```
@@ -110,7 +110,7 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
      uv pip install -e ./examples/getting_started/simple_web_query
      ```
 
-2. Verify that you've installed the NeMo Agent toolkit library.
+1. Verify that you've installed the NeMo Agent toolkit library.
 
      ```bash
      aiq --help
@@ -131,7 +131,16 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 1. Code!
     - Make sure to update unit tests!
     - Ensure the [license headers are set properly](./licensing.md).
-1. Verify your changes by [running CI locally](./running-ci-locally.md) with the `./ci/scripts/run_ci_local.sh all` command.
+1. Verify your changes:
+    * Run the style and lint checks, from the root of the repository run:
+        ```bash
+        ./ci/scripts/checks.sh
+        ```
+    * Run all unittests and verify that they are passing, from the root of the repository run:
+        ```bash
+        pytest
+        ```
+    * Optionally [run the entire CI pipeline locally](./running-ci-locally.md) with the `./ci/scripts/run_ci_local.sh all` command. This is useful if CI is failing in GitHub Actions and you want to debug the issue locally.
 1. When done, [create your pull request](https://github.com/NVIDIA/NeMo-Agent-Toolkit/compare). Select `develop` as the `Target branch` of your pull request.
     - Ensure the body of the pull request references the issue you are working on in the form of `Closes #<issue number>`.
 1. Wait for other developers to review your code and update code as needed.

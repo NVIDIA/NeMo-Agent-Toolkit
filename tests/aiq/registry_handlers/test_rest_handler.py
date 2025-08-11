@@ -24,11 +24,11 @@ import pytest
 from pytest_httpserver import HTTPServer
 
 from aiq.cli.type_registry import TypeRegistry
-from aiq.data_models.component import AIQComponentEnum
+from aiq.data_models.component import ComponentEnum
 from aiq.data_models.discovery_metadata import DiscoveryMetadata
 from aiq.registry_handlers.schemas.package import PackageNameVersionList
-from aiq.registry_handlers.schemas.publish import AIQArtifact
-from aiq.registry_handlers.schemas.publish import BuiltAIQArtifact
+from aiq.registry_handlers.schemas.publish import Artifact
+from aiq.registry_handlers.schemas.publish import BuiltArtifact
 from aiq.registry_handlers.schemas.pull import PullRequestPackages
 from aiq.registry_handlers.schemas.search import SearchQuery
 from aiq.settings.global_settings import Settings
@@ -68,14 +68,14 @@ async def test_rest_handler_publish(rest_registry_channel: dict,
 
     # Generate sample metadata
     metadata = {}
-    for component_type in AIQComponentEnum:
+    for component_type in ComponentEnum:
         metadata[component_type] = []
         for i in range(3):
             metadata[component_type].append(
                 DiscoveryMetadata(component_type=component_type, component_name=f"{component_type.value}_{i}"))
 
-    built_artifact = BuiltAIQArtifact(whl="base64encodedwhl", metadata=metadata)
-    artifact = AIQArtifact(artifact=built_artifact, whl_path="whl/path.whl")
+    built_artifact = BuiltArtifact(whl="base64encodedwhl", metadata=metadata)
+    artifact = Artifact(artifact=built_artifact, whl_path="whl/path.whl")
 
     async with AsyncExitStack() as stack:
         registry_handler_info = registry.get_registry_handler(type(rest_registry_config))

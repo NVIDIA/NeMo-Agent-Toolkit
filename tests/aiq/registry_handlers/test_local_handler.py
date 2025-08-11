@@ -46,7 +46,6 @@ from aiq.settings.global_settings import Settings
                          ])
 async def test_local_handler_search(
     local_registry_channel: dict,
-    global_settings: Settings,
     registry: TypeRegistry,
     field_name: str,
     component_type: str,
@@ -55,7 +54,7 @@ async def test_local_handler_search(
 ):
 
     search_query_dict = {
-        "query": "aiqtoolkit", "fields": [field_name], "component_types": [component_type], "top_k": top_k
+        "query": "nvidia-nat", "fields": [field_name], "component_types": [component_type], "top_k": top_k
     }
 
     registry_config = Settings.model_validate(local_registry_channel)

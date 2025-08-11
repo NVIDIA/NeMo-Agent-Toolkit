@@ -47,7 +47,7 @@ NeMo Agent toolkit currently supports the following plugin types:
 - **Retriever Providers**: Retriever providers are services that provide a way to retrieve information from a database. Examples of retriever providers include Chroma and Milvus. To register a retriever provider, you can use the {py:deco}`aiq.cli.register_workflow.register_retriever_provider` decorator.
 - **Telemetry Exporters**: Telemetry exporters send telemetry data to a telemetry service. To register a telemetry exporter, you can use the {py:deco}`aiq.cli.register_workflow.register_telemetry_exporter` decorator.
 - **Tool Wrappers**: Tool wrappers are used to wrap functions in a way that is specific to a LLM framework. For example, when using the LangChain framework, NeMo Agent toolkit functions need to be wrapped in `BaseTool` class to be compatible with LangChain. To register a tool wrapper, you can use the {py:deco}`aiq.cli.register_workflow.register_tool_wrapper` decorator.
-- **API Authentication Providers**: API authentication providers are services that provide a way to authenticate requests to an API provider. Examples of authentication providers include OAuth 2.0 Authorization Code Grant and API Key. To register an API authentication provider, you can use the {py:deco}`aiq.cli.register_workflow.register_authentication_provider` decorator.
+- **API Authentication Providers**: API authentication providers are services that provide a way to authenticate requests to an API provider. Examples of authentication providers include OAuth 2.0 Authorization Code Grant and API Key. To register an API authentication provider, you can use the {py:deco}`aiq.cli.register_workflow.register_auth_provider` decorator.
 
 ## Anatomy of a Plugin
 
@@ -82,7 +82,7 @@ async def openai_langchain(llm_config: OpenAIModelConfig, builder: Builder):
     yield ChatOpenAI(**llm_config.model_dump(exclude={"type"}, by_alias=True))
 ```
 
-The `wrapper_type` parameter in the decorator specifies the LLM framework that the plugin is compatible with. This instruments the plugin with the appropriate telemetry hooks to enable observability, evaluation, and profiling. 
+The `wrapper_type` parameter in the decorator specifies the LLM framework that the plugin is compatible with. This instruments the plugin with the appropriate telemetry hooks to enable observability, evaluation, and profiling.
 The `wrapper_type` argument can also be used with the library's `Builder` class to build plugins in a framework-agnostic way. This allows the library to use the same plugin across different frameworks without needing to change the code.
 
 ### Entry Point

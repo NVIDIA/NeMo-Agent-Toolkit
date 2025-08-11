@@ -23,14 +23,14 @@ from aiq.builder.function_info import FunctionInfo
 from aiq.cli.register_workflow import register_function
 from aiq.data_models.component_ref import RetrieverRef
 from aiq.data_models.function import FunctionBaseConfig
-from aiq.retriever.interface import AIQRetriever
+from aiq.retriever.interface import Retriever
 from aiq.retriever.models import RetrieverError
 from aiq.retriever.models import RetrieverOutput
 
 logger = logging.getLogger(__name__)
 
 
-class AIQRetrieverConfig(FunctionBaseConfig, name="aiq_retriever"):
+class RetrieverConfig(FunctionBaseConfig, name="aiq_retriever"):
     """
     AIQRetriever tool which provides a common interface for different vectorstores. Its
     configuration uses clients, which are the vectorstore-specific implementaiton of the retriever interface.
@@ -44,7 +44,7 @@ class AIQRetrieverConfig(FunctionBaseConfig, name="aiq_retriever"):
     description: str | None = Field(default=None, description="If present it will be used as the tool description")
 
 
-def _get_description_from_config(config: AIQRetrieverConfig) -> str:
+def _get_description_from_config(config: RetrieverConfig) -> str:
     """
     Generate a description of what the tool will do based on how it is configured.
     """
@@ -55,8 +55,8 @@ def _get_description_from_config(config: AIQRetrieverConfig) -> str:
     return description.format(topic=_topic) if not config.description else config.description
 
 
-@register_function(config_type=AIQRetrieverConfig)
-async def aiq_retriever_tool(config: AIQRetrieverConfig, builder: Builder):
+@register_function(config_type=RetrieverConfig)
+async def retriever_tool(config: RetrieverConfig, builder: Builder):
     """
     Configure an AIQ Toolkit Retriever Tool which supports different clients such as Milvus and Nemo Retriever.
 
@@ -68,7 +68,7 @@ async def aiq_retriever_tool(config: AIQRetrieverConfig, builder: Builder):
     class RetrieverInputSchema(BaseModel):
         query: str = Field(description="The query to be searched in the configured data store")
 
-    client: AIQRetriever = await builder.get_retriever(config.retriever)
+    client: Retriever = await builder.get_retriever(config.retriever)
 
     async def _retrieve(query: str) -> RetrieverOutput:
         try:
@@ -87,3 +87,8 @@ async def aiq_retriever_tool(config: AIQRetrieverConfig, builder: Builder):
         input_schema=RetrieverInputSchema,
         description=_get_description_from_config(config),
     )
+
+
+# Compatibility aliases with previous releases
+AIQRetrieverConfig = RetrieverConfig
+aiq_retriever_tool = retriever_tool

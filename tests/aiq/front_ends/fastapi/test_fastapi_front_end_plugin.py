@@ -26,11 +26,11 @@ from httpx import AsyncClient
 from httpx_sse import aconnect_sse
 
 from aiq.builder.workflow_builder import WorkflowBuilder
-from aiq.data_models.api_server import AIQChatRequest
-from aiq.data_models.api_server import AIQChatResponse
-from aiq.data_models.api_server import AIQChatResponseChunk
+from aiq.data_models.api_server import ChatRequest
+from aiq.data_models.api_server import ChatResponse
+from aiq.data_models.api_server import ChatResponseChunk
 from aiq.data_models.api_server import Message
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.data_models.config import GeneralConfig
 from aiq.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from aiq.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -54,8 +54,7 @@ class CustomWorker(FastApiFrontEndPluginWorker):
 
 
 @asynccontextmanager
-async def _build_client(config: AIQConfig,
-                        worker_class: type[FastApiFrontEndPluginWorker] = FastApiFrontEndPluginWorker):
+async def _build_client(config: Config, worker_class: type[FastApiFrontEndPluginWorker] = FastApiFrontEndPluginWorker):
 
     worker = worker_class(config)
 
@@ -71,7 +70,7 @@ async def test_generate_and_openai_single(fn_use_openai_api: bool):
 
     front_end_config = FastApiFrontEndConfig()
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=front_end_config),
         workflow=EchoFunctionConfig(use_openai_api=fn_use_openai_api),
     )
@@ -87,10 +86,10 @@ async def test_generate_and_openai_single(fn_use_openai_api: bool):
         # Test both the function accepting OAI and also using the OAI API
         if (fn_use_openai_api):
             response = await client.post(
-                workflow_path, json=AIQChatRequest(messages=[Message(content="Hello", role="user")]).model_dump())
+                workflow_path, json=ChatRequest(messages=[Message(content="Hello", role="user")]).model_dump())
 
             assert response.status_code == 200
-            assert AIQChatResponse.model_validate(response.json()).choices[0].message.content == "Hello"
+            assert ChatResponse.model_validate(response.json()).choices[0].message.content == "Hello"
 
         else:
             response = await client.post(workflow_path, json={"message": "Hello"})
@@ -99,10 +98,10 @@ async def test_generate_and_openai_single(fn_use_openai_api: bool):
             assert response.json() == {"value": "Hello"}
 
         response = await client.post(oai_path,
-                                     json=AIQChatRequest(messages=[Message(content="Hello", role="user")]).model_dump())
+                                     json=ChatRequest(messages=[Message(content="Hello", role="user")]).model_dump())
 
         assert response.status_code == 200
-        oai_response = AIQChatResponse.model_validate(response.json())
+        oai_response = ChatResponse.model_validate(response.json())
 
         assert oai_response.choices[0].message.content == "Hello"
 
@@ -111,12 +110,12 @@ async def test_generate_and_openai_single(fn_use_openai_api: bool):
 async def test_generate_and_openai_stream(fn_use_openai_api: bool):
 
     if (fn_use_openai_api):
-        values = AIQChatRequest(messages=[Message(content="Hello", role="user")]).model_dump()
+        values = ChatRequest(messages=[Message(content="Hello", role="user")]).model_dump()
     values = ["a", "b", "c", "d"]
 
     front_end_config = FastApiFrontEndConfig()
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=front_end_config),
         workflow=StreamingEchoFunctionConfig(use_openai_api=fn_use_openai_api),
     )
@@ -135,10 +134,10 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
             async with aconnect_sse(client,
                                     "POST",
                                     f"{workflow_path}/stream",
-                                    json=AIQChatRequest(messages=[Message(content=x, role="user")
-                                                                  for x in values]).model_dump()) as event_source:
+                                    json=ChatRequest(messages=[Message(content=x, role="user")
+                                                               for x in values]).model_dump()) as event_source:
                 async for sse in event_source.aiter_sse():
-                    response.append(AIQChatResponseChunk.model_validate(sse.json()).choices[0].message.content or "")
+                    response.append(ChatResponseChunk.model_validate(sse.json()).choices[0].message.content or "")
 
                 assert event_source.response.status_code == 200
                 assert response == values
@@ -157,10 +156,10 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
         async with aconnect_sse(client,
                                 "POST",
                                 f"{oai_path}/stream",
-                                json=AIQChatRequest(messages=[Message(content=x, role="user")
-                                                              for x in values]).model_dump()) as event_source:
+                                json=ChatRequest(messages=[Message(content=x, role="user")
+                                                           for x in values]).model_dump()) as event_source:
             async for sse in event_source.aiter_sse():
-                response_oai.append(AIQChatResponseChunk.model_validate(sse.json()).choices[0].message.content or "")
+                response_oai.append(ChatResponseChunk.model_validate(sse.json()).choices[0].message.content or "")
 
             assert event_source.response.status_code == 200
             assert response_oai == values
@@ -168,7 +167,7 @@ async def test_generate_and_openai_stream(fn_use_openai_api: bool):
 
 async def test_custom_endpoint():
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=FastApiFrontEndConfig()),
         workflow=EchoFunctionConfig(),
     )
@@ -182,7 +181,7 @@ async def test_custom_endpoint():
 
 async def test_specified_endpoints():
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=FastApiFrontEndConfig(endpoints=[
             # TODO(MDD): Uncomment this when the constant function is implemented
             # FastApiFrontEndConfig.Endpoint(
@@ -215,7 +214,7 @@ async def test_generate_async(fn_use_openai_api: bool):
 
     front_end_config = FastApiFrontEndConfig()
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=front_end_config),
         workflow=EchoFunctionConfig(use_openai_api=fn_use_openai_api),
     )
@@ -260,7 +259,7 @@ async def test_generate_async(fn_use_openai_api: bool):
 async def test_async_job_status_not_found():
     front_end_config = FastApiFrontEndConfig()
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=front_end_config),
         workflow=EchoFunctionConfig(use_openai_api=False),
     )
@@ -283,7 +282,7 @@ async def test_static_file_endpoints():
     updated_content = b"Updated content!"
     content_type = "text/plain"
 
-    config = AIQConfig(
+    config = Config(
         general=GeneralConfig(front_end=FastApiFrontEndConfig(object_store=object_store_name)),
         object_stores={object_store_name: InMemoryObjectStoreConfig()},
         workflow=EchoFunctionConfig(),  # Dummy workflow, not used here

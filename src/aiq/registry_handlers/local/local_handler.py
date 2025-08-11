@@ -21,7 +21,7 @@ from contextlib import asynccontextmanager
 from aiq.registry_handlers.package_utils import build_package_metadata
 from aiq.registry_handlers.registry_handler_base import AbstractRegistryHandler
 from aiq.registry_handlers.schemas.package import PackageNameVersionList
-from aiq.registry_handlers.schemas.publish import AIQArtifact
+from aiq.registry_handlers.schemas.publish import Artifact
 from aiq.registry_handlers.schemas.publish import PublishResponse
 from aiq.registry_handlers.schemas.pull import PullRequestPackages
 from aiq.registry_handlers.schemas.pull import PullResponse
@@ -41,7 +41,7 @@ class LocalRegistryHandler(AbstractRegistryHandler):
     search_fields: list[SearchFields] = [field for field in SearchFields if field != SearchFields.ALL]
 
     @asynccontextmanager
-    async def publish(self, artifact: AIQArtifact) -> AsyncGenerator[PublishResponse]:
+    async def publish(self, artifact: Artifact) -> AsyncGenerator[PublishResponse]:
         """Publishes an AIQ Toolkit artifact to a local registry.
 
         Args:

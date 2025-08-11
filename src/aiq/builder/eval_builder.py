@@ -23,7 +23,7 @@ from aiq.builder.evaluator import EvaluatorInfo
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.builder.workflow_builder import WorkflowBuilder
 from aiq.cli.type_registry import TypeRegistry
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.data_models.config import GeneralConfig
 from aiq.data_models.evaluate import EvalGeneralConfig
 from aiq.data_models.evaluator import EvaluatorBaseConfig
@@ -127,7 +127,7 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
                                 remaining_components,
                                 original_error)
 
-    async def populate_builder(self, config: AIQConfig):
+    async def populate_builder(self, config: Config):
         # Skip setting workflow if workflow config is EmptyFunctionConfig
         skip_workflow = isinstance(config.workflow, EmptyFunctionConfig)
 
@@ -154,7 +154,7 @@ class WorkflowEvalBuilder(WorkflowBuilder, EvalBuilder):
 
     @classmethod
     @asynccontextmanager
-    async def from_config(cls, config: AIQConfig):
+    async def from_config(cls, config: Config):
 
         async with cls(config.general, config.eval.general, registry=None) as builder:
             await builder.populate_builder(config)

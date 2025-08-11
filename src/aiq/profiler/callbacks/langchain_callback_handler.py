@@ -29,7 +29,7 @@ from langchain_core.messages import BaseMessage
 from langchain_core.outputs import ChatGeneration
 from langchain_core.outputs import LLMResult
 
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.builder.framework_enum import LLMFrameworkEnum
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
@@ -68,7 +68,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):  # p
         self._lock = threading.Lock()
         self.last_call_ts = time.time()
 
-        self.step_manager = AIQContext.get().intermediate_step_manager
+        self.step_manager = Context.get().intermediate_step_manager
         self._state = IntermediateStepType.LLM_END
 
         self._run_id_to_model_name = {}

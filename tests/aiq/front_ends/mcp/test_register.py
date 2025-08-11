@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from aiq.data_models.config import AIQConfig
+from aiq.data_models.config import Config
 from aiq.data_models.config import GeneralConfig
 from aiq.front_ends.mcp.mcp_front_end_config import MCPFrontEndConfig
 from aiq.front_ends.mcp.mcp_front_end_plugin import MCPFrontEndPlugin
@@ -27,7 +27,7 @@ async def test_register_mcp_front_end():
     mcp_config = MCPFrontEndConfig(name="Test MCP Server")
 
     # Use a real AIQConfig with a proper workflow
-    full_config = AIQConfig(general=GeneralConfig(front_end=mcp_config), workflow=EchoFunctionConfig())
+    full_config = Config(general=GeneralConfig(front_end=mcp_config), workflow=EchoFunctionConfig())
 
     # Use the context manager pattern since register_mcp_front_end
     # returns an AsyncGeneratorContextManager, not an async iterator

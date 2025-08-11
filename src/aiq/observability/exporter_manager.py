@@ -17,7 +17,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import ContextState
 from aiq.observability.exporter.base_exporter import BaseExporter
 
 logger = logging.getLogger(__name__)
@@ -133,7 +133,7 @@ class ExporterManager:
         """
         return self._exporter_registry
 
-    def create_isolated_exporters(self, context_state: AIQContextState | None = None) -> dict[str, BaseExporter]:
+    def create_isolated_exporters(self, context_state: ContextState | None = None) -> dict[str, BaseExporter]:
         """
         Create isolated copies of all exporters for concurrent execution.
 
@@ -149,7 +149,7 @@ class ExporterManager:
         """
         # Provide default context state if None
         if context_state is None:
-            context_state = AIQContextState.get()
+            context_state = ContextState.get()
 
         isolated_exporters = {}
         for name, exporter in self._exporter_registry.items():
@@ -198,7 +198,7 @@ class ExporterManager:
             logger.error("Error stopping isolated exporter '%s': %s", name, e)
 
     @asynccontextmanager
-    async def start(self, context_state: AIQContextState | None = None):
+    async def start(self, context_state: ContextState | None = None):
         """
         Start all registered exporters concurrently.
 

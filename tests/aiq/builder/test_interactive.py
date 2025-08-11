@@ -15,8 +15,8 @@
 
 import pytest
 
-from aiq.builder.context import AIQContextState
-from aiq.builder.user_interaction_manager import AIQUserInteractionManager
+from aiq.builder.context import ContextState
+from aiq.builder.user_interaction_manager import UserInteractionManager
 from aiq.data_models.api_server import TextContent
 from aiq.data_models.interactive import BinaryHumanPromptOption
 from aiq.data_models.interactive import HumanPromptBinary
@@ -103,11 +103,11 @@ async def test_prompt_user_input_text():
         return HumanResponseText(text="dummy answer")
 
     # Get the singleton context state and override the user_input_callback.
-    state = AIQContextState.get()
+    state = ContextState.get()
     token = state.user_input_callback.set(dummy_text_callback)
 
     try:
-        manager = AIQUserInteractionManager(context_state=state)
+        manager = UserInteractionManager(context_state=state)
         # Create a TextInteraction instance as the prompt content.
         prompt_content = HumanPromptText(text="What is your favorite color?", placeholder="Enter color")
         # Call prompt_user_input

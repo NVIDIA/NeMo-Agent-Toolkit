@@ -8,17 +8,13 @@ root = "../../.."
 [project]
 name = "aiq_agno_personal_finance"
 dynamic = ["version"]
-dependencies = [
-  "aiqtoolkit[agno]~=1.2",
-  "openai~=1.66",
-  "litellm~=1.63.14"
-]
+dependencies = ["nvidia-nat[agno]~=1.2", "openai~=1.66", "litellm~=1.63.14"]
 requires-python = ">=3.11,<3.13"
-description = "Custom AIQ toolkit Workflow using Agno for personal finance"
+description = "Custom NeMo Agent toolkit Workflow using Agno for personal finance"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_agno_personal_finance = "aiq_agno_personal_finance.register"

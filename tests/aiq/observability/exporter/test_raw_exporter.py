@@ -22,7 +22,7 @@ from unittest.mock import patch
 
 import pytest
 
-from aiq.builder.context import AIQContextState
+from aiq.builder.context import ContextState
 from aiq.data_models.intermediate_step import IntermediateStep
 from aiq.data_models.intermediate_step import IntermediateStepPayload
 from aiq.data_models.intermediate_step import IntermediateStepType
@@ -71,7 +71,7 @@ class StringProcessor(Processor[str, str]):
 class ConcreteRawExporter(RawExporter[IntermediateStep, str]):
     """Concrete implementation of RawExporter for testing."""
 
-    def __init__(self, context_state: AIQContextState | None = None):
+    def __init__(self, context_state: ContextState | None = None):
         super().__init__(context_state)
         self.exported_items = []
         self.export_processed_called = False
@@ -85,7 +85,7 @@ class ConcreteRawExporter(RawExporter[IntermediateStep, str]):
 @pytest.fixture
 def mock_context_state():
     """Create a mock context state."""
-    mock_state = Mock(spec=AIQContextState)
+    mock_state = Mock(spec=ContextState)
     mock_subject = Mock(spec=Subject)
     mock_event_stream = Mock()
     mock_event_stream.get.return_value = mock_subject

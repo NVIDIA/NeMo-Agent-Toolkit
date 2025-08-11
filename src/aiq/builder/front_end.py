@@ -20,12 +20,12 @@ from abc import abstractmethod
 from aiq.data_models.front_end import FrontEndConfigT
 
 if (typing.TYPE_CHECKING):
-    from aiq.data_models.config import AIQConfig
+    from aiq.data_models.config import Config
 
 
 class FrontEndBase(typing.Generic[FrontEndConfigT], ABC):
 
-    def __init__(self, full_config: "AIQConfig"):
+    def __init__(self, full_config: "Config"):
         """
         Initializes the FrontEndBase object with the specified AIQ Toolkit configuration.
 
@@ -37,7 +37,7 @@ class FrontEndBase(typing.Generic[FrontEndConfigT], ABC):
 
         super().__init__()
 
-        self._full_config: "AIQConfig" = full_config
+        self._full_config: "Config" = full_config
         self._front_end_config: FrontEndConfigT = typing.cast(FrontEndConfigT, full_config.general.front_end)
 
     @property
@@ -53,7 +53,7 @@ class FrontEndBase(typing.Generic[FrontEndConfigT], ABC):
         return self._front_end_config
 
     @property
-    def full_config(self) -> "AIQConfig":
+    def full_config(self) -> "Config":
         """
         Returns the full AIQ Toolkit configuration object.
 

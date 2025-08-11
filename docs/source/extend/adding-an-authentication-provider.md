@@ -16,6 +16,11 @@ limitations under the License.
 -->
 
 # Adding an API Authentication Provider to NeMo Agent Toolkit
+
+:::{warning}
+**Experimental Feature**: The Authentication Provider API is experimental and may change in future releases. Future versions may introduce breaking changes without notice.
+:::
+
 :::{note}
 We recommend reading the [Streamlining API Authentication](../reference/api-authentication.md) guide before proceeding with this detailed documentation.
 :::

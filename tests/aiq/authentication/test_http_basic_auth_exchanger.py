@@ -17,7 +17,7 @@ import pytest
 
 from aiq.authentication.http_basic_auth.http_basic_auth_provider import HTTPBasicAuthProvider
 from aiq.authentication.http_basic_auth.register import HTTPBasicAuthProviderConfig
-from aiq.builder.context import AIQContext
+from aiq.builder.context import Context
 from aiq.data_models.authentication import AuthenticatedContext
 from aiq.data_models.authentication import AuthFlowType
 from aiq.data_models.authentication import BasicAuthCred
@@ -36,7 +36,7 @@ def _patch_context(monkeypatch: pytest.MonkeyPatch, callback):
         def __init__(self, cb):
             self.user_auth_callback = cb
 
-    monkeypatch.setattr(AIQContext, "get", staticmethod(lambda: _DummyCtx(callback)), raising=True)
+    monkeypatch.setattr(Context, "get", staticmethod(lambda: _DummyCtx(callback)), raising=True)
 
 
 # --------------------------------------------------------------------------- #

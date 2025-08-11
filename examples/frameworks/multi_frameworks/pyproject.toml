@@ -9,19 +9,19 @@ root = "../../.."
 name = "aiq_multi_frameworks"
 dynamic = ["version"]
 dependencies = [
-  "aiqtoolkit[langchain,llama-index]~=1.2",
+  "nvidia-nat[langchain,llama-index]~=1.2",
   "arxiv~=2.1.3",
   "bs4==0.0.2",
   "markdown-it-py~=3.0",
   "nvidia-haystack==0.1.2",
-  "openai~=1.78.0",  # Pin to compatible range with llama-index
+  "openai~=1.78.0",                         # Pin to compatible range with llama-index
 ]
 requires-python = ">=3.11,<3.13"
-description = "Custom AIQ toolkit Workflow"
+description = "Custom NeMo Agent toolkit Workflow"
 classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
-aiqtoolkit = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'aiq.components']
 aiq_multi_frameworks = "aiq_multi_frameworks.register"
