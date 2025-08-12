@@ -23,7 +23,7 @@ dependencies = [
   "ragaai-catalyst>=2.2.0,<2.3",
 ]
 requires-python = ">=3.11,<3.13"
-description = "Subpackage for RagaAI Catalyst NeMo Agent toolkit"
+description = "Subpackage for RagaAI Catalyst integration in NeMo Agent toolkit"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "observability", "ragaai catalyst"]
 classifiers = ["Programming Language :: Python"]
