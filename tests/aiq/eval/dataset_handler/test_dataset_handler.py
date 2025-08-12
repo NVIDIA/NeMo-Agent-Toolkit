@@ -226,7 +226,7 @@ def sample_custom_parser(file_path: Path, difficulty: str = "") -> EvalInput:
     """
     Test implementation of a custom dataset parser that:
     """
-    with open(file_path, 'r') as f:
+    with open(file_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     # Extract questions array from the nested structure
@@ -330,7 +330,7 @@ def test_get_eval_input_from_swe_bench_df(dataset_swe_bench_handler, mock_swe_be
         f"Expected input '{mock_swe_bench_input_df.iloc[1].to_json()}', got '{second_item.input_obj}'"
 
 
-def test_get_eval_input_from_df_ignore_invalid_rows(dataset_handler, mock_input_df, dataset_id_key):
+def test_get_eval_input_from_df_ignore_invalid_rows(dataset_handler, mock_input_df):
     """
     Test that
     1. Unknown columns are ignored.
