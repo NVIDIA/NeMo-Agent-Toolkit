@@ -81,6 +81,9 @@ Tutorials <./tutorials/index.md>
 About Workflows <./workflows/about/index.md>
 ./workflows/run-workflows.md
 Workflow Configuration <./workflows/workflow-configuration.md>
+./workflows/llms/index.md
+./workflows/embedders/index.md
+./workflows/retrievers/index.md
 Functions <./workflows/functions/index.md>
 ./workflows/mcp/index.md
 Evaluate Workflows <./workflows/evaluate.md>
