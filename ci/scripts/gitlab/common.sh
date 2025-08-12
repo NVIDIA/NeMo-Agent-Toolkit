@@ -77,6 +77,8 @@ function create_env() {
     rapids-logger "Creating Environment with extras: ${@}"
 
     UV_SYNC_STDERROUT=$(uv sync ${extras[@]} 2>&1)
+    # Explicitly filter the warning about multiple packages providing a tests module, work-around for issue #611
+    UV_SYNC_STDERROUT=$(echo "${UV_SYNC_STDERROUT}" | grep -v "warning: The module \`tests\` is provided by more than one package")
 
     # Environment should have already been created in the before_script
     if [[ "${UV_SYNC_STDERROUT}" =~ "warning:" ]]; then
