@@ -6,7 +6,7 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../.."
 
 [project]
-name = "aiq_plot_charts"
+name = "nat_plot_charts"
 dynamic = ["version"]
 dependencies = [
   "nvidia-nat[langchain]~=1.2",
@@ -21,5 +21,5 @@ classifiers = ["Programming Language :: Python"]
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
 
-[project.entry-points.'aiq.components']
-aiq_plot_charts = "aiq_plot_charts.register"
+[project.entry-points.'nat.components']
+nat_plot_charts = "nat_plot_charts.register"

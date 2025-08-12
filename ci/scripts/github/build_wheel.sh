@@ -37,20 +37,20 @@ build_wheel . "nvidia-nat/${GIT_TAG}"
 
 
 # Build all examples with a pyproject.toml in the first directory below examples
-for AIQ_EXAMPLE in ${AIQ_EXAMPLES[@]}; do
+for NAT_EXAMPLE in ${NAT_EXAMPLES[@]}; do
     # places all wheels flat under example
-    build_wheel ${AIQ_EXAMPLE} "examples"
+    build_wheel ${NAT_EXAMPLE} "examples"
 done
 
 
 # Build all packages with a pyproject.toml in the first directory below packages
-for AIQ_PACKAGE in "${AIQ_PACKAGES[@]}"; do
-    build_package_wheel ${AIQ_PACKAGE}
+for NAT_PACKAGE in "${NAT_PACKAGES[@]}"; do
+    build_package_wheel ${NAT_PACKAGE}
 done
 
-if [[ "${BUILD_AIQ_COMPAT}" == "true" ]]; then
-    WHEELS_DIR="${WHEELS_BASE_DIR}/aiqtoolkit"
-    for AIQ_COMPAT_PACKAGE in "${AIQ_COMPAT_PACKAGES[@]}"; do
-        build_package_wheel ${AIQ_COMPAT_PACKAGE}
+if [[ "${BUILD_NAT_COMPAT}" == "true" ]]; then
+    WHEELS_DIR="${WHEELS_BASE_DIR}/nat"
+    for NAT_COMPAT_PACKAGE in "${NAT_COMPAT_PACKAGES[@]}"; do
+        build_package_wheel ${NAT_COMPAT_PACKAGE}
     done
 fi

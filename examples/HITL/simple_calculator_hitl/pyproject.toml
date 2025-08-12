@@ -6,12 +6,12 @@ requires = ["setuptools >= 64", "setuptools-scm>=8"]
 root = "../../.."
 
 [project]
-name = "aiq_simple_calculator_hitl"
+name = "nat_simple_calculator_hitl"
 dynamic = ["version"]
 dependencies = [
   "nvidia-nat[langchain]~=1.2",
-  "aiq_simple_calculator",
-  "aiq_por_to_jiratickets",
+  "nat_simple_calculator",
+  "nat_por_to_jiratickets",
 ]
 requires-python = ">=3.11,<3.13"
 description = "Simple Calculator Evaluation and Profiling - demonstrates NeMo Agent toolkit evaluation capabilities"
@@ -20,7 +20,7 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
-aiq_simple_calculator = { path = "../../getting_started/simple_calculator", editable = true }
+nat_simple_calculator = { path = "../../getting_started/simple_calculator", editable = true }
 
-[project.entry-points.'aiq.components']
-aiq_simple_calculator_hitl = "aiq_simple_calculator_hitl.register"
+[project.entry-points.'nat.components']
+nat_simple_calculator_hitl = "nat_simple_calculator_hitl.register"

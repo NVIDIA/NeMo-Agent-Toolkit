@@ -20,9 +20,9 @@ import logging
 from pathlib import Path
 
 import pytest
-from aiq_multi_frameworks.register import MultiFrameworksWorkflowConfig
+from nat_multi_frameworks.register import MultiFrameworksWorkflowConfig
 
-from aiq.runtime.loader import load_workflow
+from nat.runtime.loader import load_workflow
 
 logger = logging.getLogger(__name__)
 
