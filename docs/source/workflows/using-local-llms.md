@@ -30,6 +30,14 @@ Regardless of the model you choose, the process is the same for downloading the 
 - [The NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html#installation)
 - An NVIDIA API key, refer to [Obtaining API Keys](../quick-start/installing.md#obtaining-api-keys) for more information.
 
+### Install the Simple Web Query Example
+
+First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install the simple web query example so we have the `webpage_query` tool available.
+
+```bash
+pip install -e examples/getting_started/simple_web_query
+```
+
 ### Downloading the NIM Containers
 
 Login to nvcr.io with Docker:
@@ -51,13 +59,18 @@ docker pull nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest
 
 
 ### Running the NIM Containers
+
+:::{note}
+The `--gpus` flag is used to specify the GPUs to use for the LLM and embedding model. Each user's setup may vary, so adjust the commands to suit the system.
+:::
+
 Run the LLM container listening on port 8000:
 ```bash
 export NGC_API_KEY=<PASTE_API_KEY_HERE>
 export LOCAL_NIM_CACHE=~/.cache/nim
 mkdir -p "$LOCAL_NIM_CACHE"
 docker run -it --rm \
-    --gpus all \
+    --gpus 0,1 \
     --shm-size=16GB \
     -e NGC_API_KEY \
     -v "$LOCAL_NIM_CACHE:/opt/nim/.cache" \
@@ -71,7 +84,7 @@ Open a new terminal and run the embedding model container, listening on port 800
 export NGC_API_KEY=<PASTE_API_KEY_HERE>
 export LOCAL_NIM_CACHE=~/.cache/nim
 docker run -it --rm \
-    --gpus all \
+    --gpus 2,3 \
     --shm-size=16GB \
     -e NGC_API_KEY \
     -v "$LOCAL_NIM_CACHE:/opt/nim/.cache" \
@@ -127,20 +140,34 @@ aiq run --config_file examples/documentation_guides/locally_hosted_llms/nim_conf
 <!-- path-check-skip-next-line -->
 vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getting_started/quickstart.html#openai-compatible-server) allowing us to re-use our existing OpenAI clients. If you have not already done so, install vLLM following the [Quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) guide. Similar to the previous example we will be using the same [`microsoft/Phi-3-mini-4k-instruct`](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct) LLM model. Along with the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base) embedding model.
 
+### Install the Simple Web Query Example
+
+First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install the simple web query example so we have the `webpage_query` tool available.
+
+```bash
+pip install -e examples/getting_started/simple_web_query
+```
+
 ### Serving the Models
 Similar to the NIM approach we will be running the LLM on the default port of 8000 and the embedding model on port 8001.
 
+:::{note}
+The `CUDA_VISIBLE_DEVICES` environment variable is used to specify the GPUs to use for the LLM and embedding model. Each user's setup may vary, so adjust the commands to suit the system.
+:::
+
 In a terminal from within the vLLM environment, run the following command to serve the LLM:
 ```bash
-vllm serve microsoft/Phi-3-mini-4k-instruct
+CUDA_VISIBLE_DEVICES=0,1 vllm serve microsoft/Phi-3-mini-4k-instruct
 ```
 
 In a second terminal also from within the vLLM environment, run the following command to serve the embedding model:
 ```bash
-vllm serve --task embed --override-pooler-config '{"pooling_type": "MEAN"}' --port 8001 ssmits/Qwen2-7B-Instruct-embed-base
+CUDA_VISIBLE_DEVICES=2,3 vllm serve --task embed --override-pooler-config '{"pooling_type": "MEAN"}' --port 8001 ssmits/Qwen2-7B-Instruct-embed-base
 ```
 
-> Note: The `--override-pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/latest/models/supported_models.html#embedding) documentation.
+:::{note}
+The `--override-pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/latest/models/supported_models.html#embedding) documentation.
+:::
 
 
 ### NeMo Agent Toolkit Configuration
