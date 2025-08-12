@@ -72,10 +72,13 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
     1. IntermediateStep (START) → Create Span → Add to tracking
     2. IntermediateStep (END) → Complete Span → Process through pipeline → Export
 
-    Args:
-        context_state (ContextState, optional): The context state to use for the exporter. Defaults to None.
-        span_prefix (str, optional): The prefix name to use for span attributes. If `None` the value of the
-            `NAT_SPAN_PREFIX` environment variable is used. Defaults to "nat" if neither are defined.
+    Parameters
+    ----------
+        context_state: `ContextState`, optional
+            The context state to use for the exporter. Defaults to None.
+        span_prefix: `str`, optional
+            The prefix name to use for span attributes. If `None` the value of the `NAT_SPAN_PREFIX` environment
+            variable is used. Defaults to `"nat"` if neither are defined.
     """
 
     # Use descriptors for automatic isolation of span-specific state
