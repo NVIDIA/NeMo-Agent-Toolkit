@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import uuid
 from datetime import datetime
 from unittest.mock import patch
@@ -123,8 +124,22 @@ class TestSpanExporterFunctionality:
         span_exporter.export("not an intermediate step")
         assert len(span_exporter._outstanding_spans) == 0
 
-    def test_process_start_event(self, span_exporter, sample_start_event):
+    @pytest.mark.usefixtures("restore_environ")
+    @pytest.mark.parametrize("use_environ", [True, False])
+    @pytest.mark.parametrize("span_prefix, expected_span_prefix", [(None, "nat"), ("nat", "nat"), ("custom", "custom")])
+    def test_process_start_event(self,
+                                 sample_start_event: IntermediateStep,
+                                 span_prefix: str | None,
+                                 expected_span_prefix: str,
+                                 use_environ: bool):
         """Test processing START event."""
+        if use_environ:
+            if span_prefix is not None:
+                os.environ["NAT_SPAN_PREFIX"] = span_prefix
+            span_exporter = ConcreteSpanExporter()
+        else:
+            span_exporter = ConcreteSpanExporter(span_prefix=span_prefix)
+
         span_exporter.export(sample_start_event)
 
         # Check that span was created and added to tracking
@@ -136,10 +151,10 @@ class TestSpanExporterFunctionality:
         span = span_exporter._outstanding_spans[sample_start_event.payload.UUID]
         assert isinstance(span, Span)
         assert span.name == "test_llm_call"
-        assert span.attributes["nat.event_type"] == IntermediateStepType.LLM_START.value
-        assert span.attributes["nat.function.id"] == "func_123"
-        assert span.attributes["nat.function.name"] == "test_function"
-        assert span.attributes["nat.framework"] == LLMFrameworkEnum.LANGCHAIN.value
+        assert span.attributes[f"{expected_span_prefix}.event_type"] == IntermediateStepType.LLM_START.value
+        assert span.attributes[f"{expected_span_prefix}.function.id"] == "func_123"
+        assert span.attributes[f"{expected_span_prefix}.function.name"] == "test_function"
+        assert span.attributes[f"{expected_span_prefix}.framework"] == LLMFrameworkEnum.LANGCHAIN.value
 
     def test_process_start_event_with_parent(self, span_exporter):
         """Test processing START event with parent span."""
