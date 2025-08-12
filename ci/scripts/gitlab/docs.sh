@@ -27,6 +27,4 @@ apt install --no-install-recommends -y make
 create_env group:dev group:docs
 
 rapids-logger "Building documentation"
-pushd ${CI_PROJECT_DIR}/docs
-make html
-popd
+make -C docs html
