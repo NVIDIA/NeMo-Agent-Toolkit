@@ -36,7 +36,7 @@ class WeaveExporter(SpanExporter[Span, Span]):
 
     _weave_calls: IsolatedAttribute[dict[str, Call]] = IsolatedAttribute(dict)
 
-    def __init__(self, context_state=None, entity: str | None = None, project: str | None = None, **kwargs):
+    def __init__(self, context_state=None, entity: str | None = None, project: str | None = None):
         super().__init__(context_state=context_state)
         self._entity = entity
         self._project = project
